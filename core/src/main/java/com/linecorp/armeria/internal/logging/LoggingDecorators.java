@@ -21,6 +21,8 @@ import java.util.function.Function;
 import org.slf4j.Logger;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
 
@@ -38,7 +40,7 @@ public final class LoggingDecorators {
      */
     public static void logRequest(
             Logger logger, RequestLog log, LogLevel requestLogLevel,
-            Function<? super HttpHeaders, ? extends HttpHeaders> requestHeadersSanitizer,
+            Function<? super RequestHeaders, ? extends HttpHeaders> requestHeadersSanitizer,
             Function<Object, ?> requestContentSanitizer,
             Function<? super HttpHeaders, ? extends HttpHeaders> requestTrailersSanitizer) {
 
@@ -54,12 +56,12 @@ public final class LoggingDecorators {
      */
     public static void logResponse(
             Logger logger, RequestLog log, LogLevel requestLogLevel,
-            Function<? super HttpHeaders, ? extends HttpHeaders> requestHeadersSanitizer,
+            Function<? super RequestHeaders, ? extends HttpHeaders> requestHeadersSanitizer,
             Function<Object, ?> requestContentSanitizer,
             Function<? super HttpHeaders, ? extends HttpHeaders> requestTrailersSanitizer,
             LogLevel successfulResponseLogLevel,
             LogLevel failedResponseLogLevel,
-            Function<? super HttpHeaders, ? extends HttpHeaders> responseHeadersSanitizer,
+            Function<? super ResponseHeaders, ? extends HttpHeaders> responseHeadersSanitizer,
             Function<Object, ?> responseContentSanitizer,
             Function<? super HttpHeaders, ? extends HttpHeaders> responseTrailersSanitizer,
             Function<? super Throwable, ? extends Throwable> responseCauseSanitizer) {

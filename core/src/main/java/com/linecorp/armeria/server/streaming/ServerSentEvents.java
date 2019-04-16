@@ -28,10 +28,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.sse.ServerSentEvent;
 
 /**
@@ -74,10 +76,11 @@ public final class ServerSentEvents {
     private static final char LINE_FEED = '\n';
 
     /**
-     * A default {@link HttpHeaders} of Server-Sent Events.
+     * A default {@link ResponseHeaders} of Server-Sent Events.
      */
-    private static final HttpHeaders defaultHttpHeaders =
-            HttpHeaders.of(HttpStatus.OK).contentType(MediaType.EVENT_STREAM).asImmutable();
+    private static final ResponseHeaders defaultHttpHeaders =
+            ResponseHeaders.of(HttpStatus.OK,
+                               HttpHeaderNames.CONTENT_TYPE, MediaType.EVENT_STREAM);
 
     /**
      * Creates a new Server-Sent Events stream from the specified {@link Publisher}.
@@ -85,7 +88,7 @@ public final class ServerSentEvents {
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
      */
     public static HttpResponse fromPublisher(Publisher<? extends ServerSentEvent> contentPublisher) {
-        return fromPublisher(defaultHttpHeaders, contentPublisher, HttpHeaders.EMPTY_HEADERS);
+        return fromPublisher(defaultHttpHeaders, contentPublisher, HttpHeaders.of());
     }
 
     /**
@@ -94,9 +97,9 @@ public final class ServerSentEvents {
      * @param headers the HTTP headers supposed to send
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
      */
-    public static HttpResponse fromPublisher(HttpHeaders headers,
+    public static HttpResponse fromPublisher(ResponseHeaders headers,
                                              Publisher<? extends ServerSentEvent> contentPublisher) {
-        return fromPublisher(headers, contentPublisher, HttpHeaders.EMPTY_HEADERS);
+        return fromPublisher(headers, contentPublisher, HttpHeaders.of());
     }
 
     /**
@@ -106,7 +109,7 @@ public final class ServerSentEvents {
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
      * @param trailingHeaders the trailing HTTP headers supposed to send
      */
-    public static HttpResponse fromPublisher(HttpHeaders headers,
+    public static HttpResponse fromPublisher(ResponseHeaders headers,
                                              Publisher<? extends ServerSentEvent> contentPublisher,
                                              HttpHeaders trailingHeaders) {
         requireNonNull(headers, "headers");
@@ -124,7 +127,7 @@ public final class ServerSentEvents {
      */
     public static <T> HttpResponse fromPublisher(Publisher<T> contentPublisher,
                                                  Function<? super T, ? extends ServerSentEvent> converter) {
-        return fromPublisher(defaultHttpHeaders, contentPublisher, HttpHeaders.EMPTY_HEADERS, converter);
+        return fromPublisher(defaultHttpHeaders, contentPublisher, HttpHeaders.of(), converter);
     }
 
     /**
@@ -134,10 +137,10 @@ public final class ServerSentEvents {
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
      * @param converter the converter which converts published objects into {@link ServerSentEvent}s
      */
-    public static <T> HttpResponse fromPublisher(HttpHeaders headers,
+    public static <T> HttpResponse fromPublisher(ResponseHeaders headers,
                                                  Publisher<T> contentPublisher,
                                                  Function<? super T, ? extends ServerSentEvent> converter) {
-        return fromPublisher(headers, contentPublisher, HttpHeaders.EMPTY_HEADERS, converter);
+        return fromPublisher(headers, contentPublisher, HttpHeaders.of(), converter);
     }
 
     /**
@@ -148,7 +151,7 @@ public final class ServerSentEvents {
      * @param trailingHeaders the trailing HTTP headers supposed to send
      * @param converter the converter which converts published objects into {@link ServerSentEvent}s
      */
-    public static <T> HttpResponse fromPublisher(HttpHeaders headers,
+    public static <T> HttpResponse fromPublisher(ResponseHeaders headers,
                                                  Publisher<T> contentPublisher,
                                                  HttpHeaders trailingHeaders,
                                                  Function<? super T, ? extends ServerSentEvent> converter) {
@@ -168,7 +171,7 @@ public final class ServerSentEvents {
      */
     public static HttpResponse fromStream(Stream<? extends ServerSentEvent> contentStream,
                                           Executor executor) {
-        return fromStream(defaultHttpHeaders, contentStream, HttpHeaders.EMPTY_HEADERS, executor);
+        return fromStream(defaultHttpHeaders, contentStream, HttpHeaders.of(), executor);
     }
 
     /**
@@ -178,10 +181,10 @@ public final class ServerSentEvents {
      * @param contentStream the {@link Stream} which publishes the objects supposed to send as contents
      * @param executor the executor which iterates the stream
      */
-    public static HttpResponse fromStream(HttpHeaders headers,
+    public static HttpResponse fromStream(ResponseHeaders headers,
                                           Stream<? extends ServerSentEvent> contentStream,
                                           Executor executor) {
-        return fromStream(headers, contentStream, HttpHeaders.EMPTY_HEADERS, executor);
+        return fromStream(headers, contentStream, HttpHeaders.of(), executor);
     }
 
     /**
@@ -192,7 +195,7 @@ public final class ServerSentEvents {
      * @param trailingHeaders the trailing HTTP headers supposed to send
      * @param executor the executor which iterates the stream
      */
-    public static HttpResponse fromStream(HttpHeaders headers,
+    public static HttpResponse fromStream(ResponseHeaders headers,
                                           Stream<? extends ServerSentEvent> contentStream,
                                           HttpHeaders trailingHeaders, Executor executor) {
         requireNonNull(headers, "headers");
@@ -212,7 +215,7 @@ public final class ServerSentEvents {
      */
     public static <T> HttpResponse fromStream(Stream<T> contentStream, Executor executor,
                                               Function<? super T, ? extends ServerSentEvent> converter) {
-        return fromStream(defaultHttpHeaders, contentStream, HttpHeaders.EMPTY_HEADERS, executor, converter);
+        return fromStream(defaultHttpHeaders, contentStream, HttpHeaders.of(), executor, converter);
     }
 
     /**
@@ -223,9 +226,10 @@ public final class ServerSentEvents {
      * @param executor the executor which iterates the stream
      * @param converter the converter which converts published objects into {@link ServerSentEvent}s
      */
-    public static <T> HttpResponse fromStream(HttpHeaders headers, Stream<T> contentStream, Executor executor,
+    public static <T> HttpResponse fromStream(ResponseHeaders headers,
+                                              Stream<T> contentStream, Executor executor,
                                               Function<? super T, ? extends ServerSentEvent> converter) {
-        return fromStream(headers, contentStream, HttpHeaders.EMPTY_HEADERS, executor, converter);
+        return fromStream(headers, contentStream, HttpHeaders.of(), executor, converter);
     }
 
     /**
@@ -237,7 +241,7 @@ public final class ServerSentEvents {
      * @param executor the executor which iterates the stream
      * @param converter the converter which converts published objects into {@link ServerSentEvent}s
      */
-    public static <T> HttpResponse fromStream(HttpHeaders headers, Stream<T> contentStream,
+    public static <T> HttpResponse fromStream(ResponseHeaders headers, Stream<T> contentStream,
                                               HttpHeaders trailingHeaders, Executor executor,
                                               Function<? super T, ? extends ServerSentEvent> converter) {
         requireNonNull(headers, "headers");
@@ -255,7 +259,7 @@ public final class ServerSentEvents {
      * @param sse the {@link ServerSentEvent} object supposed to send as contents
      */
     public static HttpResponse fromEvent(ServerSentEvent sse) {
-        return fromEvent(defaultHttpHeaders, sse, HttpHeaders.EMPTY_HEADERS);
+        return fromEvent(defaultHttpHeaders, sse, HttpHeaders.of());
     }
 
     /**
@@ -264,8 +268,8 @@ public final class ServerSentEvents {
      * @param headers the HTTP headers supposed to send
      * @param sse the {@link ServerSentEvent} object supposed to send as contents
      */
-    public static HttpResponse fromEvent(HttpHeaders headers, ServerSentEvent sse) {
-        return fromEvent(headers, sse, HttpHeaders.EMPTY_HEADERS);
+    public static HttpResponse fromEvent(ResponseHeaders headers, ServerSentEvent sse) {
+        return fromEvent(headers, sse, HttpHeaders.of());
     }
 
     /**
@@ -275,7 +279,7 @@ public final class ServerSentEvents {
      * @param sse the {@link ServerSentEvent} object supposed to send as contents
      * @param trailingHeaders the trailing HTTP headers supposed to send
      */
-    public static HttpResponse fromEvent(HttpHeaders headers, ServerSentEvent sse,
+    public static HttpResponse fromEvent(ResponseHeaders headers, ServerSentEvent sse,
                                          HttpHeaders trailingHeaders) {
         requireNonNull(headers, "headers");
         requireNonNull(sse, "sse");
@@ -283,19 +287,15 @@ public final class ServerSentEvents {
         return HttpResponse.of(sanitizeHeaders(headers), toHttpData(sse), trailingHeaders);
     }
 
-    private static HttpHeaders sanitizeHeaders(HttpHeaders headers) {
+    private static ResponseHeaders sanitizeHeaders(ResponseHeaders headers) {
         if (headers == defaultHttpHeaders) {
             return headers;
         }
         return ensureContentType(ensureHttpStatus(headers));
     }
 
-    static HttpHeaders ensureHttpStatus(HttpHeaders headers) {
+    static ResponseHeaders ensureHttpStatus(ResponseHeaders headers) {
         final HttpStatus status = headers.status();
-        if (status == null) {
-            return headers.toMutable().status(HttpStatus.OK);
-        }
-
         if (status.equals(HttpStatus.OK)) {
             return headers;
         }
@@ -309,13 +309,15 @@ public final class ServerSentEvents {
                     status, HttpStatus.OK, ServerSentEvents.class.getSimpleName(), HttpStatus.OK);
             warnedStatusCode = true;
         }
-        return headers.toMutable().status(HttpStatus.OK);
+        return headers.toBuilder().status(HttpStatus.OK).build();
     }
 
-    static HttpHeaders ensureContentType(HttpHeaders headers) {
+    static ResponseHeaders ensureContentType(ResponseHeaders headers) {
         final MediaType contentType = headers.contentType();
         if (contentType == null) {
-            return headers.toMutable().contentType(MediaType.EVENT_STREAM);
+            return headers.toBuilder()
+                          .add(HttpHeaderNames.CONTENT_TYPE, MediaType.EVENT_STREAM.toString())
+                          .build();
         }
 
         if (contentType.is(MediaType.EVENT_STREAM)) {
@@ -331,7 +333,9 @@ public final class ServerSentEvents {
                         ServerSentEvents.class.getSimpleName(), MediaType.EVENT_STREAM);
             warnedContentType = true;
         }
-        return headers.toMutable().contentType(MediaType.EVENT_STREAM);
+        return headers.toBuilder()
+                      .contentType(MediaType.EVENT_STREAM)
+                      .build();
     }
 
     private static HttpData toHttpData(ServerSentEvent sse) {

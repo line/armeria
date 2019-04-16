@@ -27,9 +27,9 @@ import org.junit.Test;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestHeaders;
 
 public class StickyEndpointSelectionStrategyTest {
 
@@ -97,7 +97,7 @@ public class StickyEndpointSelectionStrategyTest {
     }
 
     private static ClientRequestContext contextWithHeader(String k, String v) {
-        return ClientRequestContext.of(HttpRequest.of(HttpHeaders.of(HttpMethod.GET, "/")
-                                                                 .set(HttpHeaderNames.of(k), v)));
+        return ClientRequestContext.of(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/",
+                                                                        HttpHeaderNames.of(k), v)));
     }
 }

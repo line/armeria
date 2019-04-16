@@ -29,10 +29,10 @@ import org.reactivestreams.Subscription;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -67,7 +67,7 @@ public class ArmeriaCallFactoryLargeStreamTest {
                         public void request(long n) {
                             for (int i = 0; i < n; i++) {
                                 if (count == 0) {
-                                    s.onNext(HttpHeaders.of(HttpStatus.OK));
+                                    s.onNext(ResponseHeaders.of(HttpStatus.OK));
                                 } else {
                                     s.onNext(HttpData.of(new byte[1024]));
                                 }

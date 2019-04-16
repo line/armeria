@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.file;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Clock;
+import java.util.Map.Entry;
 import java.util.function.BiFunction;
 
 import javax.annotation.Nullable;
@@ -25,11 +26,9 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.common.CacheControl;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
-
-import io.netty.handler.codec.Headers;
-import io.netty.util.AsciiString;
 
 /**
  * A skeletal builder class which helps easier implementation of an {@link HttpFile} builder.
@@ -45,7 +44,7 @@ public abstract class AbstractHttpFileBuilder<B extends AbstractHttpFileBuilder<
     @Nullable
     private BiFunction<String, HttpFileAttributes, String> entityTagFunction = DefaultEntityTagFunction.get();
     @Nullable
-    private HttpHeaders headers;
+    private HttpHeadersBuilder headers;
 
     /**
      * Returns {@code this}.
@@ -159,13 +158,13 @@ public abstract class AbstractHttpFileBuilder<B extends AbstractHttpFileBuilder<
      * Returns the immutable additional {@link HttpHeaders} which will be set when building an
      * {@link HttpResponse}.
      */
-    protected final HttpHeaders headers() {
-        return headers != null ? headers.asImmutable() : HttpHeaders.EMPTY_HEADERS;
+    protected final HttpHeaders buildHeaders() {
+        return headers != null ? headers.build() : HttpHeaders.of();
     }
 
-    private HttpHeaders getOrCreateHeaders() {
+    private HttpHeadersBuilder headersBuilder() {
         if (headers == null) {
-            headers = HttpHeaders.of();
+            headers = HttpHeaders.builder();
         }
         return headers;
     }
@@ -176,16 +175,16 @@ public abstract class AbstractHttpFileBuilder<B extends AbstractHttpFileBuilder<
     public final B addHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        getOrCreateHeaders().addObject(HttpHeaderNames.of(name), value);
+        headersBuilder().addObject(HttpHeaderNames.of(name), value);
         return self();
     }
 
     /**
      * Adds the specified HTTP headers.
      */
-    public final B addHeaders(Headers<AsciiString, String, ?> headers) {
+    public final B addHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        getOrCreateHeaders().add(headers);
+        headersBuilder().addObject(headers);
         return self();
     }
 
@@ -195,18 +194,16 @@ public abstract class AbstractHttpFileBuilder<B extends AbstractHttpFileBuilder<
     public final B setHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        getOrCreateHeaders().setObject(HttpHeaderNames.of(name), value);
+        headersBuilder().setObject(HttpHeaderNames.of(name), value);
         return self();
     }
 
     /**
      * Sets the specified HTTP headers.
      */
-    public final B setHeaders(Headers<AsciiString, String, ?> headers) {
+    public final B setHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        if (!headers.isEmpty()) {
-            getOrCreateHeaders().setAll(headers);
-        }
+        headersBuilder().setObject(headers);
         return self();
     }
 
@@ -220,7 +217,7 @@ public abstract class AbstractHttpFileBuilder<B extends AbstractHttpFileBuilder<
     public final B contentType(MediaType contentType) {
         requireNonNull(contentType, "contentType");
         autoDetectedContentType(false);
-        getOrCreateHeaders().contentType(contentType);
+        headersBuilder().contentType(contentType);
         return self();
     }
 

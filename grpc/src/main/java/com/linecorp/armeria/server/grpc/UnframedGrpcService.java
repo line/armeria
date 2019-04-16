@@ -31,6 +31,10 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
@@ -96,7 +100,7 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final HttpHeaders clientHeaders = req.headers();
+        final RequestHeaders clientHeaders = req.headers();
         final MediaType contentType = clientHeaders.contentType();
         if (contentType == null) {
             // All gRPC requests, whether framed or non-framed, must have content-type. If it's not sent, let
@@ -124,7 +128,7 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
                                    "Only unary methods can be used with non-framed requests.");
         }
 
-        final HttpHeaders grpcHeaders = HttpHeaders.copyOf(clientHeaders);
+        final RequestHeadersBuilder grpcHeaders = clientHeaders.toBuilder();
 
         final MediaType framedContentType;
         if (contentType.is(MediaType.PROTOBUF)) {
@@ -156,7 +160,7 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
             if (t != null) {
                 responseFuture.completeExceptionally(t);
             } else {
-                frameAndServe(ctx, grpcHeaders, clientRequest, responseFuture);
+                frameAndServe(ctx, grpcHeaders.build(), clientRequest, responseFuture);
             }
             return null;
         });
@@ -165,7 +169,7 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
 
     private void frameAndServe(
             ServiceRequestContext ctx,
-            HttpHeaders grpcHeaders,
+            RequestHeaders grpcHeaders,
             AggregatedHttpMessage clientRequest,
             CompletableFuture<HttpResponse> res) {
         final HttpRequest grpcRequest;
@@ -243,7 +247,7 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
         }
 
         final MediaType grpcMediaType = grpcResponse.contentType();
-        final HttpHeaders unframedHeaders = HttpHeaders.copyOf(grpcResponse.headers());
+        final ResponseHeadersBuilder unframedHeaders = ResponseHeaders.of(grpcResponse.headers()).toBuilder();
         if (grpcMediaType != null) {
             if (grpcMediaType.is(GrpcSerializationFormats.PROTO.mediaType())) {
                 unframedHeaders.contentType(MediaType.PROTOBUF);
@@ -259,7 +263,7 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
                         // We know that we don't support compression, so this is always a ByteBuffer.
                         final HttpData unframedContent = new ByteBufHttpData(message.buf(), true);
                         unframedHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, unframedContent.length());
-                        res.complete(HttpResponse.of(unframedHeaders, unframedContent));
+                        res.complete(HttpResponse.of(unframedHeaders.build(), unframedContent));
                     }
 
                     @Override
@@ -267,7 +271,7 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
                         if (!res.isDone()) {
                             // If 'ResponseObserver.onCompleted()' is called without calling 'onNext()',
                             // this callback would be invoked but 'messageRead' callback wouldn't.
-                            res.complete(HttpResponse.of(unframedHeaders));
+                            res.complete(HttpResponse.of(unframedHeaders.build()));
                         }
                     }
                 },

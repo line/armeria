@@ -37,6 +37,7 @@ import org.reactivestreams.Subscription;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 
 import io.grpc.DecompressorRegistry;
@@ -44,8 +45,8 @@ import io.grpc.Status;
 
 public class HttpStreamReaderTest {
 
-    private static final HttpHeaders HEADERS = HttpHeaders.of(HttpStatus.OK);
-    private static final HttpHeaders TRAILERS = HttpHeaders.of().set(GrpcHeaderNames.GRPC_STATUS, "2");
+    private static final ResponseHeaders HEADERS = ResponseHeaders.of(HttpStatus.OK);
+    private static final HttpHeaders TRAILERS = HttpHeaders.of(GrpcHeaderNames.GRPC_STATUS, 2);
     private static final HttpData DATA = HttpData.ofUtf8("foobarbaz");
 
     @Rule
@@ -167,7 +168,7 @@ public class HttpStreamReaderTest {
     public void httpNotOk() {
         reader.onSubscribe(subscription);
         verifyZeroInteractions(subscription);
-        reader.onNext(HttpHeaders.of(HttpStatus.UNAUTHORIZED));
+        reader.onNext(ResponseHeaders.of(HttpStatus.UNAUTHORIZED));
         verifyZeroInteractions(subscription);
         verifyZeroInteractions(deframer);
 

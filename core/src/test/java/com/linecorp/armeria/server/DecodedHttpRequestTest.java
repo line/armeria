@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.internal.InboundTrafficController;
 import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
@@ -103,7 +104,9 @@ public class DecodedHttpRequestTest {
 
     @Test
     public void contentPreview() {
-        final HttpHeaders headers = HttpHeaders.of(HttpMethod.GET, "/").contentType(MediaType.PLAIN_TEXT_UTF_8);
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/",
+                                                         HttpHeaderNames.CONTENT_TYPE,
+                                                         MediaType.PLAIN_TEXT_UTF_8);
         final ServiceRequestContext sctx =
                 ServiceRequestContextBuilder.of(HttpRequest.of(headers))
                                             .serverConfigurator(sb -> sb.contentPreview(100))
@@ -123,12 +126,12 @@ public class DecodedHttpRequestTest {
     }
 
     private static DecodedHttpRequest decodedHttpRequest() {
-        final HttpHeaders headers = HttpHeaders.of(HttpMethod.GET, "/");
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/");
         final ServiceRequestContext sctx = ServiceRequestContext.of(HttpRequest.of(headers));
         return decodedHttpRequest(headers, sctx);
     }
 
-    private static DecodedHttpRequest decodedHttpRequest(HttpHeaders headers, ServiceRequestContext sctx) {
+    private static DecodedHttpRequest decodedHttpRequest(RequestHeaders headers, ServiceRequestContext sctx) {
         final DecodedHttpRequest request = new DecodedHttpRequest(sctx.eventLoop(), 1, 1, headers, true,
                                                                   InboundTrafficController.disabled(),
                                                                   sctx.maxRequestLength());

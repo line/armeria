@@ -31,7 +31,6 @@ import org.junit.Test;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -70,8 +69,7 @@ public class ThriftHttpHeaderTest {
             resultHandler.onError(new Exception(errorMessage));
         }
 
-        final HttpHeaders responseHeaders = new DefaultHttpHeaders().set(HttpHeaderNames.of("foo"), "bar");
-        ctx.setAdditionalResponseHeaders(responseHeaders);
+        ctx.setAdditionalResponseHeader(HttpHeaderNames.of("foo"), "bar");
     };
 
     @ClassRule
@@ -104,7 +102,7 @@ public class ThriftHttpHeaderTest {
             // Should fail with the first half of the secret.
             assertAuthorizationFailure(client, secretA);
             try (SafeCloseable ignored2 = Clients.withHttpHeaders(
-                    h -> h.set(AUTHORIZATION, h.get(AUTHORIZATION) + secretB))) {
+                    h -> h.toBuilder().set(AUTHORIZATION, h.get(AUTHORIZATION) + secretB).build())) {
                 // Should pass if both manipulators worked.
                 assertThat(client.hello("foobar")).isEqualTo("Hello, foobar!");
             }

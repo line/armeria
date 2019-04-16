@@ -51,7 +51,7 @@ public interface AggregatedHttpMessage {
     static AggregatedHttpMessage of(HttpMethod method, String path) {
         requireNonNull(method, "method");
         requireNonNull(path, "path");
-        return of(HttpHeaders.of(method, path));
+        return of(RequestHeaders.of(method, path));
     }
 
     /**
@@ -161,7 +161,7 @@ public interface AggregatedHttpMessage {
         requireNonNull(path, "path");
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
-        return of(method, path, mediaType, content, HttpHeaders.EMPTY_HEADERS);
+        return of(method, path, mediaType, content, HttpHeaders.of());
     }
 
     /**
@@ -180,7 +180,9 @@ public interface AggregatedHttpMessage {
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
         requireNonNull(trailingHeaders, "trailingHeaders");
-        return of(HttpHeaders.of(method, path).contentType(mediaType), content, trailingHeaders);
+        return of(RequestHeaders.builder(method, path)
+                                .contentType(mediaType).build(),
+                  content, trailingHeaders);
     }
 
     // Note: Ensure we provide the same set of `of()` methods with the `of()` and `respond()` methods of
@@ -203,7 +205,7 @@ public interface AggregatedHttpMessage {
     static AggregatedHttpMessage of(HttpStatus status) {
         requireNonNull(status, "status");
         if (isContentAlwaysEmpty(status)) {
-            return of(HttpHeaders.of(status));
+            return of(ResponseHeaders.of(status));
         } else {
             return of(status, MediaType.PLAIN_TEXT_UTF_8, status.toHttpData());
         }
@@ -300,7 +302,7 @@ public interface AggregatedHttpMessage {
         requireNonNull(status, "status");
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
-        return of(status, mediaType, content, HttpHeaders.EMPTY_HEADERS);
+        return of(status, mediaType, content, HttpHeaders.of());
     }
 
     /**
@@ -317,7 +319,9 @@ public interface AggregatedHttpMessage {
         requireNonNull(content, "content");
         requireNonNull(trailingHeaders, "trailingHeaders");
 
-        final HttpHeaders headers = HttpHeaders.of(status).contentType(mediaType);
+        final ResponseHeaders headers = ResponseHeaders.builder(status)
+                                                       .contentType(mediaType)
+                                                       .build();
         return of(headers, content, trailingHeaders);
     }
 
@@ -328,7 +332,7 @@ public interface AggregatedHttpMessage {
      */
     static AggregatedHttpMessage of(HttpHeaders headers) {
         requireNonNull(headers, "headers");
-        return of(headers, HttpData.EMPTY_DATA, HttpHeaders.EMPTY_HEADERS);
+        return of(headers, HttpData.EMPTY_DATA, HttpHeaders.of());
     }
 
     /**
@@ -340,7 +344,7 @@ public interface AggregatedHttpMessage {
     static AggregatedHttpMessage of(HttpHeaders headers, HttpData content) {
         requireNonNull(headers, "headers");
         requireNonNull(content, "content");
-        return of(headers, content, HttpHeaders.EMPTY_HEADERS);
+        return of(headers, content, HttpHeaders.of());
     }
 
     /**
@@ -365,7 +369,7 @@ public interface AggregatedHttpMessage {
      * @param content the content of the HTTP message
      * @param trailingHeaders the trailing HTTP headers
      */
-    static AggregatedHttpMessage of(Iterable<HttpHeaders> informationals, HttpHeaders headers,
+    static AggregatedHttpMessage of(Iterable<ResponseHeaders> informationals, HttpHeaders headers,
                                     HttpData content, HttpHeaders trailingHeaders) {
 
         requireNonNull(informationals, "informationals");
@@ -374,16 +378,22 @@ public interface AggregatedHttpMessage {
         requireNonNull(trailingHeaders, "trailingHeaders");
 
         // Set the 'content-length' header if possible.
-        final HttpStatus status = headers.status();
+        final String status = headers.get(HttpHeaderNames.STATUS);
         final HttpHeaders newHeaders;
         if (status != null) { // Response
-            newHeaders = setOrRemoveContentLength(headers, content, trailingHeaders);
+            newHeaders = setOrRemoveContentLength(ResponseHeaders.of(headers), content, trailingHeaders);
         } else { // Request
-            newHeaders = headers.toMutable();
+            final RequestHeadersBuilder builder = RequestHeaders.builder().add(headers);
             if (content.isEmpty()) {
-                newHeaders.remove(CONTENT_LENGTH);
+                builder.remove(CONTENT_LENGTH);
             } else {
-                newHeaders.setInt(CONTENT_LENGTH, content.length());
+                builder.setInt(CONTENT_LENGTH, content.length());
+            }
+
+            try {
+                newHeaders = builder.build();
+            } catch (IllegalStateException e) {
+                throw new IllegalArgumentException("must set ':method' and ':path' headers");
             }
         }
 
@@ -394,7 +404,7 @@ public interface AggregatedHttpMessage {
     /**
      * Returns the informational class (1xx) HTTP headers.
      */
-    List<HttpHeaders> informationals();
+    List<ResponseHeaders> informationals();
 
     /**
      * Returns the HTTP headers.
@@ -439,7 +449,7 @@ public interface AggregatedHttpMessage {
      */
     @Nullable
     default String scheme() {
-        return headers().scheme();
+        return headers().get(HttpHeaderNames.SCHEME);
     }
 
     /**
@@ -449,7 +459,11 @@ public interface AggregatedHttpMessage {
      */
     @Nullable
     default HttpMethod method() {
-        return headers().method();
+        final String methodName = headers().get(HttpHeaderNames.METHOD);
+        if (methodName == null) {
+            return null;
+        }
+        return HttpMethod.isSupported(methodName) ? HttpMethod.valueOf(methodName) : HttpMethod.UNKNOWN;
     }
 
     /**
@@ -459,7 +473,7 @@ public interface AggregatedHttpMessage {
      */
     @Nullable
     default String path() {
-        return headers().path();
+        return headers().get(HttpHeaderNames.PATH);
     }
 
     /**
@@ -470,7 +484,7 @@ public interface AggregatedHttpMessage {
      */
     @Nullable
     default String authority() {
-        return headers().authority();
+        return headers().get(HttpHeaderNames.AUTHORITY);
     }
 
     /**
@@ -480,7 +494,8 @@ public interface AggregatedHttpMessage {
      */
     @Nullable
     default HttpStatus status() {
-        return headers().status();
+        final String status = headers().get(HttpHeaderNames.STATUS);
+        return status != null ? HttpStatus.valueOf(status) : null;
     }
 
     /**

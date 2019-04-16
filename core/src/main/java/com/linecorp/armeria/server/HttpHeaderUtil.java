@@ -98,7 +98,7 @@ final class HttpHeaderUtil {
 
     @VisibleForTesting
     @Nullable
-    static InetAddress getFirstValidAddress(String headerValue,
+    static InetAddress getFirstValidAddress(@Nullable String headerValue,
                                             Function<String, String> valueConverter,
                                             Predicate<InetAddress> filter) {
         if (Strings.isNullOrEmpty(headerValue)) {

@@ -42,9 +42,9 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.testing.internal.MockAddressResolverGroup;
 
@@ -68,16 +68,16 @@ public class ArmeriaReactiveWebServerFactoryTest {
                 .build();
     }
 
-    private ArmeriaReactiveWebServerFactory factory() {
+    private static ArmeriaReactiveWebServerFactory factory() {
         when(beanFactory.getBeanNamesForType((Class<?>) any())).thenReturn(names);
         return new ArmeriaReactiveWebServerFactory(beanFactory);
     }
 
-    private HttpClient httpsClient(WebServer server) {
+    private static HttpClient httpsClient(WebServer server) {
         return HttpClient.of(clientFactory, "https://example.com:" + server.getPort());
     }
 
-    private HttpClient httpClient(WebServer server) {
+    private static HttpClient httpClient(WebServer server) {
         return HttpClient.of(clientFactory, "http://example.com:" + server.getPort());
     }
 
@@ -86,9 +86,7 @@ public class ArmeriaReactiveWebServerFactoryTest {
         final ArmeriaReactiveWebServerFactory factory = factory();
         final int port = SocketUtils.findAvailableTcpPort();
         factory.setPort(port);
-        runEchoServer(factory, server -> {
-            assertThat(server.getPort()).isEqualTo(port);
-        });
+        runEchoServer(factory, server -> assertThat(server.getPort()).isEqualTo(port));
     }
 
     @Test
@@ -110,9 +108,7 @@ public class ArmeriaReactiveWebServerFactoryTest {
         final Ssl ssl = new Ssl();
         ssl.setEnabled(true);
         factory.setSsl(ssl);
-        runEchoServer(factory, server -> {
-            validateEchoResponse(sendPostRequest(httpsClient(server)));
-        });
+        runEchoServer(factory, server -> validateEchoResponse(sendPostRequest(httpsClient(server))));
     }
 
     @Test
@@ -176,27 +172,27 @@ public class ArmeriaReactiveWebServerFactoryTest {
         });
     }
 
-    private AggregatedHttpMessage sendPostRequest(HttpClient client) {
-        final HttpHeaders requestHeaders =
-                HttpHeaders.of(HttpMethod.POST, "/hello")
-                           .add(HttpHeaderNames.USER_AGENT, "test-agent/1.0.0")
-                           .add(HttpHeaderNames.ACCEPT_ENCODING, "gzip");
+    private static AggregatedHttpMessage sendPostRequest(HttpClient client) {
+        final RequestHeaders requestHeaders =
+                RequestHeaders.of(HttpMethod.POST, "/hello",
+                                  HttpHeaderNames.USER_AGENT, "test-agent/1.0.0",
+                                  HttpHeaderNames.ACCEPT_ENCODING, "gzip");
         return client.execute(requestHeaders, HttpData.of(POST_BODY.getBytes())).aggregate().join();
     }
 
-    private void validateEchoResponse(AggregatedHttpMessage res) {
+    private static void validateEchoResponse(AggregatedHttpMessage res) {
         assertThat(res.status()).isEqualTo(com.linecorp.armeria.common.HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo(POST_BODY);
     }
 
-    private void runEchoServer(ReactiveWebServerFactory factory,
-                               Consumer<WebServer> validator) {
+    private static void runEchoServer(ReactiveWebServerFactory factory,
+                                      Consumer<WebServer> validator) {
         runServer(factory, EchoHandler.INSTANCE, validator);
     }
 
-    private void runServer(ReactiveWebServerFactory factory,
-                           HttpHandler httpHandler,
-                           Consumer<WebServer> validator) {
+    private static void runServer(ReactiveWebServerFactory factory,
+                                  HttpHandler httpHandler,
+                                  Consumer<WebServer> validator) {
         final WebServer server = factory.getWebServer(httpHandler);
         server.start();
         try {

@@ -30,11 +30,12 @@ import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
@@ -96,8 +97,8 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
     public <I, O> ClientCall<I, O> newCall(
             MethodDescriptor<I, O> method, CallOptions callOptions) {
         final HttpRequestWriter req = HttpRequest.streaming(
-                HttpHeaders.of(HttpMethod.POST, uri().getPath() + method.getFullMethodName())
-                           .contentType(serializationFormat.mediaType()));
+                RequestHeaders.of(HttpMethod.POST, uri().getPath() + method.getFullMethodName(),
+                                  HttpHeaderNames.CONTENT_TYPE, serializationFormat.mediaType()));
         final ClientRequestContext ctx = newContext(HttpMethod.POST, req);
         ctx.logBuilder().serializationFormat(serializationFormat);
         ctx.logBuilder().deferRequestContent();

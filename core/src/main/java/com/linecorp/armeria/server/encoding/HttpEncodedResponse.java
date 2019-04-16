@@ -33,10 +33,11 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.stream.FilteredStreamMessage;
+import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 
 /**
  * A {@link FilteredStreamMessage} that applies HTTP encoding to {@link HttpObject}s as they are published.
@@ -70,12 +71,12 @@ class HttpEncodedResponse extends FilteredHttpResponse {
 
     @Override
     protected HttpObject filter(HttpObject obj) {
-        if (obj instanceof HttpHeaders) {
-            final HttpHeaders headers = (HttpHeaders) obj;
+        if (obj instanceof ResponseHeaders) {
+            final ResponseHeaders headers = (ResponseHeaders) obj;
 
             // Skip informational headers.
-            final HttpStatus status = headers.status();
-            if (status != null && status.codeClass() == HttpStatusClass.INFORMATIONAL) {
+            final String status = headers.get(HttpHeaderNames.STATUS);
+            if (ArmeriaHttpUtil.isInformational(status)) {
                 return obj;
             }
 
@@ -97,7 +98,7 @@ class HttpEncodedResponse extends FilteredHttpResponse {
             encodedStream = new ByteArrayOutputStream();
             encodingStream = HttpEncoders.getEncodingOutputStream(encodingType, encodedStream);
 
-            final HttpHeaders mutable = headers.toMutable();
+            final ResponseHeadersBuilder mutable = headers.toBuilder();
             // Always use chunked encoding when compressing.
             mutable.remove(HttpHeaderNames.CONTENT_LENGTH);
             switch (encodingType) {
@@ -109,7 +110,12 @@ class HttpEncodedResponse extends FilteredHttpResponse {
                     break;
             }
             mutable.set(HttpHeaderNames.VARY, HttpHeaderNames.ACCEPT_ENCODING.toString());
-            return mutable;
+            return mutable.build();
+        }
+
+        if (obj instanceof HttpHeaders) {
+            // Trailers.
+            return obj;
         }
 
         if (encodingStream == null) {
@@ -177,14 +183,11 @@ class HttpEncodedResponse extends FilteredHttpResponse {
                 return false;
             }
         }
-        if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
-            // We switch to chunked encoding and compress the response if it's reasonably
-            // large as the compression savings should outweigh the chunked encoding
-            // overhead.
-            if (headers.getInt(HttpHeaderNames.CONTENT_LENGTH) < minBytesToForceChunkedAndEncoding) {
-                return false;
-            }
-        }
-        return true;
+
+        // We switch to chunked encoding and compress the response if it's reasonably
+        // large or the content length is unknown because the compression savings should
+        // outweigh the chunked encoding overhead.
+        final long contentLength = headers.getLong(HttpHeaderNames.CONTENT_LENGTH, Long.MAX_VALUE);
+        return contentLength >= minBytesToForceChunkedAndEncoding;
     }
 }

@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.streaming.JsonTextSequences;
@@ -67,7 +68,7 @@ public class JacksonResponseConverterFunction implements ResponseConverterFuncti
 
     @Override
     public HttpResponse convertResponse(ServiceRequestContext ctx,
-                                        HttpHeaders headers,
+                                        ResponseHeaders headers,
                                         @Nullable Object result,
                                         HttpHeaders trailingHeaders) throws Exception {
         final MediaType mediaType = headers.contentType();
@@ -105,7 +106,7 @@ public class JacksonResponseConverterFunction implements ResponseConverterFuncti
             }
         } else if (result instanceof JsonNode) {
             // No media type is specified, but the result is a JsonNode type.
-            return HttpResponse.of(headers.toMutable().contentType(MediaType.JSON_UTF_8),
+            return HttpResponse.of(headers.toBuilder().contentType(MediaType.JSON_UTF_8).build(),
                                    toJsonHttpData(result), trailingHeaders);
         }
 

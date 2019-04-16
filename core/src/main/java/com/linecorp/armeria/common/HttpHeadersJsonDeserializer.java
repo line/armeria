@@ -37,6 +37,8 @@ import io.netty.util.AsciiString;
  */
 public final class HttpHeadersJsonDeserializer extends StdDeserializer<HttpHeaders> {
 
+    // FIXME(trustin): Add Request/ResponseHeadersJsonDeserializer.
+
     private static final long serialVersionUID = 6308506823069217145L;
 
     /**
@@ -57,7 +59,7 @@ public final class HttpHeadersJsonDeserializer extends StdDeserializer<HttpHeade
         }
 
         final ObjectNode obj = (ObjectNode) tree;
-        final HttpHeaders headers = HttpHeaders.of();
+        final HttpHeadersBuilder builder = new HttpHeadersBuilder();
 
         for (final Iterator<Entry<String, JsonNode>> i = obj.fields(); i.hasNext();) {
             final Entry<String, JsonNode> e = i.next();
@@ -65,20 +67,20 @@ public final class HttpHeadersJsonDeserializer extends StdDeserializer<HttpHeade
             final JsonNode values = e.getValue();
             if (!values.isArray()) {
                 // Values is a single item, so add it directly.
-                addHeader(ctx, headers, name, values);
+                addHeader(ctx, builder, name, values);
             } else {
                 final int numValues = values.size();
                 for (int j = 0; j < numValues; j++) {
                     final JsonNode v = values.get(j);
-                    addHeader(ctx, headers, name, v);
+                    addHeader(ctx, builder, name, v);
                 }
             }
         }
 
-        return headers.asImmutable();
+        return builder.build();
     }
 
-    private static void addHeader(DeserializationContext ctx, HttpHeaders headers,
+    private static void addHeader(DeserializationContext ctx, HttpHeadersBuilder builder,
                                   AsciiString name, JsonNode valueNode) throws JsonMappingException {
         if (!valueNode.isTextual()) {
             ctx.reportInputMismatch(HttpHeaders.class,
@@ -86,6 +88,6 @@ public final class HttpHeadersJsonDeserializer extends StdDeserializer<HttpHeade
                                     name, valueNode.getNodeType(), valueNode);
         }
 
-        headers.add(name, valueNode.asText());
+        builder.add(name, valueNode.asText());
     }
 }

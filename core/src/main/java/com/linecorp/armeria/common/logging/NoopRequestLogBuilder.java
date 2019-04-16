@@ -21,6 +21,8 @@ import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 
@@ -67,7 +69,7 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
     public void requestFirstBytesTransferred(long requestFirstBytesTransferredNanos) {}
 
     @Override
-    public void requestHeaders(HttpHeaders requestHeaders) {}
+    public void requestHeaders(RequestHeaders requestHeaders) {}
 
     @Override
     public void requestContent(@Nullable Object requestContent, @Nullable Object rawRequestContent) {}
@@ -120,7 +122,7 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
     public void responseFirstBytesTransferred(long responseFirstBytesTransferredNanos) {}
 
     @Override
-    public void responseHeaders(HttpHeaders responseHeaders) {}
+    public void responseHeaders(ResponseHeaders responseHeaders) {}
 
     @Override
     public void responseContent(@Nullable Object responseContent, @Nullable Object rawResponseContent) {}

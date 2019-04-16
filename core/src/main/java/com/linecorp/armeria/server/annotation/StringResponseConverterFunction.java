@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -39,7 +40,7 @@ public class StringResponseConverterFunction implements ResponseConverterFunctio
 
     @Override
     public HttpResponse convertResponse(ServiceRequestContext ctx,
-                                        HttpHeaders headers,
+                                        ResponseHeaders headers,
                                         @Nullable Object result,
                                         HttpHeaders trailingHeaders) throws Exception {
         final MediaType mediaType = headers.contentType();
@@ -61,7 +62,7 @@ public class StringResponseConverterFunction implements ResponseConverterFunctio
                 return HttpResponse.of(headers, toHttpData(result, charset), trailingHeaders);
             }
         } else if (result instanceof CharSequence) {
-            return HttpResponse.of(headers.toMutable().contentType(MediaType.PLAIN_TEXT_UTF_8),
+            return HttpResponse.of(headers.toBuilder().contentType(MediaType.PLAIN_TEXT_UTF_8).build(),
                                    HttpData.ofUtf8(((CharSequence) result).toString()),
                                    trailingHeaders);
         }

@@ -56,8 +56,8 @@ public abstract class HttpObjectEncoder {
         return doWriteHeaders(id, streamId, headers, endStream);
     }
 
-    protected abstract ChannelFuture doWriteHeaders(
-            int id, int streamId, HttpHeaders headers, boolean endStream);
+    protected abstract ChannelFuture doWriteHeaders(int id, int streamId, HttpHeaders headers,
+                                                    boolean endStream);
 
     /**
      * Writes an {@link HttpData}.

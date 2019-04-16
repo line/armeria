@@ -60,6 +60,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -230,7 +231,7 @@ public class AnnotatedHttpServiceTest {
     static class VoidTo200ResponseConverter implements ResponseConverterFunction {
         @Override
         public HttpResponse convertResponse(ServiceRequestContext ctx,
-                                            HttpHeaders headers,
+                                            ResponseHeaders headers,
                                             @Nullable Object result,
                                             HttpHeaders trailingHeaders) throws Exception {
             if (result == null) {
@@ -330,7 +331,7 @@ public class AnnotatedHttpServiceTest {
         public HttpResponse postStringAsync2(AggregatedHttpMessage message, RequestContext ctx) {
             validateContext(ctx);
             final HttpResponseWriter response = HttpResponse.streaming();
-            response.write(HttpHeaders.of(HttpStatus.OK));
+            response.write(ResponseHeaders.of(HttpStatus.OK));
             response.write(message.content());
             response.close();
             return response;
@@ -341,7 +342,7 @@ public class AnnotatedHttpServiceTest {
         public AggregatedHttpMessage postStringAggregateResponse1(AggregatedHttpMessage message,
                                                                   RequestContext ctx) {
             validateContext(ctx);
-            return AggregatedHttpMessage.of(HttpHeaders.of(HttpStatus.OK), message.content());
+            return AggregatedHttpMessage.of(ResponseHeaders.of(HttpStatus.OK), message.content());
         }
 
         @Post
@@ -350,7 +351,7 @@ public class AnnotatedHttpServiceTest {
                                                                   RequestContext ctx) {
             validateContextAndRequest(ctx, req);
             final AggregatedHttpMessage message = req.aggregate().join();
-            return AggregatedHttpMessage.of(HttpHeaders.of(HttpStatus.OK), message.content());
+            return AggregatedHttpMessage.of(ResponseHeaders.of(HttpStatus.OK), message.content());
         }
     }
 
@@ -449,10 +450,9 @@ public class AnnotatedHttpServiceTest {
                                  @Param("type") List<UserType> types,
                                  @Param("level") Set<UserLevel> levels) {
             validateContext(ctx);
-            return String.join("/",
-                               ImmutableList.builder().addAll(types).addAll(levels).build()
-                                            .stream().map(e -> ((Enum<?>) e).name())
-                                            .collect(Collectors.toList()));
+            return ImmutableList.builder().addAll(types).addAll(levels).build().stream()
+                                .map(e -> ((Enum<?>) e).name())
+                                .collect(Collectors.joining("/"));
         }
 
         @Get
@@ -624,9 +624,9 @@ public class AnnotatedHttpServiceTest {
         @Post("/customHeader5")
         public String customHeader5(@Header List<Integer> numbers,
                                     @Header Set<String> strings) {
-            return String.join(":",
-                               numbers.stream()
-                                      .map(String::valueOf).collect(Collectors.toList())) + '/' +
+            return numbers.stream()
+                          .map(String::valueOf)
+                          .collect(Collectors.joining(":")) + '/' +
                    String.join(":", strings);
         }
 

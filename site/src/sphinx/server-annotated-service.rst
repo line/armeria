@@ -348,10 +348,10 @@ Other classes automatically injected
 
 The following classes are automatically injected when you specify them on the parameter list of your method.
 
-- :api:`RequestContext`
-- :api:`ServiceRequestContext`
-- :api:`Request`
-- :api:`HttpRequest`
+-
+- :api:`ServiceRequestContext` (or :api:`RequestContext`)
+- :api:`RequestHeaders` (or :api:`HttpHeaders`)
+- :api:`HttpRequest` (or :api:`Request`)
 - :api:`AggregatedHttpMessage`
 - :api:`HttpParameters`
 - :api:`Cookies`
@@ -617,7 +617,7 @@ convert the result to an :api:`HttpResponse`.
     public class MyResponseConverter implements ResponseConverterFunction {
         @Override
         HttpResponse convertResponse(ServiceRequestContext ctx,
-                                     HttpHeaders headers,
+                                     ResponseHeaders headers,
                                      @Nullable Object result,
                                      HttpHeaders trailingHeaders) throws Exception {
             if (result instanceof MyObject) {
@@ -662,7 +662,7 @@ as follows.
     public class MyResponseConverter implements ResponseConverterFunction {
         @Override
         HttpResponse convertResponse(ServiceRequestContext ctx,
-                                     HttpHeaders headers,
+                                     ResponseHeaders headers,
                                      @Nullable Object result,
                                      HttpHeaders trailingHeaders) throws Exception {
             MediaType mediaType = ctx.negotiatedResponseMediaType();
@@ -753,7 +753,7 @@ in a single class and add it to your :api:`ServerBuilder` at once, e.g.
 
         @Override
         HttpResponse convertResponse(ServiceRequestContext ctx,
-                                     HttpHeaders headers,
+                                     ResponseHeaders headers,
                                      @Nullable Object result,
                                      HttpHeaders trailingHeaders) throws Exception { ... }
 
@@ -810,9 +810,11 @@ more response types which can be used in the annotated service.
           @Get("/users")
           public HttpResult<User> getUsers(@Param int start) {
               List<User> users = ...;
-              HttpHeaders headers = HttpHeaders.of(HttpStatus.OK);
-              headers.add(HttpHeaderNames.LINK,
-                          String.format("<https://example.com/users?start=%s>; rel=\"next\"", start + 10));
+              ResponseHeaders headers = new ResponseHeadersBuilder()
+                  .status(HttpStatus.OK)
+                  .add(HttpHeaderNames.LINK,
+                       String.format("<https://example.com/users?start=%s>; rel=\"next\"", start + 10))
+                  .build();
               return HttpResult.of(headers, users);
           }
 

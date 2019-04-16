@@ -26,6 +26,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
+import javax.annotation.Nullable;
+
 import org.opensaml.saml.common.SAMLObjectBuilder;
 import org.opensaml.saml.common.xml.SAMLConstants;
 import org.opensaml.saml.saml2.metadata.AssertionConsumerService;
@@ -50,10 +52,10 @@ import com.google.common.collect.MapMaker;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -65,12 +67,11 @@ final class SamlMetadataServiceFunction implements SamlServiceFunction {
     @VisibleForTesting
     static final MediaType CONTENT_TYPE_SAML_METADATA = MediaType.parse("application/samlmetadata+xml");
 
-    private static final HttpHeaders HTTP_HEADERS =
-            HttpHeaders.of(HttpStatus.OK)
-                       .contentType(CONTENT_TYPE_SAML_METADATA)
-                       .add(HttpHeaderNames.CONTENT_DISPOSITION,
-                            "attachment; filename=\"saml_metadata.xml\"")
-                       .asImmutable();
+    private static final ResponseHeaders HTTP_HEADERS =
+            ResponseHeaders.of(HttpStatus.OK,
+                               HttpHeaderNames.CONTENT_TYPE, CONTENT_TYPE_SAML_METADATA,
+                               HttpHeaderNames.CONTENT_DISPOSITION,
+                               "attachment; filename=\"saml_metadata.xml\"");
 
     private final String entityId;
     private final Credential signingCredential;
@@ -199,7 +200,7 @@ final class SamlMetadataServiceFunction implements SamlServiceFunction {
         return formats;
     }
 
-    private static KeyDescriptor buildKeyDescriptorElement(UsageType type, KeyInfo key) {
+    private static KeyDescriptor buildKeyDescriptorElement(UsageType type, @Nullable KeyInfo key) {
         final KeyDescriptor descriptor = build(KeyDescriptor.DEFAULT_ELEMENT_NAME);
         descriptor.setUse(type);
         descriptor.setKeyInfo(key);

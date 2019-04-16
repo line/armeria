@@ -28,7 +28,8 @@ public class HttpResponseDuplicatorTest {
         final HttpResponseWriter publisher = HttpResponse.streaming();
         final HttpResponseDuplicator resDuplicator = new HttpResponseDuplicator(publisher);
 
-        publisher.write(HttpHeaders.of(HttpStatus.OK).contentType(MediaType.PLAIN_TEXT_UTF_8));
+        publisher.write(ResponseHeaders.of(HttpStatus.OK,
+                                           HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8));
         publisher.write(HttpData.ofUtf8("Armeria "));
         publisher.write(HttpData.ofUtf8("is "));
         publisher.write(HttpData.ofUtf8("awesome!"));

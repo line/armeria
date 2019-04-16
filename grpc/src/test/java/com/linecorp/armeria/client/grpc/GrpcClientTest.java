@@ -721,8 +721,7 @@ public class GrpcClientTest {
                 Clients.newDerivedClient(
                         blockingStub,
                         ClientOption.HTTP_HEADERS.newValue(
-                                HttpHeaders.of()
-                                           .set(TestServiceImpl.EXTRA_HEADER_NAME, "dog")));
+                                HttpHeaders.of(TestServiceImpl.EXTRA_HEADER_NAME, "dog")));
 
         assertThat(stub.emptyCall(EMPTY)).isNotNull();
 
@@ -742,8 +741,7 @@ public class GrpcClientTest {
                 Clients.newDerivedClient(
                         asyncStub,
                         ClientOption.HTTP_HEADERS.newValue(
-                                HttpHeaders.of()
-                                           .set(TestServiceImpl.EXTRA_HEADER_NAME, "dog")));
+                                HttpHeaders.of(TestServiceImpl.EXTRA_HEADER_NAME, "dog")));
 
         final List<Integer> responseSizes = Arrays.asList(50, 100, 150, 200);
         final StreamingOutputCallRequest.Builder streamingOutputBuilder =

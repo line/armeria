@@ -19,12 +19,11 @@ package com.linecorp.armeria.client.circuitbreaker;
 import java.util.concurrent.CompletionStage;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Response;
 
 /**
  * Determines whether a {@link Response} should be reported as a success or a failure to a
- * {@link CircuitBreaker} using the content of a {@link Response}. If you just need the {@link HttpHeaders}
+ * {@link CircuitBreaker} using the content of a {@link Response}. If you just need the HTTP headers
  * to make a decision, use {@link CircuitBreakerStrategy} for efficiency.
  *
  * @param <T> the response type

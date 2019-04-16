@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ProtocolViolationException;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.InboundTrafficController;
@@ -66,8 +67,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
     private static final Logger logger = LoggerFactory.getLogger(Http1RequestDecoder.class);
 
     private static final Http2Settings DEFAULT_HTTP2_SETTINGS = new Http2Settings();
-    private static final com.linecorp.armeria.common.HttpHeaders CONTINUE_RESPONSE =
-            com.linecorp.armeria.common.HttpHeaders.of(HttpStatus.CONTINUE);
+    private static final ResponseHeaders CONTINUE_RESPONSE = ResponseHeaders.of(HttpStatus.CONTINUE);
 
     private static final HttpData DATA_DECODER_FAILURE =
             HttpData.ofUtf8(HttpResponseStatus.BAD_REQUEST + "\nDecoder failure");
@@ -271,11 +271,13 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         req = null;
 
         final HttpData data = content != null ? content : HttpData.ofUtf8(status.toString());
-        final com.linecorp.armeria.common.HttpHeaders headers =
-                com.linecorp.armeria.common.HttpHeaders.of(status.code());
-        headers.set(HttpHeaderNames.CONNECTION, "close");
-        headers.setObject(HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
-        headers.setInt(HttpHeaderNames.CONTENT_LENGTH, data.length());
+        final ResponseHeaders headers =
+                ResponseHeaders.builder()
+                               .status(status.code())
+                               .set(HttpHeaderNames.CONNECTION, "close")
+                               .setObject(HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8)
+                               .setInt(HttpHeaderNames.CONTENT_LENGTH, data.length())
+                               .build();
         writer.writeHeaders(id, 1, headers, false);
         writer.writeData(id, 1, data, true).addListener(ChannelFutureListener.CLOSE);
     }

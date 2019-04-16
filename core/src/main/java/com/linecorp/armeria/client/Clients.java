@@ -25,11 +25,8 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.util.SafeCloseable;
-
-import io.netty.util.AsciiString;
 
 /**
  * Creates a new client that connects to a specified {@link URI}.
@@ -262,7 +259,7 @@ public final class Clients {
 
     /**
      * Sets the specified HTTP header in a thread-local variable so that the header is sent by the client call
-     * made from the current thread. Use the `try-with-resources` block with the returned
+     * made from the current thread. Use the {@code try-with-resources} block with the returned
      * {@link SafeCloseable} to unset the thread-local variable automatically:
      * <pre>{@code
      * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
@@ -288,23 +285,61 @@ public final class Clients {
      *
      * @see #withHttpHeaders(Function)
      */
-    public static SafeCloseable withHttpHeader(AsciiString name, String value) {
+    public static SafeCloseable withHttpHeader(CharSequence name, String value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        return withHttpHeaders(headers -> headers.set(name, value));
+        return withHttpHeaders(headers -> headers.toBuilder().set(name, value).build());
+    }
+
+    /**
+     * Sets the specified HTTP header in a thread-local variable so that the header is sent by the client call
+     * made from the current thread. Use the {@code try-with-resources} block with the returned
+     * {@link SafeCloseable} to unset the thread-local variable automatically:
+     * <pre>{@code
+     * import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_TYPE;
+     * import static com.linecorp.armeria.common.MediaType.JSON_UTF_8;
+     *
+     * try (SafeCloseable ignored = withHttpHeader(CONTENT_TYPE, JSON_UTF_8)) {
+     *     client.executeSomething(..);
+     * }
+     * }</pre>
+     * You can also nest the header manipulation:
+     * <pre>{@code
+     * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
+     * import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_TYPE;
+     * import static com.linecorp.armeria.common.MediaType.JSON_UTF_8;
+     *
+     * try (SafeCloseable ignored = withHttpHeader(CONTENT_TYPE, JSON_UTF_8)) {
+     *     for (String secret : secrets) {
+     *         try (SafeCloseable ignored2 = withHttpHeader(AUTHORIZATION, secret)) {
+     *             // Both CONTENT_TYPE and AUTHORIZATION will be set.
+     *             client.executeSomething(..);
+     *         }
+     *     }
+     * }
+     * }</pre>
+     *
+     * @see #withHttpHeaders(Function)
+     */
+    public static SafeCloseable withHttpHeader(CharSequence name, Object value) {
+        requireNonNull(name, "name");
+        requireNonNull(value, "value");
+        return withHttpHeaders(headers -> headers.toBuilder().setObject(name, value).build());
     }
 
     /**
      * Sets the specified HTTP header manipulating function in a thread-local variable so that the manipulated
-     * headers are sent by the client call made from the current thread. Use the `try-with-resources` block
-     * with the returned {@link SafeCloseable} to unset the thread-local variable automatically:
+     * headers are sent by the client call made from the current thread. Use the {@code try-with-resources}
+     * block with the returned {@link SafeCloseable} to unset the thread-local variable automatically:
      * <pre>{@code
      * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
      * import static com.linecorp.armeria.common.HttpHeaderNames.USER_AGENT;
      *
      * try (SafeCloseable ignored = withHttpHeaders(headers -> {
-     *     headers.set(HttpHeaders.AUTHORIZATION, myCredential)
-     *            .set(HttpHeaders.USER_AGENT, myAgent);
+     *     return headers.toBuilder()
+     *                   .set(HttpHeaders.AUTHORIZATION, myCredential)
+     *                   .set(HttpHeaders.USER_AGENT, myAgent)
+     *                   .build();
      * })) {
      *     client.executeSomething(..);
      * }
@@ -314,9 +349,17 @@ public final class Clients {
      * import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
      * import static com.linecorp.armeria.common.HttpHeaderNames.USER_AGENT;
      *
-     * try (SafeCloseable ignored = withHttpHeaders(h -> h.set(USER_AGENT, myAgent))) {
+     * try (SafeCloseable ignored = withHttpHeaders(h -> {
+     *          return h.toBuilder()
+     *                  .set(USER_AGENT, myAgent)
+     *                  .build();
+     *      })) {
      *     for (String secret : secrets) {
-     *         try (SafeCloseable ignored2 = withHttpHeaders(h -> h.set(AUTHORIZATION, secret))) {
+     *         try (SafeCloseable ignored2 = withHttpHeaders(h -> {
+     *                  return h.toBuilder()
+     *                          .set(AUTHORIZATION, secret)
+     *                          .build();
+     *              })) {
      *             // Both USER_AGENT and AUTHORIZATION will be set.
      *             client.executeSomething(..);
      *         }
@@ -324,18 +367,12 @@ public final class Clients {
      * }
      * }</pre>
      *
-     * @see #withHttpHeader(AsciiString, String)
+     * @see #withHttpHeader(CharSequence, String)
      */
     public static SafeCloseable withHttpHeaders(Function<HttpHeaders, HttpHeaders> headerManipulator) {
         requireNonNull(headerManipulator, "headerManipulator");
         return withContextCustomizer(ctx -> {
-            final HttpHeaders additionalHeaders = ctx.additionalRequestHeaders();
-            final DefaultHttpHeaders headers = new DefaultHttpHeaders();
-            if (!additionalHeaders.isEmpty()) {
-                headers.set(additionalHeaders);
-            }
-
-            final HttpHeaders manipulatedHeaders = headerManipulator.apply(headers);
+            final HttpHeaders manipulatedHeaders = headerManipulator.apply(ctx.additionalRequestHeaders());
             ctx.setAdditionalRequestHeaders(manipulatedHeaders);
         });
     }
@@ -343,8 +380,8 @@ public final class Clients {
     /**
      * Sets the specified {@link ClientRequestContext} customization function in a thread-local variable so that
      * the customized context is used when the client invokes a request from the current thread. Use the
-     * `try-with-resources` block with the returned {@link SafeCloseable} to unset the thread-local variable
-     * automatically:
+     * {@code try-with-resources} block with the returned {@link SafeCloseable} to unset the thread-local
+     * variable automatically:
      * <pre>{@code
      * try (SafeCloseable ignored = withContextCustomizer(ctx -> {
      *     ctx.attr(USER_ID).set(userId);

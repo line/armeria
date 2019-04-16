@@ -23,10 +23,14 @@ import org.junit.Test;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
 import com.linecorp.armeria.internal.InboundTrafficController;
@@ -45,19 +49,20 @@ public class HttpResponseSubscriberTest {
 
     @Test
     public void contentPreview() {
-        final HttpHeaders headers = HttpHeaders.of(HttpMethod.GET, "/");
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/");
         final DefaultServiceRequestContext sctx = serviceRequestContext(headers);
         final HttpResponseSubscriber responseSubscriber = responseSubscriber(headers, sctx);
 
         responseSubscriber.onSubscribe(mock(Subscription.class));
-        responseSubscriber.onNext(HttpHeaders.of(200).contentType(MediaType.PLAIN_TEXT_UTF_8));
+        responseSubscriber.onNext(ResponseHeaders.of(HttpStatus.OK,
+                                                     HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8));
         responseSubscriber.onNext(new ByteBufHttpData(newBuffer("hello"), true));
         responseSubscriber.onComplete();
 
         assertThat(sctx.log().responseContentPreview()).isEqualTo("hello");
     }
 
-    private static DefaultServiceRequestContext serviceRequestContext(HttpHeaders headers) {
+    private static DefaultServiceRequestContext serviceRequestContext(RequestHeaders headers) {
         return (DefaultServiceRequestContext)
                 ServiceRequestContextBuilder.of(HttpRequest.of(headers))
                                             .eventLoop(EventLoopGroups.directEventLoop())
@@ -68,7 +73,7 @@ public class HttpResponseSubscriberTest {
                                             .build();
     }
 
-    private static HttpResponseSubscriber responseSubscriber(HttpHeaders headers,
+    private static HttpResponseSubscriber responseSubscriber(RequestHeaders headers,
                                                              DefaultServiceRequestContext sctx) {
 
         final DecodedHttpRequest req = new DecodedHttpRequest(sctx.eventLoop(), 1, 1, headers, true,

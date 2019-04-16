@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,227 +13,157 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.common;
 
-import static java.util.Objects.requireNonNull;
-
-import java.util.Iterator;
-import java.util.Map.Entry;
-
-import javax.annotation.Nullable;
+import java.util.function.Consumer;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
-import io.netty.handler.codec.Headers;
-import io.netty.util.AsciiString;
-
 /**
- * HTTP/2 headers.
+ * Immutable HTTP/2 headers.
+ *
+ * @see HttpHeadersBuilder
+ * @see RequestHeaders
+ * @see ResponseHeaders
  */
 @JsonSerialize(using = HttpHeadersJsonSerializer.class)
 @JsonDeserialize(using = HttpHeadersJsonDeserializer.class)
-public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, HttpHeaders> {
+public interface HttpHeaders extends HttpObject, HttpHeaderGetters {
 
     /**
-     * An immutable empty HTTP/2 headers.
+     * Creates a new empty builder.
      */
-    HttpHeaders EMPTY_HEADERS = new DefaultHttpHeaders(false, 0).asImmutable();
+    static HttpHeadersBuilder builder() {
+        return new HttpHeadersBuilder();
+    }
 
     /**
-     * Returns new empty HTTP headers.
+     * An empty {@link HttpHeaders}.
+     *
+     * @deprecated Use {@link #of()}.
+     */
+    @Deprecated
+    HttpHeaders EMPTY_HEADERS = of();
+
+    /**
+     * Returns an empty singleton {@link HttpHeaders}.
      */
     static HttpHeaders of() {
-        return new DefaultHttpHeaders();
+        return DefaultHttpHeaders.EMPTY;
     }
 
     /**
-     * Returns new HTTP request headers.
+     * Returns a new {@link HttpHeaders} with the specified header.
      */
-    static HttpHeaders of(HttpMethod method, String path) {
-        return new DefaultHttpHeaders().method(method).path(path);
+    static HttpHeaders of(CharSequence name, String value) {
+        return new HttpHeadersBuilder().add(name, value).build();
     }
 
     /**
-     * Returns new HTTP response headers.
+     * Returns a new {@link HttpHeaders} with the specified header. The value is converted into
+     * a {@link String} via {@link HttpHeadersBase#addObject(CharSequence, Object)}.
      */
-    static HttpHeaders of(int statusCode) {
-        return of(HttpStatus.valueOf(statusCode));
+    static HttpHeaders of(CharSequence name, Object value) {
+        return new HttpHeadersBuilder().addObject(name, value).build();
     }
 
     /**
-     * Returns new HTTP response headers.
+     * Returns a new {@link HttpHeaders} with the specified headers.
      */
-    static HttpHeaders of(HttpStatus status) {
-        return new DefaultHttpHeaders().status(status);
+    static HttpHeaders of(CharSequence name1, String value1,
+                          CharSequence name2, String value2) {
+        return new HttpHeadersBuilder().add(name1, value1)
+                                       .add(name2, value2)
+                                       .build();
     }
 
     /**
-     * Returns new HTTP headers with a single entry.
+     * Returns a new {@link HttpHeaders} with the specified headers. The values are converted into
+     * {@link String}s via {@link HttpHeadersBase#addObject(CharSequence, Object)}.
      */
-    static HttpHeaders of(AsciiString name, String value) {
-        return new DefaultHttpHeaders().add(name, value);
+    static HttpHeaders of(CharSequence name1, Object value1,
+                          CharSequence name2, Object value2) {
+        return new HttpHeadersBuilder().addObject(name1, value1)
+                                       .addObject(name2, value2)
+                                       .build();
     }
 
     /**
-     * Returns new HTTP headers with two entries.
+     * Returns a new {@link HttpHeaders} with the specified headers.
      */
-    static HttpHeaders of(AsciiString name1, String value1, AsciiString name2, String value2) {
-        return new DefaultHttpHeaders().add(name1, value1).add(name2, value2);
+    static HttpHeaders of(CharSequence name1, String value1,
+                          CharSequence name2, String value2,
+                          CharSequence name3, String value3) {
+        return new HttpHeadersBuilder().add(name1, value1)
+                                       .add(name2, value2)
+                                       .add(name3, value3)
+                                       .build();
     }
 
     /**
-     * Returns new HTTP headers with three entries.
+     * Returns a new {@link HttpHeaders} with the specified headers. The values are converted into
+     * {@link String}s via {@link HttpHeadersBase#addObject(CharSequence, Object)}.
      */
-    static HttpHeaders of(AsciiString name1, String value1, AsciiString name2, String value2,
-                          AsciiString name3, String value3) {
-
-        return new DefaultHttpHeaders().add(name1, value1).add(name2, value2)
-                                       .add(name3, value3);
+    static HttpHeaders of(CharSequence name1, Object value1,
+                          CharSequence name2, Object value2,
+                          CharSequence name3, Object value3) {
+        return new HttpHeadersBuilder().addObject(name1, value1)
+                                       .addObject(name2, value2)
+                                       .addObject(name3, value3)
+                                       .build();
     }
 
     /**
-     * Returns new HTTP headers with four entries.
+     * Returns a new {@link HttpHeaders} with the specified headers.
      */
-    static HttpHeaders of(AsciiString name1, String value1, AsciiString name2, String value2,
-                          AsciiString name3, String value3, AsciiString name4, String value4) {
-
-        return new DefaultHttpHeaders().add(name1, value1).add(name2, value2)
-                                       .add(name3, value3).add(name4, value4);
+    static HttpHeaders of(CharSequence name1, String value1,
+                          CharSequence name2, String value2,
+                          CharSequence name3, String value3,
+                          CharSequence name4, String value4) {
+        return new HttpHeadersBuilder().add(name1, value1)
+                                       .add(name2, value2)
+                                       .add(name3, value3)
+                                       .add(name4, value4)
+                                       .build();
     }
 
     /**
-     * Returns a copy of the specified {@link HttpHeaders}.
+     * Returns a new {@link HttpHeaders} with the specified headers. The values are converted into
+     * {@link String}s via {@link HttpHeadersBase#addObject(CharSequence, Object)}.
      */
-    static HttpHeaders copyOf(HttpHeaders headers) {
-        return of().set(requireNonNull(headers, "headers"));
+    static HttpHeaders of(CharSequence name1, Object value1,
+                          CharSequence name2, Object value2,
+                          CharSequence name3, Object value3,
+                          CharSequence name4, Object value4) {
+        return new HttpHeadersBuilder().addObject(name1, value1)
+                                       .addObject(name2, value2)
+                                       .addObject(name3, value3)
+                                       .addObject(name4, value4)
+                                       .build();
     }
 
     /**
-     * Returns an iterator over all HTTP/2 headers. The iteration order is as follows:
-     *   1. All pseudo headers (order not specified).
-     *   2. All non-pseudo headers (in insertion order).
+     * Returns a new builder created from the entries of this headers.
+     *
+     * @see #withMutations(Consumer)
      */
-    @Override
-    Iterator<Entry<AsciiString, String>> iterator();
+    HttpHeadersBuilder toBuilder();
 
     /**
-     * Gets the {@link HttpHeaderNames#METHOD} header or {@code null} if there is no such header.
-     * {@link HttpMethod#UNKNOWN} is returned if the value of the {@link HttpHeaderNames#METHOD} header is
-     * not defined in {@link HttpMethod}.
-     */
-    @Nullable
-    HttpMethod method();
-
-    /**
-     * Sets the {@link HttpHeaderNames#METHOD} header.
-     */
-    HttpHeaders method(HttpMethod method);
-
-    /**
-     * Gets the {@link HttpHeaderNames#SCHEME} header or {@code null} if there is no such header.
-     */
-    @Nullable
-    String scheme();
-
-    /**
-     * Sets the {@link HttpHeaderNames#SCHEME} header.
-     */
-    HttpHeaders scheme(String scheme);
-
-    /**
-     * Gets the {@link HttpHeaderNames#AUTHORITY} header or {@code null} if there is no such header.
-     */
-    @Nullable
-    String authority();
-
-    /**
-     * Sets the {@link HttpHeaderNames#AUTHORITY} header.
-     */
-    HttpHeaders authority(String authority);
-
-    /**
-     * Gets the {@link HttpHeaderNames#PATH} header or {@code null} if there is no such header.
-     */
-    @Nullable
-    String path();
-
-    /**
-     * Sets the {@link HttpHeaderNames#PATH} header.
-     */
-    HttpHeaders path(String path);
-
-    /**
-     * Gets the {@link HttpHeaderNames#STATUS} header or {@code null} if there is no such header.
-     */
-    @Nullable
-    HttpStatus status();
-
-    /**
-     * Sets the {@link HttpHeaderNames#STATUS} header.
-     */
-    HttpHeaders status(int statusCode);
-
-    /**
-     * Sets the {@link HttpHeaderNames#STATUS} header.
-     */
-    HttpHeaders status(HttpStatus status);
-
-    /**
-     * Returns the value of the {@code 'content-type'} header.
-     * @return the valid header value if present. {@code null} otherwise.
-     */
-    @Nullable
-    MediaType contentType();
-
-    /**
-     * Sets the {@link HttpHeaderNames#CONTENT_TYPE} header.
-     */
-    HttpHeaders contentType(MediaType mediaType);
-
-    /**
-     * Copies the entries missing in this headers from the specified {@link Headers}.
-     * This method is a shortcut of the following code:
+     * Returns a new headers which is the result from the mutation by the specified {@link Consumer}.
+     * This method is a shortcut of:
      * <pre>{@code
-     * headers.names().forEach(name -> {
-     *      if (!contains(name)) {
-     *          set(name, headers.getAll(name));
-     *      }
-     * });
+     * builder = toBuilder();
+     * mutator.accept(builder);
+     * return builder.build();
      * }</pre>
+     *
+     * @see #toBuilder()
      */
-    default HttpHeaders setAllIfAbsent(Headers<AsciiString, String, ?> headers) {
-        requireNonNull(headers, "headers");
-        if (!headers.isEmpty()) {
-            headers.names().forEach(name -> {
-                if (!contains(name)) {
-                    set(name, headers.getAll(name));
-                }
-            });
-        }
-        return this;
-    }
-
-    /**
-     * Returns the immutable view of this headers.
-     */
-    default HttpHeaders asImmutable() {
-        return new ImmutableHttpHeaders(this);
-    }
-
-    /**
-     * Returns whether this is immutable or not.
-     */
-    default boolean isImmutable() {
-        return this instanceof ImmutableHttpHeaders;
-    }
-
-    /**
-     * Returns a mutable copy of this headers.
-     * If it is already mutable, it returns {@code this}.
-     */
-    default HttpHeaders toMutable() {
-        return this;
+    default HttpHeaders withMutations(Consumer<HttpHeadersBuilder> mutator) {
+        final HttpHeadersBuilder builder = toBuilder();
+        mutator.accept(builder);
+        return builder.build();
     }
 }

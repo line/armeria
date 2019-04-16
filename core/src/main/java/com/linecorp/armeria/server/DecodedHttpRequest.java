@@ -23,6 +23,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.internal.InboundTrafficController;
 
 import io.netty.channel.ChannelHandlerContext;
@@ -44,7 +45,7 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
     private HttpResponse response;
     private boolean isResponseAborted;
 
-    DecodedHttpRequest(EventLoop eventLoop, int id, int streamId, HttpHeaders headers, boolean keepAlive,
+    DecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers, boolean keepAlive,
                        InboundTrafficController inboundTrafficController, long maxRequestLength) {
 
         super(headers);

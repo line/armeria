@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.common.logback;
 
-import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
@@ -27,7 +26,6 @@ import java.net.InetSocketAddress;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 
@@ -36,7 +34,6 @@ import javax.net.ssl.SSLSession;
 
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
-import org.assertj.core.util.Lists;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -45,18 +42,17 @@ import org.junit.rules.TestName;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
-import com.google.common.collect.ImmutableList;
-
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextBuilder;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.DefaultRpcRequest;
 import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logback.HelloService.hello_args;
@@ -66,10 +62,8 @@ import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.server.PathMappingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContextBuilder;
-import com.linecorp.armeria.server.VirtualHost;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -340,11 +334,13 @@ public class RequestContextExportingAppenderTest {
             final RequestLogBuilder log = ctx.logBuilder();
             log.serializationFormat(ThriftSerializationFormats.BINARY);
             log.requestLength(64);
-            log.requestHeaders(HttpHeaders.of(HttpHeaderNames.USER_AGENT, "some-client"));
+            log.requestHeaders(RequestHeaders.of(HttpMethod.GET, "/foo?bar=baz",
+                                                 HttpHeaderNames.USER_AGENT, "some-client"));
             log.requestContent(RPC_REQ, THRIFT_CALL);
             log.endRequest();
             log.responseLength(128);
-            log.responseHeaders(HttpHeaders.of(200).set(HttpHeaderNames.DATE, "some-date"));
+            log.responseHeaders(ResponseHeaders.of(HttpStatus.OK,
+                                                   HttpHeaderNames.DATE, "some-date"));
             log.responseContent(RPC_RES, THRIFT_REPLY);
             log.endResponse();
 
@@ -402,9 +398,9 @@ public class RequestContextExportingAppenderTest {
                 InetAddress.getByAddress("server.com", new byte[] { 5, 6, 7, 8 }), 8080);
 
         final String pathAndQuery = path + (query != null ? '?' + query : "");
-        final HttpRequest req = HttpRequest.of(HttpHeaders.of(HttpMethod.GET, pathAndQuery)
-                                                          .authority("server.com:8080")
-                                                          .set(HttpHeaderNames.USER_AGENT, "some-client"));
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, pathAndQuery,
+                                                                 HttpHeaderNames.AUTHORITY, "server.com:8080",
+                                                                 HttpHeaderNames.USER_AGENT, "some-client"));
 
         final ServiceRequestContext ctx =
                 ServiceRequestContextBuilder.of(req)
@@ -469,11 +465,13 @@ public class RequestContextExportingAppenderTest {
             final RequestLogBuilder log = ctx.logBuilder();
             log.serializationFormat(ThriftSerializationFormats.BINARY);
             log.requestLength(64);
-            log.requestHeaders(HttpHeaders.of(HttpHeaderNames.USER_AGENT, "some-client"));
+            log.requestHeaders(RequestHeaders.of(HttpMethod.GET, "/bar",
+                                                 HttpHeaderNames.USER_AGENT, "some-client"));
             log.requestContent(RPC_REQ, THRIFT_CALL);
             log.endRequest();
             log.responseLength(128);
-            log.responseHeaders(HttpHeaders.of(200).set(HttpHeaderNames.DATE, "some-date"));
+            log.responseHeaders(ResponseHeaders.of(HttpStatus.OK,
+                                                   HttpHeaderNames.DATE, "some-date"));
             log.responseContent(RPC_RES, THRIFT_REPLY);
             log.endResponse();
 
@@ -517,9 +515,9 @@ public class RequestContextExportingAppenderTest {
                 InetAddress.getByAddress("client.com", new byte[] { 5, 6, 7, 8 }), 5678);
 
         final String pathAndQuery = path + (query != null ? '?' + query : "");
-        final HttpRequest req = HttpRequest.of(HttpHeaders.of(HttpMethod.GET, pathAndQuery)
-                                                          .authority("server.com:8080")
-                                                          .set(HttpHeaderNames.USER_AGENT, "some-client"));
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, pathAndQuery,
+                                                                 HttpHeaderNames.AUTHORITY, "server.com:8080",
+                                                                 HttpHeaderNames.USER_AGENT, "some-client"));
 
         final ClientRequestContext ctx =
                 ClientRequestContextBuilder.of(req)
@@ -554,85 +552,5 @@ public class RequestContextExportingAppenderTest {
         la.start();
         testLogger.addAppender(a);
         return la.list;
-    }
-
-    private static class DummyPathMappingContext implements PathMappingContext {
-
-        private final VirtualHost virtualHost;
-        private final String hostname;
-        private final String path;
-        @Nullable
-        private final String query;
-        private final HttpHeaders headers;
-        private final List<Object> summary;
-        @Nullable
-        private Throwable delayedCause;
-
-        DummyPathMappingContext(VirtualHost virtualHost, String hostname,
-                                String path, @Nullable String query, HttpHeaders headers) {
-            this.virtualHost = requireNonNull(virtualHost, "virtualHost");
-            this.hostname = requireNonNull(hostname, "hostname");
-            this.path = requireNonNull(path, "path");
-            this.query = query;
-            this.headers = requireNonNull(headers, "headers");
-            summary = Lists.newArrayList(hostname, path, headers.method());
-        }
-
-        @Override
-        public VirtualHost virtualHost() {
-            return virtualHost;
-        }
-
-        @Override
-        public String hostname() {
-            return hostname;
-        }
-
-        @Override
-        public HttpMethod method() {
-            return headers.method();
-        }
-
-        @Override
-        public String path() {
-            return path;
-        }
-
-        @Nullable
-        @Override
-        public String query() {
-            return query;
-        }
-
-        @Nullable
-        @Override
-        public MediaType contentType() {
-            return null;
-        }
-
-        @Override
-        public List<MediaType> acceptTypes() {
-            return ImmutableList.of();
-        }
-
-        @Override
-        public boolean isCorsPreflight() {
-            return false;
-        }
-
-        @Override
-        public List<Object> summary() {
-            return summary;
-        }
-
-        @Override
-        public void delayThrowable(Throwable delayedCause) {
-            this.delayedCause = delayedCause;
-        }
-
-        @Override
-        public Optional<Throwable> delayedThrowable() {
-            return Optional.ofNullable(delayedCause);
-        }
     }
 }

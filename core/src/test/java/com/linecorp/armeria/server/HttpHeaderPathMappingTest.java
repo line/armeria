@@ -28,9 +28,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 
 public class HttpHeaderPathMappingTest {
 
@@ -203,19 +203,19 @@ public class HttpHeaderPathMappingTest {
 
     private static PathMappingContext method(HttpMethod method) {
         return DefaultPathMappingContext.of(virtualHost(), "example.com",
-                                            PATH, null, HttpHeaders.of(method, PATH));
+                                            PATH, null, RequestHeaders.of(method, PATH));
     }
 
     private static PathMappingContext consumeType(HttpMethod method, MediaType contentType) {
-        final HttpHeaders headers = HttpHeaders.of(method, PATH);
-        headers.contentType(contentType);
+        final RequestHeaders headers = RequestHeaders.of(method, PATH,
+                                                         HttpHeaderNames.CONTENT_TYPE, contentType);
         return DefaultPathMappingContext.of(virtualHost(), "example.com",
                                             PATH, null, headers);
     }
 
     private static PathMappingContext withAcceptHeader(HttpMethod method, String acceptHeader) {
-        final HttpHeaders headers = HttpHeaders.of(method, PATH);
-        headers.add(HttpHeaderNames.ACCEPT, acceptHeader);
+        final RequestHeaders headers = RequestHeaders.of(method, PATH,
+                                                         HttpHeaderNames.ACCEPT, acceptHeader);
         return DefaultPathMappingContext.of(virtualHost(), "example.com", PATH, null, headers);
     }
 }

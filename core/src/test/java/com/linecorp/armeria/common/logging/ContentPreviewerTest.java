@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Post;
@@ -88,15 +89,15 @@ public class ContentPreviewerTest {
         }
 
         public HttpResponse getBody(String path) throws Exception {
-            return client.execute(HttpHeaders.of(HttpMethod.GET, path).set(HttpHeaderNames.ACCEPT, "utf-8")
-                                             .set(HttpHeaderNames.CONTENT_TYPE,
-                                                  MediaType.ANY_TEXT_TYPE.toString()));
+            return client.execute(RequestHeaders.of(HttpMethod.GET, path,
+                                                    HttpHeaderNames.ACCEPT, "utf-8",
+                                                    HttpHeaderNames.CONTENT_TYPE, MediaType.ANY_TEXT_TYPE));
         }
 
         public HttpResponse postBody(String path, byte[] content, MediaType contentType) {
-            return client.execute(HttpHeaders.of(HttpMethod.POST, path)
-                                             .contentType(contentType)
-                                             .set(HttpHeaderNames.ACCEPT, "utf-8"), content);
+            return client.execute(RequestHeaders.of(HttpMethod.POST, path,
+                                                    HttpHeaderNames.CONTENT_TYPE, contentType,
+                                                    HttpHeaderNames.ACCEPT, "utf-8"), content);
         }
 
         public RequestLog post(String path, byte[] content, MediaType contentType) throws Exception {
@@ -149,20 +150,17 @@ public class ContentPreviewerTest {
             }
 
             public HttpResponse getBody(String path) throws Exception {
-                return client.execute(HttpHeaders.of(HttpMethod.GET, path)
-                                                 .set(HttpHeaderNames.ACCEPT, "utf-8")
-                                                 .set(HttpHeaderNames.CONTENT_TYPE,
-                                                      MediaType.ANY_TEXT_TYPE
-                                                              .toString()));
+                return client.execute(RequestHeaders.of(HttpMethod.GET, path,
+                                                        HttpHeaderNames.ACCEPT, "utf-8",
+                                                        HttpHeaderNames.CONTENT_TYPE, MediaType.ANY_TEXT_TYPE));
             }
 
             public RequestLog post(String path, byte[] content, MediaType contentType) throws Exception {
                 waitingFuture = new CompletableFuture<>();
-                client.execute(HttpHeaders.of(HttpMethod.POST, path)
-                                          .contentType(contentType)
-                                          .set(HttpHeaderNames.ACCEPT, "utf-8")
-                                          .set(HttpHeaderNames.CONTENT_TYPE,
-                                               MediaType.ANY_TEXT_TYPE.toString()),
+                client.execute(RequestHeaders.of(HttpMethod.POST, path,
+                                                 HttpHeaderNames.CONTENT_TYPE, contentType,
+                                                 HttpHeaderNames.ACCEPT, "utf-8",
+                                                 HttpHeaderNames.CONTENT_TYPE, MediaType.ANY_TEXT_TYPE),
                                content);
                 final RequestLog log = waitingFuture.get();
                 waitingFuture = null;
@@ -284,7 +282,8 @@ public class ContentPreviewerTest {
     }
 
     private static Consumer<ByteBuf> plainText(ContentPreviewer writer, Charset charset) {
-        writer.onHeaders(HttpHeaders.of().contentType(MediaType.PLAIN_TEXT_UTF_8.withCharset(charset)));
+        writer.onHeaders(HttpHeaders.of(HttpHeaderNames.CONTENT_TYPE,
+                                        MediaType.PLAIN_TEXT_UTF_8.withCharset(charset)));
         return b -> {
             if (!writer.isDone()) {
                 writer.onData(new ByteBufHttpData(b, false));
@@ -304,7 +303,7 @@ public class ContentPreviewerTest {
 
     private static void testSliceBytes(byte[] bytes, int maxLength, int sliceLength) {
         final ContentPreviewer writer = ContentPreviewer.ofBinary(maxLength, byteBuf -> {
-            byte[] b = new byte[maxLength];
+            final byte[] b = new byte[maxLength];
             assertThat(byteBuf.readableBytes()).isLessThanOrEqualTo(maxLength);
             byteBuf.readBytes(b, 0, Math.min(byteBuf.readableBytes(), maxLength));
             return BaseEncoding.base16().encode(b);
@@ -375,12 +374,12 @@ public class ContentPreviewerTest {
     @Test
     public void testCustomPreviewer() throws Exception {
         ContentPreviewer previewer = new HexDumpContentPreviewer();
-        previewer.onHeaders(HttpHeaders.EMPTY_HEADERS);
+        previewer.onHeaders(HttpHeaders.of());
         previewer.onData(HttpData.of(new byte[] {1,2,3,4}));
         assertThat(previewer.produce()).isEqualTo("01020304");
 
         previewer = new HexDumpContentPreviewer();
-        previewer.onHeaders(HttpHeaders.EMPTY_HEADERS);
+        previewer.onHeaders(HttpHeaders.of());
         previewer.onData(HttpData.of(new byte[] {1,2,3}));
         previewer.onData(HttpData.of(new byte[] {4,5}));
         assertThat(previewer.produce()).isEqualTo("0102030405");

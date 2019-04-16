@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.SocketAddress;
@@ -49,7 +50,7 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     private String decodedPath;
     @Nullable
     private final String query;
-    private final Request request;
+    private volatile Request request;
 
     // Callbacks
     @Nullable
@@ -75,6 +76,24 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
         this.path = requireNonNull(path, "path");
         this.query = query;
         this.request = requireNonNull(request, "request");
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T extends Request> T request() {
+        return (T) request;
+    }
+
+    @Override
+    public final void setRequest(Request req) {
+        requireNonNull(req, "req");
+        final Request oldReq = request;
+        if (oldReq instanceof HttpRequest) {
+            checkArgument(req instanceof HttpRequest, "req must be an HttpRequest: %s", req);
+        } else {
+            checkArgument(req instanceof RpcRequest, "req must be an RpcRequest: %s", req);
+        }
+        request = req;
     }
 
     @Override
@@ -128,12 +147,6 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     @Override
     public final String query() {
         return query;
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public final <T extends Request> T request() {
-        return (T) request;
     }
 
     @Override

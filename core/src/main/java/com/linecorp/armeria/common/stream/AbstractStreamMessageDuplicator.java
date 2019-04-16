@@ -109,31 +109,24 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
     }
 
     /**
-     * Creates a new {@link U} instance that publishes data from the {@code publisher} you create
-     * this factory with.
+     * Creates a new {@link StreamMessage} that duplicates the publisher specified when creating this
+     * duplicator.
      */
-    public U duplicateStream() {
+    public StreamMessage<T> duplicateStream() {
         return duplicateStream(false);
     }
 
     /**
-     * Creates a new {@link U} instance that publishes data from the {@code publisher} you create
-     * this factory with. If you specify the {@code lastStream} as {@code true}, it will prevent further
+     * Creates a new {@link StreamMessage} that duplicates the publisher specified when creating this
+     * duplicator. If you specify the {@code lastStream} as {@code true}, it will prevent further
      * creation of duplicate stream.
      */
-    public U duplicateStream(boolean lastStream) {
+    public StreamMessage<T> duplicateStream(boolean lastStream) {
         if (!processor.isDuplicable()) {
             throw new IllegalStateException("duplicator is closed or last downstream is added.");
         }
-        return doDuplicateStream(new ChildStreamMessage<>(this, processor, lastStream));
+        return new ChildStreamMessage<>(this, processor, lastStream);
     }
-
-    /**
-     * Creates a new {@link U} instance that wraps {@link ChildStreamMessage} and forwards its method
-     * invocations to it.
-     * @param delegate {@link ChildStreamMessage}
-     */
-    protected abstract U doDuplicateStream(StreamMessage<T> delegate);
 
     /**
      * Returns the default {@link EventExecutor} which will be used when a user subscribes to a child

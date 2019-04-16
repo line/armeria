@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -37,7 +38,7 @@ public class ByteArrayResponseConverterFunction implements ResponseConverterFunc
 
     @Override
     public HttpResponse convertResponse(ServiceRequestContext ctx,
-                                        HttpHeaders headers,
+                                        ResponseHeaders headers,
                                         @Nullable Object result,
                                         HttpHeaders trailingHeaders) throws Exception {
         final MediaType contentType = headers.contentType();
@@ -67,10 +68,10 @@ public class ByteArrayResponseConverterFunction implements ResponseConverterFunc
                 return ResponseConverterFunction.fallthrough();
             }
         } else if (result instanceof HttpData) {
-            return HttpResponse.of(headers.toMutable().contentType(MediaType.OCTET_STREAM),
+            return HttpResponse.of(headers.toBuilder().contentType(MediaType.OCTET_STREAM).build(),
                                    (HttpData) result, trailingHeaders);
         } else if (result instanceof byte[]) {
-            return HttpResponse.of(headers.toMutable().contentType(MediaType.OCTET_STREAM),
+            return HttpResponse.of(headers.toBuilder().contentType(MediaType.OCTET_STREAM).build(),
                                    HttpData.of((byte[]) result), trailingHeaders);
         }
 

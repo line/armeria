@@ -20,10 +20,11 @@ import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.ByteBufOrStream;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Listener;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -43,11 +44,10 @@ import io.netty.buffer.Unpooled;
  */
 public abstract class AbstractUnaryGrpcService extends AbstractHttpService {
 
-    private static final HttpHeaders RESPONSE_HEADERS =
-            HttpHeaders.of(HttpStatus.OK)
-                       .add(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto")
-                       .add(GrpcHeaderNames.GRPC_ENCODING, "identity")
-                       .asImmutable();
+    private static final ResponseHeaders RESPONSE_HEADERS =
+            ResponseHeaders.of(HttpStatus.OK,
+                               HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto",
+                               GrpcHeaderNames.GRPC_ENCODING, "identity");
 
     /**
      * Returns an unframed response message to return to the client, given an unframed request message. It is
@@ -77,10 +77,10 @@ public abstract class AbstractUnaryGrpcService extends AbstractHttpService {
                        return HttpResponse.of(
                                RESPONSE_HEADERS,
                                framed,
-                               GrpcTrailersUtil.statusToTrailers(StatusCodes.OK, null, true));
+                               GrpcTrailersUtil.statusToTrailers(StatusCodes.OK, null, true).build());
                    })
                    .exceptionally(t -> {
-                       final HttpHeaders trailers;
+                       final HttpHeadersBuilder trailers;
                        if (t instanceof ArmeriaStatusException) {
                            ArmeriaStatusException statusException = (ArmeriaStatusException) t;
                            trailers = GrpcTrailersUtil.statusToTrailers(
@@ -89,7 +89,7 @@ public abstract class AbstractUnaryGrpcService extends AbstractHttpService {
                            trailers = GrpcTrailersUtil.statusToTrailers(
                                    StatusCodes.INTERNAL, t.getMessage(), false);
                        }
-                       return HttpResponse.of(trailers);
+                       return HttpResponse.of(trailers.build());
                    });
 
         return HttpResponse.from(responseFuture);

@@ -44,6 +44,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 
 import io.netty.buffer.PooledByteBufAllocator;
@@ -77,7 +78,7 @@ public class DefaultHttpRequestTest {
     @Test
     public void abortedAggregation() {
         final Thread mainThread = Thread.currentThread();
-        final DefaultHttpRequest req = new DefaultHttpRequest(HttpHeaders.of(HttpMethod.GET, "/foo"));
+        final DefaultHttpRequest req = new DefaultHttpRequest(RequestHeaders.of(HttpMethod.GET, "/foo"));
         final CompletableFuture<AggregatedHttpMessage> future;
 
         // Practically same execution, but we need to test the both case due to code duplication.
@@ -119,8 +120,8 @@ public class DefaultHttpRequestTest {
         final AggregatedHttpMessage aggregated = req.aggregate().join();
         // Request headers
         assertThat(aggregated.headers()).isEqualTo(
-                HttpHeaders.of(HttpMethod.GET, "/foo")
-                           .add(HttpHeaderNames.CONTENT_LENGTH, "3"));
+                RequestHeaders.of(HttpMethod.GET, "/foo",
+                                  HttpHeaderNames.CONTENT_LENGTH, "3"));
         // Content
         assertThat(aggregated.contentUtf8()).isEqualTo("foo");
         // Trailing headers

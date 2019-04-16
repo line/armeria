@@ -19,7 +19,6 @@ package com.linecorp.armeria.client.retry;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Strings.isNullOrEmpty;
-import static com.linecorp.armeria.common.HttpHeaders.EMPTY_HEADERS;
 import static com.linecorp.armeria.internal.ClientUtil.executeWithFallback;
 
 import java.time.Duration;
@@ -46,6 +45,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestDuplicator;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
+import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 
@@ -154,7 +154,21 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
             return;
         }
 
-        final HttpRequest duplicateReq = rootReqDuplicator.duplicateStream();
+        final int totalAttempts = getTotalAttempts(ctx);
+        final HttpRequest duplicateReq;
+        if (hasInitialAuthority && totalAttempts <= 1) {
+            duplicateReq = rootReqDuplicator.duplicateStream();
+        } else {
+            final RequestHeadersBuilder newHeaders = originalReq.headers().toBuilder();
+            if (!hasInitialAuthority) {
+                newHeaders.remove(HttpHeaderNames.AUTHORITY);
+            }
+            if (totalAttempts > 1) {
+                newHeaders.setInt(ARMERIA_RETRY_COUNT, totalAttempts - 1);
+            }
+            duplicateReq = rootReqDuplicator.duplicateStream(newHeaders.build());
+        }
+
         final ClientRequestContext derivedCtx = ctx.newDerivedContext(duplicateReq);
         ctx.logBuilder().addChild(derivedCtx.log());
 
@@ -166,15 +180,6 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
             }
             return HttpResponse.ofFailure(cause);
         };
-
-        if (!hasInitialAuthority) {
-            duplicateReq.headers().remove(HttpHeaderNames.AUTHORITY);
-        }
-
-        final int totalAttempts = getTotalAttempts(ctx);
-        if (totalAttempts > 1) {
-            duplicateReq.headers().setInt(ARMERIA_RETRY_COUNT, totalAttempts - 1);
-        }
 
         final HttpResponse response = executeWithFallback(delegate(), derivedCtx, duplicateReq, fallback);
 
@@ -248,7 +253,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
     }
 
     private static long getRetryAfterMillis(ClientRequestContext ctx) {
-        final HttpHeaders headers = firstNonNull(ctx.log().responseHeaders(), EMPTY_HEADERS);
+        final HttpHeaders headers = firstNonNull(ctx.log().responseHeaders(), HttpHeaders.of());
         long millisAfter = -1;
         final String value = headers.get(HttpHeaderNames.RETRY_AFTER);
         if (value != null) {

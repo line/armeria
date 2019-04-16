@@ -27,12 +27,12 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Get;
@@ -93,7 +93,7 @@ public class RequestContextAssemblyTest {
         return Flowable.create(emitter -> {
             pool.submit(() -> {
                 for (int i = 0; i < count; i++) {
-                    emitter.onNext("" + count);
+                    emitter.onNext(String.valueOf(count));
                 }
                 emitter.onComplete();
             });
@@ -105,7 +105,7 @@ public class RequestContextAssemblyTest {
         try {
             RequestContextAssembly.enable();
             final HttpClient client = HttpClient.of(rule.uri("/"));
-            assertThat(client.execute(HttpHeaders.of(HttpMethod.GET, "/foo")).aggregate().get().status())
+            assertThat(client.execute(RequestHeaders.of(HttpMethod.GET, "/foo")).aggregate().get().status())
                     .isEqualTo(HttpStatus.OK);
         } finally {
             RequestContextAssembly.disable();
@@ -115,7 +115,7 @@ public class RequestContextAssemblyTest {
     @Test
     public void withoutTracking() throws Exception {
         final HttpClient client = HttpClient.of(rule.uri("/"));
-        assertThat(client.execute(HttpHeaders.of(HttpMethod.GET, "/foo")).aggregate().get().status())
+        assertThat(client.execute(RequestHeaders.of(HttpMethod.GET, "/foo")).aggregate().get().status())
                 .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
@@ -127,21 +127,21 @@ public class RequestContextAssemblyTest {
             return single;
         });
         final HttpClient client = HttpClient.of(rule.uri("/"));
-        client.execute(HttpHeaders.of(HttpMethod.GET, "/single")).aggregate().get();
+        client.execute(RequestHeaders.of(HttpMethod.GET, "/single")).aggregate().get();
         assertThat(calledFlag.get()).isEqualTo(3);
 
         try {
             RequestContextAssembly.enable();
-            client.execute(HttpHeaders.of(HttpMethod.GET, "/single")).aggregate().get();
+            client.execute(RequestHeaders.of(HttpMethod.GET, "/single")).aggregate().get();
             assertThat(calledFlag.get()).isEqualTo(6);
         } finally {
             RequestContextAssembly.disable();
         }
-        client.execute(HttpHeaders.of(HttpMethod.GET, "/single")).aggregate().get();
+        client.execute(RequestHeaders.of(HttpMethod.GET, "/single")).aggregate().get();
         assertThat(calledFlag.get()).isEqualTo(9);
 
         RxJavaPlugins.setOnSingleAssembly(null);
-        client.execute(HttpHeaders.of(HttpMethod.GET, "/single")).aggregate().get();
+        client.execute(RequestHeaders.of(HttpMethod.GET, "/single")).aggregate().get();
         assertThat(calledFlag.get()).isEqualTo(9);
     }
 
@@ -166,7 +166,7 @@ public class RequestContextAssemblyTest {
         });
     }
 
-    private static Completable completable(String input) {
+    private static Completable completable(@SuppressWarnings("unused") String input) {
         RequestContext.current();
         return Completable.create(emitter -> {
             RequestContext.current();

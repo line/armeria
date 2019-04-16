@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.auth;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -28,15 +30,16 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.RequestHeaders;
 
 import io.netty.util.AsciiString;
 
 /**
- * Extracts {@link OAuth1aToken} from {@link HttpHeaders}, in order to be used by
+ * Extracts {@link OAuth1aToken} from {@link RequestHeaders}, in order to be used by
  * {@link HttpAuthServiceBuilder}.
  */
-final class OAuth1aTokenExtractor implements Function<HttpHeaders, OAuth1aToken> {
+final class OAuth1aTokenExtractor implements Function<RequestHeaders, OAuth1aToken> {
 
     private static final Logger logger = LoggerFactory.getLogger(OAuth1aTokenExtractor.class);
     private static final Pattern AUTHORIZATION_HEADER_PATTERN = Pattern.compile(
@@ -44,14 +47,14 @@ final class OAuth1aTokenExtractor implements Function<HttpHeaders, OAuth1aToken>
 
     private final AsciiString header;
 
-    OAuth1aTokenExtractor(AsciiString header) {
-        this.header = header;
+    OAuth1aTokenExtractor(CharSequence header) {
+        this.header = HttpHeaderNames.of(header);
     }
 
     @Nullable
     @Override
-    public OAuth1aToken apply(HttpHeaders headers) {
-        final String authorization = headers.get(header);
+    public OAuth1aToken apply(RequestHeaders headers) {
+        final String authorization = requireNonNull(headers, "headers").get(header);
         if (Strings.isNullOrEmpty(authorization)) {
             return null;
         }

@@ -22,13 +22,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiFunction;
 
-import com.google.common.base.MoreObjects;
-
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
@@ -102,15 +100,8 @@ public interface MeterIdPrefixFunction {
                 }
 
                 if (methodName == null) {
-                    final HttpHeaders requestHeaders = log.requestHeaders();
-                    final HttpMethod httpMethod = requestHeaders.method();
-                    if (httpMethod != null) {
-                        methodName = httpMethod.name();
-                    }
-                }
-
-                if (methodName == null) {
-                    methodName = MoreObjects.firstNonNull(log.method().name(), "__UNKNOWN_METHOD__");
+                    final RequestHeaders requestHeaders = log.requestHeaders();
+                    methodName = requestHeaders.method().name();
                 }
 
                 final List<Tag> tags = new ArrayList<>(4); // method, hostNamePattern, pathMapping, status

@@ -23,13 +23,11 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.Service;
-
-import io.netty.util.AsciiString;
 
 /**
  * Builds a new {@link HttpAuthService}.
@@ -82,7 +80,7 @@ public final class HttpAuthServiceBuilder {
     /**
      * Adds an HTTP basic {@link Authorizer} for the given {@code header}.
      */
-    public HttpAuthServiceBuilder addBasicAuth(Authorizer<? super BasicToken> authorizer, AsciiString header) {
+    public HttpAuthServiceBuilder addBasicAuth(Authorizer<? super BasicToken> authorizer, CharSequence header) {
         return addTokenAuthorizer(new BasicTokenExtractor(requireNonNull(header, "header")),
                                   requireNonNull(authorizer, "authorizer"));
     }
@@ -98,7 +96,7 @@ public final class HttpAuthServiceBuilder {
     /**
      * Adds an OAuth1a {@link Authorizer} for the given {@code header}.
      */
-    public HttpAuthServiceBuilder addOAuth1a(Authorizer<? super OAuth1aToken> authorizer, AsciiString header) {
+    public HttpAuthServiceBuilder addOAuth1a(Authorizer<? super OAuth1aToken> authorizer, CharSequence header) {
         return addTokenAuthorizer(new OAuth1aTokenExtractor(requireNonNull(header, "header")),
                                   requireNonNull(authorizer, "authorizer"));
     }
@@ -113,7 +111,7 @@ public final class HttpAuthServiceBuilder {
     /**
      * Adds an OAuth2 {@link Authorizer} for the given {@code header}.
      */
-    public HttpAuthServiceBuilder addOAuth2(Authorizer<? super OAuth2Token> authorizer, AsciiString header) {
+    public HttpAuthServiceBuilder addOAuth2(Authorizer<? super OAuth2Token> authorizer, CharSequence header) {
         return addTokenAuthorizer(new OAuth2TokenExtractor(requireNonNull(header, "header")),
                                   requireNonNull(authorizer, "authorizer"));
     }
@@ -122,7 +120,7 @@ public final class HttpAuthServiceBuilder {
      * Adds a token-based {@link Authorizer}.
      */
     public <T> HttpAuthServiceBuilder addTokenAuthorizer(
-            Function<HttpHeaders, T> tokenExtractor, Authorizer<? super T> authorizer) {
+            Function<? super RequestHeaders, T> tokenExtractor, Authorizer<? super T> authorizer) {
         requireNonNull(tokenExtractor, "tokenExtractor");
         requireNonNull(authorizer, "authorizer");
         final Authorizer<HttpRequest> requestAuthorizer = (ctx, req) -> {

@@ -22,11 +22,12 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.function.Function;
 
-import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
@@ -37,14 +38,11 @@ import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 
-import io.netty.handler.codec.Headers;
-import io.netty.util.AsciiString;
-
 class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
 
     private final Map<ClientOption<?>, ClientOptionValue<?>> options = new LinkedHashMap<>();
     private final ClientDecorationBuilder decoration = new ClientDecorationBuilder();
-    private final HttpHeaders httpHeaders = new DefaultHttpHeaders();
+    private final HttpHeadersBuilder httpHeaders = HttpHeaders.builder();
 
     /**
      * Creates a new instance with the default options.
@@ -399,9 +397,9 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
     /**
      * Adds the specified HTTP headers.
      */
-    public B addHttpHeaders(Headers<AsciiString, String, ?> httpHeaders) {
+    public B addHttpHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
         requireNonNull(httpHeaders, "httpHeaders");
-        this.httpHeaders.add(httpHeaders);
+        this.httpHeaders.addObject(httpHeaders);
         return self();
     }
 
@@ -418,9 +416,9 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
     /**
      * Sets the specified HTTP headers.
      */
-    public B setHttpHeaders(Headers<AsciiString, String, ?> httpHeaders) {
+    public B setHttpHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> httpHeaders) {
         requireNonNull(httpHeaders, "httpHeaders");
-        this.httpHeaders.setAll(httpHeaders);
+        this.httpHeaders.setObject(httpHeaders);
         return self();
     }
 
@@ -429,7 +427,7 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
         final int numOpts = optVals.size();
         final ClientOptionValue<?>[] optValArray = optVals.toArray(new ClientOptionValue[numOpts + 2]);
         optValArray[numOpts] = ClientOption.DECORATION.newValue(decoration.build());
-        optValArray[numOpts + 1] = ClientOption.HTTP_HEADERS.newValue(httpHeaders);
+        optValArray[numOpts + 1] = ClientOption.HTTP_HEADERS.newValue(httpHeaders.build());
 
         return ClientOptions.of(optValArray);
     }

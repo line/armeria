@@ -20,16 +20,15 @@ import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
 import java.time.Clock;
+import java.util.Map.Entry;
 
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.CacheControl;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpResponse;
-
-import io.netty.handler.codec.Headers;
-import io.netty.util.AsciiString;
 
 /**
  * Builds a new {@link HttpFileService} and its {@link HttpFileServiceConfig}. Use the factory methods in
@@ -84,7 +83,7 @@ public final class HttpFileServiceBuilder {
     private boolean serveCompressedFiles;
     private boolean autoIndex;
     @Nullable
-    private HttpHeaders headers;
+    private HttpHeadersBuilder headers;
 
     private HttpFileServiceBuilder(HttpVfs vfs) {
         this.vfs = requireNonNull(vfs, "vfs");
@@ -146,13 +145,13 @@ public final class HttpFileServiceBuilder {
      * Returns the immutable additional {@link HttpHeaders} which will be set when building an
      * {@link HttpResponse}.
      */
-    private HttpHeaders headers() {
-        return headers != null ? headers.asImmutable() : HttpHeaders.EMPTY_HEADERS;
+    private HttpHeaders buildHeaders() {
+        return headers != null ? headers.build() : HttpHeaders.of();
     }
 
-    private HttpHeaders getOrCreateHeaders() {
+    private HttpHeadersBuilder headersBuilder() {
         if (headers == null) {
-            headers = HttpHeaders.of();
+            headers = HttpHeaders.builder();
         }
         return headers;
     }
@@ -163,16 +162,16 @@ public final class HttpFileServiceBuilder {
     public HttpFileServiceBuilder addHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        getOrCreateHeaders().addObject(HttpHeaderNames.of(name), value);
+        headersBuilder().addObject(HttpHeaderNames.of(name), value);
         return this;
     }
 
     /**
      * Adds the specified HTTP headers.
      */
-    public HttpFileServiceBuilder addHeaders(Headers<AsciiString, String, ?> headers) {
+    public HttpFileServiceBuilder addHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        getOrCreateHeaders().add(headers);
+        headersBuilder().addObject(headers);
         return this;
     }
 
@@ -182,18 +181,16 @@ public final class HttpFileServiceBuilder {
     public HttpFileServiceBuilder setHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        getOrCreateHeaders().setObject(HttpHeaderNames.of(name), value);
+        headersBuilder().setObject(HttpHeaderNames.of(name), value);
         return this;
     }
 
     /**
      * Sets the specified HTTP headers.
      */
-    public HttpFileServiceBuilder setHeaders(Headers<AsciiString, String, ?> headers) {
+    public HttpFileServiceBuilder setHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        if (!headers.isEmpty()) {
-            getOrCreateHeaders().setAll(headers);
-        }
+        headersBuilder().setObject(headers);
         return this;
     }
 
@@ -225,12 +222,12 @@ public final class HttpFileServiceBuilder {
     public HttpFileService build() {
         return new HttpFileService(new HttpFileServiceConfig(
                 vfs, clock, maxCacheEntries, maxCacheEntrySizeBytes,
-                serveCompressedFiles, autoIndex, headers()));
+                serveCompressedFiles, autoIndex, buildHeaders()));
     }
 
     @Override
     public String toString() {
         return HttpFileServiceConfig.toString(this, vfs, clock, maxCacheEntries, maxCacheEntrySizeBytes,
-                                              serveCompressedFiles, autoIndex, headers());
+                                              serveCompressedFiles, autoIndex, headers);
     }
 }

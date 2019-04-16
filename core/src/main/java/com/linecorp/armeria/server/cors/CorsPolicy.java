@@ -35,10 +35,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
-import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.cors.CorsConfig.ConstantValueSupplier;
 import com.linecorp.armeria.server.cors.CorsConfig.InstantValueSupplier;
@@ -213,7 +214,7 @@ public final class CorsPolicy {
      * @return {@link HttpHeaders} the HTTP response headers to be added.
      */
     public HttpHeaders generatePreflightResponseHeaders() {
-        final HttpHeaders headers = new DefaultHttpHeaders();
+        final HttpHeadersBuilder headers = HttpHeaders.builder();
         preflightResponseHeaders.forEach((key, value) -> {
             final Object val = getValue(value);
             if (val instanceof Iterable) {
@@ -222,20 +223,20 @@ public final class CorsPolicy {
                 headers.addObject(key, val);
             }
         });
-        return headers.asImmutable();
+        return headers.build();
     }
 
     /**
      * This is a non CORS specification feature which enables the setting of preflight
      * response headers that might be required by intermediaries.
      *
-     * @param headers the {@link HttpHeaders} to which the preflight headers should be added.
+     * @param headers the {@link ResponseHeadersBuilder} to which the preflight headers should be added.
      */
-    void setCorsPreflightResponseHeaders(HttpHeaders headers) {
+    void setCorsPreflightResponseHeaders(ResponseHeadersBuilder headers) {
         headers.add(generatePreflightResponseHeaders());
     }
 
-    void setCorsAllowCredentials(HttpHeaders headers) {
+    void setCorsAllowCredentials(ResponseHeadersBuilder headers) {
         // The string "*" cannot be used for a resource that supports credentials.
         // https://www.w3.org/TR/cors/#resource-requests
         if (credentialsAllowed &&
@@ -244,7 +245,7 @@ public final class CorsPolicy {
         }
     }
 
-    void setCorsExposeHeaders(HttpHeaders headers) {
+    void setCorsExposeHeaders(ResponseHeadersBuilder headers) {
         if (exposedHeaders.isEmpty()) {
             return;
         }
@@ -252,11 +253,11 @@ public final class CorsPolicy {
         headers.set(HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS, joinedExposedHeaders);
     }
 
-    void setCorsAllowMethods(HttpHeaders headers) {
+    void setCorsAllowMethods(ResponseHeadersBuilder headers) {
         headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS, joinedAllowedRequestMethods);
     }
 
-    void setCorsAllowHeaders(HttpHeaders headers) {
+    void setCorsAllowHeaders(ResponseHeadersBuilder headers) {
         if (allowedRequestHeaders.isEmpty()) {
             return;
         }
@@ -264,7 +265,7 @@ public final class CorsPolicy {
         headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, joinedAllowedRequestHeaders);
     }
 
-    void setCorsMaxAge(HttpHeaders headers) {
+    void setCorsMaxAge(ResponseHeadersBuilder headers) {
         headers.setLong(HttpHeaderNames.ACCESS_CONTROL_MAX_AGE, maxAge);
     }
 

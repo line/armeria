@@ -30,14 +30,14 @@ final class FixedHttpRequest {
     static final class EmptyFixedHttpRequest
             extends EmptyFixedStreamMessage<HttpObject> implements HttpRequest {
 
-        private final HttpHeaders headers;
+        private final RequestHeaders headers;
 
-        EmptyFixedHttpRequest(HttpHeaders headers) {
+        EmptyFixedHttpRequest(RequestHeaders headers) {
             this.headers = headers;
         }
 
         @Override
-        public HttpHeaders headers() {
+        public RequestHeaders headers() {
             return headers;
         }
     }
@@ -45,15 +45,15 @@ final class FixedHttpRequest {
     static final class OneElementFixedHttpRequest
             extends OneElementFixedStreamMessage<HttpObject> implements HttpRequest {
 
-        private final HttpHeaders headers;
+        private final RequestHeaders headers;
 
-        OneElementFixedHttpRequest(HttpHeaders headers, HttpObject obj) {
+        OneElementFixedHttpRequest(RequestHeaders headers, HttpObject obj) {
             super(obj);
             this.headers = headers;
         }
 
         @Override
-        public HttpHeaders headers() {
+        public RequestHeaders headers() {
             return headers;
         }
     }
@@ -61,16 +61,16 @@ final class FixedHttpRequest {
     static final class TwoElementFixedHttpRequest
             extends TwoElementFixedStreamMessage<HttpObject> implements HttpRequest {
 
-        private final HttpHeaders headers;
+        private final RequestHeaders headers;
 
         TwoElementFixedHttpRequest(
-                HttpHeaders headers, HttpObject obj1, HttpObject obj2) {
+                RequestHeaders headers, HttpObject obj1, HttpObject obj2) {
             super(obj1, obj2);
             this.headers = headers;
         }
 
         @Override
-        public HttpHeaders headers() {
+        public RequestHeaders headers() {
             return headers;
         }
     }
@@ -78,15 +78,15 @@ final class FixedHttpRequest {
     static final class RegularFixedHttpRequest
             extends RegularFixedStreamMessage<HttpObject> implements HttpRequest {
 
-        private final HttpHeaders headers;
+        private final RequestHeaders headers;
 
-        RegularFixedHttpRequest(HttpHeaders headers, HttpObject... objs) {
+        RegularFixedHttpRequest(RequestHeaders headers, HttpObject... objs) {
             super(objs);
             this.headers = headers;
         }
 
         @Override
-        public HttpHeaders headers() {
+        public RequestHeaders headers() {
             return headers;
         }
     }

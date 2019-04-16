@@ -58,6 +58,8 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -210,8 +212,8 @@ class HttpClientIntegrationTest {
                         }
 
                         return HttpResponse.of(
-                                HttpHeaders.of(HttpStatus.OK)
-                                           .set(HttpHeaderNames.CACHE_CONTROL, "alwayscache"),
+                                ResponseHeaders.of(HttpStatus.OK,
+                                                   HttpHeaderNames.CACHE_CONTROL, "alwayscache"),
                                 HttpData.ofUtf8(
                                         "METHOD: %s|ACCEPT: %s|BODY: %s",
                                         req.method().name(), accept,
@@ -255,7 +257,7 @@ class HttpClientIntegrationTest {
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
                     return HttpResponse.of(
-                            HttpHeaders.of(HttpStatus.OK),
+                            ResponseHeaders.of(HttpStatus.OK),
                             HttpData.ofUtf8("some content to compress "),
                             HttpData.ofUtf8("more content to compress"));
                 }
@@ -278,7 +280,7 @@ class HttpClientIntegrationTest {
             sb.service("/stream-closed", (ctx, req) -> {
                 ctx.setRequestTimeout(Duration.ZERO);
                 final HttpResponseWriter res = HttpResponse.streaming();
-                res.write(HttpHeaders.of(HttpStatus.OK));
+                res.write(ResponseHeaders.of(HttpStatus.OK));
                 req.subscribe(new Subscriber<HttpObject>() {
                     @Override
                     public void onSubscribe(Subscription s) {
@@ -301,15 +303,15 @@ class HttpClientIntegrationTest {
                 return res;
             });
 
-            sb.service("glob:/oneparam/**", ((ctx, req) -> {
+            sb.service("glob:/oneparam/**", (ctx, req) -> {
                 // The client was able to send a request with an escaped path param. Armeria servers always
                 // decode the path so ctx.path == '/oneparam/foo/bar' here.
-                if (req.headers().path().equals("/oneparam/foo%2Fbar") &&
-                    ctx.path().equals("/oneparam/foo/bar")) {
+                if ("/oneparam/foo%2Fbar".equals(req.headers().path()) &&
+                    "/oneparam/foo/bar".equals(ctx.path())) {
                     return HttpResponse.of("routed");
                 }
                 return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
-            }));
+            });
         }
     };
 
@@ -338,8 +340,8 @@ class HttpClientIntegrationTest {
         final HttpClient client = HttpClient.of(server.uri("/"));
 
         final AggregatedHttpMessage response = client.execute(
-                HttpHeaders.of(HttpMethod.GET, "/httptestbody")
-                           .set(HttpHeaderNames.ACCEPT, "utf-8")).aggregate().get();
+                RequestHeaders.of(HttpMethod.GET, "/httptestbody",
+                                  HttpHeaderNames.ACCEPT, "utf-8")).aggregate().get();
 
         assertEquals(HttpStatus.OK, response.status());
         assertEquals("alwayscache", response.headers().get(HttpHeaderNames.CACHE_CONTROL));
@@ -351,8 +353,8 @@ class HttpClientIntegrationTest {
         final HttpClient client = HttpClient.of(server.uri("/"));
 
         final AggregatedHttpMessage response = client.execute(
-                HttpHeaders.of(HttpMethod.POST, "/httptestbody")
-                           .set(HttpHeaderNames.ACCEPT, "utf-8"),
+                RequestHeaders.of(HttpMethod.POST, "/httptestbody",
+                                  HttpHeaderNames.ACCEPT, "utf-8"),
                 "requestbody日本語").aggregate().get();
 
         assertEquals(HttpStatus.OK, response.status());
@@ -446,8 +448,8 @@ class HttpClientIntegrationTest {
         final String OVERRIDDEN_VALUE = "Overridden";
 
         final AggregatedHttpMessage response =
-                client.execute(HttpHeaders.of(HttpMethod.GET, path)
-                                          .add(headerName, OVERRIDDEN_VALUE))
+                client.execute(RequestHeaders.of(HttpMethod.GET, path,
+                                                 headerName, OVERRIDDEN_VALUE))
                       .aggregate().get();
 
         assertEquals(OVERRIDDEN_VALUE, response.contentUtf8());
@@ -459,7 +461,7 @@ class HttpClientIntegrationTest {
                 .factory(clientFactory).decorator(HttpDecodingClient.newDecorator()).build();
 
         final AggregatedHttpMessage response =
-                client.execute(HttpHeaders.of(HttpMethod.GET, "/encoding")).aggregate().get();
+                client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding")).aggregate().get();
         assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("gzip");
         assertThat(response.contentUtf8()).isEqualTo(
                 "some content to compress more content to compress");
@@ -472,7 +474,7 @@ class HttpClientIntegrationTest {
                 .decorator(HttpDecodingClient.newDecorator(new DeflateStreamDecoderFactory())).build();
 
         final AggregatedHttpMessage response =
-                client.execute(HttpHeaders.of(HttpMethod.GET, "/encoding")).aggregate().get();
+                client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding")).aggregate().get();
         assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("deflate");
         assertThat(response.contentUtf8()).isEqualTo(
                 "some content to compress more content to compress");
@@ -485,7 +487,7 @@ class HttpClientIntegrationTest {
                 .decorator(HttpDecodingClient.newDecorator(new DeflateStreamDecoderFactory())).build();
 
         final AggregatedHttpMessage response =
-                client.execute(HttpHeaders.of(HttpMethod.GET, "/encoding-toosmall")).aggregate().get();
+                client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding-toosmall")).aggregate().get();
         assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isNull();
         assertThat(response.contentUtf8()).isEqualTo("small content");
     }
@@ -544,7 +546,7 @@ class HttpClientIntegrationTest {
         final HttpClient client = HttpClient.of(server.uri("/"));
 
         final AggregatedHttpMessage response = client.execute(
-                HttpHeaders.of(HttpMethod.GET, "/pooled")).aggregate().get();
+                RequestHeaders.of(HttpMethod.GET, "/pooled")).aggregate().get();
 
         assertEquals(HttpStatus.OK, response.status());
         assertThat(response.contentUtf8()).isEqualTo("pooled content");
@@ -556,7 +558,7 @@ class HttpClientIntegrationTest {
         final HttpClient client = HttpClient.of(server.uri("/"));
 
         final AggregatedHttpMessage response = client.execute(
-                HttpHeaders.of(HttpMethod.GET, "/pooled-aware")).aggregate().get();
+                RequestHeaders.of(HttpMethod.GET, "/pooled-aware")).aggregate().get();
 
         assertEquals(HttpStatus.OK, response.status());
         assertThat(response.contentUtf8()).isEqualTo("pooled content");
@@ -568,7 +570,7 @@ class HttpClientIntegrationTest {
         final HttpClient client = HttpClient.of(server.uri("/"));
 
         final AggregatedHttpMessage response = client.execute(
-                HttpHeaders.of(HttpMethod.GET, "/pooled-unaware")).aggregate().get();
+                RequestHeaders.of(HttpMethod.GET, "/pooled-unaware")).aggregate().get();
 
         assertEquals(HttpStatus.OK, response.status());
         assertThat(response.contentUtf8()).isEqualTo("pooled content");
@@ -579,7 +581,8 @@ class HttpClientIntegrationTest {
     void testCloseClientFactory() throws Exception {
         final ClientFactory factory = new ClientFactoryBuilder().build();
         final HttpClient client = factory.newClient("none+" + server.uri("/"), HttpClient.class);
-        final HttpRequestWriter req = HttpRequest.streaming(HttpHeaders.of(HttpMethod.GET, "/stream-closed"));
+        final HttpRequestWriter req = HttpRequest.streaming(RequestHeaders.of(HttpMethod.GET,
+                                                                              "/stream-closed"));
         final HttpResponse res = client.execute(req);
         final AtomicReference<HttpObject> obj = new AtomicReference<>();
         res.subscribe(new Subscriber<HttpObject>() {
@@ -602,7 +605,7 @@ class HttpClientIntegrationTest {
             }
         });
         req.write(HttpData.ofUtf8("not finishing this stream, sorry."));
-        await().untilAsserted(() -> assertThat(obj).hasValue(HttpHeaders.of(HttpStatus.OK)));
+        await().untilAsserted(() -> assertThat(obj).hasValue(ResponseHeaders.of(HttpStatus.OK)));
         factory.close();
         await().untilAsserted(() -> assertThat(completed).hasValue(true));
     }

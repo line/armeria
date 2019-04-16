@@ -31,10 +31,10 @@ import org.junit.Test;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.zookeeper.ZooKeeperTestBase;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.zookeeper.NodeValueCodec;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -132,9 +132,7 @@ public class ZooKeeperRegistrationTest extends ZooKeeperTestBase {
         }
 
         protected HttpResponse echo(AggregatedHttpMessage aReq) {
-            return HttpResponse.of(
-                    HttpHeaders.of(HttpStatus.OK),
-                    aReq.content());
+            return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK), aReq.content());
         }
     }
 }

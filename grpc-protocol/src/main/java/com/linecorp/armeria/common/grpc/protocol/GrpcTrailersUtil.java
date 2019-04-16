@@ -18,10 +18,11 @@ package com.linecorp.armeria.common.grpc.protocol;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
 
 /**
  * Utility for creating response trailers for a gRPC status. Trailers are only returned from a server.
@@ -33,16 +34,17 @@ public final class GrpcTrailersUtil {
      * either trailers-only or normal trailers based on {@code headersSent}, whether leading headers have
      * already been sent to the client.
      */
-    public static HttpHeaders statusToTrailers(int code, @Nullable String message, boolean headersSent) {
-        final HttpHeaders trailers;
+    public static HttpHeadersBuilder statusToTrailers(int code, @Nullable String message, boolean headersSent) {
+        final HttpHeadersBuilder trailers;
         if (headersSent) {
             // Normal trailers.
-            trailers = new DefaultHttpHeaders();
+            trailers = HttpHeaders.builder();
         } else {
             // Trailers only response
-            trailers = new DefaultHttpHeaders(true, 3, true)
-                    .status(HttpStatus.OK)
-                    .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto");
+            trailers = ResponseHeaders.builder()
+                                      .endOfStream(true)
+                                      .add(HttpHeaderNames.STATUS, HttpStatus.OK.codeAsText())
+                                      .add(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto");
         }
         trailers.add(GrpcHeaderNames.GRPC_STATUS, Integer.toString(code));
 

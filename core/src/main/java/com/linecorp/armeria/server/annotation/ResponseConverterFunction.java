@@ -22,10 +22,9 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.internal.FallthroughException;
 import com.linecorp.armeria.server.ServiceRequestContext;
-
-import io.netty.util.AsciiString;
 
 /**
  * Converts a {@code result} object to {@link HttpResponse}. The class implementing this interface would
@@ -49,21 +48,19 @@ public interface ResponseConverterFunction {
      *                {@link ServiceRequestContext#negotiatedResponseMediaType()} returns it.
      *                If the method returns {@link HttpResult}, this headers is the same headers from
      *                {@link HttpResult#headers()}
-     *                The headers could be immutable, so please call {@link HttpHeaders#toMutable()}.
      *                Please note that the additional headers set by
-     *                {@link ServiceRequestContext#addAdditionalResponseHeader(AsciiString, String)}
+     *                {@link ServiceRequestContext#addAdditionalResponseHeader(CharSequence, Object)}
      *                and {@link AdditionalHeader} are not included in this headers.
      * @param result The result of the service method.
      * @param trailingHeaders The HTTP trailers that you might want to use to create the {@link HttpResponse}.
      *                        If the annotated method returns {@link HttpResult}, this trailers is the same
      *                        trailers from {@link HttpResult#trailingHeaders()}.
-     *                        The trailers could be immutable, so please call {@link HttpHeaders#toMutable()}.
      *                        Please note that the additional trailers set by
-     *                        {@link ServiceRequestContext#addAdditionalResponseTrailer(AsciiString, String)}
+     *                        {@link ServiceRequestContext#addAdditionalResponseTrailer(CharSequence, Object)}
      *                        and {@link AdditionalTrailer} are not included in this trailers.
      */
     HttpResponse convertResponse(ServiceRequestContext ctx,
-                                 HttpHeaders headers,
+                                 ResponseHeaders headers,
                                  @Nullable Object result,
                                  HttpHeaders trailingHeaders) throws Exception;
 

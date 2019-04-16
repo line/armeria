@@ -19,12 +19,11 @@ package com.linecorp.armeria.client.retry;
 import java.util.concurrent.CompletionStage;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Response;
 
 /**
  * Determines whether a failed request should be retried using the content of a {@link Response}.
- * If you just need the {@link HttpHeaders} to make a decision, use {@link RetryStrategy} for efficiency.
+ * If you just need the headers to make a decision, use {@link RetryStrategy} for efficiency.
  *
  * @param <T> the response type
  */

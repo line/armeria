@@ -359,11 +359,6 @@ public class StreamMessageDuplicatorTest {
         StreamMessageDuplicator(StreamMessage<String> publisher) {
             super(publisher, String::length, ImmediateEventExecutor.INSTANCE, 0);
         }
-
-        @Override
-        public StreamMessage<String> doDuplicateStream(StreamMessage<String> delegate) {
-            return new StreamMessageWrapper<>(delegate);
-        }
     }
 
     private static class StringSubscriber implements Subscriber<String>, BiConsumer<Void, Throwable> {
@@ -427,11 +422,6 @@ public class StreamMessageDuplicatorTest {
             extends AbstractStreamMessageDuplicator<ByteBuf, StreamMessage<ByteBuf>> {
         ByteBufDuplicator(StreamMessage<ByteBuf> publisher) {
             super(publisher, ByteBuf::capacity, ImmediateEventExecutor.INSTANCE, 0);
-        }
-
-        @Override
-        protected StreamMessage<ByteBuf> doDuplicateStream(StreamMessage<ByteBuf> delegate) {
-            return new StreamMessageWrapper<>(delegate);
         }
     }
 

@@ -57,6 +57,8 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerListenerAdapter;
@@ -239,7 +241,7 @@ public final class JettyService implements HttpService {
         req.aggregate().handle((aReq, cause) -> {
             if (cause != null) {
                 logger.warn("{} Failed to aggregate a request:", ctx, cause);
-                res.close(HttpHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
+                res.close(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
                 return null;
             }
 
@@ -320,8 +322,8 @@ public final class JettyService implements HttpService {
 
         uriBuf.append(ctx.sessionProtocol().isTls() ? "https" : "http");
         uriBuf.append("://");
-        uriBuf.append(aHeaders.authority());
-        uriBuf.append(aHeaders.path());
+        uriBuf.append(aHeaders.get(HttpHeaderNames.AUTHORITY));
+        uriBuf.append(aHeaders.get(HttpHeaderNames.PATH));
 
         final HttpURI uri = new HttpURI(uriBuf.toString());
         uri.setPath(ctx.mappedPath());
@@ -335,24 +337,25 @@ public final class JettyService implements HttpService {
             }
         });
 
-        return new MetaData.Request(
-                aHeaders.method().name(), uri, HttpVersion.HTTP_1_1, jHeaders, aReq.content().length());
+        return new MetaData.Request(aHeaders.get(HttpHeaderNames.METHOD), uri,
+                                    HttpVersion.HTTP_1_1, jHeaders, aReq.content().length());
     }
 
-    private static HttpHeaders toResponseHeaders(ArmeriaHttpTransport transport) {
+    private static ResponseHeaders toResponseHeaders(ArmeriaHttpTransport transport) {
         final MetaData.Response info = transport.info;
         if (info == null) {
             throw new IllegalStateException("response metadata unavailable");
         }
 
-        final HttpHeaders headers = HttpHeaders.of(HttpStatus.valueOf(info.getStatus()));
+        final ResponseHeadersBuilder headers = ResponseHeaders.builder();
+        headers.status(info.getStatus());
         info.getFields().forEach(e -> headers.add(HttpHeaderNames.of(e.getName()), e.getValue()));
 
         if (transport.method != HttpMethod.HEAD) {
             headers.setLong(HttpHeaderNames.CONTENT_LENGTH, transport.contentLength);
         }
 
-        return headers;
+        return headers.build();
     }
 
     private static final class ArmeriaHttpTransport implements HttpTransport {

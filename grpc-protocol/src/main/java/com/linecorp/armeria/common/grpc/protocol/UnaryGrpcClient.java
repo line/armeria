@@ -27,11 +27,11 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.ByteBufOrStream;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Listener;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
@@ -77,13 +77,13 @@ public class UnaryGrpcClient {
      * probably use normal gRPC stubs instead of this class.
      */
     public CompletableFuture<byte[]> execute(String uri, byte[] payload) {
-        HttpRequest request = HttpRequest.of(
-                HttpHeaders.of(HttpMethod.POST, uri)
-                           .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto"),
+        final HttpRequest request = HttpRequest.of(
+                RequestHeaders.of(HttpMethod.POST, uri,
+                                  HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto"),
                 HttpData.of(payload));
         return httpClient.execute(request).aggregate()
                          .thenApply(msg -> {
-                             if (!msg.status().equals(HttpStatus.OK)) {
+                             if (!HttpStatus.OK.equals(msg.status())) {
                                  throw new ArmeriaStatusException(
                                          StatusCodes.INTERNAL,
                                          "Non-successful HTTP response code: " + msg.status());

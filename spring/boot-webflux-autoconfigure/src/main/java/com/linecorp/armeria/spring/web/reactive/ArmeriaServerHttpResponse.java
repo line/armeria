@@ -49,12 +49,13 @@ import org.springframework.util.MultiValueMap;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 
-import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.channel.EventLoop;
@@ -78,12 +79,11 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
          */
         NEW,
         /**
-         * Started to prepare an {@link com.linecorp.armeria.common.HttpHeaders} to be emitted.
+         * Started to prepare an {@link ResponseHeaders} to be emitted.
          */
         COMMITTING,
         /**
-         * The {@link com.linecorp.armeria.common.HttpHeaders} has been ready and not allowed for
-         * modification anymore.
+         * The {@link ResponseHeaders} has been ready and not allowed for modification anymore.
          */
         COMMITTED
     }
@@ -101,7 +101,7 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
     private final CompletableFuture<HttpResponse> future;
     private final DataBufferFactoryWrapper<?> factoryWrapper;
 
-    private final com.linecorp.armeria.common.HttpHeaders armeriaHeaders = new DefaultHttpHeaders();
+    private final ResponseHeadersBuilder armeriaHeaders = ResponseHeaders.builder();
 
     ArmeriaServerHttpResponse(ServiceRequestContext ctx,
                               CompletableFuture<HttpResponse> future,
@@ -128,10 +128,14 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
         }
     }
 
+    @Nullable
     @Override
     public HttpStatus getStatusCode() {
-        final com.linecorp.armeria.common.HttpStatus status = armeriaHeaders.status();
-        return status != null ? HttpStatus.resolve(status.code()) : null;
+        final String status = armeriaHeaders.get(HttpHeaderNames.STATUS);
+        if (status == null) {
+            return null;
+        }
+        return HttpStatus.resolve(com.linecorp.armeria.common.HttpStatus.valueOf(status).code());
     }
 
     @Override
@@ -178,7 +182,7 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
     private Mono<Void> write(Flux<? extends DataBuffer> publisher) {
         return Mono.defer(() -> {
             final HttpResponse response = HttpResponse.of(
-                    new HttpResponseProcessor(ctx.eventLoop(), armeriaHeaders,
+                    new HttpResponseProcessor(ctx.eventLoop(), armeriaHeaders.build(),
                                               publisher.map(factoryWrapper::toHttpData)));
             future.complete(response);
             return Mono.fromFuture(response.completionFuture());
@@ -191,7 +195,7 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
         }
 
         commitActions.add(() -> Mono.fromRunnable(() -> {
-            if (armeriaHeaders.status() == null) {
+            if (!armeriaHeaders.contains(HttpHeaderNames.STATUS)) {
                 // If there is no status code specified, set 200 OK by default.
                 armeriaHeaders.status(com.linecorp.armeria.common.HttpStatus.OK);
             }
@@ -253,7 +257,7 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
             return Mono.empty();
         }
 
-        final HttpResponse response = HttpResponse.of(armeriaHeaders);
+        final HttpResponse response = HttpResponse.of(armeriaHeaders.build());
         future.complete(response);
         logger.debug("{} Response future has been completed with an HttpResponse", ctx);
         return Mono.fromFuture(response.completionFuture());

@@ -73,8 +73,9 @@ public class HttpClientWithRequestLogTest {
     public void invalidPath() {
         final HttpClient client = new HttpClientBuilder(LOCAL_HOST)
                 .decorator((delegate, ctx, req) -> {
-                    req.headers().path("/%");
-                    return delegate.execute(ctx, req);
+                    final HttpRequest badReq = HttpRequest.of(req, req.headers().toBuilder()
+                                                                      .path("/%").build());
+                    return delegate.execute(ctx, badReq);
                 })
                 .decorator(new ExceptionHoldingDecorator())
                 .build();

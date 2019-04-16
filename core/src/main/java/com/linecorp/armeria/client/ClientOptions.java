@@ -32,7 +32,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 
-import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -73,7 +72,7 @@ public final class ClientOptions extends AbstractOptions {
             RESPONSE_TIMEOUT_MILLIS.newValue(Flags.defaultResponseTimeoutMillis()),
             MAX_RESPONSE_LENGTH.newValue(Flags.defaultMaxResponseLength()),
             DECORATION.newValue(ClientDecoration.NONE),
-            HTTP_HEADERS.newValue(HttpHeaders.EMPTY_HEADERS)
+            HTTP_HEADERS.newValue(HttpHeaders.of())
     };
 
     /**
@@ -163,7 +162,7 @@ public final class ClientOptions extends AbstractOptions {
             }
         }
 
-        return new DefaultHttpHeaders().add(headers).asImmutable();
+        return headers;
     }
 
     private ClientOptions(ClientOptionValue<?>... options) {
@@ -273,7 +272,7 @@ public final class ClientOptions extends AbstractOptions {
      * {@link SessionProtocol} is HTTP.
      */
     public HttpHeaders httpHeaders() {
-        return getOrElse(HTTP_HEADERS, HttpHeaders.EMPTY_HEADERS);
+        return getOrElse(HTTP_HEADERS, HttpHeaders.of());
     }
 
     public ContentPreviewerFactory requestContentPreviewerFactory() {

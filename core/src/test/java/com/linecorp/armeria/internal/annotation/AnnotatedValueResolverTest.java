@@ -43,9 +43,10 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.NoAnnotatedParameterException;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.RequestObjectResolver;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.ResolverContext;
@@ -82,19 +83,19 @@ public class AnnotatedValueResolverTest {
     static final ResolverContext resolverContext;
     static final ServiceRequestContext context;
     static final HttpRequest request;
-    static final HttpHeaders originalHeaders;
+    static final RequestHeaders originalHeaders;
 
     static {
         final String path = "/";
         final String query = existingHttpParameters.stream().map(p -> p + '=' + p)
                                                    .collect(Collectors.joining("&"));
 
-        final HttpHeaders headers = HttpHeaders.of(HttpMethod.GET, path + '?' + query);
+        final RequestHeadersBuilder headers = RequestHeaders.builder(HttpMethod.GET, path + '?' + query);
         headers.set(HttpHeaderNames.COOKIE, "a=1;b=2", "c=3", "a=4");
         existingHttpHeaders.forEach(name -> headers.set(name, headerValues));
 
-        request = HttpRequest.of(headers);
-        originalHeaders = HttpHeaders.copyOf(request.headers()).asImmutable();
+        originalHeaders = headers.build();
+        request = HttpRequest.of(originalHeaders);
 
         final PathMappingResult pathMappingResult = PathMappingResult.of(
                 path, query,

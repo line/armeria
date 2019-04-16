@@ -28,9 +28,9 @@ import org.springframework.util.MultiValueMap;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -48,9 +48,8 @@ public class ArmeriaServerHttpRequestTest {
     @Test
     public void readBodyStream() throws Exception {
         final HttpRequest httpRequest =
-                HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/"),
-                               Flux.just("a", "b", "c", "d", "e")
-                                   .map(HttpData::ofUtf8));
+                HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/"),
+                               Flux.just("a", "b", "c", "d", "e").map(HttpData::ofUtf8));
 
         final ServiceRequestContext ctx = newRequestContext(httpRequest);
         final ArmeriaServerHttpRequest req = request(ctx);
@@ -74,8 +73,8 @@ public class ArmeriaServerHttpRequestTest {
 
     @Test
     public void getCookies() {
-        final HttpRequest httpRequest = HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/")
-                                                                  .add(HttpHeaderNames.COOKIE, "a=1;b=2"));
+        final HttpRequest httpRequest = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/",
+                                                                         HttpHeaderNames.COOKIE, "a=1;b=2"));
         final ServiceRequestContext ctx = newRequestContext(httpRequest);
         final ArmeriaServerHttpRequest req = request(ctx);
 
@@ -91,9 +90,8 @@ public class ArmeriaServerHttpRequestTest {
     @Test
     public void cancel() {
         final HttpRequest httpRequest =
-                HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/"),
-                               Flux.just("a", "b", "c", "d", "e")
-                                   .map(HttpData::ofUtf8));
+                HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/"),
+                               Flux.just("a", "b", "c", "d", "e").map(HttpData::ofUtf8));
 
         final ServiceRequestContext ctx = newRequestContext(httpRequest);
         final ArmeriaServerHttpRequest req = request(ctx);

@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
@@ -53,6 +54,8 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.FallthroughException;
@@ -104,7 +107,7 @@ public class AnnotatedHttpService implements HttpService {
     private final ResponseConverterFunction responseConverter;
 
     private final PathMapping pathMapping;
-    private final HttpHeaders defaultHttpHeaders;
+    private final ResponseHeaders defaultHttpHeaders;
     private final HttpHeaders defaultHttpTrailers;
 
     private final ResponseType responseType;
@@ -114,7 +117,7 @@ public class AnnotatedHttpService implements HttpService {
                          List<ExceptionHandlerFunction> exceptionHandlers,
                          List<ResponseConverterFunction> responseConverters,
                          PathMapping pathMapping,
-                         HttpHeaders defaultHttpHeaders,
+                         ResponseHeaders defaultHttpHeaders,
                          HttpHeaders defaultHttpTrailers) {
         this.object = requireNonNull(object, "object");
         this.method = requireNonNull(method, "method");
@@ -127,8 +130,8 @@ public class AnnotatedHttpService implements HttpService {
         aggregationStrategy = AggregationStrategy.from(resolvers);
         this.pathMapping = requireNonNull(pathMapping, "pathMapping");
 
-        this.defaultHttpHeaders = requireNonNull(defaultHttpHeaders, "defaultHttpHeaders").asImmutable();
-        this.defaultHttpTrailers = requireNonNull(defaultHttpTrailers, "defaultHttpTrailers").asImmutable();
+        this.defaultHttpHeaders = requireNonNull(defaultHttpHeaders, "defaultHttpHeaders");
+        this.defaultHttpTrailers = requireNonNull(defaultHttpTrailers, "defaultHttpTrailers");
         final Class<?> returnType = method.getReturnType();
         if (HttpResponse.class.isAssignableFrom(returnType)) {
             responseType = ResponseType.HTTP_RESPONSE;
@@ -141,9 +144,10 @@ public class AnnotatedHttpService implements HttpService {
         this.method.setAccessible(true);
     }
 
-    private ResponseConverterFunction responseConverter(Method method,
-                                                        List<ResponseConverterFunction> responseConverters,
-                                                        ExceptionHandlerFunction exceptionHandler) {
+    private static ResponseConverterFunction responseConverter(
+            Method method, List<ResponseConverterFunction> responseConverters,
+            ExceptionHandlerFunction exceptionHandler) {
+
         final Type actualType;
         if (HttpResult.class.isAssignableFrom(method.getReturnType())) {
             final ParameterizedType type = (ParameterizedType) method.getGenericReturnType();
@@ -234,12 +238,12 @@ public class AnnotatedHttpService implements HttpService {
             case COMPLETION_STAGE:
                 return f.thenCompose(msg -> toCompletionStage(invoke(ctx, req, msg)))
                         .handle((result, cause) -> cause == null ? convertResponse(ctx, req, null, result,
-                                                                                   HttpHeaders.EMPTY_HEADERS)
+                                                                                   HttpHeaders.of())
                                                                  : exceptionHandler.handleException(ctx, req,
                                                                                                     cause));
             default:
                 return f.thenApplyAsync(msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg),
-                                                               HttpHeaders.EMPTY_HEADERS),
+                                                               HttpHeaders.of()),
                                         ctx.blockingTaskExecutor());
         }
     }
@@ -263,7 +267,7 @@ public class AnnotatedHttpService implements HttpService {
     private HttpResponse convertResponse(ServiceRequestContext ctx, HttpRequest req,
                                          @Nullable HttpHeaders headers, @Nullable Object result,
                                          HttpHeaders trailingHeaders) {
-        final HttpHeaders newHeaders;
+        final ResponseHeaders newHeaders;
         final HttpHeaders newTrailingHeaders;
         if (result instanceof HttpResult) {
             final HttpResult<?> httpResult = (HttpResult<?>) result;
@@ -272,8 +276,8 @@ public class AnnotatedHttpService implements HttpService {
             newTrailingHeaders = httpResult.trailingHeaders();
         } else {
             newHeaders = setHttpStatus(
-                    headers == null ? addNegotiatedResponseMediaType(ctx, HttpHeaders.EMPTY_HEADERS)
-                                    : headers);
+                    headers == null ? addNegotiatedResponseMediaType(ctx, HttpHeaders.of())
+                                    : ResponseHeaders.builder().add(headers));
             newTrailingHeaders = trailingHeaders;
         }
 
@@ -305,28 +309,29 @@ public class AnnotatedHttpService implements HttpService {
         }
     }
 
-    private HttpHeaders addNegotiatedResponseMediaType(ServiceRequestContext ctx,
-                                                       HttpHeaders headers) {
+    private static ResponseHeadersBuilder addNegotiatedResponseMediaType(ServiceRequestContext ctx,
+                                                                         HttpHeaders headers) {
+
         final MediaType negotiatedResponseMediaType = ctx.negotiatedResponseMediaType();
         if (negotiatedResponseMediaType == null || headers.contentType() != null) {
             // Do not overwrite 'content-type'.
-            return headers;
+            return ResponseHeaders.builder()
+                                  .add(headers);
         }
 
-        return headers.isImmutable() ? HttpHeaders.copyOf(headers).contentType(negotiatedResponseMediaType)
-                                     : headers.contentType(negotiatedResponseMediaType);
+        return ResponseHeaders.builder()
+                              .add(headers)
+                              .contentType(negotiatedResponseMediaType);
     }
 
-    private HttpHeaders setHttpStatus(HttpHeaders headers) {
-        if (headers.status() != null) {
+    private ResponseHeaders setHttpStatus(ResponseHeadersBuilder headers) {
+        if (headers.contains(HttpHeaderNames.STATUS)) {
             // Do not overwrite HTTP status.
-            return headers;
+            return headers.build();
         }
 
         final HttpStatus defaultHttpStatus = defaultHttpHeaders.status();
-        assert defaultHttpStatus != null;
-        return headers.isImmutable() ? HttpHeaders.copyOf(headers).status(defaultHttpStatus)
-                                     : headers.status(defaultHttpStatus);
+        return headers.status(defaultHttpStatus).build();
     }
 
     /**
@@ -424,7 +429,7 @@ public class AnnotatedHttpService implements HttpService {
 
         @Override
         public HttpResponse convertResponse(ServiceRequestContext ctx,
-                                            HttpHeaders headers,
+                                            ResponseHeaders headers,
                                             @Nullable Object result,
                                             HttpHeaders trailingHeaders) throws Exception {
             try (SafeCloseable ignored = ctx.push(false)) {
@@ -517,7 +522,7 @@ public class AnnotatedHttpService implements HttpService {
         @Override
         @SuppressWarnings("unchecked")
         public HttpResponse convertResponse(ServiceRequestContext ctx,
-                                            HttpHeaders headers,
+                                            ResponseHeaders headers,
                                             @Nullable Object result,
                                             HttpHeaders trailingHeaders) throws Exception {
             final CompletableFuture<?> f;

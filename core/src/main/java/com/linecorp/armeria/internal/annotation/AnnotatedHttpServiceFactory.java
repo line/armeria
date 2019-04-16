@@ -74,11 +74,14 @@ import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.DefaultValues;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.NoParameterException;
@@ -229,7 +232,7 @@ public final class AnnotatedHttpServiceFactory {
         });
     }
 
-    private static <T extends Annotation> void setAdditionalHeader(HttpHeaders headers,
+    private static <T extends Annotation> void setAdditionalHeader(HttpHeadersBuilder headers,
                                                                    AnnotatedElement element,
                                                                    String clsAlias,
                                                                    String elementAlias,
@@ -334,9 +337,10 @@ public final class AnnotatedHttpServiceFactory {
                                   "invalid HTTP status code: %s (expected: >= 0)", statusCode);
                     return HttpStatus.valueOf(statusCode);
                 });
-        final HttpHeaders defaultHeaders = HttpHeaders.of(defaultResponseStatus(defaultResponseStatus, method));
+        final ResponseHeadersBuilder defaultHeaders =
+                ResponseHeaders.builder(defaultResponseStatus(defaultResponseStatus, method));
 
-        final HttpHeaders defaultTrailingHeaders = HttpHeaders.of();
+        final HttpHeadersBuilder defaultTrailingHeaders = HttpHeaders.builder();
         final String classAlias = clazz.getName();
         final String methodAlias = String.format("%s.%s()", classAlias, method.getName());
         setAdditionalHeader(defaultHeaders, clazz, "header", classAlias, "class", AdditionalHeader.class,
@@ -374,9 +378,10 @@ public final class AnnotatedHttpServiceFactory {
             };
         }
         return new AnnotatedHttpServiceElement(pathMapping,
-                                               new AnnotatedHttpService(object, method, resolvers, eh,
-                                                                        res, pathMapping, defaultHeaders,
-                                                                        defaultTrailingHeaders),
+                                               new AnnotatedHttpService(object, method, resolvers,
+                                                                        eh, res, pathMapping,
+                                                                        defaultHeaders.build(),
+                                                                        defaultTrailingHeaders.build()),
                                                decorator(method, clazz, initialDecorator));
     }
 

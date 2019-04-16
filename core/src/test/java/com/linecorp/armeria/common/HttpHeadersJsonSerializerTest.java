@@ -37,9 +37,7 @@ public class HttpHeadersJsonSerializerTest {
 
     @Test
     public void multipleValues() {
-        final HttpHeaders headers = new DefaultHttpHeaders();
-        headers.add(NAME, "0");
-        headers.add(NAME, "1");
+        final HttpHeaders headers = HttpHeaders.of(NAME, "0", NAME, "1");
         assertThatJson(mapper.valueToTree(headers)).isEqualTo("{\"a\":[\"0\",\"1\"]}");
     }
 }

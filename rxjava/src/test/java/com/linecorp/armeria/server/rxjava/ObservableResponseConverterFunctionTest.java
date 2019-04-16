@@ -31,10 +31,10 @@ import com.google.common.collect.ImmutableList.Builder;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.ProducesJson;
@@ -265,7 +265,7 @@ public class ObservableResponseConverterFunctionTest {
             @Override
             public void onComplete() {
                 final Iterator<HttpObject> it = received.build().iterator();
-                final HttpHeaders headers = (HttpHeaders) it.next();
+                final ResponseHeaders headers = (ResponseHeaders) it.next();
                 assertThat(headers.status()).isEqualTo(HttpStatus.OK);
                 assertThat(headers.contentType()).isEqualTo(MediaType.JSON_SEQ);
                 // JSON Text Sequences: *(Record Separator[0x1E] JSON-text Line Feed[0x0A])

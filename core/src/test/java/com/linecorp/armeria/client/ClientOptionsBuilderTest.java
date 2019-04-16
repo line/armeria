@@ -87,7 +87,6 @@ public class ClientOptionsBuilderTest {
         final ClientOptionsBuilder b = new ClientOptionsBuilder();
 
         b.option(ClientOption.HTTP_HEADERS.newValue(HttpHeaders.of(HttpHeaderNames.ACCEPT, "*/*")));
-        assertThat(b.build().httpHeaders().get(HttpHeaderNames.ACCEPT)).isEqualTo("*/*");
 
         // Add another header to ensure that the builder does not replace the previous one.
         b.option(ClientOption.HTTP_HEADERS.newValue(HttpHeaders.of(HttpHeaderNames.USER_AGENT, "foo")));
@@ -98,28 +97,40 @@ public class ClientOptionsBuilderTest {
     }
 
     @Test
-    public void testSetHttpHeader() {
+    public void testSetHttpHeaders() {
         final ClientOptionsBuilder b = new ClientOptionsBuilder();
-        b.setHttpHeader(HttpHeaderNames.AUTHORIZATION, "Basic QWxhZGRpbjpPcGVuU2VzYW1l");
+        b.setHttpHeaders(HttpHeaders.of(HttpHeaderNames.AUTHORIZATION, "Basic QWxhZGRpbjpPcGVuU2VzYW1l"));
 
         assertThat(b.build().httpHeaders().get(HttpHeaderNames.AUTHORIZATION))
                 .isEqualTo("Basic QWxhZGRpbjpPcGVuU2VzYW1l");
+    }
 
+    @Test
+    public void testSetHttpHeader() {
+        final ClientOptionsBuilder b = new ClientOptionsBuilder();
         // Ensure setHttpHeader replaces instead of adding.
+        b.setHttpHeader(HttpHeaderNames.AUTHORIZATION, "Basic QWxhZGRpbjpPcGVuU2VzYW1l");
         b.setHttpHeader(HttpHeaderNames.AUTHORIZATION, "Lost token");
+
         assertThat(b.build().httpHeaders().get(HttpHeaderNames.AUTHORIZATION)).isEqualTo("Lost token");
     }
 
     @Test
-    public void testAddHttpHeader() {
+    public void testAddHttpHeaders() {
         final ClientOptionsBuilder b = new ClientOptionsBuilder();
         b.addHttpHeaders(HttpHeaders.of(HttpHeaderNames.AUTHORIZATION, "Basic QWxhZGRpbjpPcGVuU2VzYW1l"));
 
         assertThat(b.build().httpHeaders().get(HttpHeaderNames.AUTHORIZATION))
                 .isEqualTo("Basic QWxhZGRpbjpPcGVuU2VzYW1l");
+    }
 
+    @Test
+    public void testAddHttpHeader() {
+        final ClientOptionsBuilder b = new ClientOptionsBuilder();
         // Ensure addHttpHeader does not replace.
+        b.addHttpHeader(HttpHeaderNames.AUTHORIZATION, "Basic QWxhZGRpbjpPcGVuU2VzYW1l");
         b.addHttpHeader(HttpHeaderNames.AUTHORIZATION, "Lost token");
+
         assertThat(b.build().httpHeaders().getAll(HttpHeaderNames.AUTHORIZATION)).containsExactly(
                 "Basic QWxhZGRpbjpPcGVuU2VzYW1l", "Lost token");
     }

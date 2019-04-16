@@ -32,15 +32,16 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.grpc.StatusCauseException;
 import com.linecorp.armeria.common.grpc.ThrowableProto;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
+import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 
 import io.grpc.Decompressor;
 import io.grpc.DecompressorRegistry;
@@ -110,21 +111,22 @@ public class HttpStreamReader implements Subscriber<HttpObject>, BiFunction<Void
             final HttpHeaders headers = (HttpHeaders) obj;
 
             if (!sawLeadingHeaders) {
-                final HttpStatus status = headers.status();
-                if (status == null) {
+                final String statusText = headers.get(HttpHeaderNames.STATUS);
+                if (statusText == null) {
                     // Not allowed to have empty leading headers, kill the stream hard.
                     transportStatusListener.transportReportStatus(
                             Status.INTERNAL.withDescription("Missing HTTP status code"));
                     return;
                 }
 
-                if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
+                if (ArmeriaHttpUtil.isInformational(statusText)) {
                     // Skip informational headers.
                     return;
                 }
 
                 sawLeadingHeaders = true;
 
+                final HttpStatus status = HttpStatus.valueOf(statusText);
                 if (!status.equals(HttpStatus.OK)) {
                     transportStatusListener.transportReportStatus(
                             GrpcStatus.httpStatusToGrpcStatus(status.code()));

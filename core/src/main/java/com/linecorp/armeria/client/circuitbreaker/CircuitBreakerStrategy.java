@@ -22,10 +22,10 @@ import java.util.function.BiFunction;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.ResponseHeaders;
 
 /**
  * Determines whether a {@link Response} should be reported as a success or a failure to a
@@ -66,7 +66,7 @@ public interface CircuitBreakerStrategy {
      * {@link CircuitBreaker#onSuccess()} is called so that the {@link CircuitBreaker} increases its success
      * count and uses it to make a decision to close or open the circuit. If {@code false} is returned, it works
      * the other way around. If {@code null} is returned, the {@link CircuitBreaker} ignores it.
-     * To retrieve the response {@link HttpHeaders}, you can use the specified {@link ClientRequestContext}:
+     * To retrieve the {@link ResponseHeaders}, you can use the specified {@link ClientRequestContext}:
      *
      * <pre>{@code
      * CompletionStage<Backoff> shouldReportAsSuccess(ClientRequestContext ctx, @Nullable Throwable cause) {
@@ -74,7 +74,7 @@ public interface CircuitBreakerStrategy {
      *         return CompletableFuture.completedFuture(false);
      *     }
      *
-     *     HttpHeaders responseHeaders = ctx.log().responseHeaders();
+     *     ResponseHeaders responseHeaders = ctx.log().responseHeaders();
      *     if (responseHeaders.status().codeClass() == HttpStatusClass.SERVER_ERROR) {
      *         return CompletableFuture.completedFuture(false);
      *     }

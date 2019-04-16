@@ -20,6 +20,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -118,14 +119,18 @@ public final class ProxyService extends AbstractHttpService {
         return res;
     }
 
-    private static void addForwarded(ServiceRequestContext ctx, HttpRequest req) {
+    private static HttpRequest addForwarded(ServiceRequestContext ctx, HttpRequest req) {
         // This is a simplified example. Please refer to https://tools.ietf.org/html/rfc7239
         // for more information about Forwarded header.
         final StringBuilder sb = new StringBuilder();
         sb.append("for: ").append(ctx.<InetSocketAddress>remoteAddress().getAddress().getHostAddress());
         sb.append(", host: ").append(req.authority());
         sb.append(", proto: ").append(ctx.sessionProtocol());
-        req.headers().add(HttpHeaderNames.FORWARDED, sb.toString());
+
+        final RequestHeaders newHeaders = req.headers().toBuilder()
+                                             .add(HttpHeaderNames.FORWARDED, sb.toString())
+                                             .build();
+        return HttpRequest.of(req, newHeaders);
     }
 
     private static HttpResponse addViaHeader(HttpResponse res) {
@@ -134,9 +139,9 @@ public final class ProxyService extends AbstractHttpService {
             protected HttpObject filter(HttpObject obj) {
                 // You can remove or add specific headers to a response.
                 if (obj instanceof HttpHeaders) {
-                    final HttpHeaders resHeaders = ((HttpHeaders) obj).toMutable();
-                    resHeaders.add(HttpHeaderNames.VIA, viaHeaderValue);
-                    return resHeaders;
+                    return ((HttpHeaders) obj).toBuilder()
+                                              .add(HttpHeaderNames.VIA, viaHeaderValue)
+                                              .build();
                 }
                 return obj;
             }

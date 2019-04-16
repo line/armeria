@@ -30,6 +30,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
@@ -113,7 +114,7 @@ public class AbstractUnaryGrpcServiceTest {
         AggregatedHttpMessage message =
                 client.post("/armeria.grpc.testing.TestService/UnaryCall", "foobarbreak").aggregate().join();
 
-        assertThat(message.headers().status()).isEqualTo(HttpStatus.OK);
+        assertThat(message.headers().get(HttpHeaderNames.STATUS)).isEqualTo(HttpStatus.OK.codeAsText());
         assertThat(message.headers().get(GrpcHeaderNames.GRPC_STATUS))
                 .isEqualTo(Integer.toString(StatusCodes.INTERNAL));
         assertThat(message.headers().get(GrpcHeaderNames.GRPC_MESSAGE)).isNotBlank();

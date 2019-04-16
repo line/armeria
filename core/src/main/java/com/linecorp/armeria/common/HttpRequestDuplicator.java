@@ -51,7 +51,7 @@ import io.netty.util.concurrent.EventExecutor;
  */
 public class HttpRequestDuplicator extends AbstractStreamMessageDuplicator<HttpObject, HttpRequest> {
 
-    private final HttpHeaders headers;
+    private final RequestHeaders headers;
 
     /**
      * Creates a new instance wrapping a {@link HttpRequest} and publishing to multiple subscribers.
@@ -91,19 +91,45 @@ public class HttpRequestDuplicator extends AbstractStreamMessageDuplicator<HttpO
     }
 
     @Override
-    protected HttpRequest doDuplicateStream(StreamMessage<HttpObject> delegate) {
-        return new DuplicateHttpRequest(delegate);
+    public HttpRequest duplicateStream() {
+        return duplicateStream(headers);
     }
 
-    private class DuplicateHttpRequest
+    @Override
+    public HttpRequest duplicateStream(boolean lastStream) {
+        return duplicateStream(headers, lastStream);
+    }
+
+    /**
+     * Creates a new {@link HttpRequest} instance that publishes data from the {@code publisher} you create
+     * this factory with.
+     */
+    public HttpRequest duplicateStream(RequestHeaders newHeaders) {
+        return duplicateStream(newHeaders, false);
+    }
+
+    /**
+     * Creates a new {@link HttpRequest} instance that publishes data from the {@code publisher} you create
+     * this factory with. If you specify the {@code lastStream} as {@code true}, it will prevent further
+     * creation of duplicate stream.
+     */
+    public HttpRequest duplicateStream(RequestHeaders newHeaders, boolean lastStream) {
+        return new DuplicateHttpRequest(super.duplicateStream(lastStream), newHeaders);
+    }
+
+    private static class DuplicateHttpRequest
             extends StreamMessageWrapper<HttpObject> implements HttpRequest {
 
-        DuplicateHttpRequest(StreamMessage<? extends HttpObject> delegate) {
+        private final RequestHeaders headers;
+
+        DuplicateHttpRequest(StreamMessage<? extends HttpObject> delegate,
+                             RequestHeaders headers) {
             super(delegate);
+            this.headers = headers;
         }
 
         @Override
-        public HttpHeaders headers() {
+        public RequestHeaders headers() {
             return headers;
         }
 
