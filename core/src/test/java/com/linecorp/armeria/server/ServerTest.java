@@ -358,6 +358,60 @@ public class ServerTest {
         threads.forEach(t -> assertThat(t.getName()).startsWith(prefix));
     }
 
+    @Test
+    public void gracefulShutdownBlockingTaskExecutor() {
+        final Queue<Thread> threads = new LinkedTransferQueue<>();
+        final ExecutorService executor = Executors.newSingleThreadExecutor();
+
+        final Server server = new ServerBuilder()
+                .blockingTaskExecutor(executor, true)
+                .service("/", (ctx, req) -> HttpResponse.of(200))
+                .serverListener(new ThreadRecordingServerListener(threads))
+                .build();
+
+        threads.add(server.start().thenApply(unused -> Thread.currentThread()).join());
+
+        executor.execute(() -> {
+            try {
+                Thread.sleep(processDelayMillis * 2);
+            } catch (InterruptedException ignored) {
+                // Ignored
+            }
+        });
+
+        threads.add(server.stop().thenApply(unused -> Thread.currentThread()).join());
+
+        assertThat(server.config().blockingTaskExecutor().isShutdown()).isTrue();
+        assertThat(server.config().blockingTaskExecutor().isTerminated()).isTrue();
+    }
+
+    @Test
+    public void notGracefulShutdownBlockingTaskExecutor() {
+        final Queue<Thread> threads = new LinkedTransferQueue<>();
+        final ExecutorService executor = Executors.newSingleThreadExecutor();
+
+        final Server server = new ServerBuilder()
+                .blockingTaskExecutor(executor, false)
+                .service("/", (ctx, req) -> HttpResponse.of(200))
+                .serverListener(new ThreadRecordingServerListener(threads))
+                .build();
+
+        threads.add(server.start().thenApply(unused -> Thread.currentThread()).join());
+
+        executor.execute(() -> {
+            try {
+                Thread.sleep(processDelayMillis * 2);
+            } catch (InterruptedException ignored) {
+                // Ignored
+            }
+        });
+
+        threads.add(server.stop().thenApply(unused -> Thread.currentThread()).join());
+
+        assertThat(server.config().blockingTaskExecutor().isShutdown()).isFalse();
+        assertThat(server.config().blockingTaskExecutor().isTerminated()).isFalse();
+    }
+
     private static void testSimple(
             String reqLine, String expectedStatusLine, String... expectedHeaders) throws Exception {
 
