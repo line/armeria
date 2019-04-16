@@ -95,6 +95,7 @@ import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.netty.handler.ssl.ClientAuth;
+import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty.util.NetUtil;
 import io.prometheus.client.CollectorRegistry;
@@ -389,6 +390,10 @@ public final class ArmeriaConfigurationUtil {
             sb.tls(keyManagerFactory, sslContextBuilder -> {
                 sslContextBuilder.trustManager(trustManagerFactory);
 
+                final SslProvider sslProvider = ssl.getProvider();
+                if (sslProvider != null) {
+                    sslContextBuilder.sslProvider(sslProvider);
+                }
                 final List<String> enabledProtocols = ssl.getEnabledProtocols();
                 if (enabledProtocols != null) {
                     sslContextBuilder.protocols(enabledProtocols.toArray(new String[enabledProtocols.size()]));
