@@ -637,7 +637,7 @@ public class ThriftServiceTest {
                                             .eventLoop(eventLoop.get())
                                             .serverConfigurator(builder -> {
                                                 builder.blockingTaskExecutor(ImmediateEventExecutor.INSTANCE,
-                                                                             true);
+                                                                             false);
                                                 builder.verboseResponses(true);
                                             })
                                             .build();

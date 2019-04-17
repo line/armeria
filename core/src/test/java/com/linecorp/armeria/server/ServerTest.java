@@ -48,6 +48,8 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import com.google.common.util.concurrent.MoreExecutors;
+
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
@@ -360,16 +362,14 @@ public class ServerTest {
 
     @Test
     public void gracefulShutdownBlockingTaskExecutor() {
-        final Queue<Thread> threads = new LinkedTransferQueue<>();
         final ExecutorService executor = Executors.newSingleThreadExecutor();
 
         final Server server = new ServerBuilder()
                 .blockingTaskExecutor(executor, true)
                 .service("/", (ctx, req) -> HttpResponse.of(200))
-                .serverListener(new ThreadRecordingServerListener(threads))
                 .build();
 
-        threads.add(server.start().thenApply(unused -> Thread.currentThread()).join());
+        server.start().thenApply(unused -> Thread.currentThread()).join();
 
         executor.execute(() -> {
             try {
@@ -379,7 +379,7 @@ public class ServerTest {
             }
         });
 
-        threads.add(server.stop().thenApply(unused -> Thread.currentThread()).join());
+        server.stop().thenApply(unused -> Thread.currentThread()).join();
 
         assertThat(server.config().blockingTaskExecutor().isShutdown()).isTrue();
         assertThat(server.config().blockingTaskExecutor().isTerminated()).isTrue();
@@ -387,16 +387,14 @@ public class ServerTest {
 
     @Test
     public void notGracefulShutdownBlockingTaskExecutor() {
-        final Queue<Thread> threads = new LinkedTransferQueue<>();
         final ExecutorService executor = Executors.newSingleThreadExecutor();
 
         final Server server = new ServerBuilder()
                 .blockingTaskExecutor(executor, false)
                 .service("/", (ctx, req) -> HttpResponse.of(200))
-                .serverListener(new ThreadRecordingServerListener(threads))
                 .build();
 
-        threads.add(server.start().thenApply(unused -> Thread.currentThread()).join());
+        server.start().thenApply(unused -> Thread.currentThread()).join();
 
         executor.execute(() -> {
             try {
@@ -406,10 +404,11 @@ public class ServerTest {
             }
         });
 
-        threads.add(server.stop().thenApply(unused -> Thread.currentThread()).join());
+        server.stop().thenApply(unused -> Thread.currentThread()).join();
 
         assertThat(server.config().blockingTaskExecutor().isShutdown()).isFalse();
         assertThat(server.config().blockingTaskExecutor().isTerminated()).isFalse();
+        assertThat(MoreExecutors.shutdownAndAwaitTermination(executor, 10, TimeUnit.SECONDS)).isTrue();
     }
 
     private static void testSimple(

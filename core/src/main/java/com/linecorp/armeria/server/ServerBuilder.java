@@ -652,7 +652,7 @@ public final class ServerBuilder {
      */
     @Deprecated
     public ServerBuilder blockingTaskExecutor(Executor blockingTaskExecutor) {
-        this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+        blockingTaskExecutor(blockingTaskExecutor, false);
         return this;
     }
 

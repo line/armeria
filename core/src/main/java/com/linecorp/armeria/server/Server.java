@@ -456,17 +456,25 @@ public final class Server implements AutoCloseable {
 
         private void finishDoStop(CompletableFuture<Void> future) {
             if (config.shutdownBlockingTaskExecutorOnStop()) {
+                final ExecutorService executor;
                 if (config.blockingTaskExecutor() instanceof InterminableExecutorService) {
-                    final ExecutorService service =
+                    executor =
                             ((InterminableExecutorService) config.blockingTaskExecutor()).getExecutorService();
-                    try {
-                        service.shutdown();
-                        while (!service.isTerminated()) {
-                            service.awaitTermination(500, TimeUnit.MILLISECONDS);
+                } else {
+                    executor = config.blockingTaskExecutor();
+                }
+
+                try {
+                    executor.shutdown();
+                    while (!executor.isTerminated()) {
+                        try {
+                            executor.awaitTermination(1, TimeUnit.DAYS);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
                         }
-                    } catch (Exception e) {
-                        logger.warn("Failed to shutdown the {}:", service.getClass().getSimpleName(), e);
                     }
+                } catch (Exception e) {
+                    logger.warn("Failed to shutdown the {}:", executor, e);
                 }
             }
 
