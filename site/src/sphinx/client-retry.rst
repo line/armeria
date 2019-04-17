@@ -270,7 +270,7 @@ when the time of whole retry session has passed the time previously configured u
 
 .. code-block:: java
 
-    ClientBuilder.defaultResponseTimeoutMillis(millis);
+    ClientBuilder.responseTimeoutMillis(millis);
     // or..
     ClientRequestContext.setResponseTimeoutMillis(millis);
 

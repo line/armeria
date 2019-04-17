@@ -40,7 +40,7 @@ import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import io.netty.handler.codec.Headers;
 import io.netty.util.AsciiString;
 
-class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<?>> {
+class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
 
     private final Map<ClientOption<?>, ClientOptionValue<?>> options = new LinkedHashMap<>();
     private final ClientDecorationBuilder decoration = new ClientDecorationBuilder();
@@ -125,49 +125,108 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<?>> {
     }
 
     /**
-     * Sets the default timeout of a socket write attempt in milliseconds.
+     * Sets the timeout of a socket write attempt.
      *
-     * @param defaultWriteTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
+     * @deprecated Use {@link #writeTimeout(Duration)}.
+     *
+     * @param writeTimeout the timeout. {@code 0} disables the timeout.
      */
-    public B defaultWriteTimeoutMillis(long defaultWriteTimeoutMillis) {
-        return option(ClientOption.DEFAULT_WRITE_TIMEOUT_MILLIS, defaultWriteTimeoutMillis);
+    @Deprecated
+    public B defaultWriteTimeout(Duration writeTimeout) {
+        return writeTimeoutMillis(requireNonNull(writeTimeout, "writeTimeout").toMillis());
     }
 
     /**
-     * Sets the default timeout of a socket write attempt.
+     * Sets the timeout of a socket write attempt in milliseconds.
      *
-     * @param defaultWriteTimeout the timeout. {@code 0} disables the timeout.
+     * @deprecated Use {@link #writeTimeoutMillis(long)}.
+     *
+     * @param writeTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
      */
-    public B defaultWriteTimeout(Duration defaultWriteTimeout) {
-        return defaultWriteTimeoutMillis(requireNonNull(defaultWriteTimeout, "defaultWriteTimeout").toMillis());
+    @Deprecated
+    public B defaultWriteTimeoutMillis(long writeTimeoutMillis) {
+        return writeTimeoutMillis(writeTimeoutMillis);
     }
 
     /**
-     * Sets the default timeout of a response in milliseconds.
+     * Sets the timeout of a socket write attempt.
      *
-     * @param defaultResponseTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
+     * @param writeTimeout the timeout. {@code 0} disables the timeout.
      */
-    public B defaultResponseTimeoutMillis(long defaultResponseTimeoutMillis) {
-        return option(ClientOption.DEFAULT_RESPONSE_TIMEOUT_MILLIS, defaultResponseTimeoutMillis);
+    public B writeTimeout(Duration writeTimeout) {
+        return writeTimeoutMillis(requireNonNull(writeTimeout, "writeTimeout").toMillis());
     }
 
     /**
-     * Sets the default timeout of a response.
+     * Sets the timeout of a socket write attempt in milliseconds.
      *
-     * @param defaultResponseTimeout the timeout. {@code 0} disables the timeout.
+     * @param writeTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
      */
-    public B defaultResponseTimeout(Duration defaultResponseTimeout) {
-        return defaultResponseTimeoutMillis(
-                requireNonNull(defaultResponseTimeout, "defaultResponseTimeout").toMillis());
+    public B writeTimeoutMillis(long writeTimeoutMillis) {
+        return option(ClientOption.WRITE_TIMEOUT_MILLIS, writeTimeoutMillis);
     }
 
     /**
-     * Sets the default maximum allowed length of a server response in bytes.
+     * Sets the timeout of a response.
      *
-     * @param defaultMaxResponseLength the maximum length in bytes. {@code 0} disables the limit.
+     * @deprecated Use {@link #responseTimeout(Duration)}.
+     *
+     * @param responseTimeout the timeout. {@code 0} disables the timeout.
      */
-    public B defaultMaxResponseLength(long defaultMaxResponseLength) {
-        return option(ClientOption.DEFAULT_MAX_RESPONSE_LENGTH, defaultMaxResponseLength);
+    @Deprecated
+    public B defaultResponseTimeout(Duration responseTimeout) {
+        return responseTimeoutMillis(requireNonNull(responseTimeout, "responseTimeout").toMillis());
+    }
+
+    /**
+     * Sets the timeout of a response in milliseconds.
+     *
+     * @deprecated Use {@link #responseTimeoutMillis(long)}.
+     *
+     * @param responseTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
+     */
+    @Deprecated
+    public B defaultResponseTimeoutMillis(long responseTimeoutMillis) {
+        return responseTimeoutMillis(responseTimeoutMillis);
+    }
+
+    /**
+     * Sets the timeout of a response.
+     *
+     * @param responseTimeout the timeout. {@code 0} disables the timeout.
+     */
+    public B responseTimeout(Duration responseTimeout) {
+        return responseTimeoutMillis(requireNonNull(responseTimeout, "responseTimeout").toMillis());
+    }
+
+    /**
+     * Sets the timeout of a response in milliseconds.
+     *
+     * @param responseTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
+     */
+    public B responseTimeoutMillis(long responseTimeoutMillis) {
+        return option(ClientOption.RESPONSE_TIMEOUT_MILLIS, responseTimeoutMillis);
+    }
+
+    /**
+     * Sets the maximum allowed length of a server response in bytes.
+     *
+     * @deprecated Use {@link #maxResponseLength(long)}.
+     *
+     * @param maxResponseLength the maximum length in bytes. {@code 0} disables the limit.
+     */
+    @Deprecated
+    public B defaultMaxResponseLength(long maxResponseLength) {
+        return maxResponseLength(maxResponseLength);
+    }
+
+    /**
+     * Sets the maximum allowed length of a server response in bytes.
+     *
+     * @param maxResponseLength the maximum length in bytes. {@code 0} disables the limit.
+     */
+    public B maxResponseLength(long maxResponseLength) {
+        return option(ClientOption.MAX_RESPONSE_LENGTH, maxResponseLength);
     }
 
     /**
@@ -197,29 +256,29 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<?>> {
     }
 
     /**
-     * Sets the {@link ContentPreviewerFactory} creating a {@link ContentPreviewer} which produces the preview
-     * with the maxmium {@code length} limit for a request and a response.
+     * Sets the {@link ContentPreviewerFactory} for creating a {@link ContentPreviewer} which produces the
+     * preview with the maximum {@code length} limit for a request and a response.
      * The previewer is enabled only if the content type of a request/response meets
-     * any of the following cases.
+     * any of the following conditions:
      * <ul>
      *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
      *     <li>when its charset has been specified</li>
      *     <li>when its subtype is {@code "xml"} or {@code "json"}</li>
      *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
      * </ul>
-     * @param length the maximum length of the preview.
-     * @param defaultCharset the default charset for a request/response with unspecified charset in
-     *                       {@code "content-type"} header.
+     * @param length the maximum length of the preview
+     * @param defaultCharset the default charset used when a charset is not specified in the
+     *                       {@code "content-type"} header
      */
     public B contentPreview(int length, Charset defaultCharset) {
         return contentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
     }
 
     /**
-     * Sets the {@link ContentPreviewerFactory} creating a {@link ContentPreviewer} which produces the preview
-     * with the maxmium {@code length} limit for a request and a response.
+     * Sets the {@link ContentPreviewerFactory} for creating a {@link ContentPreviewer} which produces the
+     * preview with the maximum {@code length} limit for a request and a response.
      * The previewer is enabled only if the content type of a request/response meets
-     * any of the following cases.
+     * any of the following conditions:
      * <ul>
      *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
      *     <li>when its charset has been specified</li>

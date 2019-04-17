@@ -42,9 +42,9 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.server.ChainedVirtualHostBuilder;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.VirtualHostBuilder;
 
 import io.netty.channel.Channel;
 import io.netty.util.Attribute;
@@ -466,8 +466,8 @@ public interface RequestLog extends AttributeMap {
      * @throws RequestLogAvailabilityException if this property is not available yet.
      * @see ServerBuilder#contentPreview(int)
      * @see ServerBuilder#requestContentPreviewerFactory(ContentPreviewerFactory)
-     * @see ChainedVirtualHostBuilder#contentPreview(int)
-     * @see ChainedVirtualHostBuilder#requestContentPreviewerFactory(ContentPreviewerFactory)
+     * @see VirtualHostBuilder#contentPreview(int)
+     * @see VirtualHostBuilder#requestContentPreviewerFactory(ContentPreviewerFactory)
      * @see ClientBuilder#requestContentPreviewerFactory(ContentPreviewerFactory)
      * @see ClientBuilder#contentPreview(int)
      */
@@ -529,8 +529,8 @@ public interface RequestLog extends AttributeMap {
      * @throws RequestLogAvailabilityException if this property is not available yet.
      * @see ServerBuilder#contentPreview(int)
      * @see ServerBuilder#responseContentPreviewerFactory(ContentPreviewerFactory)
-     * @see ChainedVirtualHostBuilder#contentPreview(int)
-     * @see ChainedVirtualHostBuilder#responseContentPreviewerFactory(ContentPreviewerFactory)
+     * @see VirtualHostBuilder#contentPreview(int)
+     * @see VirtualHostBuilder#responseContentPreviewerFactory(ContentPreviewerFactory)
      * @see ClientBuilder#responseContentPreviewerFactory(ContentPreviewerFactory)
      * @see ClientBuilder#contentPreview(int)
      */

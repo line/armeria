@@ -23,6 +23,7 @@ import java.util.Optional;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
@@ -65,15 +66,14 @@ public interface PathMappingContext {
      * Returns {@link MediaType} specified by 'Content-Type' header of the request.
      */
     @Nullable
-    MediaType consumeType();
+    MediaType contentType();
 
     /**
-     * Returns a list of {@link MediaType} that is ordered by client-side preferences.
-     * It only includes the media types supported by the virtual host. {@code null} would be returned
-     * if the virtual host does not support media type negotiation.
+     * Returns a list of {@link MediaType}s that are specified in {@link HttpHeaderNames#ACCEPT} in the order
+     * of client-side preferences. If the client does not send the header, this will contain only
+     * {@link MediaType#ANY_TYPE}.
      */
-    @Nullable
-    List<MediaType> produceTypes();
+    List<MediaType> acceptTypes();
 
     /**
      * Returns an identifier of this {@link PathMappingContext} instance.

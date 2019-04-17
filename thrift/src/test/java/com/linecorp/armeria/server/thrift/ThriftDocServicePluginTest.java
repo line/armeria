@@ -44,8 +44,8 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.PathMapping;
-import com.linecorp.armeria.server.ServiceConfig;
-import com.linecorp.armeria.server.VirtualHostBuilder;
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.EnumInfo;
@@ -65,6 +65,7 @@ import com.linecorp.armeria.service.test.thrift.main.FooServiceException;
 import com.linecorp.armeria.service.test.thrift.main.FooStruct;
 import com.linecorp.armeria.service.test.thrift.main.FooUnion;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
+import com.linecorp.armeria.service.test.thrift.main.HelloService.AsyncIface;
 
 public class ThriftDocServicePluginTest {
 
@@ -159,20 +160,17 @@ public class ThriftDocServicePluginTest {
     }
 
     private static Map<String, ServiceInfo> services(DocServiceFilter include, DocServiceFilter exclude) {
-        final ServiceConfig helloService = new ServiceConfig(
-                new VirtualHostBuilder().build(),
-                PathMapping.ofExact("/hello"),
-                THttpService.of(mock(HelloService.AsyncIface.class)));
-
-        final ServiceConfig fooService = new ServiceConfig(
-                new VirtualHostBuilder().build(),
-                PathMapping.ofExact("/foo"),
-                THttpService.ofFormats(mock(FooService.AsyncIface.class), ThriftSerializationFormats.COMPACT));
+        final Server server = new ServerBuilder()
+                .service(PathMapping.ofExact("/hello"), THttpService.of(mock(AsyncIface.class)))
+                .service(PathMapping.ofExact("/foo"),
+                         THttpService.ofFormats(mock(FooService.AsyncIface.class),
+                                                ThriftSerializationFormats.COMPACT))
+                .build();
 
         // Generate the specification with the ServiceConfigs.
-        final ServiceSpecification specification =
-                generator.generateSpecification(ImmutableSet.of(helloService, fooService),
-                                                unifyFilter(include, exclude));
+        final ServiceSpecification specification = generator.generateSpecification(
+                ImmutableSet.copyOf(server.serviceConfigs()),
+                unifyFilter(include, exclude));
 
         // Ensure the specification contains all services.
         return specification.services()

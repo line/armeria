@@ -127,6 +127,12 @@ public final class Flags {
                     DEFAULT_DEFAULT_CONNECT_TIMEOUT_MILLIS,
                     value -> value > 0);
 
+    private static final long DEFAULT_DEFAULT_WRITE_TIMEOUT_MILLIS = 1000; // 1 second
+    private static final long DEFAULT_WRITE_TIMEOUT_MILLIS =
+            getLong("defaultWriteTimeoutMillis",
+                    DEFAULT_DEFAULT_WRITE_TIMEOUT_MILLIS,
+                    value -> value >= 0);
+
     // Use slightly greater value than the client-side default so that clients close the connection more often.
     private static final long DEFAULT_DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS = 15000; // 15 seconds
     private static final long DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS =
@@ -438,6 +444,18 @@ public final class Flags {
      */
     public static long defaultConnectTimeoutMillis() {
         return DEFAULT_CONNECT_TIMEOUT_MILLIS;
+    }
+
+    /**
+     * Returns the default client-side timeout of a socket write attempt in milliseconds.
+     * Note that this value has effect only if a user did not specify it.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_WRITE_TIMEOUT_MILLIS}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultWriteTimeoutMillis=<integer>} JVM option to override
+     * the default value. {@code 0} disables the timeout.
+     */
+    public static long defaultWriteTimeoutMillis() {
+        return DEFAULT_WRITE_TIMEOUT_MILLIS;
     }
 
     /**

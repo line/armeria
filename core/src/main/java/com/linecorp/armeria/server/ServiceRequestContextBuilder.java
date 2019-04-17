@@ -111,9 +111,9 @@ public final class ServiceRequestContextBuilder
 
     /**
      * Adds the {@link Consumer} that configures the given {@link ServerBuilder}. The {@link Consumer}s added
-     * by thid method will be invoked when this builder builds a dummy {@link Server}. This may be useful
+     * by this method will be invoked when this builder builds a dummy {@link Server}. This may be useful
      * when you need to update the default settings of the dummy {@link Server},
-     * such as {@link ServerConfig#defaultMaxRequestLength()}.
+     * such as {@link ServerConfig#maxRequestLength()}.
      */
     public ServiceRequestContextBuilder serverConfigurator(Consumer<? super ServerBuilder> serverConfigurator) {
         requireNonNull(serverConfigurator, "serverConfigurator");
@@ -151,8 +151,7 @@ public final class ServiceRequestContextBuilder
                 localAddress().getHostString(),
                 path(),
                 query(),
-                ((HttpRequest) request()).headers(),
-                null);
+                ((HttpRequest) request()).headers());
 
         final PathMappingResult pathMappingResult =
                 this.pathMappingResult != null ? this.pathMappingResult

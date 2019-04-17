@@ -71,7 +71,7 @@ public final class ProxyService extends AbstractHttpService {
 
         return new HttpClientBuilder("http://group:animation_apis")
                 // Disable timeout to serve infinite streaming response.
-                .defaultResponseTimeoutMillis(0)
+                .responseTimeoutMillis(0)
                 .decorator(LoggingClient.newDecorator())
                 .build();
     }

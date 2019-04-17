@@ -339,9 +339,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final String hostname = hostname(ctx, headers);
         final VirtualHost host = config.findVirtualHost(hostname);
 
-        final PathMappingContext mappingCtx = DefaultPathMappingContext.of(
-                host, hostname, pathAndQuery.path(), pathAndQuery.query(), headers,
-                host.producibleMediaTypes(), isCorsPreflightRequest(req));
+        final PathMappingContext mappingCtx =
+                DefaultPathMappingContext.of(host, hostname, pathAndQuery.path(), pathAndQuery.query(),
+                                             headers, isCorsPreflightRequest(req));
         // Find the service that matches the path.
         final PathMapped<ServiceConfig> mapped;
         try {

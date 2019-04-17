@@ -420,7 +420,7 @@ public final class THttpService extends AbstractHttpService {
         req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((aReq, cause) -> {
             if (cause != null) {
                 final HttpResponse errorRes;
-                if (ctx.server().config().verboseResponses()) {
+                if (ctx.verboseResponses()) {
                     errorRes = HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
                                                MediaType.PLAIN_TEXT_UTF_8,
                                                Exceptions.traceText(cause));
@@ -506,7 +506,7 @@ public final class THttpService extends AbstractHttpService {
                 logger.debug("{} Failed to decode a {} header:", ctx, serializationFormat, e);
 
                 final HttpResponse errorRes;
-                if (ctx.server().config().verboseResponses()) {
+                if (ctx.verboseResponses()) {
                     errorRes = HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
                                                "Failed to decode a %s header: %s", serializationFormat,
                                                Exceptions.traceText(e));
@@ -742,7 +742,7 @@ public final class THttpService extends AbstractHttpService {
         if (cause instanceof TApplicationException) {
             appException = (TApplicationException) cause;
         } else {
-            if (ctx.server().config().verboseResponses()) {
+            if (ctx.verboseResponses()) {
                 appException = new TApplicationException(
                         TApplicationException.INTERNAL_ERROR,
                         "\n---- BEGIN server-side trace ----\n" +

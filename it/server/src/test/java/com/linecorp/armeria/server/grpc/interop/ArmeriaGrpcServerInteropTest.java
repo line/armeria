@@ -94,7 +94,7 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
 
             sb.https(new InetSocketAddress("127.0.0.1", 0));
             sb.tls(newSslContext());
-            sb.defaultMaxRequestLength(16 * 1024 * 1024);
+            sb.maxRequestLength(16 * 1024 * 1024);
             sb.serviceUnder("/", new GrpcServiceBuilder()
                     .addService(ServerInterceptors.intercept(
                             new TestServiceImpl(executor), TestServiceImpl.interceptors()))

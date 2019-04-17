@@ -288,7 +288,7 @@ public class GrpcServiceServerTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
-            sb.defaultMaxRequestLength(0);
+            sb.maxRequestLength(0);
 
             sb.service(
                     new GrpcServiceBuilder()
@@ -316,7 +316,7 @@ public class GrpcServiceServerTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
-            sb.defaultMaxRequestLength(0);
+            sb.maxRequestLength(0);
 
             sb.serviceUnder("/", new GrpcServiceBuilder()
                     .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
@@ -338,7 +338,7 @@ public class GrpcServiceServerTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
-            sb.defaultMaxRequestLength(0);
+            sb.maxRequestLength(0);
 
             sb.serviceUnder("/", new GrpcServiceBuilder()
                     .addService(new UnitTestServiceImpl())
@@ -356,7 +356,7 @@ public class GrpcServiceServerTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
-            sb.defaultMaxRequestLength(Long.MAX_VALUE);
+            sb.maxRequestLength(Long.MAX_VALUE);
 
             sb.serviceUnder("/", new GrpcServiceBuilder()
                     .addService(new UnitTestServiceImpl())

@@ -86,7 +86,7 @@ public class ThriftDynamicTimeoutTest {
             sb.service("/fakeSleep", ThriftCallService.of(fakeSleepService)
                                                       .decorate(TimeoutDisablingService::new)
                                                       .decorate(THttpService.newDecorator()));
-            sb.defaultRequestTimeout(Duration.ofSeconds(1));
+            sb.requestTimeout(Duration.ofSeconds(1));
         }
     };
 
@@ -102,7 +102,7 @@ public class ThriftDynamicTimeoutTest {
     public void testDynamicTimeout() throws Exception {
         final SleepService.Iface client = new ClientBuilder(server.uri(BINARY, "/sleep"))
                 .rpcDecorator(clientDecorator)
-                .defaultResponseTimeout(Duration.ofSeconds(1)).build(SleepService.Iface.class);
+                .responseTimeout(Duration.ofSeconds(1)).build(SleepService.Iface.class);
 
         final long delay = 1500;
         final Stopwatch sw = Stopwatch.createStarted();
@@ -114,7 +114,7 @@ public class ThriftDynamicTimeoutTest {
     public void testDisabledTimeout() throws Exception {
         final SleepService.Iface client = new ClientBuilder(server.uri(BINARY, "/fakeSleep"))
                 .rpcDecorator(clientDecorator)
-                .defaultResponseTimeout(Duration.ofSeconds(1)).build(SleepService.Iface.class);
+                .responseTimeout(Duration.ofSeconds(1)).build(SleepService.Iface.class);
 
         // This call should take very short amount of time because the fakeSleep service does not sleep.
         client.sleep(30000);

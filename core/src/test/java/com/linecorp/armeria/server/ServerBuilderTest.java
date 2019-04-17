@@ -84,9 +84,11 @@ public class ServerBuilderTest {
                 .withVirtualHost("*.example3.com")
                 .accessLogger(host -> LoggerFactory.getLogger("com.ex3"))
                 .and()
-                .virtualHost(new VirtualHostBuilder("def.example4.com", "*.example4.com").build())
-                .virtualHost(new VirtualHostBuilder("def.example5.com", "*.example5.com")
-                                     .accessLogger("com.ex5").build())
+                .withVirtualHost("def.example4.com", "*.example4.com")
+                .and()
+                .withVirtualHost("def.example5.com", "*.example5.com")
+                .accessLogger("com.ex5")
+                .and()
                 .build();
         assertThat(sb.config().defaultVirtualHost()).isNotNull();
         assertThat(sb.config().defaultVirtualHost().accessLogger().getName()).isEqualTo("default");

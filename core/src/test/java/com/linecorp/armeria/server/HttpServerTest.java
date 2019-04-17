@@ -431,7 +431,7 @@ public class HttpServerTest {
                     };
             sb.decorator(decorator);
 
-            sb.defaultMaxRequestLength(MAX_CONTENT_LENGTH);
+            sb.maxRequestLength(MAX_CONTENT_LENGTH);
             sb.idleTimeout(Duration.ofSeconds(5));
         }
     };

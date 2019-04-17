@@ -103,46 +103,46 @@ public interface ClientRequestContext extends RequestContext {
 
     /**
      * Returns the amount of time allowed until the initial write attempt of the current {@link Request}
-     * succeeds. This value is initially set from {@link ClientOption#DEFAULT_WRITE_TIMEOUT_MILLIS}.
+     * succeeds. This value is initially set from {@link ClientOption#WRITE_TIMEOUT_MILLIS}.
      */
     long writeTimeoutMillis();
 
     /**
      * Returns the amount of time allowed until the initial write attempt of the current {@link Request}
-     * succeeds. This value is initially set from {@link ClientOption#DEFAULT_WRITE_TIMEOUT_MILLIS}.
+     * succeeds. This value is initially set from {@link ClientOption#WRITE_TIMEOUT_MILLIS}.
      */
     void setWriteTimeoutMillis(long writeTimeoutMillis);
 
     /**
      * Returns the amount of time allowed until the initial write attempt of the current {@link Request}
-     * succeeds. This value is initially set from {@link ClientOption#DEFAULT_WRITE_TIMEOUT_MILLIS}.
+     * succeeds. This value is initially set from {@link ClientOption#WRITE_TIMEOUT_MILLIS}.
      */
     void setWriteTimeout(Duration writeTimeout);
 
     /**
      * Returns the amount of time allowed until receiving the {@link Response} completely
      * since the transfer of the {@link Response} started. This value is initially set from
-     * {@link ClientOption#DEFAULT_RESPONSE_TIMEOUT_MILLIS}.
+     * {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
      */
     long responseTimeoutMillis();
 
     /**
      * Sets the amount of time allowed until receiving the {@link Response} completely
      * since the transfer of the {@link Response} started. This value is initially set from
-     * {@link ClientOption#DEFAULT_RESPONSE_TIMEOUT_MILLIS}.
+     * {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
      */
     void setResponseTimeoutMillis(long responseTimeoutMillis);
 
     /**
      * Sets the amount of time allowed until receiving the {@link Response} completely
      * since the transfer of the {@link Response} started. This value is initially set from
-     * {@link ClientOption#DEFAULT_RESPONSE_TIMEOUT_MILLIS}.
+     * {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
      */
     void setResponseTimeout(Duration responseTimeout);
 
     /**
      * Returns the maximum length of the received {@link Response}.
-     * This value is initially set from {@link ClientOption#DEFAULT_MAX_RESPONSE_LENGTH}.
+     * This value is initially set from {@link ClientOption#MAX_RESPONSE_LENGTH}.
      *
      * @see ContentTooLargeException
      */
@@ -150,7 +150,7 @@ public interface ClientRequestContext extends RequestContext {
 
     /**
      * Sets the maximum length of the received {@link Response}.
-     * This value is initially set from {@link ClientOption#DEFAULT_MAX_RESPONSE_LENGTH}.
+     * This value is initially set from {@link ClientOption#MAX_RESPONSE_LENGTH}.
      *
      * @see ContentTooLargeException
      */

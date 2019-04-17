@@ -35,7 +35,7 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
     private final int streamId;
     private final boolean keepAlive;
     private final InboundTrafficController inboundTrafficController;
-    private final long defaultMaxRequestLength;
+    private final long maxRequestLength;
     @Nullable
     private ServiceRequestContext ctx;
     private long transferredBytes;
@@ -45,7 +45,7 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
     private boolean isResponseAborted;
 
     DecodedHttpRequest(EventLoop eventLoop, int id, int streamId, HttpHeaders headers, boolean keepAlive,
-                       InboundTrafficController inboundTrafficController, long defaultMaxRequestLength) {
+                       InboundTrafficController inboundTrafficController, long maxRequestLength) {
 
         super(headers);
 
@@ -54,7 +54,7 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
         this.streamId = streamId;
         this.keepAlive = keepAlive;
         this.inboundTrafficController = inboundTrafficController;
-        this.defaultMaxRequestLength = defaultMaxRequestLength;
+        this.maxRequestLength = maxRequestLength;
     }
 
     void init(ServiceRequestContext ctx) {
@@ -77,7 +77,7 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
     }
 
     long maxRequestLength() {
-        return ctx != null ? ctx.maxRequestLength() : defaultMaxRequestLength;
+        return ctx != null ? ctx.maxRequestLength() : maxRequestLength;
     }
 
     long transferredBytes() {

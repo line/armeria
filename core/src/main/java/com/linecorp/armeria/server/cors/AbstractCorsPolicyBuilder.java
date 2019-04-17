@@ -52,8 +52,7 @@ import io.netty.util.AsciiString;
  * @see ChainedCorsPolicyBuilder
  * @see CorsPolicyBuilder
  */
-@SuppressWarnings("rawtypes")
-abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
+abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder<B>> {
     private final Set<String> origins;
     private final List<PathMapping> pathMappings = new ArrayList<>();
     private boolean credentialsAllowed;
@@ -81,7 +80,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     }
 
     @SuppressWarnings("unchecked")
-    B self() {
+    final B self() {
         return (B) this;
     }
 

@@ -171,8 +171,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         this.proxiedAddresses = proxiedAddresses;
         this.clientAddress = requireNonNull(clientAddress, "clientAddress");
 
-        log = new DefaultRequestLog(this, virtualHost().requestContentPreviewerFactory(),
-                                    virtualHost().responseContentPreviewerFactory());
+        log = new DefaultRequestLog(this, cfg.requestContentPreviewerFactory(),
+                                    cfg.responseContentPreviewerFactory());
         if (requestStartTimeSet) {
             log.startRequest(ch, sessionProtocol, sslSession, requestStartTimeNanos, requestStartTimeMicros);
         } else {
@@ -187,9 +187,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
         logger = newLogger(cfg);
 
-        final ServerConfig serverCfg = cfg.server().config();
-        requestTimeoutMillis = serverCfg.defaultRequestTimeoutMillis();
-        maxRequestLength = serverCfg.defaultMaxRequestLength();
+        requestTimeoutMillis = cfg.requestTimeoutMillis();
+        maxRequestLength = cfg.maxRequestLength();
     }
 
     private RequestContextAwareLogger newLogger(ServiceConfig cfg) {
@@ -428,6 +427,11 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
                     "maxRequestLength: " + maxRequestLength + " (expected: >= 0)");
         }
         this.maxRequestLength = maxRequestLength;
+    }
+
+    @Override
+    public boolean verboseResponses() {
+        return cfg.verboseResponses();
     }
 
     @Override

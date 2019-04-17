@@ -112,7 +112,7 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
                 options().getOrElse(
                         GrpcClientOptions.MAX_INBOUND_MESSAGE_SIZE_BYTES,
                         options().getOrElse(
-                                ClientOption.DEFAULT_MAX_RESPONSE_LENGTH,
+                                ClientOption.MAX_RESPONSE_LENGTH,
                                 (long) DEFAULT_MAX_INBOUND_MESSAGE_SIZE).intValue()),
                 callOptions,
                 CompressorRegistry.getDefaultInstance(),

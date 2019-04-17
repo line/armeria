@@ -92,9 +92,9 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         log = new DefaultRequestLog(this, options.requestContentPreviewerFactory(),
                                     options.responseContentPreviewerFactory());
 
-        writeTimeoutMillis = options.defaultWriteTimeoutMillis();
-        responseTimeoutMillis = options.defaultResponseTimeoutMillis();
-        maxResponseLength = options.defaultMaxResponseLength();
+        writeTimeoutMillis = options.writeTimeoutMillis();
+        responseTimeoutMillis = options.responseTimeoutMillis();
+        maxResponseLength = options.maxResponseLength();
 
         final HttpHeaders headers = options.getOrElse(ClientOption.HTTP_HEADERS, HttpHeaders.EMPTY_HEADERS);
         if (!headers.isEmpty()) {

@@ -122,7 +122,7 @@ public class GrpcClientTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
-            sb.defaultMaxRequestLength(MAX_MESSAGE_SIZE);
+            sb.maxRequestLength(MAX_MESSAGE_SIZE);
             sb.idleTimeoutMillis(0);
 
             sb.serviceUnder("/", new GrpcServiceBuilder()
@@ -170,7 +170,7 @@ public class GrpcClientTest {
         };
 
         blockingStub = new ClientBuilder("gproto+" + server.httpUri("/"))
-                .defaultMaxResponseLength(MAX_MESSAGE_SIZE)
+                .maxResponseLength(MAX_MESSAGE_SIZE)
                 .decorator(new LoggingClientBuilder().newDecorator())
                 .decorator(requestLogRecorder)
                 .build(TestServiceBlockingStub.class);
@@ -786,7 +786,7 @@ public class GrpcClientTest {
         final TestServiceBlockingStub stub =
                 Clients.newDerivedClient(
                         blockingStub,
-                        ClientOption.DEFAULT_RESPONSE_TIMEOUT_MILLIS.newValue(
+                        ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(
                                 TimeUnit.MINUTES.toMillis(configuredTimeoutMinutes)));
         stub.emptyCall(EMPTY);
         final long transferredTimeoutMinutes = TimeUnit.NANOSECONDS.toMinutes(
@@ -802,7 +802,7 @@ public class GrpcClientTest {
         final TestServiceBlockingStub stub =
                 Clients.newDerivedClient(
                         blockingStub,
-                        ClientOption.DEFAULT_RESPONSE_TIMEOUT_MILLIS.newValue(
+                        ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(
                                 TimeUnit.SECONDS.toMillis(10)));
         stub
                 .streamingOutputCall(
@@ -823,7 +823,7 @@ public class GrpcClientTest {
         final TestServiceBlockingStub stub =
                 Clients.newDerivedClient(
                         blockingStub,
-                        ClientOption.DEFAULT_RESPONSE_TIMEOUT_MILLIS.newValue(10L));
+                        ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(10L));
         final StreamingOutputCallRequest request =
                 StreamingOutputCallRequest.newBuilder()
                                           .addResponseParameters(
@@ -863,7 +863,7 @@ public class GrpcClientTest {
         final TestServiceStub stub =
                 Clients.newDerivedClient(
                         asyncStub,
-                        ClientOption.DEFAULT_RESPONSE_TIMEOUT_MILLIS.newValue(30L));
+                        ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(30L));
         stub.streamingOutputCall(request, recorder);
         recorder.awaitCompletion();
 
@@ -905,7 +905,7 @@ public class GrpcClientTest {
                 Clients.newDerivedClient(
                         blockingStub,
 
-                        ClientOption.DEFAULT_RESPONSE_TIMEOUT_MILLIS.newValue(TimeUnit.SECONDS.toMillis(-10)));
+                        ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(TimeUnit.SECONDS.toMillis(-10)));
         stub.emptyCall(EMPTY);
         Throwable t = catchThrowable(() -> stub.emptyCall(EMPTY));
         assertThat(t).isInstanceOf(StatusRuntimeException.class);
@@ -1083,7 +1083,7 @@ public class GrpcClientTest {
     public void timeoutOnSleepingServer() throws Exception {
         final TestServiceStub stub = Clients.newDerivedClient(
                 asyncStub,
-                ClientOption.DEFAULT_RESPONSE_TIMEOUT_MILLIS.newValue(1L));
+                ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(1L));
 
         final StreamRecorder<StreamingOutputCallResponse> responseObserver = StreamRecorder.create();
         final StreamObserver<StreamingOutputCallRequest> requestObserver

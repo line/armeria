@@ -187,8 +187,8 @@ public class GrpcFlowControlTest {
     public static ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.defaultMaxRequestLength(0);
-            sb.defaultRequestTimeoutMillis(0);
+            sb.maxRequestLength(0);
+            sb.requestTimeoutMillis(0);
 
             sb.serviceUnder("/", new GrpcServiceBuilder()
                     .addService(new FlowControlService())
@@ -205,8 +205,8 @@ public class GrpcFlowControlTest {
     @Before
     public void setUp() {
         client = new ClientBuilder(server.uri(GrpcSerializationFormats.PROTO, "/"))
-                .defaultMaxResponseLength(0)
-                .defaultResponseTimeoutMillis(0)
+                .maxResponseLength(0)
+                .responseTimeoutMillis(0)
                 .option(GrpcClientOptions.MAX_INBOUND_MESSAGE_SIZE_BYTES.newValue(Integer.MAX_VALUE))
                 .build(FlowControlTestServiceStub.class);
     }

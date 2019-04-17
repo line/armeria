@@ -265,6 +265,11 @@ public interface PathMapping {
      */
     default PathMapping withHttpHeaderInfo(Set<HttpMethod> supportedMethods,
                                            List<MediaType> consumeTypes, List<MediaType> produceTypes) {
+        if (this instanceof HttpHeaderPathMapping) {
+            throw new IllegalArgumentException(
+                    "cannot wrap a PathMapping which is already wrapped by withHttpHeaderInfo(): " + this);
+        }
+
         return new HttpHeaderPathMapping(this, supportedMethods, consumeTypes, produceTypes);
     }
 

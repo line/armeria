@@ -181,21 +181,21 @@ public interface ServiceRequestContext extends RequestContext {
     /**
      * Returns the amount of time allowed until receiving the current {@link Request} and sending
      * the corresponding {@link Response} completely.
-     * This value is initially set from {@link ServerConfig#defaultRequestTimeoutMillis()}.
+     * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
      */
     long requestTimeoutMillis();
 
     /**
      * Sets the amount of time allowed until receiving the current {@link Request} and sending
      * the corresponding {@link Response} completely.
-     * This value is initially set from {@link ServerConfig#defaultRequestTimeoutMillis()}.
+     * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
      */
     void setRequestTimeoutMillis(long requestTimeoutMillis);
 
     /**
      * Sets the amount of time allowed until receiving the current {@link Request} and sending
      * the corresponding {@link Response} completely.
-     * This value is initially set from {@link ServerConfig#defaultRequestTimeoutMillis()}.
+     * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
      */
     void setRequestTimeout(Duration requestTimeout);
 
@@ -225,7 +225,7 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Returns the maximum length of the current {@link Request}.
-     * This value is initially set from {@link ServerConfig#defaultMaxRequestLength()}.
+     * This value is initially set from {@link ServiceConfig#maxRequestLength()}.
      * If 0, there is no limit on the request size.
      *
      * @see ContentTooLargeException
@@ -234,12 +234,19 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Sets the maximum length of the current {@link Request}.
-     * This value is initially set from {@link ServerConfig#defaultMaxRequestLength()}.
+     * This value is initially set from {@link ServiceConfig#maxRequestLength()}.
      * If 0, there is no limit on the request size.
      *
      * @see ContentTooLargeException
      */
     void setMaxRequestLength(long maxRequestLength);
+
+    /**
+     * Returns whether the verbose response mode is enabled. When enabled, the service responses will contain
+     * the exception type and its full stack trace, which may be useful for debugging while potentially
+     * insecure. When disabled, the service responses will not expose such server-side details to the client.
+     */
+    boolean verboseResponses();
 
     /**
      * Returns an immutable {@link HttpHeaders} which is included when a {@link Service} sends an

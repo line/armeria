@@ -132,8 +132,8 @@ public class HttpServerStreamingTest {
                     };
             sb.decorator(decorator);
 
-            sb.defaultMaxRequestLength(0);
-            sb.defaultRequestTimeoutMillis(0);
+            sb.maxRequestLength(0);
+            sb.requestTimeoutMillis(0);
             sb.idleTimeout(Duration.ofSeconds(5));
         }
     };
@@ -297,8 +297,8 @@ public class HttpServerStreamingTest {
                 (protocol.isTls() ? server.httpsPort() : server.httpPort()));
 
         builder.factory(clientFactory);
-        builder.defaultResponseTimeoutMillis(0);
-        builder.defaultMaxResponseLength(0);
+        builder.responseTimeoutMillis(0);
+        builder.maxResponseLength(0);
 
         return client = builder.build();
     }

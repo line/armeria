@@ -199,7 +199,6 @@ Use ``ServerBuilder.withVirtualHost()`` to configure `a name-based virtual host`
 .. code-block:: java
 
     import com.linecorp.armeria.server.VirtualHost;
-    import com.linecorp.armeria.server.VirtualHostBuilder;
 
     ServerBuilder sb = new ServerBuilder();
     // Configure foo.com.

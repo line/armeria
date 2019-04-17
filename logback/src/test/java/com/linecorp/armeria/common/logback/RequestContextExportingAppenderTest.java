@@ -606,12 +606,12 @@ public class RequestContextExportingAppenderTest {
 
         @Nullable
         @Override
-        public MediaType consumeType() {
+        public MediaType contentType() {
             return null;
         }
 
         @Override
-        public List<MediaType> produceTypes() {
+        public List<MediaType> acceptTypes() {
             return ImmutableList.of();
         }
 

@@ -36,26 +36,26 @@ public class ClientOptionsBuilderTest {
     @Test
     public void testBaseOptions() {
         final ClientOptionsBuilder b = new ClientOptionsBuilder(
-                ClientOptions.of(ClientOption.DEFAULT_MAX_RESPONSE_LENGTH.newValue(42L)));
-        assertThat(b.build().defaultMaxResponseLength()).isEqualTo(42);
+                ClientOptions.of(ClientOption.MAX_RESPONSE_LENGTH.newValue(42L)));
+        assertThat(b.build().maxResponseLength()).isEqualTo(42);
     }
 
     @Test
     public void testOptions() {
         final ClientOptionsBuilder b = new ClientOptionsBuilder();
-        b.options(ClientOptions.of(ClientOption.DEFAULT_RESPONSE_TIMEOUT_MILLIS.newValue(42L)));
-        assertThat(b.build().defaultResponseTimeoutMillis()).isEqualTo(42);
+        b.options(ClientOptions.of(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(42L)));
+        assertThat(b.build().responseTimeoutMillis()).isEqualTo(42);
 
-        b.options(ClientOption.DEFAULT_WRITE_TIMEOUT_MILLIS.newValue(84L));
-        assertThat(b.build().defaultResponseTimeoutMillis()).isEqualTo(42);
-        assertThat(b.build().defaultWriteTimeoutMillis()).isEqualTo(84);
+        b.options(ClientOption.WRITE_TIMEOUT_MILLIS.newValue(84L));
+        assertThat(b.build().responseTimeoutMillis()).isEqualTo(42);
+        assertThat(b.build().writeTimeoutMillis()).isEqualTo(84);
     }
 
     @Test
     public void testOption() {
         final ClientOptionsBuilder b = new ClientOptionsBuilder();
-        b.option(ClientOption.DEFAULT_MAX_RESPONSE_LENGTH, 123L);
-        assertThat(b.build().defaultMaxResponseLength()).isEqualTo(123);
+        b.option(ClientOption.MAX_RESPONSE_LENGTH, 123L);
+        assertThat(b.build().maxResponseLength()).isEqualTo(123);
     }
 
     @Test
@@ -127,13 +127,13 @@ public class ClientOptionsBuilderTest {
     @Test
     public void testShortcutMethods() {
         final ClientOptionsBuilder b = new ClientOptionsBuilder();
-        b.defaultWriteTimeout(Duration.ofSeconds(1));
-        b.defaultResponseTimeout(Duration.ofSeconds(2));
-        b.defaultMaxResponseLength(3000);
+        b.writeTimeout(Duration.ofSeconds(1));
+        b.responseTimeout(Duration.ofSeconds(2));
+        b.maxResponseLength(3000);
 
         final ClientOptions opts = b.build();
-        assertThat(opts.defaultWriteTimeoutMillis()).isEqualTo(1000);
-        assertThat(opts.defaultResponseTimeoutMillis()).isEqualTo(2000);
-        assertThat(opts.defaultMaxResponseLength()).isEqualTo(3000);
+        assertThat(opts.writeTimeoutMillis()).isEqualTo(1000);
+        assertThat(opts.responseTimeoutMillis()).isEqualTo(2000);
+        assertThat(opts.maxResponseLength()).isEqualTo(3000);
     }
 }

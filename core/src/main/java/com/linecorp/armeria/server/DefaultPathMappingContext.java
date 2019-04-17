@@ -30,12 +30,12 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.MediaTypeSet;
 
 /**
  * Holds the parameters which are required to find a service available to handle the request.
@@ -54,9 +54,8 @@ final class DefaultPathMappingContext implements PathMappingContext {
     @Nullable
     private final String query;
     @Nullable
-    private final MediaType consumeType;
-    @Nullable
-    private final List<MediaType> produceTypes;
+    private final MediaType contentType;
+    private final List<MediaType> acceptTypes;
     private final boolean isCorsPreflight;
     private final List<Object> summary;
     @Nullable
@@ -64,21 +63,15 @@ final class DefaultPathMappingContext implements PathMappingContext {
 
     DefaultPathMappingContext(VirtualHost virtualHost, String hostname,
                               HttpMethod method, String path, @Nullable String query,
-                              @Nullable MediaType consumeType, @Nullable List<MediaType> produceTypes) {
-        this(virtualHost, hostname, method, path, query, consumeType, produceTypes, false);
-    }
-
-    DefaultPathMappingContext(VirtualHost virtualHost, String hostname,
-                              HttpMethod method, String path, @Nullable String query,
-                              @Nullable MediaType consumeType, @Nullable List<MediaType> produceTypes,
+                              @Nullable MediaType contentType, List<MediaType> acceptTypes,
                               boolean isCorsPreflight) {
         this.virtualHost = requireNonNull(virtualHost, "virtualHost");
         this.hostname = requireNonNull(hostname, "hostname");
         this.method = requireNonNull(method, "method");
         this.path = requireNonNull(path, "path");
         this.query = query;
-        this.consumeType = consumeType;
-        this.produceTypes = produceTypes;
+        this.contentType = contentType;
+        this.acceptTypes = requireNonNull(acceptTypes, "acceptTypes");
         this.isCorsPreflight = isCorsPreflight;
         summary = generateSummary(this);
     }
@@ -111,14 +104,13 @@ final class DefaultPathMappingContext implements PathMappingContext {
 
     @Nullable
     @Override
-    public MediaType consumeType() {
-        return consumeType;
+    public MediaType contentType() {
+        return contentType;
     }
 
-    @Nullable
     @Override
-    public List<MediaType> produceTypes() {
-        return produceTypes;
+    public List<MediaType> acceptTypes() {
+        return acceptTypes;
     }
 
     @Override
@@ -162,9 +154,8 @@ final class DefaultPathMappingContext implements PathMappingContext {
      * Returns a new {@link PathMappingContext} instance.
      */
     static PathMappingContext of(VirtualHost virtualHost, String hostname,
-                                 String path, @Nullable String query,
-                                 HttpHeaders headers, @Nullable MediaTypeSet producibleMediaTypes) {
-        return of(virtualHost, hostname, path, query, headers, producibleMediaTypes, false);
+                                 String path, @Nullable String query, HttpHeaders headers) {
+        return of(virtualHost, hostname, path, query, headers, false);
     }
 
     /**
@@ -172,60 +163,39 @@ final class DefaultPathMappingContext implements PathMappingContext {
      */
     static PathMappingContext of(VirtualHost virtualHost, String hostname,
                                  String path, @Nullable String query,
-                                 HttpHeaders headers, @Nullable MediaTypeSet producibleMediaTypes,
-                                 boolean isCorsPreflight) {
-        final MediaType consumeType = resolveConsumeType(headers);
-        final List<MediaType> produceTypes = resolveProduceTypes(headers, producibleMediaTypes);
+                                 HttpHeaders headers, boolean isCorsPreflight) {
         return new DefaultPathMappingContext(virtualHost, hostname, headers.method(), path, query,
-                                             consumeType, produceTypes, isCorsPreflight);
+                                             headers.contentType(), extractAcceptTypes(headers),
+                                             isCorsPreflight);
     }
 
-    @Nullable
     @VisibleForTesting
-    static MediaType resolveConsumeType(HttpHeaders headers) {
-        final MediaType contentType = headers.contentType();
-        if (contentType != null) {
-            return contentType;
-        }
-        return null;
-    }
-
-    @Nullable
-    @VisibleForTesting
-    static List<MediaType> resolveProduceTypes(HttpHeaders headers,
-                                               @Nullable MediaTypeSet producibleMediaTypes) {
-        if (producibleMediaTypes == null || producibleMediaTypes.isEmpty()) {
-            // No media type negotiation supports.
-            return null;
-        }
-
+    static List<MediaType> extractAcceptTypes(HttpHeaders headers) {
         final List<String> acceptHeaders = headers.getAll(HttpHeaderNames.ACCEPT);
         if (acceptHeaders == null || acceptHeaders.isEmpty()) {
             // No 'Accept' header means accepting everything.
             return ANY_TYPE;
         }
 
-        final List<MediaType> selectedTypes = new ArrayList<>(4);
-        for (String acceptHeader : acceptHeaders) {
-            for (String value : ACCEPT_SPLITTER.split(acceptHeader)) {
-                try {
-                    final MediaType type = MediaType.parse(value);
-                    for (MediaType producibleMediaType : producibleMediaTypes) {
-                        if (producibleMediaType.belongsTo(type)) {
-                            selectedTypes.add(type);
-                            break;
-                        }
-                    }
-                } catch (IllegalArgumentException e) {
-                    logger.debug("Failed to parse the media type in 'accept' header: {}", value, e);
-                }
-            }
+        final List<MediaType> acceptTypes = new ArrayList<>(4);
+        acceptHeaders.forEach(
+                acceptHeader -> Streams.stream(ACCEPT_SPLITTER.split(acceptHeader)).forEach(
+                        mediaType -> {
+                            try {
+                                acceptTypes.add(MediaType.parse(mediaType));
+                            } catch (IllegalArgumentException e) {
+                                logger.debug("Failed to parse the media type in 'accept' header: {}",
+                                             mediaType, e);
+                            }
+                        }));
+        if (acceptTypes.isEmpty()) {
+            return ANY_TYPE;
         }
 
-        if (selectedTypes.size() > 1) {
-            selectedTypes.sort(DefaultPathMappingContext::compareMediaType);
+        if (acceptTypes.size() > 1) {
+            acceptTypes.sort(DefaultPathMappingContext::compareMediaType);
         }
-        return selectedTypes;
+        return ImmutableList.copyOf(acceptTypes);
     }
 
     @VisibleForTesting
@@ -255,17 +225,17 @@ final class DefaultPathMappingContext implements PathMappingContext {
         // 1 : HttpMethod
         // 2 : Path
         // 3 : Content-Type
-        // 4~: Accept
+        // 4 : Accept
         final List<Object> summary = new ArrayList<>(8);
 
         summary.add(mappingCtx.virtualHost());
         summary.add(mappingCtx.method());
         summary.add(mappingCtx.path());
-        summary.add(mappingCtx.consumeType());
+        summary.add(mappingCtx.contentType());
 
-        final List<MediaType> produceTypes = mappingCtx.produceTypes();
-        if (produceTypes != null) {
-            summary.addAll(produceTypes);
+        final List<MediaType> acceptTypes = mappingCtx.acceptTypes();
+        if (!acceptTypes.isEmpty()) {
+            summary.addAll(acceptTypes);
         }
         return summary;
     }
