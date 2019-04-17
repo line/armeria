@@ -23,6 +23,8 @@ import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.conf
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureServerWithArmeriaSettings;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureThriftServices;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureTls;
+import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.contentEncodingDecorator;
+import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.parseDataSize;
 import static com.linecorp.armeria.spring.MeterIdPrefixFunctionFactory.DEFAULT;
 import static java.util.Objects.requireNonNull;
 
@@ -33,10 +35,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
@@ -54,17 +53,11 @@ import org.springframework.http.server.reactive.HttpHandler;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.server.encoding.HttpEncodingService;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
@@ -84,7 +77,6 @@ import reactor.core.Disposable;
  */
 public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFactory {
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaReactiveWebServerFactory.class);
-    private static final String[] EMPTY = new String[0];
 
     private final ConfigurableListableBeanFactory beanFactory;
 
@@ -185,7 +177,9 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
 
         final Compression compression = getCompression();
         if (compression != null && compression.getEnabled()) {
-            sb.decorator(contentEncodingDecorator(compression));
+            sb.decorator(contentEncodingDecorator(compression.getMimeTypes(),
+                                                  compression.getExcludedUserAgents(),
+                                                  compression.getMinResponseSize().toBytes()));
         }
 
         findBean(ArmeriaSettings.class).ifPresent(settings -> configureArmeriaService(sb, settings));
@@ -217,39 +211,6 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         });
     }
 
-    private static Function<Service<HttpRequest, HttpResponse>,
-            HttpEncodingService> contentEncodingDecorator(Compression compression) {
-        final Predicate<MediaType> encodableContentTypePredicate;
-        final String[] mimeTypes = compression.getMimeTypes();
-        if (mimeTypes == null || mimeTypes.length == 0) {
-            encodableContentTypePredicate = contentType -> true;
-        } else {
-            final List<MediaType> encodableContentTypes =
-                    Arrays.stream(mimeTypes).map(MediaType::parse).collect(toImmutableList());
-            encodableContentTypePredicate = contentType ->
-                    encodableContentTypes.stream().anyMatch(contentType::is);
-        }
-
-        final Predicate<HttpHeaders> encodableRequestHeadersPredicate;
-        final String[] excludedUserAgents = compression.getExcludedUserAgents();
-        if (excludedUserAgents == null || excludedUserAgents.length == 0) {
-            encodableRequestHeadersPredicate = headers -> true;
-        } else {
-            final List<Pattern> patterns =
-                    Arrays.stream(excludedUserAgents).map(Pattern::compile).collect(toImmutableList());
-            encodableRequestHeadersPredicate = headers -> {
-                // No User-Agent header will be converted to an empty string.
-                final String userAgent = headers.get(HttpHeaderNames.USER_AGENT, "");
-                return patterns.stream().noneMatch(pattern -> pattern.matcher(userAgent).matches());
-            };
-        }
-
-        return delegate -> new HttpEncodingService(delegate,
-                                                   encodableContentTypePredicate,
-                                                   encodableRequestHeadersPredicate,
-                                                   compression.getMinResponseSize().toBytes());
-    }
-
     private void configureArmeriaService(ServerBuilder sb, ArmeriaSettings settings) {
         final MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory =
                 settings.isEnableMetrics() ? findBean(MeterIdPrefixFunctionFactory.class).orElse(DEFAULT)
@@ -271,6 +232,13 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                                            findBeans(HealthChecker.class));
         if (settings.getSsl() != null) {
             configureTls(sb, settings.getSsl());
+        }
+
+        final ArmeriaSettings.Compression compression = settings.getCompression();
+        if (compression != null && compression.isEnabled()) {
+            sb.decorator(contentEncodingDecorator(compression.getMimeTypes(),
+                                                  compression.getExcludedUserAgents(),
+                                                  parseDataSize(compression.getMinResponseSize())));
         }
     }
 
