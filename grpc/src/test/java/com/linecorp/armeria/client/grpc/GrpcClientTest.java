@@ -85,6 +85,7 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceStub;
 import com.linecorp.armeria.grpc.testing.UnimplementedServiceGrpc;
 import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
+import com.linecorp.armeria.internal.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.grpc.StreamRecorder;
 import com.linecorp.armeria.internal.grpc.TestServiceImpl;
 import com.linecorp.armeria.internal.grpc.TimeoutHeaderUtil;
@@ -467,7 +468,7 @@ public class GrpcClientTest {
         requestObserver.onError(new RuntimeException());
         responseObserver.awaitCompletion();
         assertThat(responseObserver.getValues()).isEmpty();
-        assertThat(Status.fromThrowable(responseObserver.getError()).getCode()).isEqualTo(Code.CANCELLED);
+        assertThat(GrpcStatus.fromThrowable(responseObserver.getError()).getCode()).isEqualTo(Code.CANCELLED);
 
         final RequestLog log = requestLogQueue.take();
         assertThat(log.availabilities()).contains(RequestLogAvailability.COMPLETE);
@@ -501,7 +502,7 @@ public class GrpcClientTest {
         requestObserver.onError(new RuntimeException());
         responseObserver.awaitCompletion(operationTimeoutMillis(), TimeUnit.MILLISECONDS);
         assertThat(responseObserver.getValues()).hasSize(1);
-        assertThat(Status.fromThrowable(responseObserver.getError()).getCode()).isEqualTo(Code.CANCELLED);
+        assertThat(GrpcStatus.fromThrowable(responseObserver.getError()).getCode()).isEqualTo(Code.CANCELLED);
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
             assertThat(rpcReq.params()).containsExactly(request);
@@ -867,7 +868,7 @@ public class GrpcClientTest {
         recorder.awaitCompletion();
 
         assertThat(recorder.getError()).isNotNull();
-        assertThat(Status.fromThrowable(recorder.getError()).getCode())
+        assertThat(GrpcStatus.fromThrowable(recorder.getError()).getCode())
                 .isEqualTo(Status.DEADLINE_EXCEEDED.getCode());
 
         checkRequestLogError((headers, rpcReq, cause) -> {
@@ -1030,8 +1031,8 @@ public class GrpcClientTest {
 
         final ArgumentCaptor<Throwable> captor = ArgumentCaptor.forClass(Throwable.class);
         verify(responseObserver, timeout(operationTimeoutMillis())).onError(captor.capture());
-        assertThat(Status.fromThrowable(captor.getValue()).getCode()).isEqualTo(Status.UNKNOWN.getCode());
-        assertThat(Status.fromThrowable(captor.getValue()).getDescription()).isEqualTo(errorMessage);
+        assertThat(GrpcStatus.fromThrowable(captor.getValue()).getCode()).isEqualTo(Status.UNKNOWN.getCode());
+        assertThat(GrpcStatus.fromThrowable(captor.getValue()).getDescription()).isEqualTo(errorMessage);
         verifyNoMoreInteractions(responseObserver);
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
@@ -1114,7 +1115,7 @@ public class GrpcClientTest {
         // header, it's not guaranteed which is the source of this error.
         // Until https://github.com/line/armeria/issues/521 a server side timeout will not have the correct
         // status so we don't verify it for now.
-        //assertThat(Status.fromThrowable(responseObserver.getError()).getCode())
+        //assertThat(GrpcStatus.fromThrowable(responseObserver.getError()).getCode())
         //.isEqualTo(Status.DEADLINE_EXCEEDED.getCode());
     }
 

@@ -55,7 +55,7 @@ public class HttpStreamReaderTest {
     private TransportStatusListener transportStatusListener;
 
     @Mock
-    private ArmeriaMessageDeframer deframer;
+    private com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer deframer;
 
     @Mock
     private Subscription subscription;
@@ -111,7 +111,7 @@ public class HttpStreamReaderTest {
     }
 
     @Test
-    public void onMessage_noServerRequests() {
+    public void onMessage_noServerRequests() throws Exception {
         reader.onSubscribe(subscription);
         reader.onNext(DATA);
         verify(deframer).deframe(DATA, false);
@@ -119,7 +119,7 @@ public class HttpStreamReaderTest {
     }
 
     @Test
-    public void onMessage_hasServerRequests() {
+    public void onMessage_hasServerRequests() throws Exception {
         reader.onSubscribe(subscription);
         when(deframer.isStalled()).thenReturn(true);
         reader.onNext(DATA);
@@ -128,7 +128,7 @@ public class HttpStreamReaderTest {
     }
 
     @Test
-    public void onMessage_deframeError() {
+    public void onMessage_deframeError() throws Exception {
         doThrow(Status.INTERNAL.asRuntimeException())
                 .when(deframer).deframe(isA(HttpData.class), anyBoolean());
         reader.onSubscribe(subscription);
@@ -139,7 +139,7 @@ public class HttpStreamReaderTest {
     }
 
     @Test
-    public void onMessage_deframeError_errorListenerThrows() {
+    public void onMessage_deframeError_errorListenerThrows() throws Exception {
         doThrow(Status.INTERNAL.asRuntimeException())
                 .when(deframer).deframe(isA(HttpData.class), anyBoolean());
         doThrow(new IllegalStateException())
@@ -150,7 +150,7 @@ public class HttpStreamReaderTest {
     }
 
     @Test
-    public void clientDone() {
+    public void clientDone() throws Exception {
         reader.apply(null, null);
         verify(deframer).deframe(HttpData.EMPTY_DATA, true);
         verify(deframer).closeWhenComplete();

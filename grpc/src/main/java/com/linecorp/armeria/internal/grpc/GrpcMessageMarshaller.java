@@ -35,7 +35,7 @@ import com.google.protobuf.UnsafeByteOperations;
 
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.ByteBufOrStream;
 
 import io.grpc.MethodDescriptor;
 import io.grpc.MethodDescriptor.Marshaller;

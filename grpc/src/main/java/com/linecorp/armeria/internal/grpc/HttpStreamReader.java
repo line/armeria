@@ -55,7 +55,7 @@ public class HttpStreamReader implements Subscriber<HttpObject>, BiFunction<Void
     private final TransportStatusListener transportStatusListener;
 
     @VisibleForTesting
-    public final ArmeriaMessageDeframer deframer;
+    public final com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer deframer;
 
     @Nullable
     private Subscription subscription;
@@ -67,7 +67,7 @@ public class HttpStreamReader implements Subscriber<HttpObject>, BiFunction<Void
     private boolean sawLeadingHeaders;
 
     public HttpStreamReader(DecompressorRegistry decompressorRegistry,
-                            ArmeriaMessageDeframer deframer,
+                            com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer deframer,
                             TransportStatusListener transportStatusListener) {
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.deframer = requireNonNull(deframer, "deframer");
@@ -158,7 +158,7 @@ public class HttpStreamReader implements Subscriber<HttpObject>, BiFunction<Void
                             "Can't find decompressor for " + grpcEncoding));
                     return;
                 }
-                deframer.decompressor(decompressor);
+                deframer.decompressor(ForwardingDecompressor.forGrpc(decompressor));
             }
             requestHttpFrame();
             return;
@@ -168,7 +168,7 @@ public class HttpStreamReader implements Subscriber<HttpObject>, BiFunction<Void
             deframer.deframe(data, false);
         } catch (Throwable cause) {
             try {
-                transportStatusListener.transportReportStatus(Status.fromThrowable(cause));
+                transportStatusListener.transportReportStatus(GrpcStatus.fromThrowable(cause));
                 return;
             } finally {
                 deframer.close();

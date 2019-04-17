@@ -38,13 +38,15 @@ import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcHeaderNames;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.ByteBufOrStream;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer;
-import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;
-import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
+import com.linecorp.armeria.internal.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.grpc.GrpcMessageMarshaller;
+import com.linecorp.armeria.internal.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.grpc.HttpStreamReader;
 import com.linecorp.armeria.internal.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.internal.grpc.TransportStatusListener;
@@ -161,14 +163,14 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         } else {
             compressor = Identity.NONE;
         }
-        messageFramer.setCompressor(compressor);
+        messageFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
         prepareHeaders(req.headers(), compressor);
         listener = responseListener;
         final HttpResponse res;
         try (SafeCloseable ignored = ctx.push()) {
             res = httpClient.execute(ctx, req);
         } catch (Exception e) {
-            close(Status.fromThrowable(e));
+            close(GrpcStatus.fromThrowable(e));
             return;
         }
         res.subscribe(responseReader, ctx.eventLoop(), true);
@@ -249,7 +251,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                     try (SafeCloseable ignored = ctx.push()) {
                         listener.onReady();
                     } catch (Throwable t) {
-                        close(Status.fromThrowable(t));
+                        close(GrpcStatus.fromThrowable(t));
                     }
                 }
             });
@@ -279,7 +281,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 listener.onMessage(msg);
             }
         } catch (Throwable t) {
-            req.close(Status.fromThrowable(t).asException());
+            req.close(GrpcStatus.fromThrowable(t).asException());
             throw t instanceof RuntimeException ? (RuntimeException) t : new RuntimeException(t);
         }
     }
