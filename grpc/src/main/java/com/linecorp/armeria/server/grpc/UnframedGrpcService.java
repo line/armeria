@@ -264,7 +264,11 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
                     }
 
                     @Override
-                    public void endOfStream() {}
+                    public void endOfStream() {
+                        if (!res.isDone()) {
+                            res.complete(HttpResponse.of(unframedHeaders));
+                        }
+                    }
                 },
                 // Max outbound message size is handled by the GrpcService, so we don't need to set it here.
                 Integer.MAX_VALUE,
