@@ -38,6 +38,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 import com.linecorp.armeria.testing.common.EventLoopRule;
 
+import io.grpc.BindableService;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 
@@ -60,7 +61,6 @@ public class UnframedGrpcServiceTest {
 
     private ServiceRequestContext ctx;
     private HttpRequest request;
-    private UnframedGrpcService unframedGrpcService;
 
     @Before
     public void setUp() {
@@ -72,15 +72,7 @@ public class UnframedGrpcServiceTest {
 
     @Test
     public void statusOk() throws Exception {
-        unframedGrpcService =
-                (UnframedGrpcService) new GrpcServiceBuilder().addService(testService)
-                                                              .setMaxInboundMessageSizeBytes(MAX_MESSAGE_BYTES)
-                                                              .setMaxOutboundMessageSizeBytes(MAX_MESSAGE_BYTES)
-                                                              .supportedSerializationFormats(
-                                                                      GrpcSerializationFormats.values())
-                                                              .enableUnframedRequests(true)
-                                                              .build();
-
+        final UnframedGrpcService unframedGrpcService = buildUnframedGrpcService(testService);
         final HttpResponse response = unframedGrpcService.serve(ctx, request);
         final AggregatedHttpMessage aggregatedHttpMessage = response.aggregate().get();
         assertThat(aggregatedHttpMessage.status()).isEqualTo(HttpStatus.OK);
@@ -93,14 +85,7 @@ public class UnframedGrpcServiceTest {
         doThrow(Status.CANCELLED.withDescription("grpc error message").asRuntimeException())
                 .when(spyTestService)
                 .emptyCall(any(), any());
-        unframedGrpcService =
-                (UnframedGrpcService) new GrpcServiceBuilder().addService(spyTestService)
-                                                              .setMaxInboundMessageSizeBytes(MAX_MESSAGE_BYTES)
-                                                              .setMaxOutboundMessageSizeBytes(MAX_MESSAGE_BYTES)
-                                                              .supportedSerializationFormats(
-                                                                      GrpcSerializationFormats.values())
-                                                              .enableUnframedRequests(true)
-                                                              .build();
+        final UnframedGrpcService unframedGrpcService = buildUnframedGrpcService(spyTestService);
         final HttpResponse response = unframedGrpcService.serve(ctx, request);
         final AggregatedHttpMessage aggregatedHttpMessage = response.aggregate().get();
         assertThat(aggregatedHttpMessage.status()).isEqualTo(HttpStatus.CLIENT_CLOSED_REQUEST);
@@ -108,5 +93,30 @@ public class UnframedGrpcServiceTest {
                 .isEqualTo("http-status: 499, Client Closed Request\n" +
                            "Caused by: \n" +
                            "grpc-status: 1, CANCELLED, grpc error message");
+    }
+
+    @Test
+    public void noContent() throws Exception {
+        final UnframedGrpcService unframedGrpcService = buildUnframedGrpcService(new TestServiceImplBase() {
+            @Override
+            public void emptyCall(Empty request, StreamObserver<Empty> responseObserver) {
+                // Note that 'responseObserver.onNext()' is not called.
+                responseObserver.onCompleted();
+            }
+        });
+        final HttpResponse response = unframedGrpcService.serve(ctx, request);
+        final AggregatedHttpMessage aggregatedHttpMessage = response.aggregate().get();
+        assertThat(aggregatedHttpMessage.status()).isEqualTo(HttpStatus.OK);
+        assertThat(aggregatedHttpMessage.content().isEmpty()).isTrue();
+    }
+
+    private static UnframedGrpcService buildUnframedGrpcService(BindableService bindableService) {
+        return (UnframedGrpcService) new GrpcServiceBuilder()
+                .addService(bindableService)
+                .setMaxInboundMessageSizeBytes(MAX_MESSAGE_BYTES)
+                .setMaxOutboundMessageSizeBytes(MAX_MESSAGE_BYTES)
+                .supportedSerializationFormats(GrpcSerializationFormats.values())
+                .enableUnframedRequests(true)
+                .build();
     }
 }

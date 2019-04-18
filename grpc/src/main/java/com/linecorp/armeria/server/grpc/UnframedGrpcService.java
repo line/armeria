@@ -256,15 +256,20 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
                 new Listener() {
                     @Override
                     public void messageRead(ByteBufOrStream message) {
-                        // We know there is only one message in total, so don't bother with checking endOfStream
-                        // We also know that we don't support compression, so this is always a ByteBuffer.
+                        // We know that we don't support compression, so this is always a ByteBuffer.
                         final HttpData unframedContent = new ByteBufHttpData(message.buf(), true);
                         unframedHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, unframedContent.length());
                         res.complete(HttpResponse.of(unframedHeaders, unframedContent));
                     }
 
                     @Override
-                    public void endOfStream() {}
+                    public void endOfStream() {
+                        if (!res.isDone()) {
+                            // If 'ResponseObserver.onCompleted()' is called without calling 'onNext()',
+                            // this callback would be invoked but 'messageRead' callback wouldn't.
+                            res.complete(HttpResponse.of(unframedHeaders));
+                        }
+                    }
                 },
                 // Max outbound message size is handled by the GrpcService, so we don't need to set it here.
                 Integer.MAX_VALUE,
