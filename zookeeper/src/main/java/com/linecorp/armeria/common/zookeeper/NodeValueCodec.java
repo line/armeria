@@ -45,7 +45,7 @@ public interface NodeValueCodec {
     NodeValueCodec DEFAULT = DefaultNodeValueCodec.INSTANCE;
 
     /**
-     * Decode a zNode value into a set of {@link Endpoint}s.
+     * Decodes a zNode value into a set of {@link Endpoint}s.
      *
      * @param zNodeValue zNode value
      * @return the list of {@link Endpoint}s
@@ -56,7 +56,7 @@ public interface NodeValueCodec {
     }
 
     /**
-     * Decode a zNode value into a set of {@link Endpoint}s.
+     * Decodes a zNode value into a set of {@link Endpoint}s.
      *
      * @param zNodeValue zNode value
      * @return the list of {@link Endpoint}s
@@ -64,7 +64,8 @@ public interface NodeValueCodec {
     Set<Endpoint> decodeAll(String zNodeValue);
 
     /**
-     * Decode a zNode value to a {@link Endpoint}.
+     * Decodes a zNode value to a {@link Endpoint}.
+     *
      * @param zNodeValue ZooKeeper node value
      * @return an {@link Endpoint} or {@code null} if value needs to be skipped
      */
@@ -75,7 +76,8 @@ public interface NodeValueCodec {
     }
 
     /**
-     * Decode a zNode value to a {@link Endpoint}.
+     * Decodes a zNode value to a {@link Endpoint}.
+     *
      * @param zNodeValue ZooKeeper node value
      * @return an {@link Endpoint} or {@code null} if value needs to be skipped
      */
@@ -83,16 +85,18 @@ public interface NodeValueCodec {
     Endpoint decode(String zNodeValue);
 
     /**
-     * Encode a set of {@link Endpoint}s into a bytes array representation
+     * Encodes a set of {@link Endpoint}s into a byte array representation.
+     *
      * @param endpoints set of {@link Endpoint}s
-     * @return a bytes array
+     * @return a byte array
      */
     byte[] encodeAll(Iterable<Endpoint> endpoints);
 
     /**
-     * Encode single {@link Endpoint} into a bytes array representation
+     * Encodes a single {@link Endpoint} into a byte array representation.
+     *
      * @param endpoint  an {@link Endpoint}
-     * @return a bytes array
+     * @return a byte array
      */
     byte[] encode(Endpoint endpoint);
 }
