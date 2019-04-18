@@ -63,7 +63,6 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.math.LongMath;
 
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
@@ -96,8 +95,8 @@ import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.netty.handler.ssl.ClientAuth;
-import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
+import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty.util.NetUtil;
 import io.prometheus.client.CollectorRegistry;
 
@@ -385,31 +384,30 @@ public final class ArmeriaConfigurationUtil {
                 return;
             }
 
-            final SslContextBuilder sslBuilder = SslContextBuilder
-                    .forServer(getKeyManagerFactory(ssl, keyStoreSupplier))
-                    .trustManager(getTrustManagerFactory(ssl, trustStoreSupplier));
-            final SslProvider sslProvider = ssl.getProvider() == null ?
-                                            Flags.useOpenSsl() ?
-                                            SslProvider.OPENSSL
-                                                               : SslProvider.JDK
-                                                                      : ssl.getProvider();
-            sslBuilder.sslProvider(sslProvider);
-            final List<String> enabledProtocols = ssl.getEnabledProtocols();
-            if (enabledProtocols != null) {
-                sslBuilder.protocols(enabledProtocols.toArray(new String[enabledProtocols.size()]));
-            }
+            final KeyManagerFactory keyManagerFactory = getKeyManagerFactory(ssl, keyStoreSupplier);
+            final TrustManagerFactory trustManagerFactory = getTrustManagerFactory(ssl, trustStoreSupplier);
 
-            final List<String> ciphers = ssl.getCiphers();
-            if (ciphers != null) {
-                sslBuilder.ciphers(ImmutableList.copyOf(ciphers));
-            }
+            sb.tls(keyManagerFactory, sslContextBuilder -> {
+                sslContextBuilder.trustManager(trustManagerFactory);
 
-            final ClientAuth clientAuth = ssl.getClientAuth();
-            if (clientAuth != null) {
-                sslBuilder.clientAuth(clientAuth);
-            }
-
-            sb.tls(sslBuilder.build());
+                final SslProvider sslProvider = ssl.getProvider();
+                if (sslProvider != null) {
+                    sslContextBuilder.sslProvider(sslProvider);
+                }
+                final List<String> enabledProtocols = ssl.getEnabledProtocols();
+                if (enabledProtocols != null) {
+                    sslContextBuilder.protocols(enabledProtocols.toArray(new String[enabledProtocols.size()]));
+                }
+                final List<String> ciphers = ssl.getCiphers();
+                if (ciphers != null) {
+                    sslContextBuilder.ciphers(ImmutableList.copyOf(ciphers),
+                                              SupportedCipherSuiteFilter.INSTANCE);
+                }
+                final ClientAuth clientAuth = ssl.getClientAuth();
+                if (clientAuth != null) {
+                    sslContextBuilder.clientAuth(clientAuth);
+                }
+            });
         } catch (Exception e) {
             throw new IllegalStateException("Failed to configure TLS: " + e, e);
         }
