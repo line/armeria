@@ -47,6 +47,7 @@ import com.linecorp.armeria.common.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.grpc.GrpcJsonUtil;
+import com.linecorp.armeria.internal.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.PathMapping;
@@ -166,7 +167,8 @@ public final class GrpcService extends AbstractHttpService
                 final long timeout = TimeoutHeaderUtil.fromHeaderValue(timeoutHeader);
                 ctx.setRequestTimeout(Duration.ofNanos(timeout));
             } catch (IllegalArgumentException e) {
-                return HttpResponse.of(ArmeriaServerCall.statusToTrailers(ctx, Status.fromThrowable(e), false));
+                return HttpResponse.of(
+                        ArmeriaServerCall.statusToTrailers(ctx, GrpcStatus.fromThrowable(e), false));
             }
         }
 
@@ -211,7 +213,7 @@ public final class GrpcService extends AbstractHttpService
             listener = methodDef.getServerCallHandler().startCall(call, EMPTY_METADATA);
         } catch (Throwable t) {
             call.setListener(new EmptyListener<>());
-            call.close(Status.fromThrowable(t), EMPTY_METADATA);
+            call.close(GrpcStatus.fromThrowable(t), EMPTY_METADATA);
             logger.warn(
                     "Exception thrown from streaming request stub method before processing any request data" +
                     " - this is likely a bug in the stub implementation.");

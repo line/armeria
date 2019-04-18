@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -44,7 +44,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package com.linecorp.armeria.internal.grpc;
+package com.linecorp.armeria.common.grpc.protocol;
 
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
@@ -57,9 +57,6 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
-import io.grpc.Codec;
-import io.grpc.Compressor;
-import io.grpc.Status;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufOutputStream;
@@ -90,6 +87,9 @@ public class ArmeriaMessageFramer implements AutoCloseable {
     private Compressor compressor;
     private boolean closed;
 
+    /**
+     * Constructs an {@link ArmeriaMessageFramer} to write messages to a gRPC request or response.
+     */
     public ArmeriaMessageFramer(ByteBufAllocator alloc, int maxOutboundMessageSize) {
         this.alloc = requireNonNull(alloc, "alloc");
         this.maxOutboundMessageSize = maxOutboundMessageSize;
@@ -104,7 +104,7 @@ public class ArmeriaMessageFramer implements AutoCloseable {
      */
     public ByteBufHttpData writePayload(ByteBuf message) {
         verifyNotClosed();
-        final boolean compressed = messageCompression && compressor != Codec.Identity.NONE;
+        final boolean compressed = messageCompression && compressor != null;
         final int messageLength = message.readableBytes();
         try {
             final ByteBuf buf;
@@ -116,10 +116,10 @@ public class ArmeriaMessageFramer implements AutoCloseable {
             return new ByteBufHttpData(buf, false);
         } catch (IOException | RuntimeException e) {
             // IOException will not be thrown, since sink#deliverFrame doesn't throw.
-            throw Status.INTERNAL
-                    .withDescription("Failed to frame message")
-                    .withCause(e)
-                    .asRuntimeException();
+            throw new ArmeriaStatusException(
+                    StatusCodes.INTERNAL,
+                    "Failed to frame message",
+                    e);
         }
     }
 
@@ -127,11 +127,13 @@ public class ArmeriaMessageFramer implements AutoCloseable {
         this.messageCompression = messageCompression;
     }
 
-    public void setCompressor(Compressor compressor) {
+    public void setCompressor(@Nullable Compressor compressor) {
         this.compressor = compressor;
     }
 
     private ByteBuf writeCompressed(ByteBuf message) throws IOException {
+        assert compressor != null;
+
         final CompositeByteBuf compressed = alloc.compositeBuffer();
         try (OutputStream compressingStream = compressor.compress(new ByteBufOutputStream(compressed))) {
             compressingStream.write(ByteBufUtil.getBytes(message));
@@ -150,11 +152,10 @@ public class ArmeriaMessageFramer implements AutoCloseable {
         final int messageLength = message.readableBytes();
         if (maxOutboundMessageSize >= 0 && messageLength > maxOutboundMessageSize) {
             message.release();
-            throw Status.RESOURCE_EXHAUSTED
-                    .withDescription(
-                            String.format("message too large %d > %d", messageLength,
-                                          maxOutboundMessageSize))
-                    .asRuntimeException();
+            throw new ArmeriaStatusException(
+                    StatusCodes.RESOURCE_EXHAUSTED,
+                    String.format("message too large %d > %d", messageLength,
+                                  maxOutboundMessageSize));
         }
 
         // Here comes some heuristics.

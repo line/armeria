@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.grpc;
+package com.linecorp.armeria.common.grpc.protocol;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -30,10 +30,11 @@ import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
+import com.linecorp.armeria.internal.grpc.ForwardingCompressor;
+import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.grpc.Codec.Gzip;
-import io.grpc.StatusRuntimeException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.UnpooledByteBufAllocator;
 
@@ -62,7 +63,7 @@ public class ArmeriaMessageFramerTest {
 
     @Test
     public void compressed() throws Exception {
-        framer.setCompressor(new Gzip());
+        framer.setCompressor(ForwardingCompressor.forGrpc(new Gzip()));
         framer.setMessageCompression(true);
         final ByteBuf buf = GrpcTestUtil.requestByteBuf();
         final ByteBufHttpData framed = framer.writePayload(buf);
@@ -73,7 +74,7 @@ public class ArmeriaMessageFramerTest {
 
     @Test
     public void emptyNotCompressed() throws Exception {
-        framer.setCompressor(new Gzip());
+        framer.setCompressor(ForwardingCompressor.forGrpc(new Gzip()));
         framer.setMessageCompression(true);
         final ByteBuf buf = GrpcTestUtil.protoByteBuf(SimpleRequest.getDefaultInstance());
         assertThat(buf.readableBytes()).isEqualTo(0);
@@ -93,12 +94,12 @@ public class ArmeriaMessageFramerTest {
                                                         Strings.repeat("a", 1024))))
                              .build();
         assertThatThrownBy(() -> framer.writePayload(GrpcTestUtil.protoByteBuf(request)))
-                .isInstanceOf(StatusRuntimeException.class);
+                .isInstanceOf(ArmeriaStatusException.class);
     }
 
     @Test
     public void notTooLargeCompressed() throws Exception {
-        framer.setCompressor(new Gzip());
+        framer.setCompressor(ForwardingCompressor.forGrpc(new Gzip()));
         framer.setMessageCompression(true);
         final SimpleRequest request =
                 SimpleRequest.newBuilder()
@@ -113,7 +114,7 @@ public class ArmeriaMessageFramerTest {
 
     @Test
     public void tooLargeCompressed() throws Exception {
-        framer.setCompressor(new Gzip());
+        framer.setCompressor(ForwardingCompressor.forGrpc(new Gzip()));
         framer.setMessageCompression(true);
         final Random random = new Random(1);
         final byte[] payload = new byte[1024];
@@ -124,6 +125,6 @@ public class ArmeriaMessageFramerTest {
                                                 .setBody(ByteString.copyFrom(payload)))
                              .build();
         assertThatThrownBy(() -> framer.writePayload(GrpcTestUtil.protoByteBuf(request)))
-                .isInstanceOf(StatusRuntimeException.class);
+                .isInstanceOf(ArmeriaStatusException.class);
     }
 }

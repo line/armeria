@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server.grpc;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static io.netty.util.AsciiString.c2b;
@@ -52,11 +51,14 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.ThrowableProto;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.ByteBufOrStream;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
+import com.linecorp.armeria.common.grpc.protocol.Decompressor;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer;
-import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;
-import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
+import com.linecorp.armeria.internal.grpc.ForwardingCompressor;
+import com.linecorp.armeria.internal.grpc.ForwardingDecompressor;
 import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.grpc.GrpcMessageMarshaller;
 import com.linecorp.armeria.internal.grpc.GrpcStatus;
@@ -71,7 +73,6 @@ import io.grpc.Codec;
 import io.grpc.Codec.Identity;
 import io.grpc.Compressor;
 import io.grpc.CompressorRegistry;
-import io.grpc.Decompressor;
 import io.grpc.DecompressorRegistry;
 import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
@@ -228,7 +229,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 compressor = Codec.Identity.NONE;
             }
         }
-        messageFramer.setCompressor(compressor);
+        messageFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
 
         // Always put compressor, even if it's identity.
         headers.add(GrpcHeaderNames.GRPC_ENCODING, compressor.getMessageEncoding());
@@ -271,10 +272,10 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 }
             });
         } catch (RuntimeException e) {
-            close(Status.fromThrowable(e), EMPTY_METADATA);
+            close(GrpcStatus.fromThrowable(e), EMPTY_METADATA);
             throw e;
         } catch (Throwable t) {
-            close(Status.fromThrowable(t), EMPTY_METADATA);
+            close(GrpcStatus.fromThrowable(t), EMPTY_METADATA);
             throw new RuntimeException(t);
         }
     }
@@ -283,7 +284,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         try {
             listener.onReady();
         } catch (Throwable t) {
-            close(Status.fromThrowable(t), EMPTY_METADATA);
+            close(GrpcStatus.fromThrowable(t), EMPTY_METADATA);
         }
     }
 
@@ -351,7 +352,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         checkState(!sendHeadersCalled, "sendHeaders has been called");
         compressor = compressorRegistry.lookupCompressor(compressorName);
         checkArgument(compressor != null, "Unable to find compressor by name %s", compressorName);
-        messageFramer.setCompressor(compressor);
+        messageFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
     }
 
     @Override
@@ -409,7 +410,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         try (SafeCloseable ignored = ctx.push()) {
             listener.onMessage(request);
         } catch (Throwable t) {
-            close(Status.fromThrowable(t), EMPTY_METADATA);
+            close(GrpcStatus.fromThrowable(t), EMPTY_METADATA);
         }
     }
 
@@ -433,7 +434,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         try (SafeCloseable ignored = ctx.push()) {
             listener.onHalfClose();
         } catch (Throwable t) {
-            close(Status.fromThrowable(t), EMPTY_METADATA);
+            close(GrpcStatus.fromThrowable(t), EMPTY_METADATA);
         }
     }
 
@@ -500,7 +501,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 // A custom error when dealing with client cancel or transport issues should be
                 // returned. We have already closed the listener, so it will not receive any more
                 // callbacks as designed.
-                close(Status.fromThrowable(t), EMPTY_METADATA);
+                close(GrpcStatus.fromThrowable(t), EMPTY_METADATA);
             }
         }
     }
@@ -571,13 +572,17 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         return new ByteBufHttpData(serialized, true);
     }
 
+    @Nullable
     private static Decompressor clientDecompressor(HttpHeaders headers, DecompressorRegistry registry) {
         final String encoding = headers.get(GrpcHeaderNames.GRPC_ENCODING);
         if (encoding == null) {
-            return Identity.NONE;
+            return ForwardingDecompressor.forGrpc(Identity.NONE);
         }
-        final Decompressor decompressor = registry.lookupDecompressor(encoding);
-        return firstNonNull(decompressor, Identity.NONE);
+        final io.grpc.Decompressor decompressor = registry.lookupDecompressor(encoding);
+        if (decompressor != null) {
+            return ForwardingDecompressor.forGrpc(decompressor);
+        }
+        return ForwardingDecompressor.forGrpc(Identity.NONE);
     }
 
     // Copied from io.netty.handler.codec.http.HttpHeadersEncoder

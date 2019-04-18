@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -44,7 +44,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package com.linecorp.armeria.internal.grpc;
+package com.linecorp.armeria.common.grpc.protocol;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
@@ -63,10 +63,6 @@ import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.HttpData;
 
-import io.grpc.Codec;
-import io.grpc.Codec.Identity;
-import io.grpc.Decompressor;
-import io.grpc.Status;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
@@ -173,7 +169,8 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
 
     private State state = State.HEADER;
     private int requiredLength = HEADER_LENGTH;
-    private Decompressor decompressor = Identity.NONE;
+    @Nullable
+    private Decompressor decompressor;
 
     private boolean compressedFlag;
     private boolean endOfStream;
@@ -187,6 +184,9 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     private boolean inDelivery;
     private boolean startedDeframing;
 
+    /**
+     * Construct an {@link ArmeriaMessageDeframer} for reading messages out of a gRPC request or response.
+     */
     public ArmeriaMessageDeframer(Listener listener,
                                   int maxMessageSizeBytes,
                                   ByteBufAllocator alloc) {
@@ -294,7 +294,10 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
         return unprocessed == null;
     }
 
-    public ArmeriaMessageDeframer decompressor(Decompressor decompressor) {
+    /**
+     * Sets the {@link Decompressor} for this deframer.
+     */
+    public ArmeriaMessageDeframer decompressor(@Nullable Decompressor decompressor) {
         checkState(!startedDeframing, "Deframing has already started, cannot change decompressor mid-stream.");
         this.decompressor = decompressor;
         return this;
@@ -364,19 +367,20 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     private void readHeader() {
         final int type = readUnsignedByte();
         if ((type & RESERVED_MASK) != 0) {
-            throw Status.INTERNAL.withDescription(
-                    DEBUG_STRING + ": Frame header malformed: reserved bits not zero")
-                                 .asRuntimeException();
+            throw new ArmeriaStatusException(
+                    StatusCodes.INTERNAL,
+                    DEBUG_STRING + ": Frame header malformed: reserved bits not zero");
         }
         compressedFlag = (type & COMPRESSED_FLAG_MASK) != 0;
 
         // Update the required length to include the length of the frame.
         requiredLength = readInt();
         if (requiredLength < 0 || requiredLength > maxMessageSizeBytes) {
-            throw Status.RESOURCE_EXHAUSTED.withDescription(
+            throw new ArmeriaStatusException(
+                    StatusCodes.RESOURCE_EXHAUSTED,
                     String.format("%s: Frame size %d exceeds maximum: %d. ",
                                   DEBUG_STRING, requiredLength,
-                                  maxMessageSizeBytes)).asRuntimeException();
+                                  maxMessageSizeBytes));
         }
 
         // Continue reading the frame body.
@@ -500,11 +504,11 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     }
 
     private ByteBufOrStream getCompressedBody(ByteBuf buf) {
-        if (decompressor == Codec.Identity.NONE) {
+        if (decompressor == null) {
             buf.release();
-            throw Status.INTERNAL.withDescription(
-                    DEBUG_STRING + ": Can't decode compressed frame as compression not configured.")
-                                 .asRuntimeException();
+            throw new ArmeriaStatusException(
+                    StatusCodes.INTERNAL,
+                    DEBUG_STRING + ": Can't decode compressed frame as compression not configured.");
         }
 
         try {
@@ -594,9 +598,11 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
 
         private void verifySize() {
             if (count > maxMessageSize) {
-                throw Status.RESOURCE_EXHAUSTED.withDescription(String.format(
+                throw new ArmeriaStatusException(
+                        StatusCodes.RESOURCE_EXHAUSTED,
+                        String.format(
                         "%s: Compressed frame exceeds maximum frame size: %d. Bytes read: %d. ",
-                        debugString, maxMessageSize, count)).asRuntimeException();
+                        debugString, maxMessageSize, count));
             }
         }
     }

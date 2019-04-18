@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.grpc;
+package com.linecorp.armeria.common.grpc.protocol;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -41,12 +41,13 @@ import com.google.common.io.ByteStreams;
 import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.ByteBufOrStream;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;
+import com.linecorp.armeria.internal.grpc.ForwardingDecompressor;
+import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
 
 import io.grpc.Codec.Gzip;
-import io.grpc.StatusRuntimeException;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 
@@ -67,7 +68,7 @@ public class ArmeriaMessageDeframerTest {
         deframer = new ArmeriaMessageDeframer(listener,
                                               MAX_MESSAGE_SIZE,
                                               UnpooledByteBufAllocator.DEFAULT)
-                .decompressor(new Gzip());
+                .decompressor(ForwardingDecompressor.forGrpc(new Gzip()));
     }
 
     @After
@@ -83,7 +84,7 @@ public class ArmeriaMessageDeframerTest {
     }
 
     @Test
-    public void request_noDataYet() {
+    public void request_noDataYet() throws Exception {
         deframer.request(1);
         assertThat(deframer.isStalled()).isTrue();
     }
@@ -203,7 +204,7 @@ public class ArmeriaMessageDeframerTest {
         assertThat(frame.length).isGreaterThan(1024);
         deframer.request(1);
         assertThatThrownBy(() -> deframer.deframe(HttpData.of(frame), false))
-                .isInstanceOf(StatusRuntimeException.class);
+                .isInstanceOf(ArmeriaStatusException.class);
     }
 
     @Test
@@ -224,7 +225,7 @@ public class ArmeriaMessageDeframerTest {
         verifyNoMoreInteractions(listener);
         try (InputStream stream = messageCaptor.getValue().stream()) {
             assertThatThrownBy(() -> ByteStreams.toByteArray(stream))
-                    .isInstanceOf(StatusRuntimeException.class);
+                    .isInstanceOf(ArmeriaStatusException.class);
         }
     }
 
