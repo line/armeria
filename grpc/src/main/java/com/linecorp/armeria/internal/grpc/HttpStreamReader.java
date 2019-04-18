@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.StatusCauseException;
 import com.linecorp.armeria.common.grpc.ThrowableProto;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 
 import io.grpc.Decompressor;
 import io.grpc.DecompressorRegistry;
@@ -55,7 +56,7 @@ public class HttpStreamReader implements Subscriber<HttpObject>, BiFunction<Void
     private final TransportStatusListener transportStatusListener;
 
     @VisibleForTesting
-    public final com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer deframer;
+    public final ArmeriaMessageDeframer deframer;
 
     @Nullable
     private Subscription subscription;
@@ -67,7 +68,7 @@ public class HttpStreamReader implements Subscriber<HttpObject>, BiFunction<Void
     private boolean sawLeadingHeaders;
 
     public HttpStreamReader(DecompressorRegistry decompressorRegistry,
-                            com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer deframer,
+                            ArmeriaMessageDeframer deframer,
                             TransportStatusListener transportStatusListener) {
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.deframer = requireNonNull(deframer, "deframer");

@@ -21,6 +21,8 @@ package com.linecorp.armeria.common.grpc.protocol;
  */
 public class ArmeriaStatusException extends RuntimeException {
 
+    public static final long serialVersionUID = -8370257107063108923L;
+
     private final int code;
 
     /**
@@ -30,15 +32,18 @@ public class ArmeriaStatusException extends RuntimeException {
         super(message);
         this.code = code;
     }
+
     /**
      * Construct a {@link ArmeriaStatusException} for the given gRPC status code, message, and cause.
      */
-
     public ArmeriaStatusException(int code, String message, Throwable cause) {
         super(message, cause);
         this.code = code;
     }
 
+    /**
+     * Returns the gRPC status code for this {@link ArmeriaStatusException}.
+     */
     public int getCode() {
         return code;
     }
