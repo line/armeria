@@ -31,6 +31,13 @@ public final class StatusExceptionConverter {
                                                        .withDescription(armeria.getMessage())
                                                        .withCause(armeria.getCause())
                                                        .asRuntimeException();
+        // NB(anuraaga): We end up filling the stacktrace of the exception twice, which is unfortunate since
+        // generating a stacktrace is expensive. Ideally, we could call the StatusRuntimeException with the
+        // toggle for filling in the stacktrace, but it is not a public API. Other approaches could be to
+        // subclass StatusRuntimeException (which will probably just cause upstream to declare the class final
+        // :P) or include ArmeriaStatusException in the cause chain of Status that we return from armeria. Both
+        // diverge from upstream behavior slightly and for now we assume the performance hit isn't something to
+        // worry about since it only affects exceptions.
         converted.setStackTrace(armeria.getStackTrace());
         return converted;
     }
