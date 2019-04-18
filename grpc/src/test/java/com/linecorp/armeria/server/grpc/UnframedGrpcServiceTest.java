@@ -61,7 +61,6 @@ public class UnframedGrpcServiceTest {
 
     private ServiceRequestContext ctx;
     private HttpRequest request;
-    private UnframedGrpcService unframedGrpcService;
 
     @Before
     public void setUp() {
@@ -73,7 +72,7 @@ public class UnframedGrpcServiceTest {
 
     @Test
     public void statusOk() throws Exception {
-        unframedGrpcService = buildUnframedGrpcService(testService);
+        final UnframedGrpcService unframedGrpcService = buildUnframedGrpcService(testService);
         final HttpResponse response = unframedGrpcService.serve(ctx, request);
         final AggregatedHttpMessage aggregatedHttpMessage = response.aggregate().get();
         assertThat(aggregatedHttpMessage.status()).isEqualTo(HttpStatus.OK);
@@ -86,7 +85,7 @@ public class UnframedGrpcServiceTest {
         doThrow(Status.CANCELLED.withDescription("grpc error message").asRuntimeException())
                 .when(spyTestService)
                 .emptyCall(any(), any());
-        unframedGrpcService = buildUnframedGrpcService(spyTestService);
+        final UnframedGrpcService unframedGrpcService = buildUnframedGrpcService(spyTestService);
         final HttpResponse response = unframedGrpcService.serve(ctx, request);
         final AggregatedHttpMessage aggregatedHttpMessage = response.aggregate().get();
         assertThat(aggregatedHttpMessage.status()).isEqualTo(HttpStatus.CLIENT_CLOSED_REQUEST);
@@ -98,7 +97,7 @@ public class UnframedGrpcServiceTest {
 
     @Test
     public void noContent() throws Exception {
-        unframedGrpcService = buildUnframedGrpcService(new TestServiceImplBase() {
+        final UnframedGrpcService unframedGrpcService = buildUnframedGrpcService(new TestServiceImplBase() {
             @Override
             public void emptyCall(Empty request, StreamObserver<Empty> responseObserver) {
                 // Note that 'responseObserver.onNext()' is not called.
