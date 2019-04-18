@@ -102,6 +102,11 @@ public class RedirectServiceTest {
                 sb.service("/test3d/{var1}", new RedirectService("http://127.0.0.1:" + serverRule1Port +
                         "/new0/{var1}"));
 
+                // For testing preserveQueryString option.
+                sb.service("/query_string/preserved", new RedirectService("/new"));
+                sb.service("/query_string/unpreserved", new RedirectService("/new", false));
+                sb.service("/query_string/unpreserved_2", new RedirectService("/new?redirected=1"));
+
                 sb.build();
             }
         }
@@ -177,7 +182,11 @@ public class RedirectServiceTest {
                 "/test3a",
                 "/test3b",
                 "/test3c/branch1",
-                "/test3d/branch2"
+                "/test3d/branch2",
+
+                "/query_string/preserved?foo=bar",
+                "/query_string/unpreserved?foo=bar",
+                "/query_string/unpreserved_2?foo=bar"
         };
         final HttpStatus[] redirectStatuses = {
                 HttpStatus.TEMPORARY_REDIRECT,
@@ -201,7 +210,11 @@ public class RedirectServiceTest {
                 HttpStatus.TEMPORARY_REDIRECT,
                 HttpStatus.TEMPORARY_REDIRECT,
                 HttpStatus.TEMPORARY_REDIRECT,
-                HttpStatus.TEMPORARY_REDIRECT
+                HttpStatus.TEMPORARY_REDIRECT,
+
+                HttpStatus.TEMPORARY_REDIRECT,
+                HttpStatus.TEMPORARY_REDIRECT,
+                HttpStatus.TEMPORARY_REDIRECT,
         };
         final String[] expectedLocations = {
                 "/new0/branch1",
@@ -225,7 +238,11 @@ public class RedirectServiceTest {
                 "http://localhost:" + serverRule1.httpPort() + "/new0/branch1",
                 "http://127.0.0.1:" + serverRule1.httpPort() + "/new0/branch1",
                 "http://localhost:" + serverRule1.httpPort() + "/new0/branch1",
-                "http://127.0.0.1:" + serverRule1.httpPort() + "/new0/branch2"
+                "http://127.0.0.1:" + serverRule1.httpPort() + "/new0/branch2",
+
+                "/new?foo=bar",
+                "/new",
+                "/new?redirected=1"
         };
         final String[] expectedResponse = {
                 "SERVICE_BRANCH_1",
@@ -249,7 +266,11 @@ public class RedirectServiceTest {
                 "SERVICE_BRANCH_1",
                 "SERVICE_BRANCH_1",
                 "SERVICE_BRANCH_1",
-                "SERVICE_BRANCH_2"
+                "SERVICE_BRANCH_2",
+
+                null,
+                null,
+                null
         };
 
         final HttpClient client = HttpClient.of(serverRule1.uri("/"));
@@ -259,6 +280,10 @@ public class RedirectServiceTest {
 
             final String newLocation = msg.headers().get(HttpHeaderNames.LOCATION);
             assertThat(newLocation).isEqualTo(expectedLocations[i]);
+
+            if (expectedResponse[i] == null) {
+                continue;
+            }
 
             if (newLocation.startsWith("http")) {
                 final HttpClient client2 = HttpClient.of(newLocation);
