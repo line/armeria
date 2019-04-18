@@ -469,12 +469,12 @@ public final class Server implements AutoCloseable {
                     while (!executor.isTerminated()) {
                         try {
                             executor.awaitTermination(1, TimeUnit.DAYS);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
+                        } catch (InterruptedException ignore) {
+                            // Do nothing.
                         }
                     }
                 } catch (Exception e) {
-                    logger.warn("Failed to shutdown the {}:", executor, e);
+                    logger.warn("Failed to shutdown the blockingTaskExecutor: {}", executor, e);
                 }
             }
 

@@ -652,8 +652,7 @@ public final class ServerBuilder {
      */
     @Deprecated
     public ServerBuilder blockingTaskExecutor(Executor blockingTaskExecutor) {
-        blockingTaskExecutor(blockingTaskExecutor, false);
-        return this;
+        return blockingTaskExecutor(blockingTaskExecutor, false);
     }
 
     /**
