@@ -36,7 +36,7 @@ public final class SettableHealthChecker implements HealthChecker {
     }
 
     /**
-     * Constructs a new {@link SettableHealthChecker} which starts out the specified health state and can be
+     * Constructs a new {@link SettableHealthChecker} which starts out in the specified health state and can be
      * changed using {@link #setHealthy(boolean)}.
      */
     public SettableHealthChecker(boolean isHealthy) {
