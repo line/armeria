@@ -26,7 +26,7 @@ public class ArmeriaStatusException extends RuntimeException {
     private final int code;
 
     /**
-     * Construct an {@link ArmeriaStatusException} for the given gRPC status code and message.
+     * Constructs an {@link ArmeriaStatusException} for the given gRPC status code and message.
      */
     public ArmeriaStatusException(int code, String message) {
         super(message);
@@ -34,7 +34,7 @@ public class ArmeriaStatusException extends RuntimeException {
     }
 
     /**
-     * Construct an {@link ArmeriaStatusException} for the given gRPC status code, message, and cause.
+     * Constructs an {@link ArmeriaStatusException} for the given gRPC status code, message and cause.
      */
     public ArmeriaStatusException(int code, String message, Throwable cause) {
         super(message, cause);
