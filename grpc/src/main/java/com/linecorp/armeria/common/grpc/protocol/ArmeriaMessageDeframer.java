@@ -185,7 +185,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     private boolean startedDeframing;
 
     /**
-     * Construct a {@link ArmeriaMessageDeframer} for reading messages out of a gRPC request or response.
+     * Construct an {@link ArmeriaMessageDeframer} for reading messages out of a gRPC request or response.
      */
     public ArmeriaMessageDeframer(Listener listener,
                                   int maxMessageSizeBytes,
@@ -295,7 +295,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     }
 
     /**
-     * Set the {@link Decompressor} for this deframer.
+     * Sets the {@link Decompressor} for this deframer.
      */
     public ArmeriaMessageDeframer decompressor(@Nullable Decompressor decompressor) {
         checkState(!startedDeframing, "Deframing has already started, cannot change decompressor mid-stream.");

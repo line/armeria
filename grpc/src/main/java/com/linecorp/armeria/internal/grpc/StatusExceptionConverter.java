@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.internal.grpc;
 
+import static java.util.Objects.requireNonNull;
+
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 
 import io.grpc.Status;
@@ -24,10 +26,11 @@ import io.grpc.StatusRuntimeException;
 public final class StatusExceptionConverter {
 
     public static StatusRuntimeException toGrpc(ArmeriaStatusException armeria) {
-        StatusRuntimeException converted = Status.fromCodeValue(armeria.getCode())
-                                                 .withDescription(armeria.getMessage())
-                                                 .withCause(armeria.getCause())
-                                                 .asRuntimeException();
+        requireNonNull(armeria, "armeria");
+        final StatusRuntimeException converted = Status.fromCodeValue(armeria.getCode())
+                                                       .withDescription(armeria.getMessage())
+                                                       .withCause(armeria.getCause())
+                                                       .asRuntimeException();
         converted.setStackTrace(armeria.getStackTrace());
         return converted;
     }

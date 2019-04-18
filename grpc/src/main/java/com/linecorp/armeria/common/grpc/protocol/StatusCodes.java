@@ -41,8 +41,8 @@ final class StatusCodes {
     static final int RESOURCE_EXHAUSTED = 8;
 
     /**
-     * Internal errors.  Means some invariants expected by underlying
-     * system has been broken.  If you see one of these errors,
+     * Internal errors. Means some invariants expected by underlying
+     * system has been broken. If you see one of these errors,
      * something is very broken.
      */
     static final int INTERNAL = 13;

@@ -88,7 +88,7 @@ public class ArmeriaMessageFramer implements AutoCloseable {
     private boolean closed;
 
     /**
-     * Constructs a {@link ArmeriaMessageFramer} to write messages to a gRPC request or response.
+     * Constructs an {@link ArmeriaMessageFramer} to write messages to a gRPC request or response.
      */
     public ArmeriaMessageFramer(ByteBufAllocator alloc, int maxOutboundMessageSize) {
         this.alloc = requireNonNull(alloc, "alloc");

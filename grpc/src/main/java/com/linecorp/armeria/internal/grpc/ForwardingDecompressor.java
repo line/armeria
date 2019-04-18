@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.internal.grpc;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -32,6 +34,7 @@ public final class ForwardingDecompressor implements Decompressor {
 
     @Nullable
     public static ForwardingDecompressor forGrpc(io.grpc.Decompressor delegate) {
+        requireNonNull(delegate, "delegate");
         if (delegate == Identity.NONE) {
             return null;
         }
