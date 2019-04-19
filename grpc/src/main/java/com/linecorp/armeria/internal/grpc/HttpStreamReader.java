@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.StatusCauseException;
 import com.linecorp.armeria.common.grpc.ThrowableProto;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
+import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
 
 import io.grpc.Decompressor;
 import io.grpc.DecompressorRegistry;
