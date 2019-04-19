@@ -369,7 +369,7 @@ public class ServerTest {
                 .service("/", (ctx, req) -> HttpResponse.of(200))
                 .build();
 
-        server.start().thenApply(unused -> Thread.currentThread()).join();
+        server.start().join();
 
         executor.execute(() -> {
             try {
@@ -379,7 +379,7 @@ public class ServerTest {
             }
         });
 
-        server.stop().thenApply(unused -> Thread.currentThread()).join();
+        server.stop().join();
 
         assertThat(server.config().blockingTaskExecutor().isShutdown()).isTrue();
         assertThat(server.config().blockingTaskExecutor().isTerminated()).isTrue();
@@ -394,7 +394,7 @@ public class ServerTest {
                 .service("/", (ctx, req) -> HttpResponse.of(200))
                 .build();
 
-        server.start().thenApply(unused -> Thread.currentThread()).join();
+        server.start().join();
 
         executor.execute(() -> {
             try {
@@ -404,7 +404,7 @@ public class ServerTest {
             }
         });
 
-        server.stop().thenApply(unused -> Thread.currentThread()).join();
+        server.stop().join();
 
         assertThat(server.config().blockingTaskExecutor().isShutdown()).isFalse();
         assertThat(server.config().blockingTaskExecutor().isTerminated()).isFalse();
