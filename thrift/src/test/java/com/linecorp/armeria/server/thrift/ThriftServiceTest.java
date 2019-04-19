@@ -52,8 +52,12 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
+import com.linecorp.armeria.common.thrift.text.Response;
+import com.linecorp.armeria.common.thrift.text.RpcDebugService;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 import com.linecorp.armeria.service.test.thrift.main.BinaryService;
@@ -598,6 +602,19 @@ public class ThriftServiceTest {
 
         in.reset(res2.array(), res2.offset(), res2.length());
         assertThat(client2.recv_sort()).containsExactly(NAME_A, NAME_B, NAME_C);
+    }
+
+    @Test
+    public void testServiceThrowingException() {
+        Server server = new ServerBuilder()
+            .verboseResponses(true)
+            .service(
+                "/some_path",
+                THttpService.ofFormats(
+                    (RpcDebugService.Iface)(a1, a2, details) -> new Response("asdf"),
+                    ThriftSerializationFormats.COMPACT
+                )
+            ).build();
     }
 
     // NB: By making this interface functional, we can use lambda expression to implement
