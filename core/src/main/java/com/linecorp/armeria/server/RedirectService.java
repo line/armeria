@@ -274,9 +274,7 @@ public class RedirectService extends AbstractHttpService {
             return location;
         }
 
-        final StringBuilder buf = new StringBuilder(location.length() + query.length() + 1);
-        buf.append(location).append('?').append(query);
-        return buf.toString();
+        return location + '?' + query;
     }
 
     @Override
@@ -308,6 +306,7 @@ public class RedirectService extends AbstractHttpService {
 
     private static String populatePatternParams(String pathPattern, Map<String, String> pathParams) {
         for (Entry<String, String> e : pathParams.entrySet()) {
+            @SuppressWarnings("RegExpRedundantEscape")
             final String tokenPattern = "\\{" + e.getKey() + "\\}|:" + e.getKey();
             pathPattern = pathPattern.replaceAll(tokenPattern, e.getValue());
         }
