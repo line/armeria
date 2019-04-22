@@ -102,7 +102,7 @@ public final class ThriftFunction {
                     continue;
                 }
 
-                final Class<?> fieldType = resultType.getField(fieldName).getType();
+                final Class<?> fieldType = resultType.getDeclaredField(fieldName).getType();
                 if (Throwable.class.isAssignableFrom(fieldType)) {
                     @SuppressWarnings("unchecked")
                     final Class<Throwable> exceptionFieldType = (Class<Throwable>) fieldType;
