@@ -63,6 +63,15 @@ public class DefaultPathMappingTest {
     }
 
     @Test
+    public void testPathEndsWithSlash() throws Exception {
+        final DefaultPathMapping ppe = new DefaultPathMapping("/service/{value}/");
+        final PathMappingResult result = ppe.apply(create("/service/hello/", null));
+
+        assertThat(result.isPresent()).isTrue();
+        assertThat(result.path()).isEqualTo("/service/hello/");
+    }
+
+    @Test
     public void testNumericPathParamNames() {
         final DefaultPathMapping m = new DefaultPathMapping("/{0}/{1}/{2}");
         assertThat(m.paramNames()).containsExactlyInAnyOrder("0", "1", "2");
