@@ -32,15 +32,15 @@
 /**
  * A Thrift JSON protocol that supports field names as defined in the IDL.
  * This can be used for creating debug endpoints.
- * <p>
- * This was forked from <a href=https://github.com/twitter/commons>Twitter Commons</a> with the following
+ *
+ * <p>This was forked from <a href=https://github.com/twitter/commons>Twitter Commons</a> with the following
  * modifications:
  * <ul>
  *     <li>Change package name</li>
  *     <li>Replace Gson with Jackson</li>
  *     <li>Add support for encoding RPCs</li>
  *     <li>Remove obsolete TODOs</li>
- *     <li>Reformat code to armeria specification</li>
+ *     <li>Reformat code</li>
  *     <li>Miscellaneous style cleanups</li>
  * </ul>
  */

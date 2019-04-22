@@ -103,7 +103,7 @@ public class HttpHealthCheckService extends AbstractHttpService
      */
     public HttpHealthCheckService(Iterable<? extends HealthChecker> healthCheckers) {
         this.healthCheckers = ImmutableList.copyOf(requireNonNull(healthCheckers, "healthCheckers"));
-        serverHealth = new SettableHealthChecker();
+        serverHealth = new SettableHealthChecker(false);
         serverHealthUpdater = new ServerHealthUpdater();
     }
 

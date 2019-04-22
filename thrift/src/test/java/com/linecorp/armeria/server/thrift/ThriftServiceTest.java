@@ -52,6 +52,8 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
+import com.linecorp.armeria.common.thrift.text.ChildRpcDebugService;
+import com.linecorp.armeria.common.thrift.text.Response;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -600,6 +602,12 @@ public class ThriftServiceTest {
         assertThat(client2.recv_sort()).containsExactly(NAME_A, NAME_B, NAME_C);
     }
 
+    @Test
+    public void testServiceInheritance() {
+        // This should not throw an exception
+        THttpService.of((ChildRpcDebugService.Iface)(a1, a2, details) -> new Response("asdf"));
+    }
+
     // NB: By making this interface functional, we can use lambda expression to implement
     //     NameSortService.AsyncIface.sort(). By using lambda expression, we can omit the parameter type
     //     declarations (i.e. no AsyncMethodCallback<List<Name>>). By omitting the parameter type declaration,
@@ -636,7 +644,8 @@ public class ThriftServiceTest {
                 ServiceRequestContextBuilder.of(req)
                                             .eventLoop(eventLoop.get())
                                             .serverConfigurator(builder -> {
-                                                builder.blockingTaskExecutor(ImmediateEventExecutor.INSTANCE);
+                                                builder.blockingTaskExecutor(ImmediateEventExecutor.INSTANCE,
+                                                                             false);
                                                 builder.verboseResponses(true);
                                             })
                                             .build();

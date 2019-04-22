@@ -455,8 +455,29 @@ public final class Server implements AutoCloseable {
         }
 
         private void finishDoStop(CompletableFuture<Void> future) {
-            // TODO(trustin): Add shutdownBlockingTaskExecutorOnStop
-            // TODO(trustin): Count the pending blocking tasks and wait until it goes zero.
+            if (config.shutdownBlockingTaskExecutorOnStop()) {
+                final ExecutorService executor;
+                final ExecutorService blockingTaskExecutor = config.blockingTaskExecutor();
+                if (blockingTaskExecutor instanceof InterminableExecutorService) {
+                    executor = ((InterminableExecutorService) blockingTaskExecutor).getExecutorService();
+                } else {
+                    executor = blockingTaskExecutor;
+                }
+
+                try {
+                    executor.shutdown();
+                    while (!executor.isTerminated()) {
+                        try {
+                            executor.awaitTermination(1, TimeUnit.DAYS);
+                        } catch (InterruptedException ignore) {
+                            // Do nothing.
+                        }
+                    }
+                } catch (Exception e) {
+                    logger.warn("Failed to shutdown the blockingTaskExecutor: {}", executor, e);
+                }
+            }
+
             if (!config.shutdownAccessLogWriterOnStop()) {
                 future.complete(null);
                 return;
