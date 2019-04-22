@@ -22,7 +22,6 @@ import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.grpc.GrpcHeaderNames;
 
 /**
  * Utility for creating response trailers for a gRPC status. Trailers are only returned from a server.

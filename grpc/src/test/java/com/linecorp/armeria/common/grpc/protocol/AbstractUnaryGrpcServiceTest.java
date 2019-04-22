@@ -31,7 +31,6 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
@@ -79,7 +78,7 @@ public class AbstractUnaryGrpcServiceTest {
                                                                           ByteString.copyFromUtf8("hello"))
                                                                   .build())
                                                .build()).getPayload().getBody().toStringUtf8())
-                .isEqualTo("hello");
+                  .isEqualTo("hello");
     }
 
     @Test

@@ -23,7 +23,6 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.ByteBufOrStream;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Listener;
 import com.linecorp.armeria.server.AbstractHttpService;
