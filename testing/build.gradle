@@ -1,3 +1,4 @@
 dependencies {
     compile 'junit:junit'
+    compile 'org.junit.jupiter:junit-jupiter-api'
 }

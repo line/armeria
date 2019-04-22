@@ -108,6 +108,8 @@ configure(projectsWithFlags('java')) {
                 dependsOn: [tasks.checkstyleMain, tasks.checkstyleTest])
 
         test {
+            useJUnitPlatform()
+
             dependsOn tasks.checkstyle
         }
     }
