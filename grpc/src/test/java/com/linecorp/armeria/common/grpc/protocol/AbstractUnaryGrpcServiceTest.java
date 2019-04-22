@@ -35,9 +35,13 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
+import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.server.ServerRule;
+
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
 
 public class AbstractUnaryGrpcServiceTest {
 
@@ -68,7 +72,7 @@ public class AbstractUnaryGrpcServiceTest {
     };
 
     @Test
-    public void normal() {
+    public void normal_downstream() {
         TestServiceBlockingStub stub =
                 Clients.newClient(server.httpUri(GrpcSerializationFormats.PROTO, "/"),
                                   TestServiceBlockingStub.class);
@@ -79,6 +83,27 @@ public class AbstractUnaryGrpcServiceTest {
                                                                   .build())
                                                .build()).getPayload().getBody().toStringUtf8())
                   .isEqualTo("hello");
+    }
+
+    @Test
+    public void normal_upstream() {
+        ManagedChannel channel = ManagedChannelBuilder.forAddress("127.0.0.1", server.httpPort())
+                             .usePlaintext()
+                             .build();
+
+        try {
+            TestServiceBlockingStub stub = TestServiceGrpc.newBlockingStub(channel);
+
+            assertThat(stub.unaryCall(SimpleRequest.newBuilder()
+                                                   .setPayload(Payload.newBuilder()
+                                                                      .setBody(
+                                                                              ByteString.copyFromUtf8("hello"))
+                                                                      .build())
+                                                   .build()).getPayload().getBody().toStringUtf8())
+                    .isEqualTo("hello");
+        } finally {
+            channel.shutdownNow();
+        }
     }
 
     @Test

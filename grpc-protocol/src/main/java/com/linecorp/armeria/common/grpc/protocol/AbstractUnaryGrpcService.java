@@ -19,6 +19,7 @@ package com.linecorp.armeria.common.grpc.protocol;
 import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -44,6 +45,7 @@ public abstract class AbstractUnaryGrpcService extends AbstractHttpService {
 
     private static final HttpHeaders RESPONSE_HEADERS =
             HttpHeaders.of(HttpStatus.OK)
+                       .add(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto")
                        .add(GrpcHeaderNames.GRPC_ENCODING, "identity")
                        .asImmutable();
 
