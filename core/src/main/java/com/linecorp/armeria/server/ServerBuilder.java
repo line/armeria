@@ -180,6 +180,7 @@ public final class ServerBuilder {
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
     private Executor blockingTaskExecutor = CommonPools.blockingTaskExecutor();
+    private boolean shutdownBlockingTaskExecutorOnStop;
     private MeterRegistry meterRegistry = Metrics.globalRegistry;
     private String serviceLoggerPrefix = DEFAULT_SERVICE_LOGGER_PREFIX;
     private AccessLogWriter accessLogWriter = AccessLogWriter.disabled();
@@ -648,9 +649,24 @@ public final class ServerBuilder {
     /**
      * Sets the {@link Executor} dedicated to the execution of blocking tasks or invocations.
      * If not set, {@linkplain CommonPools#blockingTaskExecutor() the common pool} is used.
+     *
+     * @deprecated Use {@link #blockingTaskExecutor(Executor, boolean)}.
+     *
      */
+    @Deprecated
     public ServerBuilder blockingTaskExecutor(Executor blockingTaskExecutor) {
+        return blockingTaskExecutor(blockingTaskExecutor, false);
+    }
+
+    /**
+     * Sets the {@link Executor} dedicated to the execution of blocking tasks or invocations.
+     * If not set, {@linkplain CommonPools#blockingTaskExecutor() the common pool} is used.
+     *
+     * @param shutdownOnStop whether to shut down the {@link Executor} when the {@link Server} stops
+     */
+    public ServerBuilder blockingTaskExecutor(Executor blockingTaskExecutor, boolean shutdownOnStop) {
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+        shutdownBlockingTaskExecutorOnStop = shutdownOnStop;
         return this;
     }
 
@@ -1422,7 +1438,8 @@ public final class ServerBuilder {
                 http2InitialConnectionWindowSize, http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
                 http2MaxFrameSize, http2MaxHeaderListSize,
                 http1MaxInitialLineLength, http1MaxHeaderSize, http1MaxChunkSize,
-                gracefulShutdownQuietPeriod, gracefulShutdownTimeout, blockingTaskExecutor,
+                gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
+                blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
                 meterRegistry, serviceLoggerPrefix, accessLogWriter, shutdownAccessLogWriterOnStop,
                 proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter), sslContexts);
@@ -1516,7 +1533,8 @@ public final class ServerBuilder {
                 http2MaxStreamsPerConnection, http2MaxFrameSize, http2MaxHeaderListSize,
                 http1MaxInitialLineLength, http1MaxHeaderSize, http1MaxChunkSize,
                 proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
-                blockingTaskExecutor, meterRegistry, serviceLoggerPrefix,
+                blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
+                meterRegistry, serviceLoggerPrefix,
                 accessLogWriter, shutdownAccessLogWriterOnStop,
                 channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter

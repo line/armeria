@@ -83,6 +83,7 @@ public final class ServerConfig {
     private final Duration gracefulShutdownTimeout;
 
     private final ExecutorService blockingTaskExecutor;
+    private final boolean shutdownBlockingTaskExecutorOnStop;
 
     private final MeterRegistry meterRegistry;
 
@@ -113,7 +114,8 @@ public final class ServerConfig {
             long http2MaxStreamsPerConnection, int http2MaxFrameSize, long http2MaxHeaderListSize,
             int http1MaxInitialLineLength, int http1MaxHeaderSize, int http1MaxChunkSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
-            Executor blockingTaskExecutor, MeterRegistry meterRegistry, String serviceLoggerPrefix,
+            Executor blockingTaskExecutor, boolean shutdownBlockingTaskExecutorOnStop,
+            MeterRegistry meterRegistry, String serviceLoggerPrefix,
             AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop, int proxyProtocolMaxTlvSize,
             Map<ChannelOption<?>, Object> channelOptions,
             Map<ChannelOption<?>, Object> childChannelOptions,
@@ -158,6 +160,7 @@ public final class ServerConfig {
         } else {
             this.blockingTaskExecutor = new ExecutorBasedExecutorService(blockingTaskExecutor);
         }
+        this.shutdownBlockingTaskExecutorOnStop = shutdownBlockingTaskExecutorOnStop;
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
         this.serviceLoggerPrefix = ServiceConfig.validateLoggerName(serviceLoggerPrefix, "serviceLoggerPrefix");
@@ -531,6 +534,13 @@ public final class ServerConfig {
     }
 
     /**
+     * Returns whether the worker {@link Executor} is shut down when the {@link Server} stops.
+     */
+    public boolean shutdownBlockingTaskExecutorOnStop() {
+        return shutdownBlockingTaskExecutorOnStop;
+    }
+
+    /**
      * Returns the {@link MeterRegistry} that collects various stats.
      */
     public MeterRegistry meterRegistry() {
@@ -601,7 +611,8 @@ public final class ServerConfig {
                     http2MaxStreamsPerConnection(), http2MaxFrameSize(), http2MaxHeaderListSize(),
                     http1MaxInitialLineLength(), http1MaxHeaderSize(), http1MaxChunkSize(),
                     proxyProtocolMaxTlvSize(), gracefulShutdownQuietPeriod(), gracefulShutdownTimeout(),
-                    blockingTaskExecutor(), meterRegistry(), serviceLoggerPrefix(),
+                    blockingTaskExecutor(), shutdownBlockingTaskExecutorOnStop(),
+                    meterRegistry(), serviceLoggerPrefix(),
                     accessLogWriter(), shutdownAccessLogWriterOnStop(),
                     channelOptions(), childChannelOptions(),
                     clientAddressSources(), clientAddressTrustedProxyFilter(), clientAddressFilter()
@@ -621,7 +632,8 @@ public final class ServerConfig {
             long http2MaxHeaderListSize, long http1MaxInitialLineLength, long http1MaxHeaderSize,
             long http1MaxChunkSize, int proxyProtocolMaxTlvSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
-            Executor blockingTaskExecutor, @Nullable MeterRegistry meterRegistry, String serviceLoggerPrefix,
+            Executor blockingTaskExecutor, boolean shutdownBlockingTaskExecutorOnStop,
+            @Nullable MeterRegistry meterRegistry, String serviceLoggerPrefix,
             AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop,
             Map<ChannelOption<?>, ?> channelOptions, Map<ChannelOption<?>, ?> childChannelOptions,
             List<ClientAddressSource> clientAddressSources,
@@ -708,6 +720,8 @@ public final class ServerConfig {
         buf.append(gracefulShutdownTimeout);
         buf.append(", blockingTaskExecutor: ");
         buf.append(blockingTaskExecutor);
+        buf.append(", shutdownBlockingTaskExecutorOnStop: ");
+        buf.append(shutdownBlockingTaskExecutorOnStop);
         if (meterRegistry != null) {
             buf.append(", meterRegistry: ");
             buf.append(meterRegistry);

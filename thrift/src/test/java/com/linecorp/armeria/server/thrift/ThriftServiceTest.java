@@ -636,7 +636,8 @@ public class ThriftServiceTest {
                 ServiceRequestContextBuilder.of(req)
                                             .eventLoop(eventLoop.get())
                                             .serverConfigurator(builder -> {
-                                                builder.blockingTaskExecutor(ImmediateEventExecutor.INSTANCE);
+                                                builder.blockingTaskExecutor(ImmediateEventExecutor.INSTANCE,
+                                                                             false);
                                                 builder.verboseResponses(true);
                                             })
                                             .build();

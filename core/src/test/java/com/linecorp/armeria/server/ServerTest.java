@@ -48,6 +48,8 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import com.google.common.util.concurrent.MoreExecutors;
+
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
@@ -356,6 +358,57 @@ public class ServerTest {
         threads.add(server.stop().thenApply(unused -> Thread.currentThread()).join());
 
         threads.forEach(t -> assertThat(t.getName()).startsWith(prefix));
+    }
+
+    @Test
+    public void gracefulShutdownBlockingTaskExecutor() {
+        final ExecutorService executor = Executors.newSingleThreadExecutor();
+
+        final Server server = new ServerBuilder()
+                .blockingTaskExecutor(executor, true)
+                .service("/", (ctx, req) -> HttpResponse.of(200))
+                .build();
+
+        server.start().join();
+
+        executor.execute(() -> {
+            try {
+                Thread.sleep(processDelayMillis * 2);
+            } catch (InterruptedException ignored) {
+                // Ignored
+            }
+        });
+
+        server.stop().join();
+
+        assertThat(server.config().blockingTaskExecutor().isShutdown()).isTrue();
+        assertThat(server.config().blockingTaskExecutor().isTerminated()).isTrue();
+    }
+
+    @Test
+    public void notGracefulShutdownBlockingTaskExecutor() {
+        final ExecutorService executor = Executors.newSingleThreadExecutor();
+
+        final Server server = new ServerBuilder()
+                .blockingTaskExecutor(executor, false)
+                .service("/", (ctx, req) -> HttpResponse.of(200))
+                .build();
+
+        server.start().join();
+
+        executor.execute(() -> {
+            try {
+                Thread.sleep(processDelayMillis * 2);
+            } catch (InterruptedException ignored) {
+                // Ignored
+            }
+        });
+
+        server.stop().join();
+
+        assertThat(server.config().blockingTaskExecutor().isShutdown()).isFalse();
+        assertThat(server.config().blockingTaskExecutor().isTerminated()).isFalse();
+        assertThat(MoreExecutors.shutdownAndAwaitTermination(executor, 10, TimeUnit.SECONDS)).isTrue();
     }
 
     private static void testSimple(
