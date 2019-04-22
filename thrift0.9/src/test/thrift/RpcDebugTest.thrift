@@ -16,3 +16,6 @@ exception DebugException {
 service RpcDebugService {
   Response doDebug(1: string methodArg1, 2: i64 methodArg2, 3: RequestDetails details) throws (1: DebugException e),
 }
+
+service ChildRpcDebugService extends RpcDebugService {
+}
