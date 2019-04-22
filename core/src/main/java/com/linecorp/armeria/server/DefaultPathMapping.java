@@ -30,6 +30,7 @@ import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
 
 /**
@@ -45,6 +46,8 @@ final class DefaultPathMapping extends AbstractPathMapping {
     private static final Pattern VALID_PATTERN = Pattern.compile("(/[^/{}:]+|/:[^/{}]+|/\\{[^/{}]+})+/?");
 
     private static final String[] EMPTY_NAMES = new String[0];
+
+    private static final Splitter PATH_SPLITTER = Splitter.on('/');
 
     /**
      * The original path pattern specified in the constructor.
@@ -100,7 +103,7 @@ final class DefaultPathMapping extends AbstractPathMapping {
         final StringJoiner patternJoiner = new StringJoiner("/");
         final StringJoiner skeletonJoiner = new StringJoiner("/");
         final List<String> paramNames = new ArrayList<>();
-        for (String token : pathPattern.split("/")) {
+        for (String token : PATH_SPLITTER.split(pathPattern)) {
             final String paramName = paramName(token);
             if (paramName == null) {
                 // If the given token is a constant, do not manipulate it.
