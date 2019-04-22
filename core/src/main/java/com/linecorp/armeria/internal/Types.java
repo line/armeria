@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.internal;
 
-import java.util.HashSet;
 import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * Provides various utility functions for Java types.
@@ -26,9 +26,20 @@ public final class Types {
 
     /**
      * Returns a set of all interfaces defined for {@code cls}.
+     * Interfaces are sorted from lowest to highest level (i.e. children before parents)
      */
-    public static Set<Class<?>> getAllInterfaces(Class<?> cls) {
-        final Set<Class<?>> interfacesFound = new HashSet<>();
+    public static TreeSet<Class<?>> getAllInterfaces(Class<?> cls) {
+        final TreeSet<Class<?>> interfacesFound = new TreeSet<>(
+            (c1, c2) -> {
+                if (c1.equals(c2)) {
+                    return 0;
+                } else if (c1.isAssignableFrom(c2)) {
+                    return 1;
+                } else {
+                    return -1;
+                }
+            }
+        );
         getAllInterfaces(cls, interfacesFound);
         return interfacesFound;
     }

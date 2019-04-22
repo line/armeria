@@ -75,6 +75,7 @@ public final class ThriftServiceMetadata {
     private Set<Class<?>> init(@Nullable Object implementation, Iterable<Class<?>> candidateInterfaces) {
 
         // Build the map of method names and their corresponding process functions.
+        // If a method is defined multiple times, we take the first definition
         final Set<String> methodNames = new HashSet<>();
         final Set<Class<?>> interfaces = new HashSet<>();
 
@@ -174,7 +175,10 @@ public final class ThriftServiceMetadata {
 
     @SuppressWarnings("rawtypes")
     private void registerFunction(Set<String> methodNames, Class<?> iface, String name, Object func) {
-        checkDuplicateMethodName(methodNames, name);
+        if (methodNames.contains(name)) {
+            logger.warn("duplicate Thrift method name: " + name);
+            return;
+        }
         methodNames.add(name);
 
         try {
@@ -188,12 +192,6 @@ public final class ThriftServiceMetadata {
         } catch (Exception e) {
             throw new IllegalArgumentException("failed to retrieve function metadata: " +
                                                iface.getName() + '.' + name + "()", e);
-        }
-    }
-
-    private static void checkDuplicateMethodName(Set<String> methodNames, String name) {
-        if (methodNames.contains(name)) {
-            throw new IllegalArgumentException("duplicate Thrift method name: " + name);
         }
     }
 
