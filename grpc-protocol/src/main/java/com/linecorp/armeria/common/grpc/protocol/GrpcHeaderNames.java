@@ -14,11 +14,10 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.grpc;
+package com.linecorp.armeria.common.grpc.protocol;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 
-import io.grpc.protobuf.ProtoUtils;
 import io.netty.util.AsciiString;
 
 /**
@@ -49,7 +48,7 @@ public final class GrpcHeaderNames {
      * {@code "armeria.grpc.ThrowableProto-bin"}.
      */
     public static final AsciiString ARMERIA_GRPC_THROWABLEPROTO_BIN =
-            HttpHeaderNames.of(ProtoUtils.keyForProto(ThrowableProto.getDefaultInstance()).name());
+            HttpHeaderNames.of("armeria.grpc.ThrowableProto-bin");
 
     private GrpcHeaderNames() {}
 }

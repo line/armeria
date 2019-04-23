@@ -1,4 +1,6 @@
 dependencies {
+    compile project(':grpc-protocol')
+
     compile 'com.google.protobuf:protobuf-java'
     compile 'com.google.protobuf:protobuf-java-util'
 

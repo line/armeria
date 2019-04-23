@@ -33,6 +33,10 @@ package com.linecorp.armeria.common.grpc.protocol;
 
 /** gRPC status codes that we use. */
 final class StatusCodes {
+    /**
+     * The operation completed successfully.
+     */
+    static final int OK = 0;
 
     /**
      * Some resource has been exhausted, perhaps a per-user quota, or

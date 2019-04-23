@@ -40,21 +40,20 @@ import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.util.concurrent.MoreExecutors;
 
-import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.grpc.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.ThrowableProto;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.ByteBufOrStream;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.Decompressor;
+import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.grpc.protocol.GrpcTrailersUtil;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.grpc.ForwardingCompressor;
@@ -63,7 +62,6 @@ import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.grpc.GrpcMessageMarshaller;
 import com.linecorp.armeria.internal.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.grpc.HttpStreamReader;
-import com.linecorp.armeria.internal.grpc.StatusMessageEscaper;
 import com.linecorp.armeria.internal.grpc.TransportStatusListener;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
@@ -518,21 +516,9 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     }
 
     static HttpHeaders statusToTrailers(ServiceRequestContext ctx, Status status, boolean headersSent) {
-        final HttpHeaders trailers;
-        if (headersSent) {
-            // Normal trailers.
-            trailers = new DefaultHttpHeaders();
-        } else {
-            // Trailers only response
-            trailers = new DefaultHttpHeaders(true, 3, true)
-                    .status(HttpStatus.OK)
-                    .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto");
-        }
-        trailers.add(GrpcHeaderNames.GRPC_STATUS, Integer.toString(status.getCode().value()));
+        final HttpHeaders trailers = GrpcTrailersUtil.statusToTrailers(
+                status.getCode().value(), status.getDescription(), headersSent);
 
-        if (status.getDescription() != null) {
-            trailers.add(GrpcHeaderNames.GRPC_MESSAGE, StatusMessageEscaper.escape(status.getDescription()));
-        }
         if (ctx.server().config().verboseResponses() && status.getCause() != null) {
             final ThrowableProto proto = GrpcStatus.serializeThrowable(status.getCause());
             trailers.add(GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN,
