@@ -36,7 +36,7 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContextBuilder;
-import com.linecorp.armeria.testing.common.EventLoopRule;
+import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 
 import io.grpc.BindableService;
 import io.grpc.Status;

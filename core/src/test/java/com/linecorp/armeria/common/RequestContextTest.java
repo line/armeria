@@ -63,7 +63,7 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.ChannelUtil;
-import com.linecorp.armeria.testing.common.EventLoopRule;
+import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;

@@ -63,7 +63,7 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 public class AnnotatedHttpServiceRequestConverterTest {
 

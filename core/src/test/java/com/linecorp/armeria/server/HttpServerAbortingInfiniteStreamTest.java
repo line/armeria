@@ -49,7 +49,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 @RunWith(Parameterized.class)
 public class HttpServerAbortingInfiniteStreamTest {

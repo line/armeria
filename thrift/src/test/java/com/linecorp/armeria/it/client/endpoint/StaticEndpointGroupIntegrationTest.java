@@ -31,7 +31,7 @@ import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 public class StaticEndpointGroupIntegrationTest {
     @Rule

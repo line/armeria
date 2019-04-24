@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.InboundTrafficController;
-import com.linecorp.armeria.testing.common.EventLoopRule;
+import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;

@@ -36,7 +36,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ServerInterceptors;

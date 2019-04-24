@@ -40,7 +40,7 @@ import org.junit.rules.Timeout;
 import com.google.common.io.ByteStreams;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.testing.common.EventLoopRule;
+import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;

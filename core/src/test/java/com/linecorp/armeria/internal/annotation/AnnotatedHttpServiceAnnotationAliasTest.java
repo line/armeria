@@ -63,7 +63,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.StatusCode;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;

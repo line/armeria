@@ -66,7 +66,7 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
-import com.linecorp.armeria.testing.server.ServerExtension;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;

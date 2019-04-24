@@ -39,7 +39,7 @@ import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.micrometer.core.instrument.MeterRegistry;
 

@@ -43,7 +43,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 /**
  * Test of serialization format validation / detection based on HTTP headers.

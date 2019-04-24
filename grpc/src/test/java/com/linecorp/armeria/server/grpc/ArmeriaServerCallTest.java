@@ -52,7 +52,7 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContextBuilder;
-import com.linecorp.armeria.testing.common.EventLoopRule;
+import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.CompressorRegistry;

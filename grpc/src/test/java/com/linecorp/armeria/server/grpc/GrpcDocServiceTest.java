@@ -57,7 +57,7 @@ import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.grpc.GrpcDocServicePlugin.ServiceEntry;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.grpc.stub.StreamObserver;
 

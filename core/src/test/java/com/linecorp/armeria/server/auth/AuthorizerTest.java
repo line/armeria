@@ -41,7 +41,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContextBuilder;
-import com.linecorp.armeria.testing.common.EventLoopRule;
+import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 
 public class AuthorizerTest {
 

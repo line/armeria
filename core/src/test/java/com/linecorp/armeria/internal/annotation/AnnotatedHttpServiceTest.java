@@ -81,7 +81,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 public class AnnotatedHttpServiceTest {
 

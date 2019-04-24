@@ -24,7 +24,7 @@ import org.junit.Test;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 public class ServerListenerTest {
     private static long STARTING_AT;

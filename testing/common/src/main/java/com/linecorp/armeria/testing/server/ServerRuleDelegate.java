@@ -33,9 +33,9 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 
 /**
- * A delegate that has common methods of {@link ServerRule} and {@link ServerExtension}.
+ * A delegate that has common testing methods of {@link Server}.
  */
-abstract class ServerRuleDelegate {
+public abstract class ServerRuleDelegate {
 
     private final AtomicReference<Server> server = new AtomicReference<>();
     private final boolean autoStart;
@@ -46,14 +46,14 @@ abstract class ServerRuleDelegate {
      * @param autoStart {@code true} if the {@link Server} should start automatically.
      *                  {@code false} if the {@link Server} should start when a user calls {@link #start()}.
      */
-    ServerRuleDelegate(boolean autoStart) {
+    protected ServerRuleDelegate(boolean autoStart) {
         this.autoStart = autoStart;
     }
 
     /**
      * Calls {@link #start()} if auto-start is enabled.
      */
-    void before() throws Throwable {
+    public void before() throws Throwable {
         if (autoStart) {
             start();
         }
@@ -62,7 +62,7 @@ abstract class ServerRuleDelegate {
     /**
      * Calls {@link #stop()}, without waiting until the {@link Server} is stopped completely.
      */
-    void after() {
+    public void after() {
         stop();
     }
 
@@ -73,7 +73,7 @@ abstract class ServerRuleDelegate {
      *
      * @return the started {@link Server}
      */
-    Server start() {
+    public Server start() {
         final Server oldServer = server.get();
         if (!isStopped(oldServer)) {
             return oldServer;
@@ -96,14 +96,14 @@ abstract class ServerRuleDelegate {
     /**
      * Configures the {@link Server} with the given {@link ServerBuilder}.
      */
-    abstract void configure(ServerBuilder sb) throws Exception;
+    public abstract void configure(ServerBuilder sb) throws Exception;
 
     /**
      * Stops the {@link Server} asynchronously.
      *
      * @return the {@link CompletableFuture} that will complete when the {@link Server} is stopped.
      */
-    CompletableFuture<Void> stop() {
+    public CompletableFuture<Void> stop() {
         final Server server = this.server.getAndSet(null);
         if (server == null || server.activePorts().isEmpty()) {
             return CompletableFuture.completedFuture(null);
@@ -117,7 +117,7 @@ abstract class ServerRuleDelegate {
      *
      * @throws IllegalStateException if the {@link Server} is not started
      */
-    Server server() {
+    public Server server() {
         final Server server = this.server.get();
         if (isStopped(server)) {
             throw new IllegalStateException("server did not start.");
@@ -134,7 +134,7 @@ abstract class ServerRuleDelegate {
      *
      * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTP port
      */
-    int httpPort() {
+    public int httpPort() {
         return port(HTTP);
     }
 
@@ -143,7 +143,7 @@ abstract class ServerRuleDelegate {
      *
      * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTPS port
      */
-    int httpsPort() {
+    public int httpsPort() {
         return port(HTTPS);
     }
 
@@ -153,7 +153,7 @@ abstract class ServerRuleDelegate {
      * @throws IllegalStateException if the {@link Server} is not started or it did not open a port of the
      *                               specified protocol.
      */
-    int port(SessionProtocol protocol) {
+    public int port(SessionProtocol protocol) {
         return server().activePorts().values().stream()
                        .filter(p1 -> p1.hasProtocol(protocol)).findAny()
                        .flatMap(p -> Optional.of(p.localAddress().getPort()))
@@ -163,14 +163,14 @@ abstract class ServerRuleDelegate {
     /**
      * Returns {@code true} if the {@link Server} is started and it has an HTTP port open.
      */
-    boolean hasHttp() {
+    public boolean hasHttp() {
         return hasSessionProtocol(HTTP);
     }
 
     /**
      * Returns {@code true} if the {@link Server} is started and it has an HTTPS port open.
      */
-    boolean hasHttps() {
+    public boolean hasHttps() {
         return hasSessionProtocol(HTTPS);
     }
 
@@ -187,7 +187,7 @@ abstract class ServerRuleDelegate {
      * @throws IllegalStateException if the {@link Server} is not started or
      *                               it opened neither HTTP nor HTTPS port
      */
-    String uri(String path) {
+    public String uri(String path) {
         // This will ensure that the server has started.
         server();
 
@@ -208,7 +208,7 @@ abstract class ServerRuleDelegate {
      * @throws IllegalStateException if the {@link Server} is not started or
      *                               it did not open a port of the protocol.
      */
-    String uri(SessionProtocol protocol, SerializationFormat format, String path) {
+    public String uri(SessionProtocol protocol, SerializationFormat format, String path) {
         requireNonNull(protocol, "protocol");
         requireNonNull(format, "format");
         requireNonNull(path, "path");
@@ -225,7 +225,7 @@ abstract class ServerRuleDelegate {
      * @throws IllegalStateException if the {@link Server} is not started or
      *                               it did not open a port of the protocol.
      */
-    String uri(SessionProtocol protocol, String path) {
+    public String uri(SessionProtocol protocol, String path) {
         requireNonNull(protocol, "protocol");
         requireNonNull(path, "path");
 
@@ -250,7 +250,7 @@ abstract class ServerRuleDelegate {
      * @throws IllegalStateException if the {@link Server} is not started or
      *                               it opened neither HTTP nor HTTPS port
      */
-    String uri(SerializationFormat serializationFormat, String path) {
+    public String uri(SerializationFormat serializationFormat, String path) {
         requireNonNull(serializationFormat, "serializationFormat");
         return serializationFormat.uriText() + '+' + uri(path);
     }
@@ -260,7 +260,7 @@ abstract class ServerRuleDelegate {
      *
      * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTP port
      */
-    String httpUri(String path) {
+    public String httpUri(String path) {
         validatePath(path);
         return "http://127.0.0.1:" + httpPort() + path;
     }
@@ -270,7 +270,7 @@ abstract class ServerRuleDelegate {
      *
      * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTP port
      */
-    String httpUri(SerializationFormat serializationFormat, String path) {
+    public String httpUri(SerializationFormat serializationFormat, String path) {
         requireNonNull(serializationFormat, "serializationFormat");
         return serializationFormat.uriText() + '+' + httpUri(path);
     }
@@ -280,7 +280,7 @@ abstract class ServerRuleDelegate {
      *
      * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTPS port
      */
-    String httpsUri(String path) {
+    public String httpsUri(String path) {
         validatePath(path);
         return "https://127.0.0.1:" + httpsPort() + path;
     }
@@ -290,7 +290,7 @@ abstract class ServerRuleDelegate {
      *
      * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTPS port
      */
-    String httpsUri(SerializationFormat serializationFormat, String path) {
+    public String httpsUri(SerializationFormat serializationFormat, String path) {
         requireNonNull(serializationFormat, "serializationFormat");
         return serializationFormat.uriText() + '+' + httpsUri(path);
     }
@@ -300,7 +300,7 @@ abstract class ServerRuleDelegate {
      *
      * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTP port
      */
-    InetSocketAddress httpSocketAddress() {
+    public InetSocketAddress httpSocketAddress() {
         return new InetSocketAddress("127.0.0.1", httpPort());
     }
 
@@ -309,7 +309,7 @@ abstract class ServerRuleDelegate {
      *
      * @throws IllegalStateException if the {@link Server} is not started or it did not open an HTTPS port
      */
-    InetSocketAddress httpsSocketAddress() {
+    public InetSocketAddress httpsSocketAddress() {
         return new InetSocketAddress("127.0.0.1", httpsPort());
     }
 

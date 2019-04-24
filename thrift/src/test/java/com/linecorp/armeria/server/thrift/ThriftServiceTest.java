@@ -67,7 +67,7 @@ import com.linecorp.armeria.service.test.thrift.main.Name;
 import com.linecorp.armeria.service.test.thrift.main.NameService;
 import com.linecorp.armeria.service.test.thrift.main.NameSortService;
 import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
-import com.linecorp.armeria.testing.common.EventLoopRule;
+import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
 

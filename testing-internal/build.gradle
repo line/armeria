@@ -1,6 +1,8 @@
 dependencies {
-    compile project(':testing')
+    compile project(':testing:junit')
+    compile project(':testing:junit4')
 
+    compile 'org.junit.jupiter:junit-jupiter-api'
     compile 'junit:junit'
     compile 'org.apache.httpcomponents:httpclient'
     compile 'org.assertj:assertj-core'

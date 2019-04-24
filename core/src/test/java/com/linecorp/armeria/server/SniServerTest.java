@@ -37,8 +37,8 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.testing.server.SelfSignedCertificateRule;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.SelfSignedCertificateRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.netty.util.NetUtil;
 

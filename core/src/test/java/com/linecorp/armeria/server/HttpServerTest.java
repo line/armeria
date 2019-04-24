@@ -88,7 +88,7 @@ import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.PathAndQuery;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;

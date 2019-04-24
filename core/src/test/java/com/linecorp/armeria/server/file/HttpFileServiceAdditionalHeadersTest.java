@@ -26,7 +26,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerCacheControl;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 public class HttpFileServiceAdditionalHeadersTest {
 

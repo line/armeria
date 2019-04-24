@@ -236,6 +236,8 @@ junit:
 org.junit.jupiter:
   junit-jupiter-api:
     version: &JUNIT_JUPITER_VERSION '5.4.2'
+    javadocs:
+    - https://junit.org/junit5/docs/5.4.2/api/
   junit-jupiter-engine:
     version: *JUNIT_JUPITER_VERSION
 org.junit.platform:

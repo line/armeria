@@ -56,7 +56,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.grpc.stub.StreamObserver;
 import io.micrometer.core.instrument.MeterRegistry;

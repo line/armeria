@@ -36,7 +36,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Get;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Completable;

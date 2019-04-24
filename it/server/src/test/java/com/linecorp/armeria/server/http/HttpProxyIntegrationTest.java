@@ -37,7 +37,7 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 /** Test for issues that may happen when doing simple proxying. */
 public class HttpProxyIntegrationTest {
