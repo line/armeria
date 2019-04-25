@@ -20,14 +20,28 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchEvent.Kind;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 
+import javax.annotation.Nullable;
+
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
@@ -36,7 +50,7 @@ import com.linecorp.armeria.client.Endpoint;
  * A {@link Properties} backed {@link EndpointGroup}. The list of {@link Endpoint}s are loaded from the
  * {@link Properties}.
  */
-public final class PropertiesEndpointGroup implements EndpointGroup {
+public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
 
     // TODO(ide) Reload the endpoint list if the file is updated.
 
@@ -62,7 +76,7 @@ public final class PropertiesEndpointGroup implements EndpointGroup {
                 requireNonNull(classLoader, "classLoader"),
                 requireNonNull(resourceName, "resourceName"),
                 requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
-                0));
+                0, resourceName), resourceName);
     }
 
     /**
@@ -89,7 +103,7 @@ public final class PropertiesEndpointGroup implements EndpointGroup {
                 requireNonNull(classLoader, "classLoader"),
                 requireNonNull(resourceName, "resourceName"),
                 requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
-                defaultPort));
+                defaultPort, resourceName), resourceName);
     }
 
     /**
@@ -112,7 +126,7 @@ public final class PropertiesEndpointGroup implements EndpointGroup {
         return new PropertiesEndpointGroup(loadEndpoints(
                 requireNonNull(properties, "properties"),
                 requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
-                0));
+                0), null);
     }
 
     /**
@@ -138,22 +152,79 @@ public final class PropertiesEndpointGroup implements EndpointGroup {
         return new PropertiesEndpointGroup(loadEndpoints(
                 requireNonNull(properties, "properties"),
                 requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
-                defaultPort));
+                defaultPort), null);
+    }
+
+    public static class WatchPropertiesRunnable implements Runnable {
+        String resourceName;
+        URL resourcePathUrl;
+        String endpointKeyPrefix;
+        int defaultPort;
+        final WatchService watchService;
+        String key;
+        WatchPropertiesRunnable(String resourceName, URL resourcePathUrl, String endpointKeyPrefix, int defaultPort, String key) {
+            this.resourceName = resourceName;
+            this.resourcePathUrl = resourcePathUrl;
+            this.endpointKeyPrefix = endpointKeyPrefix;
+            this.defaultPort = defaultPort;
+            this.key = key;
+            try {
+                watchService = FileSystems.getDefault().newWatchService();
+                final Path path = Paths.get(simpleGetDirFromString(resourcePathUrl.getFile()));
+                path.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY);
+            } catch (IOException e) {
+                e.printStackTrace();
+                throw new RuntimeException();
+            }
+        }
+
+        private static String simpleGetDirFromString(String filename) {
+            return filename.substring(0, filename.lastIndexOf('/'));
+        }
+
+        @Override
+        public void run() {
+            try {
+                WatchKey key;
+                while ((key = watchService.take()) != null) {
+                    for (WatchEvent<?> event : key.pollEvents()) {
+                        System.out.println("Event kind: " + event.kind() + ". File affected: " + event.context());
+                    }
+                    List<Endpoint> endpointList = read(resourcePathUrl, endpointKeyPrefix, defaultPort, resourceName);
+                    PropertiesEndpointGroup group = endpointGroupMap.get(this.key);
+                    group.setEndpoints(endpointList);
+
+                    System.out.println("endpointList: " + endpointList);
+                    key.reset();
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private static List<Endpoint> loadEndpoints(ClassLoader classLoader, String resourceName,
-                                                String endpointKeyPrefix, int defaultPort) {
+                                                String endpointKeyPrefix, int defaultPort, String key) {
+
         final URL resourceUrl = classLoader.getResource(resourceName);
+        System.out.println(resourceUrl);
         checkArgument(resourceUrl != null, "resource not found: %s", resourceName);
         if (!endpointKeyPrefix.endsWith(".")) {
             endpointKeyPrefix += ".";
         }
+
+        new Thread(new WatchPropertiesRunnable(resourceName, resourceUrl, endpointKeyPrefix, defaultPort, key)).start();
+
+        return read(resourceUrl, endpointKeyPrefix, defaultPort, resourceName);
+    }
+
+    private static List<Endpoint> read(URL resourceUrl, String endpointKeyPrefix, int defaultPort, String resourceName) {
         try (InputStream in = resourceUrl.openStream()) {
             final Properties props = new Properties();
             props.load(in);
             return loadEndpoints(props, endpointKeyPrefix, defaultPort);
         } catch (IOException e) {
-            throw new IllegalArgumentException("failed to load: " + resourceName, e);
+              throw new IllegalArgumentException("failed to load: " + resourceName, e);
         }
     }
 
@@ -181,14 +252,24 @@ public final class PropertiesEndpointGroup implements EndpointGroup {
                       "defaultPort: %s (expected: 1-65535)", defaultPort);
     }
 
-    private final List<Endpoint> endpoints;
+    private List<Endpoint> endpoints;
+    private String key;
 
-    private PropertiesEndpointGroup(List<Endpoint> endpoints) {
+    private PropertiesEndpointGroup(List<Endpoint> endpoints, String key) {
+        this.endpoints = endpoints;
+        this.key = key;
+        endpointGroupMap.put(key, this);
+    }
+
+    public void updateEndpoints(List<Endpoint> endpoints) {
         this.endpoints = endpoints;
     }
 
     @Override
-    public List<Endpoint> endpoints() {
-        return endpoints;
+    public void close() {
+        endpointGroupMap.remove(key);
     }
+
+    @VisibleForTesting
+    static final Map<String, PropertiesEndpointGroup> endpointGroupMap = new HashMap<>();
 }
