@@ -19,7 +19,7 @@ def load_properties(filepath, sep='=', comment_char='#'):
 
 def load_yaml(filepath):
     with open(filepath, 'r') as f:
-        return yaml.load(f)
+        return yaml.load(f, Loader=yaml.FullLoader)
 
 # Load the gradle.properties and dependencies.yml.
 rootDir = os.path.dirname(os.path.abspath(__file__)) + '/../../..'
