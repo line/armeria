@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.server.ServerRuleDelegate;
+import com.linecorp.armeria.testing.internal.ServerRuleDelegate;
 
 /**
  * A {@link Extension} that allows easy set-up and tear-down of a {@link Server}.

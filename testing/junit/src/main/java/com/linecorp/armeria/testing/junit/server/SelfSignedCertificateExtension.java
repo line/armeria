@@ -29,7 +29,7 @@ import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
-import com.linecorp.armeria.testing.server.SelfSignedCertificateRuleDelegate;
+import com.linecorp.armeria.testing.internal.SelfSignedCertificateRuleDelegate;
 
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 

@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.testing.server;
+package com.linecorp.armeria.testing.internal;
 
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;

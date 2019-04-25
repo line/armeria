@@ -15,9 +15,9 @@
  */
 
 /**
- * Server-side testing utilities.
+ * Internal testing utilities.
  */
 @NonNullByDefault
-package com.linecorp.armeria.testing.server;
+package com.linecorp.armeria.testing.internal;
 
 import com.linecorp.armeria.common.util.NonNullByDefault;

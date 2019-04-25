@@ -14,7 +14,7 @@
  *  under the License.
  */
 
-package com.linecorp.armeria.testing.server;
+package com.linecorp.armeria.testing.internal;
 
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
