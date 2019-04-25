@@ -15,9 +15,11 @@
  */
 package com.linecorp.armeria.common.logback;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.regex.Pattern;
 
 import javax.net.ssl.SSLSession;
 
@@ -149,6 +151,8 @@ public enum BuiltInProperty {
 
     private static final Map<String, BuiltInProperty> mdcKeyToEnum;
 
+    static final String WILDCARD_STR = "*";
+
     static {
         final ImmutableMap.Builder<String, BuiltInProperty> builder = ImmutableMap.builder();
         for (BuiltInProperty k : BuiltInProperty.values()) {
@@ -157,8 +161,16 @@ public enum BuiltInProperty {
         mdcKeyToEnum = builder.build();
     }
 
-    static Optional<BuiltInProperty> findByMdcKey(String mdcKey) {
-        return Optional.ofNullable(mdcKeyToEnum.get(mdcKey));
+    static List<BuiltInProperty> findByMdcKeyPattern(String mdcKeyPattern) {
+        final Pattern pattern = Pattern.compile(
+                ("\\Q" + mdcKeyPattern + "\\E").replace(WILDCARD_STR, "\\E.*\\Q"));
+        final List<BuiltInProperty> matchedBuiltInProperties = new ArrayList<>();
+        mdcKeyToEnum.forEach((mdcKey, property) -> {
+            if (pattern.matcher(mdcKey).matches()) {
+                matchedBuiltInProperties.add(property);
+            }
+        });
+        return matchedBuiltInProperties;
     }
 
     final String mdcKey;

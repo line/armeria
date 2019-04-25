@@ -33,6 +33,9 @@ For example, the following configuration:
                  req.http_headers.user-agent,
                  attrs.some_value:com.example.AttrKeys#SOME_VALUE</exports>
         -->
+        <!-- ... or with wildcard:
+        <export>req.*</export>
+        -->
       </appender>
       ...
     </configuration>
@@ -64,6 +67,10 @@ Built-in properties
 -------------------
 A built-in property is a common property available for most requests. See the complete list of the built-in
 properties and their MDC keys at :api:`BuiltInProperty`.
+You can also use wildcard character ``*`` instead of listing all properties. For example:
+
+- ``"*"``
+- ``"req.*"``
 
 HTTP request and response headers
 ---------------------------------
