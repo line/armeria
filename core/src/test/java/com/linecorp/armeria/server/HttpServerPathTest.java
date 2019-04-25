@@ -49,6 +49,19 @@ public class HttpServerPathTest {
                 }
             });
 
+            // '/another/foo/' and '/another/foo' should be differently handled.
+            sb.service("/another/{id}/", new AbstractHttpService() {
+                @Override
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
+                    return HttpResponse.of(HttpStatus.OK);
+                }
+            }).service("/another/{id}", new AbstractHttpService() {
+                @Override
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
+                    return HttpResponse.of(HttpStatus.NO_CONTENT);
+                }
+            });
+
             sb.serviceUnder("/", new AbstractHttpService() {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
@@ -71,6 +84,8 @@ public class HttpServerPathTest {
         TEST_URLS.put("/service//test//////a/?flag=hello", HttpStatus.OK);
         TEST_URLS.put("/service/foo:bar", HttpStatus.OK);
         TEST_URLS.put("/service/foo::::::bar", HttpStatus.OK);
+        TEST_URLS.put("/another/foo/", HttpStatus.OK);
+        TEST_URLS.put("/another/foo", HttpStatus.NO_CONTENT);
         TEST_URLS.put("/cache/v1.0/rnd_team/get/krisjey:56578015655:1223", HttpStatus.OK);
 
         TEST_URLS.put("/signout/56578015655?crumb=s-1475829101-cec4230588-%E2%98%83", HttpStatus.OK);
