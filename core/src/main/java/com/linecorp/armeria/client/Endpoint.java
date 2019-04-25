@@ -433,6 +433,32 @@ public final class Endpoint implements Comparable<Endpoint> {
         return this.authority = authority;
     }
 
+    /**
+     * Converts this endpoint into a URI string.
+     *
+     * @return the URI string
+     */
+    public String toURI() {
+        final String authority;
+
+        if (ipAddr == null) {
+            authority = authority();
+        } else if (port == 0) {
+            if (NetUtil.isValidIpV4Address(ipAddr)) {
+                authority = ipAddr;
+            } else {
+                authority = '[' + ipAddr + ']';
+            }
+        } else {
+            if (NetUtil.isValidIpV4Address(ipAddr)) {
+                authority = ipAddr + ':' + port;
+            } else {
+                authority = '[' + ipAddr + "]:" + port;
+            }
+        }
+        return "http://" + authority;
+    }
+
     private void ensureGroup() {
         if (!isGroup()) {
             throw new IllegalStateException("not a group endpoint");

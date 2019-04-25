@@ -33,14 +33,16 @@ public class EndpointTest {
         assertThat(foo.ipAddr()).isNull();
         assertThat(foo.ipFamily()).isNull();
         assertThat(foo.hasIpAddr()).isFalse();
+        assertThat(foo.toURI()).isEqualTo("http://foo");
 
         final Endpoint bar = Endpoint.parse("bar:80");
         assertThat(bar).isEqualTo(Endpoint.of("bar", 80));
         assertThat(bar.port()).isEqualTo(80);
-        assertThat(foo.weight()).isEqualTo(1000);
-        assertThat(foo.ipAddr()).isNull();
-        assertThat(foo.ipFamily()).isNull();
-        assertThat(foo.hasIpAddr()).isFalse();
+        assertThat(bar.weight()).isEqualTo(1000);
+        assertThat(bar.ipAddr()).isNull();
+        assertThat(bar.ipFamily()).isNull();
+        assertThat(bar.hasIpAddr()).isFalse();
+        assertThat(bar.toURI()).isEqualTo("http://bar:80");
 
         assertThat(Endpoint.parse("group:foo")).isEqualTo(Endpoint.ofGroup("foo"));
     }
@@ -51,6 +53,7 @@ public class EndpointTest {
         assertThat(foo.isGroup()).isTrue();
         assertThat(foo.groupName()).isEqualTo("foo");
         assertThat(foo.authority()).isEqualTo("group:foo");
+        assertThat(foo.toURI()).isEqualTo("http://group:foo");
 
         assertThatThrownBy(foo::host).isInstanceOf(IllegalStateException.class);
         assertThatThrownBy(foo::ipAddr).isInstanceOf(IllegalStateException.class);
@@ -72,6 +75,7 @@ public class EndpointTest {
         assertThat(foo.weight()).isEqualTo(1000);
         assertThat(foo.authority()).isEqualTo("foo.com");
         assertThat(foo.withIpAddr(null)).isSameAs(foo);
+        assertThat(foo.toURI()).isEqualTo("http://foo.com");
 
         assertThatThrownBy(foo::port).isInstanceOf(IllegalStateException.class);
         assertThatThrownBy(foo::groupName).isInstanceOf(IllegalStateException.class);
@@ -91,6 +95,7 @@ public class EndpointTest {
         assertThat(foo.withDefaultPort(42)).isSameAs(foo);
         assertThat(foo.weight()).isEqualTo(1000);
         assertThat(foo.authority()).isEqualTo("foo.com:80");
+        assertThat(foo.toURI()).isEqualTo("http://foo.com:80");
 
         assertThatThrownBy(foo::groupName).isInstanceOf(IllegalStateException.class);
     }
@@ -113,16 +118,23 @@ public class EndpointTest {
         assertThat(foo.ipAddr()).isEqualTo("192.168.0.1");
         assertThat(foo.ipFamily()).isEqualTo(StandardProtocolFamily.INET);
         assertThat(foo.hasIpAddr()).isTrue();
+        assertThat(foo.toURI()).isEqualTo("http://192.168.0.1");
+
         assertThat(foo.withIpAddr(null).ipAddr()).isNull();
+        assertThat(foo.withIpAddr(null).toURI()).isEqualTo("http://foo.com");
+
         assertThat(foo.withIpAddr("::1").authority()).isEqualTo("foo.com");
         assertThat(foo.withIpAddr("::1").ipAddr()).isEqualTo("::1");
         assertThat(foo.withIpAddr("::1").ipFamily()).isEqualTo(StandardProtocolFamily.INET6);
         assertThat(foo.withIpAddr("::1").hasIpAddr()).isTrue();
+        assertThat(foo.withIpAddr("::1").toURI()).isEqualTo("http://[::1]");
+
         assertThat(foo.withIpAddr("192.168.0.1")).isSameAs(foo);
         assertThat(foo.withIpAddr("192.168.0.2").authority()).isEqualTo("foo.com");
         assertThat(foo.withIpAddr("192.168.0.2").ipAddr()).isEqualTo("192.168.0.2");
         assertThat(foo.withIpAddr("192.168.0.2").ipFamily()).isEqualTo(StandardProtocolFamily.INET);
         assertThat(foo.withIpAddr("192.168.0.2").hasIpAddr()).isTrue();
+        assertThat(foo.withIpAddr("192.168.0.2").toURI()).isEqualTo("http://192.168.0.2");
 
         assertThatThrownBy(() -> foo.withIpAddr("no-ip")).isInstanceOf(IllegalArgumentException.class);
     }
@@ -143,6 +155,7 @@ public class EndpointTest {
         assertThat(a.ipFamily()).isEqualTo(StandardProtocolFamily.INET);
         assertThat(a.hasIpAddr()).isTrue();
         assertThat(a.authority()).isEqualTo("192.168.0.1");
+        assertThat(a.toURI()).isEqualTo("http://192.168.0.1");
         assertThatThrownBy(() -> a.withIpAddr(null)).isInstanceOf(IllegalStateException.class);
         assertThat(a.withIpAddr("192.168.0.1")).isSameAs(a);
         assertThat(a.withIpAddr("192.168.0.2")).isEqualTo(Endpoint.of("192.168.0.2"));
@@ -159,6 +172,7 @@ public class EndpointTest {
         assertThat(a.hasIpAddr()).isTrue();
         assertThat(a.port()).isEqualTo(80);
         assertThat(a.authority()).isEqualTo("192.168.0.1:80");
+        assertThat(a.toURI()).isEqualTo("http://192.168.0.1:80");
     }
 
     @Test
@@ -169,6 +183,7 @@ public class EndpointTest {
         assertThat(a.ipFamily()).isEqualTo(StandardProtocolFamily.INET6);
         assertThat(a.hasIpAddr()).isTrue();
         assertThat(a.authority()).isEqualTo("[::1]");
+        assertThat(a.toURI()).isEqualTo("http://[::1]");
         assertThatThrownBy(() -> a.withIpAddr(null)).isInstanceOf(IllegalStateException.class);
         assertThat(a.withIpAddr("::1")).isSameAs(a);
         assertThat(a.withIpAddr("::2")).isEqualTo(Endpoint.of("::2"));
@@ -181,6 +196,7 @@ public class EndpointTest {
         assertThat(b.ipFamily()).isEqualTo(StandardProtocolFamily.INET6);
         assertThat(b.hasIpAddr()).isTrue();
         assertThat(b.authority()).isEqualTo("[::1]:80");
+        assertThat(b.toURI()).isEqualTo("http://[::1]:80");
 
         // Surrounding '[' and ']' should be handled correctly.
         final Endpoint c = Endpoint.of("[::1]");
@@ -189,6 +205,7 @@ public class EndpointTest {
         assertThat(c.ipFamily()).isEqualTo(StandardProtocolFamily.INET6);
         assertThat(c.hasIpAddr()).isTrue();
         assertThat(c.authority()).isEqualTo("[::1]");
+        assertThat(c.toURI()).isEqualTo("http://[::1]");
 
         final Endpoint d = Endpoint.of("[::1]", 80);
         assertThat(d.host()).isEqualTo("::1");
@@ -196,12 +213,14 @@ public class EndpointTest {
         assertThat(d.ipFamily()).isEqualTo(StandardProtocolFamily.INET6);
         assertThat(d.hasIpAddr()).isTrue();
         assertThat(d.authority()).isEqualTo("[::1]:80");
+        assertThat(d.toURI()).isEqualTo("http://[::1]:80");
 
         // withIpAddr() should handle surrounding '[' and ']' correctly.
         final Endpoint e = Endpoint.of("foo").withIpAddr("[::1]");
         assertThat(e.host()).isEqualTo("foo");
         assertThat(e.ipAddr()).isEqualTo("::1");
         assertThat(e.ipFamily()).isEqualTo(StandardProtocolFamily.INET6);
+        assertThat(e.toURI()).isEqualTo("http://[::1]");
     }
 
     @Test
@@ -213,6 +232,7 @@ public class EndpointTest {
         assertThat(a.hasIpAddr()).isTrue();
         assertThat(a.port()).isEqualTo(80);
         assertThat(a.authority()).isEqualTo("[::1]:80");
+        assertThat(a.toURI()).isEqualTo("http://[::1]:80");
     }
 
     @Test
@@ -221,6 +241,15 @@ public class EndpointTest {
         final String authority1 = foo.authority();
         final String authority2 = foo.authority();
         assertThat(authority1).isSameAs(authority2);
+    }
+
+    @Test
+    public void toURI() {
+        assertThat(Endpoint.ofGroup("a").toURI()).isEqualTo("http://group:a");
+        assertThat(Endpoint.of("192.168.0.1", 80).toURI()).isEqualTo("http://192.168.0.1:80");
+        assertThat(Endpoint.of("192.168.0.1").toURI()).isEqualTo("http://192.168.0.1");
+        assertThat(Endpoint.of("[::1]", 80).toURI()).isEqualTo("http://[::1]:80");
+        assertThat(Endpoint.of("[::1]").toURI()).isEqualTo("http://[::1]");
     }
 
     @Test

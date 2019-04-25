@@ -140,6 +140,52 @@ public interface HttpClient extends ClientBuilderParams {
     }
 
     /**
+     * Creates a new HTTP client that connects to the specified {@link Endpoint} using the default
+     * {@link ClientFactory}.
+     *
+     * @param endpoint the URI of the server endpoint {@link Endpoint}
+     * @param options the {@link ClientOptionValue}s
+     */
+    static HttpClient of(Endpoint endpoint, ClientOptionValue<?>... options) {
+        return of(ClientFactory.DEFAULT, endpoint.toURI(), options);
+    }
+
+    /**
+     * Creates a new HTTP client that connects to the specified {@link Endpoint} using the default
+     * {@link ClientFactory}.
+     *
+     * @param endpoint the URI of the server endpoint {@link Endpoint}
+     * @param options the {@link ClientOptions}
+     */
+    static HttpClient of(Endpoint endpoint, ClientOptions options) {
+        return of(ClientFactory.DEFAULT, endpoint.toURI(), options);
+    }
+
+    /**
+     * Creates a new HTTP client that connects to the specified {@link Endpoint} using an alternative
+     * {@link ClientFactory}.
+     *
+     * @param factory an alternative {@link ClientFactory}
+     * @param endpoint the server endpoint {@link Endpoint}
+     * @param options the {@link ClientOptionValue}s
+     */
+    static HttpClient of(ClientFactory factory, Endpoint endpoint, ClientOptionValue<?>... options) {
+        return new HttpClientBuilder(endpoint.toURI()).factory(factory).options(options).build();
+    }
+
+    /**
+     * Creates a new HTTP client that connects to the specified {@link Endpoint} using an alternative
+     * {@link ClientFactory}.
+     *
+     * @param factory an alternative {@link ClientFactory}
+     * @param endpoint the server endpoint {@link Endpoint}
+     * @param options the {@link ClientOptions}
+     */
+    static HttpClient of(ClientFactory factory, Endpoint endpoint, ClientOptions options) {
+        return new HttpClientBuilder(endpoint.toURI()).factory(factory).options(options).build();
+    }
+
+    /**
      * Sends the specified HTTP request.
      */
     HttpResponse execute(HttpRequest req);
