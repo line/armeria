@@ -13,12 +13,73 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
+import Table from '@material-ui/core/Table';
+import TableBody from '@material-ui/core/TableBody';
+import TableCell from '@material-ui/core/TableCell';
+import TableHead from '@material-ui/core/TableHead';
+import TableRow from '@material-ui/core/TableRow';
+import Tooltip from '@material-ui/core/Tooltip';
 import Typography from '@material-ui/core/Typography';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import React from 'react';
+import Section from '../../components/Section';
+import { convertLongToUTCDate, Versions } from '../../lib/versions';
 
-export default class HomePage extends React.PureComponent {
+interface OwnProps {
+  versions?: Versions;
+}
+
+dayjs.extend(relativeTime);
+
+function formatReadableTime(dateTime: number): string {
+  if (!dateTime) {
+    return 'Unknown';
+  }
+
+  return dayjs().to(dayjs(dateTime));
+}
+type Props = OwnProps;
+
+export default class HomePage extends React.PureComponent<Props> {
   public render() {
+    const { versions } = this.props;
+    const data = versions;
+    const tableRows: any = [];
+
+    if (data) {
+      data.getVersions().forEach((version) => {
+        tableRows.push(
+          <TableRow>
+            <TableCell>{version.artifactId}</TableCell>
+            <TableCell>
+              {version.artifactVersion}
+              {data.getArmeriaArtifactVersion() !== version.artifactVersion
+                ? '(!)'
+                : ''}
+            </TableCell>
+            <TableCell>
+              <Tooltip title={convertLongToUTCDate(version.commitTimeMillis)}>
+                <Typography variant="body2">
+                  {formatReadableTime(version.commitTimeMillis)}
+                </Typography>
+              </Tooltip>
+            </TableCell>
+            <TableCell>
+              <Typography variant="body2">
+                <a
+                  href={`https://github.com/line/armeria/commit/${version.longCommitHash}`}
+                >
+                  {version.shortCommitHash}
+                </a>
+              </Typography>
+            </TableCell>
+            <TableCell>{version.repositoryStatus}</TableCell>
+          </TableRow>,
+        );
+      });
+    }
+
     return (
       <>
         <Typography variant="h6" paragraph>
@@ -28,10 +89,33 @@ export default class HomePage extends React.PureComponent {
           This page provides the information about the RPC services and its
           related data types in this server.
         </Typography>
-        <Typography variant="body2">
+        <Typography variant="body2" paragraph>
           Please start to navigate via the sidebar on the left or the menu
           button on the top right.
         </Typography>
+        {data ? (
+          <>
+            <Typography variant="subtitle1" paragraph>
+              Version information
+            </Typography>
+            <Section>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Module</TableCell>
+                    <TableCell>Version</TableCell>
+                    <TableCell>Commit Time</TableCell>
+                    <TableCell>Commit ID</TableCell>
+                    <TableCell>Repository Status</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>{tableRows}</TableBody>
+              </Table>
+            </Section>
+          </>
+        ) : (
+          ''
+        )}
       </>
     );
   }
