@@ -522,19 +522,22 @@ after your request converters, so you don't have to specify any :api:`@RequestCo
         @Post("/hello2")
         public HttpResponse hello2(MyJsonRequest body) { ... }
 
-        // StringRequestConverterFunction will work for the content type of any of 'text'.
         @Post("/hello3")
+        public HttpResponse hello2(String body) { ... }
+
+        // StringRequestConverterFunction will work for the content type of any of 'text'.
+        @Post("/hello4")
         public HttpResponse hello3(String body) { ... }
 
-        @Post("/hello4")
+        @Post("/hello5")
         public HttpResponse hello4(CharSequence body) { ... }
 
         // ByteArrayRequestConverterFunction will work for the content type of 'application/octet-stream',
         // 'application/binary' or none.
-        @Post("/hello5")
+        @Post("/hello6")
         public HttpResponse hello5(byte[] body) { ... }
 
-        @Post("/hello6")
+        @Post("/hello7")
         public HttpResponse hello6(HttpData body) { ... }
     }
 

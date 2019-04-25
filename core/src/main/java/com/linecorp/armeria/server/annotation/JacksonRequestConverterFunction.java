@@ -68,6 +68,10 @@ public class JacksonRequestConverterFunction implements RequestConverterFunction
         final MediaType contentType = request.contentType();
         if (contentType != null && (contentType.is(MediaType.JSON) ||
                                     contentType.subtype().endsWith("+json"))) {
+            if (expectedResultType == String.class) {
+                return request.content(contentType.charset().orElse(StandardCharsets.UTF_8));
+            }
+
             final ObjectReader reader = readers.computeIfAbsent(expectedResultType, mapper::readerFor);
             if (reader != null) {
                 final String content = request.content(contentType.charset().orElse(StandardCharsets.UTF_8));
