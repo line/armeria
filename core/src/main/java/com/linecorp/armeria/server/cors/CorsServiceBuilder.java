@@ -351,6 +351,12 @@ public final class CorsServiceBuilder {
      * Returns a newly-created {@link CorsService} based on the properties of this builder.
      */
     public CorsService build(Service<HttpRequest, HttpResponse> delegate) {
+        if (delegate.as(CorsService.class).isPresent()) {
+            throw new IllegalArgumentException(
+                    "decorated with a " + CorsService.class.getSimpleName() + " already: " +
+                    delegate);
+        }
+
         return new CorsService(delegate, new CorsConfig(this));
     }
 
@@ -358,14 +364,8 @@ public final class CorsServiceBuilder {
      * Returns a newly-created decorator that decorates a {@link Service} with a new {@link CorsService}
      * based on the properties of this builder.
      */
-    public Function<Service<HttpRequest, HttpResponse>,
-            ? extends Service<HttpRequest, HttpResponse>> newDecorator() {
-        return s -> {
-            if (s.as(CorsService.class).isPresent()) {
-                return s;
-            }
-            return build(s);
-        };
+    public Function<Service<HttpRequest, HttpResponse>, CorsService> newDecorator() {
+        return this::build;
     }
 
     /**
