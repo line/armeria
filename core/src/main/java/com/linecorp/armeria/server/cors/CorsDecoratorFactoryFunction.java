@@ -36,6 +36,14 @@ public final class CorsDecoratorFactoryFunction implements DecoratorFactoryFunct
         requireNonNull(parameter, "parameter");
         final CorsServiceBuilder cb = CorsServiceBuilder.forOrigins(parameter.origins());
         cb.firstPolicyBuilder.setConfig(parameter);
-        return cb.newDecorator();
+
+        final Function<Service<HttpRequest, HttpResponse>, CorsService> decorator = cb.newDecorator();
+        return service -> {
+            if (service.as(CorsService.class).isPresent()) {
+                return service;
+            } else {
+                return decorator.apply(service);
+            }
+        };
     }
 }
