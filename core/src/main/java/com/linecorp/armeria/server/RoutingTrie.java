@@ -127,9 +127,13 @@ final class RoutingTrie<V> {
             case PARAMETER:
                 // Consume characters until the delimiter '/' as a path variable.
                 final int delim = path.indexOf('/', begin);
-                if (delim < 0 || path.length() == delim + 1) {
-                    // No more delimiter, or ends with delimiter.
+                if (delim < 0) {
+                    // No more delimiter.
                     return node;
+                }
+                if (path.length() == delim + 1) {
+                    final Node<V> trailingSlashNode = node.child('/');
+                    return trailingSlashNode != null ? trailingSlashNode : node;
                 }
                 next = delim;
                 break;
