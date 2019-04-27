@@ -179,7 +179,7 @@ public interface HttpClient extends ClientBuilderParams {
     static HttpClient of(ClientFactory factory, String scheme, Endpoint endpoint,
                          ClientOptionValue<?>... options) {
         requireNonNull(endpoint, "endpoint");
-        return new HttpClientBuilder(endpoint.toURI(scheme)).factory(factory).options(options).build();
+        return of(factory, endpoint.toURI(scheme), options);
     }
 
     /**
@@ -193,7 +193,7 @@ public interface HttpClient extends ClientBuilderParams {
      */
     static HttpClient of(ClientFactory factory, String scheme, Endpoint endpoint, ClientOptions options) {
         requireNonNull(endpoint, "endpoint");
-        return new HttpClientBuilder(endpoint.toURI(scheme)).factory(factory).options(options).build();
+        return of(factory, endpoint.toURI(scheme), options);
     }
 
     /**

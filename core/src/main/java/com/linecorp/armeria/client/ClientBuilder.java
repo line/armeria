@@ -60,6 +60,14 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
     }
 
     /**
+     * Creates a new {@link ClientBuilder} that builds the client that connects to
+     * the specified {@link Endpoint} with {@code scheme}.
+     */
+    public ClientBuilder(String scheme, Endpoint endpoint) {
+        this(requireNonNull(endpoint, "endpoint").toURI(scheme));
+    }
+
+    /**
      * Creates a new {@link ClientBuilder} that builds the client that connects to the specified {@link URI}.
      */
     public ClientBuilder(URI uri) {
