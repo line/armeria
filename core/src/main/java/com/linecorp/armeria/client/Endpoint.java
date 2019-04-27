@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.StandardProtocolFamily;
+import java.net.URI;
 import java.util.Comparator;
 import java.util.Objects;
 
@@ -418,45 +419,41 @@ public final class Endpoint implements Comparable<Endpoint> {
 
         if (isGroup()) {
             authority = "group:" + groupName;
-        } else if (port != 0) {
-            if (hostType == HostType.IPv6_ONLY) {
-                authority = '[' + host() + "]:" + port;
-            } else {
-                authority = host() + ':' + port;
-            }
-        } else if (hostType == HostType.IPv6_ONLY) {
-            authority = '[' + host() + ']';
         } else {
-            authority = host();
+            authority = buildAuthority(host());
         }
 
         return this.authority = authority;
     }
 
     /**
-     * Converts this endpoint into a URI string.
+     * Converts this endpoint into a URI.
      *
-     * @return the URI string
+     * @return the URI
      */
-    public String toURI() {
-        final String authority;
+    public URI toURI(String scheme) {
+        requireNonNull(scheme, "scheme");
 
-        if (ipAddr == null) {
-            authority = authority();
-        } else if (port == 0) {
-            if (NetUtil.isValidIpV4Address(ipAddr)) {
-                authority = ipAddr;
-            } else {
-                authority = '[' + ipAddr + ']';
-            }
+        final String authority;
+        if (isGroup()) {
+            authority = "group:" + groupName;
         } else {
-            if (NetUtil.isValidIpV4Address(ipAddr)) {
-                authority = ipAddr + ':' + port;
-            } else {
-                authority = '[' + ipAddr + "]:" + port;
-            }
+            authority = buildAuthority(hasIpAddr() ? ipAddr() : host());
         }
-        return "http://" + authority;
+
+        return URI.create(scheme + "://" + authority);
+    }
+
+    private String buildAuthority(String host) {
+        if (NetUtil.isValidIpV6Address(host)) {
+            host = '[' + host + ']';
+        }
+
+        if (port != 0) {
+            host = host + ':' + port;
+        }
+
+        return host;
     }
 
     private void ensureGroup() {

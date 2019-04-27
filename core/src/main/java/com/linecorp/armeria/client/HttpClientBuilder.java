@@ -48,6 +48,16 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
     /**
      * Creates a new instance.
      *
+     * @throws IllegalArgumentException if the {@code scheme} is not one of the fields
+     *                                  in {@link SessionProtocol}
+     */
+    public HttpClientBuilder(String scheme, Endpoint endpoint) {
+        this(requireNonNull(endpoint).toURI(scheme));
+    }
+
+    /**
+     * Creates a new instance.
+     *
      * @throws IllegalArgumentException if the scheme of the uri is not one of the fields
      *                                  in {@link SessionProtocol}
      */
