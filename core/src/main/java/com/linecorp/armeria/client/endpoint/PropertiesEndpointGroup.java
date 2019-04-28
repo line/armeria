@@ -254,17 +254,12 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
                       "defaultPort: %s (expected: 1-65535)", defaultPort);
     }
 
-    private List<Endpoint> endpoints;
     private String key;
 
     private PropertiesEndpointGroup(List<Endpoint> endpoints, String key) {
-        this.endpoints = endpoints;
+        setEndpoints(endpoints);
         this.key = key;
         endpointGroupMap.put(key, this);
-    }
-
-    public void updateEndpoints(List<Endpoint> endpoints) {
-        this.endpoints = endpoints;
     }
 
     @Override

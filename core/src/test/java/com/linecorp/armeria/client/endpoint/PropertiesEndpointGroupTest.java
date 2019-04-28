@@ -20,20 +20,27 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import com.linecorp.armeria.client.Endpoint;
 
 public class PropertiesEndpointGroupTest {
 
     private static final Properties PROPS = new Properties();
+
+    @Rule
+    public TemporaryFolder folder = new TemporaryFolder();
 
     static {
         PROPS.setProperty("serverA.hosts.0", "127.0.0.1:8080");
@@ -126,21 +133,24 @@ public class PropertiesEndpointGroupTest {
     @Test
     public void propertiesFileUpdatesCorrectly() throws Exception {
 
-        final PropertiesEndpointGroup endpointGroupA = PropertiesEndpointGroup.of(
-                getClass().getClassLoader(), "server-list-update.properties", "serverA.hosts", 80);
-        final URL resourceUrl = getClass().getClassLoader().getResource("server-list-update.properties");
+        final File file = folder.newFile("temp-file.properties");
+        final URL url = file.getParentFile().toURI().toURL();
+        final URLClassLoader classLoader = URLClassLoader.newInstance(new URL[]{url});
 
-        OutputStream outputStream = new FileOutputStream(resourceUrl.getFile());
+        OutputStream outputStream = new FileOutputStream(file);
         Properties props = new Properties();
         props.setProperty("serverA.hosts.0", "127.0.0.1:8080");
         props.store(outputStream, "");
         outputStream.flush();
         outputStream.close();
 
-        await().atMost(30, TimeUnit.SECONDS).until(() -> endpointGroupA.endpoints().size() == 1);
+        final PropertiesEndpointGroup endpointGroupA = PropertiesEndpointGroup.of(
+                classLoader, file.getName(), "serverA.hosts", 80);
+
+        await().atMost(60, TimeUnit.SECONDS).until(() -> endpointGroupA.endpoints().size() == 1);
 
         // Update resource
-        outputStream = new FileOutputStream(resourceUrl.getFile());
+        outputStream = new FileOutputStream(file);
         props = new Properties();
         props.setProperty("serverA.hosts.0", "127.0.0.1:8080");
         props.setProperty("serverA.hosts.1", "127.0.0.1:8081");
@@ -148,7 +158,8 @@ public class PropertiesEndpointGroupTest {
         outputStream.flush();
         outputStream.close();
 
-        await().atMost(30, TimeUnit.SECONDS).until(() -> endpointGroupA.endpoints().size() == 2);
+        await().atMost(60, TimeUnit.SECONDS).until(() -> endpointGroupA.endpoints().size() == 2);
+
         endpointGroupA.close();
     }
 }
