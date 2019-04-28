@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -29,7 +28,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
-import java.nio.file.WatchEvent.Kind;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.util.ArrayList;
@@ -38,8 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
-
-import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -162,7 +158,9 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
         int defaultPort;
         final WatchService watchService;
         String key;
-        WatchPropertiesRunnable(String resourceName, URL resourcePathUrl, String endpointKeyPrefix, int defaultPort, String key) {
+
+        WatchPropertiesRunnable(String resourceName, URL resourcePathUrl, String endpointKeyPrefix,
+                                int defaultPort, String key) {
             this.resourceName = resourceName;
             this.resourcePathUrl = resourcePathUrl;
             this.endpointKeyPrefix = endpointKeyPrefix;
@@ -188,9 +186,11 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
                 WatchKey key;
                 while ((key = watchService.take()) != null) {
                     for (WatchEvent<?> event : key.pollEvents()) {
-                        System.out.println("Event kind: " + event.kind() + ". File affected: " + event.context());
+                        System.out.println("Event kind: " + event.kind() +
+                                           ". File affected: " + event.context());
                     }
-                    List<Endpoint> endpointList = read(resourcePathUrl, endpointKeyPrefix, defaultPort, resourceName);
+                    List<Endpoint> endpointList = read(resourcePathUrl,
+                                                       endpointKeyPrefix, defaultPort, resourceName);
                     PropertiesEndpointGroup group = endpointGroupMap.get(this.key);
                     group.setEndpoints(endpointList);
 
@@ -213,19 +213,10 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
             endpointKeyPrefix += ".";
         }
 
-        new Thread(new WatchPropertiesRunnable(resourceName, resourceUrl, endpointKeyPrefix, defaultPort, key)).start();
+        new Thread(new WatchPropertiesRunnable(resourceName, resourceUrl,
+                                               endpointKeyPrefix, defaultPort, key)).start();
 
         return read(resourceUrl, endpointKeyPrefix, defaultPort, resourceName);
-    }
-
-    private static List<Endpoint> read(URL resourceUrl, String endpointKeyPrefix, int defaultPort, String resourceName) {
-        try (InputStream in = resourceUrl.openStream()) {
-            final Properties props = new Properties();
-            props.load(in);
-            return loadEndpoints(props, endpointKeyPrefix, defaultPort);
-        } catch (IOException e) {
-              throw new IllegalArgumentException("failed to load: " + resourceName, e);
-        }
     }
 
     private static List<Endpoint> loadEndpoints(Properties properties, String endpointKeyPrefix,
@@ -245,6 +236,17 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
         }
         checkArgument(!newEndpoints.isEmpty(), "properties contains no hosts: %s", properties);
         return ImmutableList.copyOf(newEndpoints);
+    }
+
+    private static List<Endpoint> read(URL resourceUrl, String endpointKeyPrefix,
+                                       int defaultPort, String resourceName) {
+        try (InputStream in = resourceUrl.openStream()) {
+            final Properties props = new Properties();
+            props.load(in);
+            return loadEndpoints(props, endpointKeyPrefix, defaultPort);
+        } catch (IOException e) {
+              throw new IllegalArgumentException("failed to load: " + resourceName, e);
+        }
     }
 
     private static void validateDefaultPort(int defaultPort) {

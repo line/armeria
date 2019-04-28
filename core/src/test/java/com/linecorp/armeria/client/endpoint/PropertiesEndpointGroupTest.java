@@ -26,7 +26,6 @@ import java.io.OutputStream;
 import java.net.URL;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.Test;
 
