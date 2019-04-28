@@ -16,7 +16,7 @@
 
 import { docServiceDebug, providers } from '../header-provider';
 
-import { Method } from '../specification';
+import { Endpoint, Method } from '../specification';
 
 export default abstract class Transport {
   public async send(
@@ -47,7 +47,36 @@ export default abstract class Transport {
     return this.doSend(method, filledHeaders, bodyJson, endpointPath, queries);
   }
 
+  public curlPathAndBody(method: Method, body: string): [string, string] {
+    const endpoint = this.findDebugMimeTypeEndpoint(method);
+    if (!endpoint) {
+      throw new Error("Endpoint null");
+    }
+
+    return [this.getCurlPath(endpoint), this.getCurlBody(body, endpoint, method)];
+  }
+
+  protected findDebugMimeTypeEndpoint(method: Method): Endpoint {
+    const endpoint = method.endpoints.find((ep) =>
+        ep.availableMimeTypes.includes(this.getDebugMimeType()),
+    );
+    if (!endpoint) {
+      throw new Error('Endpoint does not support debug transport.');
+    }
+    return endpoint;
+  }
+
+  protected getCurlPath(endpoint: Endpoint): string {
+    return endpoint.pathMapping;
+  }
+
+  protected getCurlBody(body: string, _endpoint: Endpoint, _method: Method): string {
+    return body;
+  }
+
   public abstract supportsMimeType(mimeType: string): boolean;
+
+  public abstract getDebugMimeType(): string;
 
   protected abstract doSend(
     method: Method,

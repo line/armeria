@@ -26,6 +26,10 @@ export default class GrpcUnframedTransport extends Transport {
     return mimeType === GRPC_UNFRAMED_MIME_TYPE;
   }
 
+  public getDebugMimeType(): string {
+    return GRPC_UNFRAMED_MIME_TYPE;
+  }
+
   protected async doSend(
     method: Method,
     headers: { [name: string]: string },

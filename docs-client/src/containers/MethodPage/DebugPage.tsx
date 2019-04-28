@@ -29,6 +29,7 @@ import githubGist from 'react-syntax-highlighter/styles/hljs/github-gist';
 import jsonMinify from 'jsonminify';
 import { RouteComponentProps } from 'react-router';
 import Section from '../../components/Section';
+import { docServiceDebug } from "../../lib/header-provider";
 import jsonPrettify from '../../lib/json-prettify';
 import { Method } from '../../lib/specification';
 import { TRANSPORTS } from '../../lib/transports';
@@ -76,6 +77,18 @@ class DebugPage extends React.PureComponent<Props, State> {
       );
     }
   }
+
+  private static copyTextToClipboard(text: string) {
+    const textArea = document.createElement('textarea');
+    textArea.style.opacity = '0.0';
+    textArea.value = text;
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+  }
+
   public state = {
     requestBodyOpen: true,
     requestBody: '',
@@ -149,6 +162,9 @@ class DebugPage extends React.PureComponent<Props, State> {
             <Typography variant="body1" paragraph />
             <Button variant="contained" color="primary" onClick={this.onSubmit}>
               Submit
+            </Button>
+            <Button variant="text" color="secondary" onClick={this.onExport}>
+              Export as curl
             </Button>
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -237,14 +253,80 @@ class DebugPage extends React.PureComponent<Props, State> {
 
   private onCopy = () => {
     const response = this.state.debugResponse;
-    const textArea = document.createElement('textarea');
-    textArea.style.opacity = '0.0';
-    textArea.value = response;
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textArea);
+    DebugPage.copyTextToClipboard(response);
+  };
+
+  private onExport = () => {
+    this.setState({
+      debugResponse: '',
+    });
+
+    let output;
+
+    const endpointPath = this.state.endpointPath; // annotated service only
+    const additionalHeaders = this.state.additionalHeaders;
+    const queries = this.state.additionalQueries;
+    const requestBody = this.state.requestBody;
+
+    try {
+      if (this.props.useRequestBody) {
+        DebugPage.validateJsonObject(requestBody, 'request body');
+      }
+
+      if (additionalHeaders) {
+        DebugPage.validateJsonObject(additionalHeaders, 'headers');
+      }
+
+      const headers = additionalHeaders && JSON.parse(additionalHeaders) || {};
+
+      // window.location.origin may have compatibility issue
+      // https://developer.mozilla.org/en-US/docs/Web/API/Window/location#Browser_compatibility
+      const host = `${window.location.protocol}//${window.location.hostname}`
+          + (window.location.port ? `:${window.location.port}` : '');
+
+      const method = this.props.method;
+      const transport = TRANSPORTS.getDebugTransport(method);
+      if (!transport) {
+        throw new Error("This method doesn't have a debug transport.");
+      }
+
+      const httpMethod = method.httpMethod;
+      const [path, body] = transport.curlPathAndBody(method, requestBody);
+      let uri;
+
+      if (this.props.isAnnotatedHttpService) {
+        if (this.props.exactPathMapping) {
+          uri = `'${host}${path}?${queries}'`;
+        } else {
+          this.validateEndpointPath(endpointPath);
+          uri = `'${host}${endpointPath}'`;
+        }
+      } else {
+        uri = `'${host}${path}'`;
+      }
+
+      headers['content-type'] = transport.getDebugMimeType();
+      if (process.env.WEBPACK_SERVE === 'true') {
+        headers[docServiceDebug] = 'true';
+      }
+
+      const header = Object.keys(headers).map((title) => {
+        return `-H '${title}:${headers[title]}'`;
+      }).join(' ');
+
+      const curlCommand = `curl -X${httpMethod} ${header} ${uri}`
+          + (this.props.useRequestBody ? ` -d '${body}'` : '');
+
+      DebugPage.copyTextToClipboard(curlCommand);
+
+      output = curlCommand;
+    } catch (e) {
+      output = e.toString();
+    }
+
+    this.setState({
+      debugResponse: output,
+    });
   };
 
   private onClear = () => {

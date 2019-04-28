@@ -14,7 +14,7 @@
  * under the License.
  */
 
-import { Method } from '../specification';
+import { Endpoint, Method } from '../specification';
 
 import Transport from './transport';
 
@@ -23,6 +23,14 @@ export const ANNOTATED_HTTP_MIME_TYPE = 'application/json; charset=utf-8';
 export default class AnnotatedHttpTransport extends Transport {
   public supportsMimeType(mimeType: string): boolean {
     return mimeType === ANNOTATED_HTTP_MIME_TYPE;
+  }
+
+  public getDebugMimeType(): string {
+    return ANNOTATED_HTTP_MIME_TYPE;
+  }
+
+  protected getCurlPath(endpoint: Endpoint): string {
+    return endpoint.pathMapping.substring("exact:".length);
   }
 
   protected async doSend(
