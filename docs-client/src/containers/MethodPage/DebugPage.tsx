@@ -17,8 +17,10 @@
 import Button from '@material-ui/core/Button';
 import Grid from '@material-ui/core/Grid';
 import IconButton from '@material-ui/core/IconButton';
+import Snackbar from "@material-ui/core/Snackbar";
 import Tooltip from '@material-ui/core/Tooltip';
 import Typography from '@material-ui/core/Typography';
+import CloseIcon from "@material-ui/icons/Close";
 import DeleteSweepIcon from '@material-ui/icons/DeleteSweep';
 import FileCopyIcon from '@material-ui/icons/FileCopy';
 import React, { ChangeEvent } from 'react';
@@ -57,6 +59,8 @@ interface State {
   additionalHeadersOpen: boolean;
   additionalHeaders: string;
   stickyHeaders: boolean;
+  snackbarOpen: boolean;
+  snackbarMessage: string;
 }
 
 type Props = OwnProps & RouteComponentProps;
@@ -100,6 +104,8 @@ class DebugPage extends React.PureComponent<Props, State> {
     additionalHeadersOpen: false,
     additionalHeaders: '',
     stickyHeaders: false,
+    snackbarOpen: false,
+    snackbarMessage: '',
   };
 
   public componentDidMount() {
@@ -164,7 +170,7 @@ class DebugPage extends React.PureComponent<Props, State> {
               Submit
             </Button>
             <Button variant="text" color="secondary" onClick={this.onExport}>
-              Export as curl
+              Copy as a curl command
             </Button>
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -187,6 +193,20 @@ class DebugPage extends React.PureComponent<Props, State> {
             </SyntaxHighlighter>
           </Grid>
         </Grid>
+        <Snackbar
+            open={this.state.snackbarOpen}
+            message={this.state.snackbarMessage}
+            autoHideDuration={3000}
+            onClose={this.onSnackbarDismiss}
+            action={[
+              <IconButton
+                  color="inherit"
+                  onClick={this.onSnackbarDismiss}
+              >
+                <CloseIcon />
+              </IconButton>,
+            ]}
+        />
       </Section>
     );
   }
@@ -253,16 +273,13 @@ class DebugPage extends React.PureComponent<Props, State> {
 
   private onCopy = () => {
     const response = this.state.debugResponse;
-    DebugPage.copyTextToClipboard(response);
+    if (response.length > 0) {
+      DebugPage.copyTextToClipboard(response);
+      this.onSnackbarOpen('The response has been copied to the clipboard.');
+    }
   };
 
   private onExport = () => {
-    this.setState({
-      debugResponse: '',
-    });
-
-    let output;
-
     const endpointPath = this.state.endpointPath; // annotated service only
     const additionalHeaders = this.state.additionalHeaders;
     const queries = this.state.additionalQueries;
@@ -318,15 +335,12 @@ class DebugPage extends React.PureComponent<Props, State> {
           + (this.props.useRequestBody ? ` -d '${body}'` : '');
 
       DebugPage.copyTextToClipboard(curlCommand);
-
-      output = curlCommand;
+      this.onSnackbarOpen('The curl command has been copied to the clipboard.');
     } catch (e) {
-      output = e.toString();
+      this.setState({
+        debugResponse: e.toString()
+      });
     }
-
-    this.setState({
-      debugResponse: output,
-    });
   };
 
   private onClear = () => {
@@ -401,6 +415,19 @@ class DebugPage extends React.PureComponent<Props, State> {
       );
     }
     this.executeRequest(params);
+  };
+
+  private onSnackbarOpen = (text: string) => {
+    this.setState({
+      snackbarOpen: true,
+      snackbarMessage: text,
+    });
+  };
+
+  private onSnackbarDismiss = () => {
+    this.setState({
+      snackbarOpen: false,
+    });
   };
 
   private validateEndpointPath(endpointPath: string) {
@@ -490,6 +517,8 @@ class DebugPage extends React.PureComponent<Props, State> {
       additionalHeadersOpen: headersOpen,
       stickyHeaders:
         urlParams.has('http_headers_sticky') || this.state.stickyHeaders,
+      snackbarOpen: false,
+      snackbarMessage: '',
     });
   }
 
