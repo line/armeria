@@ -144,10 +144,9 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
     }
 
     public static class WatchPropertiesRunnable implements Runnable {
-        String fileName;
         final WatchService watchService;
         private final Map<URL, WatchKey> urlWatchKeyMap = new HashMap<>();
-        private final Map<WatchKey, String> watchKeyPathMap = new HashMap<>();
+        private final Map<WatchKey, Path> watchKeyPathMap = new HashMap<>();
 
         WatchPropertiesRunnable() {
             try {
@@ -158,12 +157,12 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
         }
 
         public void registerResourceUrl(URL resourcePathUrl) {
-            this.fileName = new File(resourcePathUrl.getFile()).getName();
-            final Path path = new File(resourcePathUrl.getFile()).getParentFile().toPath();
+            final File file = new File(resourcePathUrl.getFile());
+            final Path path = file.getParentFile().toPath();
             try {
                 final WatchKey key = path.register(watchService, ENTRY_MODIFY); // can we register multiple paths?
                 urlWatchKeyMap.put(resourcePathUrl, key);
-                watchKeyPathMap.put(key, this.fileName);
+                watchKeyPathMap.put(key, file.toPath());
             } catch (IOException e) {
                 throw new RuntimeException("Failed to register path");
             }
@@ -182,10 +181,10 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
                 WatchKey key;
                 while ((key = watchService.take()) != null) {
                     for (WatchEvent<?> event : key.pollEvents()) {
-                        final String path = watchKeyPathMap.get(key);
+                        final Path path = watchKeyPathMap.get(key);
                         final Path changedPath = (Path) event.context();
-                        if (event.kind() == ENTRY_MODIFY && changedPath.endsWith(path)) {
-                            final PropertiesEndpointGroup group = endpointGroupMap.get(fileName);
+                        if (event.kind() == ENTRY_MODIFY) {
+                            final PropertiesEndpointGroup group = endpointGroupMap.get(changedPath.toFile().getName());
                             group.reload();
                         }
                     }
