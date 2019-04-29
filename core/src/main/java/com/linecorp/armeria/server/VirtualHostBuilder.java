@@ -348,7 +348,7 @@ public final class VirtualHostBuilder {
     }
 
     /**
-     * Returns a {@link RouteBuilder} which is for building a {@link Service} fluently.
+     * Returns a {@link RouteBuilder} which is for binding a {@link Service} fluently.
      */
     public VirtualHostRouteBuilder route() {
         return new VirtualHostRouteBuilder(this);

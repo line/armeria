@@ -778,7 +778,7 @@ public final class ServerBuilder {
     }
 
     /**
-     * Returns a {@link RouteBuilder} which is for building a {@link Service} fluently.
+     * Returns a {@link RouteBuilder} which is for binding a {@link Service} fluently.
      */
     public RouteBuilder route() {
         return new RouteBuilder(this);

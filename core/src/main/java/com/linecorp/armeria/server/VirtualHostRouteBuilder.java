@@ -22,7 +22,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 
 /**
- * A builder class for building a {@link Service} fluently. This class can only be created through
+ * A builder class for binding a {@link Service} fluently. This class can only be created through
  * {@link VirtualHostBuilder#route()}.
  *
  * <p>Call {@link #service(Service)} to build the {@link Service} and return to the {@link VirtualHostBuilder}.
@@ -30,18 +30,17 @@ import com.linecorp.armeria.common.HttpResponse;
  * <pre>{@code
  * ServerBuilder sb = new ServerBuilder();
  * sb.withVirtualHost("example.com")
- *   .route().get("/foo/bar")                      // Configure the first service.
- *   .consumes(JSON, PLAIN_TEXT_UTF_8)
- *   .produces(JSON_UTF_8, PLAIN_TEXT_UTF_8)
- *   .requestTimeoutMillis(10)
- *   .maxRequestLength(8192)
- *   .verboseResponses(true)
- *   .contentPreview(500)
- *   .service((ctx, req) -> HttpResponse.of(OK))   // Return to the VirtualHostBuilder.
- *   .accessLogger(myLogger)                       // VirtualHostBuilder
- *   .route().path("/baz")                         // Configure the second service.
- *   .methods(HttpMethod.GET, HttpMethod.POST)
- *   .service((ctx, req) -> HttpResponse.of(OK));  // Return to the VirtualHostBuilder.
+ *   .route().get("/foo/bar")                              // Configure the first service.
+ *           .consumes(JSON, PLAIN_TEXT_UTF_8)
+ *           .produces(JSON_UTF_8)
+ *           .requestTimeoutMillis(5000)
+ *           .maxRequestLength(8192)
+ *           .verboseResponses(true)
+ *           .contentPreview(500)
+ *           .service((ctx, req) -> HttpResponse.of(OK))   // Return to the VirtualHostBuilder.
+ *   .route().path("/baz")                                 // Configure the second service.
+ *           .methods(HttpMethod.GET, HttpMethod.POST)
+ *           .service((ctx, req) -> HttpResponse.of(OK));  // Return to the VirtualHostBuilder.
  * }</pre>
  *
  * @see RouteBuilder

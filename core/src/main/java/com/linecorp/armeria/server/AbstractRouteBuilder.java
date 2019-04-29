@@ -56,7 +56,7 @@ import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 
 /**
- * A builder class for building a {@link Service} fluently.
+ * A builder class for binding a {@link Service} fluently.
  *
  * @param <B> the self type
  * @param <V> {@link ServerBuilder} or {@link VirtualHostBuilder} that you create this builder from
@@ -66,10 +66,13 @@ import com.linecorp.armeria.internal.ArmeriaHttpUtil;
  */
 public abstract class AbstractRouteBuilder<B extends AbstractRouteBuilder<B, V>, V> {
 
+    private static final EnumSet<HttpMethod> defaultMethods =
+            EnumSet.of(OPTIONS, GET, HEAD, POST, PUT, PATCH, DELETE, TRACE, CONNECT);
+
     @Nullable
     private PathMapping defaultPathMapping;
 
-    private Set<HttpMethod> methods = EnumSet.of(OPTIONS, GET, HEAD, POST, PUT, PATCH, DELETE, TRACE, CONNECT);
+    private Set<HttpMethod> methods = defaultMethods;
 
     private final Map<PathMapping, Set<HttpMethod>> pathMappings = new HashMap<>();
 
@@ -125,16 +128,17 @@ public abstract class AbstractRouteBuilder<B extends AbstractRouteBuilder<B, V>,
      * {@link HttpMethod} of the request is one of the {@link HttpMethod}s set by
      * {@link #methods(HttpMethod...)}.
      *
-     * @throws IllegalArgumentException if the {@link PathMapping} is wrapped by
+     * @throws IllegalArgumentException if the {@link PathMapping} has conditions beyond the path pattern,
+     *                                  i.e. the {@link PathMapping} created by
      *                                  {@link PathMapping#withHttpHeaderInfo(Set, List, List)}
      */
     public B pathMapping(PathMapping pathMapping) {
-        if (pathMapping instanceof HttpHeaderPathMapping) {
-            throw new IllegalArgumentException(
-                    "cannot set a PathMapping which is wrapped by PathMapping.withHttpHeaderInfo(): " +
-                    pathMapping);
-        }
-        defaultPathMapping = requireNonNull(pathMapping, "pathMapping");
+        requireNonNull(pathMapping, "pathMapping");
+        checkArgument(pathMapping.hasPathPatternOnly(),
+                      "pathMapping: %s " +
+                      "(expected: the path mapping which has only the path patterns as its condition)",
+                      pathMapping.getClass().getSimpleName());
+        defaultPathMapping = pathMapping;
         return self();
     }
 

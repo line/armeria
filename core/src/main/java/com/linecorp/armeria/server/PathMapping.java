@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.PathMappingUtil.EXACT;
 import static com.linecorp.armeria.internal.PathMappingUtil.GLOB;
 import static com.linecorp.armeria.internal.PathMappingUtil.PREFIX;
@@ -262,13 +263,17 @@ public interface PathMapping {
      * @param supportedMethods the set of {@link HttpMethod}s that this {@link PathMapping} supports
      * @param consumeTypes the list of {@link MediaType}s that this {@link PathMapping} consumes
      * @param produceTypes the list of {@link MediaType}s that this {@link PathMapping} produces
+     *
+     * @throws IllegalArgumentException if the {@link PathMapping} has conditions beyond the path pattern,
+     *                                  i.e. the {@link PathMapping} created by
+     *                                  {@link #withHttpHeaderInfo(Set, List, List)}
      */
     default PathMapping withHttpHeaderInfo(Set<HttpMethod> supportedMethods,
                                            List<MediaType> consumeTypes, List<MediaType> produceTypes) {
-        if (this instanceof HttpHeaderPathMapping) {
-            throw new IllegalArgumentException(
-                    "cannot wrap a PathMapping which is already wrapped by withHttpHeaderInfo(): " + this);
-        }
+        checkArgument(hasPathPatternOnly(),
+                      "pathMapping: %s " +
+                      "(expected: the path mapping which has only the path patterns as its condition)",
+                      getClass().getSimpleName());
 
         return new HttpHeaderPathMapping(this, supportedMethods, consumeTypes, produceTypes);
     }

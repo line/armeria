@@ -149,7 +149,7 @@ final class HttpHeaderPathMapping implements PathMapping {
 
     // TODO(minwoox) Move this method into MediaType?
     private static boolean isAnyType(MediaType contentType) {
-        // Ignores the quality factor.
+        // Ignores all parameters including the quality factor.
         return "*".equals(contentType.type()) && "*".equals(contentType.subtype());
     }
 
