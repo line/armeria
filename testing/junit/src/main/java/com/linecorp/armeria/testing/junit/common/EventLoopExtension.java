@@ -22,7 +22,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 
 /**
- * A {@link Extension} that provides an {@link EventLoopGroup}. For example:
+ * An {@link Extension} that provides an {@link EventLoopGroup}. For example:
  *
  * <pre>{@code
  * > public class MyTest {
@@ -50,16 +50,16 @@ public class EventLoopExtension extends AbstractEventLoopGroupExtension {
     /**
      * Creates a new {@link Extension} that provides an {@link EventLoop}.
      *
-     * @param useDaemonThreads whether to create daemon threads or not
+     * @param useDaemonThread whether to create a daemon thread or not
      */
-    public EventLoopExtension(boolean useDaemonThreads) {
-        this("armeria-testing-eventloop", useDaemonThreads);
+    public EventLoopExtension(boolean useDaemonThread) {
+        this("armeria-testing-eventloop", useDaemonThread);
     }
 
     /**
      * Creates a new {@link Extension} that provides an {@link EventLoop}.
      *
-     * @param threadNamePrefix the prefix of thread names
+     * @param threadNamePrefix the prefix of a thread name
      */
     public EventLoopExtension(String threadNamePrefix) {
         this(threadNamePrefix, false);
@@ -68,11 +68,11 @@ public class EventLoopExtension extends AbstractEventLoopGroupExtension {
     /**
      * Creates a new {@link Extension} that provides an {@link EventLoop}.
      *
-     * @param threadNamePrefix the prefix of thread names
-     * @param useDaemonThreads whether to create daemon threads or not
+     * @param threadNamePrefix the prefix of a thread name
+     * @param useDaemonThread whether to create a daemon thread or not
      */
-    public EventLoopExtension(String threadNamePrefix, boolean useDaemonThreads) {
-        super(1, threadNamePrefix, useDaemonThreads);
+    public EventLoopExtension(String threadNamePrefix, boolean useDaemonThread) {
+        super(1, threadNamePrefix, useDaemonThread);
     }
 
     /**

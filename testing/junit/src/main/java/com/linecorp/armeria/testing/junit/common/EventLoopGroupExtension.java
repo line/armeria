@@ -21,7 +21,7 @@ import org.junit.jupiter.api.extension.Extension;
 import io.netty.channel.EventLoopGroup;
 
 /**
- * A {@link Extension} that provides an {@link EventLoopGroup}. For example:
+ * An {@link Extension} that provides an {@link EventLoopGroup}. For example:
  *
  * <pre>{@code
  * > public class MyTest {

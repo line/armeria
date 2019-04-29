@@ -22,7 +22,6 @@ import java.security.SecureRandom;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.time.temporal.TemporalAccessor;
-import java.util.Date;
 
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
@@ -34,7 +33,7 @@ import com.linecorp.armeria.testing.internal.SelfSignedCertificateRuleDelegate;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 /**
- * A {@link Extension} that provides a temporary self-signed certificate.
+ * An {@link Extension} that provides a temporary self-signed certificate.
  */
 public class SelfSignedCertificateExtension implements BeforeEachCallback, AfterEachCallback {
     private final SelfSignedCertificateRuleDelegate delegate;
@@ -44,20 +43,6 @@ public class SelfSignedCertificateExtension implements BeforeEachCallback, After
      */
     public SelfSignedCertificateExtension() {
         delegate = new SelfSignedCertificateRuleDelegate();
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @deprecated Use {@link #SelfSignedCertificateExtension(TemporalAccessor, TemporalAccessor)}.
-     *
-     * @param notBefore {@link Certificate} is not valid before this time
-     * @param notAfter {@link Certificate} is not valid after this time
-     */
-    @Deprecated
-    @SuppressWarnings("UseOfObsoleteDateTimeApi")
-    public SelfSignedCertificateExtension(Date notBefore, Date notAfter) {
-        delegate = new SelfSignedCertificateRuleDelegate(notBefore, notAfter);
     }
 
     /**
@@ -82,21 +67,6 @@ public class SelfSignedCertificateExtension implements BeforeEachCallback, After
     /**
      * Creates a new instance.
      *
-     * @deprecated Use {@link #SelfSignedCertificateExtension(String, TemporalAccessor, TemporalAccessor)}.
-     *
-     * @param fqdn a fully qualified domain name
-     * @param notBefore {@link Certificate} is not valid before this time
-     * @param notAfter {@link Certificate} is not valid after this time
-     */
-    @Deprecated
-    @SuppressWarnings("UseOfObsoleteDateTimeApi")
-    public SelfSignedCertificateExtension(String fqdn, Date notBefore, Date notAfter) {
-        delegate = new SelfSignedCertificateRuleDelegate(fqdn, notBefore, notAfter);
-    }
-
-    /**
-     * Creates a new instance.
-     *
      * @param fqdn a fully qualified domain name
      * @param notBefore {@link Certificate} is not valid before this time
      * @param notAfter {@link Certificate} is not valid after this time
@@ -114,25 +84,6 @@ public class SelfSignedCertificateExtension implements BeforeEachCallback, After
      */
     public SelfSignedCertificateExtension(String fqdn, SecureRandom random, int bits) {
         delegate = new SelfSignedCertificateRuleDelegate(fqdn, random, bits);
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @deprecated Use
-     * {@link #SelfSignedCertificateExtension(String, SecureRandom, int, TemporalAccessor, TemporalAccessor)}
-     *
-     * @param fqdn a fully qualified domain name
-     * @param random the {@link SecureRandom} to use
-     * @param bits the number of bits of the generated private key
-     * @param notBefore {@link Certificate} is not valid before this time
-     * @param notAfter {@link Certificate} is not valid after this time
-     */
-    @Deprecated
-    @SuppressWarnings("UseOfObsoleteDateTimeApi")
-    public SelfSignedCertificateExtension(String fqdn, SecureRandom random, int bits,
-                                          Date notBefore, Date notAfter) {
-        delegate = new SelfSignedCertificateRuleDelegate(fqdn, random, bits, notBefore, notAfter);
     }
 
     /**

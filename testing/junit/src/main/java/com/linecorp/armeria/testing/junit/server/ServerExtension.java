@@ -31,7 +31,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.internal.ServerRuleDelegate;
 
 /**
- * A {@link Extension} that allows easy set-up and tear-down of a {@link Server}.
+ * An {@link Extension} that allows easy set-up and tear-down of a {@link Server}.
  */
 public abstract class ServerExtension implements BeforeEachCallback, AfterEachCallback {
     private final ServerRuleDelegate delegate;
