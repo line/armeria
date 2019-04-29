@@ -145,19 +145,35 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
 
     public static class WatchPropertiesRunnable implements Runnable {
         String fileName;
-        URL resourcePathUrl;
         final WatchService watchService;
+        private final Map<URL, WatchKey> urlWatchKeyMap = new HashMap<>();
+        private final Map<WatchKey, String> watchKeyPathMap = new HashMap<>();
 
-        WatchPropertiesRunnable(URL resourcePathUrl) {
-            this.fileName = new File(resourcePathUrl.getFile()).getName();
-            this.resourcePathUrl = resourcePathUrl;
-            final Path path = new File(resourcePathUrl.getFile()).getParentFile().toPath();
+        WatchPropertiesRunnable() {
             try {
                 watchService = FileSystems.getDefault().newWatchService();
-                path.register(watchService, ENTRY_MODIFY);
             } catch (IOException e) {
                 throw new RuntimeException("Failed to register watch service");
             }
+        }
+
+        public void registerResourceUrl(URL resourcePathUrl) {
+            this.fileName = new File(resourcePathUrl.getFile()).getName();
+            final Path path = new File(resourcePathUrl.getFile()).getParentFile().toPath();
+            try {
+                final WatchKey key = path.register(watchService, ENTRY_MODIFY); // can we register multiple paths?
+                urlWatchKeyMap.put(resourcePathUrl, key);
+                watchKeyPathMap.put(key, this.fileName);
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to register path");
+            }
+        }
+
+        public void deregisterResourceUrl(URL resourcePathUrl) {
+            final WatchKey key = urlWatchKeyMap.get(resourcePathUrl);
+            key.cancel();
+            urlWatchKeyMap.remove(resourcePathUrl);
+            watchKeyPathMap.remove(key);
         }
 
         @Override
@@ -166,8 +182,9 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
                 WatchKey key;
                 while ((key = watchService.take()) != null) {
                     for (WatchEvent<?> event : key.pollEvents()) {
+                        final String path = watchKeyPathMap.get(key);
                         final Path changedPath = (Path) event.context();
-                        if (event.kind() == ENTRY_MODIFY && changedPath.endsWith(fileName)) {
+                        if (event.kind() == ENTRY_MODIFY && changedPath.endsWith(path)) {
                             final PropertiesEndpointGroup group = endpointGroupMap.get(fileName);
                             group.reload();
                         }
@@ -231,6 +248,12 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
     private String resourceName;
     private String endpointKeyPrefix;
     private int defaultPort;
+    static WatchPropertiesRunnable runnable = new WatchPropertiesRunnable();
+    private static final Thread thread = new Thread(runnable);
+
+    static {
+        thread.start();
+    }
 
     private PropertiesEndpointGroup(List<Endpoint> endpoints) {
         setEndpoints(endpoints);
@@ -248,10 +271,10 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
         this.resourceName = resourceName;
         this.endpointKeyPrefix = endpointKeyPrefix;
         this.defaultPort = defaultPort;
-        endpointGroupMap.put(this.resourceName, this);
         final URL resourceUrl = classLoader.getResource(resourceName);
+        endpointGroupMap.put(resourceName, this);
+        runnable.registerResourceUrl(resourceUrl);
 
-        new Thread(new WatchPropertiesRunnable(resourceUrl)).start();
     }
 
     private void reload() {
@@ -264,6 +287,8 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
     @Override
     public void close() {
         endpointGroupMap.remove(resourceName);
+        final URL resourceUrl = classLoader.getResource(resourceName);
+        runnable.deregisterResourceUrl(resourceUrl);
     }
 
     @VisibleForTesting
