@@ -291,7 +291,7 @@ class DebugPage extends React.PureComponent<Props, State> {
       }
 
       const httpMethod = method.httpMethod;
-      const [path, body] = transport.curlPathAndBody(method, requestBody);
+      const [path, body] = transport.curlPathAndBody(method, requestBody.replace(/'/g, `'\\''`));
       let uri;
 
       if (this.props.isAnnotatedHttpService) {
