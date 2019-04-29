@@ -1,19 +1,20 @@
-@import url('https://cdnjs.cloudflare.com/ajax/libs/github-fork-ribbon-css/0.1.1/gh-fork-ribbon.min.css');
-@import url('https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,400i,700,700i');
-@import url('https://fonts.googleapis.com/css?family=Inconsolata:400,700');
+@import url('https://cdnjs.cloudflare.com/ajax/libs/github-fork-ribbon-css/0.2.2/gh-fork-ribbon.min.css');
+@import url('https://fonts.googleapis.com/css?family=Lato:400,400i,700,700i|Merriweather:700,700i');
+@import url('https://cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css');
 
 html, body, .wy-grid-for-nav {
-  font-family: 'Source Sans Pro', 'Helvetica', 'Arial', sans-serif;
-  font-weight: normal;
-  font-size: 15px;
-  line-height: 1.42857143;
+  font-family: 'Lato', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Helvetica', 'Arial',
+               sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1.5;
   background: #f0f0f0;
   margin: 0;
   word-break: break-word;
 }
 
 .wy-nav-side {
-  font-size: 17px;
+  font-size: 18px;
 }
 
 .wy-nav-top {
@@ -26,7 +27,7 @@ html, body, .wy-grid-for-nav {
 
 .wy-nav-content {
   background: white;
-  max-width: 800px;
+  max-width: 960px;
   margin: 0;
 }
 
@@ -42,6 +43,10 @@ html, body, .wy-grid-for-nav {
   font-size: 125%;
 }
 
+.wy-side-nav-search input {
+  font-family: inherit;
+}
+
 .wy-side-nav-search > a {
   margin: 0;
   display: block;
@@ -54,7 +59,6 @@ html, body, .wy-grid-for-nav {
   padding: 0;
 }
 
-.wy-menu .slack-invitation,
 .wy-menu .project-badges {
   padding: 0.4em 1.45em 0 1.45em;
   display: block;
@@ -79,7 +83,7 @@ html, body, .wy-grid-for-nav {
 
 /* Hide the Github fork ribbon on mobile view. */
 @media screen and (max-width: 768px) {
-  .github-fork-ribbon-wrapper {
+  .github-fork-ribbon {
     display: none;
   }
 }
@@ -95,35 +99,38 @@ html, body, .wy-grid-for-nav {
   margin-top: 0.225em;
 }
 
-/* Make sure the invitation dialog appears on top of the menu whose z-index is 200. */
-.__slackin {
-  z-index: 1000;
-}
-
+/* Headings */
 h1, h2, h3, h4, h5, h6 {
-  font-weight: inherit;
+  font-family: 'Merriweather', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI',
+               'Helvetica', 'Arial', serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+  font-weight: 700;
+  margin-bottom: 16px;
 }
 
-/* Code blocks and literals */
+/* Code block wrappers */
+.rst-content div[class*='highlight'] {
+  overflow: inherit;
+}
+
+/* Both code blocks and literals */
 pre, code, kbd, var, samp, tt,
-.rst-content div[class*='highlight'] pre,
-.rst-content pre.literal-block,
-.rst-content code.literal,
-.rst-content tt.literal,
+div[class*='highlight'] pre, .rst-content div[class*='highlight'] pre,
+pre.literal-block, .rst-content pre.literal-block,
+code.literal, .rst-content code.literal,
+tt.literal, .rst-content tt.literal,
 .wy-menu-vertical li code,
 .wy-menu-vertical li tt {
-  font-family: 'Inconsolata', 'Consolas', 'Menlo', 'Monaco', 'Lucida Console', 'Liberation Mono',
-               'DejaVu Sans Mono', monospace;
+  font-family: 'Hack', 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', 'Courier', monospace;
   font-weight: inherit;
+  font-size: 87.5%;
   word-break: break-all;
 }
 
-/* Code blocks */
+/* Code blocks only */
 pre,
-.rst-content div[class*='highlight'] pre,
-.rst-content pre.literal-block {
+div[class*='highlight'] pre, .rst-content div[class*='highlight'] pre,
+pre.literal-block, .rst-content pre.literal-block {
   padding: 8px 12px 12px 12px;
-  font-size: inherit;
   overflow-x: auto;
   overflow-y: hidden;
   color: inherit;
@@ -132,12 +139,7 @@ pre,
   width: 99.9%;
 }
 
-/* Code block wrappers */
-.rst-content div[class*='highlight'] {
-  overflow: inherit;
-}
-
-/* Literals */
+/* Literals only */
 code, kbd, var, samp, tt,
 tt.literal, .rst-content tt.literal,
 code.literal, .rst-content code.literal {
@@ -145,7 +147,6 @@ code.literal, .rst-content code.literal {
   padding-right: 0;
   background: rgba(0,0,0,0.05);
   border-radius: 3px;
-  font-size: inherit;
   color: inherit;
   border: none;
   white-space: pre-wrap;
@@ -187,8 +188,8 @@ a .highlight * {
   color: inherit !important;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: 'Source Sans Pro', 'Helvetica', 'Arial', sans-serif;
+.btn, .rst-content {
+  font-family: inherit;
 }
 
 /* Use justify-align and hyphenation. */
@@ -246,7 +247,7 @@ p, .rst-content li, .wy-menu li {
 
 /* Do not add left-margin for line-blocks */
 .rst-content .line-block {
-  margin-left: 0px;
+  margin-left: 0;
 }
 
 /* Adjust the height of the top navbar */
@@ -261,7 +262,8 @@ p, .rst-content li, .wy-menu li {
 
 /* Plural suffix inside code should not be monospaced. */
 code .plural-suffix {
-  font-family: 'Source Sans Pro', 'Helvetica', 'Arial', sans-serif;
+  font-family: 'Lato', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Helvetica', 'Arial',
+               sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
 }
 
 /* highlightjs style begins */
@@ -272,13 +274,9 @@ div.hljs {
 pre.hljs {
   background: rgba(0, 0, 0, 0.01); /* 1% darker background */
 }
-td.hljs-ln-numbers, td.hljs-ln-code {
-  line-height: 1.067em;
-}
 td.hljs-ln-numbers {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
-  -khtml-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
@@ -316,6 +314,6 @@ td.hljs-ln-code {
 }
 
 .wy-menu li.current a {
-  border-right-width: 0px;
+  border-right-width: 0;
 }
 /* Armeria branding ends. */

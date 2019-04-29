@@ -108,5 +108,5 @@ Read more
     API documentation <apidocs/index.html#://>
     Source cross-reference <xref/index.html#://>
     Questions and answers <https://github.com/line/armeria/issues?q=label%3Aquestion>
-    Fork me at GitHub <https://github.com/line/armeria>
+    Fork me on GitHub <https://github.com/line/armeria>
     Contributing <https://github.com/line/armeria/blob/master/CONTRIBUTING.md>

@@ -190,5 +190,5 @@ Using Maven BOM for simpler dependency management
 -------------------------------------------------
 
 You can import ``com.linecorp.armeria:armeria-bom`` into your build rather than specifying Armeria versions in
-more than once place. See `this article <https://www.baeldung.com/spring-maven-bom>`_ to learn more about what
+more than one place. See `this article <https://www.baeldung.com/spring-maven-bom>`_ to learn more about what
 Maven BOM is and how to use it.
