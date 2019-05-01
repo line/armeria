@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.Set;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -145,8 +146,7 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
 
     public static class WatchPropertiesRunnable implements Runnable {
         final WatchService watchService;
-        private final Map<URL, WatchKey> urlWatchKeyMap = new HashMap<>();
-        private final Map<WatchKey, Path> watchKeyPathMap = new HashMap<>();
+        private final Map<String, WatchKey> fileWatchKeyMap = new HashMap<>();
 
         WatchPropertiesRunnable() {
             try {
@@ -161,18 +161,15 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
             final Path path = file.getParentFile().toPath();
             try {
                 final WatchKey key = path.register(watchService, ENTRY_MODIFY); // can we register multiple paths?
-                urlWatchKeyMap.put(resourcePathUrl, key);
-                watchKeyPathMap.put(key, file.toPath());
+                fileWatchKeyMap.put(file.getName(), key);
             } catch (IOException e) {
                 throw new RuntimeException("Failed to register path");
             }
         }
 
-        public void deregisterResourceUrl(URL resourcePathUrl) {
-            final WatchKey key = urlWatchKeyMap.get(resourcePathUrl);
+        public void deregisterResourceUrl(String resourceName) {
+            final WatchKey key = fileWatchKeyMap.remove(resourceName);
             key.cancel();
-            urlWatchKeyMap.remove(resourcePathUrl);
-            watchKeyPathMap.remove(key);
         }
 
         @Override
@@ -180,10 +177,10 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
             try {
                 WatchKey key;
                 while ((key = watchService.take()) != null) {
+                    Set<String> targetFileNames = fileWatchKeyMap.keySet();
                     for (WatchEvent<?> event : key.pollEvents()) {
-                        final Path path = watchKeyPathMap.get(key);
                         final Path changedPath = (Path) event.context();
-                        if (event.kind() == ENTRY_MODIFY) {
+                        if (event.kind() == ENTRY_MODIFY && targetFileNames.contains(changedPath.toFile().getName())) {
                             final PropertiesEndpointGroup group = endpointGroupMap.get(changedPath.toFile().getName());
                             group.reload();
                         }
@@ -271,6 +268,7 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
         this.endpointKeyPrefix = endpointKeyPrefix;
         this.defaultPort = defaultPort;
         final URL resourceUrl = classLoader.getResource(resourceName);
+        checkArgument(resourceUrl != null, "resource not found: %s", resourceName);
         endpointGroupMap.put(resourceName, this);
         runnable.registerResourceUrl(resourceUrl);
 
@@ -280,14 +278,12 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
         final List<Endpoint> endpointList = loadEndpoints(
                 classLoader, resourceName, endpointKeyPrefix, defaultPort);
         setEndpoints(endpointList);
-        System.out.println("endpointList: " + endpointList);
     }
 
     @Override
     public void close() {
         endpointGroupMap.remove(resourceName);
-        final URL resourceUrl = classLoader.getResource(resourceName);
-        runnable.deregisterResourceUrl(resourceUrl);
+        runnable.deregisterResourceUrl(resourceName);
     }
 
     @VisibleForTesting
