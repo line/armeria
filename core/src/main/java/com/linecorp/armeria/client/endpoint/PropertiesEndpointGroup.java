@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
+import java.util.function.Function;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -177,12 +178,12 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
             try {
                 WatchKey key;
                 while ((key = watchService.take()) != null) {
-                    Set<String> targetFileNames = fileWatchKeyMap.keySet();
+                    final Set<String> targetFileNames = fileWatchKeyMap.keySet();
                     for (WatchEvent<?> event : key.pollEvents()) {
                         final Path changedPath = (Path) event.context();
                         if (event.kind() == ENTRY_MODIFY && targetFileNames.contains(changedPath.toFile().getName())) {
                             final PropertiesEndpointGroup group = endpointGroupMap.get(changedPath.toFile().getName());
-                            group.reload();
+                            group.reloader.reload();
                         }
                     }
                     key.reset();
@@ -240,10 +241,7 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
                       "defaultPort: %s (expected: 1-65535)", defaultPort);
     }
 
-    private ClassLoader classLoader;
     private String resourceName;
-    private String endpointKeyPrefix;
-    private int defaultPort;
     static WatchPropertiesRunnable runnable = new WatchPropertiesRunnable();
     private static final Thread thread = new Thread(runnable);
 
@@ -255,6 +253,13 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
         setEndpoints(endpoints);
     }
 
+    @FunctionalInterface
+    private interface PropertiesEndpointReloader {
+        void reload();
+    }
+
+    public PropertiesEndpointReloader reloader;
+
     private PropertiesEndpointGroup(ClassLoader classLoader, String resourceName,
                                     String endpointKeyPrefix, int defaultPort) {
         final List<Endpoint> endpoints = loadEndpoints(
@@ -263,21 +268,17 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
                 requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
                 0);
         setEndpoints(endpoints);
-        this.classLoader = classLoader;
+        reloader = () -> {
+            final List<Endpoint> endpointList = loadEndpoints(
+                    classLoader, resourceName, endpointKeyPrefix, defaultPort);
+            setEndpoints(endpointList);
+        };
+
         this.resourceName = resourceName;
-        this.endpointKeyPrefix = endpointKeyPrefix;
-        this.defaultPort = defaultPort;
         final URL resourceUrl = classLoader.getResource(resourceName);
         checkArgument(resourceUrl != null, "resource not found: %s", resourceName);
         endpointGroupMap.put(resourceName, this);
         runnable.registerResourceUrl(resourceUrl);
-
-    }
-
-    private void reload() {
-        final List<Endpoint> endpointList = loadEndpoints(
-                classLoader, resourceName, endpointKeyPrefix, defaultPort);
-        setEndpoints(endpointList);
     }
 
     @Override
