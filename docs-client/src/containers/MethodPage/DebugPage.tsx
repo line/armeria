@@ -321,7 +321,8 @@ class DebugPage extends React.PureComponent<Props, State> {
 
       if (this.props.isAnnotatedHttpService) {
         if (this.props.exactPathMapping) {
-          uri = `'${host}${escapeSingleQuote(path)}?${escapeSingleQuote(queries)}'`;
+          uri = `'${host}${escapeSingleQuote(path)}`;
+          + queries.length > 0 ? `?${escapeSingleQuote(queries)}'` : `'`;
         } else {
           this.validateEndpointPath(endpointPath);
           uri = `'${host}${escapeSingleQuote(endpointPath)}'`;
