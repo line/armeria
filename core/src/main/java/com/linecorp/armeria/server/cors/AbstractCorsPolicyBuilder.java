@@ -136,10 +136,11 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder<B>>
      */
     public B pathMapping(PathMapping pathMapping) {
         requireNonNull(pathMapping, "pathMapping");
-        checkArgument(pathMapping.hasPathPatternOnly(),
-                      "pathMapping: %s " +
-                      "(expected: the path mapping which has only the path patterns as its condition)",
-                      pathMapping.getClass().getSimpleName());
+        if (!pathMapping.hasPathPatternOnly()) {
+            throw new IllegalArgumentException(
+                    "pathMapping: " + pathMapping.getClass().getSimpleName() +
+                    " (expected: the path mapping which has only the path patterns as its condition)");
+        }
         pathMappings.add(pathMapping);
         return self();
     }

@@ -46,6 +46,7 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -58,16 +59,15 @@ import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 /**
  * A builder class for binding a {@link Service} fluently.
  *
- * @param <B> the self type
- * @param <V> {@link ServerBuilder} or {@link VirtualHostBuilder} that you create this builder from
+ * @param <B> {@link ServerBuilder} or {@link VirtualHostBuilder} that this builder was created from
  *
  * @see RouteBuilder
  * @see VirtualHostRouteBuilder
  */
-public abstract class AbstractRouteBuilder<B extends AbstractRouteBuilder<B, V>, V> {
+abstract class AbstractRouteBuilder<B> {
 
-    private static final EnumSet<HttpMethod> defaultMethods =
-            EnumSet.of(OPTIONS, GET, HEAD, POST, PUT, PATCH, DELETE, TRACE, CONNECT);
+    private static final Set<HttpMethod> defaultMethods =
+            ImmutableSet.copyOf(EnumSet.of(OPTIONS, GET, HEAD, POST, PUT, PATCH, DELETE, TRACE, CONNECT));
 
     @Nullable
     private PathMapping defaultPathMapping;
@@ -92,93 +92,86 @@ public abstract class AbstractRouteBuilder<B extends AbstractRouteBuilder<B, V>,
     @Nullable
     private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
 
-    @SuppressWarnings("unchecked")
-    final B self() {
-        return (B) this;
-    }
-
     /**
-     * Sets the path pattern that the {@linkplain #service(Service) service} is bound to. The {@link Service}
-     * is found when the path of a request matches the path pattern and the {@link HttpMethod} of the request
-     * is one of the {@link HttpMethod}s set by {@link #methods(HttpMethod...)}.
+     * Sets the path pattern that a {@link Service} will be bound to. If the path of a request matches
+     * the path pattern and the {@link HttpMethod} of the request is one of the {@link HttpMethod}s
+     * set by {@link #methods(HttpMethod...)}, the {@link Service} is found.
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public B path(String pathPattern) {
+    public AbstractRouteBuilder<B> path(String pathPattern) {
         defaultPathMapping = PathMapping.of(requireNonNull(pathPattern, "pathPattern"));
-        return self();
+        return this;
     }
 
     /**
-     * Sets the specified prefix which is a directory that the {@linkplain #service(Service) service}
-     * is bound under. The {@link Service} is found when the path of a request is under the prefix and the
-     * {@link HttpMethod} of the request is one of the {@link HttpMethod}s set by
-     * {@link #methods(HttpMethod...)}.
+     * Sets the specified prefix which is a directory that a {@link Service} will be bound under.
+     * If the path of a request is under the prefix and the {@link HttpMethod} of the request is one of the
+     * {@link HttpMethod}s set by {@link #methods(HttpMethod...)}, the {@link Service} is found.
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public B pathUnder(String prefix) {
+    public AbstractRouteBuilder<B> pathUnder(String prefix) {
         defaultPathMapping = PathMapping.ofPrefix(requireNonNull(prefix, "prefix"));
-        return self();
+        return this;
     }
 
     /**
-     * Sets the specified {@link PathMapping} that the {@linkplain #service(Service) service} is bound.
-     * The {@link Service} is found when the path of a request matches the {@link PathMapping} and the
-     * {@link HttpMethod} of the request is one of the {@link HttpMethod}s set by
-     * {@link #methods(HttpMethod...)}.
+     * Sets the specified {@link PathMapping} that a {@link Service} will be bound to. If the path of
+     * a request matches the {@link PathMapping} and the {@link HttpMethod} of the request is one of
+     * the {@link HttpMethod}s set by {@link #methods(HttpMethod...)}, the {@link Service} is found.
      *
      * @throws IllegalArgumentException if the {@link PathMapping} has conditions beyond the path pattern,
      *                                  i.e. the {@link PathMapping} created by
      *                                  {@link PathMapping#withHttpHeaderInfo(Set, List, List)}
      */
-    public B pathMapping(PathMapping pathMapping) {
+    public AbstractRouteBuilder<B> pathMapping(PathMapping pathMapping) {
         requireNonNull(pathMapping, "pathMapping");
-        checkArgument(pathMapping.hasPathPatternOnly(),
-                      "pathMapping: %s " +
-                      "(expected: the path mapping which has only the path patterns as its condition)",
-                      pathMapping.getClass().getSimpleName());
+        if (!pathMapping.hasPathPatternOnly()) {
+            throw new IllegalArgumentException(
+                    "pathMapping: " + pathMapping.getClass().getSimpleName() +
+                    " (expected: the path mapping which has only the path patterns as its condition)");
+        }
         defaultPathMapping = pathMapping;
-        return self();
+        return this;
     }
 
     /**
-     * Sets the {@link HttpMethod}s that the {@linkplain #service(Service) service} supports.
+     * Sets the {@link HttpMethod}s that a {@link Service} will support.
      * If not set, all {@link HttpMethod}s except {@link HttpMethod#UNKNOWN} are set.
      *
      * @see #path(String)
      * @see #pathUnder(String)
      * @see #pathMapping(PathMapping)
      */
-    public B methods(HttpMethod... methods) {
+    public AbstractRouteBuilder<B> methods(HttpMethod... methods) {
         methods(EnumSet.copyOf(Arrays.asList(methods)));
-        return self();
+        return this;
     }
 
     /**
-     * Sets the {@link HttpMethod}s that the {@linkplain #service(Service) service} supports.
-     * If not set, all {@link HttpMethod}s are set.
+     * Sets the {@link HttpMethod}s that a {@link Service} will support. If not set,
+     * all {@link HttpMethod}s except {@link HttpMethod#UNKNOWN} are set.
      *
      * @see #path(String)
      * @see #pathUnder(String)
      * @see #pathMapping(PathMapping)
      */
-    public B methods(Set<HttpMethod> methods) {
+    public AbstractRouteBuilder<B> methods(Set<HttpMethod> methods) {
         requireNonNull(methods, "methods");
         checkArgument(!methods.isEmpty(), "methods can't be empty");
         this.methods = EnumSet.copyOf(methods);
-        return self();
+        return this;
     }
 
     /**
-     * Sets the path pattern and {@link HttpMethod#GET} that the {@linkplain #service(Service) service} is
-     * bound to and supports.
+     * Sets the path pattern and {@link HttpMethod#GET} that a {@link Service} will be bound to and support.
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public B get(String pathPattern) {
+    public AbstractRouteBuilder<B> get(String pathPattern) {
         addPathMapping(pathPattern, EnumSet.of(GET));
-        return self();
+        return this;
     }
 
     private void addPathMapping(String pathPattern, Set<HttpMethod> methods) {
@@ -199,113 +192,105 @@ public abstract class AbstractRouteBuilder<B extends AbstractRouteBuilder<B, V>,
     }
 
     /**
-     * Sets the path pattern and {@link HttpMethod#POST} that the {@linkplain #service(Service) service} is
-     * bound to and supports.
+     * Sets the path pattern and {@link HttpMethod#POST} that a {@link Service} will be bound to and support.
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public B post(String pathPattern) {
+    public AbstractRouteBuilder<B> post(String pathPattern) {
         addPathMapping(pathPattern, EnumSet.of(POST));
-        return self();
+        return this;
     }
 
     /**
-     * Sets the path pattern and {@link HttpMethod#PUT} that the {@linkplain #service(Service) service} is
-     * bound to and supports.
+     * Sets the path pattern and {@link HttpMethod#PUT} that a {@link Service} will be bound to and support.
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public B put(String pathPattern) {
+    public AbstractRouteBuilder<B> put(String pathPattern) {
         addPathMapping(pathPattern, EnumSet.of(PUT));
-        return self();
+        return this;
     }
 
     /**
-     * Sets the path pattern and {@link HttpMethod#PATCH} that the {@linkplain #service(Service) service} is
-     * bound to and supports.
+     * Sets the path pattern and {@link HttpMethod#PATCH} that a {@link Service} will be bound to and support.
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public B patch(String pathPattern) {
+    public AbstractRouteBuilder<B> patch(String pathPattern) {
         addPathMapping(pathPattern, EnumSet.of(PATCH));
-        return self();
+        return this;
     }
 
     /**
-     * Sets the path pattern and {@link HttpMethod#DELETE} that the {@linkplain #service(Service) service} is
-     * bound to and supports.
+     * Sets the path pattern and {@link HttpMethod#DELETE} that a {@link Service} will be bound to and support.
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public B delete(String pathPattern) {
+    public AbstractRouteBuilder<B> delete(String pathPattern) {
         addPathMapping(pathPattern, EnumSet.of(DELETE));
-        return self();
+        return this;
     }
 
     /**
-     * Sets the path pattern and {@link HttpMethod#OPTIONS} that the {@linkplain #service(Service) service} is
-     * bound to and supports.
+     * Sets the path pattern and {@link HttpMethod#OPTIONS} that a {@link Service} will be bound to and support.
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public B options(String pathPattern) {
+    public AbstractRouteBuilder<B> options(String pathPattern) {
         addPathMapping(pathPattern, EnumSet.of(OPTIONS));
-        return self();
+        return this;
     }
 
     /**
-     * Sets the path pattern and {@link HttpMethod#HEAD} that the {@linkplain #service(Service) service} is
-     * bound to and supports.
+     * Sets the path pattern and {@link HttpMethod#HEAD} that a {@link Service} will be bound to and support.
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public B head(String pathPattern) {
+    public AbstractRouteBuilder<B> head(String pathPattern) {
         addPathMapping(pathPattern, EnumSet.of(HEAD));
-        return self();
+        return this;
     }
 
     /**
-     * Sets the path pattern and {@link HttpMethod#TRACE} that the {@linkplain #service(Service) service} is
-     * bound to and supports.
+     * Sets the path pattern and {@link HttpMethod#TRACE} that a {@link Service} will be bound to and support.
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public B trace(String pathPattern) {
+    public AbstractRouteBuilder<B> trace(String pathPattern) {
         addPathMapping(pathPattern, EnumSet.of(TRACE));
-        return self();
+        return this;
     }
 
     /**
-     * Sets the path pattern and {@link HttpMethod#CONNECT} that the {@linkplain #service(Service) service} is
-     * bound to and supports.
+     * Sets the path pattern and {@link HttpMethod#CONNECT} that a {@link Service} will be bound to and support.
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public B connect(String pathPattern) {
+    public AbstractRouteBuilder<B> connect(String pathPattern) {
         addPathMapping(pathPattern, EnumSet.of(CONNECT));
-        return self();
+        return this;
     }
 
     /**
-     * Sets {@link MediaType}s that the {@link Service} consumes. If not set,
-     * the {@linkplain #service(Service) service} accepts all media types.
+     * Sets {@link MediaType}s that a {@link Service} will consume. If not set, the {@link Service}
+     * will accept all media types.
      */
-    public B consumes(MediaType... consumeTypes) {
+    public AbstractRouteBuilder<B> consumes(MediaType... consumeTypes) {
         consumes(ImmutableList.copyOf(requireNonNull(consumeTypes, "consumeTypes")));
-        return self();
+        return this;
     }
 
     /**
-     * Sets {@link MediaType}s that the {@link Service} consumes. If not set,
-     * the {@linkplain #service(Service) service} accepts all media types.
+     * Sets {@link MediaType}s that a {@link Service} will consume. If not set, the {@link Service}
+     * will accept all media types.
      */
-    public B consumes(List<MediaType> consumeTypes) {
+    public AbstractRouteBuilder<B> consumes(Iterable<MediaType> consumeTypes) {
         ensureUniqueTypes(consumeTypes, "consumeTypes");
         this.consumeTypes = ImmutableList.copyOf(consumeTypes);
-        return self();
+        return this;
     }
 
-    private static List<MediaType> ensureUniqueTypes(List<MediaType> types, String typeName) {
+    private static void ensureUniqueTypes(Iterable<MediaType> types, String typeName) {
         requireNonNull(types, typeName);
         final Set<MediaType> set = new HashSet<>();
         for (final MediaType type : types) {
@@ -314,28 +299,27 @@ public abstract class AbstractRouteBuilder<B extends AbstractRouteBuilder<B, V>,
                         "duplicated media type in " + typeName + ": " + type);
             }
         }
-        return types;
     }
 
     /**
-     * Sets {@link MediaType}s that the {@linkplain #service(Service) service} produces to be used in
+     * Sets {@link MediaType}s that a {@link Service} will produce to be used in
      * content negotiation. See <a href="https://tools.ietf.org/html/rfc7231#section-5.3.2">Accept header</a>
      * for more information.
      */
-    public B produces(MediaType... produceTypes) {
+    public AbstractRouteBuilder<B> produces(MediaType... produceTypes) {
         this.produceTypes = ImmutableList.copyOf(requireNonNull(produceTypes, "produceTypes"));
-        return self();
+        return this;
     }
 
     /**
-     * Sets {@link MediaType}s that the {@linkplain #service(Service) service} produces to be used in
+     * Sets {@link MediaType}s that a {@link Service} will produce to be used in
      * content negotiation. See <a href="https://tools.ietf.org/html/rfc7231#section-5.3.2">Accept header</a>
      * for more information.
      */
-    public B produces(List<MediaType> produceTypes) {
+    public AbstractRouteBuilder<B> produces(Iterable<MediaType> produceTypes) {
         ensureUniqueTypes(produceTypes, "produceTypes");
         this.produceTypes = ImmutableList.copyOf(produceTypes);
-        return self();
+        return this;
     }
 
     /**
@@ -344,7 +328,7 @@ public abstract class AbstractRouteBuilder<B extends AbstractRouteBuilder<B, V>,
      *
      * @param requestTimeout the timeout. {@code 0} disables the timeout.
      */
-    public B requestTimeout(Duration requestTimeout) {
+    public AbstractRouteBuilder<B> requestTimeout(Duration requestTimeout) {
         return requestTimeoutMillis(requireNonNull(requestTimeout, "requestTimeout").toMillis());
     }
 
@@ -354,9 +338,9 @@ public abstract class AbstractRouteBuilder<B extends AbstractRouteBuilder<B, V>,
      *
      * @param requestTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
      */
-    public B requestTimeoutMillis(long requestTimeoutMillis) {
+    public AbstractRouteBuilder<B> requestTimeoutMillis(long requestTimeoutMillis) {
         this.requestTimeoutMillis = validateRequestTimeoutMillis(requestTimeoutMillis);
-        return self();
+        return this;
     }
 
     /**
@@ -365,9 +349,9 @@ public abstract class AbstractRouteBuilder<B extends AbstractRouteBuilder<B, V>,
      *
      * @param maxRequestLength the maximum allowed length. {@code 0} disables the length limit.
      */
-    public B maxRequestLength(long maxRequestLength) {
+    public AbstractRouteBuilder<B> maxRequestLength(long maxRequestLength) {
         this.maxRequestLength = validateMaxRequestLength(maxRequestLength);
-        return self();
+        return this;
     }
 
     /**
@@ -376,9 +360,9 @@ public abstract class AbstractRouteBuilder<B extends AbstractRouteBuilder<B, V>,
      * insecure. When disabled, the service response will not expose such server-side details to the client.
      * If not set, {@link VirtualHost#verboseResponses()} is used.
      */
-    public B verboseResponses(boolean verboseResponses) {
+    public AbstractRouteBuilder<B> verboseResponses(boolean verboseResponses) {
         this.verboseResponses = verboseResponses;
-        return self();
+        return this;
     }
 
     /**
@@ -386,9 +370,9 @@ public abstract class AbstractRouteBuilder<B extends AbstractRouteBuilder<B, V>,
      * {@linkplain #service(Service) service}. If not set, {@link VirtualHost#requestContentPreviewerFactory()}
      * is used.
      */
-    public B requestContentPreviewerFactory(ContentPreviewerFactory factory) {
+    public AbstractRouteBuilder<B> requestContentPreviewerFactory(ContentPreviewerFactory factory) {
         requestContentPreviewerFactory = requireNonNull(factory, "factory");
-        return self();
+        return this;
     }
 
     /**
@@ -396,9 +380,9 @@ public abstract class AbstractRouteBuilder<B extends AbstractRouteBuilder<B, V>,
      * {@linkplain #service(Service) service}. If not set, {@link VirtualHost#responseContentPreviewerFactory()}
      * is used.
      */
-    public B responseContentPreviewerFactory(ContentPreviewerFactory factory) {
+    public AbstractRouteBuilder<B> responseContentPreviewerFactory(ContentPreviewerFactory factory) {
         responseContentPreviewerFactory = requireNonNull(factory, "factory");
-        return self();
+        return this;
     }
 
     /**
@@ -414,7 +398,7 @@ public abstract class AbstractRouteBuilder<B extends AbstractRouteBuilder<B, V>,
      * </ul>
      * @param length the maximum length of the preview.
      */
-    public B contentPreview(int length) {
+    public AbstractRouteBuilder<B> contentPreview(int length) {
         return contentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
     }
 
@@ -433,7 +417,7 @@ public abstract class AbstractRouteBuilder<B extends AbstractRouteBuilder<B, V>,
      * @param defaultCharset the default charset used when a charset is not specified in the
      *                       {@code "content-type"} header
      */
-    public B contentPreview(int length, Charset defaultCharset) {
+    public AbstractRouteBuilder<B> contentPreview(int length, Charset defaultCharset) {
         return contentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
     }
 
@@ -441,21 +425,21 @@ public abstract class AbstractRouteBuilder<B extends AbstractRouteBuilder<B, V>,
      * Sets the {@link ContentPreviewerFactory} for an HTTP request/response of the
      * {@linkplain #service(Service) service}.
      */
-    public B contentPreviewerFactory(ContentPreviewerFactory factory) {
+    public AbstractRouteBuilder<B> contentPreviewerFactory(ContentPreviewerFactory factory) {
         requestContentPreviewerFactory(factory);
         responseContentPreviewerFactory(factory);
-        return self();
+        return this;
     }
 
     /**
-     * Decorates the {@linkplain #service(Service) service} with the specified {@code decorator}.
+     * Decorates a {@link Service} with the specified {@code decorator}.
      *
-     * @param decorator the {@link Function} that decorates the {@linkplain #service(Service) service}
+     * @param decorator the {@link Function} that decorates the {@link Service}
      * @param <T> the type of the {@link Service} being decorated
      * @param <R> the type of the {@link Service} {@code decorator} will produce
      */
     public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
-    B decorator(Function<T, R> decorator) {
+    AbstractRouteBuilder<B> decorator(Function<T, R> decorator) {
         requireNonNull(decorator, "decorator");
 
         @SuppressWarnings("unchecked")
@@ -468,12 +452,11 @@ public abstract class AbstractRouteBuilder<B extends AbstractRouteBuilder<B, V>,
             this.decorator = castDecorator;
         }
 
-        return self();
+        return this;
     }
 
     /**
-     * Sets the {@link Service} and returns the {@link V} that you create this
-     * {@link B} from.
+     * Sets the {@link Service} and returns the {@link B} that this builder was created from.
      *
      * @throws IllegalStateException if the path that the {@link Service} will be bound to is not specified
      *
@@ -481,7 +464,7 @@ public abstract class AbstractRouteBuilder<B extends AbstractRouteBuilder<B, V>,
      * @see #pathUnder(String)
      * @see #pathMapping(PathMapping)
      */
-    public abstract V service(Service<HttpRequest, HttpResponse> service);
+    public abstract B service(Service<HttpRequest, HttpResponse> service);
 
     abstract void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder);
 

@@ -18,8 +18,16 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.nio.charset.Charset;
+import java.time.Duration;
+import java.util.Set;
+import java.util.function.Function;
+
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 
 /**
  * A builder class for binding a {@link Service} fluently. This class can only be created through
@@ -46,7 +54,7 @@ import com.linecorp.armeria.common.HttpResponse;
  * @see RouteBuilder
  */
 public final class VirtualHostRouteBuilder
-        extends AbstractRouteBuilder<VirtualHostRouteBuilder, VirtualHostBuilder> {
+        extends AbstractRouteBuilder<VirtualHostBuilder> {
 
     private final VirtualHostBuilder virtualHostBuilder;
 
@@ -54,9 +62,150 @@ public final class VirtualHostRouteBuilder
         this.virtualHostBuilder = requireNonNull(virtualHostBuilder, "virtualHostBuilder");
     }
 
+    @Override
+    public VirtualHostRouteBuilder path(String pathPattern) {
+        return (VirtualHostRouteBuilder) super.path(pathPattern);
+    }
+
+    @Override
+    public VirtualHostRouteBuilder pathUnder(String prefix) {
+        return (VirtualHostRouteBuilder) super.pathUnder(prefix);
+    }
+
+    @Override
+    public VirtualHostRouteBuilder pathMapping(PathMapping pathMapping) {
+        return (VirtualHostRouteBuilder) super.pathMapping(pathMapping);
+    }
+
+    @Override
+    public VirtualHostRouteBuilder methods(HttpMethod... methods) {
+        return (VirtualHostRouteBuilder) super.methods(methods);
+    }
+
+    @Override
+    public VirtualHostRouteBuilder methods(Set<HttpMethod> methods) {
+        return (VirtualHostRouteBuilder) super.methods(methods);
+    }
+
+    @Override
+    public VirtualHostRouteBuilder get(String pathPattern) {
+        return (VirtualHostRouteBuilder) super.get(pathPattern);
+    }
+
+    @Override
+    public VirtualHostRouteBuilder post(String pathPattern) {
+        return (VirtualHostRouteBuilder) super.post(pathPattern);
+    }
+
+    @Override
+    public VirtualHostRouteBuilder put(String pathPattern) {
+        return (VirtualHostRouteBuilder) super.put(pathPattern);
+    }
+
+    @Override
+    public VirtualHostRouteBuilder patch(String pathPattern) {
+        return (VirtualHostRouteBuilder) super.patch(pathPattern);
+    }
+
+    @Override
+    public VirtualHostRouteBuilder delete(String pathPattern) {
+        return (VirtualHostRouteBuilder) super.delete(pathPattern);
+    }
+
+    @Override
+    public VirtualHostRouteBuilder options(String pathPattern) {
+        return (VirtualHostRouteBuilder) super.options(pathPattern);
+    }
+
+    @Override
+    public VirtualHostRouteBuilder head(String pathPattern) {
+        return (VirtualHostRouteBuilder) super.head(pathPattern);
+    }
+
+    @Override
+    public VirtualHostRouteBuilder trace(String pathPattern) {
+        return (VirtualHostRouteBuilder) super.trace(pathPattern);
+    }
+
+    @Override
+    public VirtualHostRouteBuilder connect(String pathPattern) {
+        return (VirtualHostRouteBuilder) super.connect(pathPattern);
+    }
+
+    @Override
+    public VirtualHostRouteBuilder consumes(MediaType... consumeTypes) {
+        return (VirtualHostRouteBuilder) super.consumes(consumeTypes);
+    }
+
+    @Override
+    public VirtualHostRouteBuilder consumes(Iterable<MediaType> consumeTypes) {
+        return (VirtualHostRouteBuilder) super.consumes(consumeTypes);
+    }
+
+    @Override
+    public VirtualHostRouteBuilder produces(MediaType... produceTypes) {
+        return (VirtualHostRouteBuilder) super.produces(produceTypes);
+    }
+
+    @Override
+    public VirtualHostRouteBuilder produces(Iterable<MediaType> produceTypes) {
+        return (VirtualHostRouteBuilder) super.produces(produceTypes);
+    }
+
+    @Override
+    public VirtualHostRouteBuilder requestTimeout(Duration requestTimeout) {
+        return (VirtualHostRouteBuilder) super.requestTimeout(requestTimeout);
+    }
+
+    @Override
+    public VirtualHostRouteBuilder requestTimeoutMillis(long requestTimeoutMillis) {
+        return (VirtualHostRouteBuilder) super.requestTimeoutMillis(requestTimeoutMillis);
+    }
+
+    @Override
+    public VirtualHostRouteBuilder maxRequestLength(long maxRequestLength) {
+        return (VirtualHostRouteBuilder) super.maxRequestLength(maxRequestLength);
+    }
+
+    @Override
+    public VirtualHostRouteBuilder verboseResponses(boolean verboseResponses) {
+        return (VirtualHostRouteBuilder) super.verboseResponses(verboseResponses);
+    }
+
+    @Override
+    public VirtualHostRouteBuilder requestContentPreviewerFactory(ContentPreviewerFactory factory) {
+        return (VirtualHostRouteBuilder) super.requestContentPreviewerFactory(factory);
+    }
+
+    @Override
+    public VirtualHostRouteBuilder responseContentPreviewerFactory(ContentPreviewerFactory factory) {
+        return (VirtualHostRouteBuilder) super.responseContentPreviewerFactory(factory);
+    }
+
+    @Override
+    public VirtualHostRouteBuilder contentPreview(int length) {
+        return (VirtualHostRouteBuilder) super.contentPreview(length);
+    }
+
+    @Override
+    public VirtualHostRouteBuilder contentPreview(int length, Charset defaultCharset) {
+        return (VirtualHostRouteBuilder) super.contentPreview(length, defaultCharset);
+    }
+
+    @Override
+    public VirtualHostRouteBuilder contentPreviewerFactory(ContentPreviewerFactory factory) {
+        return (VirtualHostRouteBuilder) super.contentPreviewerFactory(factory);
+    }
+
+    @Override
+    public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
+    VirtualHostRouteBuilder decorator(Function<T, R> decorator) {
+        return (VirtualHostRouteBuilder) super.decorator(decorator);
+    }
+
     /**
-     * Sets the {@link Service} and returns the {@link VirtualHostBuilder} that you create this
-     * {@link VirtualHostRouteBuilder} from.
+     * Sets the {@link Service} and returns the {@link VirtualHostBuilder} that this
+     * {@link VirtualHostRouteBuilder} was created from.
      *
      * @throws IllegalStateException if the path that the {@link Service} will be bound to is not specified
      */

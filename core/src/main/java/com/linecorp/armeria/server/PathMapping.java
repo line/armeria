@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.server;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.PathMappingUtil.EXACT;
 import static com.linecorp.armeria.internal.PathMappingUtil.GLOB;
 import static com.linecorp.armeria.internal.PathMappingUtil.PREFIX;
@@ -270,10 +269,11 @@ public interface PathMapping {
      */
     default PathMapping withHttpHeaderInfo(Set<HttpMethod> supportedMethods,
                                            List<MediaType> consumeTypes, List<MediaType> produceTypes) {
-        checkArgument(hasPathPatternOnly(),
-                      "pathMapping: %s " +
-                      "(expected: the path mapping which has only the path patterns as its condition)",
-                      getClass().getSimpleName());
+        if (!hasPathPatternOnly()) {
+            throw new IllegalArgumentException(
+                    "pathMapping: " + getClass().getSimpleName() +
+                    " (expected: the path mapping which has only the path patterns as its condition)");
+        }
 
         return new HttpHeaderPathMapping(this, supportedMethods, consumeTypes, produceTypes);
     }
