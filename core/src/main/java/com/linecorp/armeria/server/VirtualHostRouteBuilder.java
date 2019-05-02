@@ -30,7 +30,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 
 /**
- * A builder class for binding a {@link Service} fluently. This class can only be created through
+ * A builder class for binding a {@link Service} fluently. This class can only be instantiated through
  * {@link VirtualHostBuilder#route()}.
  *
  * <p>Call {@link #service(Service)} to build the {@link Service} and return to the {@link VirtualHostBuilder}.
@@ -38,7 +38,7 @@ import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
  * <pre>{@code
  * ServerBuilder sb = new ServerBuilder();
  * sb.withVirtualHost("example.com")
- *   .route().get("/foo/bar")                              // Configure the first service.
+ *   .route().get("/foo/bar")                              // Configure the first service in "example.com".
  *           .consumes(JSON, PLAIN_TEXT_UTF_8)
  *           .produces(JSON_UTF_8)
  *           .requestTimeoutMillis(5000)
@@ -46,15 +46,16 @@ import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
  *           .verboseResponses(true)
  *           .contentPreview(500)
  *           .service((ctx, req) -> HttpResponse.of(OK))   // Return to the VirtualHostBuilder.
- *   .route().path("/baz")                                 // Configure the second service.
+ *           .and()                                        // Return to the ServerBuilder.
+ * sb.withVirtualHost("example2.com")
+ *   .route().path("/baz")                                 // Configure the second service "example2.com".
  *           .methods(HttpMethod.GET, HttpMethod.POST)
  *           .service((ctx, req) -> HttpResponse.of(OK));  // Return to the VirtualHostBuilder.
  * }</pre>
  *
  * @see RouteBuilder
  */
-public final class VirtualHostRouteBuilder
-        extends AbstractRouteBuilder<VirtualHostBuilder> {
+public final class VirtualHostRouteBuilder extends AbstractRouteBuilder {
 
     private final VirtualHostBuilder virtualHostBuilder;
 
@@ -209,7 +210,6 @@ public final class VirtualHostRouteBuilder
      *
      * @throws IllegalStateException if the path that the {@link Service} will be bound to is not specified
      */
-    @Override
     public VirtualHostBuilder service(Service<HttpRequest, HttpResponse> service) {
         build(service);
         return virtualHostBuilder;

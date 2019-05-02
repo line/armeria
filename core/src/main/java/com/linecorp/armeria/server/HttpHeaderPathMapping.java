@@ -58,7 +58,7 @@ final class HttpHeaderPathMapping implements PathMapping {
                           List<MediaType> consumeTypes, List<MediaType> produceTypes) {
         this.pathStringMapping = requireNonNull(pathStringMapping, "pathStringMapping");
         this.supportedMethods = requireNonNull(supportedMethods, "supportedMethods");
-        checkArgument(!supportedMethods.isEmpty(), "supportedMethod can't be empty");
+        checkArgument(!supportedMethods.isEmpty(), "supportedMethods can't be empty");
         this.consumeTypes = requireNonNull(consumeTypes, "consumeTypes");
         this.produceTypes = requireNonNull(produceTypes, "produceTypes");
 

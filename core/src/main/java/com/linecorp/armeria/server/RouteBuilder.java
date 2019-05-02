@@ -30,7 +30,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 
 /**
- * A builder class for binding a {@link Service} fluently. This class can only be created through
+ * A builder class for binding a {@link Service} fluently. This class can only be instantiated through
  * {@link ServerBuilder#route()}.
  *
  * <p>Call {@link #service(Service)} to build the {@link Service} and return to the {@link ServerBuilder}.
@@ -54,7 +54,7 @@ import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
  *
  * @see VirtualHostRouteBuilder
  */
-public final class RouteBuilder extends AbstractRouteBuilder<ServerBuilder> {
+public final class RouteBuilder extends AbstractRouteBuilder {
 
     private final ServerBuilder serverBuilder;
 
@@ -209,7 +209,6 @@ public final class RouteBuilder extends AbstractRouteBuilder<ServerBuilder> {
      *
      * @throws IllegalStateException if the path that the {@link Service} will be bound to is not specified
      */
-    @Override
     public ServerBuilder service(Service<HttpRequest, HttpResponse> service) {
         build(service);
         return serverBuilder;

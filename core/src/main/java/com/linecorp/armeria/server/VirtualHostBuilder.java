@@ -78,7 +78,7 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 /**
  * Builds a new {@link VirtualHost}.
  *
- * <p>This class can only be created through the {@link ServerBuilder#withDefaultVirtualHost()} or
+ * <p>This class can only be instantiated through the {@link ServerBuilder#withDefaultVirtualHost()} or
  * {@link ServerBuilder#withVirtualHost(String)} method of the {@link ServerBuilder}.
  *
  * <p>Call {@link #and()} method and return to {@link ServerBuilder}.
