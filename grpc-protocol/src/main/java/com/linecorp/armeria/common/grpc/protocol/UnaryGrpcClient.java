@@ -65,10 +65,11 @@ public class UnaryGrpcClient {
     /**
      * Executes a unary gRPC client request. The given {@code payload} will be framed and sent to the path at
      * {@code uri}. {@code uri} should be the method's URI, which is always of the format
-     * /:package-name.:service-name/:method. For example, for the proto package {@code armeria.protocol}, the
-     * service name {@code CoolService} and the method name {@code RunWithoutStubs}, the {@code uri} would be
-     * {@code /armeria.protocol.CoolService/RunWithoutStubs}. If you aren't sure what the package, service name,
-     * and method name are for your method, you should probably use normal gRPC stubs instead of this class.
+     * {@code /:package-name.:service-name/:method}. For example, for the proto package
+     * {@code armeria.protocol}, the service name {@code CoolService} and the method name
+     * {@code RunWithoutStubs}, the {@code uri} would be {@code /armeria.protocol.CoolService/RunWithoutStubs}.
+     * If you aren't sure what the package, service name, and method name are for your method, you should
+     * probably use normal gRPC stubs instead of this class.
      */
     public CompletableFuture<byte[]> execute(String uri, byte[] payload) {
         HttpRequest request = HttpRequest.of(
