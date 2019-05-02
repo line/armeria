@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.grpc.protocol;
 
+import javax.annotation.Nullable;
+
 /**
  * An {@link Exception} that contains enough information to convert it to a gRPC status.
  */
@@ -28,7 +30,7 @@ public class ArmeriaStatusException extends RuntimeException {
     /**
      * Constructs an {@link ArmeriaStatusException} for the given gRPC status code and message.
      */
-    public ArmeriaStatusException(int code, String message) {
+    public ArmeriaStatusException(int code, @Nullable String message) {
         super(message);
         this.code = code;
     }
@@ -36,7 +38,7 @@ public class ArmeriaStatusException extends RuntimeException {
     /**
      * Constructs an {@link ArmeriaStatusException} for the given gRPC status code, message and cause.
      */
-    public ArmeriaStatusException(int code, String message, Throwable cause) {
+    public ArmeriaStatusException(int code, @Nullable String message, @Nullable Throwable cause) {
         super(message, cause);
         this.code = code;
     }
