@@ -49,10 +49,6 @@ export default abstract class Transport {
 
   public curlPathAndBody(method: Method, body: string): [string, string] {
     const endpoint = this.findDebugMimeTypeEndpoint(method);
-    if (!endpoint) {
-      throw new Error("Endpoint null");
-    }
-
     return [this.getCurlPath(endpoint), this.getCurlBody(body, endpoint, method)];
   }
 
@@ -61,7 +57,7 @@ export default abstract class Transport {
         ep.availableMimeTypes.includes(this.getDebugMimeType()),
     );
     if (!endpoint) {
-      throw new Error('Endpoint does not support debug transport.');
+      throw new Error(`Endpoint does not support debug transport. MimeType: ${this.getDebugMimeType()}`);
     }
     return endpoint;
   }

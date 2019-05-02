@@ -40,14 +40,7 @@ export default class AnnotatedHttpTransport extends Transport {
     endpointPath?: string,
     queries?: string,
   ): Promise<string> {
-    const endpoint = method.endpoints.find((ep) =>
-      ep.availableMimeTypes.includes(ANNOTATED_HTTP_MIME_TYPE),
-    );
-    if (!endpoint) {
-      throw new Error(
-        'Endpoint does not support annotated HTTP debug transport.',
-      );
-    }
+    const endpoint = this.findDebugMimeTypeEndpoint(method);
 
     const hdrs = new Headers();
     hdrs.set('content-type', ANNOTATED_HTTP_MIME_TYPE);
