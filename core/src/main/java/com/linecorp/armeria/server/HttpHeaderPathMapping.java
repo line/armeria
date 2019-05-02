@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -58,8 +59,9 @@ final class HttpHeaderPathMapping implements PathMapping {
     HttpHeaderPathMapping(PathMapping pathStringMapping, Set<HttpMethod> supportedMethods,
                           List<MediaType> consumeTypes, List<MediaType> produceTypes) {
         this.pathStringMapping = requireNonNull(pathStringMapping, "pathStringMapping");
-        this.supportedMethods = ImmutableSet.copyOf(requireNonNull(supportedMethods, "supportedMethods"));
+        requireNonNull(supportedMethods, "supportedMethods");
         checkArgument(!supportedMethods.isEmpty(), "supportedMethods can't be empty");
+        this.supportedMethods = ImmutableSet.copyOf(EnumSet.copyOf(supportedMethods));
         this.consumeTypes = ImmutableList.copyOf(requireNonNull(consumeTypes, "consumeTypes"));
         this.produceTypes = ImmutableList.copyOf(requireNonNull(produceTypes, "produceTypes"));
 

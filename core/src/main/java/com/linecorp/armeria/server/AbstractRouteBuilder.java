@@ -64,13 +64,10 @@ import com.linecorp.armeria.internal.ArmeriaHttpUtil;
  */
 abstract class AbstractRouteBuilder {
 
-    private static final Set<HttpMethod> defaultMethods =
-            ImmutableSet.copyOf(EnumSet.of(OPTIONS, GET, HEAD, POST, PUT, PATCH, DELETE, TRACE, CONNECT));
-
     @Nullable
     private PathMapping defaultPathMapping;
 
-    private Set<HttpMethod> methods = defaultMethods;
+    private Set<HttpMethod> methods = HttpMethod.knownMethods();
 
     private final Map<PathMapping, Set<HttpMethod>> pathMappings = new HashMap<>();
 
@@ -129,8 +126,8 @@ abstract class AbstractRouteBuilder {
     }
 
     /**
-     * Sets the {@link HttpMethod}s that a {@link Service} will support.
-     * If not set, all {@link HttpMethod}s except {@link HttpMethod#UNKNOWN} are set.
+     * Sets the {@link HttpMethod}s that a {@link Service} will support. If not set,
+     * {@link HttpMethod#knownMethods()}s are set.
      *
      * @see #path(String)
      * @see #pathUnder(String)
@@ -142,7 +139,7 @@ abstract class AbstractRouteBuilder {
 
     /**
      * Sets the {@link HttpMethod}s that a {@link Service} will support. If not set,
-     * all {@link HttpMethod}s except {@link HttpMethod#UNKNOWN} are set.
+     * {@link HttpMethod#knownMethods()}s are set.
      *
      * @see #path(String)
      * @see #pathUnder(String)

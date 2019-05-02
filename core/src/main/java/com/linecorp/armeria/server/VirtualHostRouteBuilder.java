@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
 import java.time.Duration;
-import java.util.Set;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpMethod;

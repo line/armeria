@@ -305,7 +305,7 @@ public class ServerTest {
     @Test
     public void testOptions() throws Exception {
         testSimple("OPTIONS * HTTP/1.1", "HTTP/1.1 200 OK",
-                   "allow: OPTIONS,GET,HEAD,POST,PUT,PATCH,DELETE,TRACE");
+                   "allow: OPTIONS,GET,HEAD,POST,PUT,PATCH,DELETE,TRACE,CONNECT");
     }
 
     @Test

@@ -22,8 +22,8 @@ import static org.assertj.core.api.Assertions.fail;
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -38,14 +38,14 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.logging.ContentPreviewerAdapter;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-public class RouteServiceTest {
+class RouteServiceTest {
 
     private static final CountDownLatch propertyCheckLatch = new CountDownLatch(1);
 
-    @ClassRule
-    public static final ServerRule server = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension(true) {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             final ContentPreviewerFactory requestContentPreviewerFactory = (ctx, headers) ->
@@ -117,7 +117,7 @@ public class RouteServiceTest {
     };
 
     @Test
-    public void routeService() throws InterruptedException {
+    void routeService() throws InterruptedException {
         final HttpClient client = HttpClient.of(server.uri("/"));
         AggregatedHttpMessage res = client.get("/greet/armeria").aggregate().join();
         propertyCheckLatch.await();
@@ -136,7 +136,7 @@ public class RouteServiceTest {
     }
 
     @Test
-    public void consumesAndProduces() throws IOException {
+    void consumesAndProduces() throws IOException {
         final HttpClient client = HttpClient.of(server.uri("/"));
         HttpHeaders headers = HttpHeaders.of(HttpMethod.POST, "/hello");
         AggregatedHttpMessage res = client.execute(headers, "armeria").aggregate().join();
