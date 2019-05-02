@@ -41,7 +41,7 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 
 /**
- * A {@link UnaryGrpcClient} can be used to make requests go a gRPC server without depending on gRPC stubs.
+ * A {@link UnaryGrpcClient} can be used to make requests to a gRPC server without depending on gRPC stubs.
  * This client takes care of deframing and framing with the gRPC wire format and handling appropriate headers.
  *
  * <p>This client does not support compression. If you need support for compression, please consider using
@@ -143,7 +143,7 @@ public class UnaryGrpcClient {
                                return CompletableFuture.completedFuture(HttpResponse.of(msg));
                            }
 
-                           CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+                           final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
 
                            try (ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(new Listener() {
                                @Override
