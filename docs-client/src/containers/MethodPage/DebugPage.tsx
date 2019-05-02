@@ -175,12 +175,18 @@ class DebugPage extends React.PureComponent<Props, State> {
           </Grid>
           <Grid item xs={12} sm={6}>
             <Tooltip title="Copy response">
-              <IconButton onClick={this.onCopy}>
+              <IconButton
+                  onClick={this.onCopy}
+                  disabled={this.state.debugResponse.length == 0}
+              >
                 <FileCopyIcon />
               </IconButton>
             </Tooltip>
             <Tooltip title="Clear response">
-              <IconButton onClick={this.onClear}>
+              <IconButton
+                  onClick={this.onClear}
+                  disabled={this.state.debugResponse.length == 0}
+              >
                 <DeleteSweepIcon />
               </IconButton>
             </Tooltip>
