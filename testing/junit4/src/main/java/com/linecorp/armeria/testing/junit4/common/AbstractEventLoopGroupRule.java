@@ -13,43 +13,29 @@
  *  License for the specific language governing permissions and limitations
  *  under the License.
  */
-package com.linecorp.armeria.testing.common;
-
-import javax.annotation.Nullable;
+package com.linecorp.armeria.testing.junit4.common;
 
 import org.junit.rules.ExternalResource;
 import org.junit.rules.TestRule;
 
-import com.linecorp.armeria.common.util.EventLoopGroups;
+import com.linecorp.armeria.testing.internal.EventLoopGroupRuleDelegate;
 
 import io.netty.channel.EventLoopGroup;
 
 abstract class AbstractEventLoopGroupRule extends ExternalResource {
-
-    private final int numThreads;
-    private final String threadNamePrefix;
-    private final boolean useDaemonThreads;
-
-    @Nullable
-    private volatile EventLoopGroup group;
+    private final EventLoopGroupRuleDelegate delegate;
 
     AbstractEventLoopGroupRule(int numThreads, String threadNamePrefix, boolean useDaemonThreads) {
-        this.numThreads = numThreads;
-        this.threadNamePrefix = threadNamePrefix;
-        this.useDaemonThreads = useDaemonThreads;
+        delegate = new EventLoopGroupRuleDelegate(numThreads, threadNamePrefix, useDaemonThreads);
     }
 
     EventLoopGroup group() {
-        final EventLoopGroup group = this.group;
-        if (group == null) {
-            throw new IllegalStateException(EventLoopGroup.class.getSimpleName() + " not initialized");
-        }
-        return group;
+        return delegate.group();
     }
 
     @Override
     protected void before() throws Throwable {
-        group = EventLoopGroups.newEventLoopGroup(numThreads, threadNamePrefix, useDaemonThreads);
+        delegate.before();
     }
 
     /**
@@ -58,10 +44,6 @@ abstract class AbstractEventLoopGroupRule extends ExternalResource {
      */
     @Override
     protected void after() {
-        final EventLoopGroup group = this.group;
-        if (group != null) {
-            this.group = null;
-            group.shutdownGracefully();
-        }
+        delegate.after();
     }
 }

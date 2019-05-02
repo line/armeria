@@ -92,6 +92,10 @@ configure(projectsWithFlags('java')) {
         // Test-time dependencies
         testCompile 'com.google.guava:guava-testlib'
         testCompile 'junit:junit'
+        testCompile 'org.junit.jupiter:junit-jupiter-api'
+        testRuntime 'org.junit.platform:junit-platform-launcher'
+        testRuntime 'org.junit.jupiter:junit-jupiter-engine'
+        testRuntime 'org.junit.vintage:junit-vintage-engine'
         testCompile 'net.javacrumbs.json-unit:json-unit'
         testCompile 'net.javacrumbs.json-unit:json-unit-fluent'
         testCompile 'org.awaitility:awaitility'
@@ -106,6 +110,10 @@ configure(projectsWithFlags('java')) {
         if (JavaVersion.current() >= JavaVersion.VERSION_1_9) {
             options.compilerArgs += ['--release', '8']
         }
+    }
+
+    test {
+        useJUnitPlatform()
     }
 }
 

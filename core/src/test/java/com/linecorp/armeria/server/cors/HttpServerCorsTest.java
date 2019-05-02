@@ -52,7 +52,7 @@ import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.StatusCode;
 import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
 import com.linecorp.armeria.server.annotation.decorator.CorsDecorators;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 public class HttpServerCorsTest {
 

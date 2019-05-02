@@ -44,7 +44,7 @@ import com.linecorp.armeria.server.thrift.ThriftStructuredLog;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.hello_args;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.hello_result;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 public class ThriftStructuredLoggingTest {
 

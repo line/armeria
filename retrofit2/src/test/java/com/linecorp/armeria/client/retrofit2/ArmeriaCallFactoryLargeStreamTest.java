@@ -36,7 +36,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import okhttp3.ResponseBody;
 import retrofit2.converter.jackson.JacksonConverterFactory;

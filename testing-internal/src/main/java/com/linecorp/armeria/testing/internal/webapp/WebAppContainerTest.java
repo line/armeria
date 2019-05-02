@@ -45,7 +45,7 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;

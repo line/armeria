@@ -13,7 +13,7 @@
  *  License for the specific language governing permissions and limitations
  *  under the License.
  */
-package com.linecorp.armeria.testing.common;
+package com.linecorp.armeria.testing.junit4.common;
 
 import org.junit.rules.TestRule;
 
@@ -49,16 +49,16 @@ public class EventLoopRule extends AbstractEventLoopGroupRule {
     /**
      * Creates a new {@link TestRule} that provides an {@link EventLoop}.
      *
-     * @param useDaemonThreads whether to create daemon threads or not
+     * @param useDaemonThread whether to create a daemon thread or not
      */
-    public EventLoopRule(boolean useDaemonThreads) {
-        this("armeria-testing-eventloop", useDaemonThreads);
+    public EventLoopRule(boolean useDaemonThread) {
+        this("armeria-testing-eventloop", useDaemonThread);
     }
 
     /**
      * Creates a new {@link TestRule} that provides an {@link EventLoop}.
      *
-     * @param threadNamePrefix the prefix of thread names
+     * @param threadNamePrefix the prefix of a thread name
      */
     public EventLoopRule(String threadNamePrefix) {
         this(threadNamePrefix, false);
@@ -67,11 +67,11 @@ public class EventLoopRule extends AbstractEventLoopGroupRule {
     /**
      * Creates a new {@link TestRule} that provides an {@link EventLoop}.
      *
-     * @param threadNamePrefix the prefix of thread names
-     * @param useDaemonThreads whether to create daemon threads or not
+     * @param threadNamePrefix the prefix of a thread name
+     * @param useDaemonThread whether to create a daemon thread or not
      */
-    public EventLoopRule(String threadNamePrefix, boolean useDaemonThreads) {
-        super(1, threadNamePrefix, useDaemonThreads);
+    public EventLoopRule(String threadNamePrefix, boolean useDaemonThread) {
+        super(1, threadNamePrefix, useDaemonThread);
     }
 
     /**

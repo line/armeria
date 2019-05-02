@@ -92,7 +92,7 @@ import com.linecorp.armeria.internal.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.CallOptions;

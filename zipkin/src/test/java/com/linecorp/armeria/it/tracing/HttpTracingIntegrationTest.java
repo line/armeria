@@ -64,7 +64,7 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.server.tracing.HttpTracingService;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import brave.ScopedSpan;
 import brave.Tracer.SpanInScope;

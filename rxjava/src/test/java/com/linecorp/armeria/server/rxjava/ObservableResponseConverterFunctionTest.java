@@ -41,7 +41,7 @@ import com.linecorp.armeria.server.annotation.ProducesJson;
 import com.linecorp.armeria.server.annotation.ProducesJsonSequences;
 import com.linecorp.armeria.server.annotation.ProducesText;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.reactivex.Completable;
 import io.reactivex.Maybe;

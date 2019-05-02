@@ -52,8 +52,8 @@ import org.junit.rules.Timeout;
 
 import com.google.common.base.Stopwatch;
 
-import com.linecorp.armeria.testing.common.EventLoopRule;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
+import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 
 import io.netty.util.concurrent.FutureListener;
 

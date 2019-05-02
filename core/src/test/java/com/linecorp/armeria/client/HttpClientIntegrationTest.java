@@ -31,9 +31,9 @@ import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntFunction;
 
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -66,7 +66,7 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
@@ -74,7 +74,7 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 
-public class HttpClientIntegrationTest {
+class HttpClientIntegrationTest {
 
     private static final AtomicReference<ByteBuf> releasedByteBuf = new AtomicReference<>();
 
@@ -171,8 +171,8 @@ public class HttpClientIntegrationTest {
         }
     }
 
-    @ClassRule
-    public static final ServerRule server = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/httptestbody", new AbstractHttpService() {
@@ -188,7 +188,7 @@ public class HttpClientIntegrationTest {
                 }
 
                 private HttpResponse doGetOrPost(HttpRequest req) {
-                        final MediaType contentType = req.contentType();
+                    final MediaType contentType = req.contentType();
                     if (contentType != null) {
                         throw new IllegalArgumentException(
                                 "Serialization format is none, so content type should not be set: " +
@@ -315,8 +315,8 @@ public class HttpClientIntegrationTest {
 
     private static final ClientFactory clientFactory = ClientFactory.DEFAULT;
 
-    @Before
-    public void clearError() {
+    @BeforeEach
+    void clearError() {
         releasedByteBuf.set(null);
     }
 
@@ -325,7 +325,7 @@ public class HttpClientIntegrationTest {
      * 'transfer-encoding' header.
      */
     @Test
-    public void testRequestNoBodyWithoutExtraHeaders() throws Exception {
+    void testRequestNoBodyWithoutExtraHeaders() throws Exception {
         testSocketOutput(
                 "/foo",
                 port -> "GET /foo HTTP/1.1\r\n" +
@@ -334,7 +334,7 @@ public class HttpClientIntegrationTest {
     }
 
     @Test
-    public void testRequestNoBody() throws Exception {
+    void testRequestNoBody() throws Exception {
         final HttpClient client = HttpClient.of(server.uri("/"));
 
         final AggregatedHttpMessage response = client.execute(
@@ -347,7 +347,7 @@ public class HttpClientIntegrationTest {
     }
 
     @Test
-    public void testRequestWithBody() throws Exception {
+    void testRequestWithBody() throws Exception {
         final HttpClient client = HttpClient.of(server.uri("/"));
 
         final AggregatedHttpMessage response = client.execute(
@@ -361,14 +361,14 @@ public class HttpClientIntegrationTest {
     }
 
     @Test
-    public void testResolvedEndpointWithAlternateAuthority() throws Exception {
+    void testResolvedEndpointWithAlternateAuthority() throws Exception {
         final EndpointGroup group = new StaticEndpointGroup(Endpoint.of("localhost", server.httpPort())
                                                                     .withIpAddr("127.0.0.1"));
         testEndpointWithAlternateAuthority(group);
     }
 
     @Test
-    public void testUnresolvedEndpointWithAlternateAuthority() throws Exception {
+    void testUnresolvedEndpointWithAlternateAuthority() throws Exception {
         final EndpointGroup group = new StaticEndpointGroup(Endpoint.of("localhost", server.httpPort()));
         testEndpointWithAlternateAuthority(group);
     }
@@ -390,7 +390,7 @@ public class HttpClientIntegrationTest {
     }
 
     @Test
-    public void testNot200() throws Exception {
+    void testNot200() throws Exception {
         final HttpClient client = HttpClient.of(server.uri("/"));
 
         final AggregatedHttpMessage response = client.get("/not200").aggregate().get();
@@ -402,13 +402,13 @@ public class HttpClientIntegrationTest {
      * :authority header should be overridden by ClientOption.HTTP_HEADER
      */
     @Test
-    public void testAuthorityOverridableByClientOption() throws Exception {
+    void testAuthorityOverridableByClientOption() throws Exception {
 
         testHeaderOverridableByClientOption("/authority", HttpHeaderNames.AUTHORITY, "foo:8080");
     }
 
     @Test
-    public void testAuthorityOverridableByRequestHeader() throws Exception {
+    void testAuthorityOverridableByRequestHeader() throws Exception {
 
         testHeaderOverridableByRequestHeader("/authority", HttpHeaderNames.AUTHORITY, "bar:8080");
     }
@@ -417,12 +417,12 @@ public class HttpClientIntegrationTest {
      * User-agent header should be overridden by ClientOption.HTTP_HEADER
      */
     @Test
-    public void testUserAgentOverridableByClientOption() throws Exception {
+    void testUserAgentOverridableByClientOption() throws Exception {
         testHeaderOverridableByClientOption("/useragent", HttpHeaderNames.USER_AGENT, "foo-agent");
     }
 
     @Test
-    public void testUserAgentOverridableByRequestHeader() throws Exception {
+    void testUserAgentOverridableByRequestHeader() throws Exception {
         testHeaderOverridableByRequestHeader("/useragent", HttpHeaderNames.USER_AGENT, "bar-agent");
     }
 
@@ -454,7 +454,7 @@ public class HttpClientIntegrationTest {
     }
 
     @Test
-    public void httpDecoding() throws Exception {
+    void httpDecoding() throws Exception {
         final HttpClient client = new HttpClientBuilder(server.uri("/"))
                 .factory(clientFactory).decorator(HttpDecodingClient.newDecorator()).build();
 
@@ -466,7 +466,7 @@ public class HttpClientIntegrationTest {
     }
 
     @Test
-    public void httpDecoding_deflate() throws Exception {
+    void httpDecoding_deflate() throws Exception {
         final HttpClient client = new HttpClientBuilder(server.uri("/"))
                 .factory(clientFactory)
                 .decorator(HttpDecodingClient.newDecorator(new DeflateStreamDecoderFactory())).build();
@@ -479,7 +479,7 @@ public class HttpClientIntegrationTest {
     }
 
     @Test
-    public void httpDecoding_noEncodingApplied() throws Exception {
+    void httpDecoding_noEncodingApplied() throws Exception {
         final HttpClient client = new HttpClientBuilder(server.uri("/"))
                 .factory(clientFactory)
                 .decorator(HttpDecodingClient.newDecorator(new DeflateStreamDecoderFactory())).build();
@@ -522,7 +522,7 @@ public class HttpClientIntegrationTest {
     }
 
     @Test
-    public void givenHttpClientUriPathAndRequestPath_whenGet_thenRequestToConcatenatedPath() throws Exception {
+    void givenHttpClientUriPathAndRequestPath_whenGet_thenRequestToConcatenatedPath() throws Exception {
         final HttpClient client = HttpClient.of(server.uri("/hello"));
 
         final AggregatedHttpMessage response = client.get("/world").aggregate().get();
@@ -531,7 +531,7 @@ public class HttpClientIntegrationTest {
     }
 
     @Test
-    public void givenRequestPath_whenGet_thenRequestToPath() throws Exception {
+    void givenRequestPath_whenGet_thenRequestToPath() throws Exception {
         final HttpClient client = HttpClient.of(server.uri("/"));
 
         final AggregatedHttpMessage response = client.get("/hello/world").aggregate().get();
@@ -540,7 +540,7 @@ public class HttpClientIntegrationTest {
     }
 
     @Test
-    public void testPooledResponseDefaultSubscriber() throws Exception {
+    void testPooledResponseDefaultSubscriber() throws Exception {
         final HttpClient client = HttpClient.of(server.uri("/"));
 
         final AggregatedHttpMessage response = client.execute(
@@ -552,7 +552,7 @@ public class HttpClientIntegrationTest {
     }
 
     @Test
-    public void testPooledResponsePooledSubscriber() throws Exception {
+    void testPooledResponsePooledSubscriber() throws Exception {
         final HttpClient client = HttpClient.of(server.uri("/"));
 
         final AggregatedHttpMessage response = client.execute(
@@ -564,7 +564,7 @@ public class HttpClientIntegrationTest {
     }
 
     @Test
-    public void testUnpooledResponsePooledSubscriber() throws Exception {
+    void testUnpooledResponsePooledSubscriber() throws Exception {
         final HttpClient client = HttpClient.of(server.uri("/"));
 
         final AggregatedHttpMessage response = client.execute(
@@ -576,7 +576,7 @@ public class HttpClientIntegrationTest {
     }
 
     @Test
-    public void testCloseClientFactory() throws Exception {
+    void testCloseClientFactory() throws Exception {
         final ClientFactory factory = new ClientFactoryBuilder().build();
         final HttpClient client = factory.newClient("none+" + server.uri("/"), HttpClient.class);
         final HttpRequestWriter req = HttpRequest.streaming(HttpHeaders.of(HttpMethod.GET, "/stream-closed"));
@@ -608,7 +608,7 @@ public class HttpClientIntegrationTest {
     }
 
     @Test
-    public void testEscapedPathParam() throws Exception {
+    void testEscapedPathParam() throws Exception {
         final HttpClient client = HttpClient.of(server.uri("/"));
 
         final AggregatedHttpMessage response = client.get("/oneparam/foo%2Fbar").aggregate().get();

@@ -102,7 +102,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.auth.Authorizer;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.http.QueryStringEncoder;

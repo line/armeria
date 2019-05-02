@@ -90,7 +90,7 @@ import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
 import com.linecorp.armeria.internal.grpc.StreamRecorder;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.grpc.Codec;
 import io.grpc.DecompressorRegistry;

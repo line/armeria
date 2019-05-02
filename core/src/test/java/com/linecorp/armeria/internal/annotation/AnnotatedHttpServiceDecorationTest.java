@@ -40,7 +40,7 @@ import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 public class AnnotatedHttpServiceDecorationTest {
 

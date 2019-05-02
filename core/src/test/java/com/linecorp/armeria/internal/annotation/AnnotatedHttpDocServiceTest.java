@@ -85,7 +85,7 @@ import com.linecorp.armeria.server.docs.FieldLocation;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.TypeSignature;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 public class AnnotatedHttpDocServiceTest {
 

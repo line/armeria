@@ -64,7 +64,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.metric.MicrometerUtil;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;

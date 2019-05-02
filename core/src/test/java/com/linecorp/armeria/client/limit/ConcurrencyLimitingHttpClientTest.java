@@ -27,8 +27,8 @@ import static org.mockito.Mockito.when;
 
 import java.util.concurrent.TimeUnit;
 
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -39,18 +39,18 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
-import com.linecorp.armeria.testing.common.EventLoopRule;
+import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
 
-public class ConcurrencyLimitingHttpClientTest {
+class ConcurrencyLimitingHttpClientTest {
 
-    @ClassRule
-    public static final EventLoopRule eventLoop = new EventLoopRule();
+    @RegisterExtension
+    static final EventLoopExtension eventLoop = new EventLoopExtension();
 
     /**
      * Tests the request pattern  that does not exceed maxConcurrency.
      */
     @Test
-    public void testOrdinaryRequest() throws Exception {
+    void testOrdinaryRequest() throws Exception {
         final ClientRequestContext ctx = newContext();
         final HttpRequest req = mock(HttpRequest.class);
         final HttpResponseWriter actualRes = HttpResponse.streaming();
@@ -77,7 +77,7 @@ public class ConcurrencyLimitingHttpClientTest {
      * Tests the request pattern that exceeds maxConcurrency.
      */
     @Test
-    public void testLimitedRequest() throws Exception {
+    void testLimitedRequest() throws Exception {
         final ClientRequestContext ctx1 = newContext();
         final ClientRequestContext ctx2 = newContext();
         final HttpRequest req1 = mock(HttpRequest.class);
@@ -120,7 +120,7 @@ public class ConcurrencyLimitingHttpClientTest {
      * Tests if the request is not delegated but closed when the timeout is reached before delegation.
      */
     @Test
-    public void testTimeout() throws Exception {
+    void testTimeout() throws Exception {
         final ClientRequestContext ctx1 = newContext();
         final ClientRequestContext ctx2 = newContext();
         final HttpRequest req1 = mock(HttpRequest.class);
@@ -161,7 +161,7 @@ public class ConcurrencyLimitingHttpClientTest {
      * Tests the case where a delegate raises an exception rather than returning a response.
      */
     @Test
-    public void testFaultyDelegate() throws Exception {
+    void testFaultyDelegate() throws Exception {
         final ClientRequestContext ctx = newContext();
         final HttpRequest req = mock(HttpRequest.class);
 
@@ -183,7 +183,7 @@ public class ConcurrencyLimitingHttpClientTest {
     }
 
     @Test
-    public void testUnlimitedRequest() throws Exception {
+    void testUnlimitedRequest() throws Exception {
         final ClientRequestContext ctx = newContext();
         final HttpRequest req = mock(HttpRequest.class);
         final HttpResponseWriter actualRes = HttpResponse.streaming();
@@ -207,7 +207,7 @@ public class ConcurrencyLimitingHttpClientTest {
     }
 
     @Test
-    public void testUnlimitedRequestWithFaultyDelegate() throws Exception {
+    void testUnlimitedRequestWithFaultyDelegate() throws Exception {
         final ClientRequestContext ctx = newContext();
         final HttpRequest req = mock(HttpRequest.class);
 

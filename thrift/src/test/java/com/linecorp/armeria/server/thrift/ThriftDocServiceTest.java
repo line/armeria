@@ -61,7 +61,7 @@ import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.hello_args;
 import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 public class ThriftDocServiceTest {
 

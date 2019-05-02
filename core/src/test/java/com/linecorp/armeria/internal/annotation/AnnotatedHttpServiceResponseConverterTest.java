@@ -70,7 +70,7 @@ import com.linecorp.armeria.server.annotation.ProducesOctetStream;
 import com.linecorp.armeria.server.annotation.ProducesText;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.StatusCode;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
