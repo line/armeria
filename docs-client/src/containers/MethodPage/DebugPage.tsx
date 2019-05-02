@@ -17,10 +17,10 @@
 import Button from '@material-ui/core/Button';
 import Grid from '@material-ui/core/Grid';
 import IconButton from '@material-ui/core/IconButton';
-import Snackbar from "@material-ui/core/Snackbar";
+import Snackbar from '@material-ui/core/Snackbar';
 import Tooltip from '@material-ui/core/Tooltip';
 import Typography from '@material-ui/core/Typography';
-import CloseIcon from "@material-ui/icons/Close";
+import CloseIcon from '@material-ui/icons/Close';
 import DeleteSweepIcon from '@material-ui/icons/DeleteSweep';
 import FileCopyIcon from '@material-ui/icons/FileCopy';
 import React, { ChangeEvent } from 'react';
@@ -31,7 +31,7 @@ import githubGist from 'react-syntax-highlighter/styles/hljs/github-gist';
 import jsonMinify from 'jsonminify';
 import { RouteComponentProps } from 'react-router';
 import Section from '../../components/Section';
-import { docServiceDebug } from "../../lib/header-provider";
+import { docServiceDebug } from '../../lib/header-provider';
 import jsonPrettify from '../../lib/json-prettify';
 import { Method } from '../../lib/specification';
 import { TRANSPORTS } from '../../lib/transports';
@@ -176,16 +176,16 @@ class DebugPage extends React.PureComponent<Props, State> {
           <Grid item xs={12} sm={6}>
             <Tooltip title="Copy response">
               <IconButton
-                  onClick={this.onCopy}
-                  disabled={this.state.debugResponse.length == 0}
+                onClick={this.onCopy}
+                disabled={this.state.debugResponse.length === 0}
               >
                 <FileCopyIcon />
               </IconButton>
             </Tooltip>
             <Tooltip title="Clear response">
               <IconButton
-                  onClick={this.onClear}
-                  disabled={this.state.debugResponse.length == 0}
+                onClick={this.onClear}
+                disabled={this.state.debugResponse.length === 0}
               >
                 <DeleteSweepIcon />
               </IconButton>
@@ -200,18 +200,15 @@ class DebugPage extends React.PureComponent<Props, State> {
           </Grid>
         </Grid>
         <Snackbar
-            open={this.state.snackbarOpen}
-            message={this.state.snackbarMessage}
-            autoHideDuration={3000}
-            onClose={this.onSnackbarDismiss}
-            action={[
-              <IconButton
-                  color="inherit"
-                  onClick={this.onSnackbarDismiss}
-              >
-                <CloseIcon />
-              </IconButton>,
-            ]}
+          open={this.state.snackbarOpen}
+          message={this.state.snackbarMessage}
+          autoHideDuration={3000}
+          onClose={this.onSnackbarDismiss}
+          action={
+            <IconButton color="inherit" onClick={this.onSnackbarDismiss}>
+              <CloseIcon />
+            </IconButton>
+          }
         />
       </Section>
     );
@@ -302,12 +299,14 @@ class DebugPage extends React.PureComponent<Props, State> {
         DebugPage.validateJsonObject(additionalHeaders, 'headers');
       }
 
-      const headers = additionalHeaders && JSON.parse(additionalHeaders) || {};
+      const headers =
+        (additionalHeaders && JSON.parse(additionalHeaders)) || {};
 
       // window.location.origin may have compatibility issue
       // https://developer.mozilla.org/en-US/docs/Web/API/Window/location#Browser_compatibility
-      const host = `${window.location.protocol}//${window.location.hostname}`
-          + (window.location.port ? `:${window.location.port}` : '');
+      const host =
+        `${window.location.protocol}//${window.location.hostname}` +
+        `${window.location.port ? `:${window.location.port}` : ''}`;
 
       const method = this.props.method;
       const transport = TRANSPORTS.getDebugTransport(method);
@@ -316,13 +315,17 @@ class DebugPage extends React.PureComponent<Props, State> {
       }
 
       const httpMethod = method.httpMethod;
-      const [path, body] = transport.curlPathAndBody(method, escapeSingleQuote(requestBody));
+      const [path, body] = transport.curlPathAndBody(
+        method,
+        escapeSingleQuote(requestBody),
+      );
       let uri;
 
       if (this.props.isAnnotatedHttpService) {
         if (this.props.exactPathMapping) {
-          uri = `'${host}${escapeSingleQuote(path)}`;
-          + queries.length > 0 ? `?${escapeSingleQuote(queries)}'` : `'`;
+          uri =
+            `'${host}${escapeSingleQuote(path)}` +
+            `${queries.length > 0 ? `?${escapeSingleQuote(queries)}` : ''}'`;
         } else {
           this.validateEndpointPath(endpointPath);
           uri = `'${host}${escapeSingleQuote(endpointPath)}'`;
@@ -336,18 +339,21 @@ class DebugPage extends React.PureComponent<Props, State> {
         headers[docServiceDebug] = 'true';
       }
 
-      const header = Object.keys(headers).map((title) => {
-        return `-H '${title}:${headers[title]}'`;
-      }).join(' ');
+      const header = Object.keys(headers)
+        .map((title) => {
+          return `-H '${title}:${headers[title]}'`;
+        })
+        .join(' ');
 
-      const curlCommand = `curl -X${httpMethod} ${header} ${uri}`
-          + (this.props.useRequestBody ? ` -d '${body}'` : '');
+      const curlCommand =
+        `curl -X${httpMethod} ${header} ${uri}` +
+        `${this.props.useRequestBody ? ` -d '${body}'` : ''}`;
 
       DebugPage.copyTextToClipboard(curlCommand);
       this.showSnackbar('The curl command has been copied to the clipboard.');
     } catch (e) {
       this.setState({
-        debugResponse: e.toString()
+        debugResponse: e.toString(),
       });
     }
   };

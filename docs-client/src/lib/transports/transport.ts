@@ -19,6 +19,10 @@ import { docServiceDebug, providers } from '../header-provider';
 import { Endpoint, Method } from '../specification';
 
 export default abstract class Transport {
+  public abstract supportsMimeType(mimeType: string): boolean;
+
+  public abstract getDebugMimeType(): string;
+
   public async send(
     method: Method,
     headers: { [name: string]: string },
@@ -49,15 +53,20 @@ export default abstract class Transport {
 
   public curlPathAndBody(method: Method, body: string): [string, string] {
     const endpoint = this.findDebugMimeTypeEndpoint(method);
-    return [this.getCurlPath(endpoint), this.getCurlBody(body, endpoint, method)];
+    return [
+      this.getCurlPath(endpoint),
+      this.getCurlBody(body, endpoint, method),
+    ];
   }
 
   protected findDebugMimeTypeEndpoint(method: Method): Endpoint {
     const endpoint = method.endpoints.find((ep) =>
-        ep.availableMimeTypes.includes(this.getDebugMimeType()),
+      ep.availableMimeTypes.includes(this.getDebugMimeType()),
     );
     if (!endpoint) {
-      throw new Error(`Endpoint does not support debug transport. MimeType: ${this.getDebugMimeType()}`);
+      throw new Error(
+        `Endpoint does not support debug transport. MimeType: ${this.getDebugMimeType()}`,
+      );
     }
     return endpoint;
   }
@@ -66,13 +75,13 @@ export default abstract class Transport {
     return endpoint.pathMapping;
   }
 
-  protected getCurlBody(body: string, _endpoint: Endpoint, _method: Method): string {
+  protected getCurlBody(
+    body: string,
+    _endpoint: Endpoint,
+    _method: Method,
+  ): string {
     return body;
   }
-
-  public abstract supportsMimeType(mimeType: string): boolean;
-
-  public abstract getDebugMimeType(): string;
 
   protected abstract doSend(
     method: Method,

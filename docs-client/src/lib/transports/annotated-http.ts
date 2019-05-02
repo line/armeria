@@ -30,7 +30,7 @@ export default class AnnotatedHttpTransport extends Transport {
   }
 
   protected getCurlPath(endpoint: Endpoint): string {
-    return endpoint.pathMapping.substring("exact:".length);
+    return endpoint.pathMapping.substring('exact:'.length);
   }
 
   protected async doSend(

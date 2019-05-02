@@ -21,6 +21,12 @@ import Transport from './transport';
 const TTEXT_MIME_TYPE = 'application/x-thrift; protocol=TTEXT';
 
 export default class ThriftTransport extends Transport {
+  private static thriftMethod(endpoint: Endpoint, method: Method) {
+    return endpoint.fragment
+      ? `${endpoint.fragment}:${method.name}`
+      : method.name;
+  }
+
   public supportsMimeType(mimeType: string): boolean {
     return mimeType === TTEXT_MIME_TYPE;
   }
@@ -29,7 +35,11 @@ export default class ThriftTransport extends Transport {
     return TTEXT_MIME_TYPE;
   }
 
-  protected getCurlBody(body: string, endpoint: Endpoint, method: Method): string {
+  protected getCurlBody(
+    body: string,
+    endpoint: Endpoint,
+    method: Method,
+  ): string {
     const thriftMethod = ThriftTransport.thriftMethod(endpoint, method);
     return `{"method":"${thriftMethod}", "type": "CALL", "args": ${body}}`;
   }
@@ -59,11 +69,5 @@ export default class ThriftTransport extends Transport {
     });
     const response = await httpResponse.text();
     return response.length > 0 ? response : 'Request sent to one-way function';
-  }
-
-  private static thriftMethod(endpoint: Endpoint, method: Method) {
-    return endpoint.fragment
-        ? `${endpoint.fragment}:${method.name}`
-        : method.name;
   }
 }
