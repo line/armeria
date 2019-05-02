@@ -84,7 +84,7 @@ public final class VirtualHostRouteBuilder extends AbstractRouteBuilder {
     }
 
     @Override
-    public VirtualHostRouteBuilder methods(Set<HttpMethod> methods) {
+    public VirtualHostRouteBuilder methods(Iterable<HttpMethod> methods) {
         return (VirtualHostRouteBuilder) super.methods(methods);
     }
 

@@ -83,7 +83,7 @@ public final class RouteBuilder extends AbstractRouteBuilder {
     }
 
     @Override
-    public RouteBuilder methods(Set<HttpMethod> methods) {
+    public RouteBuilder methods(Iterable<HttpMethod> methods) {
         return (RouteBuilder) super.methods(methods);
     }
 

@@ -88,7 +88,7 @@ public class PathMappingTest {
         assertThatThrownBy(
                 () -> m.withHttpHeaderInfo(ImmutableSet.of(), ImmutableList.of(), ImmutableList.of()))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("supportedMethod can't be empty");
+                .hasMessage("supportedMethods can't be empty");
     }
 
     @Test

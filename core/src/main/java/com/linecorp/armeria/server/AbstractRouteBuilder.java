@@ -33,7 +33,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -47,6 +46,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -137,8 +137,7 @@ abstract class AbstractRouteBuilder {
      * @see #pathMapping(PathMapping)
      */
     public AbstractRouteBuilder methods(HttpMethod... methods) {
-        methods(EnumSet.copyOf(Arrays.asList(methods)));
-        return this;
+        return methods(ImmutableSet.copyOf(requireNonNull(methods, "methods")));
     }
 
     /**
@@ -149,10 +148,10 @@ abstract class AbstractRouteBuilder {
      * @see #pathUnder(String)
      * @see #pathMapping(PathMapping)
      */
-    public AbstractRouteBuilder methods(Set<HttpMethod> methods) {
+    public AbstractRouteBuilder methods(Iterable<HttpMethod> methods) {
         requireNonNull(methods, "methods");
-        checkArgument(!methods.isEmpty(), "methods can't be empty");
-        this.methods = EnumSet.copyOf(methods);
+        checkArgument(!Iterables.isEmpty(methods), "methods can't be empty");
+        this.methods = ImmutableSet.copyOf(methods);
         return this;
     }
 
@@ -358,8 +357,8 @@ abstract class AbstractRouteBuilder {
     }
 
     /**
-     * Sets the {@link ContentPreviewerFactory} for an HTTP request of the
-     * {@linkplain #service(Service) service}. If not set, {@link VirtualHost#requestContentPreviewerFactory()}
+     * Sets the {@link ContentPreviewerFactory} for an HTTP request of a {@link Service}.
+     * If not set, {@link VirtualHost#requestContentPreviewerFactory()}
      * is used.
      */
     public AbstractRouteBuilder requestContentPreviewerFactory(ContentPreviewerFactory factory) {
@@ -368,8 +367,8 @@ abstract class AbstractRouteBuilder {
     }
 
     /**
-     * Sets the {@link ContentPreviewerFactory} for an HTTP response of the
-     * {@linkplain #service(Service) service}. If not set, {@link VirtualHost#responseContentPreviewerFactory()}
+     * Sets the {@link ContentPreviewerFactory} for an HTTP response of a {@link Service}.
+     * If not set, {@link VirtualHost#responseContentPreviewerFactory()}
      * is used.
      */
     public AbstractRouteBuilder responseContentPreviewerFactory(ContentPreviewerFactory factory) {
@@ -396,9 +395,9 @@ abstract class AbstractRouteBuilder {
 
     /**
      * Sets the {@link ContentPreviewerFactory} for creating a {@link ContentPreviewer} which produces the
-     * preview with the maximum {@code length} limit for an HTTP request/response of the
-     * {@linkplain #service(Service) service}. The previewer is enabled only if the content type of an HTTP
-     * request/response meets any of the following conditions:
+     * preview with the maximum {@code length} limit for an HTTP request/response of a {@link Service}.
+     * The previewer is enabled only if the content type of an HTTP request/response meets any of
+     * the following conditions:
      * <ul>
      *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
      *     <li>when its charset has been specified</li>
@@ -414,8 +413,7 @@ abstract class AbstractRouteBuilder {
     }
 
     /**
-     * Sets the {@link ContentPreviewerFactory} for an HTTP request/response of the
-     * {@linkplain #service(Service) service}.
+     * Sets the {@link ContentPreviewerFactory} for an HTTP request/response of a {@link Service}.
      */
     public AbstractRouteBuilder contentPreviewerFactory(ContentPreviewerFactory factory) {
         requestContentPreviewerFactory(factory);

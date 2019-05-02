@@ -31,7 +31,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 
-public class VirtualHostRouterBuilderTest {
+public class VirtualHostRouteBuilderTest {
 
     @Test
     public void routeBuilder() {

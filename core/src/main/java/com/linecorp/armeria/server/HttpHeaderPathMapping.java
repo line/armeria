@@ -27,6 +27,7 @@ import java.util.StringJoiner;
 import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
@@ -57,10 +58,10 @@ final class HttpHeaderPathMapping implements PathMapping {
     HttpHeaderPathMapping(PathMapping pathStringMapping, Set<HttpMethod> supportedMethods,
                           List<MediaType> consumeTypes, List<MediaType> produceTypes) {
         this.pathStringMapping = requireNonNull(pathStringMapping, "pathStringMapping");
-        this.supportedMethods = requireNonNull(supportedMethods, "supportedMethods");
+        this.supportedMethods = ImmutableSet.copyOf(requireNonNull(supportedMethods, "supportedMethods"));
         checkArgument(!supportedMethods.isEmpty(), "supportedMethods can't be empty");
-        this.consumeTypes = requireNonNull(consumeTypes, "consumeTypes");
-        this.produceTypes = requireNonNull(produceTypes, "produceTypes");
+        this.consumeTypes = ImmutableList.copyOf(requireNonNull(consumeTypes, "consumeTypes"));
+        this.produceTypes = ImmutableList.copyOf(requireNonNull(produceTypes, "produceTypes"));
 
         loggerName = generateLoggerName(pathStringMapping.loggerName(),
                                         supportedMethods, consumeTypes, produceTypes);
