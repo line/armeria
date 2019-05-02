@@ -281,7 +281,7 @@ class DebugPage extends React.PureComponent<Props, State> {
     const response = this.state.debugResponse;
     if (response.length > 0) {
       DebugPage.copyTextToClipboard(response);
-      this.onSnackbarOpen('The response has been copied to the clipboard.');
+      this.showSnackbar('The response has been copied to the clipboard.');
     }
   };
 
@@ -344,7 +344,7 @@ class DebugPage extends React.PureComponent<Props, State> {
           + (this.props.useRequestBody ? ` -d '${body}'` : '');
 
       DebugPage.copyTextToClipboard(curlCommand);
-      this.onSnackbarOpen('The curl command has been copied to the clipboard.');
+      this.showSnackbar('The curl command has been copied to the clipboard.');
     } catch (e) {
       this.setState({
         debugResponse: e.toString()
@@ -426,7 +426,7 @@ class DebugPage extends React.PureComponent<Props, State> {
     this.executeRequest(params);
   };
 
-  private onSnackbarOpen = (text: string) => {
+  private showSnackbar = (text: string) => {
     this.setState({
       snackbarOpen: true,
       snackbarMessage: text,
