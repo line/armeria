@@ -54,6 +54,11 @@ public class UnaryGrpcClient {
     /**
      * Constructs a {@link UnaryGrpcClient} for the given {@link HttpClient}.
      */
+    // TODO(anuraaga): We would ideally use our standard client building pattern, i.e.,
+    // new ClientBuilder(...).build(UnaryGrpcClient.class), but that requires mapping protocol schemes to media
+    // types, which cannot be duplicated. As this and normal gproto+ clients must use the same media type, we
+    // cannot currently implement this without rethinking / refactoring core and punt for now since this is an
+    // advanced API.
     public UnaryGrpcClient(HttpClient httpClient) {
         this.httpClient = Clients.newDerivedClient(
                 httpClient,
