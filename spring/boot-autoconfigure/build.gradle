@@ -11,6 +11,35 @@ dependencies {
     compile 'org.springframework.boot:spring-boot-starter'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
+    testCompile project(':grpc')
     testCompile 'org.springframework.boot:spring-boot-starter-actuator'
     testCompile 'org.springframework.boot:spring-boot-starter-test'
+}
+
+protobuf {
+    generatedFilesBaseDir = "$projectDir/gen-src"
+    protoc {
+        artifact = "com.google.protobuf:protoc:${managedVersions['com.google.protobuf:protoc']}"
+    }
+
+    plugins {
+        grpc {
+            artifact = "io.grpc:protoc-gen-grpc-java:${managedVersions['io.grpc:grpc-core']}"
+        }
+    }
+
+    generateProtoTasks {
+        all()*.plugins {
+            grpc {}
+        }
+    }
+}
+
+sourceSets {
+    test {
+        java {
+            srcDirs "$projectDir/gen-src/test/grpc"
+            srcDirs "$projectDir/gen-src/test/java"
+        }
+    }
 }

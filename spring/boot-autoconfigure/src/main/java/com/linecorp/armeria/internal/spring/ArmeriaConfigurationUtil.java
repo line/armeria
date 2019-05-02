@@ -75,6 +75,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.ServiceWithPathMappings;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
@@ -85,6 +86,8 @@ import com.linecorp.armeria.spring.AbstractServiceRegistrationBean;
 import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
+import com.linecorp.armeria.spring.GrpcServiceRegistrationBean;
+import com.linecorp.armeria.spring.GrpcServiceRegistrationBean.ExampleRequest;
 import com.linecorp.armeria.spring.HttpServiceRegistrationBean;
 import com.linecorp.armeria.spring.MeterIdPrefixFunctionFactory;
 import com.linecorp.armeria.spring.Ssl;
@@ -236,10 +239,12 @@ public final class ArmeriaConfigurationUtil {
      * Adds Thrift services to the specified {@link ServerBuilder}.
      */
     public static void configureThriftServices(
-            ServerBuilder server, List<ThriftServiceRegistrationBean> beans,
+            ServerBuilder server, DocServiceBuilder docServiceBuilder,
+            List<ThriftServiceRegistrationBean> beans,
             @Nullable MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory,
             @Nullable String docsPath) {
         requireNonNull(server, "server");
+        requireNonNull(docServiceBuilder, "docServiceBuilder");
         requireNonNull(beans, "beans");
 
         final List<TBase<?, ?>> docServiceRequests = new ArrayList<>();
@@ -260,12 +265,10 @@ public final class ArmeriaConfigurationUtil {
         });
 
         if (!Strings.isNullOrEmpty(docsPath)) {
-            final DocServiceBuilder docServiceBuilder = new DocServiceBuilder();
             docServiceBuilder.exampleRequest(docServiceRequests);
             for (Entry<String, Collection<HttpHeaders>> entry : docServiceHeaders.entrySet()) {
                 docServiceBuilder.exampleHttpHeaders(entry.getKey(), entry.getValue());
             }
-            server.serviceUnder(docsPath, docServiceBuilder.build());
         }
     }
 
@@ -287,6 +290,46 @@ public final class ArmeriaConfigurationUtil {
             service = setupMetricCollectingService(service, bean, meterIdPrefixFunctionFactory);
             server.service(bean.getPathMapping(), service);
         });
+    }
+
+    /**
+     * Adds gRPC services to the specified {@link ServerBuilder}.
+     */
+    public static void configureGrpcServices(
+            ServerBuilder server, DocServiceBuilder docServiceBuilder,
+            List<GrpcServiceRegistrationBean> beans,
+            @Nullable MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory,
+            @Nullable String docsPath) {
+        requireNonNull(server, "server");
+        requireNonNull(docServiceBuilder, "docServiceBuilder");
+        requireNonNull(beans, "beans");
+
+        final List<ExampleRequest> docServiceRequests = new ArrayList<>();
+        beans.forEach(bean -> {
+            final ServiceWithPathMappings<HttpRequest, HttpResponse> serviceWithPathMappings =
+                    bean.getService();
+            docServiceRequests.addAll(bean.getExampleRequests());
+            serviceWithPathMappings.pathMappings().forEach(
+                    pathMapping -> {
+                        Service<HttpRequest, HttpResponse> service = bean.getService();
+                        for (Function<Service<HttpRequest, HttpResponse>,
+                                ? extends Service<HttpRequest, HttpResponse>> decorator
+                                : bean.getDecorators()) {
+                            service = service.decorate(decorator);
+                        }
+                        server.service(pathMapping,
+                                       setupMetricCollectingService(service, bean,
+                                                                    meterIdPrefixFunctionFactory));
+                    }
+            );
+        });
+
+        if (!Strings.isNullOrEmpty(docsPath)) {
+            docServiceRequests.forEach(
+                    exampleReq -> docServiceBuilder.exampleRequestForMethod(exampleReq.getServiceType(),
+                                                                            exampleReq.getMethodName(),
+                                                                            exampleReq.getExampleRequest()));
+        }
     }
 
     /**

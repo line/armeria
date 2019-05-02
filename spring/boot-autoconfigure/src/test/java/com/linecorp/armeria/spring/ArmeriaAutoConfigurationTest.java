@@ -41,6 +41,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
@@ -51,6 +52,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -58,11 +60,20 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.StringRequestConverterFunction;
+import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.spring.ArmeriaAutoConfigurationTest.TestConfiguration;
+import com.linecorp.armeria.spring.GrpcServiceRegistrationBean.ExampleRequest;
+import com.linecorp.armeria.spring.test.grpc.main.Hello.HelloReply;
+import com.linecorp.armeria.spring.test.grpc.main.Hello.HelloRequest;
+import com.linecorp.armeria.spring.test.grpc.main.HelloServiceGrpc;
+import com.linecorp.armeria.spring.test.grpc.main.HelloServiceGrpc.HelloServiceBlockingStub;
+import com.linecorp.armeria.spring.test.grpc.main.HelloServiceGrpc.HelloServiceImplBase;
 import com.linecorp.armeria.spring.test.thrift.main.HelloService;
 import com.linecorp.armeria.spring.test.thrift.main.HelloService.hello_args;
+
+import io.grpc.stub.StreamObserver;
 
 /**
  * This uses {@link ArmeriaAutoConfiguration} for integration tests.
@@ -92,13 +103,30 @@ public class ArmeriaAutoConfigurationTest {
         @Bean
         public ThriftServiceRegistrationBean helloThriftService() {
             return new ThriftServiceRegistrationBean()
-                    .setServiceName("helloService")
+                    .setServiceName("helloThriftService")
                     .setService(THttpService.of((HelloService.Iface) name -> "hello " + name))
                     .setPath("/thrift")
                     .setDecorators(ImmutableList.of(LoggingService.newDecorator()))
                     .setExampleRequests(Collections.singleton(new hello_args("nameVal")))
                     .setExampleHeaders(Collections.singleton(HttpHeaders.of(
                             HttpHeaderNames.of("x-additional-header"), "headerVal")));
+        }
+
+        @Bean
+        public GrpcServiceRegistrationBean helloGrpcService() {
+            return new GrpcServiceRegistrationBean()
+                    .setServiceName("helloGrpcService")
+                    .setService(new GrpcServiceBuilder()
+                                        .addService(new HelloGrpcService())
+                                        .supportedSerializationFormats(GrpcSerializationFormats.values())
+                                        .enableUnframedRequests(true)
+                                        .build())
+                    .setDecorators(LoggingService.newDecorator())
+                    .setExampleRequests(ImmutableList.of(ExampleRequest.of(HelloServiceGrpc.SERVICE_NAME,
+                                                                           "Hello",
+                                                                           HelloRequest.newBuilder()
+                                                                                       .setName("Armeria")
+                                                                                       .build())));
         }
     }
 
@@ -138,6 +166,17 @@ public class ArmeriaAutoConfigurationTest {
         @Get("/get/2")
         public AggregatedHttpMessage getV2() {
             throw new IllegalArgumentException();
+        }
+    }
+
+    public static class HelloGrpcService extends HelloServiceImplBase {
+        @Override
+        public void hello(HelloRequest req, StreamObserver<HelloReply> responseObserver) {
+            final HelloReply reply = HelloReply.newBuilder()
+                                               .setMessage("Hello, " + req.getName())
+                                               .build();
+            responseObserver.onNext(reply);
+            responseObserver.onCompleted();
         }
     }
 
@@ -193,6 +232,16 @@ public class ArmeriaAutoConfigurationTest {
         assertThat(msg.status()).isEqualTo(HttpStatus.OK);
         assertThatJson(msg.contentUtf8())
                 .node("services[1].exampleHttpHeaders[0].x-additional-header").isStringEqualTo("headerVal");
+    }
+
+    @Test
+    public void testGrpcServiceRegistrationBean() throws Exception {
+        final HelloServiceBlockingStub client = new ClientBuilder(newUrl("gproto+h2c") + '/')
+                .build(HelloServiceBlockingStub.class);
+        final HelloRequest request = HelloRequest.newBuilder()
+                                                 .setName("world")
+                                                 .build();
+        assertThat(client.hello(request).getMessage()).isEqualTo("Hello, world");
     }
 
     @Test
