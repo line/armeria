@@ -15,10 +15,12 @@
  */
 package com.linecorp.armeria.common.logback;
 
-import java.util.ArrayList;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
 import javax.net.ssl.SSLSession;
@@ -165,13 +167,10 @@ public enum BuiltInProperty {
     static List<BuiltInProperty> findByMdcKeyPattern(String mdcKeyPattern) {
         final Pattern pattern = Pattern.compile(
                 ("\\Q" + mdcKeyPattern + "\\E").replaceAll(WILDCARD_REGEX, "\\\\E.*\\\\Q"));
-        final List<BuiltInProperty> matchedBuiltInProperties = new ArrayList<>();
-        mdcKeyToEnum.forEach((mdcKey, property) -> {
-            if (pattern.matcher(mdcKey).matches()) {
-                matchedBuiltInProperties.add(property);
-            }
-        });
-        return matchedBuiltInProperties;
+        return mdcKeyToEnum.entrySet().stream()
+                           .filter(e -> pattern.matcher(e.getKey()).matches())
+                           .map(Entry::getValue)
+                           .collect(toImmutableList());
     }
 
     final String mdcKey;
