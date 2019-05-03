@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 
-public class HttpHeadersBuilderTest {
+public class DefaultHttpHeadersBuilderTest {
 
     @Test
     public void add() {

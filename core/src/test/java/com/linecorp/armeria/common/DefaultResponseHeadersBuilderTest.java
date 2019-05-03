@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.Maps;
 
-public class ResponseHeadersBuilderTest {
+public class DefaultResponseHeadersBuilderTest {
     @Test
     public void mutationAfterBuild() {
         final ResponseHeaders headers = ResponseHeaders.of(200);

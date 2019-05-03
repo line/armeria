@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.Maps;
 
-public class RequestHeadersBuilderTest {
+public class DefaultRequestHeadersBuilderTest {
 
     @Test
     public void mutationAfterBuild() {
