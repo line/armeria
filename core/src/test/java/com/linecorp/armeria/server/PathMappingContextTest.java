@@ -112,7 +112,8 @@ public class PathMappingContextTest {
     }
 
     static PathMappingContext create(String path, @Nullable String query) {
-        final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, path + '?' + query);
+        final String requestPath = query != null ? path + '?' + query : path;
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, requestPath);
         return DefaultPathMappingContext.of(virtualHost(), "example.com",
                                             path, query, headers);
     }

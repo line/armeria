@@ -30,11 +30,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.logging.ContentPreviewerAdapter;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
@@ -138,32 +138,34 @@ class RouteServiceTest {
     @Test
     void consumesAndProduces() throws IOException {
         final HttpClient client = HttpClient.of(server.uri("/"));
-        HttpHeaders headers = HttpHeaders.of(HttpMethod.POST, "/hello");
-        AggregatedHttpMessage res = client.execute(headers, "armeria").aggregate().join();
+        AggregatedHttpMessage res = client.execute(RequestHeaders.of(HttpMethod.POST, "/hello"), "armeria")
+                                          .aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
 
-        headers.contentType(MediaType.PLAIN_TEXT_UTF_8);
-        res = client.execute(headers, "armeria").aggregate().join();
+        res = client.execute(RequestHeaders.of(HttpMethod.POST, "/hello",
+                                               HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8),
+                             "armeria").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("armeria");
 
-        headers = HttpHeaders.of(HttpMethod.POST, "/hello").contentType(MediaType.JSON);
-        res = client.execute(headers, "armeria").aggregate().join();
+        res = client.execute(RequestHeaders.of(HttpMethod.POST, "/hello",
+                                               HttpHeaderNames.CONTENT_TYPE, MediaType.JSON),
+                             "armeria").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
 
         final ObjectMapper mapper = new ObjectMapper();
         assertThat(mapper.readTree(res.contentUtf8()).get("name").textValue()).isEqualTo("armeria");
 
-        headers = HttpHeaders.of(HttpMethod.POST, "/hello")
-                             .contentType(MediaType.PLAIN_TEXT_UTF_8)
-                             .addObject(HttpHeaderNames.ACCEPT, MediaType.HTML_UTF_8);
-        res = client.execute(headers, "armeria").aggregate().join();
+        res = client.execute(RequestHeaders.of(HttpMethod.POST, "/hello",
+                                               HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
+                                               HttpHeaderNames.ACCEPT, MediaType.HTML_UTF_8),
+                             "armeria").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.NOT_ACCEPTABLE);
 
-        headers = HttpHeaders.of(HttpMethod.POST, "/hello")
-                             .contentType(MediaType.PLAIN_TEXT_UTF_8)
-                             .addObject(HttpHeaderNames.ACCEPT, MediaType.PLAIN_TEXT_UTF_8);
-        res = client.execute(headers, "armeria").aggregate().join();
+        res = client.execute(RequestHeaders.of(HttpMethod.POST, "/hello",
+                                               HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
+                                               HttpHeaderNames.ACCEPT, MediaType.PLAIN_TEXT_UTF_8),
+                             "armeria").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("armeria");
     }
