@@ -97,9 +97,7 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
         final RequestHeadersBuilder newHeaders = req.headers().toBuilder();
         injector.inject(span.context(), newHeaders);
         req = HttpRequest.of(req, newHeaders.build());
-        if (ctx.request() instanceof HttpRequest) {
-            ctx.setRequest(req);
-        }
+        ctx.updateRequest(req);
 
         // For no-op spans, we only need to inject into headers and don't set any other attributes.
         if (span.isNoop()) {

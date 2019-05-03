@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.common;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.SocketAddress;
@@ -85,15 +84,22 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     }
 
     @Override
-    public final void setRequest(Request req) {
+    public final boolean updateRequest(Request req) {
         requireNonNull(req, "req");
         final Request oldReq = request;
         if (oldReq instanceof HttpRequest) {
-            checkArgument(req instanceof HttpRequest, "req must be an HttpRequest: %s", req);
+            if (!(req instanceof HttpRequest)) {
+                return false;
+            }
         } else {
-            checkArgument(req instanceof RpcRequest, "req must be an RpcRequest: %s", req);
+            assert oldReq instanceof RpcRequest;
+            if (!(req instanceof RpcRequest)) {
+                return false;
+            }
         }
+
         request = req;
+        return true;
     }
 
     @Override

@@ -64,8 +64,8 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     }
 
     @Override
-    public void setRequest(Request req) {
-        delegate().setRequest(req);
+    public boolean updateRequest(Request req) {
+        return delegate().updateRequest(req);
     }
 
     @Override

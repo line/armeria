@@ -87,9 +87,7 @@ public final class HttpDecodingClient extends SimpleDecoratingClient<HttpRequest
         req = HttpRequest.of(req, req.headers().toBuilder()
                                      .set(HttpHeaderNames.ACCEPT_ENCODING, acceptEncodingHeader)
                                      .build());
-        if (ctx.request() instanceof HttpRequest) {
-            ctx.setRequest(req);
-        }
+        ctx.updateRequest(req);
 
         final HttpResponse res = delegate().execute(ctx, req);
         return new HttpDecodedResponse(res, decoderFactories);

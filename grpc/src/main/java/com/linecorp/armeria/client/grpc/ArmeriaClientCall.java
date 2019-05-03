@@ -311,9 +311,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                                TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis())));
 
         final HttpRequest newReq = HttpRequest.of(req, newHeaders.build());
-        if (ctx.request() instanceof HttpRequest) {
-            ctx.setRequest(newReq);
-        }
+        ctx.updateRequest(newReq);
         return newReq;
     }
 

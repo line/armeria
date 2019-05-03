@@ -108,17 +108,20 @@ public interface RequestContext extends AttributeMap {
 
     /**
      * Replaces the {@link Request} associated with this context with the specified one. This method is useful
-     * to a decorator that manipulates HTTP request headers or RPC call parameters. Note that it is a bad idea
-     * to change the values of the pseudo headers ({@code ":method"}, {@code "path"}, {@code ":scheme"} and
-     * {@code ":authority"}) using this method, because the properties of this context are unaffected
-     * by such an attempt.
+     * to a decorator that manipulates HTTP request headers or RPC call parameters.
      *
-     * @throws IllegalArgumentException if you attempted to replace an {@link RpcRequest} with
-     *                                  an {@link HttpRequest} or vice versa.
+     * <p>Note that it is a bad idea to change the values of the pseudo headers ({@code ":method"},
+     * {@code "path"}, {@code ":scheme"} and {@code ":authority"}) when replacing an {@link HttpRequest},
+     * because the properties of this context, such as {@link #path()}, are unaffected by such an attempt.</p>
+     *
+     * <p>It is not allowed to replace an {@link RpcRequest} with an {@link HttpRequest} or vice versa.
+     * This method will reject such an attempt and return {@code false}.</p>
+     *
+     * @return {@code true} if the {@link Request} of this context has been replaced. {@code false} otherwise.
      *
      * @see HttpRequest#of(HttpRequest, RequestHeaders)
      */
-    void setRequest(Request req);
+    boolean updateRequest(Request req);
 
     /**
      * Returns the {@link SessionProtocol} of the current {@link Request}.
