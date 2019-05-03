@@ -27,7 +27,7 @@ public class RequestHeadersBuilderTest {
     @Test
     public void mutationAfterBuild() {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/");
-        final RequestHeadersBuilder builder = headers.toBuilder();
+        final DefaultRequestHeadersBuilder builder = (DefaultRequestHeadersBuilder) headers.toBuilder();
 
         // Initial state
         assertThat(builder.parent()).isSameAs(headers);
@@ -81,7 +81,7 @@ public class RequestHeadersBuilderTest {
     @Test
     public void noMutationNoCopy() {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/");
-        final RequestHeadersBuilder builder = headers.toBuilder();
+        final DefaultRequestHeadersBuilder builder = (DefaultRequestHeadersBuilder) headers.toBuilder();
         assertThat(builder.build()).isSameAs(headers);
         assertThat(builder.delegate()).isNull();
     }

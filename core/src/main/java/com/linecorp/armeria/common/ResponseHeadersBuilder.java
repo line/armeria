@@ -1,39 +1,14 @@
-/*
- * Copyright 2019 LINE Corporation
- *
- * LINE Corporation licenses this file to you under the Apache License,
- * version 2.0 (the "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at:
- *
- *   https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
- */
 package com.linecorp.armeria.common;
-
-import static com.google.common.base.Preconditions.checkState;
 
 import java.util.Map.Entry;
 
 /**
  * Builds a {@link ResponseHeaders}.
  *
- * @see RequestHeadersBuilder
+ * @see ResponseHeaders#builder()
+ * @see ResponseHeaders#toBuilder()
  */
-public final class ResponseHeadersBuilder extends HttpHeadersBuilder implements ResponseHeaderGetters {
-
-    private static final String STATUS_HEADER_MISSING = ":status header does not exist.";
-
-    ResponseHeadersBuilder() {}
-
-    ResponseHeadersBuilder(DefaultResponseHeaders headers) {
-        super(headers);
-    }
-
+public interface ResponseHeadersBuilder extends HttpHeadersBuilder, ResponseHeaderGetters {
     /**
      * Returns a newly created {@link ResponseHeaders} with the entries in this builder.
      * Note that any further modification of this builder is prohibited after this method is invoked.
@@ -41,213 +16,114 @@ public final class ResponseHeadersBuilder extends HttpHeadersBuilder implements 
      * @throws IllegalStateException if this builder does not have {@code ":status"} header set.
      */
     @Override
-    public ResponseHeaders build() {
-        final HttpHeadersBase delegate = delegate();
-        if (delegate != null) {
-            checkState(delegate.contains(HttpHeaderNames.STATUS), STATUS_HEADER_MISSING);
-            return new DefaultResponseHeaders(promoteDelegate());
-        }
-
-        final HttpHeadersBase parent = parent();
-        if (parent != null) {
-            return (ResponseHeaders) parent;
-        }
-
-        // No headers were set.
-        throw new IllegalStateException(STATUS_HEADER_MISSING);
-    }
-
-    @Override
-    public ResponseHeadersBuilder sizeHint(int sizeHint) {
-        return (ResponseHeadersBuilder) super.sizeHint(sizeHint);
-    }
-
-    // Response-specific methods.
-
-    /**
-     * Returns the value of the {@code ":status"} header as an {@link HttpStatus}.
-     * If the value is malformed, {@link HttpStatus#UNKNOWN} will be returned.
-     *
-     * @throws IllegalStateException if there is no such header.
-     */
-    @Override
-    public HttpStatus status() {
-        final HttpHeadersBase getters = getters();
-        checkState(getters != null, ":status header does not exist.");
-        return getters.status();
-    }
+    ResponseHeaders build();
 
     /**
      * Sets the the {@code ":status"} header.
      */
-    public ResponseHeadersBuilder status(int statusCode) {
-        setters().status(statusCode);
-        return this;
-    }
+    ResponseHeadersBuilder status(int statusCode);
 
     /**
      * Sets the the {@code ":status"} header.
      */
-    public ResponseHeadersBuilder status(HttpStatus status) {
-        setters().status(status);
-        return this;
-    }
+    ResponseHeadersBuilder status(HttpStatus status);
 
     // Override the return type of the chaining methods in the superclass.
 
     @Override
-    public ResponseHeadersBuilder endOfStream(boolean endOfStream) {
-        return (ResponseHeadersBuilder) super.endOfStream(endOfStream);
-    }
+    ResponseHeadersBuilder sizeHint(int sizeHint);
 
     @Override
-    public ResponseHeadersBuilder contentType(MediaType contentType) {
-        return (ResponseHeadersBuilder) super.contentType(contentType);
-    }
+    ResponseHeadersBuilder endOfStream(boolean endOfStream);
 
     @Override
-    public ResponseHeadersBuilder add(CharSequence name, String value) {
-        return (ResponseHeadersBuilder) super.add(name, value);
-    }
+    ResponseHeadersBuilder contentType(MediaType contentType);
 
     @Override
-    public ResponseHeadersBuilder add(CharSequence name, Iterable<String> values) {
-        return (ResponseHeadersBuilder) super.add(name, values);
-    }
+    ResponseHeadersBuilder add(CharSequence name, String value);
 
     @Override
-    public ResponseHeadersBuilder add(CharSequence name, String... values) {
-        return (ResponseHeadersBuilder) super.add(name, values);
-    }
+    ResponseHeadersBuilder add(CharSequence name, Iterable<String> values);
 
     @Override
-    public ResponseHeadersBuilder add(Iterable<? extends Entry<? extends CharSequence, String>> headers) {
-        return (ResponseHeadersBuilder) super.add(headers);
-    }
+    ResponseHeadersBuilder add(CharSequence name, String... values);
 
     @Override
-    public ResponseHeadersBuilder addObject(CharSequence name, Object value) {
-        return (ResponseHeadersBuilder) super.addObject(name, value);
-    }
+    ResponseHeadersBuilder add(Iterable<? extends Entry<? extends CharSequence, String>> headers);
 
     @Override
-    public ResponseHeadersBuilder addObject(CharSequence name, Iterable<?> values) {
-        return (ResponseHeadersBuilder) super.addObject(name, values);
-    }
+    ResponseHeadersBuilder addObject(CharSequence name, Object value);
 
     @Override
-    public ResponseHeadersBuilder addObject(CharSequence name, Object... values) {
-        return (ResponseHeadersBuilder) super.addObject(name, values);
-    }
+    ResponseHeadersBuilder addObject(CharSequence name, Iterable<?> values);
 
     @Override
-    public ResponseHeadersBuilder addObject(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
-        return (ResponseHeadersBuilder) super.addObject(headers);
-    }
+    ResponseHeadersBuilder addObject(CharSequence name, Object... values);
 
     @Override
-    public ResponseHeadersBuilder addInt(CharSequence name, int value) {
-        return (ResponseHeadersBuilder) super.addInt(name, value);
-    }
+    ResponseHeadersBuilder addObject(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
 
     @Override
-    public ResponseHeadersBuilder addLong(CharSequence name, long value) {
-        return (ResponseHeadersBuilder) super.addLong(name, value);
-    }
+    ResponseHeadersBuilder addInt(CharSequence name, int value);
 
     @Override
-    public ResponseHeadersBuilder addFloat(CharSequence name, float value) {
-        return (ResponseHeadersBuilder) super.addFloat(name, value);
-    }
+    ResponseHeadersBuilder addLong(CharSequence name, long value);
 
     @Override
-    public ResponseHeadersBuilder addDouble(CharSequence name, double value) {
-        return (ResponseHeadersBuilder) super.addDouble(name, value);
-    }
+    ResponseHeadersBuilder addFloat(CharSequence name, float value);
 
     @Override
-    public ResponseHeadersBuilder addTimeMillis(CharSequence name, long value) {
-        return (ResponseHeadersBuilder) super.addTimeMillis(name, value);
-    }
+    ResponseHeadersBuilder addDouble(CharSequence name, double value);
 
     @Override
-    public ResponseHeadersBuilder set(CharSequence name, String value) {
-        return (ResponseHeadersBuilder) super.set(name, value);
-    }
+    ResponseHeadersBuilder addTimeMillis(CharSequence name, long value);
 
     @Override
-    public ResponseHeadersBuilder set(CharSequence name, Iterable<String> values) {
-        return (ResponseHeadersBuilder) super.set(name, values);
-    }
+    ResponseHeadersBuilder set(CharSequence name, String value);
 
     @Override
-    public ResponseHeadersBuilder set(CharSequence name, String... values) {
-        return (ResponseHeadersBuilder) super.set(name, values);
-    }
+    ResponseHeadersBuilder set(CharSequence name, Iterable<String> values);
 
     @Override
-    public ResponseHeadersBuilder set(Iterable<? extends Entry<? extends CharSequence, String>> headers) {
-        return (ResponseHeadersBuilder) super.set(headers);
-    }
+    ResponseHeadersBuilder set(CharSequence name, String... values);
 
     @Override
-    public ResponseHeadersBuilder setIfAbsent(
-            Iterable<? extends Entry<? extends CharSequence, String>> headers) {
-        return (ResponseHeadersBuilder) super.setIfAbsent(headers);
-    }
+    ResponseHeadersBuilder set(Iterable<? extends Entry<? extends CharSequence, String>> headers);
 
     @Override
-    public ResponseHeadersBuilder setObject(CharSequence name, Object value) {
-        return (ResponseHeadersBuilder) super.setObject(name, value);
-    }
+    ResponseHeadersBuilder setIfAbsent(
+            Iterable<? extends Entry<? extends CharSequence, String>> headers);
 
     @Override
-    public ResponseHeadersBuilder setObject(CharSequence name, Iterable<?> values) {
-        return (ResponseHeadersBuilder) super.setObject(name, values);
-    }
+    ResponseHeadersBuilder setObject(CharSequence name, Object value);
 
     @Override
-    public ResponseHeadersBuilder setObject(CharSequence name, Object... values) {
-        return (ResponseHeadersBuilder) super.setObject(name, values);
-    }
+    ResponseHeadersBuilder setObject(CharSequence name, Iterable<?> values);
 
     @Override
-    public ResponseHeadersBuilder setObject(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
-        return (ResponseHeadersBuilder) super.setObject(headers);
-    }
+    ResponseHeadersBuilder setObject(CharSequence name, Object... values);
 
     @Override
-    public ResponseHeadersBuilder setInt(CharSequence name, int value) {
-        return (ResponseHeadersBuilder) super.setInt(name, value);
-    }
+    ResponseHeadersBuilder setObject(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
 
     @Override
-    public ResponseHeadersBuilder setLong(CharSequence name, long value) {
-        return (ResponseHeadersBuilder) super.setLong(name, value);
-    }
+    ResponseHeadersBuilder setInt(CharSequence name, int value);
 
     @Override
-    public ResponseHeadersBuilder setFloat(CharSequence name, float value) {
-        return (ResponseHeadersBuilder) super.setFloat(name, value);
-    }
+    ResponseHeadersBuilder setLong(CharSequence name, long value);
 
     @Override
-    public ResponseHeadersBuilder setDouble(CharSequence name, double value) {
-        return (ResponseHeadersBuilder) super.setDouble(name, value);
-    }
+    ResponseHeadersBuilder setFloat(CharSequence name, float value);
 
     @Override
-    public ResponseHeadersBuilder setTimeMillis(CharSequence name, long value) {
-        return (ResponseHeadersBuilder) super.setTimeMillis(name, value);
-    }
+    ResponseHeadersBuilder setDouble(CharSequence name, double value);
 
     @Override
-    public ResponseHeadersBuilder removeAndThen(CharSequence name) {
-        return (ResponseHeadersBuilder) super.removeAndThen(name);
-    }
+    ResponseHeadersBuilder setTimeMillis(CharSequence name, long value);
 
     @Override
-    public ResponseHeadersBuilder clear() {
-        return (ResponseHeadersBuilder) super.clear();
-    }
+    ResponseHeadersBuilder removeAndThen(CharSequence name);
+
+    @Override
+    ResponseHeadersBuilder clear();
 }

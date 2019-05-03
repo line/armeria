@@ -88,7 +88,7 @@ public class HttpHeadersBuilderTest {
     @Test
     public void mutationAfterBuild() {
         final HttpHeaders headers = HttpHeaders.of("a", "b");
-        final HttpHeadersBuilder builder = headers.toBuilder();
+        final DefaultHttpHeadersBuilder builder = (DefaultHttpHeadersBuilder) headers.toBuilder();
 
         // Initial state
         assertThat(builder.parent()).isSameAs(headers);
@@ -141,7 +141,7 @@ public class HttpHeadersBuilderTest {
         assertThat(headers.toBuilder().build()).isSameAs(headers);
 
         // Failed removal should not make a copy.
-        final HttpHeadersBuilder builder = headers.toBuilder();
+        final DefaultHttpHeadersBuilder builder = (DefaultHttpHeadersBuilder) headers.toBuilder();
         builder.getAndRemove("c");
         builder.getAndRemove("c", "d");
         builder.getIntAndRemove("c");

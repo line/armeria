@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 /**
  * Immutable HTTP/2 headers.
  *
- * @see HttpHeadersBuilder
  * @see RequestHeaders
  * @see ResponseHeaders
  */
@@ -35,7 +34,7 @@ public interface HttpHeaders extends HttpObject, HttpHeaderGetters {
      * Creates a new empty builder.
      */
     static HttpHeadersBuilder builder() {
-        return new HttpHeadersBuilder();
+        return new DefaultHttpHeadersBuilder();
     }
 
     /**
@@ -57,7 +56,7 @@ public interface HttpHeaders extends HttpObject, HttpHeaderGetters {
      * Returns a new {@link HttpHeaders} with the specified header.
      */
     static HttpHeaders of(CharSequence name, String value) {
-        return new HttpHeadersBuilder().add(name, value).build();
+        return builder().add(name, value).build();
     }
 
     /**
@@ -65,7 +64,7 @@ public interface HttpHeaders extends HttpObject, HttpHeaderGetters {
      * a {@link String} via {@link HttpHeadersBase#addObject(CharSequence, Object)}.
      */
     static HttpHeaders of(CharSequence name, Object value) {
-        return new HttpHeadersBuilder().addObject(name, value).build();
+        return builder().addObject(name, value).build();
     }
 
     /**
@@ -73,9 +72,9 @@ public interface HttpHeaders extends HttpObject, HttpHeaderGetters {
      */
     static HttpHeaders of(CharSequence name1, String value1,
                           CharSequence name2, String value2) {
-        return new HttpHeadersBuilder().add(name1, value1)
-                                       .add(name2, value2)
-                                       .build();
+        return builder().add(name1, value1)
+                        .add(name2, value2)
+                        .build();
     }
 
     /**
@@ -84,9 +83,9 @@ public interface HttpHeaders extends HttpObject, HttpHeaderGetters {
      */
     static HttpHeaders of(CharSequence name1, Object value1,
                           CharSequence name2, Object value2) {
-        return new HttpHeadersBuilder().addObject(name1, value1)
-                                       .addObject(name2, value2)
-                                       .build();
+        return builder().addObject(name1, value1)
+                        .addObject(name2, value2)
+                        .build();
     }
 
     /**
@@ -95,10 +94,10 @@ public interface HttpHeaders extends HttpObject, HttpHeaderGetters {
     static HttpHeaders of(CharSequence name1, String value1,
                           CharSequence name2, String value2,
                           CharSequence name3, String value3) {
-        return new HttpHeadersBuilder().add(name1, value1)
-                                       .add(name2, value2)
-                                       .add(name3, value3)
-                                       .build();
+        return builder().add(name1, value1)
+                        .add(name2, value2)
+                        .add(name3, value3)
+                        .build();
     }
 
     /**
@@ -108,10 +107,10 @@ public interface HttpHeaders extends HttpObject, HttpHeaderGetters {
     static HttpHeaders of(CharSequence name1, Object value1,
                           CharSequence name2, Object value2,
                           CharSequence name3, Object value3) {
-        return new HttpHeadersBuilder().addObject(name1, value1)
-                                       .addObject(name2, value2)
-                                       .addObject(name3, value3)
-                                       .build();
+        return builder().addObject(name1, value1)
+                        .addObject(name2, value2)
+                        .addObject(name3, value3)
+                        .build();
     }
 
     /**
@@ -121,11 +120,11 @@ public interface HttpHeaders extends HttpObject, HttpHeaderGetters {
                           CharSequence name2, String value2,
                           CharSequence name3, String value3,
                           CharSequence name4, String value4) {
-        return new HttpHeadersBuilder().add(name1, value1)
-                                       .add(name2, value2)
-                                       .add(name3, value3)
-                                       .add(name4, value4)
-                                       .build();
+        return builder().add(name1, value1)
+                        .add(name2, value2)
+                        .add(name3, value3)
+                        .add(name4, value4)
+                        .build();
     }
 
     /**
@@ -136,11 +135,11 @@ public interface HttpHeaders extends HttpObject, HttpHeaderGetters {
                           CharSequence name2, Object value2,
                           CharSequence name3, Object value3,
                           CharSequence name4, Object value4) {
-        return new HttpHeadersBuilder().addObject(name1, value1)
-                                       .addObject(name2, value2)
-                                       .addObject(name3, value3)
-                                       .addObject(name4, value4)
-                                       .build();
+        return builder().addObject(name1, value1)
+                        .addObject(name2, value2)
+                        .addObject(name3, value3)
+                        .addObject(name4, value4)
+                        .build();
     }
 
     /**

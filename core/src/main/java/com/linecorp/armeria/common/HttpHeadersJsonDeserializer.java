@@ -59,7 +59,7 @@ public final class HttpHeadersJsonDeserializer extends StdDeserializer<HttpHeade
         }
 
         final ObjectNode obj = (ObjectNode) tree;
-        final HttpHeadersBuilder builder = new HttpHeadersBuilder();
+        final HttpHeadersBuilder builder = HttpHeaders.builder();
 
         for (final Iterator<Entry<String, JsonNode>> i = obj.fields(); i.hasNext();) {
             final Entry<String, JsonNode> e = i.next();

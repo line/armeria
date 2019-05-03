@@ -32,7 +32,7 @@ import io.netty.util.AsciiString;
 /**
  * Provides the getter methods to {@link HttpHeaders} and {@link HttpHeadersBuilder}.
  */
-public interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
+interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
 
     /**
      * Tells whether the headers will be the last frame in an HTTP/2 stream.

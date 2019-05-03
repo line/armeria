@@ -42,7 +42,7 @@ public class HttpHeadersJsonDeserializerTest {
 
     @Test
     public void multipleValues() throws IOException {
-        final HttpHeaders expected = new HttpHeadersBuilder().set(NAME, "foo", "bar", "baz").build();
+        final HttpHeaders expected = HttpHeaders.builder().set(NAME, "foo", "bar", "baz").build();
         assertThat(mapper.readValue("{\"a\":[\"foo\",\"bar\",\"baz\"]}", HttpHeaders.class))
                 .isEqualTo(expected);
     }

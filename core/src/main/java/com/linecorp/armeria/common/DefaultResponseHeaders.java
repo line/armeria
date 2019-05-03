@@ -43,7 +43,7 @@ final class DefaultResponseHeaders extends DefaultHttpHeaders implements Respons
 
     @Override
     public ResponseHeadersBuilder toBuilder() {
-        return new ResponseHeadersBuilder(this);
+        return new DefaultResponseHeadersBuilder(this);
     }
 
     @Override

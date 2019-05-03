@@ -1,39 +1,14 @@
-/*
- * Copyright 2019 LINE Corporation
- *
- * LINE Corporation licenses this file to you under the Apache License,
- * version 2.0 (the "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at:
- *
- *   https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
- */
 package com.linecorp.armeria.common;
 
-import static com.google.common.base.Preconditions.checkState;
-
 import java.util.Map.Entry;
-
-import javax.annotation.Nullable;
 
 /**
  * Builds a {@link RequestHeaders}.
  *
- * @see ResponseHeadersBuilder
+ * @see RequestHeaders#builder()
+ * @see RequestHeaders#toBuilder()
  */
-public final class RequestHeadersBuilder extends HttpHeadersBuilder implements RequestHeaderGetters {
-
-    RequestHeadersBuilder() {}
-
-    RequestHeadersBuilder(DefaultRequestHeaders headers) {
-        super(headers);
-    }
-
+public interface RequestHeadersBuilder extends HttpHeadersBuilder, RequestHeaderGetters {
     /**
      * Returns a newly created {@link RequestHeaders} with the entries in this builder.
      * Note that any further modification of this builder is prohibited after this method is invoked.
@@ -42,245 +17,124 @@ public final class RequestHeadersBuilder extends HttpHeadersBuilder implements R
      *                               {@code ":path"} headers set.
      */
     @Override
-    public RequestHeaders build() {
-        final HttpHeadersBase delegate = delegate();
-        if (delegate != null) {
-            checkState(delegate.contains(HttpHeaderNames.METHOD), ":method header does not exist.");
-            checkState(delegate.contains(HttpHeaderNames.PATH), ":path header does not exist.");
-            return new DefaultRequestHeaders(promoteDelegate());
-        }
-
-        final HttpHeadersBase parent = parent();
-        if (parent != null) {
-            return (RequestHeaders) parent;
-        }
-
-        // No headers were set.
-        throw new IllegalStateException("must set ':method' and ':path' headers");
-    }
-
-    @Override
-    public RequestHeadersBuilder sizeHint(int sizeHint) {
-        return (RequestHeadersBuilder) super.sizeHint(sizeHint);
-    }
-
-    // Request-specific methods.
-
-    @Override
-    public HttpMethod method() {
-        final HttpHeadersBase getters = getters();
-        checkState(getters != null, ":method header does not exist.");
-        return getters.method();
-    }
+    RequestHeaders build();
 
     /**
      * Sets the {@code ":method"} header.
      */
-    public RequestHeadersBuilder method(HttpMethod method) {
-        setters().method(method);
-        return this;
-    }
-
-    @Override
-    public String path() {
-        final HttpHeadersBase getters = getters();
-        checkState(getters != null, ":path header does not exist.");
-        return getters.path();
-    }
+    RequestHeadersBuilder method(HttpMethod method);
 
     /**
      * Sets the {@code ":path"} headers.
      */
-    public RequestHeadersBuilder path(String path) {
-        setters().path(path);
-        return this;
-    }
-
-    @Nullable
-    @Override
-    public String scheme() {
-        final HttpHeadersBase getters = getters();
-        return getters != null ? getters.scheme() : null;
-    }
+    RequestHeadersBuilder path(String path);
 
     /**
      * Sets the {@code ":scheme"} headers.
      */
-    public RequestHeadersBuilder scheme(String scheme) {
-        setters().scheme(scheme);
-        return this;
-    }
-
-    @Nullable
-    @Override
-    public String authority() {
-        final HttpHeadersBase getters = getters();
-        return getters != null ? getters.authority() : null;
-    }
+    RequestHeadersBuilder scheme(String scheme);
 
     /**
      * Sets the {@code ":authority"} headers.
      */
-    public RequestHeadersBuilder authority(String authority) {
-        setters().authority(authority);
-        return this;
-    }
+    RequestHeadersBuilder authority(String authority);
 
     // Override the return type of the chaining methods in the superclass.
 
     @Override
-    public RequestHeadersBuilder endOfStream(boolean endOfStream) {
-        return (RequestHeadersBuilder) super.endOfStream(endOfStream);
-    }
+    RequestHeadersBuilder sizeHint(int sizeHint);
 
     @Override
-    public RequestHeadersBuilder contentType(MediaType contentType) {
-        return (RequestHeadersBuilder) super.contentType(contentType);
-    }
+    RequestHeadersBuilder endOfStream(boolean endOfStream);
 
     @Override
-    public RequestHeadersBuilder add(CharSequence name, String value) {
-        return (RequestHeadersBuilder) super.add(name, value);
-    }
+    RequestHeadersBuilder contentType(MediaType contentType);
 
     @Override
-    public RequestHeadersBuilder add(CharSequence name, Iterable<String> values) {
-        return (RequestHeadersBuilder) super.add(name, values);
-    }
+    RequestHeadersBuilder add(CharSequence name, String value);
 
     @Override
-    public RequestHeadersBuilder add(CharSequence name, String... values) {
-        return (RequestHeadersBuilder) super.add(name, values);
-    }
+    RequestHeadersBuilder add(CharSequence name, Iterable<String> values);
 
     @Override
-    public RequestHeadersBuilder add(Iterable<? extends Entry<? extends CharSequence, String>> headers) {
-        return (RequestHeadersBuilder) super.add(headers);
-    }
+    RequestHeadersBuilder add(CharSequence name, String... values);
 
     @Override
-    public RequestHeadersBuilder addObject(CharSequence name, Object value) {
-        return (RequestHeadersBuilder) super.addObject(name, value);
-    }
+    RequestHeadersBuilder add(Iterable<? extends Entry<? extends CharSequence, String>> headers);
 
     @Override
-    public RequestHeadersBuilder addObject(CharSequence name, Iterable<?> values) {
-        return (RequestHeadersBuilder) super.addObject(name, values);
-    }
+    RequestHeadersBuilder addObject(CharSequence name, Object value);
 
     @Override
-    public RequestHeadersBuilder addObject(CharSequence name, Object... values) {
-        return (RequestHeadersBuilder) super.addObject(name, values);
-    }
+    RequestHeadersBuilder addObject(CharSequence name, Iterable<?> values);
 
     @Override
-    public RequestHeadersBuilder addObject(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
-        return (RequestHeadersBuilder) super.addObject(headers);
-    }
+    RequestHeadersBuilder addObject(CharSequence name, Object... values);
 
     @Override
-    public RequestHeadersBuilder addInt(CharSequence name, int value) {
-        return (RequestHeadersBuilder) super.addInt(name, value);
-    }
+    RequestHeadersBuilder addObject(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
 
     @Override
-    public RequestHeadersBuilder addLong(CharSequence name, long value) {
-        return (RequestHeadersBuilder) super.addLong(name, value);
-    }
+    RequestHeadersBuilder addInt(CharSequence name, int value);
 
     @Override
-    public RequestHeadersBuilder addFloat(CharSequence name, float value) {
-        return (RequestHeadersBuilder) super.addFloat(name, value);
-    }
+    RequestHeadersBuilder addLong(CharSequence name, long value);
 
     @Override
-    public RequestHeadersBuilder addDouble(CharSequence name, double value) {
-        return (RequestHeadersBuilder) super.addDouble(name, value);
-    }
+    RequestHeadersBuilder addFloat(CharSequence name, float value);
 
     @Override
-    public RequestHeadersBuilder addTimeMillis(CharSequence name, long value) {
-        return (RequestHeadersBuilder) super.addTimeMillis(name, value);
-    }
+    RequestHeadersBuilder addDouble(CharSequence name, double value);
 
     @Override
-    public RequestHeadersBuilder set(CharSequence name, String value) {
-        return (RequestHeadersBuilder) super.set(name, value);
-    }
+    RequestHeadersBuilder addTimeMillis(CharSequence name, long value);
 
     @Override
-    public RequestHeadersBuilder set(CharSequence name, Iterable<String> values) {
-        return (RequestHeadersBuilder) super.set(name, values);
-    }
+    RequestHeadersBuilder set(CharSequence name, String value);
 
     @Override
-    public RequestHeadersBuilder set(CharSequence name, String... values) {
-        return (RequestHeadersBuilder) super.set(name, values);
-    }
+    RequestHeadersBuilder set(CharSequence name, Iterable<String> values);
 
     @Override
-    public RequestHeadersBuilder set(Iterable<? extends Entry<? extends CharSequence, String>> headers) {
-        return (RequestHeadersBuilder) super.set(headers);
-    }
+    RequestHeadersBuilder set(CharSequence name, String... values);
 
     @Override
-    public RequestHeadersBuilder setIfAbsent(
-            Iterable<? extends Entry<? extends CharSequence, String>> headers) {
-        return (RequestHeadersBuilder) super.setIfAbsent(headers);
-    }
+    RequestHeadersBuilder set(Iterable<? extends Entry<? extends CharSequence, String>> headers);
 
     @Override
-    public RequestHeadersBuilder setObject(CharSequence name, Object value) {
-        return (RequestHeadersBuilder) super.setObject(name, value);
-    }
+    RequestHeadersBuilder setIfAbsent(
+            Iterable<? extends Entry<? extends CharSequence, String>> headers);
 
     @Override
-    public RequestHeadersBuilder setObject(CharSequence name, Iterable<?> values) {
-        return (RequestHeadersBuilder) super.setObject(name, values);
-    }
+    RequestHeadersBuilder setObject(CharSequence name, Object value);
 
     @Override
-    public RequestHeadersBuilder setObject(CharSequence name, Object... values) {
-        return (RequestHeadersBuilder) super.setObject(name, values);
-    }
+    RequestHeadersBuilder setObject(CharSequence name, Iterable<?> values);
 
     @Override
-    public RequestHeadersBuilder setObject(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
-        return (RequestHeadersBuilder) super.setObject(headers);
-    }
+    RequestHeadersBuilder setObject(CharSequence name, Object... values);
 
     @Override
-    public RequestHeadersBuilder setInt(CharSequence name, int value) {
-        return (RequestHeadersBuilder) super.setInt(name, value);
-    }
+    RequestHeadersBuilder setObject(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
 
     @Override
-    public RequestHeadersBuilder setLong(CharSequence name, long value) {
-        return (RequestHeadersBuilder) super.setLong(name, value);
-    }
+    RequestHeadersBuilder setInt(CharSequence name, int value);
 
     @Override
-    public RequestHeadersBuilder setFloat(CharSequence name, float value) {
-        return (RequestHeadersBuilder) super.setFloat(name, value);
-    }
+    RequestHeadersBuilder setLong(CharSequence name, long value);
 
     @Override
-    public RequestHeadersBuilder setDouble(CharSequence name, double value) {
-        return (RequestHeadersBuilder) super.setDouble(name, value);
-    }
+    RequestHeadersBuilder setFloat(CharSequence name, float value);
 
     @Override
-    public RequestHeadersBuilder setTimeMillis(CharSequence name, long value) {
-        return (RequestHeadersBuilder) super.setTimeMillis(name, value);
-    }
+    RequestHeadersBuilder setDouble(CharSequence name, double value);
 
     @Override
-    public RequestHeadersBuilder removeAndThen(CharSequence name) {
-        return (RequestHeadersBuilder) super.removeAndThen(name);
-    }
+    RequestHeadersBuilder setTimeMillis(CharSequence name, long value);
 
     @Override
-    public RequestHeadersBuilder clear() {
-        return (RequestHeadersBuilder) super.clear();
-    }
+    RequestHeadersBuilder removeAndThen(CharSequence name);
+
+    @Override
+    RequestHeadersBuilder clear();
 }

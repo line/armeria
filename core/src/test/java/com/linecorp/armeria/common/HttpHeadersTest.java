@@ -65,7 +65,7 @@ public class HttpHeadersTest {
 
     @Test
     public void contentType() {
-        final HttpHeadersBuilder headers = new HttpHeadersBuilder();
+        final HttpHeadersBuilder headers = HttpHeaders.builder();
 
         headers.contentType(ANY_TYPE);
         assertThat(headers.contentType()).isSameAs(ANY_TYPE);
@@ -92,7 +92,7 @@ public class HttpHeadersTest {
         final Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
         calendar.setTimeInMillis(instant.toEpochMilli());
 
-        final HttpHeadersBuilder headers = new HttpHeadersBuilder();
+        final HttpHeadersBuilder headers = HttpHeaders.builder();
         headers.setObject(DATE, date);
         headers.setObject(LAST_MODIFIED, instant);
         headers.setObject(IF_MODIFIED_SINCE, calendar);

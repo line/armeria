@@ -20,10 +20,9 @@ import javax.annotation.Nullable;
 /**
  * Provides the getter methods to {@link RequestHeaders} and {@link RequestHeadersBuilder}.
  *
- * @see HttpHeaderGetters
  * @see ResponseHeaderGetters
  */
-public interface RequestHeaderGetters extends HttpHeaderGetters {
+interface RequestHeaderGetters extends HttpHeaderGetters {
 
     /**
      * Returns the value of the {@code ":method"} header as an {@link HttpMethod}.

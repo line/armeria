@@ -60,7 +60,7 @@ final class DefaultRequestHeaders extends DefaultHttpHeaders implements RequestH
 
     @Override
     public RequestHeadersBuilder toBuilder() {
-        return new RequestHeadersBuilder(this);
+        return new DefaultRequestHeadersBuilder(this);
     }
 
     @Override

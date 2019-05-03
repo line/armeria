@@ -67,7 +67,7 @@ class DefaultHttpHeaders extends HttpHeadersBase implements HttpHeaders {
 
     @Override
     public HttpHeadersBuilder toBuilder() {
-        return new HttpHeadersBuilder(this);
+        return new DefaultHttpHeadersBuilder(this);
     }
 
     @Override

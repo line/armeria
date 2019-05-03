@@ -26,7 +26,7 @@ public class ResponseHeadersBuilderTest {
     @Test
     public void mutationAfterBuild() {
         final ResponseHeaders headers = ResponseHeaders.of(200);
-        final ResponseHeadersBuilder builder = headers.toBuilder();
+        final DefaultResponseHeadersBuilder builder = (DefaultResponseHeadersBuilder) headers.toBuilder();
 
         // Initial state
         assertThat(builder.parent()).isSameAs(headers);
@@ -75,7 +75,7 @@ public class ResponseHeadersBuilderTest {
     @Test
     public void noMutationNoCopy() {
         final ResponseHeaders headers = ResponseHeaders.of(200);
-        final ResponseHeadersBuilder builder = headers.toBuilder();
+        final DefaultResponseHeadersBuilder builder = (DefaultResponseHeadersBuilder) headers.toBuilder();
         assertThat(builder.build()).isSameAs(headers);
         assertThat(builder.delegate()).isNull();
     }

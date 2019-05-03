@@ -18,10 +18,9 @@ package com.linecorp.armeria.common;
 /**
  * Provides the getter methods to {@link ResponseHeaders} and {@link ResponseHeadersBuilder}.
  *
- * @see HttpHeaderGetters
  * @see RequestHeaderGetters
  */
-public interface ResponseHeaderGetters extends HttpHeaderGetters {
+interface ResponseHeaderGetters extends HttpHeaderGetters {
     /**
      * Returns the value of the {@code ":status"} header as an {@link HttpStatus}.
      * If the value is malformed, {@link HttpStatus#UNKNOWN} will be returned.

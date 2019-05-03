@@ -23,7 +23,6 @@ import java.util.function.Consumer;
 /**
  * Immutable HTTP/2 headers for an {@link HttpResponse}.
  *
- * @see ResponseHeadersBuilder
  * @see RequestHeaders
  */
 public interface ResponseHeaders extends HttpHeaders, ResponseHeaderGetters {
@@ -32,7 +31,7 @@ public interface ResponseHeaders extends HttpHeaders, ResponseHeaderGetters {
      * Creates a new empty builder.
      */
     static ResponseHeadersBuilder builder() {
-        return new ResponseHeadersBuilder();
+        return new DefaultResponseHeadersBuilder();
     }
 
     /**
