@@ -152,6 +152,7 @@ public enum BuiltInProperty {
     private static final Map<String, BuiltInProperty> mdcKeyToEnum;
 
     static final String WILDCARD_STR = "*";
+    static final String WILDCARD_REGEX = '\\' + WILDCARD_STR;
 
     static {
         final ImmutableMap.Builder<String, BuiltInProperty> builder = ImmutableMap.builder();
@@ -163,7 +164,7 @@ public enum BuiltInProperty {
 
     static List<BuiltInProperty> findByMdcKeyPattern(String mdcKeyPattern) {
         final Pattern pattern = Pattern.compile(
-                ("\\Q" + mdcKeyPattern + "\\E").replace(WILDCARD_STR, "\\E.*\\Q"));
+                ("\\Q" + mdcKeyPattern + "\\E").replaceAll(WILDCARD_REGEX, "\\\\E.*\\\\Q"));
         final List<BuiltInProperty> matchedBuiltInProperties = new ArrayList<>();
         mdcKeyToEnum.forEach((mdcKey, property) -> {
             if (pattern.matcher(mdcKey).matches()) {

@@ -42,13 +42,24 @@ public class RequestContextExporterBuilderTest {
     }
 
     @Test
-    public void testExportWithWildcards() throws Exception {
+    public void testExportWithWildcard() throws Exception {
         final RequestContextExporterBuilder builder = new RequestContextExporterBuilder();
         final BuiltInProperty[] expectedProperties =
                 Arrays.stream(BuiltInProperty.values())
                       .filter(p -> p.mdcKey.startsWith("req."))
                       .toArray(BuiltInProperty[]::new);
         builder.export("req.*");
+        assertThat(builder.getBuiltIns()).containsExactly(expectedProperties);
+    }
+
+    @Test
+    public void testExportWithWildcards() throws Exception {
+        final RequestContextExporterBuilder builder = new RequestContextExporterBuilder();
+        final BuiltInProperty[] expectedProperties =
+                Arrays.stream(BuiltInProperty.values())
+                      .filter(p -> p.mdcKey.contains("rpc"))
+                      .toArray(BuiltInProperty[]::new);
+        builder.export("*rpc*");
         assertThat(builder.getBuiltIns()).containsExactly(expectedProperties);
     }
 
