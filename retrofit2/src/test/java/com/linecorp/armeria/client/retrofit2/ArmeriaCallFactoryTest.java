@@ -287,7 +287,7 @@ public class ArmeriaCallFactoryTest {
                                              "{\"name\":\"Cony\", \"age\":26}");
                   }
               });
-            sb.defaultRequestTimeout(Duration.of(30, ChronoUnit.SECONDS));
+            sb.requestTimeout(Duration.of(30, ChronoUnit.SECONDS));
         }
     };
 

@@ -22,15 +22,14 @@ import static com.linecorp.armeria.internal.docs.DocServiceUtil.unifyFilter;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Descriptors.ServiceDescriptor;
 
 import com.linecorp.armeria.common.HttpRequest;
@@ -50,10 +49,8 @@ import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceImplBase;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.PathMapping;
-import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceWithPathMappings;
-import com.linecorp.armeria.server.VirtualHost;
-import com.linecorp.armeria.server.VirtualHostBuilder;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.EnumInfo;
@@ -175,30 +172,27 @@ public class GrpcDocServicePluginTest {
     }
 
     private static Map<String, ServiceInfo> services(DocServiceFilter include, DocServiceFilter exclude) {
-        final VirtualHost vhost = new VirtualHostBuilder().build();
-        final Set<ServiceConfig> serviceCfgs = new HashSet<>();
+        final ServerBuilder serverBuilder = new ServerBuilder();
 
         // The case where a GrpcService is added to ServerBuilder without a prefix.
         final ServiceWithPathMappings<HttpRequest, HttpResponse> prefixlessService =
                 new GrpcServiceBuilder().addService(mock(TestServiceImplBase.class)).build();
-        prefixlessService.pathMappings().forEach(
-                mapping -> serviceCfgs.add(new ServiceConfig(vhost, mapping, prefixlessService)));
+        serverBuilder.service(prefixlessService);
 
         // The case where a GrpcService is added to ServerBuilder with a prefix.
-        serviceCfgs.add(new ServiceConfig(
-                new VirtualHostBuilder().build(),
+        serverBuilder.service(
                 PathMapping.ofPrefix("/test"),
-                new GrpcServiceBuilder().addService(mock(UnitTestServiceImplBase.class)).build()));
+                new GrpcServiceBuilder().addService(mock(UnitTestServiceImplBase.class)).build());
 
         // Another GrpcService with a different prefix.
-        serviceCfgs.add(new ServiceConfig(
-                new VirtualHostBuilder().build(),
+        serverBuilder.service(
                 PathMapping.ofPrefix("/reconnect"),
-                new GrpcServiceBuilder().addService(mock(ReconnectServiceImplBase.class)).build()));
+                new GrpcServiceBuilder().addService(mock(ReconnectServiceImplBase.class)).build());
 
         // Make sure all services and their endpoints exist in the specification.
         final ServiceSpecification specification = generator.generateSpecification(
-                serviceCfgs, unifyFilter(include, exclude));
+                ImmutableSet.copyOf(serverBuilder.build().serviceConfigs()),
+                unifyFilter(include, exclude));
         return specification
                 .services()
                 .stream()

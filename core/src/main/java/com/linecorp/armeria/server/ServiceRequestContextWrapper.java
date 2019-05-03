@@ -164,6 +164,11 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
+    public boolean verboseResponses() {
+        return delegate().verboseResponses();
+    }
+
+    @Override
     public HttpHeaders additionalResponseHeaders() {
         return delegate().additionalResponseHeaders();
     }

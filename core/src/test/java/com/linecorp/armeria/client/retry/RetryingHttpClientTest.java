@@ -404,7 +404,7 @@ public class RetryingHttpClientTest {
 
         final HttpClient client = new HttpClientBuilder(server.uri("/"))
                 .factory(factory)
-                .defaultResponseTimeoutMillis(10000)
+                .responseTimeoutMillis(10000)
                 .decorator(new RetryingHttpClientBuilder(
                         // Retry after 8000 which is slightly less than responseTimeoutMillis(10000).
                         RetryStrategy.onServerErrorStatus(Backoff.fixed(8000))).newDecorator())
@@ -493,7 +493,7 @@ public class RetryingHttpClientTest {
     private HttpClient client(RetryStrategy strategy, long responseTimeoutMillis,
                               long responseTimeoutForEach, int maxTotalAttempts) {
         return new HttpClientBuilder(server.uri("/"))
-                .factory(clientFactory).defaultResponseTimeoutMillis(responseTimeoutMillis)
+                .factory(clientFactory).responseTimeoutMillis(responseTimeoutMillis)
                 .decorator(new RetryingHttpClientBuilder(strategy)
                                    .responseTimeoutMillisForEachAttempt(responseTimeoutForEach)
                                    .useRetryAfter(true)

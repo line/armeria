@@ -52,8 +52,7 @@ import io.netty.util.AsciiString;
  * @see ChainedCorsPolicyBuilder
  * @see CorsPolicyBuilder
  */
-@SuppressWarnings("rawtypes")
-abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
+abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder<B>> {
     private final Set<String> origins;
     private final List<PathMapping> pathMappings = new ArrayList<>();
     private boolean credentialsAllowed;
@@ -81,7 +80,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
     }
 
     @SuppressWarnings("unchecked")
-    B self() {
+    final B self() {
         return (B) this;
     }
 
@@ -137,10 +136,11 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder> {
      */
     public B pathMapping(PathMapping pathMapping) {
         requireNonNull(pathMapping, "pathMapping");
-        checkArgument(pathMapping.hasPathPatternOnly(),
-                      "pathMapping: %s " +
-                      "(expected: the path mapping which has only the path patterns as its condition)",
-                      pathMapping.getClass().getSimpleName());
+        if (!pathMapping.hasPathPatternOnly()) {
+            throw new IllegalArgumentException(
+                    "pathMapping: " + pathMapping.getClass().getSimpleName() +
+                    " (expected: the path mapping which has only the path patterns as its condition)");
+        }
         pathMappings.add(pathMapping);
         return self();
     }

@@ -28,10 +28,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.Collections;
-import java.util.EnumSet;
 import java.util.IdentityHashMap;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -96,14 +93,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     private static final MediaType ERROR_CONTENT_TYPE = MediaType.PLAIN_TEXT_UTF_8;
 
-    // Note: Use EnumSet to ensure the iteration order is always same.
-    private static final Set<HttpMethod> ALLOWED_METHODS =
-            Collections.unmodifiableSet(EnumSet.of(
-                    HttpMethod.OPTIONS, HttpMethod.GET, HttpMethod.HEAD, HttpMethod.POST,
-                    HttpMethod.PUT, HttpMethod.PATCH, HttpMethod.DELETE, HttpMethod.TRACE));
-
     private static final String ALLOWED_METHODS_STRING =
-            ALLOWED_METHODS.stream().map(HttpMethod::name).collect(Collectors.joining(","));
+            HttpMethod.knownMethods().stream().map(HttpMethod::name).collect(Collectors.joining(","));
 
     private static final String MSG_MISSING_REQUEST_PATH = HttpStatus.BAD_REQUEST + "\nMissing request path";
     private static final String MSG_INVALID_REQUEST_PATH = HttpStatus.BAD_REQUEST + "\nInvalid request path";
@@ -339,9 +330,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final String hostname = hostname(ctx, headers);
         final VirtualHost host = config.findVirtualHost(hostname);
 
-        final PathMappingContext mappingCtx = DefaultPathMappingContext.of(
-                host, hostname, pathAndQuery.path(), pathAndQuery.query(), headers,
-                host.producibleMediaTypes(), isCorsPreflightRequest(req));
+        final PathMappingContext mappingCtx =
+                DefaultPathMappingContext.of(host, hostname, pathAndQuery.path(), pathAndQuery.query(),
+                                             headers, isCorsPreflightRequest(req));
         // Find the service that matches the path.
         final PathMapped<ServiceConfig> mapped;
         try {

@@ -189,13 +189,11 @@ public class ContentPreviewerTest {
 
         void build(ServerBuilder sb) {
             sb.contentPreview(10, StandardCharsets.UTF_8);
-            sb.decorator(delegate -> {
-                return (ctx, req) -> {
-                    if (waitingFuture != null) {
-                        ctx.log().addListener(waitingFuture::complete, RequestLogAvailability.COMPLETE);
-                    }
-                    return delegate.serve(ctx, req);
-                };
+            sb.decorator(delegate -> (ctx, req) -> {
+                if (waitingFuture != null) {
+                    ctx.log().addListener(waitingFuture::complete, RequestLogAvailability.COMPLETE);
+                }
+                return delegate.serve(ctx, req);
             });
             sb.annotatedService("/example", new Object() {
                 @Get("/get")

@@ -71,21 +71,17 @@ class SniServerTest {
             dnsResolver.add("mismatch.com", NetUtil.LOCALHOST4);
             dnsResolver.add("127.0.0.1", NetUtil.LOCALHOST4);
 
-            final VirtualHostBuilder a = new VirtualHostBuilder("a.com");
-            final VirtualHostBuilder b = new VirtualHostBuilder("b.com");
-            final VirtualHostBuilder c = new VirtualHostBuilder("c.com");
-
-            a.service("/", new SniTestService("a.com"));
-            b.service("/", new SniTestService("b.com"));
-            c.service("/", new SniTestService("c.com"));
-
-            a.tls(sscA.certificateFile(), sscA.privateKeyFile());
-            b.tls(sscB.certificateFile(), sscB.privateKeyFile());
-            c.tls(sscC.certificateFile(), sscC.privateKeyFile());
-
-            sb.virtualHost(a.build());
-            sb.virtualHost(b.build());
-            sb.defaultVirtualHost(c.build());
+            sb.withVirtualHost("a.com")
+              .service("/", new SniTestService("a.com"))
+              .tls(sscA.certificateFile(), sscA.privateKeyFile())
+              .and()
+              .withVirtualHost("b.com")
+              .service("/", new SniTestService("b.com"))
+              .tls(sscB.certificateFile(), sscB.privateKeyFile());
+            sb.withDefaultVirtualHost()
+              .defaultHostname("c.com")
+              .service("/", new SniTestService("c.com"))
+              .tls(sscC.certificateFile(), sscC.privateKeyFile());
         }
     };
 

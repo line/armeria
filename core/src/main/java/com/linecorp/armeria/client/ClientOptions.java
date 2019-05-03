@@ -17,15 +17,14 @@
 package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.client.ClientOption.DECORATION;
-import static com.linecorp.armeria.client.ClientOption.DEFAULT_MAX_RESPONSE_LENGTH;
-import static com.linecorp.armeria.client.ClientOption.DEFAULT_RESPONSE_TIMEOUT_MILLIS;
-import static com.linecorp.armeria.client.ClientOption.DEFAULT_WRITE_TIMEOUT_MILLIS;
 import static com.linecorp.armeria.client.ClientOption.HTTP_HEADERS;
+import static com.linecorp.armeria.client.ClientOption.MAX_RESPONSE_LENGTH;
 import static com.linecorp.armeria.client.ClientOption.REQ_CONTENT_PREVIEWER_FACTORY;
+import static com.linecorp.armeria.client.ClientOption.RESPONSE_TIMEOUT_MILLIS;
 import static com.linecorp.armeria.client.ClientOption.RES_CONTENT_PREVIEWER_FACTORY;
+import static com.linecorp.armeria.client.ClientOption.WRITE_TIMEOUT_MILLIS;
 import static java.util.Objects.requireNonNull;
 
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -50,8 +49,6 @@ import io.netty.util.AsciiString;
  */
 public final class ClientOptions extends AbstractOptions {
 
-    private static final Long DEFAULT_DEFAULT_WRITE_TIMEOUT_MILLIS = Duration.ofSeconds(1).toMillis();
-
     private static final Collection<AsciiString> BLACKLISTED_HEADER_NAMES =
             Collections.unmodifiableCollection(Arrays.asList(
                     HttpHeaderNames.CONNECTION,
@@ -72,9 +69,9 @@ public final class ClientOptions extends AbstractOptions {
                     ExtensionHeaderNames.STREAM_PROMISE_ID.text()));
 
     private static final ClientOptionValue<?>[] DEFAULT_OPTIONS = {
-            DEFAULT_WRITE_TIMEOUT_MILLIS.newValue(DEFAULT_DEFAULT_WRITE_TIMEOUT_MILLIS),
-            DEFAULT_RESPONSE_TIMEOUT_MILLIS.newValue(Flags.defaultResponseTimeoutMillis()),
-            DEFAULT_MAX_RESPONSE_LENGTH.newValue(Flags.defaultMaxResponseLength()),
+            WRITE_TIMEOUT_MILLIS.newValue(Flags.defaultWriteTimeoutMillis()),
+            RESPONSE_TIMEOUT_MILLIS.newValue(Flags.defaultResponseTimeoutMillis()),
+            MAX_RESPONSE_LENGTH.newValue(Flags.defaultMaxResponseLength()),
             DECORATION.newValue(ClientDecoration.NONE),
             HTTP_HEADERS.newValue(HttpHeaders.EMPTY_HEADERS)
     };
@@ -214,24 +211,54 @@ public final class ClientOptions extends AbstractOptions {
     }
 
     /**
-     * Returns the default timeout of a server reply to a client call.
+     * Returns the timeout of a socket write.
+     *
+     * @deprecated Use {@link #writeTimeoutMillis()}.
      */
-    public long defaultResponseTimeoutMillis() {
-        return getOrElse(DEFAULT_RESPONSE_TIMEOUT_MILLIS, Flags.defaultResponseTimeoutMillis());
+    @Deprecated
+    public long defaultWriteTimeoutMillis() {
+        return writeTimeoutMillis();
     }
 
     /**
-     * Returns the default timeout of a socket write.
+     * Returns the timeout of a socket write.
      */
-    public long defaultWriteTimeoutMillis() {
-        return getOrElse(DEFAULT_WRITE_TIMEOUT_MILLIS, DEFAULT_DEFAULT_WRITE_TIMEOUT_MILLIS);
+    public long writeTimeoutMillis() {
+        return getOrElse(WRITE_TIMEOUT_MILLIS, Flags.defaultWriteTimeoutMillis());
+    }
+
+    /**
+     * Returns the timeout of a server reply to a client call.
+     *
+     * @deprecated Use {@link #responseTimeoutMillis()}.
+     */
+    @Deprecated
+    public long defaultResponseTimeoutMillis1() {
+        return responseTimeoutMillis();
+    }
+
+    /**
+     * Returns the timeout of a server reply to a client call.
+     */
+    public long responseTimeoutMillis() {
+        return getOrElse(RESPONSE_TIMEOUT_MILLIS, Flags.defaultResponseTimeoutMillis());
+    }
+
+    /**
+     * Returns the maximum allowed length of a server response.
+     *
+     * @deprecated Use {@link #maxResponseLength()}.
+     */
+    @Deprecated
+    public long defaultMaxResponseLength() {
+        return maxResponseLength();
     }
 
     /**
      * Returns the maximum allowed length of a server response.
      */
-    public long defaultMaxResponseLength() {
-        return getOrElse(DEFAULT_MAX_RESPONSE_LENGTH, Flags.defaultMaxResponseLength());
+    public long maxResponseLength() {
+        return getOrElse(MAX_RESPONSE_LENGTH, Flags.defaultMaxResponseLength());
     }
 
     /**

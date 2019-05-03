@@ -51,10 +51,8 @@ import com.linecorp.armeria.server.TransientService;
  * <h2>Example:</h2>
  * <pre>{@code
  * Server server = new ServerBuilder()
- *         .defaultVirtualHost(new VirtualHostBuilder()
- *                 .service("/rpc", new THttpService(myHandler))
- *                 .service("/health", new HttpHealthCheckService())
- *                 .build())
+ *         .service("/services", myService)
+ *         .service("/health", new HttpHealthCheckService())
  *         .build();
  * }</pre>
  *
@@ -66,10 +64,8 @@ import com.linecorp.armeria.server.TransientService;
  * <pre>{@code
  * SettableHealthChecker healthChecker = new SettableHealthChecker();
  * Server server = new ServerBuilder()
- *         .defaultVirtualHost(new VirtualHostBuilder()
- *                 .service("/rpc", new THttpService(myHandler))
- *                 .service("/health", new HttpHealthCheckService(healthChecker))
- *                 .build())
+ *         .service("/services", myService)
+ *         .service("/health", new HttpHealthCheckService(healthChecker))
  *         .build();
  * }</pre>
  */

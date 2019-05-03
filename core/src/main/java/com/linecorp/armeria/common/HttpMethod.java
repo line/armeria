@@ -32,6 +32,11 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.EnumSet;
+import java.util.Set;
+
+import com.google.common.collect.ImmutableSet;
+
 /**
  * HTTP request method.
  */
@@ -103,6 +108,14 @@ public enum HttpMethod {
      */
     UNKNOWN;
 
+    private static final Set<HttpMethod> knownMethods;
+
+    static {
+        final Set<HttpMethod> allMethods = EnumSet.allOf(HttpMethod.class);
+        allMethods.remove(UNKNOWN);
+        knownMethods = ImmutableSet.copyOf(allMethods);
+    }
+
     /**
      * Returns whether the specified {@link String} is one of the supported method names.
      *
@@ -124,5 +137,12 @@ public enum HttpMethod {
         }
 
         return false;
+    }
+
+    /**
+     * Returns all {@link HttpMethod}s except {@link #UNKNOWN}.
+     */
+    public static Set<HttpMethod> knownMethods() {
+        return knownMethods;
     }
 }

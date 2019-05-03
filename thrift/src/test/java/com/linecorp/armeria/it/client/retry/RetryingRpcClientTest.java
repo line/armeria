@@ -167,7 +167,7 @@ public class RetryingRpcClientTest {
                 };
 
         final HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift"))
-                .defaultResponseTimeoutMillis(10000)
+                .responseTimeoutMillis(10000)
                 .factory(factory)
                 .rpcDecorator(new RetryingRpcClientBuilder(strategy).newDecorator())
                 .build(HelloService.Iface.class);

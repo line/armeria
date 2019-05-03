@@ -148,7 +148,7 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
     @Test
     public void testHeapdump() throws Exception {
         final HttpClient client = Clients.newDerivedClient(this.client, options -> {
-            return new ClientOptionsBuilder(options).defaultMaxResponseLength(0).build();
+            return new ClientOptionsBuilder(options).maxResponseLength(0).build();
         });
 
         final HttpResponse res = client.get("/internal/actuator/heapdump");

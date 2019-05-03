@@ -85,7 +85,7 @@ public class ArmeriaCallFactoryLargeStreamTest {
                     }));
                 }
             });
-            sb.defaultRequestTimeout(Duration.of(30, ChronoUnit.SECONDS));
+            sb.requestTimeout(Duration.of(30, ChronoUnit.SECONDS));
         }
     };
 
@@ -95,8 +95,8 @@ public class ArmeriaCallFactoryLargeStreamTest {
                 .baseUrl(server.uri("/"))
                 .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
                 .withClientOptions((s, clientOptionsBuilder) -> {
-                    clientOptionsBuilder.defaultMaxResponseLength(Long.MAX_VALUE);
-                    clientOptionsBuilder.defaultResponseTimeout(Duration.of(30, ChronoUnit.SECONDS));
+                    clientOptionsBuilder.maxResponseLength(Long.MAX_VALUE);
+                    clientOptionsBuilder.responseTimeout(Duration.of(30, ChronoUnit.SECONDS));
                     return clientOptionsBuilder;
                 })
                 .build()

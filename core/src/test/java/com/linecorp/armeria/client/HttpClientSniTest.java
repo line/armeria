@@ -39,7 +39,6 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.VirtualHostBuilder;
 import com.linecorp.armeria.testing.internal.MockAddressResolverGroup;
 
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -55,27 +54,24 @@ public class HttpClientSniTest {
     private static final SelfSignedCertificate sscB;
 
     static {
-        final ServerBuilder sb = new ServerBuilder();
-
         try {
+            final ServerBuilder sb = new ServerBuilder();
             sscA = new SelfSignedCertificate("a.com");
             sscB = new SelfSignedCertificate("b.com");
 
-            final VirtualHostBuilder a = new VirtualHostBuilder("a.com");
-            final VirtualHostBuilder b = new VirtualHostBuilder("b.com");
+            sb.withVirtualHost("a.com")
+              .service("/", new SniTestService("a.com"))
+              .tls(sscA.certificate(), sscA.privateKey())
+              .and()
+              .withDefaultVirtualHost()
+              .defaultHostname("b.com")
+              .service("/", new SniTestService("b.com"))
+              .tls(sscB.certificate(), sscB.privateKey());
 
-            a.service("/", new SniTestService("a.com"));
-            b.service("/", new SniTestService("b.com"));
-
-            a.tls(sscA.certificate(), sscA.privateKey());
-            b.tls(sscB.certificate(), sscB.privateKey());
-
-            sb.virtualHost(a.build());
-            sb.defaultVirtualHost(b.build());
+            server = sb.build();
         } catch (Exception e) {
             throw new Error(e);
         }
-        server = sb.build();
     }
 
     @BeforeClass

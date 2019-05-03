@@ -19,8 +19,8 @@ Using ``ClientBuilder``
     int writeTimeout = 10;
 
     HelloService.Iface client = new ClientBuilder("tbinary+http://example.com/hello")
-            .defaultResponseTimeout(Duration.ofSeconds(responseTimeout))
-            .defaultWriteTimeout(Duration.ofSeconds(writeTimeout))
+            .responseTimeout(Duration.ofSeconds(responseTimeout))
+            .writeTimeout(Duration.ofSeconds(writeTimeout))
             .build(HelloService.Iface.class);
 
 Using ``ClientOptionsBuilder``
@@ -43,8 +43,8 @@ Using ``ClientOptionsBuilder``
             "tbinary+http://example.com/hello",
             HelloService.Iface.class,
             new ClientOptionsBuilder()
-                    .defaultResponseTimeout(Duration.ofSeconds(responseTimeout))
-                    .defaultWriteTimeout(Duration.ofSeconds(writeTimeout))
+                    .responseTimeout(Duration.ofSeconds(responseTimeout))
+                    .writeTimeout(Duration.ofSeconds(writeTimeout))
                     .build()
     );
 
@@ -86,6 +86,10 @@ prefer setting it programmatically:
 - ``-Dcom.linecorp.armeria.defaultConnectTimeoutMillis=<integer>``
 
   - the default client-side timeout of a socket connection attempt in milliseconds. Default: ``3200``
+
+- ``-Dcom.linecorp.armeria.defaultWriteTimeoutMillis=<integer>``
+
+  - the default client-side timeout of a socket write attempt in milliseconds. Default: ``1000``
 
 - ``-Dcom.linecorp.armeria.defaultResponseTimeoutMillis=<integer>``
 

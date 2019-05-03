@@ -120,8 +120,14 @@ public final class Server implements AutoCloseable {
     }
 
     /**
-     * Returns the hostname of the default {@link VirtualHost}, which is the hostname of the machine unless
-     * configured explicitly via {@link ServerBuilder#defaultVirtualHost(VirtualHost)}.
+     * Returns the information of all available {@link Service}s in the {@link Server}.
+     */
+    public List<ServiceConfig> serviceConfigs() {
+        return config.serviceConfigs();
+    }
+
+    /**
+     * Returns the hostname of the default {@link VirtualHost}, which is the hostname of the machine.
      */
     public String defaultHostname() {
         return config().defaultVirtualHost().defaultHostname();

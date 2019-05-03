@@ -63,7 +63,7 @@ public class HttpResponseSubscriberTest {
                                             .eventLoop(EventLoopGroups.directEventLoop())
                                             .serverConfigurator(sb -> {
                                                 sb.contentPreview(100);
-                                                sb.defaultRequestTimeoutMillis(0);
+                                                sb.requestTimeoutMillis(0);
                                             })
                                             .build();
     }

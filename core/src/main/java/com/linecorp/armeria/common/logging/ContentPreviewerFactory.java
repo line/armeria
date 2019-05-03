@@ -115,7 +115,7 @@ public interface ContentPreviewerFactory {
 
     /**
      * Creates a new instance of {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer}
-     * through {@code supplier} if a request/response mathces any of {@code contentTypes}.
+     * through {@code supplier} if a request/response matches any of {@code contentTypes}.
      */
     static ContentPreviewerFactory of(Supplier<? extends ContentPreviewer> supplier,
                                       Iterable<MediaType> contentTypes) {
@@ -129,7 +129,7 @@ public interface ContentPreviewerFactory {
 
     /**
      * Creates a new instance of {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer}
-     * through {@code supplier} if a request/response mathces any of {@code contentTypes}.
+     * through {@code supplier} if a request/response matches any of {@code contentTypes}.
      */
     static ContentPreviewerFactory of(Supplier<? extends ContentPreviewer> supplier,
                                       MediaType... contentTypes) {
@@ -138,16 +138,16 @@ public interface ContentPreviewerFactory {
 
     /**
      * Creates a new instance of {@link ContentPreviewerFactory} which creates a {@link ContentPreviewer}
-     * through {@code supplier} if the content type of a request/response mathces any of {@code contentTypes}.
+     * through {@code supplier} if the content type of a request/response matches any of {@code contentTypes}.
      */
     static ContentPreviewerFactory of(Supplier<? extends ContentPreviewer> supplier, String... contentTypes) {
         return of(supplier, Arrays.stream(contentTypes).map(MediaType::parse).collect(Collectors.toList()));
     }
 
     /**
-     * Creates a new instance of {@link ContentPreviewerFactory} creating a {@link ContentPreviewer}
+     * Creates a new instance of {@link ContentPreviewerFactory} for creating a {@link ContentPreviewer}
      * which produces the text with the maximum {@code length}
-     * if the content type of a request/response mathces any of {@code contentTypes}.
+     * if the content type of a request/response matches any of {@code contentTypes}.
      */
     static ContentPreviewerFactory ofText(int length, Charset defaultCharset,
                                           Iterable<MediaType> contentTypes) {
@@ -159,16 +159,16 @@ public interface ContentPreviewerFactory {
     }
 
     /**
-     * Creates a new instance of {@link ContentPreviewerFactory} creating a {@link ContentPreviewer}
+     * Creates a new instance of {@link ContentPreviewerFactory} for creating a {@link ContentPreviewer}
      * which produces the text with the maximum {@code length}
-     * if the content type of a request/response mathces any of {@code contentTypes}.
+     * if the content type of a request/response matches any of {@code contentTypes}.
      */
     static ContentPreviewerFactory ofText(int length, Charset defaultCharset, MediaType... contentTypes) {
         return ofText(length, defaultCharset, Arrays.asList(contentTypes));
     }
 
     /**
-     * Creates a new instance of {@link ContentPreviewerFactory} creating a {@link ContentPreviewer}
+     * Creates a new instance of {@link ContentPreviewerFactory} for creating a {@link ContentPreviewer}
      * which produces the text with the maximum {@code length} limit
      * if the content type of a request/response matches any of {@code contentTypes}.
      */
@@ -178,10 +178,10 @@ public interface ContentPreviewerFactory {
     }
 
     /**
-     * Creates a new instance of {@link ContentPreviewerFactory} creating a {@link ContentPreviewer}
-     * which produces the text with the maximum {@code length} limit
+     * Creates a new instance of {@link ContentPreviewerFactory} for creating a {@link ContentPreviewer}.
+     * The previewer produces the text with the maximum {@code length} limit
      * if the content type of a request/response meets
-     * any of the following cases.
+     * any of the following conditions:
      * <ul>
      *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
      *     <li>when its charset has been specified</li>
@@ -189,9 +189,9 @@ public interface ContentPreviewerFactory {
      *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
      * </ul>
      *
-     * @param length the maximum length of the preview.
-     * @param defaultCharset the default charset for a request/response with unspecified charset in
-     *                       {@code "content-type"} header.
+     * @param length the maximum length of the preview
+     * @param defaultCharset the default charset used when a charset is not specified in the
+     *                       {@code "content-type"} header
      */
     static ContentPreviewerFactory ofText(int length, Charset defaultCharset) {
         if (length == 0) {
@@ -201,10 +201,10 @@ public interface ContentPreviewerFactory {
     }
 
     /**
-     * Creates a new instance of {@link ContentPreviewerFactory} creating a {@link ContentPreviewer}
-     * which produces the text with the maximum {@code length} limit
+     * Creates a new instance of {@link ContentPreviewerFactory} for creating a {@link ContentPreviewer}.
+     * The previewer produces the text with the maximum {@code length} limit
      * if the content type of a request/response meets
-     * any of the following cases.
+     * any of the following conditions:
      * <ul>
      *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
      *     <li>when its charset has been specified</li>

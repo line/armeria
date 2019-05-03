@@ -66,10 +66,12 @@ public final class ServerConfig {
     private final boolean shutdownWorkerGroupOnStop;
     private final Executor startStopExecutor;
     private final int maxNumConnections;
-    private final long defaultRequestTimeoutMillis;
+
+    private final long requestTimeoutMillis;
     private final long idleTimeoutMillis;
-    private final long defaultMaxRequestLength;
+    private final long maxRequestLength;
     private final boolean verboseResponses;
+
     private final int http2InitialConnectionWindowSize;
     private final int http2InitialStreamWindowSize;
     private final long http2MaxStreamsPerConnection;
@@ -109,7 +111,7 @@ public final class ServerConfig {
             VirtualHost defaultVirtualHost, Iterable<VirtualHost> virtualHosts,
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop, Executor startStopExecutor,
             int maxNumConnections, long idleTimeoutMillis,
-            long defaultRequestTimeoutMillis, long defaultMaxRequestLength, boolean verboseResponses,
+            long requestTimeoutMillis, long maxRequestLength, boolean verboseResponses,
             int http2InitialConnectionWindowSize, int http2InitialStreamWindowSize,
             long http2MaxStreamsPerConnection, int http2MaxFrameSize, long http2MaxHeaderListSize,
             int http1MaxInitialLineLength, int http1MaxHeaderSize, int http1MaxChunkSize,
@@ -133,8 +135,8 @@ public final class ServerConfig {
         this.startStopExecutor = requireNonNull(startStopExecutor, "startStopExecutor");
         this.maxNumConnections = validateMaxNumConnections(maxNumConnections);
         this.idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeoutMillis);
-        this.defaultRequestTimeoutMillis = validateDefaultRequestTimeoutMillis(defaultRequestTimeoutMillis);
-        this.defaultMaxRequestLength = validateDefaultMaxRequestLength(defaultMaxRequestLength);
+        this.requestTimeoutMillis = validateRequestTimeoutMillis(requestTimeoutMillis);
+        this.maxRequestLength = validateMaxRequestLength(maxRequestLength);
         this.verboseResponses = verboseResponses;
         this.http2InitialConnectionWindowSize = http2InitialConnectionWindowSize;
         this.http2InitialStreamWindowSize = http2InitialStreamWindowSize;
@@ -241,20 +243,19 @@ public final class ServerConfig {
         return idleTimeoutMillis;
     }
 
-    static long validateDefaultRequestTimeoutMillis(long defaultRequestTimeoutMillis) {
-        if (defaultRequestTimeoutMillis < 0) {
+    static long validateRequestTimeoutMillis(long requestTimeoutMillis) {
+        if (requestTimeoutMillis < 0) {
             throw new IllegalArgumentException(
-                    "defaultRequestTimeoutMillis: " + defaultRequestTimeoutMillis + " (expected: >= 0)");
+                    "requestTimeoutMillis: " + requestTimeoutMillis + " (expected: >= 0)");
         }
-        return defaultRequestTimeoutMillis;
+        return requestTimeoutMillis;
     }
 
-    static long validateDefaultMaxRequestLength(long defaultMaxRequestLength) {
-        if (defaultMaxRequestLength < 0) {
-            throw new IllegalArgumentException(
-                    "defaultMaxRequestLength: " + defaultMaxRequestLength + " (expected: >= 0)");
+    static long validateMaxRequestLength(long maxRequestLength) {
+        if (maxRequestLength < 0) {
+            throw new IllegalArgumentException("maxRequestLength: " + maxRequestLength + " (expected: >= 0)");
         }
-        return defaultMaxRequestLength;
+        return maxRequestLength;
     }
 
     static int validateNonNegative(int value, String fieldName) {
@@ -426,24 +427,54 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns the default timeout of a request.
+     * Returns the timeout of a request.
+     *
+     * @deprecated Use {@link #requestTimeoutMillis()}.
      */
+    @Deprecated
     public long defaultRequestTimeoutMillis() {
-        return defaultRequestTimeoutMillis;
+        return requestTimeoutMillis;
     }
 
     /**
-     * Returns the default maximum allowed length of the content decoded at the session layer.
-     * e.g. the content length of an HTTP request.
+     * Returns the timeout of a request.
+     *
+     * @see ServiceConfig#requestTimeoutMillis()
+     * @see VirtualHost#requestTimeoutMillis()
      */
+    public long requestTimeoutMillis() {
+        return requestTimeoutMillis;
+    }
+
+    /**
+     * Returns the maximum allowed length of the content decoded at the session layer.
+     * e.g. the content length of an HTTP request.
+     *
+     * @deprecated Use {@link #maxRequestLength()}.
+     */
+    @Deprecated
     public long defaultMaxRequestLength() {
-        return defaultMaxRequestLength;
+        return maxRequestLength;
+    }
+
+    /**
+     * Returns the maximum allowed length of the content decoded at the session layer.
+     * e.g. the content length of an HTTP request.
+     *
+     * @see ServiceConfig#maxRequestLength()
+     * @see VirtualHost#maxRequestLength()
+     */
+    public long maxRequestLength() {
+        return maxRequestLength;
     }
 
     /**
      * Returns whether the verbose response mode is enabled. When enabled, the server responses will contain
      * the exception type and its full stack trace, which may be useful for debugging while potentially
      * insecure. When disabled, the server responses will not expose such server-side details to the client.
+     *
+     * @see ServiceConfig#verboseResponses()
+     * @see VirtualHost#verboseResponses()
      */
     public boolean verboseResponses() {
         return verboseResponses;
@@ -606,7 +637,7 @@ public final class ServerConfig {
                     getClass(), ports(), null, virtualHosts(),
                     workerGroup(), shutdownWorkerGroupOnStop(),
                     maxNumConnections(), idleTimeoutMillis(),
-                    defaultRequestTimeoutMillis(), defaultMaxRequestLength(), verboseResponses(),
+                    requestTimeoutMillis(), maxRequestLength(), verboseResponses(),
                     http2InitialConnectionWindowSize(), http2InitialStreamWindowSize(),
                     http2MaxStreamsPerConnection(), http2MaxFrameSize(), http2MaxHeaderListSize(),
                     http1MaxInitialLineLength(), http1MaxHeaderSize(), http1MaxChunkSize(),
@@ -626,8 +657,8 @@ public final class ServerConfig {
             @Nullable Class<?> type, Iterable<ServerPort> ports,
             @Nullable VirtualHost defaultVirtualHost, List<VirtualHost> virtualHosts,
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop,
-            int maxNumConnections, long idleTimeoutMillis, long defaultRequestTimeoutMillis,
-            long defaultMaxRequestLength, boolean verboseResponses, int http2InitialConnectionWindowSize,
+            int maxNumConnections, long idleTimeoutMillis, long requestTimeoutMillis,
+            long maxRequestLength, boolean verboseResponses, int http2InitialConnectionWindowSize,
             int http2InitialStreamWindowSize, long http2MaxStreamsPerConnection, int http2MaxFrameSize,
             long http2MaxHeaderListSize, long http1MaxInitialLineLength, long http1MaxHeaderSize,
             long http1MaxChunkSize, int proxyProtocolMaxTlvSize,
@@ -663,23 +694,18 @@ public final class ServerConfig {
 
         buf.append(" virtualHosts: [");
         if (!virtualHosts.isEmpty()) {
-            virtualHosts.forEach(c -> {
-                buf.append(VirtualHost.toString(null, c.defaultHostname(), c.hostnamePattern(),
-                                                c.sslContext(), c.serviceConfigs()));
+            virtualHosts.forEach(virtualHost -> {
+                buf.append(virtualHost.toStringWithoutTypeName());
                 buf.append(", ");
             });
 
             if (defaultVirtualHost != null) {
-                buf.append(VirtualHost.toString(null, defaultVirtualHost.defaultHostname(), "*",
-                                                defaultVirtualHost.sslContext(),
-                                                defaultVirtualHost.serviceConfigs()));
+                buf.append(defaultVirtualHost.toStringWithoutTypeName());
             } else {
                 buf.setLength(buf.length() - 2);
             }
         } else if (defaultVirtualHost != null) {
-            buf.append(VirtualHost.toString(null, defaultVirtualHost.defaultHostname(), "*",
-                                            defaultVirtualHost.sslContext(),
-                                            defaultVirtualHost.serviceConfigs()));
+            buf.append(defaultVirtualHost.toStringWithoutTypeName());
         }
 
         buf.append("], workerGroup: ");
@@ -690,10 +716,10 @@ public final class ServerConfig {
         buf.append(maxNumConnections);
         buf.append(", idleTimeout: ");
         buf.append(idleTimeoutMillis);
-        buf.append("ms, defaultRequestTimeout: ");
-        buf.append(defaultRequestTimeoutMillis);
-        buf.append("ms, defaultMaxRequestLength: ");
-        buf.append(defaultMaxRequestLength);
+        buf.append("ms, requestTimeout: ");
+        buf.append(requestTimeoutMillis);
+        buf.append("ms, maxRequestLength: ");
+        buf.append(maxRequestLength);
         buf.append("B, verboseResponses: ");
         buf.append(verboseResponses);
         buf.append(", http2InitialConnectionWindowSize: ");

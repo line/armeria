@@ -13,6 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package com.linecorp.armeria.common.logging;
 
 import javax.annotation.Nullable;
@@ -20,11 +21,15 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 
-final class NoopContentPreviewer implements ContentPreviewer {
+/**
+ * A skeletal {@link ContentPreviewer} implementation in order for a user to implement only the methods
+ * what he or she really needs.
+ */
+public class ContentPreviewerAdapter implements ContentPreviewer {
 
-    static ContentPreviewer INSTANCE = new NoopContentPreviewer();
+    static final ContentPreviewer NOOP = new ContentPreviewerAdapter();
 
-    private NoopContentPreviewer() {}
+    protected ContentPreviewerAdapter() {}
 
     @Override
     public void onHeaders(HttpHeaders headers) {}

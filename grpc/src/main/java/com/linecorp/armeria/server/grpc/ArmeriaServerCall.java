@@ -519,7 +519,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         final HttpHeaders trailers = GrpcTrailersUtil.statusToTrailers(
                 status.getCode().value(), status.getDescription(), headersSent);
 
-        if (ctx.server().config().verboseResponses() && status.getCause() != null) {
+        if (ctx.verboseResponses() && status.getCause() != null) {
             final ThrowableProto proto = GrpcStatus.serializeThrowable(status.getCause());
             trailers.add(GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN,
                          Base64.getEncoder().encodeToString(proto.toByteArray()));

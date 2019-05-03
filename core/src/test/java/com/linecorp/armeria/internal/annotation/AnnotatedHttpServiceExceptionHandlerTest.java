@@ -72,7 +72,7 @@ public class AnnotatedHttpServiceExceptionHandlerTest {
 
             sb.annotatedService("/5", new MyService5());
 
-            sb.defaultRequestTimeoutMillis(500L);
+            sb.requestTimeoutMillis(500L);
         }
     };
 

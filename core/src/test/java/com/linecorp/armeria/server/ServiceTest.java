@@ -23,6 +23,7 @@ import org.junit.Test;
 
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 
 public class ServiceTest {
 
@@ -63,7 +64,9 @@ public class ServiceTest {
 
         // Test if FooService.serviceAdded() is invoked.
         @SuppressWarnings({ "unchecked", "rawtypes" })
-        final ServiceConfig cfg = new ServiceConfig(PathMapping.ofCatchAll(), (Service) outer, "foo");
+        final ServiceConfig cfg = new ServiceConfig(PathMapping.ofCatchAll(), (Service) outer, "foo", 1, 1,
+                                                    true, ContentPreviewerFactory.disabled(),
+                                                    ContentPreviewerFactory.disabled());
         outer.serviceAdded(cfg);
         assertThat(inner.cfg).isSameAs(cfg);
     }

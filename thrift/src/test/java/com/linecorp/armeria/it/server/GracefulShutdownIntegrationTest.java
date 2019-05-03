@@ -47,7 +47,7 @@ public class GracefulShutdownIntegrationTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.gracefulShutdownTimeout(1000L, 2000L);
-            sb.defaultRequestTimeoutMillis(0); // Disable RequestTimeoutException.
+            sb.requestTimeoutMillis(0); // Disable RequestTimeoutException.
 
             sb.service("/sleep", THttpService.of(
                     (AsyncIface) (milliseconds, resultHandler) ->

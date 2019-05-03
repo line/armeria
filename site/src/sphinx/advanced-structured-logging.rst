@@ -285,18 +285,17 @@ You can enable it when you configure :api:`Server`, :api:`VirtualHost` or :api:`
 .. code-block:: java
 
     import com.linecorp.armeria.server.ServerBuilder;
-    import com.linecorp.armeria.server.VirtualHostBuilder;
 
     ServerBuilder sb = new ServerBuilder();
     ...
-    // Enable previewing the content with the maxium length of 100 for textual content.
+    // Enable previewing the content with the maximum length of 100 for textual content.
     sb.contentPreview(100);
     ...
-    VirtualHostBuilder vhb = new VirtualHostBuilder("http://example.com");
-    // In this case, the property of virtual host takes precedence over that of server.
-    vhb.contentPreview(150);
+    sb.withVirtualHost("http://example.com")
+      // In this case, the property of virtual host takes precedence over that of server.
+      .contentPreview(150);
     ...
-    sb.virtualHost(vhb.build());
+    sb.build();
 
 .. code-block:: java
 

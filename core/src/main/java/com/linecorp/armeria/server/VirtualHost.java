@@ -63,7 +63,7 @@ public final class VirtualHost {
             "^(?:[-_a-zA-Z0-9]|[-_a-zA-Z0-9][-_.a-zA-Z0-9]*[-_a-zA-Z0-9])$");
 
     /**
-     * Initialized later by {@link ServerConfig} via {@link #setServerConfig(ServerConfig)}.
+     * Initialized later via {@link #setServerConfig(ServerConfig)}.
      */
     @Nullable
     private ServerConfig serverConfig;
@@ -76,52 +76,22 @@ public final class VirtualHost {
     private final Router<ServiceConfig> router;
     private final MediaTypeSet producibleMediaTypes;
 
-    /**
-     * If {@code accessLogger} is {@code null}, it is initialized later
-     * by {@link ServerBuilder} via {@link #accessLogger(Logger)}.
-     */
-    @Nullable
-    private Logger accessLogger;
+    private final Logger accessLogger;
 
-    @Nullable
-    private String strVal;
-
-    private ContentPreviewerFactory requestContentPreviewerFactory;
-    private ContentPreviewerFactory responseContentPreviewerFactory;
-
-    /**
-     * Use this constructor when you are sure that the {@link ServiceConfig}s have no duplicate
-     * {@link PathMapping}s or it's OK to have them. This is useful when you create a new {@link VirtualHost}
-     * from an existing {@link VirtualHost}, because its {@link ServiceConfig}s were validated already.
-     */
-    VirtualHost(String defaultHostname, String hostnamePattern,
-                @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
-                MediaTypeSet producibleMediaTypes) {
-        this(defaultHostname, hostnamePattern, sslContext, serviceConfigs, producibleMediaTypes,
-             RejectedPathMappingHandler.DISABLED, null, null, null);
-    }
-
-    VirtualHost(String defaultHostname, String hostnamePattern,
-                @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
-                MediaTypeSet producibleMediaTypes, Function<VirtualHost, Logger> accessLoggerMapper) {
-        this(defaultHostname, hostnamePattern, sslContext, serviceConfigs, producibleMediaTypes,
-             RejectedPathMappingHandler.DISABLED, accessLoggerMapper, null, null);
-    }
-
-    VirtualHost(String defaultHostname, String hostnamePattern,
-                @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
-                MediaTypeSet producibleMediaTypes, RejectedPathMappingHandler rejectionHandler) {
-        this(defaultHostname, hostnamePattern, sslContext, serviceConfigs, producibleMediaTypes,
-             rejectionHandler, null, null, null);
-    }
+    private final long requestTimeoutMillis;
+    private final long maxRequestLength;
+    private final boolean verboseResponses;
+    private final ContentPreviewerFactory requestContentPreviewerFactory;
+    private final ContentPreviewerFactory responseContentPreviewerFactory;
 
     VirtualHost(String defaultHostname, String hostnamePattern,
                 @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
                 MediaTypeSet producibleMediaTypes, RejectedPathMappingHandler rejectionHandler,
                 Function<VirtualHost, Logger> accessLoggerMapper,
-                @Nullable ContentPreviewerFactory requestContentPreviewerFactory,
-                @Nullable ContentPreviewerFactory responseContentPreviewerFactory) {
-
+                long requestTimeoutMillis,
+                long maxRequestLength, boolean verboseResponses,
+                ContentPreviewerFactory requestContentPreviewerFactory,
+                ContentPreviewerFactory responseContentPreviewerFactory) {
         defaultHostname = normalizeDefaultHostname(defaultHostname);
         hostnamePattern = normalizeHostnamePattern(hostnamePattern);
         ensureHostnamePatternMatchesDefaultHostname(hostnamePattern, defaultHostname);
@@ -130,29 +100,34 @@ public final class VirtualHost {
         this.hostnamePattern = hostnamePattern;
         this.sslContext = validateSslContext(sslContext);
         this.producibleMediaTypes = producibleMediaTypes;
-        this.requestContentPreviewerFactory =
-                requestContentPreviewerFactory != null ? requestContentPreviewerFactory
-                                                       : ContentPreviewerFactory.disabled();
-        this.responseContentPreviewerFactory =
-                responseContentPreviewerFactory != null ? responseContentPreviewerFactory
-                                                        : ContentPreviewerFactory.disabled();
+        this.requestTimeoutMillis = requestTimeoutMillis;
+        this.maxRequestLength = maxRequestLength;
+        this.verboseResponses = verboseResponses;
+        this.requestContentPreviewerFactory = requestContentPreviewerFactory;
+        this.responseContentPreviewerFactory = responseContentPreviewerFactory;
 
         requireNonNull(serviceConfigs, "serviceConfigs");
 
         final List<ServiceConfig> servicesCopy = new ArrayList<>();
 
         for (ServiceConfig c : serviceConfigs) {
-            c = c.build(this);
+            c = c.withVirtualHost(this);
             servicesCopy.add(c);
         }
 
         services = Collections.unmodifiableList(servicesCopy);
         router = Routers.ofVirtualHost(this, services, rejectionHandler);
-        if (accessLoggerMapper != null) {
-            accessLogger = accessLoggerMapper.apply(this);
-            checkState(accessLogger != null,
-                       "accessLoggerMapper.apply() has returned null for virtual host: %s.", hostnamePattern);
-        }
+        accessLogger = accessLoggerMapper.apply(this);
+        checkState(accessLogger != null,
+                   "accessLoggerMapper.apply() has returned null for virtual host: %s.", hostnamePattern);
+    }
+
+    VirtualHost withNewSslContext(SslContext sslContext) {
+        return new VirtualHost(defaultHostname(), hostnamePattern(), sslContext,
+                               serviceConfigs(), producibleMediaTypes, RejectedPathMappingHandler.DISABLED,
+                               host -> accessLogger, requestTimeoutMillis(),
+                               maxRequestLength(), verboseResponses(),
+                               requestContentPreviewerFactory(), responseContentPreviewerFactory());
     }
 
     /**
@@ -252,50 +227,6 @@ public final class VirtualHost {
     }
 
     /**
-     * Sets the {@link Logger} which is used for writing access logs of this virtual host.
-     */
-    void accessLogger(Logger logger) {
-        accessLogger = requireNonNull(logger, "logger");
-    }
-
-    /**
-     * Returns the {@link Logger} which is used for writing access logs of this virtual host.
-     */
-    public Logger accessLogger() {
-        checkState(accessLogger != null, "accessLogger not initialized yet.");
-        return accessLogger;
-    }
-
-    @Nullable
-    Logger accessLoggerOrNull() {
-        return accessLogger;
-    }
-
-    /**
-     * Returns the {@link ContentPreviewerFactory} used for creating a new {@link ContentPreviewer}
-     * which produces the request content preview of this virtual host.
-     */
-    public ContentPreviewerFactory requestContentPreviewerFactory() {
-        return requestContentPreviewerFactory;
-    }
-
-    void requestContentPreviewerFactory(ContentPreviewerFactory factory) {
-        requestContentPreviewerFactory = requireNonNull(factory, "factory");
-    }
-
-    /**
-     * Returns the {@link ContentPreviewerFactory} used for creating a new {@link ContentPreviewer}
-     * which produces the response content preview of this virtual host.
-     */
-    public ContentPreviewerFactory responseContentPreviewerFactory() {
-        return responseContentPreviewerFactory;
-    }
-
-    void responseContentPreviewerFactory(ContentPreviewerFactory factory) {
-        responseContentPreviewerFactory = requireNonNull(factory, "factory");
-    }
-
-    /**
      * Returns the default hostname of this virtual host.
      */
     public String defaultHostname() {
@@ -327,9 +258,99 @@ public final class VirtualHost {
 
     /**
      * Returns {@link MediaTypeSet} that consists of media types producible by this virtual host.
+     *
+     * @deprecated Use {@link ServiceConfig#produceTypes()}.
      */
+    @Deprecated
     public MediaTypeSet producibleMediaTypes() {
         return producibleMediaTypes;
+    }
+
+    /**
+     * Returns the {@link Logger} which is used for writing access logs of this virtual host.
+     */
+    public Logger accessLogger() {
+        return accessLogger;
+    }
+
+    /**
+     * Returns the timeout of a request.
+     *
+     * @deprecated Use {@link #requestTimeoutMillis()}.
+     *
+     * @see ServiceConfig#requestTimeoutMillis()
+     * @see ServerConfig#requestTimeoutMillis()
+     */
+    @Deprecated
+    public long defaultRequestTimeoutMillis() {
+        return requestTimeoutMillis;
+    }
+
+    /**
+     * Returns the timeout of a request.
+     *
+     * @see ServiceConfig#requestTimeoutMillis()
+     * @see ServerConfig#requestTimeoutMillis()
+     */
+    public long requestTimeoutMillis() {
+        return requestTimeoutMillis;
+    }
+
+    /**
+     * Returns the maximum allowed length of the content decoded at the session layer.
+     * e.g. the content length of an HTTP request.
+     *
+     * @deprecated Use {@link #maxRequestLength()}.
+     *
+     * @see ServiceConfig#maxRequestLength()
+     * @see ServerConfig#maxRequestLength()
+     */
+    @Deprecated
+    public long defaultMaxRequestLength() {
+        return maxRequestLength;
+    }
+
+    /**
+     * Returns the maximum allowed length of the content decoded at the session layer.
+     * e.g. the content length of an HTTP request.
+     *
+     * @see ServiceConfig#maxRequestLength()
+     * @see ServerConfig#maxRequestLength()
+     */
+    public long maxRequestLength() {
+        return maxRequestLength;
+    }
+
+    /**
+     * Returns whether the verbose response mode is enabled. When enabled, the server responses will contain
+     * the exception type and its full stack trace, which may be useful for debugging while potentially
+     * insecure. When disabled, the server responses will not expose such server-side details to the client.
+     *
+     * @see ServiceConfig#verboseResponses()
+     * @see ServerConfig#verboseResponses()
+     */
+    public boolean verboseResponses() {
+        return verboseResponses;
+    }
+
+    /**
+     * Returns the {@link ContentPreviewerFactory} used for creating a new {@link ContentPreviewer}
+     * which produces the request content preview of this virtual host.
+     *
+     * @see ServiceConfig#requestContentPreviewerFactory()
+     */
+    public ContentPreviewerFactory requestContentPreviewerFactory() {
+        return requestContentPreviewerFactory;
+    }
+
+    /**
+     * Returns the {@link ContentPreviewerFactory} used for creating a new {@link ContentPreviewer}
+     * which produces the response content preview of this virtual host.
+     *
+     * @see ServiceConfig#responseContentPreviewerFactory()
+     */
+    public ContentPreviewerFactory responseContentPreviewerFactory() {
+        return responseContentPreviewerFactory;
     }
 
     /**
@@ -346,52 +367,61 @@ public final class VirtualHost {
     }
 
     VirtualHost decorate(@Nullable Function<Service<HttpRequest, HttpResponse>,
-                                            Service<HttpRequest, HttpResponse>> decorator) {
+            Service<HttpRequest, HttpResponse>> decorator) {
         if (decorator == null) {
             return this;
         }
 
         final List<ServiceConfig> services =
-                this.services.stream().map(cfg -> {
-                    final PathMapping pathMapping = cfg.pathMapping();
-                    final Service<HttpRequest, HttpResponse> service = decorator.apply(cfg.service());
-                    final String loggerName = cfg.loggerName().orElse(null);
-                    return new ServiceConfig(pathMapping, service, loggerName);
-                }).collect(Collectors.toList());
+                this.services.stream()
+                             .map(cfg -> cfg.withDecoratedService(decorator))
+                             .collect(Collectors.toList());
 
         return new VirtualHost(defaultHostname(), hostnamePattern(), sslContext(),
-                               services, producibleMediaTypes());
+                               services, producibleMediaTypes, RejectedPathMappingHandler.DISABLED,
+                               host -> accessLogger, requestTimeoutMillis(),
+                               maxRequestLength(), verboseResponses(),
+                               requestContentPreviewerFactory(), responseContentPreviewerFactory());
     }
 
     @Override
     public String toString() {
-        String strVal = this.strVal;
-        if (strVal == null) {
-            this.strVal = strVal = toString(
-                    getClass(), defaultHostname(), hostnamePattern(), sslContext(), serviceConfigs());
-        }
-
-        return strVal;
+        return toString(true);
     }
 
-    static String toString(@Nullable Class<?> type, String defaultHostname, String hostnamePattern,
-                           @Nullable SslContext sslContext, List<?> services) {
-
+    private String toString(boolean withTypeName) {
         final StringBuilder buf = new StringBuilder();
-        if (type != null) {
-            buf.append(type.getSimpleName());
+        if (withTypeName) {
+            buf.append(getClass().getSimpleName());
         }
 
         buf.append('(');
-        buf.append(defaultHostname);
+        buf.append(defaultHostname());
         buf.append('/');
-        buf.append(hostnamePattern);
+        buf.append(hostnamePattern());
         buf.append(", ssl: ");
-        buf.append(sslContext != null);
+        buf.append(sslContext() != null);
         buf.append(", services: ");
         buf.append(services);
+        buf.append(", router: ");
+        buf.append(router);
+        buf.append(", accessLogger: ");
+        buf.append(accessLogger());
+        buf.append(", requestTimeoutMillis: ");
+        buf.append(requestTimeoutMillis());
+        buf.append(", maxRequestLength: ");
+        buf.append(maxRequestLength());
+        buf.append(", verboseResponses: ");
+        buf.append(verboseResponses());
+        buf.append(", requestContentPreviewerFactory: ");
+        buf.append(requestContentPreviewerFactory());
+        buf.append(", responseContentPreviewerFactory: ");
+        buf.append(responseContentPreviewerFactory());
         buf.append(')');
-
         return buf.toString();
+    }
+
+    String toStringWithoutTypeName() {
+        return toString(false);
     }
 }
