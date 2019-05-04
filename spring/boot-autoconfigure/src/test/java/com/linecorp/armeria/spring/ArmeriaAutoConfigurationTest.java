@@ -230,8 +230,10 @@ public class ArmeriaAutoConfigurationTest {
 
         final AggregatedHttpMessage msg = response.aggregate().get();
         assertThat(msg.status()).isEqualTo(HttpStatus.OK);
+        assertThatJson(msg.contentUtf8()).node("services[2].name").isStringEqualTo(
+                "com.linecorp.armeria.spring.test.thrift.main.HelloService");
         assertThatJson(msg.contentUtf8())
-                .node("services[1].exampleHttpHeaders[0].x-additional-header").isStringEqualTo("headerVal");
+                .node("services[2].exampleHttpHeaders[0].x-additional-header").isStringEqualTo("headerVal");
     }
 
     @Test
@@ -242,6 +244,16 @@ public class ArmeriaAutoConfigurationTest {
                                                  .setName("world")
                                                  .build();
         assertThat(client.hello(request).getMessage()).isEqualTo("Hello, world");
+
+        final HttpClient httpClient = HttpClient.of(newUrl("h1c"));
+        final HttpResponse response = httpClient.get("/internal/docs/specification.json");
+
+        final AggregatedHttpMessage msg = response.aggregate().get();
+        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
+        assertThatJson(msg.contentUtf8()).node("services[1].name").isStringEqualTo(
+                "com.linecorp.armeria.spring.test.grpc.main.HelloService");
+        assertThatJson(msg.contentUtf8())
+                .node("services[1].exampleHttpHeaders").isEqualTo(Collections.emptyList());
     }
 
     @Test
