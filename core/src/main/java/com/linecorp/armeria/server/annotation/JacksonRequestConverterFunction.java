@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -68,8 +69,11 @@ public class JacksonRequestConverterFunction implements RequestConverterFunction
         final MediaType contentType = request.contentType();
         if (contentType != null && (contentType.is(MediaType.JSON) ||
                                     contentType.subtype().endsWith("+json"))) {
-            if (expectedResultType == String.class) {
-                return request.content(contentType.charset().orElse(StandardCharsets.UTF_8));
+            if (expectedResultType == byte[].class) {
+                return request.content().array();
+            }
+            if (expectedResultType == HttpData.class) {
+                return request.content();
             }
 
             final ObjectReader reader = readers.computeIfAbsent(expectedResultType, mapper::readerFor);
