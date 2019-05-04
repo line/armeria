@@ -136,7 +136,7 @@ public class PropertiesEndpointGroupTest {
         final PropertiesEndpointGroup endpointGroupA = PropertiesEndpointGroup.of(
                 classLoader, file.getName(), "serverA.hosts", 80);
 
-        await().atMost(60, TimeUnit.SECONDS).until(() -> endpointGroupA.endpoints().size() == 1);
+        await().atMost(10, TimeUnit.SECONDS).until(() -> endpointGroupA.endpoints().size() == 1);
 
         // Update resource
         props = new Properties();
@@ -145,7 +145,7 @@ public class PropertiesEndpointGroupTest {
         props.store(outputStream, "");
         outputStream.flush();
 
-        await().atMost(60, TimeUnit.SECONDS).until(() -> endpointGroupA.endpoints().size() == 2);
+        await().atMost(10, TimeUnit.SECONDS).until(() -> endpointGroupA.endpoints().size() == 2);
 
         endpointGroupA.close();
         outputStream.close();

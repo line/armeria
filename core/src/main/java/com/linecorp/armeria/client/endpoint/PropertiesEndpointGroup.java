@@ -18,27 +18,19 @@ package com.linecorp.armeria.client.endpoint;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
 import static java.util.Objects.requireNonNull;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.nio.file.FileSystems;
-import java.nio.file.Path;
-import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
-import java.nio.file.WatchService;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
-import java.util.Set;
 
-import com.google.common.annotations.VisibleForTesting;
+import javax.annotation.Nullable;
+
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
@@ -144,62 +136,6 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
                 defaultPort));
     }
 
-    public static class WatchPropertiesRunnable implements Runnable {
-        final WatchService watchService;
-        private final Map<String, WatchKey> fileWatchKeyMap = new HashMap<>();
-        static final Map<String, PropertiesEndpointGroup> endpointGroupMap = new HashMap<>();
-
-        WatchPropertiesRunnable() {
-            try {
-                watchService = FileSystems.getDefault().newWatchService();
-            } catch (IOException e) {
-                throw new RuntimeException("Failed to register watch service");
-            }
-        }
-
-        public void registerEndpointGroup(PropertiesEndpointGroup group) {
-            final File file = new File(group.resourceUrl.getFile());
-            final Path path = file.getParentFile().toPath();
-            try {
-                final WatchKey key = path.register(watchService, ENTRY_MODIFY); // can we register multiple paths?
-                fileWatchKeyMap.put(group.resourceUrl.getFile(), key);
-            } catch (IOException e) {
-                throw new RuntimeException("Failed to register path");
-            }
-            endpointGroupMap.put(group.resourceUrl.getFile(), group);
-        }
-
-        public void deregisterResourceUrl(PropertiesEndpointGroup group) {
-            final WatchKey key = fileWatchKeyMap.remove(group.resourceUrl.getFile());
-            key.cancel();
-            endpointGroupMap.remove(group.resourceUrl.getFile());
-        }
-
-        @Override
-        @SuppressWarnings("unchecked")
-        public void run() {
-            try {
-                WatchKey key;
-                while ((key = watchService.take()) != null) {
-                    final Set<String> targetFileNames = fileWatchKeyMap.keySet();
-                    for (WatchEvent<?> event : key.pollEvents()) {
-                        if (event.kind() == ENTRY_MODIFY) {
-                            final Path watchedPath = ((Path) key.watchable()).resolve(((WatchEvent<Path>) event).context());
-                            final String watchedPathFile = watchedPath.toFile().getAbsolutePath();
-                            if (targetFileNames.contains(watchedPathFile)) {
-                                final PropertiesEndpointGroup group = endpointGroupMap.get(watchedPathFile);
-                                group.reloader.reload();
-                            }
-                        }
-                    }
-                    key.reset();
-                }
-            } catch (InterruptedException e) {
-                throw new RuntimeException("Unexpected exception while watching");
-            }
-        }
-    }
-
     private static List<Endpoint> loadEndpoints(ClassLoader classLoader, String resourceName,
                                                 String endpointKeyPrefix, int defaultPort) {
 
@@ -247,8 +183,9 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
                       "defaultPort: %s (expected: 1-65535)", defaultPort);
     }
 
+    @Nullable
     private URL resourceUrl;
-    static WatchPropertiesRunnable runnable = new WatchPropertiesRunnable();
+    static final PropertiesEndpointGroupWatcherRunnable runnable = new PropertiesEndpointGroupWatcherRunnable();
     private static final Thread thread = new Thread(runnable);
 
     static {
@@ -259,13 +196,6 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
         setEndpoints(endpoints);
     }
 
-    @FunctionalInterface
-    private interface PropertiesEndpointReloader {
-        void reload();
-    }
-
-    public PropertiesEndpointReloader reloader = () -> {};
-
     private PropertiesEndpointGroup(ClassLoader classLoader, String resourceName,
                                     String endpointKeyPrefix, int defaultPort) {
         final List<Endpoint> endpoints = loadEndpoints(
@@ -274,20 +204,21 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
                 requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
                 0);
         setEndpoints(endpoints);
-        reloader = () -> {
-            final List<Endpoint> endpointList = loadEndpoints(
-                    classLoader, resourceName, endpointKeyPrefix, defaultPort);
-            setEndpoints(endpointList);
-        };
 
         final URL resourceUrl = classLoader.getResource(resourceName);
         checkArgument(resourceUrl != null, "resource not found: %s", resourceName);
         this.resourceUrl = resourceUrl;
-        runnable.registerEndpointGroup(this);
+
+        runnable.registerEndpointGroup(resourceUrl, this, () -> {
+            final List<Endpoint> endpointList = loadEndpoints(
+                    classLoader, resourceName, endpointKeyPrefix, defaultPort);
+            setEndpoints(endpointList);
+        });
     }
 
     @Override
     public void close() {
-        runnable.deregisterResourceUrl(this);
+        super.close();
+        runnable.deregisterResourceUrl(resourceUrl, this);
     }
 }
