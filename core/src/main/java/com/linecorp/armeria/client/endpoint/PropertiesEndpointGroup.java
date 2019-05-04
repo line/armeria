@@ -37,7 +37,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
-import java.util.function.Function;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -157,33 +156,37 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
             }
         }
 
-        public void registerResourceUrl(URL resourcePathUrl) {
-            final File file = new File(resourcePathUrl.getFile());
+        public void registerResourceUrl(URL resourceUrl) {
+            final File file = new File(resourceUrl.getFile());
             final Path path = file.getParentFile().toPath();
             try {
                 final WatchKey key = path.register(watchService, ENTRY_MODIFY); // can we register multiple paths?
-                fileWatchKeyMap.put(file.getName(), key);
+                fileWatchKeyMap.put(resourceUrl.getFile(), key);
             } catch (IOException e) {
                 throw new RuntimeException("Failed to register path");
             }
         }
 
-        public void deregisterResourceUrl(String resourceName) {
-            final WatchKey key = fileWatchKeyMap.remove(resourceName);
+        public void deregisterResourceUrl(URL resourceUrl) {
+            final WatchKey key = fileWatchKeyMap.remove(resourceUrl.getFile());
             key.cancel();
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         public void run() {
             try {
                 WatchKey key;
                 while ((key = watchService.take()) != null) {
                     final Set<String> targetFileNames = fileWatchKeyMap.keySet();
                     for (WatchEvent<?> event : key.pollEvents()) {
-                        final Path changedPath = (Path) event.context();
-                        if (event.kind() == ENTRY_MODIFY && targetFileNames.contains(changedPath.toFile().getName())) {
-                            final PropertiesEndpointGroup group = endpointGroupMap.get(changedPath.toFile().getName());
-                            group.reloader.reload();
+                        if (event.kind() == ENTRY_MODIFY) {
+                            final Path watchedPath = ((Path) key.watchable()).resolve(((WatchEvent<Path>) event).context());
+                            final String watchedPathFile = watchedPath.toFile().getAbsolutePath();
+                            if (targetFileNames.contains(watchedPathFile)) {
+                                final PropertiesEndpointGroup group = endpointGroupMap.get(watchedPathFile);
+                                group.reloader.reload();
+                            }
                         }
                     }
                     key.reset();
@@ -241,7 +244,7 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
                       "defaultPort: %s (expected: 1-65535)", defaultPort);
     }
 
-    private String resourceName;
+    private URL resourceUrl;
     static WatchPropertiesRunnable runnable = new WatchPropertiesRunnable();
     private static final Thread thread = new Thread(runnable);
 
@@ -258,7 +261,7 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
         void reload();
     }
 
-    public PropertiesEndpointReloader reloader;
+    public PropertiesEndpointReloader reloader = () -> {};
 
     private PropertiesEndpointGroup(ClassLoader classLoader, String resourceName,
                                     String endpointKeyPrefix, int defaultPort) {
@@ -274,17 +277,17 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
             setEndpoints(endpointList);
         };
 
-        this.resourceName = resourceName;
         final URL resourceUrl = classLoader.getResource(resourceName);
         checkArgument(resourceUrl != null, "resource not found: %s", resourceName);
-        endpointGroupMap.put(resourceName, this);
+        this.resourceUrl = resourceUrl;
+        endpointGroupMap.put(resourceUrl.getFile(), this);
         runnable.registerResourceUrl(resourceUrl);
     }
 
     @Override
     public void close() {
-        endpointGroupMap.remove(resourceName);
-        runnable.deregisterResourceUrl(resourceName);
+        endpointGroupMap.remove(resourceUrl.getFile());
+        runnable.deregisterResourceUrl(resourceUrl);
     }
 
     @VisibleForTesting
