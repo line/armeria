@@ -28,18 +28,18 @@ public class PropertiesEndpointGroupWatcherRunnable implements Runnable {
         }
     }
 
-    public void registerEndpointGroup(URL resourceUrl, PropertiesEndpointGroup group, PropertiesEndpointGroupWatcherReloader reloader) {
+    public void registerEndpointGroup(URL resourceUrl, PropertiesEndpointGroupWatcherReloader reloader) {
         final File file = new File(resourceUrl.getFile());
         final Path path = file.getParentFile().toPath();
         try {
             final WatchKey key = path.register(watchService, ENTRY_MODIFY); // can we register multiple paths?
-            contextMap.put(resourceUrl.getFile(), new RunnableGroupContext(key, group, reloader));
+            contextMap.put(resourceUrl.getFile(), new RunnableGroupContext(key, reloader));
         } catch (IOException e) {
             throw new RuntimeException("Failed to register path");
         }
     }
 
-    public void deregisterResourceUrl(@Nullable URL resourceUrl, PropertiesEndpointGroup group) {
+    public void deregisterResourceUrl(@Nullable URL resourceUrl) {
         final RunnableGroupContext context = contextMap.remove(resourceUrl.getFile());
         context.key.cancel();
         contextMap.remove(resourceUrl.getFile());
@@ -71,11 +71,9 @@ public class PropertiesEndpointGroupWatcherRunnable implements Runnable {
 
     private static class RunnableGroupContext {
         private final WatchKey key;
-        private final PropertiesEndpointGroup group;
         private final PropertiesEndpointGroupWatcherReloader reloader;
-        RunnableGroupContext(WatchKey key, PropertiesEndpointGroup group, PropertiesEndpointGroupWatcherReloader reloader) {
+        RunnableGroupContext(WatchKey key, PropertiesEndpointGroupWatcherReloader reloader) {
             this.key = key;
-            this.group = group;
             this.reloader = reloader;
         }
     }
@@ -83,5 +81,9 @@ public class PropertiesEndpointGroupWatcherRunnable implements Runnable {
     @FunctionalInterface
     interface PropertiesEndpointGroupWatcherReloader {
         void reload();
+    }
+
+    public boolean isEmpty() {
+        return contextMap.isEmpty();
     }
 }

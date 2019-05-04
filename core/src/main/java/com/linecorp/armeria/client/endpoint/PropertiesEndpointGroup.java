@@ -23,7 +23,6 @@ import static java.util.Objects.requireNonNull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.nio.file.WatchKey;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
@@ -41,7 +40,14 @@ import com.linecorp.armeria.client.Endpoint;
  */
 public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
 
-    // TODO(ide) Reload the endpoint list if the file is updated.
+    @Nullable
+    private URL resourceUrl;
+    private static final PropertiesEndpointGroupWatcherRunnable runnable = new PropertiesEndpointGroupWatcherRunnable();
+    private static final Thread thread = new Thread(runnable);
+
+    static {
+        thread.setDaemon(true);
+    }
 
     /**
      * Creates a new {@link EndpointGroup} instance that loads the host names (or IP address) and the port
@@ -136,6 +142,32 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
                 defaultPort));
     }
 
+    private PropertiesEndpointGroup(List<Endpoint> endpoints) {
+        setEndpoints(endpoints);
+    }
+
+    private PropertiesEndpointGroup(ClassLoader classLoader, String resourceName,
+                                    String endpointKeyPrefix, int defaultPort) {
+        final List<Endpoint> endpoints = loadEndpoints(
+                requireNonNull(classLoader, "classLoader"),
+                requireNonNull(resourceName, "fileName"),
+                requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
+                0);
+        setEndpoints(endpoints);
+
+        final URL resourceUrl = classLoader.getResource(resourceName);
+        checkArgument(resourceUrl != null, "resource not found: %s", resourceName);
+        this.resourceUrl = resourceUrl;
+
+        runnable.registerEndpointGroup(resourceUrl, () -> {
+            final List<Endpoint> endpointList = loadEndpoints(
+                    classLoader, resourceName, endpointKeyPrefix, defaultPort);
+            setEndpoints(endpointList);
+        });
+
+        updateThreadStatus();
+    }
+
     private static List<Endpoint> loadEndpoints(ClassLoader classLoader, String resourceName,
                                                 String endpointKeyPrefix, int defaultPort) {
 
@@ -183,42 +215,18 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
                       "defaultPort: %s (expected: 1-65535)", defaultPort);
     }
 
-    @Nullable
-    private URL resourceUrl;
-    static final PropertiesEndpointGroupWatcherRunnable runnable = new PropertiesEndpointGroupWatcherRunnable();
-    private static final Thread thread = new Thread(runnable);
-
-    static {
-        thread.start();
-    }
-
-    private PropertiesEndpointGroup(List<Endpoint> endpoints) {
-        setEndpoints(endpoints);
-    }
-
-    private PropertiesEndpointGroup(ClassLoader classLoader, String resourceName,
-                                    String endpointKeyPrefix, int defaultPort) {
-        final List<Endpoint> endpoints = loadEndpoints(
-                requireNonNull(classLoader, "classLoader"),
-                requireNonNull(resourceName, "fileName"),
-                requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
-                0);
-        setEndpoints(endpoints);
-
-        final URL resourceUrl = classLoader.getResource(resourceName);
-        checkArgument(resourceUrl != null, "resource not found: %s", resourceName);
-        this.resourceUrl = resourceUrl;
-
-        runnable.registerEndpointGroup(resourceUrl, this, () -> {
-            final List<Endpoint> endpointList = loadEndpoints(
-                    classLoader, resourceName, endpointKeyPrefix, defaultPort);
-            setEndpoints(endpointList);
-        });
+    private synchronized void updateThreadStatus() {
+        if (!thread.isAlive() && !runnable.isEmpty()) {
+            thread.start();
+        } else if (thread.isAlive() && runnable.isEmpty()) {
+            thread.interrupt();
+        }
     }
 
     @Override
     public void close() {
         super.close();
-        runnable.deregisterResourceUrl(resourceUrl, this);
+        runnable.deregisterResourceUrl(resourceUrl);
+        updateThreadStatus();
     }
 }
