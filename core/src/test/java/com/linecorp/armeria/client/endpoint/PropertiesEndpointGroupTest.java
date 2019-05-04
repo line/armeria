@@ -22,7 +22,6 @@ import static org.awaitility.Awaitility.await;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -119,15 +118,6 @@ public class PropertiesEndpointGroupTest {
                 getClass().getClassLoader(), "server-list.properties", "serverA.hosts", 0))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("defaultPort");
-    }
-
-    @Test
-    public void propertiesFileAddsCorrectly() throws IOException {
-        final PropertiesEndpointGroup endpointGroupA = PropertiesEndpointGroup.of(
-                getClass().getClassLoader(), "server-list.properties", "serverA.hosts", 80);
-        assert PropertiesEndpointGroup.endpointGroupMap.size() == 1;
-        endpointGroupA.close();
-        assert PropertiesEndpointGroup.endpointGroupMap.isEmpty();
     }
 
     @Test

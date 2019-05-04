@@ -147,6 +147,7 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
     public static class WatchPropertiesRunnable implements Runnable {
         final WatchService watchService;
         private final Map<String, WatchKey> fileWatchKeyMap = new HashMap<>();
+        static final Map<String, PropertiesEndpointGroup> endpointGroupMap = new HashMap<>();
 
         WatchPropertiesRunnable() {
             try {
@@ -156,20 +157,22 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
             }
         }
 
-        public void registerResourceUrl(URL resourceUrl) {
-            final File file = new File(resourceUrl.getFile());
+        public void registerEndpointGroup(PropertiesEndpointGroup group) {
+            final File file = new File(group.resourceUrl.getFile());
             final Path path = file.getParentFile().toPath();
             try {
                 final WatchKey key = path.register(watchService, ENTRY_MODIFY); // can we register multiple paths?
-                fileWatchKeyMap.put(resourceUrl.getFile(), key);
+                fileWatchKeyMap.put(group.resourceUrl.getFile(), key);
             } catch (IOException e) {
                 throw new RuntimeException("Failed to register path");
             }
+            endpointGroupMap.put(group.resourceUrl.getFile(), group);
         }
 
-        public void deregisterResourceUrl(URL resourceUrl) {
-            final WatchKey key = fileWatchKeyMap.remove(resourceUrl.getFile());
+        public void deregisterResourceUrl(PropertiesEndpointGroup group) {
+            final WatchKey key = fileWatchKeyMap.remove(group.resourceUrl.getFile());
             key.cancel();
+            endpointGroupMap.remove(group.resourceUrl.getFile());
         }
 
         @Override
@@ -280,16 +283,11 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
         final URL resourceUrl = classLoader.getResource(resourceName);
         checkArgument(resourceUrl != null, "resource not found: %s", resourceName);
         this.resourceUrl = resourceUrl;
-        endpointGroupMap.put(resourceUrl.getFile(), this);
-        runnable.registerResourceUrl(resourceUrl);
+        runnable.registerEndpointGroup(this);
     }
 
     @Override
     public void close() {
-        endpointGroupMap.remove(resourceUrl.getFile());
-        runnable.deregisterResourceUrl(resourceUrl);
+        runnable.deregisterResourceUrl(this);
     }
-
-    @VisibleForTesting
-    static final Map<String, PropertiesEndpointGroup> endpointGroupMap = new HashMap<>();
 }
