@@ -27,8 +27,8 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
 /**
- * A bean with information for registering an annotated service object. It enables micrometer
- * monitoring of the service automatically.
+ * A bean with information for registering an annotated service object.
+ * It enables Micrometer metric collection of the service automatically.
  * <pre>{@code
  * > @Bean
  * > public AnnotatedServiceRegistrationBean okService() {

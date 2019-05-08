@@ -26,8 +26,8 @@ import com.linecorp.armeria.server.ServiceWithPathMappings;
 import com.linecorp.armeria.server.docs.DocService;
 
 /**
- * A bean with information for registering a http service. It enables micrometer
- * monitoring of the service automatically.
+ * A bean with information for registering a gRPC service.
+ * It enables Micrometer metric collection of the service automatically.
  * <pre>{@code
  * > @Bean
  * > public GrpcServiceRegistrationBean helloService() {
