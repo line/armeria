@@ -122,7 +122,7 @@ public class HttpResponseWrapperTest {
     }
 
     @Test
-    public void infromationalHeadersHeadersDataAndTrailers() throws Exception {
+    public void informationalHeadersHeadersDataAndTrailers() throws Exception {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
