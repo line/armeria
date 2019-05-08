@@ -23,6 +23,7 @@ import java.util.function.Consumer;
 /**
  * Immutable HTTP/2 headers for an {@link HttpResponse}.
  *
+ * @see HttpHeaders
  * @see RequestHeaders
  */
 public interface ResponseHeaders extends HttpHeaders, ResponseHeaderGetters {
@@ -72,8 +73,8 @@ public interface ResponseHeaders extends HttpHeaders, ResponseHeaderGetters {
 
     /**
      * Returns a new {@link ResponseHeaders} with the specified {@link HttpStatus} and an additional header.
-     * The value is converted into a {@link String} via
-     * {@link HttpHeadersBuilder#addObject(CharSequence, Object)}.
+     * The value is converted into a {@link String} as explained in
+     * <a href="HttpHeaders.html#object-values">Specifying a non-String header value</a>.
      */
     static ResponseHeaders of(HttpStatus status, CharSequence name, Object value) {
         return builder(status).addObject(name, value).build();
@@ -92,8 +93,8 @@ public interface ResponseHeaders extends HttpHeaders, ResponseHeaderGetters {
 
     /**
      * Returns a new {@link ResponseHeaders} with the specified {@link HttpStatus} and additional headers.
-     * The values are converted into {@link String}s via
-     * {@link HttpHeadersBuilder#addObject(CharSequence, Object)}.
+     * The values are converted into {@link String}s as explained in
+     * <a href="HttpHeaders.html#object-values">Specifying a non-String header value</a>.
      */
     static ResponseHeaders of(HttpStatus status,
                               CharSequence name1, Object value1,
@@ -118,8 +119,8 @@ public interface ResponseHeaders extends HttpHeaders, ResponseHeaderGetters {
 
     /**
      * Returns a new {@link ResponseHeaders} with the specified {@link HttpStatus} and additional headers.
-     * The values are converted into {@link String}s via
-     * {@link HttpHeadersBuilder#addObject(CharSequence, Object)}.
+     * The values are converted into {@link String}s as explained in
+     * <a href="HttpHeaders.html#object-values">Specifying a non-String header value</a>.
      */
     static ResponseHeaders of(HttpStatus status,
                               CharSequence name1, Object value1,
@@ -148,8 +149,8 @@ public interface ResponseHeaders extends HttpHeaders, ResponseHeaderGetters {
 
     /**
      * Returns a new {@link ResponseHeaders} with the specified {@link HttpStatus} and additional headers.
-     * The values are converted into {@link String}s via
-     * {@link HttpHeadersBuilder#addObject(CharSequence, Object)}.
+     * The values are converted into {@link String}s as explained in
+     * <a href="HttpHeaders.html#object-values">Specifying a non-String header value</a>.
      */
     static ResponseHeaders of(HttpStatus status,
                               CharSequence name1, Object value1,

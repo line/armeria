@@ -111,7 +111,7 @@ public interface RequestContext extends AttributeMap {
      * to a decorator that manipulates HTTP request headers or RPC call parameters.
      *
      * <p>Note that it is a bad idea to change the values of the pseudo headers ({@code ":method"},
-     * {@code "path"}, {@code ":scheme"} and {@code ":authority"}) when replacing an {@link HttpRequest},
+     * {@code ":path"}, {@code ":scheme"} and {@code ":authority"}) when replacing an {@link HttpRequest},
      * because the properties of this context, such as {@link #path()}, are unaffected by such an attempt.</p>
      *
      * <p>It is not allowed to replace an {@link RpcRequest} with an {@link HttpRequest} or vice versa.

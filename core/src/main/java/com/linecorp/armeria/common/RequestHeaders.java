@@ -23,6 +23,7 @@ import java.util.function.Consumer;
 /**
  * Immutable HTTP/2 headers for an {@link HttpRequest}.
  *
+ * @see HttpHeaders
  * @see ResponseHeaders
  */
 public interface RequestHeaders extends HttpHeaders, RequestHeaderGetters {
@@ -63,8 +64,8 @@ public interface RequestHeaders extends HttpHeaders, RequestHeaderGetters {
 
     /**
      * Returns a new {@link RequestHeaders} with the specified {@link HttpMethod}, {@code path} and
-     * an additional header. The value is converted into a {@link String} via
-     * {@link HttpHeadersBuilder#addObject(CharSequence, Object)}.
+     * an additional header. The value is converted into a {@link String} as explained in
+     * <a href="HttpHeaders.html#object-values">Specifying a non-String header value</a>.
      */
     static RequestHeaders of(HttpMethod method, String path,
                              CharSequence name, Object value) {
@@ -86,8 +87,8 @@ public interface RequestHeaders extends HttpHeaders, RequestHeaderGetters {
 
     /**
      * Returns a new {@link RequestHeaders} with the specified {@link HttpMethod}, {@code path} and
-     * an additional header. The values are converted into {@link String}s via
-     * {@link HttpHeadersBuilder#addObject(CharSequence, Object)}.
+     * additional headers. The values are converted into {@link String}s as explained in
+     * <a href="HttpHeaders.html#object-values">Specifying a non-String header value</a>.
      */
     static RequestHeaders of(HttpMethod method, String path,
                              CharSequence name1, Object value1,
@@ -113,8 +114,8 @@ public interface RequestHeaders extends HttpHeaders, RequestHeaderGetters {
 
     /**
      * Returns a new {@link RequestHeaders} with the specified {@link HttpMethod}, {@code path} and
-     * an additional header. The values are converted into {@link String}s via
-     * {@link HttpHeadersBuilder#addObject(CharSequence, Object)}.
+     * additional headers. The values are converted into {@link String}s as explained in
+     * <a href="HttpHeaders.html#object-values">Specifying a non-String header value</a>.
      */
     static RequestHeaders of(HttpMethod method, String path,
                              CharSequence name1, Object value1,
@@ -144,8 +145,8 @@ public interface RequestHeaders extends HttpHeaders, RequestHeaderGetters {
 
     /**
      * Returns a new {@link RequestHeaders} with the specified {@link HttpMethod}, {@code path} and
-     * an additional header. The values are converted into {@link String}s via
-     * {@link HttpHeadersBuilder#addObject(CharSequence, Object)}.
+     * additional headers. The values are converted into {@link String}s as explained in
+     * <a href="HttpHeaders.html#object-values">Specifying a non-String header value</a>.
      */
     static RequestHeaders of(HttpMethod method, String path,
                              CharSequence name1, Object value1,
