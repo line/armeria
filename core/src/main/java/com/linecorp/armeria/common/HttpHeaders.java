@@ -15,6 +15,10 @@
  */
 package com.linecorp.armeria.common;
 
+import java.time.Instant;
+import java.time.temporal.TemporalAccessor;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.function.Consumer;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
@@ -22,6 +26,119 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
 /**
  * Immutable HTTP/2 headers.
+ *
+ * <h3>Building a new {@link HttpHeaders}</h3>
+ *
+ * <p>You can use the {@link HttpHeaders#of(CharSequence, String) HttpHeaders.of()} factory methods or
+ * the {@link HttpHeadersBuilder} to build a new {@link HttpHeaders} from scratch:</p>
+ *
+ * <pre>{@code
+ * // Using of()
+ * HttpHeaders headersWithOf =
+ *     HttpHeaders.of(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=utf-8",
+ *                    HttpHeaderNames.CONTENT_LENGTH, "42");
+ *
+ * // Using builder()
+ * HttpHeaders headersWithBuilder =
+ *     HttpHeaders.builder()
+ *                .add(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=utf-8")
+ *                .add(HttpHeaderNames.CONTENT_LENGTH, "42")
+ *                .build();
+ *
+ * assert headersWithOf.equals(headersWithBuilder);
+ * }</pre>
+ *
+ * <h3>Building a new {@link HttpHeaders} from an existing one</h3>
+ *
+ * <p>You can use {@link HttpHeaders#toBuilder()} or {@link HttpHeaders#withMutations(Consumer)} to build
+ * a new {@link HttpHeaders} derived from an existing one:</p>
+ *
+ * <pre>{@code
+ * HttpHeaders headers = HttpHeaders.of("name1", "value0")
+ *
+ * // Using toBuilder()
+ * HttpHeaders headersWithToBuilder = headers.toBuilder()
+ *                                           .set("name1", "value1")
+ *                                           .add("name2", "value2")
+ *                                           .build();
+ * // Using withMutations()
+ * HttpHeaders headersWithMutations = headers.withMutations(builder -> {
+ *     builder.set("name1", "value1");
+ *     builder.add("name2", "value2");
+ * });
+ *
+ * assert headersWithToBuilder.equals(headersWithMutations);
+ *
+ * // Note that the original headers remain unmodified.
+ * assert !headers.equals(headersWithToBuilder);
+ * assert !headers.equals(headersWithMutations);
+ * }</pre>
+ *
+ * <h3><a name="object-values">Specifying a non-{@link String} header value</a></h3>
+ *
+ * <p>Certain header values are better represented as a Java object than as a {@link String}.
+ * For example, it is more convenient to specify {@code "content-length"}, {@code "content-type"} and
+ * {@code "date"} header as {@link Integer}, {@link MediaType} and {@link Instant} (or {@link Date})
+ * respectively. Armeria's HTTP header API allows you to specify a Java object of well-known type
+ * as a header value by converting it into an HTTP-friendly {@link String} representation:</p>
+ *
+ * <ul>
+ *   <li>{@link Number}, {@link CharSequence} and {@link MediaType}
+ *     <ul>
+ *       <li>Converted via {@code toString()}</li>
+ *       <li>e.g. {@code "42"}, {@code "string"}, {@code "text/plain; charset=utf-8"}</li>
+ *     </ul>
+ *   </li>
+ *   <li>{@link CacheControl}
+ *     <ul>
+ *       <li>Converted via {@link CacheControl#asHeaderValue() asHeaderValue()}</li>
+ *       <li>e.g. {@code "no-cache, no-store, must-revalidate"}</li>
+ *     </ul>
+ *   </li>
+ *   <li>{@link Instant}, {@link TemporalAccessor}, {@link Date} and {@link Calendar}
+ *     <ul>
+ *       <li>Converted into a time and date string as specified in
+ *         <a href="https://tools.ietf.org/html/rfc1123#page-55">RFC1123</a></li>
+ *       <li>e.g. {@code Sun, 27 Nov 2016 19:37:15 UTC}</li>
+ *     </ul>
+ *   </li>
+ *   <li>All other types
+ *     <ul><li>Converted via {@code toString()}</li></ul>
+ *   </li>
+ * </ul>
+ *
+ * <h4>Using {@link HttpHeaders#of(CharSequence, Object) HttpHeaders.of()} factory methods</h4>
+ *
+ * <pre>{@code
+ * HttpHeaders headers =
+ *     HttpHeaders.of(HttpHeaderNames.CONTENT_LENGTH, 42,
+ *                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
+ *                    HttpHeaderNames.DATE, Instant.now());
+ * }</pre>
+ *
+ * <h4>Using {@link HttpHeadersBuilder}</h4>
+ *
+ * <pre>{@code
+ * HttpHeaders headers =
+ *     HttpHeaders.builder()
+ *                .setObject(HttpHeaderNames.CONTENT_LENGTH, 42)
+ *                .setObject(HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8)
+ *                .setObject(HttpHeaderNames.DATE, Instant.now())
+ *                .build();
+ * }</pre>
+ *
+ * <h4>Specifying value type explicitly</h4>
+ *
+ * <p>You might prefer type-safe setters for more efficiency and less ambiguity:</p>
+ *
+ * <pre>{@code
+ * HttpHeaders headers =
+ *     HttpHeaders.builder()
+ *                .setInt(HttpHeaderNames.CONTENT_LENGTH, 42)
+ *                .set(HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8.toString())
+ *                .setTimeMillis(HttpHeaderNames.DATE, System.currentTimeMillis())
+ *                .build();
+ * }</pre>
  *
  * @see RequestHeaders
  * @see ResponseHeaders
@@ -61,7 +178,7 @@ public interface HttpHeaders extends HttpObject, HttpHeaderGetters {
 
     /**
      * Returns a new {@link HttpHeaders} with the specified header. The value is converted into
-     * a {@link String} via {@link HttpHeadersBase#addObject(CharSequence, Object)}.
+     * a {@link String} as explained in <a href="#object-values">Specifying a non-String header value</a>.
      */
     static HttpHeaders of(CharSequence name, Object value) {
         return builder().addObject(name, value).build();
@@ -79,7 +196,7 @@ public interface HttpHeaders extends HttpObject, HttpHeaderGetters {
 
     /**
      * Returns a new {@link HttpHeaders} with the specified headers. The values are converted into
-     * {@link String}s via {@link HttpHeadersBase#addObject(CharSequence, Object)}.
+     * {@link String}s as explained in <a href="#object-values">Specifying a non-String header value</a>.
      */
     static HttpHeaders of(CharSequence name1, Object value1,
                           CharSequence name2, Object value2) {
@@ -102,7 +219,7 @@ public interface HttpHeaders extends HttpObject, HttpHeaderGetters {
 
     /**
      * Returns a new {@link HttpHeaders} with the specified headers. The values are converted into
-     * {@link String}s via {@link HttpHeadersBase#addObject(CharSequence, Object)}.
+     * {@link String}s as explained in <a href="#object-values">Specifying a non-String header value</a>.
      */
     static HttpHeaders of(CharSequence name1, Object value1,
                           CharSequence name2, Object value2,
@@ -129,7 +246,7 @@ public interface HttpHeaders extends HttpObject, HttpHeaderGetters {
 
     /**
      * Returns a new {@link HttpHeaders} with the specified headers. The values are converted into
-     * {@link String}s via {@link HttpHeadersBase#addObject(CharSequence, Object)}.
+     * {@link String}s as explained in <a href="#object-values">Specifying a non-String header value</a>.
      */
     static HttpHeaders of(CharSequence name1, Object value1,
                           CharSequence name2, Object value2,

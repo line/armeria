@@ -62,6 +62,7 @@ final class StringValueConverter implements ValueConverter<String> {
 
         // Try the types that appears more often first.
         if (value instanceof CharSequence ||
+            value instanceof Number ||
             value instanceof MediaType) {
             return value.toString();
         }

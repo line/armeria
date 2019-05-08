@@ -83,7 +83,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
      *
      * @param name the header name
      * @return the {@code int} value of the first value in insertion order or {@code null} if there is no
-     *         such value or it can't be converted to {@code int}.
+     *         such value or it can't be converted into {@code int}.
      */
     @Nullable
     Integer getIntAndRemove(CharSequence name);
@@ -94,7 +94,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
      * @param name the header name
      * @param defaultValue the default value
      * @return the {@code int} value of the first value in insertion order or {@code defaultValue} if there is
-     *         no such value or it can't be converted to {@code int}.
+     *         no such value or it can't be converted into {@code int}.
      */
     int getIntAndRemove(CharSequence name, int defaultValue);
 
@@ -103,7 +103,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
      *
      * @param name the header name
      * @return the {@code long} value of the first value in insertion order or {@code null} if there is no such
-     *         value or it can't be converted to {@code long}.
+     *         value or it can't be converted into {@code long}.
      */
     @Nullable
     Long getLongAndRemove(CharSequence name);
@@ -114,7 +114,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
      * @param name the header name
      * @param defaultValue the default value
      * @return the {@code long} value of the first value in insertion order or {@code defaultValue} if there is
-     *         no such value or it can't be converted to {@code long}.
+     *         no such value or it can't be converted into {@code long}.
      */
     long getLongAndRemove(CharSequence name, long defaultValue);
 
@@ -123,7 +123,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
      *
      * @param name the header name
      * @return the {@code float} value of the first value in insertion order or {@code null} if there is
-     *         no such value or it can't be converted to {@code float}.
+     *         no such value or it can't be converted into {@code float}.
      */
     @Nullable
     Float getFloatAndRemove(CharSequence name);
@@ -134,7 +134,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
      * @param name the header name
      * @param defaultValue the default value
      * @return the {@code float} value of the first value in insertion order or {@code defaultValue} if there
-     *         is no such value or it can't be converted to {@code float}.
+     *         is no such value or it can't be converted into {@code float}.
      */
     float getFloatAndRemove(CharSequence name, float defaultValue);
 
@@ -143,7 +143,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
      *
      * @param name the header name
      * @return the {@code double} value of the first value in insertion order or {@code null} if there is
-     *         no such value or it can't be converted to {@code double}.
+     *         no such value or it can't be converted into {@code double}.
      */
     @Nullable
     Double getDoubleAndRemove(CharSequence name);
@@ -154,7 +154,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
      * @param name the header name
      * @param defaultValue the default value
      * @return the {@code double} value of the first value in insertion order or {@code defaultValue} if there
-     *         is no such value or it can't be converted to {@code double}.
+     *         is no such value or it can't be converted into {@code double}.
      */
     double getDoubleAndRemove(CharSequence name, double defaultValue);
 
@@ -163,7 +163,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
      *
      * @param name the header name
      * @return the milliseconds value of the first value in insertion order or {@code null} if there is no such
-     *         value or it can't be converted to milliseconds.
+     *         value or it can't be converted into milliseconds.
      */
     @Nullable
     Long getTimeMillisAndRemove(CharSequence name);
@@ -174,7 +174,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
      * @param name the header name
      * @param defaultValue the default value
      * @return the milliseconds value of the first value in insertion order or {@code defaultValue} if there is
-     *         no such value or it can't be converted to milliseconds.
+     *         no such value or it can't be converted into milliseconds.
      */
     long getTimeMillisAndRemove(CharSequence name, long defaultValue);
 
@@ -227,7 +227,8 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
             Iterable<? extends Entry<? extends CharSequence, String>> headers);
 
     /**
-     * Adds a new header. Before the {@code value} is added, it's converted to a {@link String}.
+     * Adds a new header. The specified header value is converted into a {@link String}, as explained
+     * in <a href="HttpHeaders.html#object-values">Specifying a non-String header value</a>.
      *
      * @param name the header name
      * @param value the header value
@@ -236,7 +237,9 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
     HttpHeadersBuilder addObject(CharSequence name, Object value);
 
     /**
-     * Adds a new header with the specified name and values. This method is equivalent to
+     * Adds a new header with the specified name and values. The specified header values are converted into
+     * {@link String}s, as explained in <a href="HttpHeaders.html#object-values">Specifying a non-String
+     * header value</a>. This method is equivalent to:
      * <pre>{@code
      * for (Object v : values) {
      *     headers.addObject(name, v);
@@ -250,7 +253,9 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
     HttpHeadersBuilder addObject(CharSequence name, Iterable<?> values);
 
     /**
-     * Adds a new header with the specified name and values. This method is equivalent to
+     * Adds a new header with the specified name and values. The specified header values are converted into
+     * {@link String}s, as explained in <a href="HttpHeaders.html#object-values">Specifying a non-String
+     * header value</a>. This method is equivalent to:
      * <pre>{@code
      * for (Object v : values) {
      *     headers.addObject(name, v);
@@ -264,7 +269,9 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
     HttpHeadersBuilder addObject(CharSequence name, Object... values);
 
     /**
-     * Adds all header names and values of the specified {@code headers}.
+     * Adds all header names and values of the specified {@code headers}. The specified header values are
+     * converted into {@link String}s, as explained in <a href="HttpHeaders.html#object-values">Specifying
+     * a non-String header value</a>.
      *
      * @return {@code this}
      * @throws IllegalArgumentException if {@code headers == this}.
@@ -382,8 +389,9 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
     HttpHeadersBuilder setIfAbsent(Iterable<? extends Entry<? extends CharSequence, String>> headers);
 
     /**
-     * Sets a new header. Any existing headers with the specified name are removed. Before the {@code value} is
-     * added, it's converted to a {@link String}.
+     * Sets a new header. Any existing headers with the specified name are removed. The specified header value
+     * is converted into a {@link String}, as explained in <a href="HttpHeaders.html#object-values">Specifying
+     * a non-String header value</a>.
      *
      * @param name the header name
      * @param value the value of the header
@@ -393,7 +401,9 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
 
     /**
      * Sets a header with the specified name and values. Any existing headers with the specified name are
-     * removed. This method is equivalent to:
+     * removed. The specified header values are converted into {@link String}s, as explained in
+     * <a href="HttpHeaders.html#object-values">Specifying a non-String header value</a>.
+     * This method is equivalent to:
      * <pre>{@code
      * headers.remove(name);
      * for (Object v : values) {
@@ -409,7 +419,9 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
 
     /**
      * Sets a header with the specified name and values. Any existing headers with the specified name are
-     * removed. This method is equivalent to:
+     * removed. The specified header values are converted into {@link String}s, as explained in
+     * <a href="HttpHeaders.html#object-values">Specifying a non-String header value</a>.
+     * This method is equivalent to:
      * <pre>{@code
      * headers.remove(name);
      * for (Object v : values) {
@@ -425,7 +437,8 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
 
     /**
      * Retains all current headers but calls {@link #setObject(CharSequence, Object)} for each entry in
-     * the specified {@code headers}.
+     * the specified {@code headers}. The specified header values are converted into {@link String}s,
+     * as explained in <a href="HttpHeaders.html#object-values">Specifying a non-String header value</a>.
      *
      * @param headers the headers used to set the values in this instance
      * @return {@code this}
