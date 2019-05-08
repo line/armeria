@@ -29,7 +29,6 @@
  */
 package com.linecorp.armeria.common;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName.hasPseudoHeaderFormat;
@@ -55,6 +54,7 @@ import javax.annotation.Nullable;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterators;
 
 import io.netty.handler.codec.DateFormatter;
 import io.netty.util.AsciiString;
@@ -237,6 +237,10 @@ class HttpHeadersBase implements HttpHeaderGetters {
     @Override
     public final List<String> getAll(CharSequence name) {
         requireNonNull(name, "name");
+        return getAllReversed(name).reverse();
+    }
+
+    private ImmutableList<String> getAllReversed(CharSequence name) {
         final ImmutableList.Builder<String> builder = ImmutableList.builder();
         final int h = AsciiString.hashCode(name);
         final int i = index(h);
@@ -247,7 +251,7 @@ class HttpHeadersBase implements HttpHeaderGetters {
             }
             e = e.next;
         }
-        return builder.build().reverse();
+        return builder.build();
     }
 
     @Nullable
@@ -969,10 +973,33 @@ class HttpHeadersBase implements HttpHeaderGetters {
             return false;
         }
 
-        for (AsciiString name : names()) {
-            if (!getAll(name).equals(that.getAll(name))) {
+        if (that instanceof HttpHeadersBase) {
+            return equalsFast((HttpHeadersBase) that);
+        } else {
+            return equalsSlow(that);
+        }
+    }
+
+    private boolean equalsFast(HttpHeadersBase that) {
+        HeaderEntry e = head.after;
+        while (e != head) {
+            final AsciiString name = e.getKey();
+            if (!getAllReversed(name).equals(that.getAllReversed(name))) {
                 return false;
             }
+            e = e.after;
+        }
+        return true;
+    }
+
+    private boolean equalsSlow(HttpHeaderGetters that) {
+        HeaderEntry e = head.after;
+        while (e != head) {
+            final AsciiString name = e.getKey();
+            if (!Iterators.elementsEqual(valueIterator(name), that.valueIterator(name))) {
+                return false;
+            }
+            e = e.after;
         }
         return true;
     }
@@ -992,7 +1019,7 @@ class HttpHeadersBase implements HttpHeaderGetters {
 
         HeaderEntry e = head.after;
         while (e != head) {
-            sb.append(e.key).append('=').append(firstNonNull(e.valueAsString, e.value)).append(", ");
+            sb.append(e.key).append('=').append(e.value).append(", ");
             e = e.after;
         }
 
@@ -1035,8 +1062,6 @@ class HttpHeadersBase implements HttpHeaderGetters {
         final AsciiString key;
         @Nullable
         final String value;
-        @Nullable
-        private String valueAsString;
         /**
          * In bucket linked list.
          */
@@ -1100,12 +1125,8 @@ class HttpHeadersBase implements HttpHeaderGetters {
 
         @Override
         public String getValue() {
-            if (valueAsString != null) {
-                return valueAsString;
-            }
-
             assert value != null;
-            return valueAsString = value;
+            return value;
         }
 
         @Override

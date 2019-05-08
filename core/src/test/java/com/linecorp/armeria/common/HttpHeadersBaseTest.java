@@ -47,6 +47,28 @@ import io.netty.util.AsciiString;
 
 public class HttpHeadersBaseTest {
 
+    @Test
+    public void testEqualsInsertionOrderSameHeaderName() {
+        final HttpHeadersBase h1 = newEmptyHeaders();
+        h1.add("a", "b");
+        h1.add("a", "c");
+        final HttpHeadersBase h2 = newEmptyHeaders();
+        h2.add("a", "c");
+        h2.add("a", "b");
+        assertThat(h1).isNotEqualTo(h2);
+    }
+
+    @Test
+    public void testEqualsInsertionOrderDifferentHeaderNames() {
+        final HttpHeadersBase h1 = newEmptyHeaders();
+        h1.add("a", "b");
+        h1.add("c", "d");
+        final HttpHeadersBase h2 = newEmptyHeaders();
+        h2.add("c", "d");
+        h2.add("a", "b");
+        assertThat(h1).isEqualTo(h2);
+    }
+
     // Tests forked from io.netty.handler.codec.DefaultHeadersTest
 
     @Test
