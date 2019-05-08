@@ -221,15 +221,15 @@ abstract class HttpResponseDecoder {
                     // NB: It's safe to call logBuilder.startResponse() multiple times.
                     logBuilder.startResponse();
 
-                    assert o instanceof HttpHeaders;
+                    if (!(o instanceof ResponseHeaders)) {
+                        throw new IllegalStateException("unexpected HttpObject: " + o);
+                    }
 
-                    if (o instanceof ResponseHeaders) {
-                        final ResponseHeaders headers = (ResponseHeaders) o;
-                        final HttpStatus status =  headers.status();
-                        if (status.codeClass() != HttpStatusClass.INFORMATIONAL) {
-                            state = State.WAIT_DATA_OR_TRAILERS;
-                            logBuilder.responseHeaders(headers);
-                        }
+                    final ResponseHeaders headers = (ResponseHeaders) o;
+                    final HttpStatus status =  headers.status();
+                    if (status.codeClass() != HttpStatusClass.INFORMATIONAL) {
+                        state = State.WAIT_DATA_OR_TRAILERS;
+                        logBuilder.responseHeaders(headers);
                     }
                     break;
                 case WAIT_DATA_OR_TRAILERS:
