@@ -440,5 +440,4 @@ public class ArmeriaHttpUtilTest {
         assertThat(toArmeria(in, false, false)).isInstanceOf(ResponseHeaders.class)
                                                .isNotInstanceOf(RequestHeaders.class);
     }
-
 }
