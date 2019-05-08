@@ -34,12 +34,12 @@ public interface ResponseHeadersBuilder extends HttpHeadersBuilder, ResponseHead
     ResponseHeaders build();
 
     /**
-     * Sets the the {@code ":status"} header.
+     * Sets the {@code ":status"} header.
      */
     ResponseHeadersBuilder status(int statusCode);
 
     /**
-     * Sets the the {@code ":status"} header.
+     * Sets the {@code ":status"} header.
      */
     ResponseHeadersBuilder status(HttpStatus status);
 

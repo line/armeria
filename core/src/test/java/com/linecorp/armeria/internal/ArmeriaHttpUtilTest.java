@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.ResponseHeaders;
 
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -396,4 +397,48 @@ public class ArmeriaHttpUtilTest {
         final Http2Headers outHttp2 = toNettyHttp2(in, true);
         assertThat(outHttp2).isEqualTo(new DefaultHttp2Headers().add("foo", "bar"));
     }
+
+    @Test
+    public void convertedHeaderTypes() {
+        final Http2Headers in = new DefaultHttp2Headers().set("a", "b");
+
+        // Request headers without pseudo headers.
+        assertThat(toArmeria(in, true, false)).isInstanceOf(HttpHeaders.class)
+                                              .isNotInstanceOf(RequestHeaders.class)
+                                              .isNotInstanceOf(ResponseHeaders.class);
+
+        // Response headers without pseudo headers.
+        assertThat(toArmeria(in, false, false)).isInstanceOf(HttpHeaders.class)
+                                               .isNotInstanceOf(RequestHeaders.class)
+                                               .isNotInstanceOf(ResponseHeaders.class);
+
+        // Request headers with pseudo headers.
+        in.clear()
+          .set(HttpHeaderNames.METHOD, "GET")
+          .set(HttpHeaderNames.PATH, "/");
+        assertThat(toArmeria(in, true, false)).isInstanceOf(RequestHeaders.class)
+                                              .isNotInstanceOf(ResponseHeaders.class);
+
+        // Response headers with pseudo headers.
+        in.clear()
+          .set(HttpHeaderNames.STATUS, "200");
+        assertThat(toArmeria(in, false, false)).isInstanceOf(ResponseHeaders.class)
+                                               .isNotInstanceOf(RequestHeaders.class);
+
+        // Request headers with mixed pseudo headers.
+        in.clear()
+          .set(HttpHeaderNames.METHOD, "GET")
+          .set(HttpHeaderNames.PATH, "/")
+          .set(HttpHeaderNames.STATUS, "200");
+        assertThat(toArmeria(in, true, false)).isInstanceOf(RequestHeaders.class)
+                                              .isNotInstanceOf(ResponseHeaders.class);
+
+        // Response headers with mixed pseudo headers.
+        in.clear()
+          .set(HttpHeaderNames.STATUS, "200")
+          .set(HttpHeaderNames.METHOD, "GET");
+        assertThat(toArmeria(in, false, false)).isInstanceOf(ResponseHeaders.class)
+                                               .isNotInstanceOf(RequestHeaders.class);
+    }
+
 }
