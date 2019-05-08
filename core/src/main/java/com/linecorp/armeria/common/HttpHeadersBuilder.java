@@ -29,7 +29,6 @@ import javax.annotation.Nullable;
 public interface HttpHeadersBuilder extends HttpHeaderGetters {
     /**
      * Returns a newly created {@link HttpHeaders} with the entries in this builder.
-     * Note that any further modification of this builder is prohibited after this method is invoked.
      */
     HttpHeaders build();
 
@@ -56,7 +55,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
     /**
      * Removes all the headers with the specified name and returns the header value which was added first.
      *
-     * @param name the name of the header to retrieve
+     * @param name the header name
      * @return the first header value or {@code null} if there is no such header
      */
     @Nullable
@@ -65,7 +64,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
     /**
      * Removes all the headers with the specified name and returns the header value which was added first.
      *
-     * @param name the name of the header to retrieve
+     * @param name the header name
      * @param defaultValue the default value
      * @return the first header value or {@code defaultValue} if there is no such header
      */
@@ -74,7 +73,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
     /**
      * Removes all the headers with the specified name and returns the removed header values.
      *
-     * @param name the name of the header to retrieve
+     * @param name the header name
      * @return a {@link List} of header values or an empty {@link List} if no values are found.
      */
     List<String> getAllAndRemove(CharSequence name);
@@ -82,7 +81,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
     /**
      * Removes all the headers with the specified name and returns the header value which was added first.
      *
-     * @param name the name of the header to search
+     * @param name the header name
      * @return the {@code int} value of the first value in insertion order or {@code null} if there is no
      *         such value or it can't be converted to {@code int}.
      */
@@ -92,7 +91,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
     /**
      * Removes all the headers with the specified name and returns the header value which was added first.
      *
-     * @param name the name of the header to search
+     * @param name the header name
      * @param defaultValue the default value
      * @return the {@code int} value of the first value in insertion order or {@code defaultValue} if there is
      *         no such value or it can't be converted to {@code int}.
@@ -102,7 +101,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
     /**
      * Removes all the headers with the specified name and returns the header value which was added first.
      *
-     * @param name the name of the header to search
+     * @param name the header name
      * @return the {@code long} value of the first value in insertion order or {@code null} if there is no such
      *         value or it can't be converted to {@code long}.
      */
@@ -112,7 +111,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
     /**
      * Removes all the headers with the specified name and returns the header value which was added first.
      *
-     * @param name the name of the header to search
+     * @param name the header name
      * @param defaultValue the default value
      * @return the {@code long} value of the first value in insertion order or {@code defaultValue} if there is
      *         no such value or it can't be converted to {@code long}.
@@ -122,7 +121,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
     /**
      * Removes all the headers with the specified name and returns the header value which was added first.
      *
-     * @param name the name of the header to search
+     * @param name the header name
      * @return the {@code float} value of the first value in insertion order or {@code null} if there is
      *         no such value or it can't be converted to {@code float}.
      */
@@ -132,7 +131,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
     /**
      * Removes all the headers with the specified name and returns the header value which was added first.
      *
-     * @param name the name of the header to search
+     * @param name the header name
      * @param defaultValue the default value
      * @return the {@code float} value of the first value in insertion order or {@code defaultValue} if there
      *         is no such value or it can't be converted to {@code float}.
@@ -142,7 +141,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
     /**
      * Removes all the headers with the specified name and returns the header value which was added first.
      *
-     * @param name the name of the header to search
+     * @param name the header name
      * @return the {@code double} value of the first value in insertion order or {@code null} if there is
      *         no such value or it can't be converted to {@code double}.
      */
@@ -152,7 +151,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
     /**
      * Removes all the headers with the specified name and returns the header value which was added first.
      *
-     * @param name the name of the header to search
+     * @param name the header name
      * @param defaultValue the default value
      * @return the {@code double} value of the first value in insertion order or {@code defaultValue} if there
      *         is no such value or it can't be converted to {@code double}.
@@ -162,7 +161,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
     /**
      * Removes all the headers with the specified name and returns the header value which was added first.
      *
-     * @param name the name of the header to retrieve
+     * @param name the header name
      * @return the milliseconds value of the first value in insertion order or {@code null} if there is no such
      *         value or it can't be converted to milliseconds.
      */
@@ -172,7 +171,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
     /**
      * Removes all the headers with the specified name and returns the header value which was added first.
      *
-     * @param name the name of the header to retrieve
+     * @param name the header name
      * @param defaultValue the default value
      * @return the milliseconds value of the first value in insertion order or {@code defaultValue} if there is
      *         no such value or it can't be converted to milliseconds.

@@ -28,14 +28,14 @@ import java.util.function.Consumer;
 public interface RequestHeaders extends HttpHeaders, RequestHeaderGetters {
 
     /**
-     * Creates a new empty builder.
+     * Returns a new empty builder.
      */
     static RequestHeadersBuilder builder() {
         return new DefaultRequestHeadersBuilder();
     }
 
     /**
-     * Creates a new builder with the specified {@link HttpMethod} and {@code path}.
+     * Returns a new builder with the specified {@link HttpMethod} and {@code path}.
      */
     static RequestHeadersBuilder builder(HttpMethod method, String path) {
         requireNonNull(method, "method");

@@ -35,7 +35,7 @@ import io.netty.util.AsciiString;
 interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
 
     /**
-     * Tells whether the headers will be the last frame in an HTTP/2 stream.
+     * Tells whether the headers correspond to the last frame in an HTTP/2 stream.
      */
     boolean isEndOfStream();
 
@@ -194,7 +194,8 @@ interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
 
     /**
      * Returns {@code true} if a header with the {@code name} and {@code value} exists.
-     *  @param name the header name
+     *
+     * @param name the header name
      * @param value the header value of the header to find
      */
     boolean contains(CharSequence name, String value);
@@ -269,7 +270,7 @@ interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
     Set<AsciiString> names();
 
     /**
-     * Returns an iterator that yields all header entries. The iteration order is as follows:
+     * Returns an {@link Iterator} that yields all header entries. The iteration order is as follows:
      * <ol>
      *   <li>All pseudo headers (order not specified).</li>
      *   <li>All non-pseudo headers (in insertion order).</li>
@@ -279,7 +280,7 @@ interface HttpHeaderGetters extends Iterable<Entry<AsciiString, String>> {
     Iterator<Entry<AsciiString, String>> iterator();
 
     /**
-     * Returns an iterator that yields all values of the headers with the specified {@code name}.
+     * Returns an {@link Iterator} that yields all values of the headers with the specified {@code name}.
      */
     Iterator<String> valueIterator(CharSequence name);
 

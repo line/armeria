@@ -31,13 +31,6 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 public interface HttpHeaders extends HttpObject, HttpHeaderGetters {
 
     /**
-     * Creates a new empty builder.
-     */
-    static HttpHeadersBuilder builder() {
-        return new DefaultHttpHeadersBuilder();
-    }
-
-    /**
      * An empty {@link HttpHeaders}.
      *
      * @deprecated Use {@link #of()}.
@@ -46,7 +39,14 @@ public interface HttpHeaders extends HttpObject, HttpHeaderGetters {
     HttpHeaders EMPTY_HEADERS = of();
 
     /**
-     * Returns an empty singleton {@link HttpHeaders}.
+     * Returns a new empty builder.
+     */
+    static HttpHeadersBuilder builder() {
+        return new DefaultHttpHeadersBuilder();
+    }
+
+    /**
+     * Returns an empty {@link HttpHeaders}.
      */
     static HttpHeaders of() {
         return DefaultHttpHeaders.EMPTY;

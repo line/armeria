@@ -26,7 +26,6 @@ import java.util.Map.Entry;
 public interface ResponseHeadersBuilder extends HttpHeadersBuilder, ResponseHeaderGetters {
     /**
      * Returns a newly created {@link ResponseHeaders} with the entries in this builder.
-     * Note that any further modification of this builder is prohibited after this method is invoked.
      *
      * @throws IllegalStateException if this builder does not have {@code ":status"} header set.
      */

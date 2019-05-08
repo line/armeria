@@ -28,21 +28,21 @@ import java.util.function.Consumer;
 public interface ResponseHeaders extends HttpHeaders, ResponseHeaderGetters {
 
     /**
-     * Creates a new empty builder.
+     * Returns a new empty builder.
      */
     static ResponseHeadersBuilder builder() {
         return new DefaultResponseHeadersBuilder();
     }
 
     /**
-     * Creates a new builder with the specified {@code statusCode}.
+     * Returns a new builder with the specified {@code statusCode}.
      */
     static ResponseHeadersBuilder builder(int statusCode) {
         return builder(HttpStatus.valueOf(statusCode));
     }
 
     /**
-     * Creates a new builder with the specified {@link HttpStatus}.
+     * Returns a new builder with the specified {@link HttpStatus}.
      */
     static ResponseHeadersBuilder builder(HttpStatus status) {
         requireNonNull(status, "status");
