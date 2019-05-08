@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -113,6 +114,7 @@ public final class GrpcService extends AbstractHttpService
                 DecompressorRegistry decompressorRegistry,
                 CompressorRegistry compressorRegistry,
                 Set<SerializationFormat> supportedSerializationFormats,
+                Consumer<MessageMarshaller.Builder> jsonMarshallerCustomizer,
                 int maxOutboundMessageSizeBytes,
                 boolean useBlockingTaskExecutor,
                 boolean unsafeWrapRequestBuffers,
@@ -124,7 +126,7 @@ public final class GrpcService extends AbstractHttpService
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         this.supportedSerializationFormats = supportedSerializationFormats;
         this.protoReflectionService = protoReflectionService;
-        jsonMarshaller = jsonMarshaller(registry, supportedSerializationFormats);
+        jsonMarshaller = jsonMarshaller(registry, supportedSerializationFormats, jsonMarshallerCustomizer);
         this.maxOutboundMessageSizeBytes = maxOutboundMessageSizeBytes;
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
@@ -336,8 +338,10 @@ public final class GrpcService extends AbstractHttpService
     }
 
     @Nullable
-    private static MessageMarshaller jsonMarshaller(HandlerRegistry registry,
-                                                    Set<SerializationFormat> supportedSerializationFormats) {
+    private static MessageMarshaller jsonMarshaller(
+            HandlerRegistry registry,
+            Set<SerializationFormat> supportedSerializationFormats,
+            Consumer<MessageMarshaller.Builder> jsonMarshallerCustomizer) {
         if (supportedSerializationFormats.stream().noneMatch(GrpcSerializationFormats::isJson)) {
             return null;
         }
@@ -346,7 +350,7 @@ public final class GrpcService extends AbstractHttpService
                         .flatMap(service -> service.getMethods().stream())
                         .map(ServerMethodDefinition::getMethodDescriptor)
                         .collect(toImmutableList());
-        return GrpcJsonUtil.jsonMarshaller(methods);
+        return GrpcJsonUtil.jsonMarshaller(methods, jsonMarshallerCustomizer);
     }
 
     @Override

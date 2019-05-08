@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.grpc;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 
@@ -36,7 +37,9 @@ public final class GrpcJsonUtil {
      * Returns a {@link MessageMarshaller} with the request/response {@link Message}s of all the {@code methods}
      * registered.
      */
-    public static MessageMarshaller jsonMarshaller(List<MethodDescriptor<?, ?>> methods) {
+    public static MessageMarshaller jsonMarshaller(
+            List<MethodDescriptor<?, ?>> methods,
+            Consumer<MessageMarshaller.Builder> jsonMarshallerCustomizer) {
         final MessageMarshaller.Builder builder = MessageMarshaller.builder()
                                                                    .omittingInsignificantWhitespace(true)
                                                                    .ignoringUnknownFields(true);
@@ -44,6 +47,9 @@ public final class GrpcJsonUtil {
             marshallerPrototype(method.getRequestMarshaller()).ifPresent(builder::register);
             marshallerPrototype(method.getResponseMarshaller()).ifPresent(builder::register);
         }
+
+        jsonMarshallerCustomizer.accept(builder);
+
         return builder.build();
     }
 

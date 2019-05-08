@@ -46,6 +46,7 @@ public final class GrpcTestUtil {
             SimpleResponse.newBuilder()
                           .setPayload(Payload.newBuilder()
                                              .setBody(ByteString.copyFromUtf8("grpc and armeria")))
+                          .setOauthScope("oauth-scope")
                           .build();
 
     public static byte[] uncompressedResponseBytes() {
