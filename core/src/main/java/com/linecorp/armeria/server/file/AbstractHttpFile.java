@@ -158,7 +158,7 @@ public abstract class AbstractHttpFile implements HttpFile {
         final String etag = generateEntityTag(attrs);
         final ResponseHeadersBuilder headers =
                 ResponseHeaders.builder(HttpStatus.OK)
-                               .set(HttpHeaderNames.CONTENT_LENGTH, Long.toString(attrs.length()));
+                               .addLong(HttpHeaderNames.CONTENT_LENGTH, attrs.length());
         return addCommonHeaders(headers, attrs, etag);
     }
 
