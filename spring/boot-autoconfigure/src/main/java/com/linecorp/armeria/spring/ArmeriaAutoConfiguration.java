@@ -17,6 +17,7 @@
 package com.linecorp.armeria.spring;
 
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureAnnotatedHttpServices;
+import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureGrpcServices;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureHttpServices;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configurePorts;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureServerWithArmeriaSettings;
@@ -36,10 +37,13 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import com.google.common.base.Strings;
+
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
+import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 
@@ -67,6 +71,7 @@ public class ArmeriaAutoConfiguration {
             Optional<List<HealthChecker>> healthCheckers,
             Optional<List<ArmeriaServerConfigurator>> armeriaServerConfigurators,
             Optional<List<ThriftServiceRegistrationBean>> thriftServiceRegistrationBeans,
+            Optional<List<GrpcServiceRegistrationBean>> grpcServiceRegistrationBean,
             Optional<List<HttpServiceRegistrationBean>> httpServiceRegistrationBeans,
             Optional<List<AnnotatedServiceRegistrationBean>> annotatedServiceRegistrationBeans)
             throws InterruptedException {
@@ -92,10 +97,18 @@ public class ArmeriaAutoConfiguration {
             configurePorts(server, ports);
         }
 
+        final DocServiceBuilder docServiceBuilder = new DocServiceBuilder();
+        final String docsPath = armeriaSettings.getDocsPath();
         configureThriftServices(server,
+                                docServiceBuilder,
                                 thriftServiceRegistrationBeans.orElseGet(Collections::emptyList),
                                 meterIdPrefixFuncFactory,
-                                armeriaSettings.getDocsPath());
+                                docsPath);
+        configureGrpcServices(server,
+                              docServiceBuilder,
+                              grpcServiceRegistrationBean.orElseGet(Collections::emptyList),
+                              meterIdPrefixFuncFactory,
+                              docsPath);
         configureHttpServices(server,
                               httpServiceRegistrationBeans.orElseGet(Collections::emptyList),
                               meterIdPrefixFuncFactory);
@@ -109,6 +122,10 @@ public class ArmeriaAutoConfiguration {
         armeriaServerConfigurators.ifPresent(
                 configurators -> configurators.forEach(
                         configurator -> configurator.configure(server)));
+
+        if (!Strings.isNullOrEmpty(docsPath)) {
+            server.serviceUnder(docsPath, docServiceBuilder.build());
+        }
 
         final Server s = server.build();
 

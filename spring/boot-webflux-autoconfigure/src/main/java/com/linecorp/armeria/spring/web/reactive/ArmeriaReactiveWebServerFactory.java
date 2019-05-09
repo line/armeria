@@ -18,6 +18,7 @@ package com.linecorp.armeria.spring.web.reactive;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureAnnotatedHttpServices;
+import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureGrpcServices;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureHttpServices;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configurePorts;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureServerWithArmeriaSettings;
@@ -51,6 +52,7 @@ import org.springframework.boot.web.server.SslStoreProvider;
 import org.springframework.boot.web.server.WebServer;
 import org.springframework.http.server.reactive.HttpHandler;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpResponse;
@@ -58,10 +60,12 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
+import com.linecorp.armeria.spring.GrpcServiceRegistrationBean;
 import com.linecorp.armeria.spring.HttpServiceRegistrationBean;
 import com.linecorp.armeria.spring.MeterIdPrefixFunctionFactory;
 import com.linecorp.armeria.spring.ThriftServiceRegistrationBean;
@@ -217,10 +221,17 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                                            : null;
 
         configurePorts(sb, settings.getPorts());
+        final DocServiceBuilder docServiceBuilder = new DocServiceBuilder();
         configureThriftServices(sb,
+                                docServiceBuilder,
                                 findBeans(ThriftServiceRegistrationBean.class),
                                 meterIdPrefixFunctionFactory,
                                 settings.getDocsPath());
+        configureGrpcServices(sb,
+                              docServiceBuilder,
+                              findBeans(GrpcServiceRegistrationBean.class),
+                              meterIdPrefixFunctionFactory,
+                              settings.getDocsPath());
         configureHttpServices(sb,
                               findBeans(HttpServiceRegistrationBean.class),
                               meterIdPrefixFunctionFactory);
@@ -239,6 +250,10 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
             sb.decorator(contentEncodingDecorator(compression.getMimeTypes(),
                                                   compression.getExcludedUserAgents(),
                                                   parseDataSize(compression.getMinResponseSize())));
+        }
+
+        if (!Strings.isNullOrEmpty(settings.getDocsPath())) {
+            sb.serviceUnder(settings.getDocsPath(), docServiceBuilder.build());
         }
     }
 

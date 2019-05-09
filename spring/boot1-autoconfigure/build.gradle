@@ -12,6 +12,7 @@ dependencies {
     compile 'org.springframework.boot:spring-boot-starter:1.5.20.RELEASE'
     compileOnly 'org.springframework.boot:spring-boot-configuration-processor:1.5.20.RELEASE'
 
+    testCompile project(':grpc')
     testCompile 'org.springframework.boot:spring-boot-starter-test:1.5.20.RELEASE'
 }
 
@@ -22,7 +23,9 @@ dependencies {
 def autoconfigureProjectDir = "${rootProject.projectDir}/spring/boot-autoconfigure"
 tasks.compileJava.source "${autoconfigureProjectDir}/src/main/java"
 tasks.processResources.from "${autoconfigureProjectDir}/src/main/resources"
-tasks.compileTestJava.source "${autoconfigureProjectDir}/src/test/java", "${autoconfigureProjectDir}/gen-src/test/java"
+tasks.compileTestJava.source "${autoconfigureProjectDir}/src/test/java",
+        "${autoconfigureProjectDir}/gen-src/test/grpc",
+        "${autoconfigureProjectDir}/gen-src/test/java"
 tasks.processTestResources.from "${autoconfigureProjectDir}/src/test/resources"
 tasks.sourceJar.from "${autoconfigureProjectDir}/src/main/java"
 tasks.sourceJar.from "${autoconfigureProjectDir}/src/main/resources"
