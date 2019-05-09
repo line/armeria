@@ -98,16 +98,17 @@ public class ArmeriaAutoConfiguration {
         }
 
         final DocServiceBuilder docServiceBuilder = new DocServiceBuilder();
+        final String docsPath = armeriaSettings.getDocsPath();
         configureThriftServices(server,
                                 docServiceBuilder,
                                 thriftServiceRegistrationBeans.orElseGet(Collections::emptyList),
                                 meterIdPrefixFuncFactory,
-                                armeriaSettings.getDocsPath());
+                                docsPath);
         configureGrpcServices(server,
                               docServiceBuilder,
                               grpcServiceRegistrationBean.orElseGet(Collections::emptyList),
                               meterIdPrefixFuncFactory,
-                              armeriaSettings.getDocsPath());
+                              docsPath);
         configureHttpServices(server,
                               httpServiceRegistrationBeans.orElseGet(Collections::emptyList),
                               meterIdPrefixFuncFactory);
@@ -122,8 +123,8 @@ public class ArmeriaAutoConfiguration {
                 configurators -> configurators.forEach(
                         configurator -> configurator.configure(server)));
 
-        if (!Strings.isNullOrEmpty(armeriaSettings.getDocsPath())) {
-            server.serviceUnder(armeriaSettings.getDocsPath(), docServiceBuilder.build());
+        if (!Strings.isNullOrEmpty(docsPath)) {
+            server.serviceUnder(docsPath, docServiceBuilder.build());
         }
 
         final Server s = server.build();
