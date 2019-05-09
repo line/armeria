@@ -75,7 +75,9 @@ public class GrpcServiceRegistrationBean
             return exampleRequest;
         }
 
-        public static ExampleRequest of(String serviceType, String methodName, Object exampleRequest) {
+        public static ExampleRequest of(@NotNull String serviceType,
+                                        @NotNull String methodName,
+                                        @NotNull Object exampleRequest) {
             return new ExampleRequest(serviceType, methodName, exampleRequest);
         }
     }
