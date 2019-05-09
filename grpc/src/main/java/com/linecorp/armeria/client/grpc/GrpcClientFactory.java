@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 
@@ -60,6 +61,8 @@ final class GrpcClientFactory extends DecoratingClientFactory {
                                                         .stream()
                                                         .map(f -> Scheme.of(f, p)))
                   .collect(toImmutableSet());
+
+    private static final Consumer<MessageMarshaller.Builder> NO_OP = (unused) -> {};
 
     /**
      * Creates a new instance from the specified {@link ClientFactory} that supports the "none+http" scheme.
@@ -112,8 +115,11 @@ final class GrpcClientFactory extends DecoratingClientFactory {
 
         final Client<HttpRequest, HttpResponse> httpClient = newHttpClient(uri, scheme, options);
 
-        final MessageMarshaller jsonMarshaller = GrpcSerializationFormats.isJson(serializationFormat) ?
-                                                 GrpcJsonUtil.jsonMarshaller(stubMethods(stubClass)) : null;
+        final MessageMarshaller jsonMarshaller =
+                GrpcSerializationFormats.isJson(serializationFormat) ?
+                GrpcJsonUtil.jsonMarshaller(
+                        stubMethods(stubClass),
+                        options.getOrElse(GrpcClientOptions.JSON_MARSHALLER_CUSTOMIZER, NO_OP)) : null;
         final ArmeriaChannel channel = new ArmeriaChannel(
                 new DefaultClientBuilderParams(this, uri, clientType, options),
                 httpClient,

@@ -24,6 +24,7 @@ import static org.assertj.core.api.Assertions.entry;
 import static org.awaitility.Awaitility.await;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
@@ -58,10 +59,14 @@ import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
+import com.linecorp.armeria.client.grpc.GrpcClientOptions;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.FilteredHttpResponse;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -304,6 +309,16 @@ public class GrpcServiceServerTest {
                                 ctx.log().addListener(requestLogQueue::add, RequestLogAvailability.COMPLETE);
                                 return delegate.serve(ctx, req);
                             }));
+
+            // For simplicity, mount onto a subpath with custom options
+            sb.serviceUnder(
+                    "/json-preserving/",
+                    new GrpcServiceBuilder()
+                            .addService(new UnitTestServiceImpl())
+                            .supportedSerializationFormats(GrpcSerializationFormats.values())
+                            .jsonMarshallerCustomizer(marshaller -> marshaller.preservingProtoFieldNames(true))
+                            .build());
+
             sb.service(
                     new GrpcServiceBuilder()
                             .addService(ProtoReflectionService.newInstance())
@@ -862,6 +877,7 @@ public class GrpcServiceServerTest {
     @Test
     public void json() throws Exception {
         final AtomicReference<HttpHeaders> requestHeaders = new AtomicReference<>();
+        final AtomicReference<byte[]> payload = new AtomicReference<>();
         final UnitTestServiceBlockingStub jsonStub =
                 new ClientBuilder(server.httpUri(GrpcSerializationFormats.JSON, "/"))
                         .decorator(client -> new SimpleDecoratingClient<HttpRequest, HttpResponse>(client) {
@@ -869,7 +885,15 @@ public class GrpcServiceServerTest {
                             public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
                                     throws Exception {
                                 requestHeaders.set(req.headers());
-                                return delegate().execute(ctx, req);
+                                return new FilteredHttpResponse(delegate().execute(ctx, req)) {
+                                    @Override
+                                    protected HttpObject filter(HttpObject obj) {
+                                        if (obj instanceof HttpData) {
+                                            payload.set(((HttpData) obj).array());
+                                        }
+                                        return obj;
+                                    }
+                                };
                             }
                         })
                         .build(UnitTestServiceBlockingStub.class);
@@ -882,6 +906,42 @@ public class GrpcServiceServerTest {
             assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
             assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
         });
+
+        byte[] deframed = Arrays.copyOfRange(payload.get(), 5, payload.get().length);
+        assertThat(new String(deframed, StandardCharsets.UTF_8)).contains("oauthScope");
+    }
+
+    @Test
+    public void json_preservingFieldNames() throws Exception {
+        final AtomicReference<HttpHeaders> requestHeaders = new AtomicReference<>();
+        final AtomicReference<byte[]> payload = new AtomicReference<>();
+        final UnitTestServiceBlockingStub jsonStub =
+                new ClientBuilder(server.httpUri(GrpcSerializationFormats.JSON, "/json-preserving/"))
+                        .option(GrpcClientOptions.JSON_MARSHALLER_CUSTOMIZER.newValue(
+                                marshaller -> marshaller.preservingProtoFieldNames(true)))
+                        .decorator(client -> new SimpleDecoratingClient<HttpRequest, HttpResponse>(client) {
+                            @Override
+                            public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
+                                    throws Exception {
+                                requestHeaders.set(req.headers());
+                                return new FilteredHttpResponse(delegate().execute(ctx, req)) {
+                                    @Override
+                                    protected HttpObject filter(HttpObject obj) {
+                                        if (obj instanceof HttpData) {
+                                            payload.set(((HttpData) obj).array());
+                                        }
+                                        return obj;
+                                    }
+                                };
+                            }
+                        })
+                        .build(UnitTestServiceBlockingStub.class);
+        final SimpleResponse response = jsonStub.staticUnaryCall(REQUEST_MESSAGE);
+        assertThat(response).isEqualTo(RESPONSE_MESSAGE);
+        assertThat(requestHeaders.get().get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo("application/grpc+json");
+
+        byte[] deframed = Arrays.copyOfRange(payload.get(), 5, payload.get().length);
+        assertThat(new String(deframed, StandardCharsets.UTF_8)).contains("oauth_scope");
     }
 
     @Test

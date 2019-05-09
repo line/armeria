@@ -23,8 +23,12 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
+
+import org.curioswitch.common.protobuf.json.MessageMarshaller;
+import org.curioswitch.common.protobuf.json.MessageMarshaller.Builder;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -70,6 +74,8 @@ public final class GrpcServiceBuilder {
     private int maxInboundMessageSizeBytes = GrpcService.NO_MAX_INBOUND_MESSAGE_SIZE;
 
     private int maxOutboundMessageSizeBytes = ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE;
+
+    private Consumer<Builder> jsonMarshallerCustomizer = (unused) -> {};
 
     private boolean enableUnframedRequests;
 
@@ -248,6 +254,18 @@ public final class GrpcServiceBuilder {
     }
 
     /**
+     * Sets a {@link Consumer} that can customize the JSON marshaller used when handling JSON payloads in the
+     * service. This is commonly used to switch from the default of using lowerCamelCase for field names to
+     * using the field name from the proto definition, by setting
+     * {@link MessageMarshaller.Builder#preservingProtoFieldNames(boolean)}.
+     */
+    public GrpcServiceBuilder jsonMarshallerCustomizer(
+            Consumer<MessageMarshaller.Builder> jsonMarshallerCustomizer) {
+        this.jsonMarshallerCustomizer = requireNonNull(jsonMarshallerCustomizer, "jsonMarshallerCustomizer");
+        return this;
+    }
+
+    /**
      * Constructs a new {@link GrpcService} that can be bound to
      * {@link ServerBuilder}. It is recommended to bind the service to a server
      * using {@link ServerBuilder#service(ServiceWithPathMappings)} to mount all
@@ -267,6 +285,7 @@ public final class GrpcServiceBuilder {
                 firstNonNull(decompressorRegistry, DecompressorRegistry.getDefaultInstance()),
                 firstNonNull(compressorRegistry, CompressorRegistry.getDefaultInstance()),
                 supportedSerializationFormats,
+                jsonMarshallerCustomizer,
                 maxOutboundMessageSizeBytes,
                 useBlockingTaskExecutor,
                 unsafeWrapRequestBuffers,
