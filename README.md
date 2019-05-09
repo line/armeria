@@ -24,7 +24,7 @@ $ ./gradlew build
 Just [create a new issue](https://github.com/line/armeria/issues/new) to ask a question, and browse
 [the list of previously answered questions](https://github.com/line/armeria/issues?q=label%3Aquestion).
 
-We also have [a Slack workspace](https://line-slacknow.herokuapp.com/line-armeria/).
+We also have [a Slack workspace](https://join.slack.com/t/line-armeria/shared_invite/enQtNjIxNDU1ODU1MTI2LTgwMzk0MzVhOGRhZjJiY2ExODc0MzNhYzIxZDFlYjM5OGRjNTE1MzYzYzQ4MzNhNGY2ZDM0NThhMTRmZmQ3ZjQ).
 
 ## How to contribute
 
