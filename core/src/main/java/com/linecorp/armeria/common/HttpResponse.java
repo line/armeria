@@ -96,7 +96,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     static HttpResponse of(HttpStatus status) {
         requireNonNull(status, "status");
         checkArgument(status.codeClass() != HttpStatusClass.INFORMATIONAL,
-                      "statue: %s (expected: a non-1xx status");
+                      "status: %s (expected: a non-1xx status");
 
         if (isContentAlwaysEmpty(status)) {
             return new OneElementFixedHttpResponse(ResponseHeaders.of(status));

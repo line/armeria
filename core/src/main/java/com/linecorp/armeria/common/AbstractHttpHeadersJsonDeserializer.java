@@ -88,13 +88,13 @@ abstract class AbstractHttpHeadersJsonDeserializer<T extends HttpHeaders> extend
 
     private void addHeader(DeserializationContext ctx, HttpHeadersBuilder builder,
                            AsciiString name, JsonNode valueNode) throws JsonMappingException {
-        if (!valueNode.isTextual()) {
+        if (valueNode.isTextual()) {
+            builder.add(name, valueNode.asText());
+        } else {
             ctx.reportInputMismatch(handledType(),
                                     "HTTP header '%s' contains %s (%s); only strings are allowed.",
                                     name, valueNode.getNodeType(), valueNode);
         }
-
-        builder.add(name, valueNode.asText());
     }
 
     abstract HttpHeadersBuilder newBuilder();
