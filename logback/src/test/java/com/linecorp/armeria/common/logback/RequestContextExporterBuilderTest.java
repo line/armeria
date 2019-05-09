@@ -63,11 +63,9 @@ public class RequestContextExporterBuilderTest {
         assertThat(builder.getBuiltIns()).containsExactly(expectedProperties);
     }
 
-    @Test
-    public void testExportAttrWithWildcard() throws Exception {
+    @Test(expected = IllegalArgumentException.class)
+    public void testExportWithNotMatchedWildcard() {
         final RequestContextExporterBuilder builder = new RequestContextExporterBuilder();
-        builder.export("attrs.*");
-        builder.export("attrs.my_attrs:MyAttribute");
-        assertEquals(1, builder.getAttributes().size());
+        builder.export("*hoge*");
     }
 }
