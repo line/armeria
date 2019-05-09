@@ -18,7 +18,7 @@ package com.linecorp.armeria.common;
 
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -39,5 +39,17 @@ public class HttpHeadersJsonSerializerTest {
     public void multipleValues() {
         final HttpHeaders headers = HttpHeaders.of(NAME, "0", NAME, "1");
         assertThatJson(mapper.valueToTree(headers)).isEqualTo("{\"a\":[\"0\",\"1\"]}");
+    }
+
+    @Test
+    public void requestHeaders() {
+        assertThatJson(mapper.valueToTree(RequestHeaders.of(HttpMethod.GET, "/")))
+                .isEqualTo("{ \":method\": \"GET\", \":path\": \"/\" }");
+    }
+
+    @Test
+    public void responseHeaders() {
+        assertThatJson(mapper.valueToTree(ResponseHeaders.of(200)))
+                .isEqualTo("{ \":status\": \"200\" }");
     }
 }

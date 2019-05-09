@@ -19,21 +19,22 @@ package com.linecorp.armeria.common;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 
 /**
- * Jackson {@link JsonDeserializer} for {@link HttpHeaders}.
+ * Jackson {@link JsonDeserializer} for {@link ResponseHeaders}.
  */
-public final class HttpHeadersJsonDeserializer extends AbstractHttpHeadersJsonDeserializer<HttpHeaders> {
+public final class ResponseHeadersJsonDeserializer
+        extends AbstractHttpHeadersJsonDeserializer<ResponseHeaders> {
 
-    private static final long serialVersionUID = -4704864616526248652L;
+    private static final long serialVersionUID = 6980263543152792445L;
 
     /**
      * Creates a new instance.
      */
-    public HttpHeadersJsonDeserializer() {
-        super(HttpHeaders.class);
+    public ResponseHeadersJsonDeserializer() {
+        super(ResponseHeaders.class);
     }
 
     @Override
-    HttpHeadersBuilder newBuilder() {
-        return HttpHeaders.builder();
+    ResponseHeadersBuilder newBuilder() {
+        return ResponseHeaders.builder();
     }
 }

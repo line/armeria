@@ -20,12 +20,15 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Consumer;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+
 /**
  * Immutable HTTP/2 headers for an {@link HttpResponse}.
  *
  * @see HttpHeaders
  * @see RequestHeaders
  */
+@JsonDeserialize(using = ResponseHeadersJsonDeserializer.class)
 public interface ResponseHeaders extends HttpHeaders, ResponseHeaderGetters {
 
     /**
