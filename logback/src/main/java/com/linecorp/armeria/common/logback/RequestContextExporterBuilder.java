@@ -124,7 +124,7 @@ final class RequestContextExporterBuilder {
         }
 
         if (mdcKey.contains(BuiltInProperty.WILDCARD_STR)) {
-            throw new IllegalArgumentException("Not found matched built-in properties. mdcKey: " + mdcKey);
+            return;
         }
 
         if (mdcKey.startsWith(PREFIX_ATTRS)) {
