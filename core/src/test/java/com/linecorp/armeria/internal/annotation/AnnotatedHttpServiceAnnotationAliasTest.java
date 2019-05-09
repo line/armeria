@@ -37,6 +37,8 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.server.DecoratingServiceFunction;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -131,7 +133,7 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
     static class MyResponseConverter implements ResponseConverterFunction {
         @Override
         public HttpResponse convertResponse(
-                ServiceRequestContext ctx, HttpHeaders headers,
+                ServiceRequestContext ctx, ResponseHeaders headers,
                 @Nullable Object result, HttpHeaders trailingHeaders) throws Exception {
             return HttpResponse.of(headers, HttpData.ofUtf8("Hello, %s!", result), trailingHeaders);
         }
@@ -234,9 +236,9 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
     public void metaAnnotations() {
         final AggregatedHttpMessage msg =
                 HttpClient.of(rule.uri("/"))
-                          .execute(HttpHeaders.of(HttpMethod.POST, "/hello")
-                                              .contentType(MediaType.PLAIN_TEXT_UTF_8)
-                                              .add(HttpHeaderNames.ACCEPT, "text/*"),
+                          .execute(RequestHeaders.of(HttpMethod.POST, "/hello",
+                                                     HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
+                                                     HttpHeaderNames.ACCEPT, "text/*"),
                                    HttpData.ofUtf8("Armeria"))
                           .aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.CREATED);
@@ -253,10 +255,9 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
     public void metaOfMetaAnnotation_ProducesJson() {
         final AggregatedHttpMessage msg =
                 HttpClient.of(rule.uri("/"))
-                          .execute(HttpHeaders.of(HttpMethod.POST, "/hello")
-                                              .contentType(MediaType.PLAIN_TEXT_UTF_8)
-                                              .add(HttpHeaderNames.ACCEPT,
-                                                   "application/json; charset=utf-8"),
+                          .execute(RequestHeaders.of(HttpMethod.POST, "/hello",
+                                                     HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
+                                                     HttpHeaderNames.ACCEPT, "application/json; charset=utf-8"),
                                    HttpData.ofUtf8("Armeria"))
                           .aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.CREATED);

@@ -31,9 +31,10 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptionsBuilder;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
 
 import okhttp3.Call;
@@ -131,55 +132,35 @@ final class ArmeriaCallFactory implements Factory {
             } else {
                 uriString = httpUrl.encodedPath() + '?' + httpUrl.encodedQuery();
             }
-            final HttpHeaders headers;
-            switch (request.method()) {
-                case "GET":
-                    headers = HttpHeaders.of(HttpMethod.GET, uriString);
-                    break;
-                case "HEAD":
-                    headers = HttpHeaders.of(HttpMethod.HEAD, uriString);
-                    break;
-                case "POST":
-                    headers = HttpHeaders.of(HttpMethod.POST, uriString);
-                    break;
-                case "DELETE":
-                    headers = HttpHeaders.of(HttpMethod.DELETE, uriString);
-                    break;
-                case "PUT":
-                    headers = HttpHeaders.of(HttpMethod.PUT, uriString);
-                    break;
-                case "PATCH":
-                    headers = HttpHeaders.of(HttpMethod.PATCH, uriString);
-                    break;
-                case "OPTIONS":
-                    headers = HttpHeaders.of(HttpMethod.OPTIONS, uriString);
-                    break;
-                default:
-                    throw new IllegalArgumentException("Invalid HTTP method:" + request.method());
-            }
+            final RequestHeadersBuilder headers = RequestHeaders.builder(HttpMethod.valueOf(request.method()),
+                                                                         uriString);
             final Headers requestHeaders = request.headers();
             final int numHeaders = requestHeaders.size();
             for (int i = 0; i < numHeaders; i++) {
                 headers.add(HttpHeaderNames.of(requestHeaders.name(i)),
                             requestHeaders.value(i));
             }
+
             final RequestBody body = request.body();
-            if (body != null) {
-                final MediaType contentType = body.contentType();
-                if (contentType != null) {
-                    headers.set(HttpHeaderNames.CONTENT_TYPE, contentType.toString());
-                }
-
-                try (Buffer contentBuffer = new Buffer()) {
-                    body.writeTo(contentBuffer);
-
-                    return httpClient.execute(headers, contentBuffer.readByteArray());
-                } catch (IOException e) {
-                    throw new IllegalArgumentException(
-                            "Failed to convert RequestBody to HttpData. " + request.method(), e);
-                }
+            if (body == null) {
+                // Without a body.
+                return httpClient.execute(headers.build());
             }
-            return httpClient.execute(headers);
+
+            // With a body.
+            final MediaType contentType = body.contentType();
+            if (contentType != null) {
+                headers.set(HttpHeaderNames.CONTENT_TYPE, contentType.toString());
+            }
+
+            try (Buffer contentBuffer = new Buffer()) {
+                body.writeTo(contentBuffer);
+
+                return httpClient.execute(headers.build(), contentBuffer.readByteArray());
+            } catch (IOException e) {
+                throw new IllegalArgumentException(
+                        "Failed to convert RequestBody to HttpData. " + request.method(), e);
+            }
         }
 
         @Override

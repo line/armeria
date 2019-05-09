@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull;
+
 import javax.annotation.Nullable;
 
 /**
@@ -347,6 +349,30 @@ public final class HttpStatus implements Comparable<HttpStatus> {
         }
     }
 
+    /**
+     * Returns the {@link HttpStatus} represented by the specified status text.
+     *
+     * @return the parsed {@link HttpStatus}, or {@link #UNKNOWN} if failed to parse.
+     */
+    public static HttpStatus valueOf(String statusText) {
+        requireNonNull(statusText, "statusText");
+        final int spaceIdx = statusText.indexOf(' ');
+        final int statusCode;
+        try {
+            if (spaceIdx < 0) {
+                statusCode = Integer.parseInt(statusText);
+            } else if (spaceIdx > 0) {
+                statusCode = Integer.parseInt(statusText.substring(0, spaceIdx));
+            } else {
+                return UNKNOWN;
+            }
+        } catch (NumberFormatException e) {
+            return UNKNOWN;
+        }
+
+        return valueOf(statusCode);
+    }
+
     private final int code;
     private final String codeAsText;
     private final HttpStatusClass codeClass;
@@ -385,7 +411,7 @@ public final class HttpStatus implements Comparable<HttpStatus> {
             }
         }
 
-        this.code = statusCode;
+        code = statusCode;
         codeAsText = Integer.toString(statusCode);
         codeClass = HttpStatusClass.valueOf(statusCode);
         this.reasonPhrase = reasonPhrase;

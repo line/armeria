@@ -62,14 +62,18 @@ import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 
-import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.ResponseHeadersBuilder;
 
 import io.netty.handler.codec.DefaultHeaders;
 import io.netty.handler.codec.UnsupportedValueConverter;
@@ -99,7 +103,7 @@ public final class ArmeriaHttpUtil {
     /**
      * The default case-insensitive {@link AsciiString} hasher and comparator for HTTP/2 headers.
      */
-    public static final HashingStrategy<AsciiString> HTTP2_HEADER_NAME_HASHER =
+    private static final HashingStrategy<AsciiString> HTTP2_HEADER_NAME_HASHER =
             new HashingStrategy<AsciiString>() {
                 @Override
                 public int hashCode(AsciiString o) {
@@ -252,8 +256,7 @@ public final class ArmeriaHttpUtil {
                 return path2; // Most requests will land here.
             }
 
-            return new StringBuilder(path2.length() + 1)
-                    .append('/').append(path2).toString();
+            return '/' + path2;
         }
 
         // At this point, we are sure path1 is neither empty nor null.
@@ -272,8 +275,7 @@ public final class ArmeriaHttpUtil {
 
             // path1 ends with '/' and path2 does not start with '/'.
             // Simple concatenation would suffice.
-            return new StringBuilder(path1.length() + path2.length())
-                    .append(path1).append(path2).toString();
+            return path1 + path2;
         }
 
         if (path2.charAt(0) == '/') {
@@ -284,8 +286,7 @@ public final class ArmeriaHttpUtil {
 
         // path1 does not end with '/' and path2 does not start with '/'.
         // Need to insert '/' between path1 and path2.
-        return new StringBuilder(path1.length() + path2.length() + 1)
-                .append(path1).append('/').append(path2).toString();
+        return path1 + '/' + path2;
     }
 
     /**
@@ -331,6 +332,13 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
+     * Returns {@code true} if the specified HTTP status string represents an informational status.
+     */
+    public static boolean isInformational(@Nullable String statusText) {
+        return statusText != null && !statusText.isEmpty() && statusText.charAt(0) == '1';
+    }
+
+    /**
      * Returns {@code true} if the content of the response with the given {@link HttpStatus} is expected to
      * be always empty (1xx, 204, 205 and 304 responses.)
      */
@@ -340,6 +348,24 @@ public final class ArmeriaHttpUtil {
         }
 
         switch (status.code()) {
+            case 204:
+            case 205:
+            case 304:
+                return true;
+        }
+        return false;
+    }
+
+    /**
+     * Returns {@code true} if the content of the response with the given status code is expected to
+     * be always empty (1xx, 204, 205 and 304 responses.)
+     */
+    public static boolean isContentAlwaysEmpty(int statusCode) {
+        if (HttpStatusClass.INFORMATIONAL.contains(statusCode)) {
+            return true;
+        }
+
+        switch (statusCode) {
             case 204:
             case 205:
             case 304:
@@ -489,8 +515,19 @@ public final class ArmeriaHttpUtil {
     /**
      * Converts the specified Netty HTTP/2 into Armeria HTTP/2 headers.
      */
-    public static HttpHeaders toArmeria(Http2Headers headers, boolean endOfStream) {
-        final HttpHeaders converted = new DefaultHttpHeaders(false, headers.size(), endOfStream);
+    public static HttpHeaders toArmeria(Http2Headers headers, boolean request, boolean endOfStream) {
+        final HttpHeadersBuilder converted;
+        if (request) {
+            converted = headers.contains(HttpHeaderNames.METHOD) ? RequestHeaders.builder()
+                                                                 : HttpHeaders.builder();
+        } else {
+            converted = headers.contains(HttpHeaderNames.STATUS) ? ResponseHeaders.builder()
+                                                                 : HttpHeaders.builder();
+        }
+
+        converted.sizeHint(headers.size());
+        converted.endOfStream(endOfStream);
+
         StringJoiner cookieJoiner = null;
         for (Entry<CharSequence, CharSequence> e : headers) {
             final AsciiString name = HttpHeaderNames.of(e.getKey());
@@ -512,7 +549,7 @@ public final class ArmeriaHttpUtil {
             converted.add(HttpHeaderNames.COOKIE, cookieJoiner.toString());
         }
 
-        return converted;
+        return converted.build();
     }
 
     /**
@@ -524,38 +561,39 @@ public final class ArmeriaHttpUtil {
      * </ul>
      * {@link ExtensionHeaderNames#PATH} is ignored and instead extracted from the {@code Request-Line}.
      */
-    public static HttpHeaders toArmeria(HttpRequest in) throws URISyntaxException {
+    public static RequestHeaders toArmeria(HttpRequest in) throws URISyntaxException {
         final URI requestTargetUri = toUri(in);
 
         final io.netty.handler.codec.http.HttpHeaders inHeaders = in.headers();
-        final HttpHeaders out = new DefaultHttpHeaders(true, inHeaders.size());
+        final RequestHeadersBuilder out = RequestHeaders.builder();
+        out.sizeHint(inHeaders.size());
+        out.add(HttpHeaderNames.METHOD, in.method().name());
+        out.add(HttpHeaderNames.PATH, toHttp2Path(requestTargetUri));
 
-        out.path(toHttp2Path(requestTargetUri));
-        out.method(HttpMethod.valueOf(in.method().name()));
-        setHttp2Scheme(inHeaders, requestTargetUri, out);
+        addHttp2Scheme(inHeaders, requestTargetUri, out);
 
         if (!isOriginForm(requestTargetUri) && !isAsteriskForm(requestTargetUri)) {
             // Attempt to take from HOST header before taking from the request-line
             final String host = inHeaders.getAsString(HttpHeaderNames.HOST);
-            setHttp2Authority(host == null || host.isEmpty() ? requestTargetUri.getAuthority() : host, out);
+            addHttp2Authority(host == null || host.isEmpty() ? requestTargetUri.getAuthority() : host, out);
         }
 
         // Add the HTTP headers which have not been consumed above
         toArmeria(inHeaders, out);
-        return out;
+        return out.build();
     }
 
     /**
      * Converts the headers of the given Netty HTTP/1.x response into Armeria HTTP/2 headers.
      */
-    public static HttpHeaders toArmeria(HttpResponse in) {
+    public static ResponseHeaders toArmeria(HttpResponse in) {
         final io.netty.handler.codec.http.HttpHeaders inHeaders = in.headers();
-        final HttpHeaders out = new DefaultHttpHeaders(true, inHeaders.size());
-        out.status(in.status().code());
-
+        final ResponseHeadersBuilder out = ResponseHeaders.builder();
+        out.sizeHint(inHeaders.size());
+        out.add(HttpHeaderNames.STATUS, HttpStatus.valueOf(in.status().code()).codeAsText());
         // Add the HTTP headers which have not been consumed above
         toArmeria(inHeaders, out);
-        return out;
+        return out.build();
     }
 
     /**
@@ -563,18 +601,19 @@ public final class ArmeriaHttpUtil {
      */
     public static HttpHeaders toArmeria(io.netty.handler.codec.http.HttpHeaders inHeaders) {
         if (inHeaders.isEmpty()) {
-            return HttpHeaders.EMPTY_HEADERS;
+            return HttpHeaders.of();
         }
 
-        final HttpHeaders out = new DefaultHttpHeaders(true, inHeaders.size());
+        final HttpHeadersBuilder out = HttpHeaders.builder();
+        out.sizeHint(inHeaders.size());
         toArmeria(inHeaders, out);
-        return out;
+        return out.build();
     }
 
     /**
      * Converts the specified Netty HTTP/1 headers into Armeria HTTP/2 headers.
      */
-    public static void toArmeria(io.netty.handler.codec.http.HttpHeaders inHeaders, HttpHeaders out) {
+    public static void toArmeria(io.netty.handler.codec.http.HttpHeaders inHeaders, HttpHeadersBuilder out) {
         final Iterator<Entry<CharSequence, CharSequence>> iter = inHeaders.iteratorCharSequence();
         // Choose 8 as a default size because it is unlikely we will see more than 4 Connection headers values,
         // but still allowing for "enough" space in the map to reduce the chance of hash code collision.
@@ -648,7 +687,7 @@ public final class ArmeriaHttpUtil {
      * @param out the resulting HTTP/2 headers.
      */
     private static void toHttp2HeadersFilterTE(Entry<CharSequence, CharSequence> entry,
-                                               HttpHeaders out) {
+                                               HttpHeadersBuilder out) {
         if (AsciiString.indexOf(entry.getValue(), ',', 0) == -1) {
             if (AsciiString.contentEqualsIgnoreCase(AsciiString.trim(entry.getValue()),
                                                     HttpHeaderValues.TRAILERS)) {
@@ -706,7 +745,7 @@ public final class ArmeriaHttpUtil {
     }
 
     @VisibleForTesting
-    static void setHttp2Authority(@Nullable String authority, HttpHeaders out) {
+    static void addHttp2Authority(@Nullable String authority, RequestHeadersBuilder out) {
         // The authority MUST NOT include the deprecated "userinfo" subcomponent
         if (authority != null) {
             final String actualAuthority;
@@ -722,23 +761,24 @@ public final class ArmeriaHttpUtil {
                     actualAuthority = authority.substring(start);
                 }
             }
-            out.authority(actualAuthority);
+            out.add(HttpHeaderNames.AUTHORITY, actualAuthority);
         }
     }
 
-    private static void setHttp2Scheme(io.netty.handler.codec.http.HttpHeaders in, URI uri, HttpHeaders out) {
+    private static void addHttp2Scheme(io.netty.handler.codec.http.HttpHeaders in, URI uri,
+                                       RequestHeadersBuilder out) {
         final String value = uri.getScheme();
         if (value != null) {
-            out.scheme(value);
+            out.add(HttpHeaderNames.SCHEME, value);
             return;
         }
 
         // Consume the Scheme extension header if present
         final CharSequence cValue = in.get(ExtensionHeaderNames.SCHEME.text());
         if (cValue != null) {
-            out.scheme(cValue.toString());
+            out.add(HttpHeaderNames.SCHEME, cValue.toString());
         } else {
-            out.scheme("unknown");
+            out.add(HttpHeaderNames.SCHEME, "unknown");
         }
     }
 
@@ -749,7 +789,7 @@ public final class ArmeriaHttpUtil {
         final Http2Headers out = new DefaultHttp2Headers(false, in.size());
 
         // Trailing headers if it does not have :status.
-        if (server && in.status() == null) {
+        if (server && !in.contains(HttpHeaderNames.STATUS)) {
             for (Entry<AsciiString, String> entry : in) {
                 final AsciiString name = entry.getKey();
                 final String value = entry.getValue();
@@ -759,7 +799,7 @@ public final class ArmeriaHttpUtil {
                 out.add(name, value);
             }
         } else {
-            out.set(in);
+            in.forEach((BiConsumer<AsciiString, String>) out::add);
             out.remove(HttpHeaderNames.CONNECTION);
             out.remove(HttpHeaderNames.TRANSFER_ENCODING);
         }
@@ -843,7 +883,7 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
-     * Returns an {@link HttpHeaders} whose {@link HttpHeaderNames#CONTENT_LENGTH} is added or removed
+     * Returns a {@link ResponseHeaders} whose {@link HttpHeaderNames#CONTENT_LENGTH} is added or removed
      * according to the status of the specified {@code headers}, {@code content} and {@code trailingHeaders}.
      * The {@link HttpHeaderNames#CONTENT_LENGTH} is removed when:
      * <ul>
@@ -858,28 +898,27 @@ public final class ArmeriaHttpUtil {
      * @throws IllegalArgumentException if the specified {@code content} or {@code trailingHeaders} are
      *                                  non-empty when the content is always empty
      */
-    public static HttpHeaders setOrRemoveContentLength(HttpHeaders headers, HttpData content,
-                                                       HttpHeaders trailingHeaders) {
+    public static ResponseHeaders setOrRemoveContentLength(ResponseHeaders headers, HttpData content,
+                                                           HttpHeaders trailingHeaders) {
         requireNonNull(headers, "headers");
         requireNonNull(content, "content");
         requireNonNull(trailingHeaders, "trailingHeaders");
 
         final HttpStatus status = headers.status();
-        assert status != null;
 
         if (isContentAlwaysEmptyWithValidation(status, content, trailingHeaders)) {
             if (status != HttpStatus.NOT_MODIFIED) {
                 if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
-                    final HttpHeaders mutable = headers.toMutable();
-                    mutable.remove(HttpHeaderNames.CONTENT_LENGTH);
-                    return mutable.asImmutable();
+                    final ResponseHeadersBuilder builder = headers.toBuilder();
+                    builder.remove(HttpHeaderNames.CONTENT_LENGTH);
+                    return builder.build();
                 }
             } else {
                 // 304 response can have the "content-length" header when it is a response to a conditional
                 // GET request. See https://tools.ietf.org/html/rfc7230#section-3.3.2
             }
 
-            return headers.asImmutable();
+            return headers;
         }
 
         if (!trailingHeaders.isEmpty()) {
@@ -889,25 +928,24 @@ public final class ArmeriaHttpUtil {
             // The response is sent using chunked transfer encoding in HTTP/1 or a DATA frame payload
             // in HTTP/2, so it's no worry.
             if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
-                final HttpHeaders mutable = headers.toMutable();
-                mutable.remove(HttpHeaderNames.CONTENT_LENGTH);
-                return mutable.asImmutable();
+                final ResponseHeadersBuilder builder = headers.toBuilder();
+                builder.remove(HttpHeaderNames.CONTENT_LENGTH);
+                return builder.build();
             }
 
-            return headers.asImmutable();
+            return headers;
         }
 
         if (!headers.contains(HttpHeaderNames.CONTENT_LENGTH) || !content.isEmpty()) {
-            final HttpHeaders mutable = headers.toMutable();
-            mutable.setInt(HttpHeaderNames.CONTENT_LENGTH, content.length());
-            return mutable.asImmutable();
-        } else {
-            // The header contains "content-length" header and the content is empty.
-            // Do not overwrite the header because a response to a HEAD request
-            // will have no content even if it has non-zero content-length header.
+            return headers.toBuilder()
+                          .setInt(HttpHeaderNames.CONTENT_LENGTH, content.length())
+                          .build();
         }
 
-        return headers.asImmutable();
+        // The header contains "content-length" header and the content is empty.
+        // Do not overwrite the header because a response to a HEAD request
+        // will have no content even if it has non-zero content-length header.
+        return headers;
     }
 
     private static String convertHeaderValue(AsciiString name, CharSequence value) {

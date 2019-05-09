@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -42,8 +42,7 @@ public class HttpHeadersJsonDeserializerTest {
 
     @Test
     public void multipleValues() throws IOException {
-        final HttpHeaders expected = new DefaultHttpHeaders();
-        expected.set(NAME, "foo", "bar", "baz");
+        final HttpHeaders expected = HttpHeaders.builder().set(NAME, "foo", "bar", "baz").build();
         assertThat(mapper.readValue("{\"a\":[\"foo\",\"bar\",\"baz\"]}", HttpHeaders.class))
                 .isEqualTo(expected);
     }

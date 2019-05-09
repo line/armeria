@@ -12,10 +12,10 @@ import org.junit.Test;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.Server;
 
 public class AnnotatedHttpServiceTest {
@@ -69,12 +69,12 @@ public class AnnotatedHttpServiceTest {
                                          .thatContains(1)
                                          .thatContains("MALE");
 
-        final HttpHeaders headers = HttpHeaders.of(HttpMethod.GET, "/injection/header")
-                                               .add(HttpHeaderNames.of("x-armeria-text"), "armeria")
-                                               .add(HttpHeaderNames.of("x-armeria-sequence"), "1")
-                                               .add(HttpHeaderNames.of("x-armeria-sequence"), "2")
-                                               .add(HttpHeaderNames.COOKIE, "a=1")
-                                               .add(HttpHeaderNames.COOKIE, "b=1");
+        final RequestHeaders headers = RequestHeaders.builder(HttpMethod.GET, "/injection/header")
+                                                     .add(HttpHeaderNames.of("x-armeria-text"), "armeria")
+                                                     .add(HttpHeaderNames.of("x-armeria-sequence"), "1")
+                                                     .add(HttpHeaderNames.of("x-armeria-sequence"), "2")
+                                                     .add(HttpHeaderNames.COOKIE, "a=1")
+                                                     .add(HttpHeaderNames.COOKIE, "b=1").build();
 
         res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
@@ -95,8 +95,8 @@ public class AnnotatedHttpServiceTest {
                                                "/messageConverter/node/obj",
                                                "/messageConverter/obj/obj",
                                                "/messageConverter/obj/future")) {
-            res = client.execute(HttpHeaders.of(HttpMethod.POST, path)
-                                            .contentType(MediaType.JSON_UTF_8),
+            res = client.execute(RequestHeaders.of(HttpMethod.POST, path,
+                                                   HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8),
                                  "{\"name\":\"armeria\"}").aggregate().join();
 
             assertThat(res.status()).isEqualTo(HttpStatus.OK);
@@ -108,8 +108,8 @@ public class AnnotatedHttpServiceTest {
         }
 
         // custom(text protocol)
-        res = client.execute(HttpHeaders.of(HttpMethod.POST, "/messageConverter/custom")
-                                        .contentType(MediaType.PLAIN_TEXT_UTF_8),
+        res = client.execute(RequestHeaders.of(HttpMethod.POST, "/messageConverter/custom",
+                                               HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8),
                              "armeria").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentType().is(MediaType.PLAIN_TEXT_UTF_8)).isTrue();

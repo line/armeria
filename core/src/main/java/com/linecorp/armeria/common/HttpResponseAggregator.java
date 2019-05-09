@@ -32,9 +32,9 @@ import io.netty.util.ReferenceCountUtil;
 final class HttpResponseAggregator extends HttpMessageAggregator {
 
     @Nullable
-    private List<HttpHeaders> informationals; // needs aggregation as well
+    private List<ResponseHeaders> informationals; // needs aggregation as well
     @Nullable
-    private HttpHeaders headers;
+    private ResponseHeaders headers;
     private HttpHeaders trailingHeaders;
 
     private boolean receivedMessageHeaders;
@@ -42,7 +42,7 @@ final class HttpResponseAggregator extends HttpMessageAggregator {
     HttpResponseAggregator(CompletableFuture<AggregatedHttpMessage> future,
                            @Nullable ByteBufAllocator alloc) {
         super(future, alloc);
-        trailingHeaders = HttpHeaders.EMPTY_HEADERS;
+        trailingHeaders = HttpHeaders.of();
     }
 
     @Override
@@ -69,21 +69,23 @@ final class HttpResponseAggregator extends HttpMessageAggregator {
     }
 
     private void onInformationalOrMessageHeaders(HttpHeaders headers) {
-        final HttpStatus status = headers.status();
-        if (status != null && status.codeClass() != HttpStatusClass.INFORMATIONAL) {
+        final String status = headers.get(HttpHeaderNames.STATUS);
+        if (status != null && !status.isEmpty() && status.charAt(0) != '1') {
+            // Message headers.
             assert this.headers == null;
-            this.headers = headers;
+            this.headers = (ResponseHeaders) headers;
             receivedMessageHeaders = true;
         } else {
             if (informationals == null) {
                 informationals = new ArrayList<>(2);
-                informationals.add(headers);
+                informationals.add((ResponseHeaders) headers);
             } else if (status != null) {
                 // A new informational headers
-                informationals.add(headers);
+                informationals.add((ResponseHeaders) headers);
             } else {
                 // Append to the last informational headers
-                informationals.get(informationals.size() - 1).add(headers);
+                final int lastIdx = informationals.size() - 1;
+                informationals.set(lastIdx, informationals.get(lastIdx).withMutations(h -> h.add(headers)));
             }
         }
     }
@@ -98,6 +100,6 @@ final class HttpResponseAggregator extends HttpMessageAggregator {
     @Override
     protected void onFailure() {
         headers = null;
-        trailingHeaders = HttpHeaders.EMPTY_HEADERS;
+        trailingHeaders = HttpHeaders.of();
     }
 }

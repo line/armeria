@@ -75,8 +75,8 @@ public class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
      */
     public TestServiceImpl(ScheduledExecutorService executor) {
         this.executor = executor;
-        this.compressableBuffer = ByteString.copyFrom(new byte[1024]);
-        this.uncompressableBuffer = createBufferFromFile(UNCOMPRESSABLE_FILE);
+        compressableBuffer = ByteString.copyFrom(new byte[1024]);
+        uncompressableBuffer = createBufferFromFile(UNCOMPRESSABLE_FILE);
     }
 
     @Override
@@ -91,9 +91,9 @@ public class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
      */
     @Override
     public void unaryCall(SimpleRequest req, StreamObserver<SimpleResponse> responseObserver) {
-        ServerCallStreamObserver<SimpleResponse> obs =
+        final ServerCallStreamObserver<SimpleResponse> obs =
                 (ServerCallStreamObserver<SimpleResponse>) responseObserver;
-        SimpleResponse.Builder responseBuilder = SimpleResponse.newBuilder();
+        final SimpleResponse.Builder responseBuilder = SimpleResponse.newBuilder();
         try {
             switch (req.getResponseCompression()) {
                 case DEFLATE:
@@ -121,13 +121,13 @@ public class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
         }
 
         if (req.getResponseSize() != 0) {
-            boolean compressable = compressableResponse(req.getResponseType());
-            ByteString dataBuffer = compressable ? compressableBuffer : uncompressableBuffer;
+            final boolean compressable = compressableResponse(req.getResponseType());
+            final ByteString dataBuffer = compressable ? compressableBuffer : uncompressableBuffer;
             // For consistency with the c++ TestServiceImpl, use a random offset for unary calls.
             // TODO(wonderfly): whether or not this is a good approach needs further discussion.
-            int offset = random.nextInt(
+            final int offset = random.nextInt(
                     compressable ? compressableBuffer.size() : uncompressableBuffer.size());
-            ByteString payload = generatePayload(dataBuffer, offset, req.getResponseSize());
+            final ByteString payload = generatePayload(dataBuffer, offset, req.getResponseSize());
             responseBuilder.getPayloadBuilder()
                            .setType(compressable ? PayloadType.COMPRESSABLE : PayloadType.UNCOMPRESSABLE)
                            .setBody(payload);
@@ -262,7 +262,7 @@ public class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
         @GuardedBy("this")
         private boolean cancelled;
         private Throwable failure;
-        private Runnable dispatchTask = new Runnable() {
+        private final Runnable dispatchTask = new Runnable() {
             @Override
             public void run() {
                 try {
@@ -291,7 +291,7 @@ public class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
         };
 
         ResponseDispatcher(StreamObserver<StreamingOutputCallResponse> responseStream) {
-            this.chunks = Queues.newLinkedBlockingQueue();
+            chunks = Queues.newLinkedBlockingQueue();
             this.responseStream = responseStream;
         }
 
@@ -340,7 +340,7 @@ public class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
             }
             try {
                 // Pop off the next chunk and send it to the client.
-                Chunk chunk = chunks.remove();
+                final Chunk chunk = chunks.remove();
                 if (chunk == completionChunk) {
                     responseStream.onCompleted();
                 } else {
@@ -370,13 +370,13 @@ public class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
                 }
 
                 // Schedule the next response chunk if there is one.
-                Chunk nextChunk = chunks.peek();
+                final Chunk nextChunk = chunks.peek();
                 if (nextChunk != null) {
                     scheduled = true;
                     // TODO(ejona): cancel future if RPC is cancelled
-                    Future<?> unused = executor.schedule(new LogExceptionRunnable(dispatchTask),
-                                                         nextChunk.delayMicroseconds,
-                                                         TimeUnit.MICROSECONDS);
+                    final Future<?> unused = executor.schedule(new LogExceptionRunnable(dispatchTask),
+                                                               nextChunk.delayMicroseconds,
+                                                               TimeUnit.MICROSECONDS);
                     return;
                 }
             }
@@ -393,9 +393,9 @@ public class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
      * Breaks down the request and creates a queue of response chunks for the given request.
      */
     Queue<Chunk> toChunkQueue(StreamingOutputCallRequest request) {
-        Queue<Chunk> chunkQueue = new LinkedList<Chunk>();
+        final Queue<Chunk> chunkQueue = new LinkedList<Chunk>();
         int offset = 0;
-        boolean compressable = compressableResponse(request.getResponseType());
+        final boolean compressable = compressableResponse(request.getResponseType());
         for (ResponseParameters params : request.getResponseParametersList()) {
             chunkQueue.add(new Chunk(params.getIntervalUs(), offset, params.getSize(), compressable));
 
@@ -430,10 +430,10 @@ public class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
          * Convert this chunk into a streaming response proto.
          */
         private StreamingOutputCallResponse toResponse() {
-            StreamingOutputCallResponse.Builder responseBuilder =
+            final StreamingOutputCallResponse.Builder responseBuilder =
                     StreamingOutputCallResponse.newBuilder();
-            ByteString dataBuffer = compressable ? compressableBuffer : uncompressableBuffer;
-            ByteString payload = generatePayload(dataBuffer, offset, length);
+            final ByteString dataBuffer = compressable ? compressableBuffer : uncompressableBuffer;
+            final ByteString payload = generatePayload(dataBuffer, offset, length);
             responseBuilder.getPayloadBuilder()
                            .setType(compressable ? PayloadType.COMPRESSABLE : PayloadType.UNCOMPRESSABLE)
                            .setBody(payload);
@@ -447,7 +447,7 @@ public class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
     @SuppressWarnings("Finally") // Not concerned about suppression; expected to be exceedingly rare
     private ByteString createBufferFromFile(String fileClassPath) {
         ByteString buffer = ByteString.EMPTY;
-        InputStream inputStream = getClass().getResourceAsStream(fileClassPath);
+        final InputStream inputStream = getClass().getResourceAsStream(fileClassPath);
         if (inputStream == null) {
             throw new IllegalArgumentException("Unable to locate file on classpath: " + fileClassPath);
         }
@@ -486,7 +486,7 @@ public class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
      * Generates a payload of desired type and size. Reads compressableBuffer or
      * uncompressableBuffer as a circular buffer.
      */
-    private ByteString generatePayload(ByteString dataBuffer, int offset, int size) {
+    private static ByteString generatePayload(ByteString dataBuffer, int offset, int size) {
         ByteString payload = ByteString.EMPTY;
         // This offset would never pass the array boundary.
         int begin = offset;
@@ -496,7 +496,7 @@ public class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
             end = Math.min(begin + bytesLeft, dataBuffer.size());
             // ByteString.substring returns the substring from begin, inclusive, to end, exclusive.
             payload = payload.concat(dataBuffer.substring(begin, end));
-            bytesLeft -= (end - begin);
+            bytesLeft -= end - begin;
             begin = end % dataBuffer.size();
         }
         return payload;
@@ -514,7 +514,7 @@ public class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
 
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-            HttpResponse res = delegate().serve(ctx, req);
+            final HttpResponse res = delegate().serve(ctx, req);
             return new FilteredHttpResponse(res) {
                 private boolean headersReceived;
 
@@ -524,10 +524,10 @@ public class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
                         if (!headersReceived) {
                             headersReceived = true;
                         } else {
-                            HttpHeaders trailers = (HttpHeaders) obj;
-                            String extraHeader = req.headers().get(EXTRA_HEADER_NAME);
+                            final HttpHeaders trailers = (HttpHeaders) obj;
+                            final String extraHeader = req.headers().get(EXTRA_HEADER_NAME);
                             if (extraHeader != null) {
-                                trailers.set(EXTRA_HEADER_NAME, extraHeader);
+                                return trailers.toBuilder().set(EXTRA_HEADER_NAME, extraHeader).build();
                             }
                         }
                     }

@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.auth;
 
+import static java.util.Objects.requireNonNull;
+
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Base64.Decoder;
@@ -30,14 +32,16 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Strings;
 
-import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.RequestHeaders;
 
 import io.netty.util.AsciiString;
 
 /**
- * Extracts {@link BasicToken} from {@link HttpHeaders}, in order to be used by {@link HttpAuthServiceBuilder}.
+ * Extracts {@link BasicToken} from {@link RequestHeaders}, in order to be used by
+ * {@link HttpAuthServiceBuilder}.
  */
-final class BasicTokenExtractor implements Function<HttpHeaders, BasicToken> {
+final class BasicTokenExtractor implements Function<RequestHeaders, BasicToken> {
 
     private static final Logger logger = LoggerFactory.getLogger(BasicTokenExtractor.class);
 
@@ -47,14 +51,14 @@ final class BasicTokenExtractor implements Function<HttpHeaders, BasicToken> {
 
     private final AsciiString header;
 
-    BasicTokenExtractor(AsciiString header) {
-        this.header = header;
+    BasicTokenExtractor(CharSequence header) {
+        this.header = HttpHeaderNames.of(header);
     }
 
     @Nullable
     @Override
-    public BasicToken apply(HttpHeaders headers) {
-        final String authorization = headers.get(header);
+    public BasicToken apply(RequestHeaders headers) {
+        final String authorization = requireNonNull(headers, "headers").get(header);
         if (Strings.isNullOrEmpty(authorization)) {
             return null;
         }

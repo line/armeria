@@ -41,10 +41,10 @@ import com.google.common.base.Strings;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Param;
@@ -92,8 +92,8 @@ public class ArmeriaCompressionConfigurationTest {
     }
 
     private static HttpRequest request(int sizeParam) {
-        return HttpRequest.of(HttpHeaders.of(HttpMethod.GET, "/hello?size=" + sizeParam)
-                                         .add(HttpHeaderNames.ACCEPT_ENCODING, "gzip"));
+        return HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/hello?size=" + sizeParam,
+                                                HttpHeaderNames.ACCEPT_ENCODING, "gzip"));
     }
 
     @Test

@@ -171,7 +171,7 @@ public final class DocServiceBuilder {
         for (HttpHeaders h : exampleHttpHeaders) {
             requireNonNull(h, "exampleHttpHeaders contains null.");
             this.exampleHttpHeaders.computeIfAbsent(serviceName, unused -> ArrayListMultimap.create())
-                                   .put(methodName, HttpHeaders.copyOf(h).asImmutable());
+                                   .put(methodName, h);
         }
         return this;
     }

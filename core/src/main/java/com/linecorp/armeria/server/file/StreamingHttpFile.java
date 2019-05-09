@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
@@ -76,7 +77,7 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
     }
 
     @Override
-    protected final HttpResponse doRead(HttpHeaders headers, long length,
+    protected final HttpResponse doRead(ResponseHeaders headers, long length,
                                         Executor fileReadExecutor, ByteBufAllocator alloc) throws IOException {
         final T in = newStream();
         if (in == null) {

@@ -55,7 +55,7 @@ public final class Main {
         return new ServerBuilder()
                 .http(port)
                 // Disable timeout to serve infinite streaming response.
-                .defaultRequestTimeoutMillis(0)
+                .requestTimeoutMillis(0)
                 // Serve /index.html file.
                 .service("/", HttpFileBuilder.ofResource(Main.class.getClassLoader(), "index.html")
                                              .cacheControl(ServerCacheControl.REVALIDATED)
@@ -73,7 +73,7 @@ public final class Main {
                 .https(httpsPort)
                 .tlsSelfSigned()
                 // Disable timeout to serve infinite streaming response.
-                .defaultRequestTimeoutMillis(0)
+                .requestTimeoutMillis(0)
                 .serviceUnder("/", new ProxyService())
                 .decorator(LoggingService.newDecorator())
                 .build();

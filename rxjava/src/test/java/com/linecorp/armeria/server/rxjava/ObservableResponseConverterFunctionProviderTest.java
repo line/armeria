@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -80,7 +81,7 @@ public class ObservableResponseConverterFunctionProviderTest {
     private static class DummyResponseConverter implements ResponseConverterFunction {
         @Override
         public HttpResponse convertResponse(ServiceRequestContext ctx,
-                                            HttpHeaders headers,
+                                            ResponseHeaders headers,
                                             @Nullable Object result,
                                             HttpHeaders trailingHeaders) throws Exception {
             return HttpResponse.of(HttpStatus.OK);

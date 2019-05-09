@@ -51,7 +51,6 @@ import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
@@ -60,6 +59,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.EventLoopGroups;
@@ -113,8 +113,8 @@ public class HttpServerStreamingTest {
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     final long length = Long.parseLong(ctx.mappedPath().substring(1));
                     final HttpResponseWriter res = HttpResponse.streaming();
-                    res.write(HttpHeaders.of(HttpStatus.OK)
-                                         .setLong(HttpHeaderNames.CONTENT_LENGTH, length));
+                    res.write(ResponseHeaders.of(HttpStatus.OK,
+                                                 HttpHeaderNames.CONTENT_LENGTH, length));
 
                     stream(res, length, STREAMING_CONTENT_CHUNK_LENGTH);
                     return res;
@@ -132,8 +132,8 @@ public class HttpServerStreamingTest {
                     };
             sb.decorator(decorator);
 
-            sb.defaultMaxRequestLength(0);
-            sb.defaultRequestTimeoutMillis(0);
+            sb.maxRequestLength(0);
+            sb.requestTimeoutMillis(0);
             sb.idleTimeout(Duration.ofSeconds(5));
         }
     };
@@ -244,8 +244,8 @@ public class HttpServerStreamingTest {
 
             @Override
             public void onNext(HttpObject obj) {
-                if (obj instanceof HttpHeaders) {
-                    status.compareAndSet(null, ((HttpHeaders) obj).status());
+                if (obj instanceof ResponseHeaders) {
+                    status.compareAndSet(null, ((ResponseHeaders) obj).status());
                 }
                 super.onNext(obj);
             }
@@ -297,8 +297,8 @@ public class HttpServerStreamingTest {
                 (protocol.isTls() ? server.httpsPort() : server.httpPort()));
 
         builder.factory(clientFactory);
-        builder.defaultResponseTimeoutMillis(0);
-        builder.defaultMaxResponseLength(0);
+        builder.responseTimeoutMillis(0);
+        builder.maxResponseLength(0);
 
         return client = builder.build();
     }

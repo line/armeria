@@ -151,9 +151,9 @@ like ``MyAuthorizer`` in this example.
             cookie.setMaxAge(60);
             cookie.setPath("/");
             return HttpResponse.of(
-                    HttpHeaders.of(HttpStatus.OK)
-                               .contentType(MediaType.HTML_UTF_8)
-                               .add(HttpHeaderNames.SET_COOKIE, ServerCookieEncoder.LAX.encode(cookie)),
+                    ResponseHeaders,of(HttpStatus.OK,
+                                       HttpHeaderNames.CONTENT_TYPE, MediaType.HTML_UTF_8,
+                                       HttpHeaderNames.SET_COOKIE, ServerCookieEncoder.LAX.encode(cookie)),
                     HttpData.ofUtf8("<html><body onLoad=\"window.location.href='/welcome'\"></body></html>"));
         }
 

@@ -53,6 +53,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.sse.ServerSentEvent;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -299,7 +300,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
                 public HttpResult<CompletionStage<Object>> asyncExpectBadRequest() {
                     final CompletableFuture<Object> future = new CompletableFuture<>();
                     future.completeExceptionally(new IllegalArgumentException("Bad arguments"));
-                    return HttpResult.of(HttpHeaders.of(HttpStatus.OK), future);
+                    return HttpResult.of(ResponseHeaders.of(HttpStatus.OK), future);
                 }
 
                 @Get("/wildcard")
@@ -324,9 +325,9 @@ public class AnnotatedHttpServiceResponseConverterTest {
                 @Get("/header-overwrite")
                 @AdditionalHeader(name = "header_name_1", value = "header_value_unchaged")
                 public HttpResponse headerOverwrite() {
-                    return HttpResponse.of(HttpHeaders.of(HttpStatus.OK)
-                                                      .set(HttpHeaderNames.of("header_name_1"),
-                                                           "header_value_changed"));
+                    return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK,
+                                                              HttpHeaderNames.of("header_name_1"),
+                                                              "header_value_changed"));
                 }
             });
 
@@ -692,7 +693,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
         testJsonTextSequences("/publisher");
     }
 
-    private void testJsonTextSequences(String path) {
+    private static void testJsonTextSequences(String path) {
         final BiConsumer<HttpObject, String> ensureExpectedHttpData = (o, expectedString) -> {
             assertThat(o).isInstanceOf(HttpData.class);
             final HttpData data = (HttpData) o;
@@ -706,12 +707,13 @@ public class AnnotatedHttpServiceResponseConverterTest {
         };
 
         StepVerifier.create(HttpClient.of(rule.uri("/json-seq")).get(path))
-                    .expectNext(HttpHeaders.of(HttpStatus.OK).contentType(MediaType.JSON_SEQ))
+                    .expectNext(ResponseHeaders.of(HttpStatus.OK,
+                                                   HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_SEQ))
                     .assertNext(o -> ensureExpectedHttpData.accept(o, "foo"))
                     .assertNext(o -> ensureExpectedHttpData.accept(o, "bar"))
                     .assertNext(o -> ensureExpectedHttpData.accept(o, "baz"))
                     .assertNext(o -> ensureExpectedHttpData.accept(o, "qux"))
-                    .assertNext(this::assertThatLastContent)
+                    .assertNext(AnnotatedHttpServiceResponseConverterTest::assertThatLastContent)
                     .expectComplete()
                     .verify();
     }
@@ -726,19 +728,20 @@ public class AnnotatedHttpServiceResponseConverterTest {
         testEventStream("/publisher");
     }
 
-    private void testEventStream(String path) {
+    private static void testEventStream(String path) {
         StepVerifier.create(HttpClient.of(rule.uri("/event-stream")).get(path))
-                    .expectNext(HttpHeaders.of(HttpStatus.OK).contentType(MediaType.EVENT_STREAM))
+                    .expectNext(ResponseHeaders.of(HttpStatus.OK,
+                                                   HttpHeaderNames.CONTENT_TYPE, MediaType.EVENT_STREAM))
                     .expectNext(HttpData.ofUtf8("data:foo\n\n"))
                     .expectNext(HttpData.ofUtf8("data:bar\n\n"))
                     .expectNext(HttpData.ofUtf8("data:baz\n\n"))
                     .expectNext(HttpData.ofUtf8("data:qux\n\n"))
-                    .assertNext(this::assertThatLastContent)
+                    .assertNext(AnnotatedHttpServiceResponseConverterTest::assertThatLastContent)
                     .expectComplete()
                     .verify();
     }
 
-    private void assertThatLastContent(HttpObject o) {
+    private static void assertThatLastContent(HttpObject o) {
         // On the server side, HttpResponseSubscriber emits a DATA frame with end of stream
         // flag when the HttpResponseWriter is closed.
         final HttpData lastContent = (HttpData) o;

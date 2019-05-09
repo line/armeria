@@ -24,6 +24,7 @@ import static org.assertj.core.api.Assertions.entry;
 import static org.awaitility.Awaitility.await;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
@@ -58,14 +59,19 @@ import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
+import com.linecorp.armeria.client.grpc.GrpcClientOptions;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.FilteredHttpResponse;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -288,7 +294,7 @@ public class GrpcServiceServerTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
-            sb.defaultMaxRequestLength(0);
+            sb.maxRequestLength(0);
 
             sb.service(
                     new GrpcServiceBuilder()
@@ -303,6 +309,16 @@ public class GrpcServiceServerTest {
                                 ctx.log().addListener(requestLogQueue::add, RequestLogAvailability.COMPLETE);
                                 return delegate.serve(ctx, req);
                             }));
+
+            // For simplicity, mount onto a subpath with custom options
+            sb.serviceUnder(
+                    "/json-preserving/",
+                    new GrpcServiceBuilder()
+                            .addService(new UnitTestServiceImpl())
+                            .supportedSerializationFormats(GrpcSerializationFormats.values())
+                            .jsonMarshallerCustomizer(marshaller -> marshaller.preservingProtoFieldNames(true))
+                            .build());
+
             sb.service(
                     new GrpcServiceBuilder()
                             .addService(ProtoReflectionService.newInstance())
@@ -316,7 +332,7 @@ public class GrpcServiceServerTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
-            sb.defaultMaxRequestLength(0);
+            sb.maxRequestLength(0);
 
             sb.serviceUnder("/", new GrpcServiceBuilder()
                     .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
@@ -338,7 +354,7 @@ public class GrpcServiceServerTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
-            sb.defaultMaxRequestLength(0);
+            sb.maxRequestLength(0);
 
             sb.serviceUnder("/", new GrpcServiceBuilder()
                     .addService(new UnitTestServiceImpl())
@@ -356,7 +372,7 @@ public class GrpcServiceServerTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
-            sb.defaultMaxRequestLength(Long.MAX_VALUE);
+            sb.maxRequestLength(Long.MAX_VALUE);
 
             sb.serviceUnder("/", new GrpcServiceBuilder()
                     .addService(new UnitTestServiceImpl())
@@ -722,9 +738,9 @@ public class GrpcServiceServerTest {
     public void unframed() throws Exception {
         final HttpClient client = HttpClient.of(server.httpUri("/"));
         final AggregatedHttpMessage response = client.execute(
-                HttpHeaders.of(HttpMethod.POST,
-                               UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName())
-                           .set(HttpHeaderNames.CONTENT_TYPE, "application/protobuf"),
+                RequestHeaders.of(HttpMethod.POST,
+                                  UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
+                                  HttpHeaderNames.CONTENT_TYPE, "application/protobuf"),
                 REQUEST_MESSAGE.toByteArray()).aggregate().get();
         final SimpleResponse message = SimpleResponse.parseFrom(response.content().array());
         assertThat(message).isEqualTo(RESPONSE_MESSAGE);
@@ -742,10 +758,10 @@ public class GrpcServiceServerTest {
     public void unframed_acceptEncoding() throws Exception {
         final HttpClient client = HttpClient.of(server.httpUri("/"));
         final AggregatedHttpMessage response = client.execute(
-                HttpHeaders.of(HttpMethod.POST,
-                               UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName())
-                           .set(HttpHeaderNames.CONTENT_TYPE, "application/protobuf")
-                           .set(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, "gzip,none"),
+                RequestHeaders.of(HttpMethod.POST,
+                                  UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
+                                  HttpHeaderNames.CONTENT_TYPE, "application/protobuf",
+                                  GrpcHeaderNames.GRPC_ACCEPT_ENCODING, "gzip,none"),
                 REQUEST_MESSAGE.toByteArray()).aggregate().get();
         final SimpleResponse message = SimpleResponse.parseFrom(response.content().array());
         assertThat(message).isEqualTo(RESPONSE_MESSAGE);
@@ -763,9 +779,9 @@ public class GrpcServiceServerTest {
     public void unframed_streamingApi() throws Exception {
         final HttpClient client = HttpClient.of(server.httpUri("/"));
         final AggregatedHttpMessage response = client.execute(
-                HttpHeaders.of(HttpMethod.POST,
-                               UnitTestServiceGrpc.getStaticStreamedOutputCallMethod().getFullMethodName())
-                           .set(HttpHeaderNames.CONTENT_TYPE, "application/protobuf"),
+                RequestHeaders.of(HttpMethod.POST,
+                                  UnitTestServiceGrpc.getStaticStreamedOutputCallMethod().getFullMethodName(),
+                                  HttpHeaderNames.CONTENT_TYPE, "application/protobuf"),
                 StreamingOutputCallRequest.getDefaultInstance().toByteArray()).aggregate().get();
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertNoRpcContent();
@@ -775,8 +791,8 @@ public class GrpcServiceServerTest {
     public void unframed_noContentType() throws Exception {
         final HttpClient client = HttpClient.of(server.httpUri("/"));
         final AggregatedHttpMessage response = client.execute(
-                HttpHeaders.of(HttpMethod.POST,
-                               UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName()),
+                RequestHeaders.of(HttpMethod.POST,
+                                  UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName()),
                 REQUEST_MESSAGE.toByteArray()).aggregate().get();
         assertThat(response.status()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
         assertNoRpcContent();
@@ -786,10 +802,10 @@ public class GrpcServiceServerTest {
     public void unframed_grpcEncoding() throws Exception {
         final HttpClient client = HttpClient.of(server.httpUri("/"));
         final AggregatedHttpMessage response = client.execute(
-                HttpHeaders.of(HttpMethod.POST,
-                               UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName())
-                           .set(HttpHeaderNames.CONTENT_TYPE, "application/protobuf")
-                           .set(GrpcHeaderNames.GRPC_ENCODING, "gzip"),
+                RequestHeaders.of(HttpMethod.POST,
+                                  UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
+                                  HttpHeaderNames.CONTENT_TYPE, "application/protobuf",
+                                  GrpcHeaderNames.GRPC_ENCODING, "gzip"),
                 REQUEST_MESSAGE.toByteArray()).aggregate().get();
         assertThat(response.status()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
         assertNoRpcContent();
@@ -805,9 +821,9 @@ public class GrpcServiceServerTest {
                                                .setCode(Status.DEADLINE_EXCEEDED.getCode().value()))
                              .build();
         final AggregatedHttpMessage response = client.execute(
-                HttpHeaders.of(HttpMethod.POST,
-                               UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName())
-                           .set(HttpHeaderNames.CONTENT_TYPE, "application/protobuf"),
+                RequestHeaders.of(HttpMethod.POST,
+                                  UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
+                                  HttpHeaderNames.CONTENT_TYPE, "application/protobuf"),
                 request.toByteArray()).aggregate().get();
         assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 
@@ -823,9 +839,9 @@ public class GrpcServiceServerTest {
     public void grpcWeb() throws Exception {
         final HttpClient client = HttpClient.of(server.httpUri("/"));
         final AggregatedHttpMessage response = client.execute(
-                HttpHeaders.of(HttpMethod.POST,
-                               UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName())
-                           .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc-web"),
+                RequestHeaders.of(HttpMethod.POST,
+                                  UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
+                                  HttpHeaderNames.CONTENT_TYPE, "application/grpc-web"),
                 GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf())).aggregate().get();
         final byte[] serializedStatusHeader = "grpc-status: 0\r\n".getBytes(StandardCharsets.US_ASCII);
         final byte[] serializedTrailers = Bytes.concat(
@@ -849,9 +865,9 @@ public class GrpcServiceServerTest {
     public void grpcWeb_error() throws Exception {
         final HttpClient client = HttpClient.of(server.httpUri("/"));
         final AggregatedHttpMessage response = client.execute(
-                HttpHeaders.of(HttpMethod.POST,
-                               UnitTestServiceGrpc.getErrorWithMessageMethod().getFullMethodName())
-                           .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc-web"),
+                RequestHeaders.of(HttpMethod.POST,
+                                  UnitTestServiceGrpc.getErrorWithMessageMethod().getFullMethodName(),
+                                  HttpHeaderNames.CONTENT_TYPE, "application/grpc-web"),
                 GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf())).aggregate().get();
         assertThat(response.headers()).contains(entry(GrpcHeaderNames.GRPC_STATUS, "10"),
                                                 entry(GrpcHeaderNames.GRPC_MESSAGE, "aborted call"));
@@ -861,6 +877,7 @@ public class GrpcServiceServerTest {
     @Test
     public void json() throws Exception {
         final AtomicReference<HttpHeaders> requestHeaders = new AtomicReference<>();
+        final AtomicReference<byte[]> payload = new AtomicReference<>();
         final UnitTestServiceBlockingStub jsonStub =
                 new ClientBuilder(server.httpUri(GrpcSerializationFormats.JSON, "/"))
                         .decorator(client -> new SimpleDecoratingClient<HttpRequest, HttpResponse>(client) {
@@ -868,7 +885,15 @@ public class GrpcServiceServerTest {
                             public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
                                     throws Exception {
                                 requestHeaders.set(req.headers());
-                                return delegate().execute(ctx, req);
+                                return new FilteredHttpResponse(delegate().execute(ctx, req)) {
+                                    @Override
+                                    protected HttpObject filter(HttpObject obj) {
+                                        if (obj instanceof HttpData) {
+                                            payload.set(((HttpData) obj).array());
+                                        }
+                                        return obj;
+                                    }
+                                };
                             }
                         })
                         .build(UnitTestServiceBlockingStub.class);
@@ -881,6 +906,42 @@ public class GrpcServiceServerTest {
             assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
             assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
         });
+
+        byte[] deframed = Arrays.copyOfRange(payload.get(), 5, payload.get().length);
+        assertThat(new String(deframed, StandardCharsets.UTF_8)).contains("oauthScope");
+    }
+
+    @Test
+    public void json_preservingFieldNames() throws Exception {
+        final AtomicReference<HttpHeaders> requestHeaders = new AtomicReference<>();
+        final AtomicReference<byte[]> payload = new AtomicReference<>();
+        final UnitTestServiceBlockingStub jsonStub =
+                new ClientBuilder(server.httpUri(GrpcSerializationFormats.JSON, "/json-preserving/"))
+                        .option(GrpcClientOptions.JSON_MARSHALLER_CUSTOMIZER.newValue(
+                                marshaller -> marshaller.preservingProtoFieldNames(true)))
+                        .decorator(client -> new SimpleDecoratingClient<HttpRequest, HttpResponse>(client) {
+                            @Override
+                            public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
+                                    throws Exception {
+                                requestHeaders.set(req.headers());
+                                return new FilteredHttpResponse(delegate().execute(ctx, req)) {
+                                    @Override
+                                    protected HttpObject filter(HttpObject obj) {
+                                        if (obj instanceof HttpData) {
+                                            payload.set(((HttpData) obj).array());
+                                        }
+                                        return obj;
+                                    }
+                                };
+                            }
+                        })
+                        .build(UnitTestServiceBlockingStub.class);
+        final SimpleResponse response = jsonStub.staticUnaryCall(REQUEST_MESSAGE);
+        assertThat(response).isEqualTo(RESPONSE_MESSAGE);
+        assertThat(requestHeaders.get().get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo("application/grpc+json");
+
+        byte[] deframed = Arrays.copyOfRange(payload.get(), 5, payload.get().length);
+        assertThat(new String(deframed, StandardCharsets.UTF_8)).contains("oauth_scope");
     }
 
     @Test

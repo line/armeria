@@ -32,7 +32,7 @@ final class HttpRequestAggregator extends HttpMessageAggregator {
                           @Nullable ByteBufAllocator alloc) {
         super(future, alloc);
         this.request = request;
-        trailingHeaders = HttpHeaders.EMPTY_HEADERS;
+        trailingHeaders = HttpHeaders.of();
     }
 
     @Override
@@ -67,6 +67,6 @@ final class HttpRequestAggregator extends HttpMessageAggregator {
 
     @Override
     protected void onFailure() {
-        trailingHeaders = HttpHeaders.EMPTY_HEADERS;
+        trailingHeaders = HttpHeaders.of();
     }
 }

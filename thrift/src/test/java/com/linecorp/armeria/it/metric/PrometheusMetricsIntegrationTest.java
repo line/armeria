@@ -44,9 +44,9 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
@@ -303,8 +303,8 @@ public class PrometheusMetricsIntegrationTest {
     private static AggregatedHttpMessage makeMetricsRequest() throws ExecutionException,
                                                                      InterruptedException {
         final HttpClient client = HttpClient.of("http://127.0.0.1:" + server.httpPort());
-        return client.execute(HttpHeaders.of(HttpMethod.GET, "/internal/prometheus/metrics")
-                                         .setObject(HttpHeaderNames.ACCEPT, MediaType.PLAIN_TEXT_UTF_8))
+        return client.execute(RequestHeaders.of(HttpMethod.GET, "/internal/prometheus/metrics",
+                                                HttpHeaderNames.ACCEPT, MediaType.PLAIN_TEXT_UTF_8))
                      .aggregate().get();
     }
 

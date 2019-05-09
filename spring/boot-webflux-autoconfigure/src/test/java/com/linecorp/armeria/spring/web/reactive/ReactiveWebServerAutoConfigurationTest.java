@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.spring.web.reactive;
 
+import static com.linecorp.armeria.common.MediaType.JSON_UTF_8;
+import static com.linecorp.armeria.common.MediaType.PLAIN_TEXT_UTF_8;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -55,10 +57,11 @@ import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.internal.MockAddressResolverGroup;
@@ -151,8 +154,8 @@ public class ReactiveWebServerAutoConfigurationTest {
             assertThat(res.contentUtf8()).isEqualTo("route");
 
             final AggregatedHttpMessage res2 =
-                    client.execute(HttpHeaders.of(HttpMethod.POST, "/route2")
-                                              .contentType(com.linecorp.armeria.common.MediaType.JSON_UTF_8),
+                    client.execute(RequestHeaders.of(HttpMethod.POST, "/route2",
+                                                     HttpHeaderNames.CONTENT_TYPE, JSON_UTF_8),
                                    HttpData.of("{\"a\":1}".getBytes())).aggregate().join();
             assertThatJson(res2.contentUtf8()).isArray()
                                               .ofLength(1)
@@ -167,8 +170,8 @@ public class ReactiveWebServerAutoConfigurationTest {
             assertThat(client.get("/route2").aggregate().join().status()).isEqualTo(HttpStatus.NOT_FOUND);
 
             assertThat(client.execute(
-                    HttpHeaders.of(HttpMethod.POST, "/route2")
-                               .contentType(com.linecorp.armeria.common.MediaType.PLAIN_TEXT_UTF_8),
+                    RequestHeaders.of(HttpMethod.POST, "/route2",
+                                      HttpHeaderNames.CONTENT_TYPE, PLAIN_TEXT_UTF_8),
                     HttpData.of("text".getBytes())).aggregate().join().status())
                     .isEqualTo(HttpStatus.NOT_FOUND);
         });

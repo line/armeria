@@ -262,9 +262,19 @@ public interface PathMapping {
      * @param supportedMethods the set of {@link HttpMethod}s that this {@link PathMapping} supports
      * @param consumeTypes the list of {@link MediaType}s that this {@link PathMapping} consumes
      * @param produceTypes the list of {@link MediaType}s that this {@link PathMapping} produces
+     *
+     * @throws IllegalArgumentException if the {@link PathMapping} has conditions beyond the path pattern,
+     *                                  i.e. the {@link PathMapping} created by
+     *                                  {@link #withHttpHeaderInfo(Set, List, List)}
      */
     default PathMapping withHttpHeaderInfo(Set<HttpMethod> supportedMethods,
                                            List<MediaType> consumeTypes, List<MediaType> produceTypes) {
+        if (!hasPathPatternOnly()) {
+            throw new IllegalArgumentException(
+                    "pathMapping: " + getClass().getSimpleName() +
+                    " (expected: the path mapping which has only the path patterns as its condition)");
+        }
+
         return new HttpHeaderPathMapping(this, supportedMethods, consumeTypes, produceTypes);
     }
 

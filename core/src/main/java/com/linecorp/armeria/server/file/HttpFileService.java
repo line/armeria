@@ -37,11 +37,11 @@ import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.metric.CaffeineMetricSupport;
@@ -218,8 +218,8 @@ public final class HttpFileService extends AbstractHttpService {
             if (findFile(ctx, decodedMappedPath + "/index.html", supportedEncodings) != null ||
                 config.autoIndex() && config.vfs().canList(decodedMappedPath)) {
                 throw HttpResponseException.of(HttpResponse.of(
-                        HttpHeaders.of(HttpStatus.TEMPORARY_REDIRECT)
-                                   .set(HttpHeaderNames.LOCATION, ctx.path() + '/')));
+                        ResponseHeaders.of(HttpStatus.TEMPORARY_REDIRECT,
+                                           HttpHeaderNames.LOCATION, ctx.path() + '/')));
             }
         }
 

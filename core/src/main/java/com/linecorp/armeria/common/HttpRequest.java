@@ -42,7 +42,7 @@ import io.netty.util.concurrent.EventExecutor;
 /**
  * A streamed HTTP/2 {@link Request}.
  *
- * <p>Note: The initial {@link HttpHeaders} is not signaled to {@link Subscriber}s. It is readily available
+ * <p>Note: The initial {@link RequestHeaders} is not signaled to {@link Subscriber}s. It is readily available
  * via {@link #headers()}.
  */
 public interface HttpRequest extends Request, StreamMessage<HttpObject> {
@@ -52,19 +52,19 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
 
     /**
      * Creates a new HTTP request that can be used to stream an arbitrary number of {@link HttpObject}
-     * with the initial {@link HttpHeaders} of the specified {@link HttpMethod} and {@code path}.
+     * with the initial {@link RequestHeaders} of the specified {@link HttpMethod} and {@code path}.
      */
     static HttpRequestWriter streaming(HttpMethod method, String path) {
         requireNonNull(method, "method");
         requireNonNull(path, "path");
-        return streaming(HttpHeaders.of(method, path));
+        return streaming(RequestHeaders.of(method, path));
     }
 
     /**
      * Creates a new HTTP request that can be used to stream an arbitrary number of {@link HttpObject}
-     * with the specified initial {@link HttpHeaders}.
+     * with the specified initial {@link RequestHeaders}.
      */
-    static HttpRequestWriter streaming(HttpHeaders headers) {
+    static HttpRequestWriter streaming(RequestHeaders headers) {
         requireNonNull(headers, "headers");
         return new DefaultHttpRequest(headers);
     }
@@ -78,7 +78,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     static HttpRequest of(HttpMethod method, String path) {
         requireNonNull(method, "method");
         requireNonNull(path, "path");
-        return of(HttpHeaders.of(method, path));
+        return of(RequestHeaders.of(method, path));
     }
 
     /**
@@ -171,7 +171,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * @param content the content of the request
      */
     static HttpRequest of(HttpMethod method, String path, MediaType mediaType, HttpData content) {
-        return of(method, path, mediaType, content, HttpHeaders.EMPTY_HEADERS);
+        return of(method, path, mediaType, content, HttpHeaders.of());
     }
 
     /**
@@ -188,21 +188,24 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
         requireNonNull(method, "method");
         requireNonNull(path, "path");
         requireNonNull(mediaType, "mediaType");
-        return of(HttpHeaders.of(method, path).contentType(mediaType), content, trailingHeaders);
+        return of(RequestHeaders.builder(method, path)
+                                .contentType(mediaType)
+                                .build(),
+                  content, trailingHeaders);
     }
 
     /**
      * Creates a new {@link HttpRequest} with empty content and closes the stream.
      */
-    static HttpRequest of(HttpHeaders headers) {
+    static HttpRequest of(RequestHeaders headers) {
         return of(headers, HttpData.EMPTY_DATA);
     }
 
     /**
      * Creates a new {@link HttpRequest} and closes the stream.
      */
-    static HttpRequest of(HttpHeaders headers, HttpData content) {
-        return of(headers, content, HttpHeaders.EMPTY_HEADERS);
+    static HttpRequest of(RequestHeaders headers, HttpData content) {
+        return of(headers, content, HttpHeaders.of());
     }
 
     /**
@@ -210,26 +213,19 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      *
      * @throws IllegalStateException if the headers are malformed.
      */
-    static HttpRequest of(HttpHeaders headers, HttpData content, HttpHeaders trailingHeaders) {
+    static HttpRequest of(RequestHeaders headers, HttpData content, HttpHeaders trailingHeaders) {
         requireNonNull(headers, "headers");
         requireNonNull(content, "content");
         requireNonNull(trailingHeaders, "trailingHeaders");
 
-        // From the section 8.1.2.3 of RFC 7540:
-        //// All HTTP/2 requests MUST include exactly one valid value for the :method, :scheme, and :path
-        //// pseudo-header fields, unless it is a CONNECT request (Section 8.3)
-        // NB: ':scheme' will be filled when a request is written.
-        if (headers.method() == null) {
-            throw new IllegalStateException("not a request (missing :method)");
-        }
-        if (headers.path() == null) {
-            throw new IllegalStateException("not a request (missing :path)");
-        }
-
         if (content.isEmpty()) {
-            headers.remove(CONTENT_LENGTH);
+            final RequestHeadersBuilder builder = headers.toBuilder();
+            builder.remove(CONTENT_LENGTH);
+            headers = builder.build();
         } else {
-            headers.setInt(CONTENT_LENGTH, content.length());
+            headers = headers.toBuilder()
+                             .setInt(CONTENT_LENGTH, content.length())
+                             .build();
         }
 
         if (!content.isEmpty()) {
@@ -247,11 +243,11 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
 
     /**
      * Creates a new {@link HttpRequest} that publishes the given {@link HttpObject}s and closes the stream.
-     * {@code objs} must not contain {@link HttpHeaders}.
+     * {@code objs} must not contain {@link RequestHeaders}.
      */
-    static HttpRequest of(HttpHeaders headers, HttpObject... objs) {
+    static HttpRequest of(RequestHeaders headers, HttpObject... objs) {
         if (Arrays.stream(objs).anyMatch(obj -> obj instanceof HttpHeaders)) {
-            throw new IllegalArgumentException("objs contains HttpHeaders, which is not allowed.");
+            throw new IllegalArgumentException("objs contains Headers, which is not allowed.");
         }
         switch (objs.length) {
             case 0:
@@ -261,11 +257,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
             case 2:
                 return new TwoElementFixedHttpRequest(headers, objs[0], objs[1]);
             default:
-                for (int i = 0; i < objs.length; i++) {
-                    if (objs[i] == null) {
-                        throw new NullPointerException("objs[" + i + "] is null");
-                    }
-                }
                 return new RegularFixedHttpRequest(headers, objs);
         }
     }
@@ -274,37 +265,62 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * Converts the {@link AggregatedHttpMessage} into a new {@link HttpRequest} and closes the stream.
      */
     static HttpRequest of(AggregatedHttpMessage message) {
-        return of(message.headers(), message.content(), message.trailingHeaders());
+        return of(RequestHeaders.of(message.headers()), message.content(), message.trailingHeaders());
     }
 
     /**
-     * Creates a new instance from an existing {@link HttpHeaders} and {@link Publisher}.
+     * Creates a new instance from an existing {@link RequestHeaders} and {@link Publisher}.
      */
-    static HttpRequest of(HttpHeaders headers, Publisher<? extends HttpObject> publisher) {
+    static HttpRequest of(RequestHeaders headers, Publisher<? extends HttpObject> publisher) {
         requireNonNull(publisher, "publisher");
         return new PublisherBasedHttpRequest(headers, publisher);
     }
 
     /**
+     * Creates a new instance from an existing {@link HttpRequest} replacing its {@link RequestHeaders}
+     * with the specified {@code newHeaders}. Make sure to update {@link RequestContext#request()} with
+     * {@link RequestContext#updateRequest(Request)} if you are intercepting an {@link HttpRequest}
+     * in a decorator. For example:
+     * <pre>{@code
+     * > public class MyService extends SimpleDecoratingService<HttpRequest, HttpResponse> {
+     * >     @Override
+     * >     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
+     * >         // Create a new request with an additional header.
+     * >         final HttpRequest newReq = HttpRequest.of(
+     * >                 req, req.headers().toBuilder()
+     * >                         .set("x-custom-header", "value")
+     * >                         .build());
+     * >
+     * >         // Update the ctx.request.
+     * >         ctx.updateRequest(newReq);
+     * >
+     * >         // Delegate the new request with the updated context.
+     * >         return delegate().serve(ctx, newReq);
+     * >     }
+     * > }
+     * }</pre>
+     */
+    static HttpRequest of(HttpRequest request, RequestHeaders newHeaders) {
+        requireNonNull(request, "request");
+        requireNonNull(newHeaders, "newHeaders");
+        if (request instanceof HeaderOverridingHttpRequest) {
+            request = ((HeaderOverridingHttpRequest) request).unwrap();
+        }
+
+        return new HeaderOverridingHttpRequest(request, newHeaders);
+    }
+
+    /**
      * Returns the initial HTTP/2 headers of this request.
      */
-    HttpHeaders headers();
+    RequestHeaders headers();
 
     /**
      * Returns the scheme of this request. This method is a shortcut of {@code headers().scheme()}.
      */
+    @Nullable
     default String scheme() {
         return headers().scheme();
-    }
-
-    /**
-     * Sets the scheme of this request. This method is a shortcut of {@code headers().scheme(...)}.
-     *
-     * @return {@code this}
-     */
-    default HttpRequest scheme(String scheme) {
-        headers().scheme(scheme);
-        return this;
     }
 
     /**
@@ -315,16 +331,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     }
 
     /**
-     * Sets the method of this request. This method is a shortcut of {@code headers().method(...)}.
-     *
-     * @return {@code this}
-     */
-    default HttpRequest method(HttpMethod method) {
-        headers().method(method);
-        return this;
-    }
-
-    /**
      * Returns the path of this request. This method is a shortcut of {@code headers().path()}.
      */
     default String path() {
@@ -332,30 +338,11 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     }
 
     /**
-     * Sets the path of this request. This method is a shortcut of {@code headers().path(...)}.
-     *
-     * @return {@code this}
-     */
-    default HttpRequest path(String path) {
-        headers().path(path);
-        return this;
-    }
-
-    /**
      * Returns the authority of this request. This method is a shortcut of {@code headers().authority()}.
      */
+    @Nullable
     default String authority() {
         return headers().authority();
-    }
-
-    /**
-     * Sets the authority of this request. This method is a shortcut of {@code headers().authority(...)}.
-     *
-     * @return {@code this}
-     */
-    default HttpRequest authority(String authority) {
-        headers().authority(authority);
-        return this;
     }
 
     /**
@@ -365,14 +352,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     @Nullable
     default MediaType contentType() {
         return headers().contentType();
-    }
-
-    /**
-     * Sets the {@link HttpHeaderNames#CONTENT_TYPE} header.
-     */
-    default HttpRequest contentType(MediaType mediaType) {
-        headers().contentType(mediaType);
-        return this;
     }
 
     /**

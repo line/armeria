@@ -45,9 +45,9 @@ public class UnaryGrpcClientTest {
 
         @Override
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
-            SimpleResponse response = SimpleResponse.newBuilder()
-                                                    .setPayload(request.getPayload())
-                                                    .build();
+            final SimpleResponse response = SimpleResponse.newBuilder()
+                                                          .setPayload(request.getPayload())
+                                                          .build();
             responseObserver.onNext(response);
             responseObserver.onCompleted();
         }
@@ -72,29 +72,28 @@ public class UnaryGrpcClientTest {
 
     @Before
     public void setUp() {
-        client = new UnaryGrpcClient(HttpClient.of("http://127.0.0.1:" + server.getPort() + "/"));
+        client = new UnaryGrpcClient(HttpClient.of("http://127.0.0.1:" + server.getPort()));
     }
 
     @Test
     public void normal() throws Exception {
-        SimpleRequest request = SimpleRequest.newBuilder()
-                                             .setPayload(Payload.newBuilder()
+        final SimpleRequest request = SimpleRequest.newBuilder()
+                                                   .setPayload(Payload.newBuilder()
                                                                 .setBody(ByteString.copyFromUtf8("hello"))
                                                                 .build())
-                                             .build();
+                                                   .build();
 
-        byte[] responseBytes =
+        final byte[] responseBytes =
                 client.execute("/armeria.grpc.testing.TestService/UnaryCall", request.toByteArray()).join();
-        SimpleResponse response = SimpleResponse.parseFrom(responseBytes);
+        final SimpleResponse response = SimpleResponse.parseFrom(responseBytes);
         assertThat(response.getPayload().getBody().toStringUtf8()).isEqualTo("hello");
     }
 
     @Test
     public void invalidPayload() {
         assertThatThrownBy(
-                () ->
-                        client.execute("/armeria.grpc.testing.TestService/UnaryCall",
-                                       "foobarbreak".getBytes(StandardCharsets.UTF_8)).join())
+                () -> client.execute("/armeria.grpc.testing.TestService/UnaryCall",
+                                     "foobarbreak".getBytes(StandardCharsets.UTF_8)).join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(ArmeriaStatusException.class);
     }

@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server.docs;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSortedSet.toImmutableSortedSet;
 import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
@@ -41,7 +40,7 @@ import com.linecorp.armeria.server.Service;
  */
 public final class ServiceSpecification {
 
-    private static ServiceSpecification emptyServiceSpecification =
+    private static final ServiceSpecification emptyServiceSpecification =
             new ServiceSpecification(ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
                                      ImmutableList.of(), ImmutableList.of());
 
@@ -141,9 +140,8 @@ public final class ServiceSpecification {
         this.enums = collectNamedTypeInfo(enums, "enums");
         this.structs = collectNamedTypeInfo(structs, "structs");
         this.exceptions = collectNamedTypeInfo(exceptions, "exceptions");
-        this.exampleHttpHeaders = Streams.stream(requireNonNull(exampleHttpHeaders, "exampleHttpHeaders"))
-                                         .map(headers -> HttpHeaders.copyOf(headers).asImmutable())
-                                         .collect(toImmutableList());
+        this.exampleHttpHeaders = ImmutableList.copyOf(requireNonNull(exampleHttpHeaders,
+                                                                      "exampleHttpHeaders"));
     }
 
     private static <T extends NamedTypeInfo> Set<T> collectNamedTypeInfo(Iterable<T> values, String name) {

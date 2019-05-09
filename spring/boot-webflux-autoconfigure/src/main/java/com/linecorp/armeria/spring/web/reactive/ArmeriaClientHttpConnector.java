@@ -33,7 +33,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpClientBuilder;
-import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 
 import reactor.core.publisher.Mono;
 
@@ -113,7 +113,7 @@ public final class ArmeriaClientHttpConnector implements ClientHttpConnector {
         return new ArmeriaClientHttpRequest(builder.build(), method, pathAndQuery, uri, factoryWrapper);
     }
 
-    private ArmeriaClientHttpResponse createResponse(HttpHeaders headers,
+    private ArmeriaClientHttpResponse createResponse(ResponseHeaders headers,
                                                      ArmeriaHttpClientResponseSubscriber s) {
         return new ArmeriaClientHttpResponse(headers, s.toResponseBodyPublisher(), factoryWrapper);
     }

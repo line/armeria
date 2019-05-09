@@ -45,12 +45,14 @@ import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -116,8 +118,8 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
             ctx.logBuilder().requestContent(call, new ThriftCall(header, tArgs));
 
             final HttpRequest httpReq = HttpRequest.of(
-                    HttpHeaders.of(HttpMethod.POST, ctx.path())
-                               .contentType(mediaType),
+                    RequestHeaders.of(HttpMethod.POST, ctx.path(),
+                                      HttpHeaderNames.CONTENT_TYPE, mediaType),
                     HttpData.of(outTransport.getArray(), 0, outTransport.length()));
 
             ctx.logBuilder().deferResponseContent();
@@ -133,8 +135,9 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
 
                 final HttpStatus status = res.status();
                 if (status.code() != HttpStatus.OK.code()) {
-                    handlePreDecodeException(ctx, reply, func,
-                                             new InvalidResponseHeadersException(res.headers()));
+                    handlePreDecodeException(
+                            ctx, reply, func,
+                            new InvalidResponseHeadersException(ResponseHeaders.of(res.headers())));
                     return null;
                 }
 

@@ -58,9 +58,9 @@ public interface ContentPreviewer {
     /**
      * Creates a new instance of {@link ContentPreviewer} which produces the text
      * with the maximum {@code length} limit.
-     * @param length the maximum length of the preview.
-     * @param defaultCharset the default charset for a request/response with unspecified charset in
-     *                       {@code "content-type"} header.
+     * @param length the maximum length of the preview
+     * @param defaultCharset the default charset used when a charset is not specified in the
+     *                       {@code "content-type"} header
      */
     static ContentPreviewer ofText(int length, Charset defaultCharset) {
         checkArgument(length >= 0, "length : %d (expected: >= 0)", length);
@@ -83,7 +83,7 @@ public interface ContentPreviewer {
      * A dummy {@link ContentPreviewer} which discards everything it collected and produces {@code null}.
      */
     static ContentPreviewer disabled() {
-        return NoopContentPreviewer.INSTANCE;
+        return ContentPreviewerAdapter.NOOP;
     }
 
     /**

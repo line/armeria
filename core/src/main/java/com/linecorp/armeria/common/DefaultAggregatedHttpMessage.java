@@ -23,12 +23,12 @@ import com.google.common.base.MoreObjects.ToStringHelper;
 
 final class DefaultAggregatedHttpMessage implements AggregatedHttpMessage {
 
-    private final List<HttpHeaders> informationals;
+    private final List<ResponseHeaders> informationals;
     private final HttpHeaders headers;
     private final HttpData content;
     private final HttpHeaders trailingHeaders;
 
-    DefaultAggregatedHttpMessage(List<HttpHeaders> informationals, HttpHeaders headers,
+    DefaultAggregatedHttpMessage(List<ResponseHeaders> informationals, HttpHeaders headers,
                                  HttpData content, HttpHeaders trailingHeaders) {
         this.informationals = informationals;
         this.headers = headers;
@@ -37,7 +37,7 @@ final class DefaultAggregatedHttpMessage implements AggregatedHttpMessage {
     }
 
     @Override
-    public List<HttpHeaders> informationals() {
+    public List<ResponseHeaders> informationals() {
         return informationals;
     }
 

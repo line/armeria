@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.common;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isContentAlwaysEmpty;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isContentAlwaysEmptyWithValidation;
 import static java.util.Objects.requireNonNull;
@@ -55,9 +54,9 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
     default void respond(HttpStatus status) {
         requireNonNull(status, "status");
         if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
-            write(HttpHeaders.of(status));
+            write(ResponseHeaders.of(status));
         } else if (isContentAlwaysEmpty(status)) {
-            write(HttpHeaders.of(status));
+            write(ResponseHeaders.of(status));
             close();
         } else {
             respond(status, MediaType.PLAIN_TEXT_UTF_8, status.toHttpData());
@@ -151,7 +150,7 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
         requireNonNull(status, "status");
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
-        respond(status, mediaType, content, HttpHeaders.EMPTY_HEADERS);
+        respond(status, mediaType, content, HttpHeaders.of());
     }
 
     /**
@@ -171,10 +170,10 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
         requireNonNull(content, "content");
         requireNonNull(trailingHeaders, "trailingHeaders");
 
-        final HttpHeaders headers =
-                HttpHeaders.of(status)
-                           .contentType(mediaType)
-                           .setInt(HttpHeaderNames.CONTENT_LENGTH, content.length());
+        final ResponseHeaders headers =
+                ResponseHeaders.of(status,
+                                   HttpHeaderNames.CONTENT_TYPE, mediaType,
+                                   HttpHeaderNames.CONTENT_LENGTH, content.length());
 
         if (isContentAlwaysEmptyWithValidation(status, content, trailingHeaders)) {
             ReferenceCountUtil.safeRelease(content);
@@ -211,10 +210,8 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
     default void close(AggregatedHttpMessage res) {
         requireNonNull(res, "res");
 
-        final HttpHeaders headers = res.headers();
+        final ResponseHeaders headers = ResponseHeaders.of(res.headers());
         final HttpStatus status = headers.status();
-        checkArgument(status != null, "res does not contain :status.");
-
         final HttpData content = res.content();
         final HttpHeaders trailingHeaders = res.trailingHeaders();
 

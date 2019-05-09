@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.PooledByteBufAllocator;
@@ -80,10 +81,9 @@ public class ArmeriaServerHttpResponseTest {
         StepVerifier.create(httpResponse)
                     .assertNext(o -> {
                         assertThat(o.isEndOfStream()).isFalse();
-                        assertThat(o).isInstanceOf(HttpHeaders.class);
-                        final HttpHeaders headers = (HttpHeaders) o;
-                        assertThat(headers.status())
-                                .isEqualTo(com.linecorp.armeria.common.HttpStatus.NOT_FOUND);
+                        assertThat(o).isInstanceOf(ResponseHeaders.class);
+                        final ResponseHeaders headers = (ResponseHeaders) o;
+                        assertThat(headers.status().code()).isEqualTo(404);
                     })
                     .expectComplete()
                     .verify();
@@ -125,10 +125,9 @@ public class ArmeriaServerHttpResponseTest {
         StepVerifier.create(httpResponse)
                     .assertNext(o -> {
                         assertThat(o.isEndOfStream()).isFalse();
-                        assertThat(o).isInstanceOf(HttpHeaders.class);
-                        final HttpHeaders headers = (HttpHeaders) o;
-                        assertThat(headers.status())
-                                .isEqualTo(com.linecorp.armeria.common.HttpStatus.OK);
+                        assertThat(o).isInstanceOf(ResponseHeaders.class);
+                        final ResponseHeaders headers = (ResponseHeaders) o;
+                        assertThat(headers.status().code()).isEqualTo(200);
                         assertThat(headers.get(HttpHeaderNames.of("Armeria"))).isEqualTo("awesome");
                         final Cookie setCookie =
                                 ClientCookieDecoder.LAX.decode(headers.get(HttpHeaderNames.SET_COOKIE));

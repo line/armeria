@@ -24,7 +24,9 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.logging.Sampler;
@@ -69,11 +71,11 @@ public final class LoggingService<I extends Request, O extends Response> extends
     private final LogLevel requestLogLevel;
     private final LogLevel successfulResponseLogLevel;
     private final LogLevel failedResponseLogLevel;
-    private final Function<? super HttpHeaders, ? extends HttpHeaders> requestHeadersSanitizer;
+    private final Function<? super RequestHeaders, ? extends HttpHeaders> requestHeadersSanitizer;
     private final Function<Object, ?> requestContentSanitizer;
     private final Function<? super HttpHeaders, ? extends HttpHeaders> requestTrailersSanitizer;
 
-    private final Function<? super HttpHeaders, ? extends HttpHeaders> responseHeadersSanitizer;
+    private final Function<? super ResponseHeaders, ? extends HttpHeaders> responseHeadersSanitizer;
     private final Function<Object, ?> responseContentSanitizer;
     private final Function<? super HttpHeaders, ? extends HttpHeaders> responseTrailersSanitizer;
     private final Function<? super Throwable, ? extends Throwable> responseCauseSanitizer;
@@ -119,10 +121,10 @@ public final class LoggingService<I extends Request, O extends Response> extends
             LogLevel requestLogLevel,
             LogLevel successfulResponseLogLevel,
             LogLevel failedResponseLogLevel,
-            Function<? super HttpHeaders, ? extends HttpHeaders> requestHeadersSanitizer,
+            Function<? super RequestHeaders, ? extends HttpHeaders> requestHeadersSanitizer,
             Function<Object, ?> requestContentSanitizer,
             Function<? super HttpHeaders, ? extends HttpHeaders> requestTrailersSanitizer,
-            Function<? super HttpHeaders, ? extends HttpHeaders> responseHeadersSanitizer,
+            Function<? super ResponseHeaders, ? extends HttpHeaders> responseHeadersSanitizer,
             Function<Object, ?> responseContentSanitizer,
             Function<? super HttpHeaders, ? extends HttpHeaders> responseTrailersSanitizer,
             Function<? super Throwable, ? extends Throwable> responseCauseSanitizer,
@@ -151,10 +153,12 @@ public final class LoggingService<I extends Request, O extends Response> extends
                                                     requestContentSanitizer, requestTrailersSanitizer),
                                   RequestLogAvailability.REQUEST_END);
             ctx.log().addListener(log -> logResponse(((ServiceRequestContext) log.context()).logger(), log,
-                                                     requestLogLevel, requestHeadersSanitizer,
-                                                     requestContentSanitizer,
+                                                     requestLogLevel,
                                                      requestHeadersSanitizer,
-                                                     successfulResponseLogLevel, failedResponseLogLevel,
+                                                     requestContentSanitizer,
+                                                     requestTrailersSanitizer,
+                                                     successfulResponseLogLevel,
+                                                     failedResponseLogLevel,
                                                      responseHeadersSanitizer,
                                                      responseContentSanitizer,
                                                      responseTrailersSanitizer,

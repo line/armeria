@@ -34,11 +34,11 @@ final class DefaultHttpResult<T> implements HttpResult<T> {
     private final HttpHeaders trailingHeaders;
 
     DefaultHttpResult(HttpHeaders headers) {
-        this(headers, null, HttpHeaders.EMPTY_HEADERS);
+        this(headers, null, HttpHeaders.of());
     }
 
     DefaultHttpResult(HttpHeaders headers, T content) {
-        this(headers, requireNonNull(content, "content"), HttpHeaders.EMPTY_HEADERS);
+        this(headers, requireNonNull(content, "content"), HttpHeaders.of());
     }
 
     DefaultHttpResult(HttpHeaders headers, @Nullable T content, HttpHeaders trailingHeaders) {

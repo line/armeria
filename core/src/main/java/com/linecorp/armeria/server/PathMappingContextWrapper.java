@@ -69,14 +69,13 @@ class PathMappingContextWrapper implements PathMappingContext {
 
     @Nullable
     @Override
-    public MediaType consumeType() {
-        return delegate().consumeType();
+    public MediaType contentType() {
+        return delegate().contentType();
     }
 
-    @Nullable
     @Override
-    public List<MediaType> produceTypes() {
-        return delegate().produceTypes();
+    public List<MediaType> acceptTypes() {
+        return delegate().acceptTypes();
     }
 
     @Override

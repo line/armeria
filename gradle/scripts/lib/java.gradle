@@ -103,9 +103,14 @@ configure(projectsWithFlags('java')) {
             }
         }
 
-        task checkstyle(group: 'Verification',
-                description: 'Runs the checkstyle rules.',
-                dependsOn: [tasks.checkstyleMain, tasks.checkstyleTest])
+        task checkstyle(group: 'Verification', description: 'Runs the checkstyle rules.') {
+            project.sourceSets.all { SourceSet sourceSet ->
+                def dependencyTask = project.tasks.findByName(sourceSet.getTaskName("checkstyle", ""))
+                if (dependencyTask instanceof Checkstyle) {
+                    dependsOn dependencyTask
+                }
+            }
+        }
 
         test {
             dependsOn tasks.checkstyle

@@ -50,9 +50,9 @@ import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.saml.SamlService.SamlParameters;
 
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -68,14 +68,14 @@ final class HttpRedirectBindingUtil {
     private static final String DEFAULT_PRAGMA = HttpHeaderValues.NO_CACHE.toString();
 
     /**
-     * Returns an {@link HttpHeaders} with the specified {@code location}, the default {@code cache-control}
+     * Returns a {@link ResponseHeaders} with the specified {@code location}, the default {@code cache-control}
      * and the default {@code pragma} headers.
      */
-    static HttpHeaders headersWithLocation(String location) {
-        return HttpHeaders.of(HttpStatus.FOUND)
-                          .add(HttpHeaderNames.LOCATION, location)
-                          .add(HttpHeaderNames.CACHE_CONTROL, DEFAULT_CACHE_CONTROL)
-                          .add(HttpHeaderNames.PRAGMA, DEFAULT_PRAGMA);
+    static ResponseHeaders headersWithLocation(String location) {
+        return ResponseHeaders.of(HttpStatus.FOUND,
+                                  HttpHeaderNames.LOCATION, location,
+                                  HttpHeaderNames.CACHE_CONTROL, DEFAULT_CACHE_CONTROL,
+                                  HttpHeaderNames.PRAGMA, DEFAULT_PRAGMA);
     }
 
     /**

@@ -16,8 +16,10 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -26,6 +28,7 @@ import java.util.StringJoiner;
 import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
@@ -36,7 +39,7 @@ import com.linecorp.armeria.common.MediaType;
  */
 final class HttpHeaderPathMapping implements PathMapping {
 
-    private static final List<MediaType> ANY_TYPE = ImmutableList.of(MediaType.ANY_TYPE);
+    private static final List<MediaType> ANY_TYPE_LIST = ImmutableList.of(MediaType.ANY_TYPE);
     private static final Joiner loggerNameJoiner = Joiner.on('_');
     private static final Joiner meterTagJoiner = Joiner.on(',');
 
@@ -56,9 +59,11 @@ final class HttpHeaderPathMapping implements PathMapping {
     HttpHeaderPathMapping(PathMapping pathStringMapping, Set<HttpMethod> supportedMethods,
                           List<MediaType> consumeTypes, List<MediaType> produceTypes) {
         this.pathStringMapping = requireNonNull(pathStringMapping, "pathStringMapping");
-        this.supportedMethods = requireNonNull(supportedMethods, "supportedMethods");
-        this.consumeTypes = requireNonNull(consumeTypes, "consumeTypes");
-        this.produceTypes = requireNonNull(produceTypes, "produceTypes");
+        requireNonNull(supportedMethods, "supportedMethods");
+        checkArgument(!supportedMethods.isEmpty(), "supportedMethods can't be empty");
+        this.supportedMethods = ImmutableSet.copyOf(EnumSet.copyOf(supportedMethods));
+        this.consumeTypes = ImmutableList.copyOf(requireNonNull(consumeTypes, "consumeTypes"));
+        this.produceTypes = ImmutableList.copyOf(requireNonNull(produceTypes, "produceTypes"));
 
         loggerName = generateLoggerName(pathStringMapping.loggerName(),
                                         supportedMethods, consumeTypes, produceTypes);
@@ -101,11 +106,11 @@ final class HttpHeaderPathMapping implements PathMapping {
         }
 
         if (!consumeTypes.isEmpty()) {
-            final MediaType type = mappingCtx.consumeType();
+            final MediaType contentType = mappingCtx.contentType();
             boolean found = false;
-            if (type != null) {
-                for (MediaType mediaType : consumeTypes) {
-                    found = type.belongsTo(mediaType);
+            if (contentType != null) {
+                for (MediaType consumeType : consumeTypes) {
+                    found = contentType.belongsTo(consumeType);
                     if (found) {
                         break;
                     }
@@ -117,26 +122,25 @@ final class HttpHeaderPathMapping implements PathMapping {
             }
         }
 
-        // If a request does not have 'Accept' header, it would be handled the same as 'Accept: */*'.
-        // So there is a '*/*' at least in the 'mappingCtx.produceTypes()' if the virtual host supports
-        // the media type negotiation.
-        final List<MediaType> types = mappingCtx.produceTypes();
-        if (types == null) {
-            // Media type negotiation is not supported on this virtual host.
-            return result;
-        }
-
-        // Also, the missing '@ProduceTypes' would be handled the same as '@ProduceTypes({"*/*"})'.
-        final List<MediaType> producibleTypes = produceTypes.isEmpty() ? ANY_TYPE : produceTypes;
+        final List<MediaType> types = mappingCtx.acceptTypes();
+        final List<MediaType> producibleTypes = produceTypes.isEmpty() ? ANY_TYPE_LIST : produceTypes;
         for (MediaType produceType : producibleTypes) {
             for (int i = 0; i < types.size(); i++) {
-                if (produceType.belongsTo(types.get(i))) {
+                final MediaType acceptType = types.get(i);
+                if (isAnyType(produceType) && isAnyType(acceptType)) {
                     // To early stop path mapping traversal,
                     // we set the score as the best score when the index is 0.
                     result.setScore(i == 0 ? PathMappingResult.HIGHEST_SCORE : -1 * i);
-                    if (!produceTypes.isEmpty()) {
-                        result.setNegotiatedResponseMediaType(produceType);
-                    }
+                    return result;
+                }
+
+                if (produceType.belongsTo(acceptType)) {
+                    // At this time, the produceType is not ANY_TYPE.
+
+                    // To early stop path mapping traversal,
+                    // we set the score as the best score when the index is 0.
+                    result.setScore(i == 0 ? PathMappingResult.HIGHEST_SCORE : -1 * i);
+                    result.setNegotiatedResponseMediaType(produceType);
                     return result;
                 }
             }
@@ -144,6 +148,12 @@ final class HttpHeaderPathMapping implements PathMapping {
 
         mappingCtx.delayThrowable(HttpStatusException.of(HttpStatus.NOT_ACCEPTABLE));
         return PathMappingResult.empty();
+    }
+
+    // TODO(minwoox) Move this method into MediaType?
+    private static boolean isAnyType(MediaType contentType) {
+        // Ignores all parameters including the quality factor.
+        return "*".equals(contentType.type()) && "*".equals(contentType.subtype());
     }
 
     @Override
@@ -218,12 +228,6 @@ final class HttpHeaderPathMapping implements PathMapping {
                               .add("produceTypes", produceTypes));
         buf.append(']');
         return buf.toString();
-    }
-
-    @Override
-    public PathMapping withHttpHeaderInfo(Set<HttpMethod> supportedMethods, List<MediaType> consumeTypes,
-                                          List<MediaType> produceTypes) {
-        return new HttpHeaderPathMapping(pathStringMapping, supportedMethods, consumeTypes, produceTypes);
     }
 
     private static String generateLoggerName(String prefix, Set<HttpMethod> supportedMethods,

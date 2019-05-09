@@ -39,6 +39,8 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -83,7 +85,7 @@ public class DefaultRequestLogTest {
     public void endRequestWithoutHeaders() {
         when(ctx.sessionProtocol()).thenReturn(SessionProtocol.H2C);
         log.endRequest();
-        final HttpHeaders headers = log.requestHeaders();
+        final RequestHeaders headers = log.requestHeaders();
         assertThat(headers.scheme()).isEqualTo("http");
         assertThat(headers.authority()).isEqualTo("?");
         assertThat(headers.method()).isSameAs(HttpMethod.UNKNOWN);
@@ -109,7 +111,7 @@ public class DefaultRequestLogTest {
     @Test
     public void endResponseWithoutHeaders() {
         log.endResponse();
-        assertThat(log.responseHeaders().status()).isEqualTo(HttpStatus.valueOf(0));
+        assertThat(log.responseHeaders().status()).isEqualTo(HttpStatus.UNKNOWN);
     }
 
     @Test
@@ -148,7 +150,7 @@ public class DefaultRequestLogTest {
         assertThat(log.requestFirstBytesTransferredTimeNanos())
                 .isEqualTo(child.requestFirstBytesTransferredTimeNanos());
 
-        final HttpHeaders foo = HttpHeaders.of(HttpHeaderNames.of("foo"), "foo");
+        final RequestHeaders foo = RequestHeaders.of(HttpMethod.GET, "/foo");
         child.requestHeaders(foo);
         assertThat(log.requestHeaders()).isSameAs(foo);
 
@@ -171,7 +173,7 @@ public class DefaultRequestLogTest {
         assertThatThrownBy(() -> log.responseFirstBytesTransferredTimeNanos())
                 .isExactlyInstanceOf(RequestLogAvailabilityException.class);
 
-        final HttpHeaders bar = HttpHeaders.of(HttpHeaderNames.of("bar"), "bar");
+        final ResponseHeaders bar = ResponseHeaders.of(200);
         child.responseHeaders(bar);
         assertThatThrownBy(() -> log.responseHeaders())
                 .isExactlyInstanceOf(RequestLogAvailabilityException.class);
@@ -196,7 +198,9 @@ public class DefaultRequestLogTest {
 
     @Test
     public void toStringRequestBuilderCapacity() {
-        final HttpHeaders reqHeaders = HttpHeaders.of(HttpMethod.GET, "/armeria/awesome");
+        final RequestHeaders reqHeaders =
+                RequestHeaders.of(HttpMethod.POST, "/armeria/awesome",
+                                  HttpHeaderNames.CONTENT_LENGTH, VERY_LONG_STRING.length());
         final HttpRequest req = HttpRequest.of(
                 AggregatedHttpMessage.of(reqHeaders, HttpData.ofUtf8(VERY_LONG_STRING)));
         final ClientRequestContext ctx = ClientRequestContextBuilder.of(req).build();
@@ -221,14 +225,16 @@ public class DefaultRequestLogTest {
 
     @Test
     public void toStringResponseBuilderCapacity() {
+        final RequestHeaders reqHeaders =
+                RequestHeaders.of(HttpMethod.POST, "/armeria/awesome",
+                                  HttpHeaderNames.CONTENT_LENGTH, VERY_LONG_STRING.length());
         final HttpRequest req = HttpRequest.of(
-                AggregatedHttpMessage.of(HttpHeaders.of(HttpMethod.GET, "/armeria/awesome"),
-                                         HttpData.ofUtf8(VERY_LONG_STRING)));
+                AggregatedHttpMessage.of(reqHeaders, HttpData.ofUtf8(VERY_LONG_STRING)));
         final ClientRequestContext ctx = ClientRequestContextBuilder.of(req).build();
         final RequestLogBuilder logBuilder = ctx.logBuilder();
         logBuilder.endRequest();
 
-        final HttpHeaders resHeaders = HttpHeaders.of(200);
+        final ResponseHeaders resHeaders = ResponseHeaders.of(200);
         logBuilder.responseHeaders(resHeaders);
 
         logBuilder.responseLength(1000000000);

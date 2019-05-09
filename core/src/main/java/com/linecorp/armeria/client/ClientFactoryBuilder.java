@@ -116,7 +116,6 @@ public final class ClientFactoryBuilder {
      */
     public ClientFactoryBuilder() {
         connectTimeoutMillis(Flags.defaultConnectTimeoutMillis());
-        channelOption(ChannelOption.SO_KEEPALIVE, true);
     }
 
     /**

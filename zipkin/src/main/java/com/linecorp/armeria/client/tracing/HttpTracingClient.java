@@ -28,9 +28,9 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext;
@@ -73,7 +73,7 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
     }
 
     private final Tracer tracer;
-    private final TraceContext.Injector<HttpHeaders> injector;
+    private final TraceContext.Injector<RequestHeadersBuilder> injector;
     @Nullable
     private final String remoteServiceName;
 
@@ -85,14 +85,20 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
         super(delegate);
         tracer = tracing.tracer();
         injector = tracing.propagationFactory().create(AsciiStringKeyFactory.INSTANCE)
-                          .injector(HttpHeaders::set);
+                          .injector(RequestHeadersBuilder::set);
         this.remoteServiceName = remoteServiceName;
     }
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final Span span = tracer.nextSpan();
-        injector.inject(span.context(), req.headers());
+
+        // Inject the headers.
+        final RequestHeadersBuilder newHeaders = req.headers().toBuilder();
+        injector.inject(span.context(), newHeaders);
+        req = HttpRequest.of(req, newHeaders.build());
+        ctx.updateRequest(req);
+
         // For no-op spans, we only need to inject into headers and don't set any other attributes.
         if (span.isNoop()) {
             return delegate().execute(ctx, req);

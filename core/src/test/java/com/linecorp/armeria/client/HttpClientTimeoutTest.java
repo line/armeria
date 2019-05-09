@@ -60,7 +60,7 @@ public class HttpClientTimeoutTest {
     public void responseTimeoutH1C() throws Exception {
         try (ServerSocket ss = new ServerSocket(0)) {
             final HttpClient client = new HttpClientBuilder("h1c://127.0.0.1:" + ss.getLocalPort())
-                    .factory(factory).defaultResponseTimeout(Duration.ofSeconds(1)).build();
+                    .factory(factory).responseTimeout(Duration.ofSeconds(1)).build();
 
             final HttpResponse res = client.get("/");
             try (Socket s = ss.accept()) {
@@ -84,7 +84,7 @@ public class HttpClientTimeoutTest {
     public void responseTimeoutH2C() throws Exception {
         try (ServerSocket ss = new ServerSocket(0)) {
             final HttpClient client = new HttpClientBuilder("h2c://127.0.0.1:" + ss.getLocalPort())
-                    .factory(factory).defaultResponseTimeout(Duration.ofSeconds(1)).build();
+                    .factory(factory).responseTimeout(Duration.ofSeconds(1)).build();
 
             final HttpResponse res = client.get("/");
             try (Socket s = ss.accept()) {

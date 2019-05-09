@@ -73,7 +73,7 @@ You can also use the builder pattern for client construction:
     import com.linecorp.armeria.common.HttpResponse;
 
     HelloService.Iface helloService = new ClientBuilder("tbinary+http://127.0.0.1:8080/hello")
-            .defaultResponseTimeoutMillis(10000)
+            .responseTimeoutMillis(10000)
             .decorator(LoggingClient.newDecorator())
             .build(HelloService.Iface.class); // or AsyncIface.class
 

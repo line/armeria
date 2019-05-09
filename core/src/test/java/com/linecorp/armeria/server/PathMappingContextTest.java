@@ -17,7 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.server.DefaultPathMappingContext.compareMediaType;
-import static com.linecorp.armeria.server.DefaultPathMappingContext.resolveProduceTypes;
+import static com.linecorp.armeria.server.DefaultPathMappingContext.extractAcceptTypes;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
@@ -29,43 +29,27 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.MediaTypeSet;
+import com.linecorp.armeria.common.RequestHeaders;
 
 public class PathMappingContextTest {
 
     @Test
-    public void testProduceTypes() {
-        final DefaultHttpHeaders headers = new DefaultHttpHeaders();
-        headers.add(HttpHeaderNames.ACCEPT,
-                    "text/html, application/xhtml+xml, application/xml;q=0.9, */*;q=0.8");
-        final MediaTypeSet producibleTypes =
-                new MediaTypeSet(MediaType.create("application", "xml"),
-                                 MediaType.create("text", "html"));
-        final List<MediaType> selectedTypes = resolveProduceTypes(headers, producibleTypes);
-
-        assertThat(selectedTypes).hasSize(3);
-        assertThat(selectedTypes.get(0).type()).isEqualTo("text");
-        assertThat(selectedTypes.get(1).type()).isEqualTo("application");
-        assertThat(selectedTypes.get(2).type()).isEqualTo("*");
-    }
-
-    @Test
-    public void testProduceTypes2() {
-        final DefaultHttpHeaders headers = new DefaultHttpHeaders();
-        headers.add(HttpHeaderNames.ACCEPT,
-                    "text/html ;charset=UTF-8, application/xhtml+xml, application/xml;q=0.9, */*;q=0.8");
-        final MediaTypeSet producibleTypes =
-                new MediaTypeSet(MediaType.create("application", "xml"),
-                                 MediaType.create("text", "html"));
-        final List<MediaType> selectedTypes = resolveProduceTypes(headers, producibleTypes);
-
-        assertThat(selectedTypes).hasSize(2);
-        assertThat(selectedTypes.get(0).type()).isEqualTo("application");
-        assertThat(selectedTypes.get(1).type()).isEqualTo("*");
+    public void testAcceptTypes() {
+        final HttpHeaders headers = HttpHeaders.of(
+                HttpHeaderNames.ACCEPT,
+                "application/xml;q=0.9, " +
+                "*/*;q=0.8, " +
+                "text/html;charset=UTF-8, " +
+                "application/xhtml+xml;charset=utf-8");
+        final List<MediaType> acceptTypes = extractAcceptTypes(headers);
+        assertThat(acceptTypes).containsExactly(MediaType.XHTML_UTF_8,
+                                                MediaType.HTML_UTF_8,
+                                                MediaType.parse("application/xml;q=0.9"),
+                                                MediaType.parse("*/*;q=0.8"));
     }
 
     @Test
@@ -95,15 +79,18 @@ public class PathMappingContextTest {
         ctx1 = new DefaultPathMappingContext(virtualHost, "example.com",
                                              HttpMethod.GET, "/hello", null,
                                              MediaType.JSON_UTF_8,
-                                             ImmutableList.of(MediaType.JSON_UTF_8, MediaType.XML_UTF_8));
+                                             ImmutableList.of(MediaType.JSON_UTF_8, MediaType.XML_UTF_8),
+                                             false);
         ctx2 = new DefaultPathMappingContext(virtualHost, "example.com",
                                              HttpMethod.GET, "/hello", null,
                                              MediaType.JSON_UTF_8,
-                                             ImmutableList.of(MediaType.JSON_UTF_8, MediaType.XML_UTF_8));
+                                             ImmutableList.of(MediaType.JSON_UTF_8, MediaType.XML_UTF_8),
+                                             false);
         ctx3 = new DefaultPathMappingContext(virtualHost, "example.com",
                                              HttpMethod.GET, "/hello", null,
                                              MediaType.JSON_UTF_8,
-                                             ImmutableList.of(MediaType.XML_UTF_8, MediaType.JSON_UTF_8));
+                                             ImmutableList.of(MediaType.XML_UTF_8, MediaType.JSON_UTF_8),
+                                             false);
 
         assertThat(ctx1.hashCode()).isEqualTo(ctx2.hashCode());
         assertThat(ctx1).isEqualTo(ctx2);
@@ -111,10 +98,10 @@ public class PathMappingContextTest {
 
         ctx1 = new DefaultPathMappingContext(virtualHost, "example.com",
                                              HttpMethod.GET, "/hello", "a=1&b=1",
-                                             null, null);
+                                             null, ImmutableList.of(), false);
         ctx2 = new DefaultPathMappingContext(virtualHost, "example.com",
                                              HttpMethod.GET, "/hello", "a=1",
-                                             null, null);
+                                             null, ImmutableList.of(), false);
 
         assertThat(ctx1.hashCode()).isEqualTo(ctx2.hashCode());
         assertThat(ctx1).isEqualTo(ctx2);
@@ -125,10 +112,10 @@ public class PathMappingContextTest {
     }
 
     static PathMappingContext create(String path, @Nullable String query) {
-        final DefaultHttpHeaders headers = new DefaultHttpHeaders();
-        headers.method(HttpMethod.GET);
+        final String requestPath = query != null ? path + '?' + query : path;
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, requestPath);
         return DefaultPathMappingContext.of(virtualHost(), "example.com",
-                                            path, query, headers, null);
+                                            path, query, headers);
     }
 
     static VirtualHost virtualHost() {

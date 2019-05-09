@@ -41,13 +41,13 @@ You may want to consider the following options before putting your Armeria appli
 
       // Server-side
       ServerBuilder sb = new ServerBuilder();
-      sb.defaultMaxRequestLength(1048576); // bytes (default: 10 MiB)
-      sb.defaultRequestTimeout(Duration.ofSeconds(7)); // (default: 10 seconds)
+      sb.maxRequestLength(1048576); // bytes (default: 10 MiB)
+      sb.requestTimeout(Duration.ofSeconds(7)); // (default: 10 seconds)
 
       // Client-side
       ClientBuilder cb = new ClientBuilder(...); // or HttpClientBuilder
-      cb.defaultMaxResponseLength(1048576); // bytes (default: 10 MiB)
-      cb.defaultResponseTimeout(Duration.ofSeconds(10)); // (default: 15 seconds)
+      cb.maxResponseLength(1048576); // bytes (default: 10 MiB)
+      cb.responseTimeout(Duration.ofSeconds(10)); // (default: 15 seconds)
 
 - Decorate your services with :api:`ThrottlingService` which lets you fail the incoming requests based on a
   policy, such as 'fail if the rate of requests exceed a certain threshold.'

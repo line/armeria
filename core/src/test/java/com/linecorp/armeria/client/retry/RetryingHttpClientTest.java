@@ -59,6 +59,7 @@ import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -147,8 +148,8 @@ public class RetryingHttpClientTest {
                         throws Exception {
                     if (reqCount.getAndIncrement() < 1) {
                         return HttpResponse.of(
-                                HttpHeaders.of(HttpStatus.SERVICE_UNAVAILABLE)
-                                           .setInt(HttpHeaderNames.RETRY_AFTER, 1 /* second */));
+                                ResponseHeaders.of(HttpStatus.SERVICE_UNAVAILABLE,
+                                                   HttpHeaderNames.RETRY_AFTER, "1" /* second */));
                     } else {
                         return HttpResponse.of("Succeeded after retry");
                     }
@@ -163,10 +164,11 @@ public class RetryingHttpClientTest {
                         throws Exception {
                     if (reqCount.getAndIncrement() < 1) {
                         return HttpResponse.of(
-                                HttpHeaders.of(HttpStatus.SERVICE_UNAVAILABLE)
-                                           .setTimeMillis(HttpHeaderNames.RETRY_AFTER,
-                                                          Duration.ofSeconds(3).toMillis() +
-                                                          System.currentTimeMillis()));
+                                ResponseHeaders.builder(HttpStatus.SERVICE_UNAVAILABLE)
+                                               .setTimeMillis(HttpHeaderNames.RETRY_AFTER,
+                                                              Duration.ofSeconds(3).toMillis() +
+                                                              System.currentTimeMillis())
+                                               .build());
                     } else {
                         return HttpResponse.of(
                                 HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Succeeded after retry");
@@ -180,10 +182,11 @@ public class RetryingHttpClientTest {
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
                     return HttpResponse.of(
-                            HttpHeaders.of(HttpStatus.SERVICE_UNAVAILABLE)
-                                       .setTimeMillis(HttpHeaderNames.RETRY_AFTER,
-                                                      Duration.ofDays(365).toMillis() +
-                                                      System.currentTimeMillis()));
+                            ResponseHeaders.builder(HttpStatus.SERVICE_UNAVAILABLE)
+                                           .setTimeMillis(HttpHeaderNames.RETRY_AFTER,
+                                                          Duration.ofDays(365).toMillis() +
+                                                          System.currentTimeMillis())
+                                           .build());
                 }
             });
 
@@ -336,7 +339,7 @@ public class RetryingHttpClientTest {
         // The response will be the last response whose headers contains HttpHeaderNames.RETRY_AFTER
         // because next retry is after timeout
         final HttpHeaders headers = client.get("retry-after-one-year").aggregate().join().headers();
-        assertThat(headers.status()).isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(headers.get(HttpHeaderNames.STATUS)).isEqualTo("503");
         assertThat(headers.get(HttpHeaderNames.RETRY_AFTER)).isNotNull();
     }
 
@@ -404,7 +407,7 @@ public class RetryingHttpClientTest {
 
         final HttpClient client = new HttpClientBuilder(server.uri("/"))
                 .factory(factory)
-                .defaultResponseTimeoutMillis(10000)
+                .responseTimeoutMillis(10000)
                 .decorator(new RetryingHttpClientBuilder(
                         // Retry after 8000 which is slightly less than responseTimeoutMillis(10000).
                         RetryStrategy.onServerErrorStatus(Backoff.fixed(8000))).newDecorator())
@@ -493,7 +496,7 @@ public class RetryingHttpClientTest {
     private HttpClient client(RetryStrategy strategy, long responseTimeoutMillis,
                               long responseTimeoutForEach, int maxTotalAttempts) {
         return new HttpClientBuilder(server.uri("/"))
-                .factory(clientFactory).defaultResponseTimeoutMillis(responseTimeoutMillis)
+                .factory(clientFactory).responseTimeoutMillis(responseTimeoutMillis)
                 .decorator(new RetryingHttpClientBuilder(strategy)
                                    .responseTimeoutMillisForEachAttempt(responseTimeoutForEach)
                                    .useRetryAfter(true)

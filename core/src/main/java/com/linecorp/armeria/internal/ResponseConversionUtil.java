@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.ResponseHeaders;
 
 /**
  * A utility class which helps to send a streaming {@link HttpResponse}.
@@ -50,7 +51,7 @@ public final class ResponseConversionUtil {
      * @param executor executes the collecting job
      */
     public static HttpResponseWriter aggregateFrom(Stream<?> stream,
-                                                   HttpHeaders headers, HttpHeaders trailingHeaders,
+                                                   ResponseHeaders headers, HttpHeaders trailingHeaders,
                                                    Function<Object, HttpData> contentConverter,
                                                    Executor executor) {
         requireNonNull(stream, "stream");
@@ -72,7 +73,7 @@ public final class ResponseConversionUtil {
      * @param contentConverter converts the collected objects into a content of the response
      */
     public static HttpResponseWriter aggregateFrom(Publisher<?> publisher,
-                                                   HttpHeaders headers, HttpHeaders trailingHeaders,
+                                                   ResponseHeaders headers, HttpHeaders trailingHeaders,
                                                    Function<Object, HttpData> contentConverter) {
         requireNonNull(publisher, "publisher");
         requireNonNull(headers, "headers");
@@ -84,7 +85,7 @@ public final class ResponseConversionUtil {
     }
 
     private static HttpResponseWriter aggregateFrom(CompletableFuture<?> future,
-                                                    HttpHeaders headers, HttpHeaders trailingHeaders,
+                                                    ResponseHeaders headers, HttpHeaders trailingHeaders,
                                                     Function<Object, HttpData> contentConverter) {
         final HttpResponseWriter writer = HttpResponse.streaming();
         future.handle((result, cause) -> {
@@ -119,7 +120,7 @@ public final class ResponseConversionUtil {
      * @param executor executes the iteration of the stream
      */
     public static <T> HttpResponseWriter streamingFrom(Stream<T> stream,
-                                                       HttpHeaders headers, HttpHeaders trailingHeaders,
+                                                       ResponseHeaders headers, HttpHeaders trailingHeaders,
                                                        Function<T, HttpData> contentConverter,
                                                        Executor executor) {
         requireNonNull(stream, "stream");
@@ -162,7 +163,7 @@ public final class ResponseConversionUtil {
      * @param contentConverter converts the published objects into streaming contents of the response
      */
     public static <T> HttpResponseWriter streamingFrom(Publisher<T> publisher,
-                                                       HttpHeaders headers, HttpHeaders trailingHeaders,
+                                                       ResponseHeaders headers, HttpHeaders trailingHeaders,
                                                        Function<T, HttpData> contentConverter) {
         final HttpResponseWriter writer = HttpResponse.streaming();
         publisher.subscribe(new StreamingSubscriber<>(writer, headers, trailingHeaders, contentConverter));
@@ -176,7 +177,7 @@ public final class ResponseConversionUtil {
     private static final class StreamingSubscriber<T> implements Subscriber<T> {
 
         private final HttpResponseWriter writer;
-        private final HttpHeaders headers;
+        private final ResponseHeaders headers;
         private final HttpHeaders trailingHeaders;
         private final Function<T, HttpData> contentConverter;
         @Nullable
@@ -184,7 +185,7 @@ public final class ResponseConversionUtil {
         private boolean headersSent;
 
         StreamingSubscriber(HttpResponseWriter writer,
-                            HttpHeaders headers, HttpHeaders trailingHeaders,
+                            ResponseHeaders headers, HttpHeaders trailingHeaders,
                             Function<T, HttpData> contentConverter) {
             this.writer = requireNonNull(writer, "writer");
             this.headers = requireNonNull(headers, "headers");

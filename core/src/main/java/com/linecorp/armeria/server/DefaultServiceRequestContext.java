@@ -24,6 +24,7 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -35,8 +36,8 @@ import javax.net.ssl.SSLSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
@@ -51,8 +52,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
-import io.netty.handler.codec.Headers;
-import io.netty.util.AsciiString;
 import io.netty.util.Attribute;
 
 /**
@@ -171,8 +170,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         this.proxiedAddresses = proxiedAddresses;
         this.clientAddress = requireNonNull(clientAddress, "clientAddress");
 
-        log = new DefaultRequestLog(this, virtualHost().requestContentPreviewerFactory(),
-                                    virtualHost().responseContentPreviewerFactory());
+        log = new DefaultRequestLog(this, cfg.requestContentPreviewerFactory(),
+                                    cfg.responseContentPreviewerFactory());
         if (requestStartTimeSet) {
             log.startRequest(ch, sessionProtocol, sslSession, requestStartTimeNanos, requestStartTimeMicros);
         } else {
@@ -187,9 +186,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
         logger = newLogger(cfg);
 
-        final ServerConfig serverCfg = cfg.server().config();
-        requestTimeoutMillis = serverCfg.defaultRequestTimeoutMillis();
-        maxRequestLength = serverCfg.defaultMaxRequestLength();
+        requestTimeoutMillis = cfg.requestTimeoutMillis();
+        maxRequestLength = cfg.maxRequestLength();
     }
 
     private RequestContextAwareLogger newLogger(ServiceConfig cfg) {
@@ -200,6 +198,12 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
         return new RequestContextAwareLogger(this, LoggerFactory.getLogger(
                 cfg.server().config().serviceLoggerPrefix() + '.' + loggerName));
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public HttpRequest request() {
+        return super.request();
     }
 
     @Nonnull
@@ -257,7 +261,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     private HttpHeaders createAdditionalHeadersIfAbsent() {
         final HttpHeaders additionalResponseHeaders = this.additionalResponseHeaders;
         if (additionalResponseHeaders == null) {
-            final HttpHeaders newHeaders = new DefaultHttpHeaders();
+            final HttpHeaders newHeaders = HttpHeaders.of();
             if (additionalResponseHeadersUpdater.compareAndSet(this, null, newHeaders)) {
                 return newHeaders;
             } else {
@@ -273,7 +277,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     private HttpHeaders createAdditionalTrailersIfAbsent() {
         final HttpHeaders additionalResponseTrailers = this.additionalResponseTrailers;
         if (additionalResponseTrailers == null) {
-            final HttpHeaders newTrailers = new DefaultHttpHeaders();
+            final HttpHeaders newTrailers = HttpHeaders.of();
             if (additionalResponseTrailersUpdater.compareAndSet(this, null, newTrailers)) {
                 return newTrailers;
             } else {
@@ -431,85 +435,110 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     }
 
     @Override
+    public boolean verboseResponses() {
+        return cfg.verboseResponses();
+    }
+
+    @Override
     public HttpHeaders additionalResponseHeaders() {
         final HttpHeaders additionalResponseHeaders = this.additionalResponseHeaders;
         if (additionalResponseHeaders == null) {
-            return HttpHeaders.EMPTY_HEADERS;
+            return HttpHeaders.of();
         }
-        return additionalResponseHeaders.asImmutable();
+        return additionalResponseHeaders;
     }
 
     @Override
-    public void setAdditionalResponseHeader(AsciiString name, String value) {
+    public void setAdditionalResponseHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        createAdditionalHeadersIfAbsent().set(name, value);
+        additionalResponseHeaders = createAdditionalHeadersIfAbsent().toBuilder()
+                                                                     .setObject(name, value).build();
     }
 
     @Override
-    public void setAdditionalResponseHeaders(Headers<? extends AsciiString, ? extends String, ?> headers) {
+    public void setAdditionalResponseHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        createAdditionalHeadersIfAbsent().set(headers);
+        additionalResponseHeaders = createAdditionalHeadersIfAbsent().toBuilder().setObject(headers).build();
     }
 
     @Override
-    public void addAdditionalResponseHeader(AsciiString name, String value) {
+    public void addAdditionalResponseHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        createAdditionalHeadersIfAbsent().add(name, value);
+        additionalResponseHeaders = createAdditionalHeadersIfAbsent().toBuilder()
+                                                                     .addObject(name, value).build();
     }
 
     @Override
-    public void addAdditionalResponseHeaders(Headers<? extends AsciiString, ? extends String, ?> headers) {
+    public void addAdditionalResponseHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        createAdditionalHeadersIfAbsent().add(headers);
+        additionalResponseHeaders = createAdditionalHeadersIfAbsent().toBuilder().addObject(headers).build();
     }
 
     @Override
-    public boolean removeAdditionalResponseHeader(AsciiString name) {
+    public boolean removeAdditionalResponseHeader(CharSequence name) {
         requireNonNull(name, "name");
-        return createAdditionalHeadersIfAbsent().remove(name);
+        final HttpHeaders additionalResponseHeaders = this.additionalResponseHeaders;
+        if (additionalResponseHeaders == null || additionalResponseHeaders.isEmpty()) {
+            return false;
+        }
+
+        final HttpHeadersBuilder builder = createAdditionalHeadersIfAbsent().toBuilder();
+        final boolean removed = builder.remove(name);
+        this.additionalResponseHeaders = builder.build();
+        return removed;
     }
 
     @Override
     public HttpHeaders additionalResponseTrailers() {
         final HttpHeaders additionalResponseTrailers = this.additionalResponseTrailers;
         if (additionalResponseTrailers == null) {
-            return HttpHeaders.EMPTY_HEADERS;
+            return HttpHeaders.of();
         }
-        return additionalResponseTrailers.asImmutable();
+        return additionalResponseTrailers;
     }
 
     @Override
-    public void setAdditionalResponseTrailer(AsciiString name, String value) {
+    public void setAdditionalResponseTrailer(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        createAdditionalTrailersIfAbsent().set(name, value);
+        additionalResponseTrailers = createAdditionalTrailersIfAbsent().toBuilder()
+                                                                       .setObject(name, value).build();
     }
 
     @Override
-    public void setAdditionalResponseTrailers(Headers<? extends AsciiString, ? extends String, ?> headers) {
+    public void setAdditionalResponseTrailers(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        createAdditionalTrailersIfAbsent().set(headers);
+        additionalResponseTrailers = createAdditionalTrailersIfAbsent().toBuilder().setObject(headers).build();
     }
 
     @Override
-    public void addAdditionalResponseTrailer(AsciiString name, String value) {
+    public void addAdditionalResponseTrailer(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        createAdditionalTrailersIfAbsent().add(name, value);
+        additionalResponseTrailers = createAdditionalTrailersIfAbsent().toBuilder()
+                                                                       .addObject(name, value).build();
     }
 
     @Override
-    public void addAdditionalResponseTrailers(Headers<? extends AsciiString, ? extends String, ?> headers) {
+    public void addAdditionalResponseTrailers(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        createAdditionalTrailersIfAbsent().add(headers);
+        additionalResponseTrailers = createAdditionalTrailersIfAbsent().toBuilder().addObject(headers).build();
     }
 
     @Override
-    public boolean removeAdditionalResponseTrailer(AsciiString name) {
+    public boolean removeAdditionalResponseTrailer(CharSequence name) {
         requireNonNull(name, "name");
-        return createAdditionalTrailersIfAbsent().remove(name);
+        final HttpHeaders additionalResponseTrailers = this.additionalResponseTrailers;
+        if (additionalResponseTrailers == null || additionalResponseTrailers.isEmpty()) {
+            return false;
+        }
+
+        final HttpHeadersBuilder builder = createAdditionalTrailersIfAbsent().toBuilder();
+        final boolean removed = builder.remove(name);
+        this.additionalResponseTrailers = builder.build();
+        return removed;
     }
 
     @Nullable

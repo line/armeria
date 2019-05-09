@@ -30,8 +30,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.HttpStatusClass;
+import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 
 /**
  * A {@link FilteredHttpResponse} that applies HTTP decoding to {@link HttpObject}s as they are published.
@@ -55,8 +54,8 @@ class HttpDecodedResponse extends FilteredHttpResponse {
             final HttpHeaders headers = (HttpHeaders) obj;
 
             // Skip informational headers.
-            final HttpStatus status = headers.status();
-            if (status != null && status.codeClass() == HttpStatusClass.INFORMATIONAL) {
+            final String status = headers.get(HttpHeaderNames.STATUS);
+            if (ArmeriaHttpUtil.isInformational(status)) {
                 return obj;
             }
 

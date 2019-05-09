@@ -33,11 +33,11 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.PathMapping;
@@ -265,10 +265,10 @@ public class HttpServerCorsTest {
     static AggregatedHttpMessage request(HttpClient client, HttpMethod method, String path, String origin,
                                          String requestMethod) {
         return client.execute(
-                HttpHeaders.of(method, path)
-                           .set(HttpHeaderNames.ACCEPT, "utf-8")
-                           .set(HttpHeaderNames.ORIGIN, origin)
-                           .set(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, requestMethod)
+                RequestHeaders.of(method, path,
+                                  HttpHeaderNames.ACCEPT, "utf-8",
+                                  HttpHeaderNames.ORIGIN, origin,
+                                  HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, requestMethod)
         ).aggregate().join();
     }
 

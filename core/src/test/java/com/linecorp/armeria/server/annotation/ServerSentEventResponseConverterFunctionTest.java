@@ -28,10 +28,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.sse.ServerSentEvent;
 import com.linecorp.armeria.common.sse.ServerSentEventBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -45,9 +47,10 @@ public class ServerSentEventResponseConverterFunctionTest {
     private static final ResponseConverterFunction function = new ServerSentEventResponseConverterFunction();
     private static final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
 
-    private static final HttpHeaders EVENT_STREAM_HEADER =
-            HttpHeaders.of(HttpStatus.OK).contentType(MediaType.EVENT_STREAM);
-    private static final HttpHeaders DEFAULT_TRAILING_HEADERS = HttpHeaders.EMPTY_HEADERS;
+    private static final ResponseHeaders EVENT_STREAM_HEADER =
+            ResponseHeaders.of(HttpStatus.OK,
+                               HttpHeaderNames.CONTENT_TYPE, MediaType.EVENT_STREAM);
+    private static final HttpHeaders DEFAULT_TRAILING_HEADERS = HttpHeaders.of();
 
     @Test
     public void dataStringUtf8() throws Exception {
@@ -163,7 +166,9 @@ public class ServerSentEventResponseConverterFunctionTest {
     public void singleEvent() throws Exception {
         final HttpResponse response = doConvert(ServerSentEvent.ofData("foo"));
         StepVerifier.create(response)
-                    .expectNext(EVENT_STREAM_HEADER)
+                    .expectNext(EVENT_STREAM_HEADER.toBuilder()
+                                                   .setInt(HttpHeaderNames.CONTENT_LENGTH, 10)
+                                                   .build())
                     .expectNext(HttpData.ofUtf8("data:foo\n\n"))
                     .expectComplete()
                     .verify();

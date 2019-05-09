@@ -24,10 +24,10 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -105,7 +105,7 @@ public class MeterIdPrefixFunctionTest {
         // HTTP response status.
         ctx = newContext(HttpMethod.GET, "/get", null);
         ctx.logBuilder().startResponse();
-        ctx.logBuilder().responseHeaders(HttpHeaders.of(200));
+        ctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
         res = f.apply(registry, ctx.log());
         assertThat(res.name()).isEqualTo("foo");
         assertThat(res.tags()).containsExactly(Tag.of("hostnamePattern", "*"),
@@ -141,7 +141,7 @@ public class MeterIdPrefixFunctionTest {
         // HTTP response status.
         ctx = newContext(HttpMethod.GET, "/get", null);
         ctx.logBuilder().startResponse();
-        ctx.logBuilder().responseHeaders(HttpHeaders.of(200));
+        ctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
         res = f.activeRequestPrefix(registry, ctx.log());
         assertThat(res.name()).isEqualTo("foo");
         assertThat(res.tags()).containsExactly(Tag.of("hostnamePattern", "*"),

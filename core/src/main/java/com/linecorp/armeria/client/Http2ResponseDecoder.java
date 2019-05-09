@@ -194,7 +194,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
         res.logResponseFirstBytesTransferred();
 
-        final HttpHeaders converted = ArmeriaHttpUtil.toArmeria(headers, endOfStream);
+        final HttpHeaders converted = ArmeriaHttpUtil.toArmeria(headers, false, endOfStream);
         try {
             // If this tryWrite() returns false, it means the response stream has been closed due to
             // disconnection or by the response consumer. We do not need to handle such cases here because

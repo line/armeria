@@ -27,8 +27,8 @@ import java.util.concurrent.Executor;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.HttpService;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -134,14 +134,14 @@ public interface HttpFile {
     HttpFileAttributes readAttributes() throws IOException;
 
     /**
-     * Reads the attributes of this file as {@link HttpHeaders}, which could be useful for building a response
-     * for a {@code HEAD} request.
+     * Reads the attributes of this file as {@link ResponseHeaders}, which could be useful for building
+     * a response for a {@code HEAD} request.
      *
      * @return the headers, or {@code null} if the file does not exist.
      * @throws IOException if failed to retrieve the attributes of this file.
      */
     @Nullable
-    HttpHeaders readHeaders() throws IOException;
+    ResponseHeaders readHeaders() throws IOException;
 
     /**
      * Starts to stream this file into the returned {@link HttpResponse}.

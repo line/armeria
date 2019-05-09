@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.internal.FallthroughException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -45,10 +46,7 @@ public class StringResponseConverterFunctionTest {
     private static final ResponseConverterFunction function = new StringResponseConverterFunction();
     private static final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
 
-    private static final HttpHeaders PLAIN_TEXT_HEADERS =
-            HttpHeaders.of(HttpStatus.OK).contentType(MediaType.PLAIN_TEXT_UTF_8)
-                       .addInt(HttpHeaderNames.CONTENT_LENGTH, 6);
-    private static final HttpHeaders DEFAULT_TRAILING_HEADERS = HttpHeaders.EMPTY_HEADERS;
+    private static final HttpHeaders DEFAULT_TRAILING_HEADERS = HttpHeaders.of();
 
     @BeforeClass
     public static void setup() {
@@ -57,12 +55,21 @@ public class StringResponseConverterFunctionTest {
 
     @Test
     public void aggregatedText() throws Exception {
+        final ResponseHeaders expectedHeadersWithoutContentLength =
+                ResponseHeaders.of(HttpStatus.OK,
+                                   HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
+        final ResponseHeaders expectedHeadersWithContentLength =
+                expectedHeadersWithoutContentLength.withMutations(h -> {
+                    h.addInt(HttpHeaderNames.CONTENT_LENGTH, 11);
+                });
+
         final List<String> contents = ImmutableList.of("foo", ",", "bar", ",", "baz");
         for (final Object result : ImmutableList.of(Flux.fromIterable(contents),    // publisher
                                                     contents.stream(),              // stream
                                                     contents)) {                    // iterable
             StepVerifier.create(from(result))
-                        .expectNext(PLAIN_TEXT_HEADERS)
+                        .expectNext(result instanceof Iterable ? expectedHeadersWithContentLength
+                                                               : expectedHeadersWithoutContentLength)
                         .expectNext(HttpData.of("foo,bar,baz".getBytes()))
                         .expectComplete()
                         .verify();
@@ -71,31 +78,39 @@ public class StringResponseConverterFunctionTest {
 
     @Test
     public void withoutContentType() throws Exception {
-        StepVerifier.create(function.convertResponse(ctx, HttpHeaders.of(HttpStatus.OK),
+        StepVerifier.create(function.convertResponse(ctx, ResponseHeaders.of(HttpStatus.OK),
                                                      "foo", DEFAULT_TRAILING_HEADERS))
-                    .expectNext(HttpHeaders.of(HttpStatus.OK).contentType(MediaType.PLAIN_TEXT_UTF_8)
-                                           .addInt(HttpHeaderNames.CONTENT_LENGTH, 3))
+                    .expectNext(ResponseHeaders.of(HttpStatus.OK,
+                                                   HttpHeaderNames.CONTENT_TYPE,
+                                                   MediaType.PLAIN_TEXT_UTF_8,
+                                                   HttpHeaderNames.CONTENT_LENGTH, 3))
                     .expectNext(HttpData.ofUtf8("foo"))
                     .expectComplete()
                     .verify();
 
         assertThatThrownBy(() -> function.convertResponse(
-                ctx, HttpHeaders.of(HttpStatus.OK), ImmutableList.of(), DEFAULT_TRAILING_HEADERS))
+                ctx, ResponseHeaders.of(HttpStatus.OK), ImmutableList.of(), DEFAULT_TRAILING_HEADERS))
                 .isInstanceOf(FallthroughException.class);
     }
 
     @Test
     public void charset() throws Exception {
-        final HttpHeaders headers = HttpHeaders.of(HttpStatus.OK)
-                                               .contentType(MediaType.parse("text/plain; charset=euc-kr"));
+        final ResponseHeaders headers = ResponseHeaders.of(HttpStatus.OK,
+                                                           HttpHeaderNames.CONTENT_TYPE,
+                                                           "text/plain; charset=euc-kr");
         StepVerifier.create(function.convertResponse(ctx, headers, "한글", DEFAULT_TRAILING_HEADERS))
-                    .expectNext(headers)
+                    .expectNext(headers.toBuilder()
+                                       .addInt(HttpHeaderNames.CONTENT_LENGTH, 4)
+                                       .build())
                     .expectNext(HttpData.of(Charset.forName("euc-kr"), "한글"))
                     .expectComplete()
                     .verify();
     }
 
     private static HttpResponse from(Object result) throws Exception {
-        return function.convertResponse(ctx, PLAIN_TEXT_HEADERS, result, DEFAULT_TRAILING_HEADERS);
+        final ResponseHeaders headers =
+                ResponseHeaders.of(HttpStatus.OK,
+                                   HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
+        return function.convertResponse(ctx, headers, result, DEFAULT_TRAILING_HEADERS);
     }
 }

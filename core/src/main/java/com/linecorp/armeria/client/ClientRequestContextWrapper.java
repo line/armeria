@@ -17,14 +17,12 @@
 package com.linecorp.armeria.client;
 
 import java.time.Duration;
+import java.util.Map.Entry;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContextWrapper;
 import com.linecorp.armeria.server.ServiceRequestContext;
-
-import io.netty.handler.codec.Headers;
-import io.netty.util.AsciiString;
 
 /**
  * Wraps an existing {@link ServiceRequestContext}.
@@ -110,27 +108,27 @@ public class ClientRequestContextWrapper
     }
 
     @Override
-    public void setAdditionalRequestHeader(AsciiString name, String value) {
+    public void setAdditionalRequestHeader(CharSequence name, Object value) {
         delegate().setAdditionalRequestHeader(name, value);
     }
 
     @Override
-    public void setAdditionalRequestHeaders(Headers<? extends AsciiString, ? extends String, ?> headers) {
+    public void setAdditionalRequestHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         delegate().setAdditionalRequestHeaders(headers);
     }
 
     @Override
-    public void addAdditionalRequestHeader(AsciiString name, String value) {
+    public void addAdditionalRequestHeader(CharSequence name, Object value) {
         delegate().addAdditionalRequestHeader(name, value);
     }
 
     @Override
-    public void addAdditionalRequestHeaders(Headers<? extends AsciiString, ? extends String, ?> headers) {
+    public void addAdditionalRequestHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         delegate().setAdditionalRequestHeaders(headers);
     }
 
     @Override
-    public boolean removeAdditionalRequestHeader(AsciiString name) {
+    public boolean removeAdditionalRequestHeader(CharSequence name) {
         return delegate().removeAdditionalRequestHeader(name);
     }
 }

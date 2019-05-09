@@ -13,33 +13,27 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common.logging;
 
-import javax.annotation.Nullable;
+package com.linecorp.armeria.common;
 
-import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaders;
+import com.fasterxml.jackson.databind.JsonDeserializer;
 
-final class NoopContentPreviewer implements ContentPreviewer {
+/**
+ * Jackson {@link JsonDeserializer} for {@link RequestHeaders}.
+ */
+public final class RequestHeadersJsonDeserializer extends AbstractHttpHeadersJsonDeserializer<RequestHeaders> {
 
-    static ContentPreviewer INSTANCE = new NoopContentPreviewer();
+    private static final long serialVersionUID = 3242326707433770361L;
 
-    private NoopContentPreviewer() {}
-
-    @Override
-    public void onHeaders(HttpHeaders headers) {}
-
-    @Override
-    public void onData(HttpData data) {}
-
-    @Nullable
-    @Override
-    public String produce() {
-        return null;
+    /**
+     * Creates a new instance.
+     */
+    public RequestHeadersJsonDeserializer() {
+        super(RequestHeaders.class);
     }
 
     @Override
-    public boolean isDone() {
-        return true;
+    RequestHeadersBuilder newBuilder() {
+        return RequestHeaders.builder();
     }
 }

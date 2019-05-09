@@ -19,10 +19,15 @@ package com.linecorp.armeria.server.file;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Clock;
+import java.util.Map.Entry;
+
+import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpHeaders;
+
+import io.netty.util.AsciiString;
 
 /**
  * {@link HttpFileService} configuration.
@@ -45,7 +50,7 @@ public final class HttpFileServiceConfig {
         this.maxCacheEntrySizeBytes = validateMaxCacheEntrySizeBytes(maxCacheEntrySizeBytes);
         this.serveCompressedFiles = serveCompressedFiles;
         this.autoIndex = autoIndex;
-        this.headers = requireNonNull(headers, "headers").asImmutable();
+        this.headers = requireNonNull(headers, "headers");
     }
 
     static int validateMaxCacheEntries(int maxCacheEntries) {
@@ -123,9 +128,9 @@ public final class HttpFileServiceConfig {
     static String toString(Object holder, HttpVfs vfs, Clock clock,
                            int maxCacheEntries, int maxCacheEntrySizeBytes,
                            boolean serveCompressedFiles, boolean autoIndex,
-                           HttpHeaders headers) {
+                           @Nullable Iterable<Entry<AsciiString, String>> headers) {
 
-        return MoreObjects.toStringHelper(holder)
+        return MoreObjects.toStringHelper(holder).omitNullValues()
                           .add("vfs", vfs)
                           .add("clock", clock)
                           .add("maxCacheEntries", maxCacheEntries)

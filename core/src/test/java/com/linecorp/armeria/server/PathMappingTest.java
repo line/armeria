@@ -21,6 +21,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.Test;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+
+import com.linecorp.armeria.common.HttpMethod;
+
 public class PathMappingTest {
 
     @Test
@@ -65,6 +70,25 @@ public class PathMappingTest {
         m = PathMapping.of("regex:^/files/(?<filePath>.*)$");
         assertThat(m).isInstanceOf(RegexPathMapping.class);
         assertThat(m.regex().get()).isEqualTo("^/files/(?<filePath>.*)$");
+    }
+
+    @Test
+    public void withHttpHeaderInfo() {
+        final PathMapping m = PathMapping.of("/foo");
+
+        final PathMapping pathMappingWithInfo =
+                m.withHttpHeaderInfo(ImmutableSet.of(HttpMethod.GET), ImmutableList.of(), ImmutableList.of());
+        assertThat(pathMappingWithInfo.supportedMethods()).containsExactly(HttpMethod.GET);
+
+        assertThatThrownBy(
+                () -> pathMappingWithInfo.withHttpHeaderInfo(ImmutableSet.of(HttpMethod.GET),
+                                                             ImmutableList.of(), ImmutableList.of()))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        assertThatThrownBy(
+                () -> m.withHttpHeaderInfo(ImmutableSet.of(), ImmutableList.of(), ImmutableList.of()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("supportedMethods can't be empty");
     }
 
     @Test

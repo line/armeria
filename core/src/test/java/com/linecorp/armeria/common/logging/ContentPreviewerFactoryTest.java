@@ -26,6 +26,7 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
@@ -38,7 +39,7 @@ public class ContentPreviewerFactoryTest {
     RequestContext ctx;
 
     private static HttpHeaders headers(MediaType contentType) {
-        return HttpHeaders.of().contentType(contentType);
+        return HttpHeaders.of(HttpHeaderNames.CONTENT_TYPE, contentType);
     }
 
     private static HttpHeaders headers(String contentType) {
@@ -79,7 +80,7 @@ public class ContentPreviewerFactoryTest {
 
     @Test
     public void testComposite() {
-        ContentPreviewerFactory factory = ContentPreviewerFactory.of(
+        final ContentPreviewerFactory factory = ContentPreviewerFactory.of(
                 ContentPreviewerFactory.ofText(20, Charset.defaultCharset(), "text/test"),
                 ContentPreviewerFactory.ofText(10),
                 // shouldn't get those.
@@ -105,7 +106,7 @@ public class ContentPreviewerFactoryTest {
 
     @Test
     public void testMapped() {
-        ContentPreviewerFactory factory = ContentPreviewerFactory.of(
+        final ContentPreviewerFactory factory = ContentPreviewerFactory.of(
                 ContentPreviewerFactory.ofText(10, Charset.defaultCharset(), MediaType.JSON),
                 ContentPreviewerFactory.ofText(20, Charset.defaultCharset(), MediaType.ANY_TEXT_TYPE),
                 // shouldn't get those.

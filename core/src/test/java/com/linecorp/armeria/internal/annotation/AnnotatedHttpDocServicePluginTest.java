@@ -53,9 +53,8 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePluginTest.RequestBean2.InsideBean;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.PrefixAddingPathMapping;
 import com.linecorp.armeria.server.PathMapping;
-import com.linecorp.armeria.server.ServiceConfig;
-import com.linecorp.armeria.server.VirtualHost;
-import com.linecorp.armeria.server.VirtualHostBuilder;
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
@@ -337,8 +336,13 @@ public class AnnotatedHttpDocServicePluginTest {
     }
 
     private static Map<String, ServiceInfo> services(DocServiceFilter include, DocServiceFilter exclude) {
-        ServiceSpecification specification = plugin.generateSpecification(serviceConfigs(),
-                                                                          unifyFilter(include, exclude));
+        final Server server = new ServerBuilder()
+                .annotatedService(new FooClass())
+                .annotatedService(new BarClass())
+                .build();
+        final ServiceSpecification specification =
+                plugin.generateSpecification(ImmutableSet.copyOf(server.serviceConfigs()),
+                                             unifyFilter(include, exclude));
         return specification.services()
                             .stream()
                             .collect(toImmutableMap(ServiceInfo::name, Function.identity()));
@@ -349,20 +353,6 @@ public class AnnotatedHttpDocServicePluginTest {
                        .stream()
                        .map(MethodInfo::name)
                        .collect(toImmutableList());
-    }
-
-    private static Set<ServiceConfig> serviceConfigs() {
-        final List<AnnotatedHttpServiceElement> fooElements = AnnotatedHttpServiceFactory.find(
-                "/", new FooClass(), ImmutableList.of());
-        final List<AnnotatedHttpServiceElement> barElements = AnnotatedHttpServiceFactory.find(
-                "/", new BarClass(), ImmutableList.of());
-        final ImmutableSet.Builder<ServiceConfig> builder = ImmutableSet.builder();
-        final VirtualHost virtualHost = new VirtualHostBuilder("*").build();
-        fooElements.forEach(element -> builder.add(
-                new ServiceConfig(virtualHost, element.pathMapping(), element.service(), null)));
-        barElements.forEach(element -> builder.add(
-                new ServiceConfig(virtualHost, element.pathMapping(), element.service(), null)));
-        return builder.build();
     }
 
     static FieldInfo compositeBean() {

@@ -25,22 +25,22 @@ import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 /**
  * Default {@link HttpRequest} implementation.
  *
- * @deprecated Use {@link HttpRequest#streaming(HttpHeaders)}.
+ * @deprecated Use {@link HttpRequest#streaming(RequestHeaders)}.
  */
 @Deprecated
 public class DefaultHttpRequest extends DefaultStreamMessage<HttpObject> implements HttpRequestWriter {
 
-    private final HttpHeaders headers;
+    private final RequestHeaders headers;
 
     /**
      * Creates a new instance with the specified headers.
      */
-    public DefaultHttpRequest(HttpHeaders headers) {
+    public DefaultHttpRequest(RequestHeaders headers) {
         this.headers = requireNonNull(headers, "headers");
     }
 
     @Override
-    public HttpHeaders headers() {
+    public RequestHeaders headers() {
         return headers;
     }
 

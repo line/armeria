@@ -55,6 +55,7 @@ import com.google.common.io.BaseEncoding;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
@@ -284,7 +285,7 @@ final class RequestContextExporter {
 
     @Nullable
     private static String getAuthority(RequestContext ctx, HttpHeaders headers) {
-        String authority = headers.authority();
+        String authority = headers.get(HttpHeaderNames.AUTHORITY);
         if (authority != null) {
             final Pattern portPattern = ctx.sessionProtocol().isTls() ? PORT_443 : PORT_80;
             final Matcher m = portPattern.matcher(authority);

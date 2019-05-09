@@ -21,6 +21,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ExecutorService;
 
 import javax.annotation.Nonnull;
@@ -39,9 +40,6 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 
-import io.netty.handler.codec.Headers;
-import io.netty.util.AsciiString;
-
 /**
  * Provides information about an invocation and related utilities. Every request being handled has its own
  * {@link ServiceRequestContext} instance.
@@ -59,6 +57,13 @@ public interface ServiceRequestContext extends RequestContext {
     static ServiceRequestContext of(HttpRequest request) {
         return ServiceRequestContextBuilder.of(request).build();
     }
+
+    /**
+     * Returns the {@link HttpRequest} associated with this context.
+     */
+    @Override
+    @SuppressWarnings("unchecked")
+    HttpRequest request();
 
     /**
      * Returns the remote address of this request.
@@ -181,21 +186,21 @@ public interface ServiceRequestContext extends RequestContext {
     /**
      * Returns the amount of time allowed until receiving the current {@link Request} and sending
      * the corresponding {@link Response} completely.
-     * This value is initially set from {@link ServerConfig#defaultRequestTimeoutMillis()}.
+     * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
      */
     long requestTimeoutMillis();
 
     /**
      * Sets the amount of time allowed until receiving the current {@link Request} and sending
      * the corresponding {@link Response} completely.
-     * This value is initially set from {@link ServerConfig#defaultRequestTimeoutMillis()}.
+     * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
      */
     void setRequestTimeoutMillis(long requestTimeoutMillis);
 
     /**
      * Sets the amount of time allowed until receiving the current {@link Request} and sending
      * the corresponding {@link Response} completely.
-     * This value is initially set from {@link ServerConfig#defaultRequestTimeoutMillis()}.
+     * This value is initially set from {@link ServiceConfig#requestTimeoutMillis()}.
      */
     void setRequestTimeout(Duration requestTimeout);
 
@@ -208,7 +213,9 @@ public interface ServiceRequestContext extends RequestContext {
      * <pre>{@code
      *   HttpResponseWriter res = HttpResponse.streaming();
      *   ctx.setRequestTimeoutHandler(() -> {
-     *      res.write(HttpHeaders.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Request timed out."));
+     *      res.write(ResponseHeaders.of(HttpStatus.OK,
+     *                                   HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8));
+     *      res.write(HttpData.ofUtf8("Request timed out."));
      *      res.close();
      *   });
      *   ...
@@ -225,7 +232,7 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Returns the maximum length of the current {@link Request}.
-     * This value is initially set from {@link ServerConfig#defaultMaxRequestLength()}.
+     * This value is initially set from {@link ServiceConfig#maxRequestLength()}.
      * If 0, there is no limit on the request size.
      *
      * @see ContentTooLargeException
@@ -234,12 +241,19 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Sets the maximum length of the current {@link Request}.
-     * This value is initially set from {@link ServerConfig#defaultMaxRequestLength()}.
+     * This value is initially set from {@link ServiceConfig#maxRequestLength()}.
      * If 0, there is no limit on the request size.
      *
      * @see ContentTooLargeException
      */
     void setMaxRequestLength(long maxRequestLength);
+
+    /**
+     * Returns whether the verbose response mode is enabled. When enabled, the service responses will contain
+     * the exception type and its full stack trace, which may be useful for debugging while potentially
+     * insecure. When disabled, the service responses will not expose such server-side details to the client.
+     */
+    boolean verboseResponses();
 
     /**
      * Returns an immutable {@link HttpHeaders} which is included when a {@link Service} sends an
@@ -252,35 +266,35 @@ public interface ServiceRequestContext extends RequestContext {
      * associated with the specified {@code name}.
      * The header will be included when a {@link Service} sends an {@link HttpResponse}.
      */
-    void setAdditionalResponseHeader(AsciiString name, String value);
+    void setAdditionalResponseHeader(CharSequence name, Object value);
 
     /**
-     * Clears the current header and sets the specified {@link Headers} which is included when a
+     * Clears the current header and sets the specified {@link HttpHeaders} which is included when a
      * {@link Service} sends an {@link HttpResponse}.
      */
-    void setAdditionalResponseHeaders(Headers<? extends AsciiString, ? extends String, ?> headers);
+    void setAdditionalResponseHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
 
     /**
      * Adds a header with the specified {@code name} and {@code value}. The header will be included when
      * a {@link Service} sends an {@link HttpResponse}.
      */
-    void addAdditionalResponseHeader(AsciiString name, String value);
+    void addAdditionalResponseHeader(CharSequence name, Object value);
 
     /**
-     * Adds the specified {@link Headers} which is included when a {@link Service} sends an
+     * Adds the specified {@link HttpHeaders} which is included when a {@link Service} sends an
      * {@link HttpResponse}.
      */
-    void addAdditionalResponseHeaders(Headers<? extends AsciiString, ? extends String, ?> headers);
+    void addAdditionalResponseHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
 
     /**
      * Removes all headers with the specified {@code name}.
      *
      * @return {@code true} if at least one entry has been removed
      */
-    boolean removeAdditionalResponseHeader(AsciiString name);
+    boolean removeAdditionalResponseHeader(CharSequence name);
 
     /**
-     * Returns an immutable {@link HttpHeaders} which is returned along with any other trailers when a
+     * Returns the {@link HttpHeaders} which is returned along with any other trailers when a
      * {@link Service} completes an {@link HttpResponse}.
      */
     HttpHeaders additionalResponseTrailers();
@@ -290,32 +304,32 @@ public interface ServiceRequestContext extends RequestContext {
      * associated with the specified {@code name}.
      * The trailer will be included when a {@link Service} completes an {@link HttpResponse}.
      */
-    void setAdditionalResponseTrailer(AsciiString name, String value);
+    void setAdditionalResponseTrailer(CharSequence name, Object value);
 
     /**
-     * Clears the current trailer and sets the specified {@link Headers} which is included when a
+     * Clears the current trailer and sets the specified {@link HttpHeaders} which is included when a
      * {@link Service} completes an {@link HttpResponse}.
      */
-    void setAdditionalResponseTrailers(Headers<? extends AsciiString, ? extends String, ?> headers);
+    void setAdditionalResponseTrailers(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
 
     /**
      * Adds a trailer with the specified {@code name} and {@code value}. The trailer will be included when
      * a {@link Service} completes an {@link HttpResponse}.
      */
-    void addAdditionalResponseTrailer(AsciiString name, String value);
+    void addAdditionalResponseTrailer(CharSequence name, Object value);
 
     /**
-     * Adds the specified {@link Headers} which is included when a {@link Service} completes an
+     * Adds the specified {@link HttpHeaders} which is included when a {@link Service} completes an
      * {@link HttpResponse}.
      */
-    void addAdditionalResponseTrailers(Headers<? extends AsciiString, ? extends String, ?> headers);
+    void addAdditionalResponseTrailers(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
 
     /**
      * Removes all trailers with the specified {@code name}.
      *
      * @return {@code true} if at least one entry has been removed
      */
-    boolean removeAdditionalResponseTrailer(AsciiString name);
+    boolean removeAdditionalResponseTrailer(CharSequence name);
 
     /**
      * Returns the proxied addresses if the current {@link Request} is received through a proxy.

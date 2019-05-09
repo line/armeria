@@ -44,7 +44,6 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
@@ -636,7 +635,7 @@ public class ThriftServiceTest {
 
     private static void invoke0(THttpService service, HttpData content,
                                 CompletableFuture<HttpData> promise) throws Exception {
-        final HttpRequestWriter req = HttpRequest.streaming(HttpHeaders.of(HttpMethod.POST, "/"));
+        final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.POST, "/");
         req.write(content);
         req.close();
 

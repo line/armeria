@@ -31,9 +31,10 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WriteTimeoutException;
 import com.linecorp.armeria.common.DefaultRpcRequest;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
@@ -52,7 +53,7 @@ public class RequestMetricSupportTest {
         final ClientRequestContext ctx = setupClientRequestCtx(registry);
 
         setConnectionTimings(ctx);
-        ctx.logBuilder().requestHeaders(HttpHeaders.of(HttpMethod.POST, "/foo"));
+        ctx.logBuilder().requestHeaders(RequestHeaders.of(HttpMethod.POST, "/foo"));
         ctx.logBuilder().requestFirstBytesTransferred();
         ctx.logBuilder().requestContent(null, null);
         ctx.logBuilder().requestLength(123);
@@ -60,7 +61,7 @@ public class RequestMetricSupportTest {
         Map<String, Double> measurements = measureAll(registry);
         assertThat(measurements).containsEntry("foo.activeRequests#value{method=POST}", 1.0);
 
-        ctx.logBuilder().responseHeaders(HttpHeaders.of(200));
+        ctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
         ctx.logBuilder().responseLength(456);
 
         ctx.logBuilder().endRequest();
@@ -105,9 +106,9 @@ public class RequestMetricSupportTest {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final ClientRequestContext ctx = setupClientRequestCtx(registry);
 
-        ctx.logBuilder().requestHeaders(HttpHeaders.of(HttpMethod.POST, "/foo"));
+        ctx.logBuilder().requestHeaders(RequestHeaders.of(HttpMethod.POST, "/foo"));
         ctx.logBuilder().requestFirstBytesTransferred();
-        ctx.logBuilder().responseHeaders(HttpHeaders.of(500));
+        ctx.logBuilder().responseHeaders(ResponseHeaders.of(500));
         ctx.logBuilder().responseFirstBytesTransferred();
         ctx.logBuilder().responseLength(456);
         ctx.logBuilder().endRequest();
@@ -169,7 +170,7 @@ public class RequestMetricSupportTest {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final ClientRequestContext ctx = setupClientRequestCtx(registry);
 
-        ctx.logBuilder().requestHeaders(HttpHeaders.of(HttpMethod.POST, "/foo"));
+        ctx.logBuilder().requestHeaders(RequestHeaders.of(HttpMethod.POST, "/foo"));
         ctx.logBuilder().requestFirstBytesTransferred();
         ctx.logBuilder().endRequest();
         ctx.logBuilder().endResponse(ResponseTimeoutException.get());
@@ -231,12 +232,12 @@ public class RequestMetricSupportTest {
         ctx.logBuilder().addChild(derivedCtx.log());
 
         setConnectionTimings(derivedCtx);
-        derivedCtx.logBuilder().requestHeaders(HttpHeaders.of(HttpMethod.POST, "/foo"));
+        derivedCtx.logBuilder().requestHeaders(RequestHeaders.of(HttpMethod.POST, "/foo"));
         derivedCtx.logBuilder().requestFirstBytesTransferred();
         derivedCtx.logBuilder().requestContent(null, null);
         derivedCtx.logBuilder().requestLength(123);
 
-        derivedCtx.logBuilder().responseHeaders(HttpHeaders.of(500));
+        derivedCtx.logBuilder().responseHeaders(ResponseHeaders.of(500));
         derivedCtx.logBuilder().responseFirstBytesTransferred();
         derivedCtx.logBuilder().responseLength(456);
         derivedCtx.logBuilder().endRequest();
@@ -256,9 +257,9 @@ public class RequestMetricSupportTest {
         ctx.logBuilder().startRequest(mock(Channel.class), SessionProtocol.H2C);
         RequestMetricSupport.setup(ctx, meterIdPrefixFunction, true);
 
-        ctx.logBuilder().requestHeaders(HttpHeaders.of(HttpMethod.POST, "/foo"));
+        ctx.logBuilder().requestHeaders(RequestHeaders.of(HttpMethod.POST, "/foo"));
         ctx.logBuilder().requestFirstBytesTransferred();
-        ctx.logBuilder().responseHeaders(HttpHeaders.of(503)); // 503 when request timed out
+        ctx.logBuilder().responseHeaders(ResponseHeaders.of(503)); // 503 when request timed out
         ctx.logBuilder().responseFirstBytesTransferred();
         ctx.logBuilder().responseLength(456);
         ctx.logBuilder().endRequest();
@@ -296,7 +297,7 @@ public class RequestMetricSupportTest {
         ctx.logBuilder().startRequest(mock(Channel.class), SessionProtocol.H2C);
         RequestMetricSupport.setup(ctx, meterIdPrefixFunction, false);
 
-        ctx.logBuilder().requestHeaders(HttpHeaders.of(HttpMethod.POST, "/bar"));
+        ctx.logBuilder().requestHeaders(RequestHeaders.of(HttpMethod.POST, "/bar"));
         ctx.logBuilder().requestFirstBytesTransferred();
         ctx.logBuilder().requestContent(new DefaultRpcRequest(Object.class, "baz"), null);
 

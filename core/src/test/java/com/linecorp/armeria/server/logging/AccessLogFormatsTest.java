@@ -49,11 +49,12 @@ import org.junit.Test;
 
 import com.linecorp.armeria.common.DefaultRpcRequest;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -95,8 +96,8 @@ public class AccessLogFormatsTest {
         assertThat(entry).isInstanceOf(HttpHeaderComponent.class);
         headerEntry = (HttpHeaderComponent) entry;
         assertThat(headerEntry.condition()).isNotNull();
-        assertThat(headerEntry.condition().apply(HttpHeaders.of(HttpStatus.OK))).isTrue();
-        assertThat(headerEntry.condition().apply(HttpHeaders.of(HttpStatus.BAD_REQUEST))).isFalse();
+        assertThat(headerEntry.condition().apply(ResponseHeaders.of(HttpStatus.OK))).isTrue();
+        assertThat(headerEntry.condition().apply(ResponseHeaders.of(HttpStatus.BAD_REQUEST))).isFalse();
         assertThat(headerEntry.headerName().toString())
                 .isEqualToIgnoringCase(HttpHeaderNames.REFERER.toString());
 
@@ -106,8 +107,8 @@ public class AccessLogFormatsTest {
         assertThat(entry).isInstanceOf(HttpHeaderComponent.class);
         headerEntry = (HttpHeaderComponent) entry;
         assertThat(headerEntry.condition()).isNotNull();
-        assertThat(headerEntry.condition().apply(HttpHeaders.of(HttpStatus.OK))).isFalse();
-        assertThat(headerEntry.condition().apply(HttpHeaders.of(HttpStatus.BAD_REQUEST))).isTrue();
+        assertThat(headerEntry.condition().apply(ResponseHeaders.of(HttpStatus.OK))).isFalse();
+        assertThat(headerEntry.condition().apply(ResponseHeaders.of(HttpStatus.BAD_REQUEST))).isTrue();
         assertThat(headerEntry.headerName().toString())
                 .isEqualToIgnoringCase(HttpHeaderNames.USER_AGENT.toString());
 
@@ -117,8 +118,9 @@ public class AccessLogFormatsTest {
         assertThat(entry).isInstanceOf(CommonComponent.class);
         commonComponentEntry = (CommonComponent) entry;
         assertThat(commonComponentEntry.condition()).isNotNull();
-        assertThat(commonComponentEntry.condition().apply(HttpHeaders.of(HttpStatus.OK))).isTrue();
-        assertThat(commonComponentEntry.condition().apply(HttpHeaders.of(HttpStatus.BAD_REQUEST))).isFalse();
+        assertThat(commonComponentEntry.condition().apply(ResponseHeaders.of(HttpStatus.OK))).isTrue();
+        assertThat(commonComponentEntry.condition()
+                                       .apply(ResponseHeaders.of(HttpStatus.BAD_REQUEST))).isFalse();
 
         format = AccessLogFormats.parseCustom("%!200b");
         assertThat(format.size()).isOne();
@@ -126,8 +128,8 @@ public class AccessLogFormatsTest {
         assertThat(entry).isInstanceOf(CommonComponent.class);
         commonComponentEntry = (CommonComponent) entry;
         assertThat(commonComponentEntry.condition()).isNotNull();
-        assertThat(commonComponentEntry.condition().apply(HttpHeaders.of(HttpStatus.OK))).isFalse();
-        assertThat(commonComponentEntry.condition().apply(HttpHeaders.of(HttpStatus.BAD_REQUEST))).isTrue();
+        assertThat(commonComponentEntry.condition().apply(ResponseHeaders.of(HttpStatus.OK))).isFalse();
+        assertThat(commonComponentEntry.condition().apply(ResponseHeaders.of(HttpStatus.BAD_REQUEST))).isTrue();
 
         assertThat(AccessLogFormats.parseCustom("").isEmpty()).isTrue();
 
@@ -179,10 +181,10 @@ public class AccessLogFormatsTest {
     @Test
     public void formatMessage() {
         final HttpRequest req = HttpRequest.of(
-                HttpHeaders.of(HttpMethod.GET, "/armeria/log")
-                           .add(HttpHeaderNames.USER_AGENT, "armeria/x.y.z")
-                           .add(HttpHeaderNames.REFERER, "http://log.example.com")
-                           .add(HttpHeaderNames.COOKIE, "a=1;b=2"));
+                RequestHeaders.of(HttpMethod.GET, "/armeria/log",
+                                  HttpHeaderNames.USER_AGENT, "armeria/x.y.z",
+                                  HttpHeaderNames.REFERER, "http://log.example.com",
+                                  HttpHeaderNames.COOKIE, "a=1;b=2"));
         final ServiceRequestContext ctx =
                 ServiceRequestContextBuilder.of(req)
                                             .requestStartTime(requestStartTimeNanos, requestStartTimeMicros)
@@ -196,9 +198,9 @@ public class AccessLogFormatsTest {
         assertThat(ctx.log().isAvailable(RequestLogAvailability.REQUEST_END)).isTrue();
         assertThat(log.isAvailable(RequestLogAvailability.REQUEST_END)).isTrue();
 
-        logBuilder.responseHeaders(HttpHeaders.of(HttpStatus.OK)
-                                              .addObject(HttpHeaderNames.CONTENT_TYPE,
-                                                         MediaType.PLAIN_TEXT_UTF_8));
+        logBuilder.responseHeaders(ResponseHeaders.of(HttpStatus.OK,
+                                                      HttpHeaderNames.CONTENT_TYPE,
+                                                      MediaType.PLAIN_TEXT_UTF_8));
         logBuilder.responseLength(1024);
         logBuilder.endResponse();
 
@@ -276,10 +278,10 @@ public class AccessLogFormatsTest {
         final String expectedLogMessage = "\"GET /armeria/log#rpcMethod h2\" 200 1024";
 
         final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(
-                HttpRequest.of(HttpHeaders.of(HttpMethod.GET, "/armeria/log")
-                                          .add(HttpHeaderNames.USER_AGENT, "armeria/x.y.z")
-                                          .add(HttpHeaderNames.REFERER, "http://log.example.com")
-                                          .add(HttpHeaderNames.COOKIE, "a=1;b=2"))).build();
+                HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/armeria/log",
+                                                 HttpHeaderNames.USER_AGENT, "armeria/x.y.z",
+                                                 HttpHeaderNames.REFERER, "http://log.example.com",
+                                                 HttpHeaderNames.COOKIE, "a=1;b=2"))).build();
         final RequestLog log = ctx.log();
         final RequestLogBuilder logBuilder = ctx.logBuilder();
 
@@ -294,7 +296,7 @@ public class AccessLogFormatsTest {
         assertThat(AccessLogger.format(AccessLogFormats.COMMON, log)).doesNotEndWith(expectedLogMessage);
         logBuilder.endRequest();
         assertThat(AccessLogger.format(AccessLogFormats.COMMON, log)).doesNotEndWith(expectedLogMessage);
-        logBuilder.responseHeaders(HttpHeaders.of(HttpStatus.OK));
+        logBuilder.responseHeaders(ResponseHeaders.of(HttpStatus.OK));
         assertThat(AccessLogger.format(AccessLogFormats.COMMON, log)).doesNotEndWith(expectedLogMessage);
         logBuilder.responseLength(1024);
         assertThat(AccessLogger.format(AccessLogFormats.COMMON, log)).doesNotEndWith(expectedLogMessage);

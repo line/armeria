@@ -18,6 +18,7 @@ package com.linecorp.armeria.common;
 
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_MD5;
+import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_TYPE;
 import static com.linecorp.armeria.common.MediaType.PLAIN_TEXT_UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -38,9 +39,9 @@ public class DefaultAggregatedHttpMessageTest {
         final HttpRequest req = HttpRequest.of(aReq);
         final List<HttpObject> drained = req.drainAll().join();
 
-        assertThat(req.headers()).isEqualTo(HttpHeaders.of(HttpMethod.POST, "/foo")
-                                                       .contentType(PLAIN_TEXT_UTF_8)
-                                                       .setInt(CONTENT_LENGTH, 3));
+        assertThat(req.headers()).isEqualTo(RequestHeaders.of(HttpMethod.POST, "/foo",
+                                                              CONTENT_TYPE, PLAIN_TEXT_UTF_8,
+                                                              CONTENT_LENGTH, 3));
         assertThat(drained).containsExactly(HttpData.of(StandardCharsets.UTF_8, "bar"));
     }
 
@@ -50,7 +51,7 @@ public class DefaultAggregatedHttpMessageTest {
         final HttpRequest req = HttpRequest.of(aReq);
         final List<HttpObject> drained = req.drainAll().join();
 
-        assertThat(req.headers()).isEqualTo(HttpHeaders.of(HttpMethod.GET, "/bar"));
+        assertThat(req.headers()).isEqualTo(RequestHeaders.of(HttpMethod.GET, "/bar"));
         assertThat(drained).isEmpty();
     }
 
@@ -62,9 +63,9 @@ public class DefaultAggregatedHttpMessageTest {
         final HttpRequest req = HttpRequest.of(aReq);
         final List<HttpObject> drained = req.drainAll().join();
 
-        assertThat(req.headers()).isEqualTo(HttpHeaders.of(HttpMethod.PUT, "/baz")
-                                                       .contentType(PLAIN_TEXT_UTF_8)
-                                                       .setInt(CONTENT_LENGTH, 3));
+        assertThat(req.headers()).isEqualTo(RequestHeaders.of(HttpMethod.PUT, "/baz",
+                                                              CONTENT_TYPE, PLAIN_TEXT_UTF_8,
+                                                              CONTENT_LENGTH, 3));
         assertThat(drained).containsExactly(
                 HttpData.of(StandardCharsets.UTF_8, "bar"),
                 HttpHeaders.of(CONTENT_MD5, "37b51d194a7513e45b56f6524f2d51f2"));
@@ -73,7 +74,7 @@ public class DefaultAggregatedHttpMessageTest {
     @Test
     public void toHttpRequestAgainstResponse() {
         final AggregatedHttpMessage aRes = AggregatedHttpMessage.of(200);
-        assertThatThrownBy(() -> HttpRequest.of(aRes)).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> HttpRequest.of(aRes)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -81,12 +82,12 @@ public class DefaultAggregatedHttpMessageTest {
         // Method only
         assertThatThrownBy(() -> HttpRequest.of(
                 AggregatedHttpMessage.of(HttpHeaders.of(HttpHeaderNames.METHOD, "GET"))))
-                .isInstanceOf(IllegalStateException.class);
+                .isInstanceOf(IllegalArgumentException.class);
 
         // Path only
         assertThatThrownBy(() -> HttpRequest.of(
                 AggregatedHttpMessage.of(HttpHeaders.of(HttpHeaderNames.PATH, "/charlie"))))
-                .isInstanceOf(IllegalStateException.class);
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -97,9 +98,9 @@ public class DefaultAggregatedHttpMessageTest {
         final List<HttpObject> drained = res.drainAll().join();
 
         assertThat(drained).containsExactly(
-                HttpHeaders.of(HttpStatus.OK)
-                           .contentType(PLAIN_TEXT_UTF_8)
-                           .setInt(CONTENT_LENGTH, 5),
+                ResponseHeaders.of(HttpStatus.OK,
+                                   CONTENT_TYPE, PLAIN_TEXT_UTF_8,
+                                   CONTENT_LENGTH, 5),
                 HttpData.of(StandardCharsets.UTF_8, "alice"));
     }
 
@@ -111,9 +112,9 @@ public class DefaultAggregatedHttpMessageTest {
         final List<HttpObject> drained = res.drainAll().join();
 
         assertThat(drained).containsExactly(
-                HttpHeaders.of(HttpStatus.OK)
-                           .contentType(PLAIN_TEXT_UTF_8)
-                           .setInt(CONTENT_LENGTH, 0));
+                ResponseHeaders.of(HttpStatus.OK,
+                                   CONTENT_TYPE, PLAIN_TEXT_UTF_8,
+                                   CONTENT_LENGTH, 0));
     }
 
     @Test
@@ -125,8 +126,8 @@ public class DefaultAggregatedHttpMessageTest {
         final List<HttpObject> drained = res.drainAll().join();
 
         assertThat(drained).containsExactly(
-                HttpHeaders.of(HttpStatus.OK)
-                           .contentType(PLAIN_TEXT_UTF_8),
+                ResponseHeaders.of(HttpStatus.OK,
+                                   CONTENT_TYPE, PLAIN_TEXT_UTF_8),
                 HttpData.of(StandardCharsets.UTF_8, "bob"),
                 HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
     }
@@ -134,28 +135,27 @@ public class DefaultAggregatedHttpMessageTest {
     @Test
     public void toHttpResponseWithInformationals() throws Exception {
         final AggregatedHttpMessage aRes = AggregatedHttpMessage.of(
-                ImmutableList.of(HttpHeaders.of(HttpStatus.CONTINUE)),
-                HttpHeaders.of(HttpStatus.OK), HttpData.EMPTY_DATA, HttpHeaders.EMPTY_HEADERS);
+                ImmutableList.of(ResponseHeaders.of(HttpStatus.CONTINUE)),
+                ResponseHeaders.of(HttpStatus.OK), HttpData.EMPTY_DATA, HttpHeaders.of());
 
         final HttpResponse res = HttpResponse.of(aRes);
         final List<HttpObject> drained = res.drainAll().join();
 
         assertThat(drained).containsExactly(
-                HttpHeaders.of(HttpStatus.CONTINUE),
-                HttpHeaders.of(HttpStatus.OK)
-                           .setInt(CONTENT_LENGTH, 0));
+                ResponseHeaders.of(HttpStatus.CONTINUE),
+                ResponseHeaders.of(HttpStatus.OK, CONTENT_LENGTH, 0));
     }
 
     @Test
     public void errorWhenContentOrTrailingHeadersShouldBeEmpty() throws Exception {
         contentAndTrailingHeadersShouldBeEmpty(HttpStatus.CONTINUE, HttpData.ofUtf8("bob"),
-                                               HttpHeaders.EMPTY_HEADERS);
+                                               HttpHeaders.of());
         contentAndTrailingHeadersShouldBeEmpty(HttpStatus.NO_CONTENT, HttpData.ofUtf8("bob"),
-                                               HttpHeaders.EMPTY_HEADERS);
+                                               HttpHeaders.of());
         contentAndTrailingHeadersShouldBeEmpty(HttpStatus.RESET_CONTENT, HttpData.ofUtf8("bob"),
-                                               HttpHeaders.EMPTY_HEADERS);
+                                               HttpHeaders.of());
         contentAndTrailingHeadersShouldBeEmpty(HttpStatus.NOT_MODIFIED, HttpData.ofUtf8("bob"),
-                                               HttpHeaders.EMPTY_HEADERS);
+                                               HttpHeaders.of());
 
         contentAndTrailingHeadersShouldBeEmpty(HttpStatus.CONTINUE, HttpData.EMPTY_DATA,
                                                HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
@@ -175,18 +175,18 @@ public class DefaultAggregatedHttpMessageTest {
 
     @Test
     public void contentLengthIsNotSetWhen1xxOr204Or205() {
-        HttpHeaders headers = HttpHeaders.of(HttpStatus.CONTINUE).addInt(CONTENT_LENGTH, 100);
+        ResponseHeaders headers = ResponseHeaders.of(HttpStatus.CONTINUE, CONTENT_LENGTH, 100);
         assertThat(AggregatedHttpMessage.of(headers).headers().get(CONTENT_LENGTH)).isNull();
 
-        headers = HttpHeaders.of(HttpStatus.NO_CONTENT).addInt(CONTENT_LENGTH, 100);
+        headers = ResponseHeaders.of(HttpStatus.NO_CONTENT, CONTENT_LENGTH, 100);
         assertThat(AggregatedHttpMessage.of(headers).headers().get(CONTENT_LENGTH)).isNull();
 
-        headers = HttpHeaders.of(HttpStatus.RESET_CONTENT).addInt(CONTENT_LENGTH, 100);
+        headers = ResponseHeaders.of(HttpStatus.RESET_CONTENT, CONTENT_LENGTH, 100);
         assertThat(AggregatedHttpMessage.of(headers).headers().get(CONTENT_LENGTH)).isNull();
 
         // 304 response can have the 'Content-length' header when it is a response to a conditional
         // GET request. See https://tools.ietf.org/html/rfc7230#section-3.3.2
-        headers = HttpHeaders.of(HttpStatus.NOT_MODIFIED).addInt(CONTENT_LENGTH, 100);
+        headers = ResponseHeaders.of(HttpStatus.NOT_MODIFIED, CONTENT_LENGTH, 100);
         assertThat(AggregatedHttpMessage.of(headers).headers().getInt(CONTENT_LENGTH)).isEqualTo(100);
     }
 
@@ -201,7 +201,7 @@ public class DefaultAggregatedHttpMessageTest {
         msg = AggregatedHttpMessage.of(HttpStatus.OK, PLAIN_TEXT_UTF_8, HttpData.ofUtf8(""));
         assertThat(msg.headers().getInt(CONTENT_LENGTH)).isEqualTo(0);
 
-        final HttpHeaders headers = HttpHeaders.of(HttpStatus.OK).addInt(CONTENT_LENGTH, 1000000);
+        final ResponseHeaders headers = ResponseHeaders.of(HttpStatus.OK, CONTENT_LENGTH, 1000000);
         // It can have 'Content-length' even though it does not have content, because it can be a response
         // to a HEAD request.
         assertThat(AggregatedHttpMessage.of(headers).headers().getInt(CONTENT_LENGTH)).isEqualTo(1000000);
@@ -213,6 +213,6 @@ public class DefaultAggregatedHttpMessageTest {
     @Test
     public void toHttpResponseAgainstRequest() {
         final AggregatedHttpMessage aReq = AggregatedHttpMessage.of(HttpMethod.GET, "/qux");
-        assertThatThrownBy(() -> HttpResponse.of(aReq)).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> HttpResponse.of(aReq)).isInstanceOf(IllegalArgumentException.class);
     }
 }

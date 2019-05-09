@@ -44,7 +44,7 @@ import com.linecorp.armeria.testing.junit4.server.ServerRule;
 @RunWith(Parameterized.class)
 public class HttpRequestSubscriberTest {
 
-    private static final HttpHeaders headers = HttpHeaders.of(HttpMethod.POST, "/delayed_ok");
+    private static final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/delayed_ok");
 
     @ClassRule
     public static ServerRule rule = new ServerRule() {

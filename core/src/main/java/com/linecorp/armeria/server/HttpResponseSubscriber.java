@@ -28,7 +28,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -36,6 +35,8 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
@@ -155,33 +156,27 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         switch (state) {
             case NEEDS_HEADERS: {
                 logBuilder().startResponse();
-                if (!(o instanceof HttpHeaders)) {
+                if (!(o instanceof ResponseHeaders)) {
                     throw newIllegalStateException(
-                            "published an HttpData without a preceding Http2Headers: " + o +
+                            "published an HttpData without a preceding ResponseHeaders: " + o +
                             " (service: " + service() + ')');
                 }
 
-                HttpHeaders headers = (HttpHeaders) o;
+                ResponseHeaders headers = (ResponseHeaders) o;
                 final HttpStatus status = headers.status();
-                if (status == null) {
-                    throw newIllegalStateException("published an HttpHeaders without status: " + o +
-                                                   " (service: " + service() + ')');
-                }
-
                 if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
                     // Needs non-informational headers.
                     break;
                 }
 
                 final HttpHeaders additionalHeaders = reqCtx.additionalResponseHeaders();
-                headers = fillAdditionalHeaders(headers, additionalHeaders);
-                if (headers.contains(HttpHeaderNames.CONTENT_LENGTH) &&
+                final ResponseHeadersBuilder newHeaders = fillAdditionalHeaders(headers, additionalHeaders);
+                if (newHeaders.contains(HttpHeaderNames.CONTENT_LENGTH) &&
                     !reqCtx.additionalResponseTrailers().isEmpty()) {
-                    final HttpHeaders mutable = headers.toMutable();
-                    mutable.remove(HttpHeaderNames.CONTENT_LENGTH);
-                    headers = mutable;
+                    newHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
                 }
 
+                headers = newHeaders.build();
                 logBuilder().responseHeaders(headers);
                 o = headers;
 
@@ -209,14 +204,14 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
             case NEEDS_DATA_OR_TRAILING_HEADERS: {
                 if (o instanceof HttpHeaders) {
                     final HttpHeaders trailingHeaders = (HttpHeaders) o;
-                    if (trailingHeaders.status() != null) {
+                    if (trailingHeaders.contains(HttpHeaderNames.STATUS)) {
                         throw newIllegalStateException(
                                 "published a trailing HttpHeaders with status: " + o +
                                 " (service: " + service() + ')');
                     }
                     final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
-                    final HttpHeaders addedTrailers = fillAdditionalHeaders(trailingHeaders,
-                                                                            additionalTrailers);
+                    final HttpHeaders addedTrailers = fillAdditionalTrailers(trailingHeaders,
+                                                                             additionalTrailers);
                     logBuilder().responseTrailers(addedTrailers);
                     o = addedTrailers;
 
@@ -348,9 +343,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                     logBuilder().endResponse();
                     reqCtx.log().addListener(accessLogWriter::log, RequestLogAvailability.COMPLETE);
                 }
-                if (state != State.DONE) {
-                    subscription.request(1);
-                }
+
+                subscription.request(1);
                 return;
             }
 
@@ -377,7 +371,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         final HttpHeaders headers = message.headers();
         final HttpData content = message.content();
 
-        logBuilder().responseHeaders(headers);
+        logBuilder().responseHeaders((ResponseHeaders) headers);
         logBuilder().increaseResponseLength(content);
 
         final State oldState = setDone();
@@ -438,17 +432,21 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         return state == State.NEEDS_HEADERS;
     }
 
-    private static HttpHeaders fillAdditionalHeaders(HttpHeaders headers, HttpHeaders additionalHeaders) {
-        if (!additionalHeaders.isEmpty()) {
-            if (headers.isImmutable()) {
-                // All headers are already validated.
-                final HttpHeaders temp = headers;
-                headers = new DefaultHttpHeaders(false, temp.size() + additionalHeaders.size());
-                headers.set(temp);
-            }
-            headers.setAllIfAbsent(additionalHeaders);
+    private static ResponseHeadersBuilder fillAdditionalHeaders(ResponseHeaders headers,
+                                                                HttpHeaders additionalHeaders) {
+        if (additionalHeaders.isEmpty()) {
+            return headers.toBuilder();
         }
-        return headers;
+
+        return headers.toBuilder().setIfAbsent(additionalHeaders);
+    }
+
+    private static HttpHeaders fillAdditionalTrailers(HttpHeaders trailers, HttpHeaders additionalTrailers) {
+        if (additionalTrailers.isEmpty()) {
+            return trailers;
+        }
+
+        return trailers.toBuilder().setIfAbsent(additionalTrailers).build();
     }
 
     private boolean cancelTimeout() {
