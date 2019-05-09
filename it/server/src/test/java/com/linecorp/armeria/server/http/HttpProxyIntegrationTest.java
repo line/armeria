@@ -28,13 +28,12 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.DefaultHttpHeaders;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
@@ -46,14 +45,16 @@ public class HttpProxyIntegrationTest {
     public static ServerRule backendServer = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.service("/trailers", ((ctx, req) -> {
-                HttpResponseWriter writer = HttpResponse.streaming();
+            sb.service("/trailers", (ctx, req) -> {
+                final HttpResponseWriter writer = HttpResponse.streaming();
 
-                HttpHeaders headers = HttpHeaders.of(HttpStatus.OK);
+                final ResponseHeaders headers = ResponseHeaders.of(HttpStatus.OK);
                 assertThat(headers.isEndOfStream()).isFalse();
 
-                HttpHeaders trailers = new DefaultHttpHeaders(true, 1, true)
-                        .set(HttpHeaderNames.of("armeria-message"), "error");
+                final HttpHeaders trailers = HttpHeaders.builder()
+                                                        .set("armeria-message", "error")
+                                                        .endOfStream(true)
+                                                        .build();
                 assertThat(trailers.isEndOfStream()).isTrue();
 
                 writer.write(headers);
@@ -61,21 +62,22 @@ public class HttpProxyIntegrationTest {
                 writer.close();
 
                 return writer;
-            }));
+            });
 
-            sb.service("/trailers-only", ((ctx, req) -> {
-                HttpResponseWriter writer = HttpResponse.streaming();
+            sb.service("/trailers-only", (ctx, req) -> {
+                final HttpResponseWriter writer = HttpResponse.streaming();
 
-                HttpHeaders trailers = new DefaultHttpHeaders(true, 1, true)
-                        .status(HttpStatus.OK)
-                        .set(HttpHeaderNames.of("armeria-message"), "error");
+                final ResponseHeaders trailers = ResponseHeaders.builder(HttpStatus.OK)
+                                                                .set("armeria-message", "error")
+                                                                .endOfStream(true)
+                                                                .build();
                 assertThat(trailers.isEndOfStream()).isTrue();
 
                 writer.write(trailers);
                 writer.close();
 
                 return writer;
-            }));
+            });
 
             sb.decorator(LoggingService.newDecorator());
         }
@@ -86,12 +88,12 @@ public class HttpProxyIntegrationTest {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.service("/trailers", (ctx, req) -> {
-                HttpClient client = HttpClient.of(backendServer.uri("/"));
+                final HttpClient client = HttpClient.of(backendServer.uri("/"));
                 return client.get("/trailers");
             });
 
             sb.service("/trailers-only", (ctx, req) -> {
-                HttpClient client = HttpClient.of(backendServer.uri("/"));
+                final HttpClient client = HttpClient.of(backendServer.uri("/"));
                 return client.get("/trailers-only");
             });
 
@@ -101,11 +103,11 @@ public class HttpProxyIntegrationTest {
 
     @Test
     public void proxyWithTrailers() throws Throwable {
-        HttpClient client = HttpClient.of(frontendServer.uri("/"));
+        final HttpClient client = HttpClient.of(frontendServer.uri("/"));
 
-        AtomicBoolean headersReceived = new AtomicBoolean();
-        AtomicBoolean complete = new AtomicBoolean();
-        AtomicReference<Throwable> error = new AtomicReference<>();
+        final AtomicBoolean headersReceived = new AtomicBoolean();
+        final AtomicBoolean complete = new AtomicBoolean();
+        final AtomicReference<Throwable> error = new AtomicReference<>();
 
         client.get("/trailers").subscribe(new Subscriber<HttpObject>() {
             @Override
@@ -136,7 +138,7 @@ public class HttpProxyIntegrationTest {
         });
 
         await().untilTrue(complete);
-        Throwable raisedError = error.get();
+        final Throwable raisedError = error.get();
         if (raisedError != null) {
             throw raisedError;
         }
@@ -144,10 +146,10 @@ public class HttpProxyIntegrationTest {
 
     @Test
     public void proxyWithTrailersOnly() throws Throwable {
-        HttpClient client = HttpClient.of(frontendServer.uri("/"));
+        final HttpClient client = HttpClient.of(frontendServer.uri("/"));
 
-        AtomicBoolean complete = new AtomicBoolean();
-        AtomicReference<Throwable> error = new AtomicReference<>();
+        final AtomicBoolean complete = new AtomicBoolean();
+        final AtomicReference<Throwable> error = new AtomicReference<>();
 
         client.get("/trailers-only").subscribe(new Subscriber<HttpObject>() {
             @Override
@@ -175,7 +177,7 @@ public class HttpProxyIntegrationTest {
         });
 
         await().untilTrue(complete);
-        Throwable raisedError = error.get();
+        final Throwable raisedError = error.get();
         if (raisedError != null) {
             throw raisedError;
         }

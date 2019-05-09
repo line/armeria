@@ -24,7 +24,9 @@ import javax.net.ssl.SSLSession;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.ChannelUtil;
@@ -177,7 +179,7 @@ public interface RequestLogBuilder {
     /**
      * Sets the {@link RequestLog#requestHeaders()}.
      */
-    void requestHeaders(HttpHeaders requestHeaders);
+    void requestHeaders(RequestHeaders requestHeaders);
 
     /**
      * Sets the {@link RequestLog#requestContent()} and the {@link RequestLog#rawRequestContent()}.
@@ -310,7 +312,7 @@ public interface RequestLogBuilder {
     /**
      * Sets the {@link RequestLog#responseHeaders()}.
      */
-    void responseHeaders(HttpHeaders responseHeaders);
+    void responseHeaders(ResponseHeaders responseHeaders);
 
     /**
      * Sets the {@link RequestLog#responseContent()} and the {@link RequestLog#rawResponseContent()}.

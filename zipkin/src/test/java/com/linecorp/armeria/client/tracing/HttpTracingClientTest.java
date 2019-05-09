@@ -19,6 +19,8 @@ package com.linecorp.armeria.client.tracing;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -37,11 +39,13 @@ import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextBuilder;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.tracing.HelloService;
@@ -164,8 +168,8 @@ public class HttpTracingClientTest {
             throws Exception {
 
         // prepare parameters
-        final HttpRequest req = HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/hello/armeria")
-                                                          .authority("foo.com"));
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/armeria",
+                                                                 HttpHeaderNames.AUTHORITY, "foo.com"));
         final RpcRequest rpcReq = RpcRequest.of(HelloService.Iface.class, "hello", "Armeria");
         final HttpResponse res = HttpResponse.of(HttpStatus.OK);
         final RpcResponse rpcRes = RpcResponse.of("Hello, Armeria!");
@@ -189,9 +193,14 @@ public class HttpTracingClientTest {
 
         assertThat(actualRes).isEqualTo(res);
 
-        verify(delegate, times(1)).execute(ctx, req);
+        verify(delegate, times(1)).execute(same(ctx), argThat(arg -> {
+            final RequestHeaders headers = arg.headers();
+            return headers.contains(HttpHeaderNames.of("x-b3-traceid")) &&
+                   headers.contains(HttpHeaderNames.of("x-b3-spanid")) &&
+                   headers.contains(HttpHeaderNames.of("x-b3-sampled"));
+        }));
 
-        ctx.logBuilder().responseHeaders(HttpHeaders.of(HttpStatus.OK));
+        ctx.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.OK));
         ctx.logBuilder().responseFirstBytesTransferred();
         ctx.logBuilder().responseContent(rpcRes, res);
         ctx.logBuilder().endResponse();

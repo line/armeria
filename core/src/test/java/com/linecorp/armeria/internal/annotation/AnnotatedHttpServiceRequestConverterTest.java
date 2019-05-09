@@ -41,10 +41,10 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceRequestConverterTest.MyService3.CompositeRequestBean1;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceRequestConverterTest.MyService3.CompositeRequestBean2;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceRequestConverterTest.MyService3.CompositeRequestBean3;
@@ -596,7 +596,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         public RequestJsonObj2 convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
                                               Class<?> expectedResultType) throws Exception {
             if (expectedResultType.isAssignableFrom(RequestJsonObj2.class)) {
-                return new RequestJsonObj2(request.headers().method().name());
+                return new RequestJsonObj2(request.headers().get(HttpHeaderNames.METHOD));
             }
             return RequestConverterFunction.fallthrough();
         }
@@ -618,7 +618,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
         public Optional<RequestJsonObj2> convertRequest(ServiceRequestContext ctx,
                                                         AggregatedHttpMessage request,
                                                         Class<?> expectedResultType) throws Exception {
-            return Optional.of(new RequestJsonObj2(request.headers().method().name()));
+            return Optional.of(new RequestJsonObj2(request.headers().get(HttpHeaderNames.METHOD)));
         }
     }
 
@@ -669,48 +669,48 @@ public class AnnotatedHttpServiceRequestConverterTest {
 
         // Normal Request: POST + Form Data
         final HttpData formData = HttpData.ofAscii("age=25&manager=true&gender=male");
-        HttpHeaders reqHeaders = HttpHeaders.of(HttpMethod.POST, "/2/default/bean1/john/1234")
-                                            .set(HttpHeaderNames.of("x-user-permission"), "perm1,perm2")
-                                            .set(HttpHeaderNames.of("x-client-name"), "TestClient")
-                                            .contentType(MediaType.FORM_DATA);
+        RequestHeaders reqHeaders = RequestHeaders.of(HttpMethod.POST, "/2/default/bean1/john/1234",
+                                                      HttpHeaderNames.of("x-user-permission"), "perm1,perm2",
+                                                      HttpHeaderNames.of("x-client-name"), "TestClient",
+                                                      HttpHeaderNames.CONTENT_TYPE, MediaType.FORM_DATA);
 
         response = client.execute(AggregatedHttpMessage.of(reqHeaders, formData)).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo(expectedResponseContent);
 
         // Normal Request: GET + Query String
-        reqHeaders = HttpHeaders.of(HttpMethod.GET,
-                                    "/2/default/bean1/john/1234?age=25&manager=true&gender=MALE")
-                                .set(HttpHeaderNames.of("x-user-permission"), "perm1,perm2")
-                                .set(HttpHeaderNames.of("x-client-name"), "TestClient");
+        reqHeaders = RequestHeaders.of(HttpMethod.GET,
+                                       "/2/default/bean1/john/1234?age=25&manager=true&gender=MALE",
+                                       HttpHeaderNames.of("x-user-permission"), "perm1,perm2",
+                                       HttpHeaderNames.of("x-client-name"), "TestClient");
 
         response = client.execute(AggregatedHttpMessage.of(reqHeaders)).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo(expectedResponseContent);
 
         // Bad Request: age=badParam
-        reqHeaders = HttpHeaders.of(HttpMethod.GET,
-                                    "/2/default/bean1/john/1234?age=badParam&manager=true&gender=male")
-                                .set(HttpHeaderNames.of("x-user-permission"), "perm1,perm2")
-                                .set(HttpHeaderNames.of("x-client-name"), "TestClient");
+        reqHeaders = RequestHeaders.of(HttpMethod.GET,
+                                       "/2/default/bean1/john/1234?age=badParam&manager=true&gender=male",
+                                       HttpHeaderNames.of("x-user-permission"), "perm1,perm2",
+                                       HttpHeaderNames.of("x-client-name"), "TestClient");
 
         response = client.execute(AggregatedHttpMessage.of(reqHeaders)).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
 
         // Bad Request: seqNum=badParam
-        reqHeaders = HttpHeaders.of(HttpMethod.GET,
-                                    "/2/default/bean1/john/badParam?age=25&manager=true&gender=MALE")
-                                .set(HttpHeaderNames.of("x-user-permission"), "perm1,perm2")
-                                .set(HttpHeaderNames.of("x-client-name"), "TestClient");
+        reqHeaders = RequestHeaders.of(HttpMethod.GET,
+                                       "/2/default/bean1/john/badParam?age=25&manager=true&gender=MALE",
+                                       HttpHeaderNames.of("x-user-permission"), "perm1,perm2",
+                                       HttpHeaderNames.of("x-client-name"), "TestClient");
 
         response = client.execute(AggregatedHttpMessage.of(reqHeaders)).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
 
         // Bad Request: gender=badParam
-        reqHeaders = HttpHeaders.of(HttpMethod.GET,
-                                    "/2/default/bean1/john/1234?age=25&manager=true&gender=badParam")
-                                .set(HttpHeaderNames.of("x-user-permission"), "perm1,perm2")
-                                .set(HttpHeaderNames.of("x-client-name"), "TestClient");
+        reqHeaders = RequestHeaders.of(HttpMethod.GET,
+                                       "/2/default/bean1/john/1234?age=25&manager=true&gender=badParam",
+                                       HttpHeaderNames.of("x-user-permission"), "perm1,perm2",
+                                       HttpHeaderNames.of("x-client-name"), "TestClient");
 
         response = client.execute(AggregatedHttpMessage.of(reqHeaders)).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -735,22 +735,22 @@ public class AnnotatedHttpServiceRequestConverterTest {
 
         // Normal Request: POST + Form Data
         final HttpData formData = HttpData.ofAscii("age=25&gender=male");
-        HttpHeaders reqHeaders = HttpHeaders.of(HttpMethod.POST, "/2/default/bean2/john/98765")
-                                            .set(HttpHeaderNames.of("x-user-permission"), "perm1,perm2")
-                                            .set(HttpHeaderNames.of("x-client-name"), "TestClient")
-                                            .set(HttpHeaderNames.of("uid"), "abcd-efgh")
-                                            .contentType(MediaType.FORM_DATA);
+        RequestHeaders reqHeaders = RequestHeaders.of(HttpMethod.POST, "/2/default/bean2/john/98765",
+                                                      HttpHeaderNames.of("x-user-permission"), "perm1,perm2",
+                                                      HttpHeaderNames.of("x-client-name"), "TestClient",
+                                                      HttpHeaderNames.of("uid"), "abcd-efgh",
+                                                      HttpHeaderNames.CONTENT_TYPE, MediaType.FORM_DATA);
 
         response = client.execute(AggregatedHttpMessage.of(reqHeaders, formData)).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo(expectedResponseContent);
 
         // Normal Request: GET + Query String
-        reqHeaders = HttpHeaders.of(HttpMethod.GET,
-                                    "/2/default/bean2/john?age=25&gender=MALE&serialNo=98765")
-                                .set(HttpHeaderNames.of("x-user-permission"), "perm1,perm2")
-                                .set(HttpHeaderNames.of("x-client-name"), "TestClient")
-                                .set(HttpHeaderNames.of("uid"), "abcd-efgh");
+        reqHeaders = RequestHeaders.of(HttpMethod.GET,
+                                       "/2/default/bean2/john?age=25&gender=MALE&serialNo=98765",
+                                       HttpHeaderNames.of("x-user-permission"), "perm1,perm2",
+                                       HttpHeaderNames.of("x-client-name"), "TestClient",
+                                       HttpHeaderNames.of("uid"), "abcd-efgh");
 
         response = client.execute(AggregatedHttpMessage.of(reqHeaders)).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
@@ -776,20 +776,20 @@ public class AnnotatedHttpServiceRequestConverterTest {
 
         // Normal Request: POST + Form Data
         final HttpData formData = HttpData.ofAscii("age=25&gender=male");
-        HttpHeaders reqHeaders = HttpHeaders.of(HttpMethod.POST, "/2/default/bean3/john/3349")
-                                            .set(HttpHeaderNames.of("x-user-permission"), "perm1,perm2")
-                                            .set(HttpHeaderNames.of("x-client-name"), "TestClient")
-                                            .contentType(MediaType.FORM_DATA);
+        RequestHeaders reqHeaders = RequestHeaders.of(HttpMethod.POST, "/2/default/bean3/john/3349",
+                                                      HttpHeaderNames.of("x-user-permission"), "perm1,perm2",
+                                                      HttpHeaderNames.of("x-client-name"), "TestClient",
+                                                      HttpHeaderNames.CONTENT_TYPE, MediaType.FORM_DATA);
 
         response = client.execute(AggregatedHttpMessage.of(reqHeaders, formData)).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo(expectedResponseContent);
 
         // Normal Request: GET + Query String
-        reqHeaders = HttpHeaders.of(HttpMethod.GET,
-                                    "/2/default/bean3/john?age=25&gender=MALE&departmentNo=3349")
-                                .set(HttpHeaderNames.of("x-user-permission"), "perm1,perm2")
-                                .set(HttpHeaderNames.of("x-client-name"), "TestClient");
+        reqHeaders = RequestHeaders.of(HttpMethod.GET,
+                                       "/2/default/bean3/john?age=25&gender=MALE&departmentNo=3349",
+                                       HttpHeaderNames.of("x-user-permission"), "perm1,perm2",
+                                       HttpHeaderNames.of("x-client-name"), "TestClient");
 
         response = client.execute(AggregatedHttpMessage.of(reqHeaders)).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
@@ -916,8 +916,8 @@ public class AnnotatedHttpServiceRequestConverterTest {
         expectedRequestBean.foo3 = 200;
         final String expectedResponseContent = mapper.writeValueAsString(expectedRequestBean);
 
-        final HttpHeaders reqHeaders = HttpHeaders.of(HttpMethod.GET, "/2/default/bean4?foo=100")
-                                                  .setObject(HttpHeaderNames.of("foo"), 200);
+        final RequestHeaders reqHeaders = RequestHeaders.of(HttpMethod.GET, "/2/default/bean4?foo=100",
+                                                            HttpHeaderNames.of("foo"), 200);
 
         final AggregatedHttpMessage response = client.execute(reqHeaders).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);

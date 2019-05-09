@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,227 +13,273 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.common;
 
-import static java.util.Objects.requireNonNull;
-
-import java.util.Iterator;
-import java.util.Map.Entry;
-
-import javax.annotation.Nullable;
+import java.time.Instant;
+import java.time.temporal.TemporalAccessor;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.function.Consumer;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 
-import io.netty.handler.codec.Headers;
-import io.netty.util.AsciiString;
-
 /**
- * HTTP/2 headers.
+ * Immutable HTTP/2 headers.
+ *
+ * <h3>Building a new {@link HttpHeaders}</h3>
+ *
+ * <p>You can use the {@link HttpHeaders#of(CharSequence, String) HttpHeaders.of()} factory methods or
+ * the {@link HttpHeadersBuilder} to build a new {@link HttpHeaders} from scratch:</p>
+ *
+ * <pre>{@code
+ * // Using of()
+ * HttpHeaders headersWithOf =
+ *     HttpHeaders.of(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=utf-8",
+ *                    HttpHeaderNames.CONTENT_LENGTH, "42");
+ *
+ * // Using builder()
+ * HttpHeaders headersWithBuilder =
+ *     HttpHeaders.builder()
+ *                .add(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=utf-8")
+ *                .add(HttpHeaderNames.CONTENT_LENGTH, "42")
+ *                .build();
+ *
+ * assert headersWithOf.equals(headersWithBuilder);
+ * }</pre>
+ *
+ * <h3>Building a new {@link HttpHeaders} from an existing one</h3>
+ *
+ * <p>You can use {@link HttpHeaders#toBuilder()} or {@link HttpHeaders#withMutations(Consumer)} to build
+ * a new {@link HttpHeaders} derived from an existing one:</p>
+ *
+ * <pre>{@code
+ * HttpHeaders headers = HttpHeaders.of("name1", "value0")
+ *
+ * // Using toBuilder()
+ * HttpHeaders headersWithToBuilder = headers.toBuilder()
+ *                                           .set("name1", "value1")
+ *                                           .add("name2", "value2")
+ *                                           .build();
+ * // Using withMutations()
+ * HttpHeaders headersWithMutations = headers.withMutations(builder -> {
+ *     builder.set("name1", "value1");
+ *     builder.add("name2", "value2");
+ * });
+ *
+ * assert headersWithToBuilder.equals(headersWithMutations);
+ *
+ * // Note that the original headers remain unmodified.
+ * assert !headers.equals(headersWithToBuilder);
+ * assert !headers.equals(headersWithMutations);
+ * }</pre>
+ *
+ * <h3><a name="object-values">Specifying a non-{@link String} header value</a></h3>
+ *
+ * <p>Certain header values are better represented as a Java object than as a {@link String}.
+ * For example, it is more convenient to specify {@code "content-length"}, {@code "content-type"} and
+ * {@code "date"} header as {@link Integer}, {@link MediaType} and {@link Instant} (or {@link Date})
+ * respectively. Armeria's HTTP header API allows you to specify a Java object of well-known type
+ * as a header value by converting it into an HTTP-friendly {@link String} representation:</p>
+ *
+ * <ul>
+ *   <li>{@link Number}, {@link CharSequence} and {@link MediaType}
+ *     <ul>
+ *       <li>Converted via {@code toString()}</li>
+ *       <li>e.g. {@code "42"}, {@code "string"}, {@code "text/plain; charset=utf-8"}</li>
+ *     </ul>
+ *   </li>
+ *   <li>{@link CacheControl}
+ *     <ul>
+ *       <li>Converted via {@link CacheControl#asHeaderValue() asHeaderValue()}</li>
+ *       <li>e.g. {@code "no-cache, no-store, must-revalidate"}</li>
+ *     </ul>
+ *   </li>
+ *   <li>{@link Instant}, {@link TemporalAccessor}, {@link Date} and {@link Calendar}
+ *     <ul>
+ *       <li>Converted into a time and date string as specified in
+ *         <a href="https://tools.ietf.org/html/rfc1123#page-55">RFC1123</a></li>
+ *       <li>e.g. {@code Sun, 27 Nov 2016 19:37:15 UTC}</li>
+ *     </ul>
+ *   </li>
+ *   <li>All other types
+ *     <ul><li>Converted via {@code toString()}</li></ul>
+ *   </li>
+ * </ul>
+ *
+ * <h4>Using {@link HttpHeaders#of(CharSequence, Object) HttpHeaders.of()} factory methods</h4>
+ *
+ * <pre>{@code
+ * HttpHeaders headers =
+ *     HttpHeaders.of(HttpHeaderNames.CONTENT_LENGTH, 42,
+ *                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
+ *                    HttpHeaderNames.DATE, Instant.now());
+ * }</pre>
+ *
+ * <h4>Using {@link HttpHeadersBuilder}</h4>
+ *
+ * <pre>{@code
+ * HttpHeaders headers =
+ *     HttpHeaders.builder()
+ *                .setObject(HttpHeaderNames.CONTENT_LENGTH, 42)
+ *                .setObject(HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8)
+ *                .setObject(HttpHeaderNames.DATE, Instant.now())
+ *                .build();
+ * }</pre>
+ *
+ * <h4>Specifying value type explicitly</h4>
+ *
+ * <p>You might prefer type-safe setters for more efficiency and less ambiguity:</p>
+ *
+ * <pre>{@code
+ * HttpHeaders headers =
+ *     HttpHeaders.builder()
+ *                .setInt(HttpHeaderNames.CONTENT_LENGTH, 42)
+ *                .set(HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8.toString())
+ *                .setTimeMillis(HttpHeaderNames.DATE, System.currentTimeMillis())
+ *                .build();
+ * }</pre>
+ *
+ * @see RequestHeaders
+ * @see ResponseHeaders
  */
 @JsonSerialize(using = HttpHeadersJsonSerializer.class)
 @JsonDeserialize(using = HttpHeadersJsonDeserializer.class)
-public interface HttpHeaders extends HttpObject, Headers<AsciiString, String, HttpHeaders> {
+public interface HttpHeaders extends HttpObject, HttpHeaderGetters {
 
     /**
-     * An immutable empty HTTP/2 headers.
+     * An empty {@link HttpHeaders}.
+     *
+     * @deprecated Use {@link #of()}.
      */
-    HttpHeaders EMPTY_HEADERS = new DefaultHttpHeaders(false, 0).asImmutable();
+    @Deprecated
+    HttpHeaders EMPTY_HEADERS = of();
 
     /**
-     * Returns new empty HTTP headers.
+     * Returns a new empty builder.
+     */
+    static HttpHeadersBuilder builder() {
+        return new DefaultHttpHeadersBuilder();
+    }
+
+    /**
+     * Returns an empty {@link HttpHeaders}.
      */
     static HttpHeaders of() {
-        return new DefaultHttpHeaders();
+        return DefaultHttpHeaders.EMPTY;
     }
 
     /**
-     * Returns new HTTP request headers.
+     * Returns a new {@link HttpHeaders} with the specified header.
      */
-    static HttpHeaders of(HttpMethod method, String path) {
-        return new DefaultHttpHeaders().method(method).path(path);
+    static HttpHeaders of(CharSequence name, String value) {
+        return builder().add(name, value).build();
     }
 
     /**
-     * Returns new HTTP response headers.
+     * Returns a new {@link HttpHeaders} with the specified header. The value is converted into
+     * a {@link String} as explained in <a href="#object-values">Specifying a non-String header value</a>.
      */
-    static HttpHeaders of(int statusCode) {
-        return of(HttpStatus.valueOf(statusCode));
+    static HttpHeaders of(CharSequence name, Object value) {
+        return builder().addObject(name, value).build();
     }
 
     /**
-     * Returns new HTTP response headers.
+     * Returns a new {@link HttpHeaders} with the specified headers.
      */
-    static HttpHeaders of(HttpStatus status) {
-        return new DefaultHttpHeaders().status(status);
+    static HttpHeaders of(CharSequence name1, String value1,
+                          CharSequence name2, String value2) {
+        return builder().add(name1, value1)
+                        .add(name2, value2)
+                        .build();
     }
 
     /**
-     * Returns new HTTP headers with a single entry.
+     * Returns a new {@link HttpHeaders} with the specified headers. The values are converted into
+     * {@link String}s as explained in <a href="#object-values">Specifying a non-String header value</a>.
      */
-    static HttpHeaders of(AsciiString name, String value) {
-        return new DefaultHttpHeaders().add(name, value);
+    static HttpHeaders of(CharSequence name1, Object value1,
+                          CharSequence name2, Object value2) {
+        return builder().addObject(name1, value1)
+                        .addObject(name2, value2)
+                        .build();
     }
 
     /**
-     * Returns new HTTP headers with two entries.
+     * Returns a new {@link HttpHeaders} with the specified headers.
      */
-    static HttpHeaders of(AsciiString name1, String value1, AsciiString name2, String value2) {
-        return new DefaultHttpHeaders().add(name1, value1).add(name2, value2);
+    static HttpHeaders of(CharSequence name1, String value1,
+                          CharSequence name2, String value2,
+                          CharSequence name3, String value3) {
+        return builder().add(name1, value1)
+                        .add(name2, value2)
+                        .add(name3, value3)
+                        .build();
     }
 
     /**
-     * Returns new HTTP headers with three entries.
+     * Returns a new {@link HttpHeaders} with the specified headers. The values are converted into
+     * {@link String}s as explained in <a href="#object-values">Specifying a non-String header value</a>.
      */
-    static HttpHeaders of(AsciiString name1, String value1, AsciiString name2, String value2,
-                          AsciiString name3, String value3) {
-
-        return new DefaultHttpHeaders().add(name1, value1).add(name2, value2)
-                                       .add(name3, value3);
+    static HttpHeaders of(CharSequence name1, Object value1,
+                          CharSequence name2, Object value2,
+                          CharSequence name3, Object value3) {
+        return builder().addObject(name1, value1)
+                        .addObject(name2, value2)
+                        .addObject(name3, value3)
+                        .build();
     }
 
     /**
-     * Returns new HTTP headers with four entries.
+     * Returns a new {@link HttpHeaders} with the specified headers.
      */
-    static HttpHeaders of(AsciiString name1, String value1, AsciiString name2, String value2,
-                          AsciiString name3, String value3, AsciiString name4, String value4) {
-
-        return new DefaultHttpHeaders().add(name1, value1).add(name2, value2)
-                                       .add(name3, value3).add(name4, value4);
+    static HttpHeaders of(CharSequence name1, String value1,
+                          CharSequence name2, String value2,
+                          CharSequence name3, String value3,
+                          CharSequence name4, String value4) {
+        return builder().add(name1, value1)
+                        .add(name2, value2)
+                        .add(name3, value3)
+                        .add(name4, value4)
+                        .build();
     }
 
     /**
-     * Returns a copy of the specified {@link HttpHeaders}.
+     * Returns a new {@link HttpHeaders} with the specified headers. The values are converted into
+     * {@link String}s as explained in <a href="#object-values">Specifying a non-String header value</a>.
      */
-    static HttpHeaders copyOf(HttpHeaders headers) {
-        return of().set(requireNonNull(headers, "headers"));
+    static HttpHeaders of(CharSequence name1, Object value1,
+                          CharSequence name2, Object value2,
+                          CharSequence name3, Object value3,
+                          CharSequence name4, Object value4) {
+        return builder().addObject(name1, value1)
+                        .addObject(name2, value2)
+                        .addObject(name3, value3)
+                        .addObject(name4, value4)
+                        .build();
     }
 
     /**
-     * Returns an iterator over all HTTP/2 headers. The iteration order is as follows:
-     *   1. All pseudo headers (order not specified).
-     *   2. All non-pseudo headers (in insertion order).
+     * Returns a new builder created from the entries of this headers.
+     *
+     * @see #withMutations(Consumer)
      */
-    @Override
-    Iterator<Entry<AsciiString, String>> iterator();
+    HttpHeadersBuilder toBuilder();
 
     /**
-     * Gets the {@link HttpHeaderNames#METHOD} header or {@code null} if there is no such header.
-     * {@link HttpMethod#UNKNOWN} is returned if the value of the {@link HttpHeaderNames#METHOD} header is
-     * not defined in {@link HttpMethod}.
-     */
-    @Nullable
-    HttpMethod method();
-
-    /**
-     * Sets the {@link HttpHeaderNames#METHOD} header.
-     */
-    HttpHeaders method(HttpMethod method);
-
-    /**
-     * Gets the {@link HttpHeaderNames#SCHEME} header or {@code null} if there is no such header.
-     */
-    @Nullable
-    String scheme();
-
-    /**
-     * Sets the {@link HttpHeaderNames#SCHEME} header.
-     */
-    HttpHeaders scheme(String scheme);
-
-    /**
-     * Gets the {@link HttpHeaderNames#AUTHORITY} header or {@code null} if there is no such header.
-     */
-    @Nullable
-    String authority();
-
-    /**
-     * Sets the {@link HttpHeaderNames#AUTHORITY} header.
-     */
-    HttpHeaders authority(String authority);
-
-    /**
-     * Gets the {@link HttpHeaderNames#PATH} header or {@code null} if there is no such header.
-     */
-    @Nullable
-    String path();
-
-    /**
-     * Sets the {@link HttpHeaderNames#PATH} header.
-     */
-    HttpHeaders path(String path);
-
-    /**
-     * Gets the {@link HttpHeaderNames#STATUS} header or {@code null} if there is no such header.
-     */
-    @Nullable
-    HttpStatus status();
-
-    /**
-     * Sets the {@link HttpHeaderNames#STATUS} header.
-     */
-    HttpHeaders status(int statusCode);
-
-    /**
-     * Sets the {@link HttpHeaderNames#STATUS} header.
-     */
-    HttpHeaders status(HttpStatus status);
-
-    /**
-     * Returns the value of the {@code 'content-type'} header.
-     * @return the valid header value if present. {@code null} otherwise.
-     */
-    @Nullable
-    MediaType contentType();
-
-    /**
-     * Sets the {@link HttpHeaderNames#CONTENT_TYPE} header.
-     */
-    HttpHeaders contentType(MediaType mediaType);
-
-    /**
-     * Copies the entries missing in this headers from the specified {@link Headers}.
-     * This method is a shortcut of the following code:
+     * Returns a new headers which is the result from the mutation by the specified {@link Consumer}.
+     * This method is a shortcut of:
      * <pre>{@code
-     * headers.names().forEach(name -> {
-     *      if (!contains(name)) {
-     *          set(name, headers.getAll(name));
-     *      }
-     * });
+     * builder = toBuilder();
+     * mutator.accept(builder);
+     * return builder.build();
      * }</pre>
+     *
+     * @see #toBuilder()
      */
-    default HttpHeaders setAllIfAbsent(Headers<AsciiString, String, ?> headers) {
-        requireNonNull(headers, "headers");
-        if (!headers.isEmpty()) {
-            headers.names().forEach(name -> {
-                if (!contains(name)) {
-                    set(name, headers.getAll(name));
-                }
-            });
-        }
-        return this;
-    }
-
-    /**
-     * Returns the immutable view of this headers.
-     */
-    default HttpHeaders asImmutable() {
-        return new ImmutableHttpHeaders(this);
-    }
-
-    /**
-     * Returns whether this is immutable or not.
-     */
-    default boolean isImmutable() {
-        return this instanceof ImmutableHttpHeaders;
-    }
-
-    /**
-     * Returns a mutable copy of this headers.
-     * If it is already mutable, it returns {@code this}.
-     */
-    default HttpHeaders toMutable() {
-        return this;
+    default HttpHeaders withMutations(Consumer<HttpHeadersBuilder> mutator) {
+        final HttpHeadersBuilder builder = toBuilder();
+        mutator.accept(builder);
+        return builder.build();
     }
 }

@@ -59,6 +59,16 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     }
 
     @Override
+    public <E extends Request> E request() {
+        return delegate().request();
+    }
+
+    @Override
+    public boolean updateRequest(Request req) {
+        return delegate().updateRequest(req);
+    }
+
+    @Override
     public SessionProtocol sessionProtocol() {
         return delegate().sessionProtocol();
     }
@@ -99,11 +109,6 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     @Override
     public String query() {
         return delegate().query();
-    }
-
-    @Override
-    public <E extends Request> E request() {
-        return delegate().request();
     }
 
     @Override

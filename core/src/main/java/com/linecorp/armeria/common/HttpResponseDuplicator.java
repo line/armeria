@@ -91,8 +91,13 @@ public class HttpResponseDuplicator
     }
 
     @Override
-    protected HttpResponse doDuplicateStream(StreamMessage<HttpObject> delegate) {
-        return new DuplicateHttpResponse(delegate);
+    public HttpResponse duplicateStream() {
+        return new DuplicateHttpResponse(super.duplicateStream());
+    }
+
+    @Override
+    public HttpResponse duplicateStream(boolean lastStream) {
+        return new DuplicateHttpResponse(super.duplicateStream(lastStream));
     }
 
     private static class DuplicateHttpResponse

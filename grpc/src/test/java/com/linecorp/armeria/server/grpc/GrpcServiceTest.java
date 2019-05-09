@@ -24,12 +24,13 @@ import org.junit.Test;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.PathMappingResult;
@@ -49,60 +50,61 @@ public class GrpcServiceTest {
         final ServiceRequestContext ctx = ServiceRequestContext.of(req);
         final HttpResponse response = grpcService.doPost(ctx, req);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
-                HttpHeaders.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
-                           .contentType(MediaType.PLAIN_TEXT_UTF_8)
-                           .setInt(HttpHeaderNames.CONTENT_LENGTH, 39),
+                ResponseHeaders.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                                   HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
+                                   HttpHeaderNames.CONTENT_LENGTH, 39),
                 HttpData.ofUtf8("Missing or invalid Content-Type header.")));
     }
 
     @Test
     public void badContentType() throws Exception {
         final HttpRequest req = HttpRequest.of(
-                HttpHeaders.of(HttpMethod.POST, "/grpc.testing.TestService.UnaryCall")
-                           .contentType(MediaType.JSON_UTF_8));
+                RequestHeaders.of(HttpMethod.POST, "/grpc.testing.TestService.UnaryCall",
+                                  HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8));
         final ServiceRequestContext ctx = ServiceRequestContext.of(req);
         final HttpResponse response = grpcService.doPost(ctx, req);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
-                HttpHeaders.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
-                           .contentType(MediaType.PLAIN_TEXT_UTF_8)
-                           .setInt(HttpHeaderNames.CONTENT_LENGTH, 39),
+                ResponseHeaders.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                                   HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
+                                   HttpHeaderNames.CONTENT_LENGTH, 39),
                 HttpData.ofUtf8("Missing or invalid Content-Type header.")));
     }
 
     @Test
     public void pathMissingSlash() throws Exception {
         final HttpRequest req = HttpRequest.of(
-                HttpHeaders.of(HttpMethod.POST, "/grpc.testing.TestService.UnaryCall")
-                           .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto"));
+                RequestHeaders.of(HttpMethod.POST, "/grpc.testing.TestService.UnaryCall",
+                                  HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto"));
         final PathMappingResult pathMappingResult = PathMappingResult.of("grpc.testing.TestService.UnaryCall");
         final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(req)
                                                                       .pathMappingResult(pathMappingResult)
                                                                       .build();
         final HttpResponse response = grpcService.doPost(ctx, req);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
-                HttpHeaders.of(HttpStatus.BAD_REQUEST)
-                           .contentType(MediaType.PLAIN_TEXT_UTF_8)
-                           .setInt(HttpHeaderNames.CONTENT_LENGTH, 13),
+                ResponseHeaders.of(HttpStatus.BAD_REQUEST,
+                                   HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
+                                   HttpHeaderNames.CONTENT_LENGTH, 13),
                 HttpData.ofUtf8("Invalid path.")));
     }
 
     @Test
     public void missingMethod() throws Exception {
         final HttpRequest req = HttpRequest.of(
-                HttpHeaders.of(HttpMethod.POST, "/grpc.testing.TestService/FooCall")
-                           .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto"));
+                RequestHeaders.of(HttpMethod.POST, "/grpc.testing.TestService/FooCall",
+                                  HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto"));
         final PathMappingResult pathMappingResult = PathMappingResult.of("/grpc.testing.TestService/FooCall");
         final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(req)
                                                                       .pathMappingResult(pathMappingResult)
                                                                       .build();
         final HttpResponse response = grpcService.doPost(ctx, req);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
-                HttpHeaders.of(HttpStatus.OK)
-                           .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto")
-                           .set(HttpHeaderNames.of("grpc-status"), "12")
-                           .set(HttpHeaderNames.of("grpc-message"),
-                                "Method not found: grpc.testing.TestService/FooCall")
-                           .setInt(HttpHeaderNames.CONTENT_LENGTH, 0),
+                ResponseHeaders.builder(HttpStatus.OK)
+                               .endOfStream(true)
+                               .add(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto")
+                               .addInt("grpc-status", 12)
+                               .add("grpc-message", "Method not found: grpc.testing.TestService/FooCall")
+                               .addInt(HttpHeaderNames.CONTENT_LENGTH, 0)
+                               .build(),
                 HttpData.EMPTY_DATA));
     }
 

@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.Http2GoAwayHandler;
 import com.linecorp.armeria.internal.InboundTrafficController;
@@ -129,8 +130,8 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             }
 
             req = new DecodedHttpRequest(ctx.channel().eventLoop(), ++nextId, streamId,
-                                         ArmeriaHttpUtil.toArmeria(headers, endOfStream), true,
-                                         inboundTrafficController, cfg.maxRequestLength());
+                                         (RequestHeaders) ArmeriaHttpUtil.toArmeria(headers, true, endOfStream),
+                                         true, inboundTrafficController, cfg.maxRequestLength());
 
             // Close the request early when it is sure that there will be
             // neither content nor trailing headers.
@@ -142,7 +143,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             ctx.fireChannelRead(req);
         } else {
             try {
-                req.write(ArmeriaHttpUtil.toArmeria(headers, endOfStream));
+                req.write(ArmeriaHttpUtil.toArmeria(headers, true, endOfStream));
             } catch (Throwable t) {
                 req.close(t);
                 throw connectionError(INTERNAL_ERROR, t, "failed to consume a HEADERS frame");

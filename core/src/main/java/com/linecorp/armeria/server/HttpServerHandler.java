@@ -41,7 +41,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -51,6 +50,10 @@ import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -96,10 +99,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private static final String ALLOWED_METHODS_STRING =
             HttpMethod.knownMethods().stream().map(HttpMethod::name).collect(Collectors.joining(","));
 
-    private static final String MSG_MISSING_REQUEST_PATH = HttpStatus.BAD_REQUEST + "\nMissing request path";
     private static final String MSG_INVALID_REQUEST_PATH = HttpStatus.BAD_REQUEST + "\nInvalid request path";
 
-    private static final HttpData DATA_MISSING_REQUEST_PATH = HttpData.ofUtf8(MSG_MISSING_REQUEST_PATH);
     private static final HttpData DATA_INVALID_REQUEST_PATH = HttpData.ofUtf8(MSG_INVALID_REQUEST_PATH);
 
     private static final ChannelFutureListener CLOSE = future -> {
@@ -301,15 +302,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             handledLastRequest = true;
         }
 
-        final HttpHeaders headers = req.headers();
+        RequestHeaders headers = req.headers();
 
         // Handle 'OPTIONS * HTTP/1.1'.
         final String originalPath = headers.path();
-        if (originalPath == null) {
-            respond(ctx, req, HttpStatus.BAD_REQUEST, DATA_MISSING_REQUEST_PATH,
-                    new ProtocolViolationException(MSG_MISSING_REQUEST_PATH));
-            return;
-        }
         if (originalPath.isEmpty() || originalPath.charAt(0) != '/') {
             if (headers.method() == HttpMethod.OPTIONS && "*".equals(originalPath)) {
                 handleOptions(ctx, req);
@@ -326,8 +322,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             return;
         }
 
-        fillSchemeIfMissing(headers);
-        final String hostname = hostname(ctx, headers);
+        headers = fillSchemeAndAuthorityIfMissing(ctx, headers);
+        final String hostname = hostname(headers);
         final VirtualHost host = config.findVirtualHost(hostname);
 
         final PathMappingContext mappingCtx =
@@ -453,8 +449,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private void handleOptions(ChannelHandlerContext ctx, DecodedHttpRequest req) {
         respond(ctx,
                 newEarlyRespondingRequestContext(ctx, req, req.path(), null),
-                HttpHeaders.of(HttpStatus.OK)
-                           .set(HttpHeaderNames.ALLOW, ALLOWED_METHODS_STRING),
+                ResponseHeaders.builder(HttpStatus.OK)
+                               .add(HttpHeaderNames.ALLOW, ALLOWED_METHODS_STRING),
                 null, null);
     }
 
@@ -488,37 +484,47 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         respond(ctx, req, HttpStatus.NOT_FOUND, null, null);
     }
 
-    private void fillSchemeIfMissing(HttpHeaders headers) {
-        if (headers.scheme() == null) {
-            headers.scheme(protocol.isTls() ? "https" : "http");
+    private RequestHeaders fillSchemeAndAuthorityIfMissing(ChannelHandlerContext ctx, RequestHeaders headers) {
+        final String scheme = headers.scheme();
+        final String authority = headers.authority();
+        if (scheme != null && authority != null) {
+            return headers;
         }
-    }
 
-    private String hostname(ChannelHandlerContext ctx, HttpHeaders headers) {
-        final String hostname = headers.authority();
-        if (hostname == null) {
-            // Fill the authority with the default host name and current port, just in case the client did not
-            // send it.
+        final RequestHeadersBuilder builder = headers.toBuilder();
+        if (scheme == null) {
+            // Fill in the scheme, just in case the client did not send it.
+            builder.add(HttpHeaderNames.SCHEME, protocol.isTls() ? "https" : "http");
+        }
+
+        if (authority == null) {
+            // Fill in the authority with the default host name and current port, just in case the client
+            // did not send it.
             final String defaultHostname = config.defaultVirtualHost().defaultHostname();
             final int port = ((InetSocketAddress) ctx.channel().localAddress()).getPort();
-            headers.authority(defaultHostname + ':' + port);
-            return defaultHostname;
+            builder.add(HttpHeaderNames.AUTHORITY, defaultHostname + ':' + port);
         }
 
-        final int hostnameColonIdx = hostname.lastIndexOf(':');
+        return builder.build();
+    }
+
+    private static String hostname(RequestHeaders headers) {
+        final String authority = headers.authority();
+        assert authority != null;
+        final int hostnameColonIdx = authority.lastIndexOf(':');
         if (hostnameColonIdx < 0) {
-            return hostname;
+            return authority;
         }
 
-        return hostname.substring(0, hostnameColonIdx);
+        return authority.substring(0, hostnameColonIdx);
     }
 
     private void redirect(ChannelHandlerContext ctx, DecodedHttpRequest req,
                           PathAndQuery pathAndQuery, String location) {
         respond(ctx,
                 newEarlyRespondingRequestContext(ctx, req, pathAndQuery.path(), pathAndQuery.query()),
-                HttpHeaders.of(HttpStatus.TEMPORARY_REDIRECT)
-                           .set(HttpHeaderNames.LOCATION, location),
+                ResponseHeaders.builder(HttpStatus.TEMPORARY_REDIRECT)
+                               .add(HttpHeaderNames.LOCATION, location),
                 null, null);
     }
 
@@ -538,7 +544,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                          HttpStatus status, @Nullable HttpData resContent, @Nullable Throwable cause) {
 
         if (status.code() < 400) {
-            respond(ctx, reqCtx, HttpHeaders.of(status), null, cause);
+            respond(ctx, reqCtx, ResponseHeaders.builder(status), null, cause);
             return;
         }
 
@@ -551,13 +557,13 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         respond(ctx, reqCtx,
-                HttpHeaders.of(status)
-                           .contentType(ERROR_CONTENT_TYPE),
+                ResponseHeaders.builder(status)
+                               .addObject(HttpHeaderNames.CONTENT_TYPE, ERROR_CONTENT_TYPE),
                 resContent, cause);
     }
 
-    private void respond(ChannelHandlerContext ctx, RequestContext reqCtx,
-                         HttpHeaders resHeaders, @Nullable HttpData resContent, @Nullable Throwable cause) {
+    private void respond(ChannelHandlerContext ctx, RequestContext reqCtx, ResponseHeadersBuilder resHeaders,
+                         @Nullable HttpData resContent, @Nullable Throwable cause) {
         if (!handledLastRequest) {
             respond0(reqCtx, true, resHeaders, resContent, cause).addListener(CLOSE_ON_FAILURE);
         } else {
@@ -571,7 +577,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     private ChannelFuture respond0(
             RequestContext reqCtx, boolean addKeepAlive,
-            HttpHeaders resHeaders, @Nullable HttpData resContent, @Nullable Throwable cause) {
+            ResponseHeadersBuilder resHeaders, @Nullable HttpData resContent, @Nullable Throwable cause) {
 
         assert resContent == null || !resContent.isEmpty() : resContent;
 
@@ -584,18 +590,18 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         logBuilder.startResponse();
         assert responseEncoder != null;
-        final HttpHeaders mutableHeaders = resHeaders.toMutable();
         if (addKeepAlive) {
-            addKeepAliveHeaders(mutableHeaders);
+            addKeepAliveHeaders(resHeaders);
         }
         // Note that it is perfectly fine not to set the 'content-length' header to the last response
         // of an HTTP/1 connection. We set it anyway to work around overly strict HTTP clients that always
         // require a 'content-length' header for non-chunked responses.
-        setContentLength(req, mutableHeaders, hasContent ? resContent.length() : 0);
+        setContentLength(req, resHeaders, hasContent ? resContent.length() : 0);
 
+        final ResponseHeaders immutableResHeaders = resHeaders.build();
         ChannelFuture future = responseEncoder.writeHeaders(
-                req.id(), req.streamId(), mutableHeaders, !hasContent);
-        logBuilder.responseHeaders(mutableHeaders);
+                req.id(), req.streamId(), immutableResHeaders, !hasContent);
+        logBuilder.responseHeaders(immutableResHeaders);
         if (hasContent) {
             logBuilder.increaseResponseLength(resContent);
             future = responseEncoder.writeData(req.id(), req.streamId(), resContent, true);
@@ -617,7 +623,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
      * Sets the keep alive header as per:
      * - https://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.html#Connection
      */
-    private void addKeepAliveHeaders(HttpHeaders headers) {
+    private void addKeepAliveHeaders(ResponseHeadersBuilder headers) {
         if (protocol == H1 || protocol == H1C) {
             headers.set(HttpHeaderNames.CONNECTION, "keep-alive");
         } else {
@@ -629,7 +635,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     /**
      * Sets the 'content-length' header to the response.
      */
-    private static void setContentLength(HttpRequest req, HttpHeaders headers, int contentLength) {
+    private static void setContentLength(HttpRequest req, ResponseHeadersBuilder headers,
+                                         int contentLength) {
         // https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.4
         // prohibits to send message body for below cases.
         // and in those cases, content should be empty.

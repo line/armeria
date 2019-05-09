@@ -32,11 +32,11 @@ import org.junit.Test;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -79,7 +79,7 @@ public class CachingHttpFileTest {
     @Test
     public void existentFile() throws Exception {
         final HttpFileAttributes attrs = new HttpFileAttributes(3, 0);
-        final HttpHeaders headers = HttpHeaders.of(200);
+        final ResponseHeaders headers = ResponseHeaders.of(200);
         final HttpFile uncached = mock(HttpFile.class);
         when(uncached.readAttributes()).thenReturn(attrs);
         when(uncached.readHeaders()).thenReturn(headers);
@@ -150,7 +150,7 @@ public class CachingHttpFileTest {
     @Test
     public void largeFile() throws Exception {
         final HttpFileAttributes attrs = new HttpFileAttributes(5, 0);
-        final HttpHeaders headers = HttpHeaders.of(200);
+        final ResponseHeaders headers = ResponseHeaders.of(200);
         final HttpResponse res = HttpResponse.of("large");
         final CompletableFuture<AggregatedHttpFile> aggregated =
                 CompletableFuture.completedFuture(HttpFile.of(HttpData.ofUtf8("large"), 0));

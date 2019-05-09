@@ -92,12 +92,12 @@ import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Get;
@@ -265,7 +265,9 @@ public class SamlServiceProviderTest {
                                            MessageContext<Response> message, @Nullable String sessionIndex,
                                            @Nullable String relayState) {
             return HttpResponse.of(headersWithLocation(firstNonNull(relayState, "/"))
-                                           .add(HttpHeaderNames.SET_COOKIE, setCookie));
+                                           .toBuilder()
+                                           .add(HttpHeaderNames.SET_COOKIE, setCookie)
+                                           .build());
         }
 
         @Override
@@ -307,6 +309,7 @@ public class SamlServiceProviderTest {
         final Pattern p = Pattern.compile(
                 "http://idp\\.example\\.com/saml/sso/redirect\\?" +
                 "SAMLRequest=([^&]+)&RelayState=([^&]+)&SigAlg=([^&]+)&Signature=(.+)$");
+        assertThat(location).isNotNull();
         assertThat(p.matcher(location).matches()).isTrue();
 
         final QueryStringDecoder decoder = new QueryStringDecoder(location, true);
@@ -332,8 +335,8 @@ public class SamlServiceProviderTest {
 
     @Test
     public void shouldBeAlreadyAuthenticated() throws Exception {
-        final HttpHeaders req = HttpHeaders.of(HttpMethod.GET, "/redirect")
-                                           .add(HttpHeaderNames.COOKIE, "test=test");
+        final RequestHeaders req = RequestHeaders.of(HttpMethod.GET, "/redirect",
+                                                     HttpHeaderNames.COOKIE, "test=test");
         final AggregatedHttpMessage resp = client.execute(req).aggregate().join();
         assertThat(resp.status()).isEqualTo(HttpStatus.OK);
         assertThat(resp.contentUtf8()).isEqualTo("authenticated");
@@ -402,7 +405,7 @@ public class SamlServiceProviderTest {
         assertThat(msg.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("/");
     }
 
-    private Response getAuthResponse(String recipient) throws Exception {
+    private static Response getAuthResponse(String recipient) throws Exception {
         // IdP entity ID
         final Issuer issuer = build(Issuer.DEFAULT_ELEMENT_NAME);
         issuer.setValue("http://idp.example.com/post");
@@ -500,10 +503,11 @@ public class SamlServiceProviderTest {
         final Pattern p = Pattern.compile(
                 "http://idp\\.example\\.com/saml/slo/redirect\\?" +
                 "SAMLResponse=([^&]+)&SigAlg=([^&]+)&Signature=(.+)$");
+        assertThat(location).isNotNull();
         assertThat(p.matcher(location).matches()).isTrue();
     }
 
-    private LogoutRequest getLogoutRequest(String destination, String issuerId) {
+    private static LogoutRequest getLogoutRequest(String destination, String issuerId) {
         final LogoutRequest logoutRequest = build(LogoutRequest.DEFAULT_ELEMENT_NAME);
 
         logoutRequest.setID(requestIdManager.newId());

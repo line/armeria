@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 
 /**
  * Holds the parameters which are required to find a service available to handle the request.
@@ -154,7 +155,7 @@ final class DefaultPathMappingContext implements PathMappingContext {
      * Returns a new {@link PathMappingContext} instance.
      */
     static PathMappingContext of(VirtualHost virtualHost, String hostname,
-                                 String path, @Nullable String query, HttpHeaders headers) {
+                                 String path, @Nullable String query, RequestHeaders headers) {
         return of(virtualHost, hostname, path, query, headers, false);
     }
 
@@ -163,7 +164,7 @@ final class DefaultPathMappingContext implements PathMappingContext {
      */
     static PathMappingContext of(VirtualHost virtualHost, String hostname,
                                  String path, @Nullable String query,
-                                 HttpHeaders headers, boolean isCorsPreflight) {
+                                 RequestHeaders headers, boolean isCorsPreflight) {
         return new DefaultPathMappingContext(virtualHost, hostname, headers.method(), path, query,
                                              headers.contentType(), extractAcceptTypes(headers),
                                              isCorsPreflight);
@@ -172,7 +173,7 @@ final class DefaultPathMappingContext implements PathMappingContext {
     @VisibleForTesting
     static List<MediaType> extractAcceptTypes(HttpHeaders headers) {
         final List<String> acceptHeaders = headers.getAll(HttpHeaderNames.ACCEPT);
-        if (acceptHeaders == null || acceptHeaders.isEmpty()) {
+        if (acceptHeaders.isEmpty()) {
             // No 'Accept' header means accepting everything.
             return ANY_TYPE;
         }

@@ -40,12 +40,13 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
@@ -76,7 +77,7 @@ public class HttpServerAbortingInfiniteStreamTest {
                 assertThat(ctx.sessionProtocol()).isEqualTo(protocol);
 
                 final HttpResponseWriter writer = HttpResponse.streaming();
-                writer.write(HttpHeaders.of(HttpStatus.OK));
+                writer.write(ResponseHeaders.of(HttpStatus.OK));
 
                 // Do not close the response writer because it returns data infinitely.
                 writer.onDemand(new Runnable() {
@@ -107,7 +108,7 @@ public class HttpServerAbortingInfiniteStreamTest {
     @Test
     public void shouldCancelInfiniteStreamImmediately() {
         final HttpClient client = HttpClient.of(server.uri(protocol, "/"));
-        final HttpResponse response = client.execute(HttpHeaders.of(HttpMethod.GET, "/infinity"));
+        final HttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/infinity"));
 
         response.subscribe(new Subscriber<HttpObject>() {
             @Nullable

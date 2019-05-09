@@ -18,11 +18,11 @@ import com.google.common.base.Strings;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.auth.Authorizer;
 import com.linecorp.armeria.server.saml.SamlNameIdFormat;
@@ -85,9 +85,9 @@ final class MyAuthHandler implements Authorizer<HttpRequest>, SamlSingleSignOnHa
         cookie.setMaxAge(60);
         cookie.setPath("/");
         return HttpResponse.of(
-                HttpHeaders.of(HttpStatus.OK)
-                           .contentType(MediaType.HTML_UTF_8)
-                           .add(HttpHeaderNames.SET_COOKIE, ServerCookieEncoder.LAX.encode(cookie)),
+                ResponseHeaders.of(HttpStatus.OK,
+                                   HttpHeaderNames.CONTENT_TYPE, MediaType.HTML_UTF_8,
+                                   HttpHeaderNames.SET_COOKIE, ServerCookieEncoder.LAX.encode(cookie)),
                 HttpData.ofUtf8("<html><body onLoad=\"window.location.href='/welcome'\"></body></html>"));
     }
 

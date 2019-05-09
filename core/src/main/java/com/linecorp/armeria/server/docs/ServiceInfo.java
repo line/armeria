@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server.docs;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
 
@@ -34,7 +33,6 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
-import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.server.Service;
@@ -81,10 +79,8 @@ public final class ServiceInfo {
 
         this.methods = ImmutableSortedSet.copyOf(comparing(MethodInfo::name)
                                                          .thenComparing(MethodInfo::httpMethod), methods);
-        this.exampleHttpHeaders = Streams.stream(requireNonNull(exampleHttpHeaders, "exampleHttpHeaders"))
-                                         .map(HttpHeaders::copyOf)
-                                         .map(HttpHeaders::asImmutable)
-                                         .collect(toImmutableList());
+        this.exampleHttpHeaders = ImmutableList.copyOf(requireNonNull(exampleHttpHeaders,
+                                                                      "exampleHttpHeaders"));
         this.docString = Strings.emptyToNull(docString);
     }
 

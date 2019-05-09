@@ -94,16 +94,5 @@ public class StreamMessageDuplicatorVerification extends StreamMessageVerificati
         StreamMessageDuplicator(StreamMessage<Long> publisher) {
             super(publisher, l -> 8, null, 0);
         }
-
-        @Override
-        public StreamMessage<Long> doDuplicateStream(StreamMessage<Long> delegate) {
-            return new MulticastStream(delegate);
-        }
-
-        private static class MulticastStream extends StreamMessageWrapper<Long> {
-            MulticastStream(StreamMessage<Long> delegate) {
-                super(delegate);
-            }
-        }
     }
 }

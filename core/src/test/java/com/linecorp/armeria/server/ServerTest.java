@@ -51,11 +51,11 @@ import org.junit.Test;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.CompletionActions;
@@ -460,7 +460,7 @@ public class ServerTest {
 
         protected HttpResponse echo(AggregatedHttpMessage aReq) {
             return HttpResponse.of(
-                    HttpHeaders.of(HttpStatus.OK),
+                    ResponseHeaders.of(HttpStatus.OK),
                     aReq.content());
         }
     }

@@ -95,7 +95,6 @@ public abstract class AbstractThriftOverHttpTest {
 
     static {
         final ServerBuilder sb = new ServerBuilder();
-
         try {
             sb.http(0);
             sb.https(0);
@@ -429,7 +428,7 @@ public abstract class AbstractThriftOverHttpTest {
     }
 
     protected final TTransport newTransport(String scheme, String path) throws TTransportException {
-        return newTransport(scheme, path, HttpHeaders.EMPTY_HEADERS);
+        return newTransport(scheme, path, HttpHeaders.of());
     }
 
     protected final TTransport newTransport(String scheme, String path,

@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
@@ -75,7 +76,7 @@ final class HttpDataFile extends AbstractHttpFile implements AggregatedHttpFile 
     }
 
     @Override
-    public HttpHeaders readHeaders() {
+    public ResponseHeaders readHeaders() {
         try {
             return super.readHeaders();
         } catch (IOException e) {
@@ -84,7 +85,7 @@ final class HttpDataFile extends AbstractHttpFile implements AggregatedHttpFile 
     }
 
     @Override
-    protected HttpResponse doRead(HttpHeaders headers, long length,
+    protected HttpResponse doRead(ResponseHeaders headers, long length,
                                   Executor fileReadExecutor, ByteBufAllocator alloc) {
         if (content instanceof ByteBufHolder) {
             final ByteBufHolder holder = (ByteBufHolder) content;

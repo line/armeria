@@ -67,11 +67,13 @@ import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.FallthroughException;
 import com.linecorp.armeria.internal.annotation.AnnotatedBeanFactoryRegistry.BeanFactoryId;
@@ -534,6 +536,13 @@ final class AnnotatedValueResolver {
             return builder(annotatedElement, type)
                     .supportOptional(true)
                     .resolver((unused, ctx) -> ctx.request())
+                    .build();
+        }
+
+        if (actual == HttpHeaders.class || actual == RequestHeaders.class) {
+            return builder(annotatedElement, type)
+                    .supportOptional(true)
+                    .resolver((unused, ctx) -> ctx.request().headers())
                     .build();
         }
 

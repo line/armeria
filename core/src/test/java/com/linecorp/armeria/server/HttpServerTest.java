@@ -81,6 +81,8 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
@@ -191,14 +193,14 @@ public class HttpServerTest {
                     // Send 9 informational responses before sending the actual response.
                     for (int i = 1; i <= 9; i++) {
                         ctx.eventLoop().schedule(
-                                () -> res.write(HttpHeaders.of(HttpStatus.PROCESSING)),
+                                () -> res.write(ResponseHeaders.of(HttpStatus.PROCESSING)),
                                 delayMillis * i / 10, TimeUnit.MILLISECONDS);
                     }
 
                     // Send the actual response.
                     ctx.eventLoop().schedule(
                             () -> {
-                                res.write(HttpHeaders.of(HttpStatus.OK));
+                                res.write(ResponseHeaders.of(HttpStatus.OK));
                                 res.close();
                             },
                             delayMillis, TimeUnit.MILLISECONDS);
@@ -213,7 +215,7 @@ public class HttpServerTest {
                     final boolean pooled = "pooled".equals(ctx.query());
 
                     final HttpResponseWriter res = HttpResponse.streaming();
-                    res.write(HttpHeaders.of(HttpStatus.OK));
+                    res.write(ResponseHeaders.of(HttpStatus.OK));
 
                     // Send 10 characters ('0' - '9') at fixed rate.
                     for (int i = 0; i < 10; i++) {
@@ -243,16 +245,16 @@ public class HttpServerTest {
             sb.serviceUnder("/path", new AbstractHttpService() {
                 @Override
                 protected HttpResponse doHead(ServiceRequestContext ctx, HttpRequest req) {
-                    return HttpResponse.of(HttpHeaders.of(HttpStatus.OK)
-                                                      .setInt(HttpHeaderNames.CONTENT_LENGTH,
+                    return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK,
+                                                              HttpHeaderNames.CONTENT_LENGTH,
                                                               ctx.mappedPath().length()));
                 }
 
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     return HttpResponse.of(
-                            HttpHeaders.of(HttpStatus.OK)
-                                       .setInt(HttpHeaderNames.CONTENT_LENGTH,
+                            ResponseHeaders.of(HttpStatus.OK,
+                                               HttpHeaderNames.CONTENT_LENGTH,
                                                ctx.mappedPath().length()),
                             HttpData.ofAscii(ctx.mappedPath()));
                 }
@@ -262,7 +264,7 @@ public class HttpServerTest {
                 @Override
                 protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
                     final HttpResponseWriter res = HttpResponse.streaming();
-                    res.write(HttpHeaders.of(HttpStatus.OK));
+                    res.write(ResponseHeaders.of(HttpStatus.OK));
                     req.subscribe(new Subscriber<HttpObject>() {
                         private Subscription subscription;
 
@@ -298,7 +300,8 @@ public class HttpServerTest {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     return HttpResponse.of(
-                            HttpHeaders.of(HttpStatus.OK).contentType(MediaType.PLAIN_TEXT_UTF_8),
+                            ResponseHeaders.of(HttpStatus.OK,
+                                               HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8),
                             HttpData.ofUtf8("Armeria "),
                             HttpData.ofUtf8("is "),
                             HttpData.ofUtf8("awesome!"));
@@ -309,7 +312,8 @@ public class HttpServerTest {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     return HttpResponse.of(
-                            HttpHeaders.of(HttpStatus.OK).contentType(MediaType.PNG),
+                            ResponseHeaders.of(HttpStatus.OK,
+                                               HttpHeaderNames.CONTENT_TYPE, MediaType.PNG),
                             HttpData.ofUtf8("Armeria "),
                             HttpData.ofUtf8("is "),
                             HttpData.ofUtf8("awesome!"));
@@ -321,9 +325,9 @@ public class HttpServerTest {
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     final String response = Strings.repeat("a", 1023);
                     return HttpResponse.of(
-                            HttpHeaders.of(HttpStatus.OK)
-                                       .contentType(MediaType.PLAIN_TEXT_UTF_8)
-                                       .setInt(HttpHeaderNames.CONTENT_LENGTH, response.length()),
+                            ResponseHeaders.of(HttpStatus.OK,
+                                               HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
+                                               HttpHeaderNames.CONTENT_LENGTH, response.length()),
                             HttpData.ofUtf8(response));
                 }
             }.decorate(HttpEncodingService.class));
@@ -333,9 +337,9 @@ public class HttpServerTest {
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     final String response = Strings.repeat("a", 1024);
                     return HttpResponse.of(
-                            HttpHeaders.of(HttpStatus.OK)
-                                       .contentType(MediaType.PLAIN_TEXT_UTF_8)
-                                       .setInt(HttpHeaderNames.CONTENT_LENGTH, response.length()),
+                            ResponseHeaders.of(HttpStatus.OK,
+                                               HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
+                                               HttpHeaderNames.CONTENT_LENGTH, response.length()),
                             HttpData.ofUtf8(response));
                 }
             }.decorate(HttpEncodingService.class));
@@ -356,9 +360,10 @@ public class HttpServerTest {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
                     return HttpResponse.of(
-                            HttpHeaders.of(HttpStatus.OK).contentType(MediaType.PLAIN_TEXT_UTF_8)
-                                       .add(HttpHeaderNames.of("x-custom-header1"), "custom1")
-                                       .add(HttpHeaderNames.of("X-Custom-Header2"), "custom2"),
+                            ResponseHeaders.of(HttpStatus.OK,
+                                               HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
+                                               HttpHeaderNames.of("x-custom-header1"), "custom1",
+                                               HttpHeaderNames.of("X-Custom-Header2"), "custom2"),
                             HttpData.ofUtf8("headers"));
                 }
             }.decorate(HttpEncodingService.class));
@@ -368,17 +373,17 @@ public class HttpServerTest {
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
                     return HttpResponse.of(
-                            HttpHeaders.of(HttpStatus.OK),
+                            ResponseHeaders.of(HttpStatus.OK),
                             HttpData.ofAscii("trailers incoming!"),
                             HttpHeaders.of(HttpHeaderNames.of("foo"), "bar"));
                 }
             });
 
-            sb.service("/head-headers-only", (ctx, req) -> HttpResponse.of(HttpHeaders.of(HttpStatus.OK)));
+            sb.service("/head-headers-only", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
 
             sb.service("/additional-trailers-other-trailers", (ctx, req) -> {
                 ctx.addAdditionalResponseTrailer(HttpHeaderNames.of("additional-trailer"), "value2");
-                return HttpResponse.of(HttpHeaders.of(HttpStatus.OK),
+                return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
                                        HttpData.ofAscii("foobar"),
                                        HttpHeaders.of(HttpHeaderNames.of("original-trailer"), "value1"));
             });
@@ -386,7 +391,7 @@ public class HttpServerTest {
             sb.service("/additional-trailers-no-other-trailers", (ctx, req) -> {
                 ctx.addAdditionalResponseTrailer(HttpHeaderNames.of("additional-trailer"), "value2");
                 String payload = "foobar";
-                return HttpResponse.of(HttpHeaders.of(HttpStatus.OK),
+                return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
                                        new DefaultHttpData(payload.getBytes(StandardCharsets.UTF_8),
                                                            0, payload.length(), true));
             });
@@ -394,7 +399,7 @@ public class HttpServerTest {
             sb.service("/additional-trailers-no-eos", (ctx, req) -> {
                 ctx.addAdditionalResponseTrailer(HttpHeaderNames.of("additional-trailer"), "value2");
                 String payload = "foobar";
-                return HttpResponse.of(HttpHeaders.of(HttpStatus.OK),
+                return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
                                        new DefaultHttpData(payload.getBytes(StandardCharsets.UTF_8),
                                                            0, payload.length(), false));
             });
@@ -593,7 +598,7 @@ public class HttpServerTest {
 
     @Test(timeout = 10000)
     public void testStrings_noAcceptEncoding() throws Exception {
-        final HttpHeaders req = HttpHeaders.of(HttpMethod.GET, "/strings");
+        final RequestHeaders req = RequestHeaders.of(HttpMethod.GET, "/strings");
         final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
 
         final AggregatedHttpMessage res = f.get();
@@ -606,8 +611,8 @@ public class HttpServerTest {
 
     @Test(timeout = 10000)
     public void testStrings_acceptEncodingGzip() throws Exception {
-        final HttpHeaders req = HttpHeaders.of(HttpMethod.GET, "/strings")
-                                           .set(HttpHeaderNames.ACCEPT_ENCODING, "gzip");
+        final RequestHeaders req = RequestHeaders.of(HttpMethod.GET, "/strings",
+                                                     HttpHeaderNames.ACCEPT_ENCODING, "gzip");
         final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
 
         final AggregatedHttpMessage res = f.get();
@@ -627,8 +632,8 @@ public class HttpServerTest {
 
     @Test(timeout = 10000)
     public void testStrings_acceptEncodingGzip_imageContentType() throws Exception {
-        final HttpHeaders req = HttpHeaders.of(HttpMethod.GET, "/images")
-                                           .set(HttpHeaderNames.ACCEPT_ENCODING, "gzip");
+        final RequestHeaders req = RequestHeaders.of(HttpMethod.GET, "/images",
+                                                     HttpHeaderNames.ACCEPT_ENCODING, "gzip");
         final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
 
         final AggregatedHttpMessage res = f.get();
@@ -641,8 +646,8 @@ public class HttpServerTest {
 
     @Test(timeout = 10000)
     public void testStrings_acceptEncodingGzip_smallFixedContent() throws Exception {
-        final HttpHeaders req = HttpHeaders.of(HttpMethod.GET, "/small")
-                                           .set(HttpHeaderNames.ACCEPT_ENCODING, "gzip");
+        final RequestHeaders req = RequestHeaders.of(HttpMethod.GET, "/small",
+                                                     HttpHeaderNames.ACCEPT_ENCODING, "gzip");
         final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
 
         final AggregatedHttpMessage res = f.get();
@@ -655,8 +660,8 @@ public class HttpServerTest {
 
     @Test(timeout = 10000)
     public void testStrings_acceptEncodingGzip_largeFixedContent() throws Exception {
-        final HttpHeaders req = HttpHeaders.of(HttpMethod.GET, "/large")
-                                           .set(HttpHeaderNames.ACCEPT_ENCODING, "gzip");
+        final RequestHeaders req = RequestHeaders.of(HttpMethod.GET, "/large",
+                                                     HttpHeaderNames.ACCEPT_ENCODING, "gzip");
         final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
 
         final AggregatedHttpMessage res = f.get();
@@ -674,8 +679,8 @@ public class HttpServerTest {
 
     @Test(timeout = 10000)
     public void testStrings_acceptEncodingDeflate() throws Exception {
-        final HttpHeaders req = HttpHeaders.of(HttpMethod.GET, "/strings")
-                                           .set(HttpHeaderNames.ACCEPT_ENCODING, "deflate");
+        final RequestHeaders req = RequestHeaders.of(HttpMethod.GET, "/strings",
+                                                     HttpHeaderNames.ACCEPT_ENCODING, "deflate");
         final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
 
         final AggregatedHttpMessage res = f.get();
@@ -694,8 +699,8 @@ public class HttpServerTest {
 
     @Test(timeout = 10000)
     public void testStrings_acceptEncodingUnknown() throws Exception {
-        final HttpHeaders req = HttpHeaders.of(HttpMethod.GET, "/strings")
-                                           .set(HttpHeaderNames.ACCEPT_ENCODING, "piedpiper");
+        final RequestHeaders req = RequestHeaders.of(HttpMethod.GET, "/strings",
+                                                     HttpHeaderNames.ACCEPT_ENCODING, "piedpiper");
         final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
 
         final AggregatedHttpMessage res = f.get();
@@ -728,7 +733,9 @@ public class HttpServerTest {
 
             // Should neither be chunked nor have content.
             assertThat(new String(ByteStreams.toByteArray(in)))
-                    .isEqualTo("HTTP/1.1 200 OK\r\ncontent-length: 0\r\n\r\n");
+                    .isEqualTo("HTTP/1.1 200 OK\r\n" +
+                               "content-type: text/plain; charset=utf-8\r\n" +
+                               "content-length: 6\r\n\r\n");
         }
     }
 
@@ -736,19 +743,19 @@ public class HttpServerTest {
     public void testExpect100Continue() throws Exception {
         // Makes sure the server sends a '100 Continue' response if 'expect: 100-continue' header exists.
         final AggregatedHttpMessage res =
-                client().execute(HttpHeaders.of(HttpMethod.POST, "/echo")
-                                            .set(HttpHeaderNames.EXPECT, "100-continue"),
+                client().execute(RequestHeaders.of(HttpMethod.POST, "/echo",
+                                                   HttpHeaderNames.EXPECT, "100-continue"),
                                  "met expectation")
                         .aggregate().join();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.informationals()).containsExactly(HttpHeaders.of(100));
+        assertThat(res.informationals()).containsExactly(ResponseHeaders.of(100));
         assertThat(res.contentUtf8()).isEqualTo("met expectation");
 
         // Makes sure the server does not send a '100 Continue' response if 'expect: 100-continue' header
         // does not exists.
         final AggregatedHttpMessage res2 =
-                client().execute(HttpHeaders.of(HttpMethod.POST, "/echo"), "without expectation")
+                client().execute(RequestHeaders.of(HttpMethod.POST, "/echo"), "without expectation")
                         .aggregate().join();
 
         assertThat(res2.status()).isEqualTo(HttpStatus.OK);
@@ -778,7 +785,8 @@ public class HttpServerTest {
             assertThat(new String(ByteStreams.toByteArray(in)))
                     .isEqualTo(Strings.repeat("HTTP/1.1 100 Continue\r\n\r\n" +
                                               "HTTP/1.1 200 OK\r\n" +
-                                              "content-length: 0\r\n\r\n", 4));
+                                              "content-type: text/plain; charset=utf-8\r\n" +
+                                              "content-length: 6\r\n\r\n200 OK", 4));
         }
     }
 
@@ -807,8 +815,7 @@ public class HttpServerTest {
 
     @Test(timeout = 10000)
     public void testHeaders() throws Exception {
-        final HttpHeaders req = HttpHeaders.of(HttpMethod.GET, "/headers");
-        final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
+        final CompletableFuture<AggregatedHttpMessage> f = client().get("/headers").aggregate();
 
         final AggregatedHttpMessage res = f.get();
 
@@ -827,8 +834,7 @@ public class HttpServerTest {
 
     @Test(timeout = 10000)
     public void testTrailers() throws Exception {
-        final HttpHeaders req = HttpHeaders.of(HttpMethod.GET, "/trailers");
-        final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
+        final CompletableFuture<AggregatedHttpMessage> f = client().get("/trailers").aggregate();
 
         final AggregatedHttpMessage res = f.get();
         assertThat(res.trailingHeaders().get(HttpHeaderNames.of("foo"))).isEqualTo("bar");
@@ -837,28 +843,22 @@ public class HttpServerTest {
     @Test(timeout = 10000)
     public void testExactPathCached() throws Exception {
         assertThat(client().get("/cached-exact-path")
-                                                           .aggregate().get().status())
-                                       .isEqualTo(HttpStatus.OK);
-        assertThat(PathAndQuery.cachedPaths())
-                                       .contains("/cached-exact-path");
+                           .aggregate().get().status()).isEqualTo(HttpStatus.OK);
+        assertThat(PathAndQuery.cachedPaths()).contains("/cached-exact-path");
     }
 
     @Test(timeout = 10000)
     public void testPrefixPathNotCached() throws Exception {
         assertThat(client().get("/not-cached-paths/hoge")
-                                                           .aggregate().get().status())
-                                       .isEqualTo(HttpStatus.OK);
-        assertThat(PathAndQuery.cachedPaths())
-                                       .doesNotContain("/not-cached-paths/hoge");
+                           .aggregate().get().status()).isEqualTo(HttpStatus.OK);
+        assertThat(PathAndQuery.cachedPaths()).doesNotContain("/not-cached-paths/hoge");
     }
 
     @Test(timeout = 10000)
     public void testPrefixPath_cacheForced() throws Exception {
         assertThat(client().get("/cached-paths/hoge")
-                                                           .aggregate().get().status())
-                                       .isEqualTo(HttpStatus.OK);
-        assertThat(PathAndQuery.cachedPaths())
-                                       .contains("/cached-paths/hoge");
+                           .aggregate().get().status()).isEqualTo(HttpStatus.OK);
+        assertThat(PathAndQuery.cachedPaths()).contains("/cached-paths/hoge");
     }
 
     @Test(timeout = 10000)
@@ -866,8 +866,8 @@ public class HttpServerTest {
         if (!protocol.isMultiplex()) {
             return;
         }
-        HttpHeaders trailers = client().get("/additional-trailers-other-trailers")
-                                       .aggregate().join().trailingHeaders();
+        final HttpHeaders trailers = client().get("/additional-trailers-other-trailers")
+                                             .aggregate().join().trailingHeaders();
         assertThat(trailers.get(HttpHeaderNames.of("original-trailer"))).isEqualTo("value1");
         assertThat(trailers.get(HttpHeaderNames.of("additional-trailer"))).isEqualTo("value2");
     }
@@ -877,8 +877,8 @@ public class HttpServerTest {
         if (!protocol.isMultiplex()) {
             return;
         }
-        HttpHeaders trailers = client().get("/additional-trailers-no-eos")
-                                       .aggregate().join().trailingHeaders();
+        final HttpHeaders trailers = client().get("/additional-trailers-no-eos")
+                                             .aggregate().join().trailingHeaders();
         assertThat(trailers.get(HttpHeaderNames.of("additional-trailer"))).isEqualTo("value2");
     }
 
@@ -887,8 +887,8 @@ public class HttpServerTest {
         if (!protocol.isMultiplex()) {
             return;
         }
-        HttpHeaders trailers = client().get("/additional-trailers-no-other-trailers")
-                                       .aggregate().join().trailingHeaders();
+        final HttpHeaders trailers = client().get("/additional-trailers-no-other-trailers")
+                                             .aggregate().join().trailingHeaders();
         assertThat(trailers.get(HttpHeaderNames.of("additional-trailer"))).isEqualTo("value2");
     }
 

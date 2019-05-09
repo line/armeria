@@ -118,14 +118,19 @@ public final class CorsConfig {
      * Returns the policy for the specified {@code origin}.
      *
      * @return {@link CorsPolicy} which allows the {@code origin},
-     *         {@code null} if the {@code origin} is not allowed in any policy.
+     *         {@code null} if the {@code origin} is {@code null} or not allowed in any policy.
      */
     @Nullable
-    public CorsPolicy getPolicy(String origin, PathMappingContext pathMappingContext) {
-        requireNonNull(origin, "origin");
+    public CorsPolicy getPolicy(@Nullable String origin, PathMappingContext pathMappingContext) {
+        requireNonNull(pathMappingContext, "pathMappingContext");
+        if (origin == null) {
+            return null;
+        }
+
         if (isAnyOriginSupported()) {
             return Iterables.getFirst(policies, null);
         }
+
         final String lowerCaseOrigin = Ascii.toLowerCase(origin);
         final boolean isNullOrigin = CorsService.NULL_ORIGIN.equals(lowerCaseOrigin);
         for (final CorsPolicy policy : policies) {

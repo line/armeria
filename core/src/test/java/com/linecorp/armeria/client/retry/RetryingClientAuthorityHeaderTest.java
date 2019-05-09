@@ -31,9 +31,10 @@ import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -81,7 +82,8 @@ public class RetryingClientAuthorityHeaderTest {
     public void authorityIsSameWhenSet() {
         final HttpClient client = newHttpClientWithEndpointGroup();
 
-        final HttpHeaders headers = HttpHeaders.of(GET, "/").authority("www.armeria.com");
+        final RequestHeaders headers = RequestHeaders.of(GET, "/",
+                                                         HttpHeaderNames.AUTHORITY, "www.armeria.com");
         final AggregatedHttpMessage msg = client.execute(headers).aggregate().join();
         assertThat(msg.contentUtf8()).contains("www.armeria.com");
     }

@@ -36,6 +36,7 @@ import org.springframework.boot.actuate.endpoint.InvocationContext;
 import org.springframework.boot.actuate.endpoint.SecurityContext;
 import org.springframework.boot.actuate.endpoint.web.WebEndpointResponse;
 import org.springframework.boot.actuate.endpoint.web.WebOperation;
+import org.springframework.boot.actuate.endpoint.web.reactive.AbstractWebFluxEndpointHandlerMapping;
 import org.springframework.core.io.Resource;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -44,13 +45,14 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
@@ -60,7 +62,7 @@ import io.netty.handler.codec.http.QueryStringDecoder;
 
 /**
  * {@link HttpService} to handle a {@link WebOperation}. Mostly inspired by reactive implementation in
- * {@link org.springframework.boot.actuate.endpoint.web.reactive.AbstractWebFluxEndpointHandlerMapping}.
+ * {@link AbstractWebFluxEndpointHandlerMapping}.
  */
 final class WebOperationHttpService implements HttpService {
 
@@ -163,17 +165,16 @@ final class WebOperationHttpService implements HttpService {
             final String filename = resource.getFilename();
             final HttpResponseWriter res = HttpResponse.streaming();
             final long length = resource.contentLength();
-            final HttpHeaders headers =
-                    HttpHeaders.of(status)
-                               .contentType(contentType)
-                               .setLong(HttpHeaderNames.CONTENT_LENGTH, length)
-                               .setTimeMillis(HttpHeaderNames.LAST_MODIFIED, resource.lastModified());
+            final ResponseHeadersBuilder headers = ResponseHeaders.builder(status);
+            headers.contentType(contentType);
+            headers.setLong(HttpHeaderNames.CONTENT_LENGTH, length);
+            headers.setTimeMillis(HttpHeaderNames.LAST_MODIFIED, resource.lastModified());
             if (filename != null) {
                 headers.set(HttpHeaderNames.CONTENT_DISPOSITION,
                             "attachment;filename=" + FILENAME_BAD_CHARS.matcher(filename).replaceAll("_"));
             }
 
-            res.write(headers);
+            res.write(headers.build());
 
             boolean success = false;
             ReadableByteChannel in = null;

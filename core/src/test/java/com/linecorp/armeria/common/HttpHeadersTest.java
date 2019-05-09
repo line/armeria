@@ -38,8 +38,6 @@ import org.junit.Test;
 
 import com.linecorp.armeria.server.ServerCacheControl;
 
-import io.netty.util.AsciiString;
-
 public class HttpHeadersTest {
 
     @Test
@@ -58,8 +56,8 @@ public class HttpHeadersTest {
 
     @Test
     public void testInvalidHeaderName() throws Exception {
-        assertThatThrownBy(() -> HttpHeaders.of((AsciiString) null, "value1"))
-                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> HttpHeaders.of(null, "value1"))
+                .isInstanceOf(NullPointerException.class);
 
         assertThatThrownBy(() -> HttpHeaders.of(of(""), "value1"))
                 .isInstanceOf(IllegalArgumentException.class);
@@ -67,7 +65,7 @@ public class HttpHeadersTest {
 
     @Test
     public void contentType() {
-        final HttpHeaders headers = HttpHeaders.of();
+        final HttpHeadersBuilder headers = HttpHeaders.builder();
 
         headers.contentType(ANY_TYPE);
         assertThat(headers.contentType()).isSameAs(ANY_TYPE);
@@ -94,7 +92,7 @@ public class HttpHeadersTest {
         final Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
         calendar.setTimeInMillis(instant.toEpochMilli());
 
-        final HttpHeaders headers = HttpHeaders.of();
+        final HttpHeadersBuilder headers = HttpHeaders.builder();
         headers.setObject(DATE, date);
         headers.setObject(LAST_MODIFIED, instant);
         headers.setObject(IF_MODIFIED_SINCE, calendar);

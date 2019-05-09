@@ -25,9 +25,8 @@ import java.util.Queue;
 
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.stream.ClosedPublisherException;
 
@@ -44,9 +43,9 @@ import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.HttpContent;
-import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMessage;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
@@ -133,7 +132,7 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
             int id, int streamId, HttpHeaders headers, boolean endStream) throws Http2Exception {
 
         final HttpObject converted = convertServerHeaders(streamId, headers, endStream);
-        final HttpStatus status = headers.status();
+        final String status = headers.get(HttpHeaderNames.STATUS);
         if (status == null) {
             // Trailing headers
             final ChannelFuture f = write(id, converted, endStream);
@@ -141,7 +140,7 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
             return f;
         }
 
-        if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
+        if (!status.isEmpty() && status.charAt(0) == '1') {
             // Informational status headers.
             final ChannelFuture f = write(id, converted, false);
             if (endStream) {
@@ -183,15 +182,16 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
             int streamId, HttpHeaders headers, boolean endStream) throws Http2Exception {
 
         // Leading headers will always have :status, trailers will never have it.
-        final HttpStatus status = headers.status();
+        final String status = headers.get(HttpHeaderNames.STATUS);
         if (status == null) {
             return convertTrailingHeaders(streamId, headers);
         }
 
         // Convert leading headers.
         final HttpResponse res;
-        final boolean informational = status.codeClass() == HttpStatusClass.INFORMATIONAL;
-        final HttpResponseStatus nettyStatus = HttpResponseStatus.valueOf(status.code());
+        final int statusCode = Integer.parseInt(status);
+        final boolean informational = HttpStatusClass.INFORMATIONAL.contains(statusCode);
+        final HttpResponseStatus nettyStatus = HttpResponseStatus.valueOf(statusCode);
 
         if (endStream || informational) {
 
@@ -202,7 +202,7 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
             final io.netty.handler.codec.http.HttpHeaders outHeaders = res.headers();
             convert(streamId, headers, outHeaders, false, false);
 
-            if (ArmeriaHttpUtil.isContentAlwaysEmpty(status)) {
+            if (ArmeriaHttpUtil.isContentAlwaysEmpty(statusCode)) {
                 outHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
             } else if (!headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
                 // NB: Set the 'content-length' only when not set rather than always setting to 0.
@@ -226,17 +226,17 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
             throws Http2Exception {
 
         // Leading headers will always have :method, trailers will never have it.
-        final HttpMethod method = headers.method();
+        final String method = headers.get(HttpHeaderNames.METHOD);
         if (method == null) {
             return convertTrailingHeaders(streamId, headers);
         }
 
         // Convert leading headers.
-        final String path = headers.path();
+        final String path = headers.get(HttpHeaderNames.PATH);
         assert path != null;
         final HttpRequest req = new DefaultHttpRequest(
                 HttpVersion.HTTP_1_1,
-                io.netty.handler.codec.http.HttpMethod.valueOf(method.name()),
+                HttpMethod.valueOf(method),
                 path, false);
 
         convert(streamId, headers, req.headers(), false, true);
@@ -256,9 +256,9 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
             // > a payload body and the method semantics do not anticipate such a
             // > body.
             switch (method) {
-                case POST:
-                case PUT:
-                case PATCH:
+                case "POST":
+                case "PUT":
+                case "PATCH":
                     req.headers().set(HttpHeaderNames.CONTENT_LENGTH, "0");
                     break;
                 default:

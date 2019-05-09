@@ -65,20 +65,6 @@ import io.netty.util.concurrent.Promise;
 public interface RequestContext extends AttributeMap {
 
     /**
-     * Creates a new derived {@link RequestContext} which only the {@link RequestLog}
-     * is different from the deriving context. Note that the references of {@link Attribute}s
-     * in the {@link #attrs()} are copied as well.
-     */
-    RequestContext newDerivedContext();
-
-    /**
-     * Creates a new derived {@link RequestContext} with the specified {@link Request} which the
-     * {@link RequestLog} is different from the deriving context.
-     * Note that the references of {@link Attribute}s in the {@link #attrs()} are copied as well.
-     */
-    RequestContext newDerivedContext(Request request);
-
-    /**
      * Returns the context of the {@link Request} that is being handled in the current thread.
      *
      * @throws IllegalStateException if the context is unavailable in the current thread
@@ -114,6 +100,28 @@ public interface RequestContext extends AttributeMap {
 
         return null;
     }
+
+    /**
+     * Returns the {@link Request} associated with this context.
+     */
+    <T extends Request> T request();
+
+    /**
+     * Replaces the {@link Request} associated with this context with the specified one. This method is useful
+     * to a decorator that manipulates HTTP request headers or RPC call parameters.
+     *
+     * <p>Note that it is a bad idea to change the values of the pseudo headers ({@code ":method"},
+     * {@code ":path"}, {@code ":scheme"} and {@code ":authority"}) when replacing an {@link HttpRequest},
+     * because the properties of this context, such as {@link #path()}, are unaffected by such an attempt.</p>
+     *
+     * <p>It is not allowed to replace an {@link RpcRequest} with an {@link HttpRequest} or vice versa.
+     * This method will reject such an attempt and return {@code false}.</p>
+     *
+     * @return {@code true} if the {@link Request} of this context has been replaced. {@code false} otherwise.
+     *
+     * @see HttpRequest#of(HttpRequest, RequestHeaders)
+     */
+    boolean updateRequest(Request req);
 
     /**
      * Returns the {@link SessionProtocol} of the current {@link Request}.
@@ -162,11 +170,6 @@ public interface RequestContext extends AttributeMap {
      */
     @Nullable
     String query();
-
-    /**
-     * Returns the {@link Request} associated with this context.
-     */
-    <T extends Request> T request();
 
     /**
      * Returns the {@link RequestLog} that contains the information about the current {@link Request}.
@@ -614,4 +617,18 @@ public interface RequestContext extends AttributeMap {
         LoggerFactory.getLogger(RequestContext.class).warn(
                 "Failed to reject a completed promise ({}) with {}", promise, cause, cause);
     }
+
+    /**
+     * Creates a new derived {@link RequestContext} which only the {@link RequestLog}
+     * is different from the deriving context. Note that the references of {@link Attribute}s
+     * in the {@link #attrs()} are copied as well.
+     */
+    RequestContext newDerivedContext();
+
+    /**
+     * Creates a new derived {@link RequestContext} with the specified {@link Request} which the
+     * {@link RequestLog} is different from the deriving context.
+     * Note that the references of {@link Attribute}s in the {@link #attrs()} are copied as well.
+     */
+    RequestContext newDerivedContext(Request request);
 }

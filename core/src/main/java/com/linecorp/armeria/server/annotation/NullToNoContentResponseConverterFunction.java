@@ -20,6 +20,7 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -30,7 +31,7 @@ public final class NullToNoContentResponseConverterFunction implements ResponseC
 
     @Override
     public HttpResponse convertResponse(ServiceRequestContext ctx,
-                                        HttpHeaders headers,
+                                        ResponseHeaders headers,
                                         @Nullable Object result,
                                         HttpHeaders trailingHeaders) throws Exception {
         if (result == null) {

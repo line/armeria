@@ -28,10 +28,10 @@ import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
 
 /**
  * An {@link HttpService} that sends a redirect response such as {@code "307 Temporary Redirect"}.
@@ -262,8 +262,8 @@ public class RedirectService extends AbstractHttpService {
             location = appendQueryString(ctx, location);
         }
 
-        return HttpResponse.of(HttpHeaders.of(httpStatus)
-                                          .set(HttpHeaderNames.LOCATION, location));
+        return HttpResponse.of(ResponseHeaders.of(httpStatus,
+                                                  HttpHeaderNames.LOCATION, location));
     }
 
     private static String appendQueryString(ServiceRequestContext ctx, String location) {

@@ -99,8 +99,13 @@ abstract class AbstractSubscriber implements Subscriber<HttpObject> {
                 final HttpHeaders headers = (HttpHeaders) httpObject;
                 onHttpHeaders();
 
-                final HttpStatus status = headers.status();
-                if (status != null && status.codeClass() != HttpStatusClass.INFORMATIONAL) {
+                final String statusText = headers.get(HttpHeaderNames.STATUS);
+                if (statusText == null) {
+                    break;
+                }
+
+                final HttpStatus status = HttpStatus.valueOf(statusText);
+                if (status.codeClass() != HttpStatusClass.INFORMATIONAL) {
                     state = State.WAIT_DATA_OR_TRAILERS;
                     responseBuilder.code(status.code());
                     responseBuilder.message(status.reasonPhrase());

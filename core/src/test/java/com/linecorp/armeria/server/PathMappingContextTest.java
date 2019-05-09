@@ -29,21 +29,22 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 
 public class PathMappingContextTest {
 
     @Test
     public void testAcceptTypes() {
-        final DefaultHttpHeaders headers = new DefaultHttpHeaders();
-        headers.add(HttpHeaderNames.ACCEPT,
-                    "application/xml;q=0.9, " +
-                    "*/*;q=0.8, " +
-                    "text/html;charset=UTF-8, " +
-                    "application/xhtml+xml;charset=utf-8");
+        final HttpHeaders headers = HttpHeaders.of(
+                HttpHeaderNames.ACCEPT,
+                "application/xml;q=0.9, " +
+                "*/*;q=0.8, " +
+                "text/html;charset=UTF-8, " +
+                "application/xhtml+xml;charset=utf-8");
         final List<MediaType> acceptTypes = extractAcceptTypes(headers);
         assertThat(acceptTypes).containsExactly(MediaType.XHTML_UTF_8,
                                                 MediaType.HTML_UTF_8,
@@ -111,8 +112,8 @@ public class PathMappingContextTest {
     }
 
     static PathMappingContext create(String path, @Nullable String query) {
-        final DefaultHttpHeaders headers = new DefaultHttpHeaders();
-        headers.method(HttpMethod.GET);
+        final String requestPath = query != null ? path + '?' + query : path;
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, requestPath);
         return DefaultPathMappingContext.of(virtualHost(), "example.com",
                                             path, query, headers);
     }

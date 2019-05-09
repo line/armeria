@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
@@ -61,14 +62,14 @@ public class HttpServiceTest {
             sb.service("/trailersWithoutData", new AbstractHttpService() {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                    return HttpResponse.of(HttpHeaders.of(HttpStatus.OK),
+                    return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
                                            HttpHeaders.of(HttpHeaderNames.of("foo"), "bar"));
                 }
             });
             sb.service("/dataAndTrailers", new AbstractHttpService() {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                    return HttpResponse.of(HttpHeaders.of(HttpStatus.OK),
+                    return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
                                            HttpData.ofUtf8("trailer"),
                                            HttpHeaders.of(HttpHeaderNames.of("foo"), "bar"));
                 }

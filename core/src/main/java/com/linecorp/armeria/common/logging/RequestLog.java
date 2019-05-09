@@ -36,7 +36,9 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
@@ -422,9 +424,7 @@ public interface RequestLog extends AttributeMap {
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
     default HttpStatus status() {
-        final HttpStatus status = responseHeaders().status();
-        assert status != null;
-        return status;
+        return responseHeaders().status();
     }
 
     /**
@@ -438,14 +438,14 @@ public interface RequestLog extends AttributeMap {
     }
 
     /**
-     * Returns the {@link HttpHeaders} of the {@link Request}. If the {@link Request} was not received or sent
-     * at all, it will return a dummy {@link HttpHeaders} whose {@code :authority} and {@code :path} are
+     * Returns the {@link RequestHeaders}. If the {@link Request} was not received or sent at all,
+     * it will return a dummy {@link RequestHeaders} whose {@code :authority} and {@code :path} are
      * set to {@code "?"}, {@code :scheme} is set to {@code "http"} or {@code "https"}, and {@code :method} is
      * set to {@code "UNKNOWN"}.
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
-    HttpHeaders requestHeaders();
+    RequestHeaders requestHeaders();
 
     /**
      * Returns the high-level content object of the {@link Request}, which is specific
@@ -492,13 +492,13 @@ public interface RequestLog extends AttributeMap {
     HttpHeaders requestTrailers();
 
     /**
-     * Returns the non-informational status {@link HttpHeaders} of the {@link Response}.
+     * Returns the non-informational status {@link ResponseHeaders}.
      * If the {@link Response} was not received or sent at all, it will return a dummy
-     * {@link HttpHeaders} whose {@code :status} is {@code "0"}.
+     * {@link ResponseHeaders} whose {@code :status} is {@code "0"}.
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
-    HttpHeaders responseHeaders();
+    ResponseHeaders responseHeaders();
 
     /**
      * Returns the high-level content object of the {@link Response}, which is specific
@@ -573,7 +573,7 @@ public interface RequestLog extends AttributeMap {
      * @param trailersSanitizer a {@link Function} for sanitizing HTTP trailers for logging. The result of the
      *                          {@link Function} is what is actually logged as trailers.
      */
-    String toStringRequestOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
+    String toStringRequestOnly(Function<? super RequestHeaders, ? extends HttpHeaders> headersSanitizer,
                                Function<Object, ?> contentSanitizer,
                                Function<? super HttpHeaders, ? extends HttpHeaders> trailersSanitizer);
 
@@ -606,7 +606,7 @@ public interface RequestLog extends AttributeMap {
      * @param trailersSanitizer a {@link Function} for sanitizing HTTP trailers for logging. The result of the
      *                         {@link Function} is what is actually logged as trailers.
      */
-    String toStringResponseOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
+    String toStringResponseOnly(Function<? super ResponseHeaders, ? extends HttpHeaders> headersSanitizer,
                                 Function<Object, ?> contentSanitizer,
                                 Function<? super HttpHeaders, ? extends HttpHeaders> trailersSanitizer);
 }

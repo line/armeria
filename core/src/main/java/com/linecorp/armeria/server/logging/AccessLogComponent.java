@@ -39,7 +39,9 @@ import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -84,7 +86,7 @@ interface AccessLogComponent {
         return new CommonComponent(type, type == AccessLogType.REQUEST_LINE, null, variable);
     }
 
-    static AccessLogComponent ofQuotedRequestHeader(AsciiString headerName) {
+    static AccessLogComponent ofQuotedRequestHeader(CharSequence headerName) {
         return new HttpHeaderComponent(AccessLogType.REQUEST_HEADER,
                                        headerName, true, null);
     }
@@ -186,10 +188,10 @@ interface AccessLogComponent {
     abstract class ResponseHeaderConditional implements AccessLogComponent {
 
         @Nullable
-        private final Function<HttpHeaders, Boolean> condition;
+        private final Function<ResponseHeaders, Boolean> condition;
         private final boolean addQuote;
 
-        protected ResponseHeaderConditional(@Nullable Function<HttpHeaders, Boolean> condition,
+        protected ResponseHeaderConditional(@Nullable Function<ResponseHeaders, Boolean> condition,
                                             boolean addQuote) {
             this.condition = condition;
             this.addQuote = addQuote;
@@ -197,7 +199,7 @@ interface AccessLogComponent {
 
         @Nullable
         @VisibleForTesting
-        Function<HttpHeaders, Boolean> condition() {
+        Function<ResponseHeaders, Boolean> condition() {
             return condition;
         }
 
@@ -246,7 +248,7 @@ interface AccessLogComponent {
         private final String variable;
 
         CommonComponent(AccessLogType type, boolean addQuote,
-                        @Nullable Function<HttpHeaders, Boolean> condition,
+                        @Nullable Function<ResponseHeaders, Boolean> condition,
                         @Nullable String variable) {
             super(condition, addQuote);
             checkArgument(isSupported(requireNonNull(type, "type")),
@@ -325,10 +327,10 @@ interface AccessLogComponent {
         private final AsciiString headerName;
         private final Function<RequestLog, HttpHeaders> httpHeaders;
 
-        HttpHeaderComponent(AccessLogType logType, AsciiString headerName, boolean addQuote,
-                            @Nullable Function<HttpHeaders, Boolean> condition) {
+        HttpHeaderComponent(AccessLogType logType, CharSequence headerName, boolean addQuote,
+                            @Nullable Function<ResponseHeaders, Boolean> condition) {
             super(condition, addQuote);
-            this.headerName = requireNonNull(headerName, "headerName");
+            this.headerName = HttpHeaderNames.of(requireNonNull(headerName, "headerName"));
             if (logType == AccessLogType.REQUEST_HEADER) {
                 httpHeaders = RequestLog::requestHeaders;
             } else {
@@ -361,7 +363,7 @@ interface AccessLogComponent {
         private final Function<Object, String> stringifer;
 
         AttributeComponent(String attributeName, Function<Object, String> stringifer, boolean addQuote,
-                           @Nullable Function<HttpHeaders, Boolean> condition) {
+                           @Nullable Function<ResponseHeaders, Boolean> condition) {
             super(condition, addQuote);
             key = AttributeKey.valueOf(requireNonNull(attributeName, "attributeName"));
             this.stringifer = requireNonNull(stringifer, "stringifer");
@@ -392,7 +394,7 @@ interface AccessLogComponent {
         private final Function<RequestLog, Object> resolver;
 
         RequestLogComponent(String variable, boolean addQuote,
-                            @Nullable Function<HttpHeaders, Boolean> condition) {
+                            @Nullable Function<ResponseHeaders, Boolean> condition) {
             super(condition, addQuote);
             resolver = findResolver(requireNonNull(variable, "variable"));
         }
@@ -469,7 +471,7 @@ interface AccessLogComponent {
                     return RequestLog::scheme;
                 case "host":
                     return log -> {
-                        final String authority = log.responseHeaders().authority();
+                        final String authority = log.requestHeaders().authority();
                         if ("?".equals(authority)) {
                             final InetSocketAddress remoteAddr = log.context().remoteAddress();
                             assert remoteAddr != null;

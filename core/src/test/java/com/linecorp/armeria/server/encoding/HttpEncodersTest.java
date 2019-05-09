@@ -26,8 +26,9 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestHeaders;
 
 public class HttpEncodersTest {
 
@@ -37,31 +38,35 @@ public class HttpEncodersTest {
 
     @Test
     public void noAcceptEncoding() {
-        when(request.headers()).thenReturn(HttpHeaders.EMPTY_HEADERS);
+        when(request.headers()).thenReturn(RequestHeaders.of(HttpMethod.GET, "/"));
         assertThat(HttpEncoders.getWrapperForRequest(request)).isNull();
     }
 
     @Test
     public void acceptEncodingGzip() {
-        when(request.headers()).thenReturn(HttpHeaders.of(HttpHeaderNames.ACCEPT_ENCODING, "gzip"));
+        when(request.headers()).thenReturn(RequestHeaders.of(HttpMethod.GET, "/",
+                                                             HttpHeaderNames.ACCEPT_ENCODING, "gzip"));
         assertThat(HttpEncoders.getWrapperForRequest(request)).isEqualTo(HttpEncodingType.GZIP);
     }
 
     @Test
     public void acceptEncodingDeflate() {
-        when(request.headers()).thenReturn(HttpHeaders.of(HttpHeaderNames.ACCEPT_ENCODING, "deflate"));
+        when(request.headers()).thenReturn(RequestHeaders.of(HttpMethod.GET, "/",
+                                                             HttpHeaderNames.ACCEPT_ENCODING, "deflate"));
         assertThat(HttpEncoders.getWrapperForRequest(request)).isEqualTo(HttpEncodingType.DEFLATE);
     }
 
     @Test
     public void acceptEncodingBoth() {
-        when(request.headers()).thenReturn(HttpHeaders.of(HttpHeaderNames.ACCEPT_ENCODING, "gzip, deflate"));
+        when(request.headers()).thenReturn(RequestHeaders.of(HttpMethod.GET, "/",
+                                                             HttpHeaderNames.ACCEPT_ENCODING, "gzip, deflate"));
         assertThat(HttpEncoders.getWrapperForRequest(request)).isEqualTo(HttpEncodingType.GZIP);
     }
 
     @Test
     public void acceptEncodingUnknown() {
-        when(request.headers()).thenReturn(HttpHeaders.of(HttpHeaderNames.ACCEPT_ENCODING, "piedpiper"));
+        when(request.headers()).thenReturn(RequestHeaders.of(HttpMethod.GET, "/",
+                                                             HttpHeaderNames.ACCEPT_ENCODING, "piedpiper"));
         assertThat(HttpEncoders.getWrapperForRequest(request)).isNull();
     }
 }

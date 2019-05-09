@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import javax.annotation.Nullable;
+
 import org.openjdk.jmh.annotations.Benchmark;
 
 /**
@@ -23,18 +25,19 @@ import org.openjdk.jmh.annotations.Benchmark;
  */
 public class HttpHeadersBenchmark {
 
+    @Nullable
     @Benchmark
     public MediaType parseKnown() {
-        final HttpHeaders headers = new DefaultHttpHeaders()
-                .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto");
+        final HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto");
         return headers.contentType();
     }
 
+    @Nullable
     @Benchmark
     public MediaType parseUnknown() {
-        final HttpHeaders headers = new DefaultHttpHeaders()
+        final HttpHeaders headers = HttpHeaders.of(
                 // Single letter change to keep theoretical parsing performance the same.
-                .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+oroto");
+                HttpHeaderNames.CONTENT_TYPE, "application/grpc+oroto");
         return headers.contentType();
     }
 }

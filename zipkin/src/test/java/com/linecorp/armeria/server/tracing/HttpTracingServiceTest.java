@@ -31,11 +31,13 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -128,8 +130,8 @@ public class HttpTracingServiceTest {
 
         final HttpTracingService stub = new HttpTracingService(delegate, tracing);
 
-        final HttpRequest req = HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/hello/trustin")
-                                                          .authority("foo.com"));
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/trustin",
+                                                                 HttpHeaderNames.AUTHORITY, "foo.com"));
         final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(req)
                                                                       .service(stub)
                                                                       .build();
@@ -147,7 +149,7 @@ public class HttpTracingServiceTest {
         stub.serve(ctx, req);
 
         verify(delegate, times(1)).serve(eq(ctx), eq(req));
-        logBuilder.responseHeaders(HttpHeaders.of(HttpStatus.OK));
+        logBuilder.responseHeaders(ResponseHeaders.of(HttpStatus.OK));
         logBuilder.responseFirstBytesTransferred();
         logBuilder.responseContent(rpcRes, res);
         logBuilder.endResponse();

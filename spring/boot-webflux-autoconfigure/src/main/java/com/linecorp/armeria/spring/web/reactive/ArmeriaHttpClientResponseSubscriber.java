@@ -25,26 +25,26 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 
 import io.netty.channel.EventLoop;
 
 /**
- * A {@link Subscriber} which reads the {@link HttpHeaders} first from an {@link HttpResponse}.
- * If the {@link HttpHeaders} is consumed, it completes the {@code future} with the {@link HttpHeaders}.
+ * A {@link Subscriber} which reads the {@link ResponseHeaders} first from an {@link HttpResponse}.
+ * If the {@link ResponseHeaders} is consumed, it completes the {@code future} with the {@link ResponseHeaders}.
  * After that, it can act as a {@link Publisher} on behalf of the {@link HttpResponse},
  * by calling {@link #toResponseBodyPublisher()} which returns {@link ResponseBodyPublisher}.
  */
 final class ArmeriaHttpClientResponseSubscriber
         implements Subscriber<HttpObject>, BiFunction<Void, Throwable, Void> {
 
-    private final CompletableFuture<HttpHeaders> future = new CompletableFuture<>();
+    private final CompletableFuture<ResponseHeaders> future = new CompletableFuture<>();
     private final EventLoop eventLoop = CommonPools.workerGroup().next();
 
     @Nullable
@@ -62,7 +62,7 @@ final class ArmeriaHttpClientResponseSubscriber
         httpResponse.subscribe(this, eventLoop);
     }
 
-    CompletableFuture<HttpHeaders> httpHeadersFuture() {
+    CompletableFuture<ResponseHeaders> httpHeadersFuture() {
         return future;
     }
 
@@ -78,10 +78,10 @@ final class ArmeriaHttpClientResponseSubscriber
             publisher.relayOnNext(httpObject);
             return;
         }
-        if (httpObject instanceof HttpHeaders) {
-            final HttpHeaders headers = (HttpHeaders) httpObject;
+        if (httpObject instanceof ResponseHeaders) {
+            final ResponseHeaders headers = (ResponseHeaders) httpObject;
             final HttpStatus status = headers.status();
-            if (status != null && status.codeClass() != HttpStatusClass.INFORMATIONAL) {
+            if (status.codeClass() != HttpStatusClass.INFORMATIONAL) {
                 future.complete(headers);
                 return;
             }
@@ -124,7 +124,7 @@ final class ArmeriaHttpClientResponseSubscriber
             !(cause instanceof AbortedStreamException)) {
             future.completeExceptionally(cause);
         } else {
-            future.complete(HttpHeaders.EMPTY_HEADERS);
+            future.complete(ResponseHeaders.of(HttpStatus.UNKNOWN));
         }
         return null;
     }

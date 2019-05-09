@@ -40,8 +40,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.logging.AccessLogComponent.AttributeComponent;
 import com.linecorp.armeria.server.logging.AccessLogComponent.CommonComponent;
 import com.linecorp.armeria.server.logging.AccessLogComponent.HttpHeaderComponent;
@@ -206,7 +206,7 @@ final class AccessLogFormats {
         // Do not add quotes when parsing a user-provided custom format.
         final boolean addQuote = false;
 
-        final Function<HttpHeaders, Boolean> condition = condBuilder != null ? condBuilder.build() : null;
+        final Function<ResponseHeaders, Boolean> condition = condBuilder != null ? condBuilder.build() : null;
         if (TimestampComponent.isSupported(type)) {
             return new TimestampComponent(addQuote, variable);
         }
@@ -261,7 +261,7 @@ final class AccessLogFormats {
     /**
      * A condition based on {@link HttpStatus} of the HTTP response.
      */
-    private static final class Condition implements Function<HttpHeaders, Boolean> {
+    private static final class Condition implements Function<ResponseHeaders, Boolean> {
 
         private final Set<HttpStatus> statusSet;
         private final boolean sign;
@@ -280,7 +280,7 @@ final class AccessLogFormats {
         }
 
         @Override
-        public Boolean apply(HttpHeaders headers) {
+        public Boolean apply(ResponseHeaders headers) {
             return statusSet.contains(headers.status()) == sign;
         }
 
@@ -307,7 +307,7 @@ final class AccessLogFormats {
             }
 
             Builder addHttpStatus(String text) {
-                final HttpStatus s = HttpStatus.valueOf(Integer.valueOf(text));
+                final HttpStatus s = HttpStatus.valueOf(Integer.parseInt(text));
                 statusSet.add(s);
                 isEmpty = false;
                 return this;
@@ -317,7 +317,7 @@ final class AccessLogFormats {
                 return isEmpty;
             }
 
-            Function<HttpHeaders, Boolean> build() {
+            Function<ResponseHeaders, Boolean> build() {
                 return new Condition(statusSet.build(), sign);
             }
         }

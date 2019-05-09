@@ -52,11 +52,12 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.Server;
 
 import io.prometheus.client.exporter.common.TextFormat;
@@ -123,9 +124,9 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
         Map<String, Object> values = OBJECT_MAPPER.readValue(res.content().array(), JSON_MAP);
         assertThat(values).containsEntry("effectiveLevel", "DEBUG");
 
-        res = client.execute(HttpHeaders.of(HttpMethod.POST, loggerPath)
-                                        .contentType(MediaType.JSON_UTF_8),
-                          OBJECT_MAPPER.writeValueAsBytes(ImmutableMap.of("configuredLevel", "info")))
+        res = client.execute(RequestHeaders.of(HttpMethod.POST, loggerPath,
+                                               HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8),
+                             OBJECT_MAPPER.writeValueAsBytes(ImmutableMap.of("configuredLevel", "info")))
                     .aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.NO_CONTENT);
 
@@ -155,8 +156,8 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
         final AtomicLong remainingBytes = new AtomicLong();
         StepVerifier.create(res)
                     .assertNext(obj -> {
-                        assertThat(obj).isInstanceOf(HttpHeaders.class);
-                        final HttpHeaders headers = (HttpHeaders) obj;
+                        assertThat(obj).isInstanceOf(ResponseHeaders.class);
+                        final ResponseHeaders headers = (ResponseHeaders) obj;
                         assertThat(headers.status()).isEqualTo(HttpStatus.OK);
                         assertThat(headers.contentType()).isEqualTo(MediaType.OCTET_STREAM);
                         assertThat(headers.get(HttpHeaderNames.CONTENT_DISPOSITION))
@@ -190,7 +191,7 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
     public void testMissingMediaType() throws Exception {
         final String loggerPath = "/internal/actuator/loggers/" + TEST_LOGGER_NAME;
         final AggregatedHttpMessage res =
-                client.execute(HttpHeaders.of(HttpMethod.POST, loggerPath),
+                client.execute(RequestHeaders.of(HttpMethod.POST, loggerPath),
                                OBJECT_MAPPER.writeValueAsBytes(ImmutableMap.of("configuredLevel", "info")))
                       .aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
@@ -200,8 +201,8 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
     public void testInvalidMediaType() throws Exception {
         final String loggerPath = "/internal/actuator/loggers/" + TEST_LOGGER_NAME;
         final AggregatedHttpMessage res =
-                client.execute(HttpHeaders.of(HttpMethod.POST, loggerPath)
-                                          .contentType(MediaType.PROTOBUF),
+                client.execute(RequestHeaders.of(HttpMethod.POST, loggerPath,
+                                                 HttpHeaderNames.CONTENT_TYPE, MediaType.PROTOBUF),
                                OBJECT_MAPPER.writeValueAsBytes(ImmutableMap.of("configuredLevel", "info")))
                       .aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);

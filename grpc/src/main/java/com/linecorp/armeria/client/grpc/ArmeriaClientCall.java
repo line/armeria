@@ -32,10 +32,10 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.ByteBufOrStream;
@@ -164,7 +164,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             compressor = Identity.NONE;
         }
         messageFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
-        prepareHeaders(req.headers(), compressor);
+        final HttpRequest req = prepareHeaders(compressor);
         listener = responseListener;
         final HttpResponse res;
         try (SafeCloseable ignored = ctx.push()) {
@@ -296,16 +296,23 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         close(status);
     }
 
-    private void prepareHeaders(HttpHeaders headers, Compressor compressor) {
+    private HttpRequest prepareHeaders(Compressor compressor) {
+        final RequestHeadersBuilder newHeaders = req.headers().toBuilder();
         if (compressor != Identity.NONE) {
-            headers.set(GrpcHeaderNames.GRPC_ENCODING, compressor.getMessageEncoding());
+            newHeaders.set(GrpcHeaderNames.GRPC_ENCODING, compressor.getMessageEncoding());
         }
+
         if (!advertisedEncodingsHeader.isEmpty()) {
-            headers.add(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, advertisedEncodingsHeader);
+            newHeaders.add(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, advertisedEncodingsHeader);
         }
-        headers.add(GrpcHeaderNames.GRPC_TIMEOUT,
-                    TimeoutHeaderUtil.toHeaderValue(
-                            TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis())));
+
+        newHeaders.add(GrpcHeaderNames.GRPC_TIMEOUT,
+                       TimeoutHeaderUtil.toHeaderValue(
+                               TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis())));
+
+        final HttpRequest newReq = HttpRequest.of(req, newHeaders.build());
+        ctx.updateRequest(newReq);
+        return newReq;
     }
 
     private void close(Status status) {

@@ -20,6 +20,7 @@ import java.net.InetAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ExecutorService;
 
 import javax.annotation.Nonnull;
@@ -34,9 +35,6 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContextWrapper;
 
-import io.netty.handler.codec.Headers;
-import io.netty.util.AsciiString;
-
 /**
  * Wraps an existing {@link ServiceRequestContext}.
  */
@@ -48,6 +46,12 @@ public class ServiceRequestContextWrapper
      */
     protected ServiceRequestContextWrapper(ServiceRequestContext delegate) {
         super(delegate);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public HttpRequest request() {
+        return super.request();
     }
 
     @Nonnull
@@ -174,27 +178,29 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public void setAdditionalResponseHeader(AsciiString name, String value) {
+    public void setAdditionalResponseHeader(CharSequence name, Object value) {
         delegate().setAdditionalResponseHeader(name, value);
     }
 
     @Override
-    public void setAdditionalResponseHeaders(Headers<? extends AsciiString, ? extends String, ?> headers) {
+    public void setAdditionalResponseHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         delegate().setAdditionalResponseHeaders(headers);
     }
 
     @Override
-    public void addAdditionalResponseHeader(AsciiString name, String value) {
+    public void addAdditionalResponseHeader(CharSequence name, Object value) {
         delegate().addAdditionalResponseHeader(name, value);
     }
 
     @Override
-    public void addAdditionalResponseHeaders(Headers<? extends AsciiString, ? extends String, ?> headers) {
+    public void addAdditionalResponseHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         delegate().addAdditionalResponseHeaders(headers);
     }
 
     @Override
-    public boolean removeAdditionalResponseHeader(AsciiString name) {
+    public boolean removeAdditionalResponseHeader(CharSequence name) {
         return delegate().removeAdditionalResponseHeader(name);
     }
 
@@ -204,27 +210,29 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public void setAdditionalResponseTrailer(AsciiString name, String value) {
+    public void setAdditionalResponseTrailer(CharSequence name, Object value) {
         delegate().setAdditionalResponseTrailer(name, value);
     }
 
     @Override
-    public void setAdditionalResponseTrailers(Headers<? extends AsciiString, ? extends String, ?> headers) {
+    public void setAdditionalResponseTrailers(
+            Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         delegate().setAdditionalResponseTrailers(headers);
     }
 
     @Override
-    public void addAdditionalResponseTrailer(AsciiString name, String value) {
+    public void addAdditionalResponseTrailer(CharSequence name, Object value) {
         delegate().addAdditionalResponseTrailer(name, value);
     }
 
     @Override
-    public void addAdditionalResponseTrailers(Headers<? extends AsciiString, ? extends String, ?> headers) {
+    public void addAdditionalResponseTrailers(
+            Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         delegate().addAdditionalResponseTrailers(headers);
     }
 
     @Override
-    public boolean removeAdditionalResponseTrailer(AsciiString name) {
+    public boolean removeAdditionalResponseTrailer(CharSequence name) {
         return delegate().removeAdditionalResponseTrailer(name);
     }
 

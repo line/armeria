@@ -33,6 +33,9 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.server.HttpService;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -77,7 +80,7 @@ public abstract class AbstractHttpFile implements HttpFile {
         this.dateEnabled = dateEnabled;
         this.lastModifiedEnabled = lastModifiedEnabled;
         this.entityTagFunction = entityTagFunction;
-        this.headers = requireNonNull(headers, "headers").asImmutable();
+        this.headers = requireNonNull(headers, "headers");
     }
 
     /**
@@ -141,24 +144,26 @@ public abstract class AbstractHttpFile implements HttpFile {
 
     @Nullable
     @Override
-    public HttpHeaders readHeaders() throws IOException {
+    public ResponseHeaders readHeaders() throws IOException {
         return readHeaders(readAttributes());
     }
 
     @Nullable
-    private HttpHeaders readHeaders(@Nullable HttpFileAttributes attrs) throws IOException {
+    private ResponseHeaders readHeaders(@Nullable HttpFileAttributes attrs) throws IOException {
         if (attrs == null) {
             return null;
         }
 
         // TODO(trustin): Cache the headers (sans the 'date' header') if attrs did not change.
         final String etag = generateEntityTag(attrs);
-        final HttpHeaders headers = HttpHeaders.of(HttpStatus.OK);
-        headers.set(HttpHeaderNames.CONTENT_LENGTH, Long.toString(attrs.length()));
+        final ResponseHeadersBuilder headers =
+                ResponseHeaders.builder(HttpStatus.OK)
+                               .addLong(HttpHeaderNames.CONTENT_LENGTH, attrs.length());
         return addCommonHeaders(headers, attrs, etag);
     }
 
-    private HttpHeaders addCommonHeaders(HttpHeaders headers, HttpFileAttributes attrs, @Nullable String etag) {
+    private ResponseHeaders addCommonHeaders(ResponseHeadersBuilder headers, HttpFileAttributes attrs,
+                                             @Nullable String etag) {
         if (contentType != null) {
             headers.set(HttpHeaderNames.CONTENT_TYPE, contentType.toString());
         }
@@ -171,12 +176,12 @@ public abstract class AbstractHttpFile implements HttpFile {
         if (etag != null) {
             headers.set(HttpHeaderNames.ETAG, '\"' + etag + '\"');
         }
-        if (!this.headers.isEmpty()) {
-            headers.setAll(this.headers);
-        }
-        return headers;
+
+        headers.set(this.headers);
+        return headers.build();
     }
 
+    @Nullable
     @Override
     public final HttpResponse read(Executor fileReadExecutor, ByteBufAllocator alloc) {
         requireNonNull(fileReadExecutor, "fileReadExecutor");
@@ -184,7 +189,7 @@ public abstract class AbstractHttpFile implements HttpFile {
 
         try {
             final HttpFileAttributes attrs = readAttributes();
-            final HttpHeaders headers = readHeaders(attrs);
+            final ResponseHeaders headers = readHeaders(attrs);
             if (headers == null) {
                 return null;
             }
@@ -203,9 +208,9 @@ public abstract class AbstractHttpFile implements HttpFile {
 
     /**
      * Returns a new {@link HttpResponse} which streams the content of the file which follows the specified
-     * {@link HttpHeaders}.
+     * {@link ResponseHeaders}.
      *
-     * @param headers the {@link HttpHeaders} of the response
+     * @param headers the {@link ResponseHeaders}
      * @param length the content length. The returned {@link HttpResponse} must stream only as many bytes as
      *               this value.
      * @param fileReadExecutor the {@link Executor} which should be used for performing a blocking file I/O
@@ -217,7 +222,7 @@ public abstract class AbstractHttpFile implements HttpFile {
      *                     notification mechanism.
      */
     @Nullable
-    protected abstract HttpResponse doRead(HttpHeaders headers, long length,
+    protected abstract HttpResponse doRead(ResponseHeaders headers, long length,
                                            Executor fileReadExecutor,
                                            ByteBufAllocator alloc) throws IOException;
 
@@ -238,7 +243,7 @@ public abstract class AbstractHttpFile implements HttpFile {
             // about how conditional requests are handled.
 
             // Handle 'if-none-match' header.
-            final HttpHeaders reqHeaders = req.headers();
+            final RequestHeaders reqHeaders = req.headers();
             final String etag = generateEntityTag(attrs);
             final String ifNoneMatch = reqHeaders.get(HttpHeaderNames.IF_NONE_MATCH);
             if (etag != null && ifNoneMatch != null) {
@@ -266,7 +271,7 @@ public abstract class AbstractHttpFile implements HttpFile {
             // Precondition did not match. Handle as usual.
             switch (ctx.method()) {
                 case HEAD:
-                    final HttpHeaders resHeaders = readHeaders();
+                    final ResponseHeaders resHeaders = readHeaders();
                     if (resHeaders != null) {
                         return HttpResponse.of(resHeaders);
                     }
@@ -325,7 +330,7 @@ public abstract class AbstractHttpFile implements HttpFile {
     }
 
     private HttpResponse newNotModified(HttpFileAttributes attrs, @Nullable String etag) {
-        final HttpHeaders headers = HttpHeaders.of(HttpStatus.NOT_MODIFIED);
-        return HttpResponse.of(addCommonHeaders(headers, attrs, etag));
+        return HttpResponse.of(addCommonHeaders(ResponseHeaders.builder(HttpStatus.NOT_MODIFIED),
+                                                attrs, etag));
     }
 }

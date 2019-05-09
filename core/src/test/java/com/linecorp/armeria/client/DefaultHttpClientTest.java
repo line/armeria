@@ -25,10 +25,10 @@ import java.net.URI;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 
@@ -47,7 +47,7 @@ public class DefaultHttpClientTest {
                 clientBuilderParams, mockClientDelegate, NoopMeterRegistry.get(),
                 SessionProtocol.of("http"), Endpoint.of("127.0.0.1"));
 
-        defaultHttpClient.execute(HttpRequest.of(HttpHeaders.of(HttpMethod.GET, requestPath)));
+        defaultHttpClient.execute(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, requestPath)));
 
         final ArgumentCaptor<HttpRequest> argCaptor = ArgumentCaptor.forClass(HttpRequest.class);
         verify(mockClientDelegate).execute(any(ClientRequestContext.class), argCaptor.capture());

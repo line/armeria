@@ -27,12 +27,12 @@ import org.junit.Test;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.Server;
@@ -129,8 +129,8 @@ public class HttpClientSniTest {
     public void testCustomAuthority() throws Exception {
         final HttpClient client = HttpClient.of(clientFactory, "https://127.0.0.1:" + httpsPort);
         final AggregatedHttpMessage response =
-                client.execute(HttpHeaders.of(HttpMethod.GET, "/")
-                                          .set(HttpHeaderNames.AUTHORITY, "a.com:" + httpsPort))
+                client.execute(RequestHeaders.of(HttpMethod.GET, "/",
+                                                 HttpHeaderNames.AUTHORITY, "a.com:" + httpsPort))
                       .aggregate().get();
 
         assertEquals(HttpStatus.OK, response.status());

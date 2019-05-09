@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.spring.web.reactive;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
@@ -32,6 +31,7 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.spring.web.reactive.ArmeriaHttpClientResponseSubscriber.ResponseBodyPublisher;
 
 import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
@@ -43,7 +43,7 @@ import reactor.core.publisher.Flux;
 final class ArmeriaClientHttpResponse implements ClientHttpResponse {
 
     private final com.linecorp.armeria.common.HttpStatus status;
-    private final com.linecorp.armeria.common.HttpHeaders headers;
+    private final ResponseHeaders headers;
 
     private final Flux<DataBuffer> body;
 
@@ -52,13 +52,11 @@ final class ArmeriaClientHttpResponse implements ClientHttpResponse {
     @Nullable
     private HttpHeaders httpHeaders;
 
-    ArmeriaClientHttpResponse(com.linecorp.armeria.common.HttpHeaders headers,
+    ArmeriaClientHttpResponse(ResponseHeaders headers,
                               ResponseBodyPublisher publisher,
                               DataBufferFactoryWrapper<?> factoryWrapper) {
         this.headers = requireNonNull(headers, "headers");
-        final com.linecorp.armeria.common.HttpStatus status = headers.status();
-        checkArgument(status != null, "no status in HTTP headers");
-        this.status = status;
+        status = headers.status();
 
         body = Flux.from(publisher).cast(HttpData.class).map(factoryWrapper::toDataBuffer);
     }

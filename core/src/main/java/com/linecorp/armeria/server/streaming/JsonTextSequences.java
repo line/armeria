@@ -31,10 +31,12 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.util.Exceptions;
 
 /**
@@ -85,10 +87,10 @@ public final class JsonTextSequences {
     private static final ObjectMapper defaultMapper = new ObjectMapper();
 
     /**
-     * A default {@link HttpHeaders} of JSON Text Sequences.
+     * A default {@link ResponseHeaders} of JSON Text Sequences.
      */
-    private static final HttpHeaders defaultHttpHeaders =
-            HttpHeaders.of(HttpStatus.OK).contentType(MediaType.JSON_SEQ).asImmutable();
+    private static final ResponseHeaders defaultHttpHeaders =
+            ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_SEQ);
 
     /**
      * Creates a new JSON Text Sequences from the specified {@link Publisher}.
@@ -96,7 +98,7 @@ public final class JsonTextSequences {
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
      */
     public static HttpResponse fromPublisher(Publisher<?> contentPublisher) {
-        return fromPublisher(defaultHttpHeaders, contentPublisher, HttpHeaders.EMPTY_HEADERS, defaultMapper);
+        return fromPublisher(defaultHttpHeaders, contentPublisher, HttpHeaders.of(), defaultMapper);
     }
 
     /**
@@ -106,7 +108,7 @@ public final class JsonTextSequences {
      * @param mapper the mapper which converts the content object into JSON Text Sequences
      */
     public static HttpResponse fromPublisher(Publisher<?> contentPublisher, ObjectMapper mapper) {
-        return fromPublisher(defaultHttpHeaders, contentPublisher, HttpHeaders.EMPTY_HEADERS, mapper);
+        return fromPublisher(defaultHttpHeaders, contentPublisher, HttpHeaders.of(), mapper);
     }
 
     /**
@@ -115,8 +117,8 @@ public final class JsonTextSequences {
      * @param headers the HTTP headers supposed to send
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
      */
-    public static HttpResponse fromPublisher(HttpHeaders headers, Publisher<?> contentPublisher) {
-        return fromPublisher(headers, contentPublisher, HttpHeaders.EMPTY_HEADERS, defaultMapper);
+    public static HttpResponse fromPublisher(ResponseHeaders headers, Publisher<?> contentPublisher) {
+        return fromPublisher(headers, contentPublisher, HttpHeaders.of(), defaultMapper);
     }
 
     /**
@@ -126,9 +128,9 @@ public final class JsonTextSequences {
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
      * @param mapper the mapper which converts the content object into JSON Text Sequences
      */
-    public static HttpResponse fromPublisher(HttpHeaders headers, Publisher<?> contentPublisher,
+    public static HttpResponse fromPublisher(ResponseHeaders headers, Publisher<?> contentPublisher,
                                              ObjectMapper mapper) {
-        return fromPublisher(headers, contentPublisher, HttpHeaders.EMPTY_HEADERS, mapper);
+        return fromPublisher(headers, contentPublisher, HttpHeaders.of(), mapper);
     }
 
     /**
@@ -139,7 +141,7 @@ public final class JsonTextSequences {
      * @param trailingHeaders the trailing HTTP headers supposed to send
      * @param mapper the mapper which converts the content object into JSON Text Sequences
      */
-    public static HttpResponse fromPublisher(HttpHeaders headers, Publisher<?> contentPublisher,
+    public static HttpResponse fromPublisher(ResponseHeaders headers, Publisher<?> contentPublisher,
                                              HttpHeaders trailingHeaders, ObjectMapper mapper) {
         requireNonNull(mapper, "mapper");
         return streamingFrom(contentPublisher, sanitizeHeaders(headers), trailingHeaders,
@@ -153,7 +155,7 @@ public final class JsonTextSequences {
      * @param executor the executor which iterates the stream
      */
     public static HttpResponse fromStream(Stream<?> contentStream, Executor executor) {
-        return fromStream(defaultHttpHeaders, contentStream, HttpHeaders.EMPTY_HEADERS, executor,
+        return fromStream(defaultHttpHeaders, contentStream, HttpHeaders.of(), executor,
                           defaultMapper);
     }
 
@@ -165,7 +167,7 @@ public final class JsonTextSequences {
      */
     public static HttpResponse fromStream(Stream<?> contentStream, Executor executor,
                                           ObjectMapper mapper) {
-        return fromStream(defaultHttpHeaders, contentStream, HttpHeaders.EMPTY_HEADERS, executor, mapper);
+        return fromStream(defaultHttpHeaders, contentStream, HttpHeaders.of(), executor, mapper);
     }
 
     /**
@@ -175,9 +177,9 @@ public final class JsonTextSequences {
      * @param contentStream the {@link Stream} which publishes the objects supposed to send as contents
      * @param executor the executor which iterates the stream
      */
-    public static HttpResponse fromStream(HttpHeaders headers, Stream<?> contentStream,
+    public static HttpResponse fromStream(ResponseHeaders headers, Stream<?> contentStream,
                                           Executor executor) {
-        return fromStream(headers, contentStream, HttpHeaders.EMPTY_HEADERS, executor, defaultMapper);
+        return fromStream(headers, contentStream, HttpHeaders.of(), executor, defaultMapper);
     }
 
     /**
@@ -188,9 +190,9 @@ public final class JsonTextSequences {
      * @param executor the executor which iterates the stream
      * @param mapper the mapper which converts the content object into JSON Text Sequences
      */
-    public static HttpResponse fromStream(HttpHeaders headers, Stream<?> contentStream,
+    public static HttpResponse fromStream(ResponseHeaders headers, Stream<?> contentStream,
                                           Executor executor, ObjectMapper mapper) {
-        return fromStream(headers, contentStream, HttpHeaders.EMPTY_HEADERS, executor, mapper);
+        return fromStream(headers, contentStream, HttpHeaders.of(), executor, mapper);
     }
 
     /**
@@ -202,7 +204,7 @@ public final class JsonTextSequences {
      * @param executor the executor which iterates the stream
      * @param mapper the mapper which converts the content object into JSON Text Sequences
      */
-    public static HttpResponse fromStream(HttpHeaders headers, Stream<?> contentStream,
+    public static HttpResponse fromStream(ResponseHeaders headers, Stream<?> contentStream,
                                           HttpHeaders trailingHeaders, Executor executor,
                                           ObjectMapper mapper) {
         requireNonNull(mapper, "mapper");
@@ -216,7 +218,7 @@ public final class JsonTextSequences {
      * @param content the object supposed to send as contents
      */
     public static HttpResponse fromObject(@Nullable Object content) {
-        return fromObject(defaultHttpHeaders, content, HttpHeaders.EMPTY_HEADERS, defaultMapper);
+        return fromObject(defaultHttpHeaders, content, HttpHeaders.of(), defaultMapper);
     }
 
     /**
@@ -225,8 +227,8 @@ public final class JsonTextSequences {
      * @param headers the HTTP headers supposed to send
      * @param content the object supposed to send as contents
      */
-    public static HttpResponse fromObject(HttpHeaders headers, @Nullable Object content) {
-        return fromObject(headers, content, HttpHeaders.EMPTY_HEADERS, defaultMapper);
+    public static HttpResponse fromObject(ResponseHeaders headers, @Nullable Object content) {
+        return fromObject(headers, content, HttpHeaders.of(), defaultMapper);
     }
 
     /**
@@ -236,9 +238,9 @@ public final class JsonTextSequences {
      * @param content the object supposed to send as contents
      * @param mapper the mapper which converts the content object into JSON Text Sequences
      */
-    public static HttpResponse fromObject(HttpHeaders headers, @Nullable Object content,
+    public static HttpResponse fromObject(ResponseHeaders headers, @Nullable Object content,
                                           ObjectMapper mapper) {
-        return fromObject(headers, content, HttpHeaders.EMPTY_HEADERS, mapper);
+        return fromObject(headers, content, HttpHeaders.of(), mapper);
     }
 
     /**
@@ -249,7 +251,7 @@ public final class JsonTextSequences {
      * @param trailingHeaders the trailing HTTP headers supposed to send
      * @param mapper the mapper which converts the content object into JSON Text Sequences
      */
-    public static HttpResponse fromObject(HttpHeaders headers, @Nullable Object content,
+    public static HttpResponse fromObject(ResponseHeaders headers, @Nullable Object content,
                                           HttpHeaders trailingHeaders, ObjectMapper mapper) {
         requireNonNull(headers, "headers");
         requireNonNull(trailingHeaders, "trailingHeaders");
@@ -257,19 +259,15 @@ public final class JsonTextSequences {
         return HttpResponse.of(sanitizeHeaders(headers), toHttpData(mapper, content), trailingHeaders);
     }
 
-    private static HttpHeaders sanitizeHeaders(HttpHeaders headers) {
+    private static ResponseHeaders sanitizeHeaders(ResponseHeaders headers) {
         if (headers == defaultHttpHeaders) {
             return headers;
         }
         return ensureContentType(ensureHttpStatus(headers));
     }
 
-    static HttpHeaders ensureHttpStatus(HttpHeaders headers) {
+    static ResponseHeaders ensureHttpStatus(ResponseHeaders headers) {
         final HttpStatus status = headers.status();
-        if (status == null) {
-            return headers.toMutable().status(HttpStatus.OK);
-        }
-
         if (status.equals(HttpStatus.OK)) {
             return headers;
         }
@@ -283,13 +281,15 @@ public final class JsonTextSequences {
                     status, HttpStatus.OK, JsonTextSequences.class.getSimpleName(), HttpStatus.OK);
             warnedStatusCode = true;
         }
-        return headers.toMutable().status(HttpStatus.OK);
+        return headers.toBuilder().status(HttpStatus.OK).build();
     }
 
-    static HttpHeaders ensureContentType(HttpHeaders headers) {
+    static ResponseHeaders ensureContentType(ResponseHeaders headers) {
         final MediaType contentType = headers.contentType();
         if (contentType == null) {
-            return headers.toMutable().contentType(MediaType.JSON_SEQ);
+            return headers.toBuilder()
+                          .add(HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_SEQ.toString())
+                          .build();
         }
 
         if (contentType.is(MediaType.JSON_SEQ)) {
@@ -305,7 +305,9 @@ public final class JsonTextSequences {
                         JsonTextSequences.class.getSimpleName(), MediaType.JSON_SEQ);
             warnedContentType = true;
         }
-        return headers.toMutable().contentType(MediaType.JSON_SEQ);
+        return headers.toBuilder()
+                      .contentType(MediaType.JSON_SEQ)
+                      .build();
     }
 
     private static HttpData toHttpData(ObjectMapper mapper, @Nullable Object value) {

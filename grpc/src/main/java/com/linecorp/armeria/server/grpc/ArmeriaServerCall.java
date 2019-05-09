@@ -42,9 +42,12 @@ import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.ThrowableProto;
@@ -110,7 +113,6 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     private final HttpResponseWriter res;
     private final CompressorRegistry compressorRegistry;
-    private final DecompressorRegistry decompressorRegistry;
     private final ServiceRequestContext ctx;
     private final SerializationFormat serializationFormat;
     private final GrpcMessageMarshaller<I, O> marshaller;
@@ -171,7 +173,6 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         clientAcceptEncoding =
                 Strings.emptyToNull(clientHeaders.get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING));
-        this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         marshaller = new GrpcMessageMarshaller<>(ctx.alloc(), serializationFormat, method, jsonMarshaller,
                                                  unsafeWrapRequestBuffers);
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
@@ -213,7 +214,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         checkState(!sendHeadersCalled, "sendHeaders already called");
         checkState(!closeCalled, "call is closed");
 
-        final HttpHeaders headers = HttpHeaders.of(HttpStatus.OK);
+        final ResponseHeadersBuilder headers = ResponseHeaders.builder(HttpStatus.OK);
 
         headers.contentType(serializationFormat.mediaType());
 
@@ -237,7 +238,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         }
 
         sendHeadersCalled = true;
-        res.write(headers);
+        res.write(headers.build());
     }
 
     @Override
@@ -516,7 +517,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     }
 
     static HttpHeaders statusToTrailers(ServiceRequestContext ctx, Status status, boolean headersSent) {
-        final HttpHeaders trailers = GrpcTrailersUtil.statusToTrailers(
+        final HttpHeadersBuilder trailers = GrpcTrailersUtil.statusToTrailers(
                 status.getCode().value(), status.getDescription(), headersSent);
 
         if (ctx.verboseResponses() && status.getCause() != null) {
@@ -525,7 +526,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                          Base64.getEncoder().encodeToString(proto.toByteArray()));
         }
 
-        return trailers;
+        return trailers.build();
     }
 
     HttpStreamReader messageReader() {

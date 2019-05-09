@@ -30,6 +30,8 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.internal.InboundTrafficController;
 
 import io.netty.channel.Channel;
@@ -42,13 +44,13 @@ public class HttpResponseWrapperTest {
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
         assertThat(wrapper.tryWrite(
-                HttpHeaders.of(200).addInt(HttpHeaderNames.CONTENT_LENGTH, "foo".length()))).isTrue();
+                ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, "foo".length()))).isTrue();
         assertThat(wrapper.tryWrite(HttpData.ofUtf8("foo"))).isTrue();
         wrapper.close();
 
         final List<HttpObject> drained = res.drainAll().join();
         assertThat(drained).containsExactly(
-                HttpHeaders.of(200).addInt(HttpHeaderNames.CONTENT_LENGTH, 3),
+                ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, 3),
                 HttpData.ofUtf8("foo"));
     }
 
@@ -57,13 +59,13 @@ public class HttpResponseWrapperTest {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
-        assertThat(wrapper.tryWrite(HttpHeaders.of(200))).isTrue();
+        assertThat(wrapper.tryWrite(ResponseHeaders.of(200))).isTrue();
         assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
         wrapper.close();
 
         final List<HttpObject> drained = res.drainAll().join();
         assertThat(drained).containsExactly(
-                HttpHeaders.of(200),
+                ResponseHeaders.of(200),
                 HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"));
     }
 
@@ -72,7 +74,7 @@ public class HttpResponseWrapperTest {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
-        assertThat(wrapper.tryWrite(HttpHeaders.of(200))).isTrue();
+        assertThat(wrapper.tryWrite(ResponseHeaders.of(200))).isTrue();
         assertThat(wrapper.tryWrite(
                 HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue(); // Second header is trailers.
         assertThat(wrapper.tryWrite(HttpData.ofUtf8("foo"))).isFalse();
@@ -80,7 +82,7 @@ public class HttpResponseWrapperTest {
 
         final List<HttpObject> drained = res.drainAll().join();
         assertThat(drained).containsExactly(
-                HttpHeaders.of(200),
+                ResponseHeaders.of(200),
                 HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"));
     }
 
@@ -89,14 +91,14 @@ public class HttpResponseWrapperTest {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
-        assertThat(wrapper.tryWrite(HttpHeaders.of(200))).isTrue();
+        assertThat(wrapper.tryWrite(ResponseHeaders.of(200))).isTrue();
         assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
         assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("qux"), "quux"))).isFalse();
         wrapper.close();
 
         final List<HttpObject> drained = res.drainAll().join();
         assertThat(drained).containsExactly(
-                HttpHeaders.of(200),
+                ResponseHeaders.of(200),
                 HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"));
     }
 
@@ -106,7 +108,7 @@ public class HttpResponseWrapperTest {
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
         assertThat(wrapper.tryWrite(
-                HttpHeaders.of(200).addInt(HttpHeaderNames.CONTENT_LENGTH, "foo".length()))).isTrue();
+                ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, "foo".length()))).isTrue();
         assertThat(wrapper.tryWrite(HttpData.ofUtf8("foo"))).isTrue();
         assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
         assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("qux"), "quux"))).isFalse();
@@ -114,29 +116,29 @@ public class HttpResponseWrapperTest {
 
         final List<HttpObject> drained = res.drainAll().join();
         assertThat(drained).containsExactly(
-                HttpHeaders.of(200).addInt(HttpHeaderNames.CONTENT_LENGTH, 3),
+                ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, 3),
                 HttpData.ofUtf8("foo"),
                 HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"));
     }
 
     @Test
-    public void infromationalHeadersHeadersDataAndTrailers() throws Exception {
+    public void informationalHeadersHeadersDataAndTrailers() throws Exception {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
-        assertThat(wrapper.tryWrite(HttpHeaders.of(100))).isTrue();
+        assertThat(wrapper.tryWrite(ResponseHeaders.of(100))).isTrue();
         assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("a"), "b"))).isTrue();
         assertThat(wrapper.tryWrite(
-                HttpHeaders.of(200).addInt(HttpHeaderNames.CONTENT_LENGTH, "foo".length()))).isTrue();
+                ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, "foo".length()))).isTrue();
         assertThat(wrapper.tryWrite(HttpData.ofUtf8("foo"))).isTrue();
         assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
         wrapper.close();
 
         final List<HttpObject> drained = res.drainAll().join();
         assertThat(drained).containsExactly(
-                HttpHeaders.of(100),
+                ResponseHeaders.of(100),
                 HttpHeaders.of(HttpHeaderNames.of("a"), "b"),
-                HttpHeaders.of(200).addInt(HttpHeaderNames.CONTENT_LENGTH, "foo".length()),
+                ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, "foo".length()),
                 HttpData.ofUtf8("foo"),
                 HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"));
     }

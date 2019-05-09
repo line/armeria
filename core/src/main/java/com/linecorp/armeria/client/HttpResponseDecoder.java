@@ -32,6 +32,8 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -220,13 +222,15 @@ abstract class HttpResponseDecoder {
                     // NB: It's safe to call logBuilder.startResponse() multiple times.
                     logBuilder.startResponse();
 
-                    assert o instanceof HttpHeaders;
-                    final HttpHeaders headers = (HttpHeaders) o;
-                    final HttpStatus status = headers.status();
+                    assert o instanceof HttpHeaders && !(o instanceof RequestHeaders) : o;
 
-                    if (status != null && status.codeClass() != HttpStatusClass.INFORMATIONAL) {
-                        state = State.WAIT_DATA_OR_TRAILERS;
-                        logBuilder.responseHeaders(headers);
+                    if (o instanceof ResponseHeaders) {
+                        final ResponseHeaders headers = (ResponseHeaders) o;
+                        final HttpStatus status = headers.status();
+                        if (status.codeClass() != HttpStatusClass.INFORMATIONAL) {
+                            state = State.WAIT_DATA_OR_TRAILERS;
+                            logBuilder.responseHeaders(headers);
+                        }
                     }
                     break;
                 case WAIT_DATA_OR_TRAILERS:

@@ -34,6 +34,7 @@ import com.linecorp.armeria.client.retrofit2.ArmeriaCallFactory.ArmeriaCall;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -81,7 +82,7 @@ public class BlockingCallSubscriberTest {
         final BlockingCallSubscriber subscriber = new BlockingCallSubscriber(
                 armeriaCall, callback, new Request.Builder().url("http://foo.com").build());
         subscriber.onSubscribe(subscription);
-        subscriber.onNext(HttpHeaders.of(200));
+        subscriber.onNext(ResponseHeaders.of(200));
         subscriber.onNext(HttpData.ofUtf8("{\"name\":\"foo\"}"));
         subscriber.onComplete();
 
@@ -98,8 +99,8 @@ public class BlockingCallSubscriberTest {
         final BlockingCallSubscriber subscriber = new BlockingCallSubscriber(
                 armeriaCall, callback, new Request.Builder().url("http://bar.com").build());
         subscriber.onSubscribe(subscription);
-        subscriber.onNext(HttpHeaders.of(100));
-        subscriber.onNext(HttpHeaders.of(200));
+        subscriber.onNext(ResponseHeaders.of(100));
+        subscriber.onNext(ResponseHeaders.of(200));
         subscriber.onNext(HttpHeaders.of(HttpHeaderNames.of("foo"), "bar")); // Trailers.
         subscriber.onNext(HttpData.ofUtf8("baz")); // Ignored.
         subscriber.onComplete();
@@ -120,7 +121,7 @@ public class BlockingCallSubscriberTest {
         final BlockingCallSubscriber subscriber = new BlockingCallSubscriber(
                 armeriaCall, callback, new Request.Builder().url("http://foo.com").build());
         subscriber.onSubscribe(subscription);
-        subscriber.onNext(HttpHeaders.of(200));
+        subscriber.onNext(ResponseHeaders.of(200));
         subscriber.onNext(HttpData.ofUtf8("{\"name\":\"foo\"}"));
         subscriber.onComplete();
 

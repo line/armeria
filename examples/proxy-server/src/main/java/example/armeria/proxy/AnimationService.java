@@ -5,12 +5,13 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -62,8 +63,8 @@ public final class AnimationService extends AbstractHttpService {
     protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         // Create a response for streaming. If you don't need to stream, use HttpResponse.of(...) instead.
         final HttpResponseWriter res = HttpResponse.streaming();
-        res.write(HttpHeaders.of(HttpStatus.OK)
-                             .contentType(MediaType.PLAIN_TEXT_UTF_8));
+        res.write(ResponseHeaders.of(HttpStatus.OK,
+                                     HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8));
         res.onDemand(() -> streamData(ctx.eventLoop(), res, 0));
         return res;
     }

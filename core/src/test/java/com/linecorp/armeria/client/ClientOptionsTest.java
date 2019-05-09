@@ -32,7 +32,7 @@ public class ClientOptionsTest {
         assertThat(options.get(ClientOption.HTTP_HEADERS)).contains(httpHeader);
 
         final ClientOptions options2 = ClientOptions.DEFAULT;
-        assertThat(options2.get(ClientOption.HTTP_HEADERS)).contains(HttpHeaders.EMPTY_HEADERS);
+        assertThat(options2.get(ClientOption.HTTP_HEADERS)).contains(HttpHeaders.of());
     }
 
     @Test(expected = IllegalArgumentException.class)

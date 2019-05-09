@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.Map.Entry;
 
 import javax.annotation.Nullable;
 
@@ -30,9 +31,6 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
-
-import io.netty.handler.codec.Headers;
-import io.netty.util.AsciiString;
 
 /**
  * Provides information about a {@link Request}, its {@link Response} and its related utilities.
@@ -157,8 +155,7 @@ public interface ClientRequestContext extends RequestContext {
     void setMaxResponseLength(long maxResponseLength);
 
     /**
-     * Returns an immutable {@link HttpHeaders} which is included when a {@link Client} sends an
-     * {@link HttpRequest}.
+     * Returns an {@link HttpHeaders} which is included when a {@link Client} sends an {@link HttpRequest}.
      */
     HttpHeaders additionalRequestHeaders();
 
@@ -167,30 +164,30 @@ public interface ClientRequestContext extends RequestContext {
      * associated with the specified {@code name}.
      * The header will be included when a {@link Client} sends an {@link HttpRequest}.
      */
-    void setAdditionalRequestHeader(AsciiString name, String value);
+    void setAdditionalRequestHeader(CharSequence name, Object value);
 
     /**
-     * Clears the current header and sets the specified {@link Headers} which is included when a
+     * Clears the current header and sets the specified {@link HttpHeaders} which is included when a
      * {@link Client} sends an {@link HttpRequest}.
      */
-    void setAdditionalRequestHeaders(Headers<? extends AsciiString, ? extends String, ?> headers);
+    void setAdditionalRequestHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
 
     /**
      * Adds a header with the specified {@code name} and {@code value}. The header will be included when
      * a {@link Client} sends an {@link HttpRequest}.
      */
-    void addAdditionalRequestHeader(AsciiString name, String value);
+    void addAdditionalRequestHeader(CharSequence name, Object value);
 
     /**
-     * Adds the specified {@link Headers} which is included when a {@link Client} sends an
+     * Adds the specified {@link HttpHeaders} which is included when a {@link Client} sends an
      * {@link HttpRequest}.
      */
-    void addAdditionalRequestHeaders(Headers<? extends AsciiString, ? extends String, ?> headers);
+    void addAdditionalRequestHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
 
     /**
      * Removes all headers with the specified {@code name}.
      *
      * @return {@code true} if at least one entry has been removed
      */
-    boolean removeAdditionalRequestHeader(AsciiString name);
+    boolean removeAdditionalRequestHeader(CharSequence name);
 }

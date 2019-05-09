@@ -31,6 +31,7 @@
 package com.linecorp.armeria.common;
 
 import java.time.Instant;
+import java.time.temporal.TemporalAccessor;
 import java.util.Calendar;
 import java.util.Date;
 
@@ -59,6 +60,26 @@ final class StringValueConverter implements ValueConverter<String> {
             return null;
         }
 
+        // Try the types that appears more often first.
+        if (value instanceof CharSequence ||
+            value instanceof Number ||
+            value instanceof MediaType) {
+            return value.toString();
+        }
+
+        if (value instanceof Instant) {
+            return DateFormatter.format(new Date(((Instant) value).toEpochMilli()));
+        }
+
+        if (value instanceof TemporalAccessor) {
+            return DateFormatter.format(new Date(Instant.from((TemporalAccessor) value).toEpochMilli()));
+        }
+
+        if (value instanceof CacheControl) {
+            return ((CacheControl) value).asHeaderValue();
+        }
+
+        // Obsolete types.
         if (value instanceof Date) {
             return DateFormatter.format((Date) value);
         }
@@ -67,13 +88,6 @@ final class StringValueConverter implements ValueConverter<String> {
             return DateFormatter.format(((Calendar) value).getTime());
         }
 
-        if (value instanceof Instant) {
-            return DateFormatter.format(new Date(((Instant) value).toEpochMilli()));
-        }
-
-        if (value instanceof CacheControl) {
-            return ((CacheControl) value).asHeaderValue();
-        }
         return value.toString();
     }
 

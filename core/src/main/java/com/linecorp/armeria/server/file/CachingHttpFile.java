@@ -28,8 +28,8 @@ import com.google.common.base.MoreObjects;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.spotify.futures.CompletableFutures;
 
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.HttpService;
 
@@ -57,7 +57,7 @@ final class CachingHttpFile implements HttpFile {
 
     @Nullable
     @Override
-    public HttpHeaders readHeaders() throws IOException {
+    public ResponseHeaders readHeaders() throws IOException {
         return file.readHeaders();
     }
 

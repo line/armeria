@@ -19,7 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 
 /**
  * An {@link InvalidResponseException} raised when a client received a response with invalid headers.
@@ -28,39 +28,39 @@ public class InvalidResponseHeadersException extends InvalidResponseException {
 
     private static final long serialVersionUID = -1349209911680323202L;
 
-    private final HttpHeaders headers;
+    private final ResponseHeaders headers;
 
     /**
-     * Creates a new instance with the specified response {@link HttpHeaders}.
+     * Creates a new instance with the specified {@link ResponseHeaders}.
      */
-    public InvalidResponseHeadersException(HttpHeaders headers) {
+    public InvalidResponseHeadersException(ResponseHeaders headers) {
         super(requireNonNull(headers, "headers").toString());
-        this.headers = HttpHeaders.copyOf(headers).asImmutable();
+        this.headers = headers;
     }
 
     /**
-     * Creates a new instance with the specified response {@link HttpHeaders} and {@code cause}.
+     * Creates a new instance with the specified {@link ResponseHeaders} and {@code cause}.
      */
-    public InvalidResponseHeadersException(HttpHeaders headers, @Nullable Throwable cause) {
+    public InvalidResponseHeadersException(ResponseHeaders headers, @Nullable Throwable cause) {
         super(requireNonNull(headers, "headers").toString(), cause);
-        this.headers = HttpHeaders.copyOf(headers).asImmutable();
+        this.headers = headers;
     }
 
     /**
-     * Creates a new instance with the specified response {@link HttpHeaders}, {@code cause},
+     * Creates a new instance with the specified {@link ResponseHeaders}, {@code cause},
      * suppression enabled or disabled, and writable stack trace enabled or disabled.
      */
-    protected InvalidResponseHeadersException(HttpHeaders headers, @Nullable Throwable cause,
+    protected InvalidResponseHeadersException(ResponseHeaders headers, @Nullable Throwable cause,
                                               boolean enableSuppression, boolean writableStackTrace) {
         super(requireNonNull(headers, "headers").toString(), cause,
               enableSuppression, writableStackTrace);
-        this.headers = HttpHeaders.copyOf(headers).asImmutable();
+        this.headers = headers;
     }
 
     /**
-     * Returns the response {@link HttpHeaders} which triggered this exception.
+     * Returns the {@link ResponseHeaders} which triggered this exception.
      */
-    public HttpHeaders headers() {
+    public ResponseHeaders headers() {
         return headers;
     }
 }

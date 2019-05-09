@@ -22,7 +22,7 @@ import java.util.concurrent.Executor;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 
 import io.netty.buffer.ByteBufAllocator;
 
@@ -51,14 +51,14 @@ public interface AggregatedHttpFile extends HttpFile {
     HttpFileAttributes readAttributes();
 
     /**
-     * Returns the attributes of this file as {@link HttpHeaders}, which could be useful for building
+     * Returns the attributes of this file as {@link ResponseHeaders}, which could be useful for building
      * a response for a {@code HEAD} request.
      *
      * @return the headers, or {@code null} if the file does not exist.
      */
     @Nullable
     @Override
-    HttpHeaders readHeaders();
+    ResponseHeaders readHeaders();
 
     /**
      * Returns the content of the file.

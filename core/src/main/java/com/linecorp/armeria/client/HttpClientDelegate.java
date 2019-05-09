@@ -26,6 +26,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.HttpChannelPool.PoolKey;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -136,7 +137,7 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
 
     @VisibleForTesting
     static String extractHost(ClientRequestContext ctx, HttpRequest req, Endpoint endpoint) {
-        String host = extractHost(ctx.additionalRequestHeaders().authority());
+        String host = extractHost(ctx.additionalRequestHeaders().get(HttpHeaderNames.AUTHORITY));
         if (host != null) {
             return host;
         }

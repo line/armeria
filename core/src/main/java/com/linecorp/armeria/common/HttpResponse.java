@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isContentAlwaysEmpty;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.setOrRemoveContentLength;
 import static java.util.Objects.requireNonNull;
@@ -49,7 +50,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
 
     /**
      * Creates a new HTTP response that can stream an arbitrary number of {@link HttpObject} to the client.
-     * The first object written must be of type {@link HttpHeaders}.
+     * The first object written must be of type {@link ResponseHeaders}.
      */
     static HttpResponseWriter streaming() {
         return new DefaultHttpResponse();
@@ -77,32 +78,35 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Creates a new HTTP response of the specified {@code statusCode} and closes the stream if the
-     * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     * Creates a new HTTP response of the specified {@code statusCode}.
+     *
+     * @throws IllegalArgumentException if the {@link HttpStatusClass} is
+     *                                  {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
      */
     static HttpResponse of(int statusCode) {
         return of(HttpStatus.valueOf(statusCode));
     }
 
     /**
-     * Creates a new HTTP response of the specified {@link HttpStatus} and closes the stream if the
-     * {@link HttpStatusClass} is not {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
+     * Creates a new HTTP response of the specified {@link HttpStatus}.
+     *
+     * @throws IllegalArgumentException if the {@link HttpStatusClass} is
+     *                                  {@linkplain HttpStatusClass#INFORMATIONAL informational} (1xx).
      */
     static HttpResponse of(HttpStatus status) {
         requireNonNull(status, "status");
-        if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
-            final HttpResponseWriter res = streaming();
-            res.write(HttpHeaders.of(status));
-            return res;
-        } else if (isContentAlwaysEmpty(status)) {
-            return new OneElementFixedHttpResponse(HttpHeaders.of(status));
+        checkArgument(status.codeClass() != HttpStatusClass.INFORMATIONAL,
+                      "status: %s (expected: a non-1xx status");
+
+        if (isContentAlwaysEmpty(status)) {
+            return new OneElementFixedHttpResponse(ResponseHeaders.of(status));
         } else {
             return of(status, MediaType.PLAIN_TEXT_UTF_8, status.toHttpData());
         }
     }
 
     /**
-     * Creates a new HTTP response of the specified {@link HttpStatus} and closes the stream.
+     * Creates a new HTTP response of the specified {@link HttpStatus}.
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
@@ -118,7 +122,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Creates a new HTTP response of the specified {@link HttpStatus} and closes the stream.
+     * Creates a new HTTP response of the specified {@link HttpStatus}.
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
@@ -130,7 +134,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Creates a new HTTP response of OK status with the content as UTF_8 and closes the stream.
+     * Creates a new HTTP response of OK status with the content as UTF_8.
      *
      * @param content the content of the response
      */
@@ -139,7 +143,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Creates a new HTTP response of OK status with the content as UTF_8 and closes the stream.
+     * Creates a new HTTP response of OK status with the content as UTF_8.
      * The content of the response is formatted by {@link String#format(Locale, String, Object...)} with
      * {@linkplain Locale#ENGLISH English locale}.
      *
@@ -151,7 +155,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Creates a new HTTP response of OK status with the content and closes the stream.
+     * Creates a new HTTP response of OK status with the content.
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
@@ -161,7 +165,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Creates a new HTTP response of OK status with the content and closes the stream.
+     * Creates a new HTTP response of OK status with the content.
      * The content of the response is formatted by {@link String#format(Locale, String, Object...)} with
      * {@linkplain Locale#ENGLISH English locale}.
      *
@@ -174,7 +178,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Creates a new HTTP response of the specified {@link HttpStatus} and closes the stream.
+     * Creates a new HTTP response of the specified {@link HttpStatus}.
      * The content of the response is formatted by {@link String#format(Locale, String, Object...)} with
      * {@linkplain Locale#ENGLISH English locale}.
      *
@@ -189,7 +193,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Creates a new HTTP response of the specified {@link HttpStatus} and closes the stream.
+     * Creates a new HTTP response of the specified {@link HttpStatus}.
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
@@ -199,7 +203,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Creates a new HTTP response of the specified {@link HttpStatus} and closes the stream.
+     * Creates a new HTTP response of the specified {@link HttpStatus}.
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
@@ -211,17 +215,17 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Creates a new HTTP response of the specified {@link HttpStatus} and closes the stream.
+     * Creates a new HTTP response of the specified {@link HttpStatus}.
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, HttpData content) {
-        return of(status, mediaType, content, HttpHeaders.EMPTY_HEADERS);
+        return of(status, mediaType, content, HttpHeaders.of());
     }
 
     /**
-     * Creates a new HTTP response of the specified {@link HttpStatus} and closes the stream.
+     * Creates a new HTTP response of the specified {@link HttpStatus}.
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
@@ -233,28 +237,29 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
 
-        final HttpHeaders headers = HttpHeaders.of(status).contentType(mediaType);
+        final ResponseHeaders headers = ResponseHeaders.of(status,
+                                                           HttpHeaderNames.CONTENT_TYPE, mediaType);
         return of(headers, content, trailingHeaders);
     }
 
     /**
      * Creates a new HTTP response of the specified headers.
      */
-    static HttpResponse of(HttpHeaders headers) {
+    static HttpResponse of(ResponseHeaders headers) {
         return of(headers, HttpData.EMPTY_DATA);
     }
 
     /**
      * Creates a new HTTP response of the specified headers and content.
      */
-    static HttpResponse of(HttpHeaders headers, HttpData content) {
-        return of(headers, content, HttpHeaders.EMPTY_HEADERS);
+    static HttpResponse of(ResponseHeaders headers, HttpData content) {
+        return of(headers, content, HttpHeaders.of());
     }
 
     /**
-     * Creates a new HTTP response of the specified objects and closes the stream.
+     * Creates a new HTTP response of the specified objects.
      */
-    static HttpResponse of(HttpHeaders headers, HttpData content, HttpHeaders trailingHeaders) {
+    static HttpResponse of(ResponseHeaders headers, HttpData content, HttpHeaders trailingHeaders) {
         requireNonNull(headers, "headers");
         requireNonNull(content, "content");
         requireNonNull(trailingHeaders, "trailingHeaders");
@@ -269,7 +274,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
             throw new IllegalStateException("not a response (missing :status)");
         }
 
-        final HttpHeaders newHeaders = setOrRemoveContentLength(headers, content, trailingHeaders);
+        final ResponseHeaders newHeaders = setOrRemoveContentLength(headers, content, trailingHeaders);
         if (content.isEmpty() && trailingHeaders.isEmpty()) {
             ReferenceCountUtil.safeRelease(content);
             return new OneElementFixedHttpResponse(newHeaders);
@@ -287,15 +292,9 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Creates a new HTTP response of the specified objects and closes the stream.
+     * Creates a new HTTP response of the specified objects.
      */
     static HttpResponse of(HttpObject... objs) {
-        requireNonNull(objs, "objs");
-        for (int i = 0; i < objs.length; i++) {
-            if (objs[i] == null) {
-                throw new NullPointerException("objs[" + i + "] is null");
-            }
-        }
         return new RegularFixedHttpResponse(objs);
     }
 
@@ -305,8 +304,8 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     static HttpResponse of(AggregatedHttpMessage res) {
         requireNonNull(res, "res");
 
-        final List<HttpHeaders> informationals = res.informationals();
-        final HttpHeaders headers = res.headers();
+        final List<ResponseHeaders> informationals = res.informationals();
+        final ResponseHeaders headers = ResponseHeaders.of(res.headers());
         final HttpData content = res.content();
         final HttpHeaders trailingHeaders = res.trailingHeaders();
 
@@ -320,7 +319,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
                                (!trailingHeaders.isEmpty() ? 1 : 0);
         final HttpObject[] objs = new HttpObject[numObjects];
         int writerIndex = 0;
-        for (HttpHeaders informational : informationals) {
+        for (ResponseHeaders informational : informationals) {
             objs[writerIndex++] = informational;
         }
         objs[writerIndex++] = headers;

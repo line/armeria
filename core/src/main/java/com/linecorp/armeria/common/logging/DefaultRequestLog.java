@@ -17,7 +17,6 @@
 package com.linecorp.armeria.common.logging;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.common.HttpHeaders.EMPTY_HEADERS;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.COMPLETE;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.REQUEST_CONTENT;
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.REQUEST_END;
@@ -52,6 +51,8 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -82,11 +83,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @VisibleForTesting
     static final int RESPONSE_STRING_BUILDER_CAPACITY = 203;
 
-    private static final HttpHeaders DUMMY_REQUEST_HEADERS_HTTP =
-            HttpHeaders.of().scheme("http").authority("?").method(HttpMethod.UNKNOWN).path("?").asImmutable();
-    private static final HttpHeaders DUMMY_REQUEST_HEADERS_HTTPS =
-            HttpHeaders.of().scheme("https").authority("?").method(HttpMethod.UNKNOWN).path("?").asImmutable();
-    private static final HttpHeaders DUMMY_RESPONSE_HEADERS = HttpHeaders.of(HttpStatus.UNKNOWN).asImmutable();
+    private static final RequestHeaders DUMMY_REQUEST_HEADERS_HTTP =
+            RequestHeaders.builder(HttpMethod.UNKNOWN, "?").scheme("http").authority("?").build();
+    private static final RequestHeaders DUMMY_REQUEST_HEADERS_HTTPS =
+            RequestHeaders.builder(HttpMethod.UNKNOWN, "?").scheme("https").authority("?").build();
+    private static final ResponseHeaders DUMMY_RESPONSE_HEADERS = ResponseHeaders.of(HttpStatus.UNKNOWN);
 
     private final RequestContext ctx;
 
@@ -135,11 +136,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private SessionProtocol sessionProtocol;
     private SerializationFormat serializationFormat = SerializationFormat.NONE;
 
-    private HttpHeaders requestHeaders = DUMMY_REQUEST_HEADERS_HTTP;
-    private HttpHeaders requestTrailers = EMPTY_HEADERS;
+    private RequestHeaders requestHeaders = DUMMY_REQUEST_HEADERS_HTTP;
+    private HttpHeaders requestTrailers = HttpHeaders.of();
 
-    private HttpHeaders responseHeaders = DUMMY_RESPONSE_HEADERS;
-    private HttpHeaders responseTrailers = EMPTY_HEADERS;
+    private ResponseHeaders responseHeaders = DUMMY_RESPONSE_HEADERS;
+    private HttpHeaders responseTrailers = HttpHeaders.of();
 
     @Nullable
     private Object requestContent;
@@ -567,13 +568,13 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public HttpHeaders requestHeaders() {
+    public RequestHeaders requestHeaders() {
         ensureAvailability(REQUEST_HEADERS);
         return requestHeaders;
     }
 
     @Override
-    public void requestHeaders(HttpHeaders requestHeaders) {
+    public void requestHeaders(RequestHeaders requestHeaders) {
         if (isAvailabilityAlreadyUpdated(REQUEST_HEADERS)) {
             return;
         }
@@ -828,13 +829,13 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public HttpHeaders responseHeaders() {
+    public ResponseHeaders responseHeaders() {
         ensureAvailability(RESPONSE_HEADERS);
         return responseHeaders;
     }
 
     @Override
-    public void responseHeaders(HttpHeaders responseHeaders) {
+    public void responseHeaders(ResponseHeaders responseHeaders) {
         if (isAvailabilityAlreadyUpdated(RESPONSE_HEADERS)) {
             return;
         }
@@ -1077,7 +1078,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public String toStringRequestOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
+    public String toStringRequestOnly(Function<? super RequestHeaders, ? extends HttpHeaders> headersSanitizer,
                                       Function<Object, ?> contentSanitizer,
                                       Function<? super HttpHeaders, ? extends HttpHeaders> trailersSanitizer) {
         requireNonNull(headersSanitizer, "headersSanitizer");
@@ -1188,9 +1189,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public String toStringResponseOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
-                                       Function<Object, ?> contentSanitizer,
-                                       Function<? super HttpHeaders, ? extends HttpHeaders> trailersSanitizer) {
+    public String toStringResponseOnly(
+            Function<? super ResponseHeaders, ? extends HttpHeaders> headersSanitizer,
+            Function<Object, ?> contentSanitizer,
+            Function<? super HttpHeaders, ? extends HttpHeaders> trailersSanitizer) {
+
         requireNonNull(headersSanitizer, "headersSanitizer");
         requireNonNull(contentSanitizer, "contentSanitizer");
         requireNonNull(trailersSanitizer, "trailersSanitizer");

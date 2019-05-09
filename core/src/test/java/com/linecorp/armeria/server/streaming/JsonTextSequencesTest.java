@@ -31,14 +31,15 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
+import io.netty.handler.codec.http.HttpHeaderNames;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
@@ -70,12 +71,13 @@ public class JsonTextSequencesTest {
         for (final String path : ImmutableList.of("/publisher", "/stream", "/custom-mapper")) {
             final HttpResponse response = client.get(path);
             StepVerifier.create(response)
-                        .expectNext(HttpHeaders.of(HttpStatus.OK).contentType(MediaType.JSON_SEQ))
+                        .expectNext(ResponseHeaders.of(HttpStatus.OK,
+                                                       HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_SEQ))
                         .assertNext(o -> ensureExpectedHttpData(o, "foo"))
                         .assertNext(o -> ensureExpectedHttpData(o, "bar"))
                         .assertNext(o -> ensureExpectedHttpData(o, "baz"))
                         .assertNext(o -> ensureExpectedHttpData(o, "qux"))
-                        .assertNext(this::assertThatLastContent)
+                        .assertNext(JsonTextSequencesTest::assertThatLastContent)
                         .expectComplete()
                         .verify();
         }
@@ -91,7 +93,7 @@ public class JsonTextSequencesTest {
         assertThat(response.content().array()).containsExactly(0x1E, '"', 'f', 'o', 'o', '"', 0x0A);
     }
 
-    private void assertThatLastContent(HttpObject o) {
+    private static void assertThatLastContent(HttpObject o) {
         // On the server side, HttpResponseSubscriber emits a DATA frame with end of stream
         // flag when the HttpResponseWriter is closed.
         final HttpData lastContent = (HttpData) o;

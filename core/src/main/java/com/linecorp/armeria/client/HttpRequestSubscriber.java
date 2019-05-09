@@ -29,12 +29,13 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
 import com.linecorp.armeria.common.ClosedSessionException;
-import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
@@ -157,7 +158,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
             return;
         }
 
-        final HttpHeaders firstHeaders = autoFillHeaders(ch);
+        final RequestHeaders firstHeaders = autoFillHeaders(ch);
 
         final SessionProtocol protocol = session.protocol();
         assert protocol != null;
@@ -173,17 +174,11 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         }
     }
 
-    private HttpHeaders autoFillHeaders(Channel ch) {
-        HttpHeaders requestHeaders = request.headers();
-        if (requestHeaders.isImmutable()) {
-            final HttpHeaders temp = requestHeaders;
-            requestHeaders = new DefaultHttpHeaders(false);
-            requestHeaders.set(temp);
-        }
-
+    private RequestHeaders autoFillHeaders(Channel ch) {
+        final RequestHeadersBuilder requestHeaders = request.headers().toBuilder();
         final HttpHeaders additionalHeaders = reqCtx.additionalRequestHeaders();
         if (!additionalHeaders.isEmpty()) {
-            requestHeaders.setAllIfAbsent(additionalHeaders);
+            requestHeaders.setIfAbsent(additionalHeaders);
         }
 
         final SessionProtocol sessionProtocol = reqCtx.sessionProtocol();
@@ -203,17 +198,17 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
                 authority = buf.toString();
             }
 
-            requestHeaders.authority(authority);
+            requestHeaders.add(HttpHeaderNames.AUTHORITY, authority);
         }
 
-        if (requestHeaders.scheme() == null) {
-            requestHeaders.scheme(sessionProtocol.isTls() ? "https" : "http");
+        if (!requestHeaders.contains(HttpHeaderNames.SCHEME)) {
+            requestHeaders.add(HttpHeaderNames.SCHEME, sessionProtocol.isTls() ? "https" : "http");
         }
 
         if (!requestHeaders.contains(HttpHeaderNames.USER_AGENT)) {
-            requestHeaders.set(HttpHeaderNames.USER_AGENT, HttpHeaderUtil.USER_AGENT.toString());
+            requestHeaders.add(HttpHeaderNames.USER_AGENT, HttpHeaderUtil.USER_AGENT.toString());
         }
-        return requestHeaders;
+        return requestHeaders.build();
     }
 
     @Override
@@ -228,7 +223,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
             case NEEDS_DATA_OR_TRAILING_HEADERS: {
                 if (o instanceof HttpHeaders) {
                     final HttpHeaders trailingHeaders = (HttpHeaders) o;
-                    if (trailingHeaders.status() != null) {
+                    if (trailingHeaders.contains(HttpHeaderNames.STATUS)) {
                         throw newIllegalStateException("published a trailing HttpHeaders with status: " + o);
                     }
                     // Trailing headers always end the stream even if not explicitly set.

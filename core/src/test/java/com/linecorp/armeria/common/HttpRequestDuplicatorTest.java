@@ -40,17 +40,17 @@ public class HttpRequestDuplicatorTest {
         final AggregatedHttpMessage req2 = reqDuplicator.duplicateStream().aggregate().join();
 
         assertThat(req1.headers()).isEqualTo(
-                HttpHeaders.of(HttpMethod.PUT, "/foo")
-                           .contentType(PLAIN_TEXT_UTF_8)
-                           .setInt(CONTENT_LENGTH, 3));
+                RequestHeaders.of(HttpMethod.PUT, "/foo",
+                                  HttpHeaderNames.CONTENT_TYPE, PLAIN_TEXT_UTF_8,
+                                  CONTENT_LENGTH, 3));
         assertThat(req1.content()).isEqualTo(HttpData.of(StandardCharsets.UTF_8, "bar"));
         assertThat(req1.trailingHeaders()).isEqualTo(
                 HttpHeaders.of(CONTENT_MD5, "37b51d194a7513e45b56f6524f2d51f2"));
 
         assertThat(req2.headers()).isEqualTo(
-                HttpHeaders.of(HttpMethod.PUT, "/foo")
-                           .contentType(PLAIN_TEXT_UTF_8)
-                           .setInt(CONTENT_LENGTH, 3));
+                RequestHeaders.of(HttpMethod.PUT, "/foo",
+                                  HttpHeaderNames.CONTENT_TYPE, PLAIN_TEXT_UTF_8,
+                                  CONTENT_LENGTH, 3));
         assertThat(req2.content()).isEqualTo(HttpData.of(StandardCharsets.UTF_8, "bar"));
         assertThat(req2.trailingHeaders()).isEqualTo(
                 HttpHeaders.of(CONTENT_MD5, "37b51d194a7513e45b56f6524f2d51f2"));

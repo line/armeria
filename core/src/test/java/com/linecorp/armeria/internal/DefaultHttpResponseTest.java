@@ -42,6 +42,8 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 
 import io.netty.buffer.PooledByteBufAllocator;
@@ -109,9 +111,9 @@ public class DefaultHttpResponseTest {
     @Test
     public void ignoresAfterTrailersIsWritten() {
         final HttpResponseWriter res = HttpResponse.streaming();
-        res.write(HttpHeaders.of(100));
+        res.write(ResponseHeaders.of(100));
         res.write(HttpHeaders.of(HttpHeaderNames.of("a"), "b"));
-        res.write(HttpHeaders.of(200));
+        res.write(ResponseHeaders.of(200));
         res.write(HttpHeaders.of(HttpHeaderNames.of("c"), "d")); // Split headers is trailers.
 
         // Ignored after trailers is written.
@@ -123,9 +125,9 @@ public class DefaultHttpResponseTest {
         final AggregatedHttpMessage aggregated = res.aggregate().join();
         // Informational headers
         assertThat(aggregated.informationals()).containsExactly(
-                HttpHeaders.of(100).add(HttpHeaderNames.of("a"), "b"));
+                ResponseHeaders.of(HttpStatus.CONTINUE, HttpHeaderNames.of("a"), "b"));
         // Non-informational header
-        assertThat(aggregated.headers()).isEqualTo(HttpHeaders.of(200));
+        assertThat(aggregated.headers()).isEqualTo(ResponseHeaders.of(200));
 
         assertThat(aggregated.contentUtf8()).isEmpty();
         assertThat(aggregated.trailingHeaders()).isEqualTo(HttpHeaders.of(HttpHeaderNames.of("c"), "d"));
