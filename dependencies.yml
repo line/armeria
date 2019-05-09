@@ -3,7 +3,7 @@
 #
 
 cglib:
-  cglib: { version: '3.2.10' }
+  cglib: { version: '3.2.12' }
 
 ch.qos.logback:
   logback-classic:
@@ -115,7 +115,7 @@ gradle.plugin.net.davidecavestro:
 
 io.dropwizard.metrics:
   metrics-core:
-    version: &DROPWIZARD_VERSION '4.0.5'
+    version: &DROPWIZARD_VERSION '4.1.0'
     javadocs:
     - https://metrics.dropwizard.io/4.0.0/apidocs/
   metrics-json: { version: *DROPWIZARD_VERSION }
@@ -188,7 +188,7 @@ io.netty:
 
 io.projectreactor:
   reactor-core:
-    version: &REACTOR_VERSION '3.2.8.RELEASE'
+    version: &REACTOR_VERSION '3.2.9.RELEASE'
     javadocs:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }
@@ -264,7 +264,7 @@ net.javacrumbs.json-unit:
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 net.sf.proguard:
-  proguard-gradle: { version: '6.1.0beta2' }
+  proguard-gradle: { version: '6.1.0' }
 
 net.shibboleth.utilities:
   java-support: { version: '7.3.0' }
@@ -346,7 +346,7 @@ org.dmonix.junit:
   zookeeper-junit: { version: '1.2' }
 
 org.eclipse.jetty:
-  apache-jsp: { version: &JETTY_VERSION '9.4.17.v20190418' }
+  apache-jsp: { version: &JETTY_VERSION '9.4.18.v20190429' }
   apache-jstl: { version: *JETTY_VERSION }
   jetty-annotations:
     version: *JETTY_VERSION
