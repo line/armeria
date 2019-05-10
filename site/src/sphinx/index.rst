@@ -3,7 +3,7 @@
 .. _`gRPC`: https://grpc.io/
 .. _`HTTP/2`: https://http2.github.io/
 .. _`HTTP/2 connection preface`: https://tools.ietf.org/html/rfc7540#section-3.5
-.. _`Java 8`: https://java.oracle.com/
+.. _`Java 8`: https://go.java/
 .. _`LINE Corporation`: https://linecorp.com/en/
 .. _`Netty`: https://netty.io/
 .. _`Reactive Streams`: http://www.reactive-streams.org/

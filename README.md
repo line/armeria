@@ -3,7 +3,7 @@ Visit [the official web site](https://line.github.io/armeria/) for more informat
 # Armeria
 
 _Armeria_ is an open-source asynchronous RPC/API client/server library built on top of
-[Java 8](https://java.oracle.com/), [Netty 4.1](https://netty.io/), [HTTP/2](https://http2.github.io/),
+[Java 8](https://go.java/), [Netty 4.1](https://netty.io/), [HTTP/2](https://http2.github.io/),
 [Thrift](https://thrift.apache.org/) and [gRPC](https://grpc.io/). Its primary goal is to help engineers build
 high-performance asynchronous microservices that use HTTP/2 as a session layer protocol.
 
