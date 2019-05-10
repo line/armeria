@@ -83,16 +83,23 @@ public final class SpanTags {
 
     private static String generateUrl(Scheme scheme, String authority, String path, @Nullable String query) {
         final SessionProtocol sessionProtocol = scheme.sessionProtocol();
-        final StringBuilder uriBuilder = new StringBuilder();
+        final String uriScheme;
         if (SessionProtocol.httpValues().contains(sessionProtocol)) {
-            uriBuilder.append("http://");
+            uriScheme = "http://";
         } else if (SessionProtocol.httpsValues().contains(sessionProtocol)) {
-            uriBuilder.append("https://");
+            uriScheme = "https://";
         } else {
-            uriBuilder.append(sessionProtocol.uriText()).append("://");
+            uriScheme = sessionProtocol.uriText() + "://";
         }
 
-        uriBuilder.append(authority).append(path);
+        final StringBuilder uriBuilder = new StringBuilder(
+                uriScheme.length() + authority.length() + path.length() +
+                (query != null ? query.length() + 1 : 0));
+
+        uriBuilder.append(uriScheme)
+                  .append(authority)
+                  .append(path);
+
         if (query != null) {
             uriBuilder.append('?').append(query);
         }
