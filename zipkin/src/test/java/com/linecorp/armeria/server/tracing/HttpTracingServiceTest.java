@@ -100,8 +100,7 @@ public class HttpTracingServiceTest {
                                .containsEntry("http.path", "/hello/trustin")
                                .containsEntry("http.status_code", "200")
                                .containsEntry("http.url", "http://foo.com/hello/trustin")
-                               .containsEntry("http.protocol", "h2c")
-                               .containsEntry("http.serfmt", "none");
+                               .containsEntry("http.protocol", "h2c");
 
         // check service name
         assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);

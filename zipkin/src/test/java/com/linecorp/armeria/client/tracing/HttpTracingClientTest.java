@@ -111,8 +111,7 @@ public class HttpTracingClientTest {
                                .containsEntry("http.path", "/hello/armeria")
                                .containsEntry("http.status_code", "200")
                                .containsEntry("http.url", "http://foo.com/hello/armeria")
-                               .containsEntry("http.protocol", "h2c")
-                               .containsEntry("http.serfmt", "none");
+                               .containsEntry("http.protocol", "h2c");
 
         // check service name
         assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
@@ -141,8 +140,7 @@ public class HttpTracingClientTest {
                                .containsEntry("http.path", "/hello/armeria")
                                .containsEntry("http.status_code", "200")
                                .containsEntry("http.url", "http://foo.com/hello/armeria")
-                               .containsEntry("http.protocol", "h2c")
-                               .containsEntry("http.serfmt", "none");
+                               .containsEntry("http.protocol", "h2c");
 
         // check service name
         assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);

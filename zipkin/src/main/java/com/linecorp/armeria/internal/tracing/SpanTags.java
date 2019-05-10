@@ -22,6 +22,7 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 
@@ -52,8 +53,12 @@ public final class SpanTags {
             .tag("http.path", path)
             .tag("http.url", generateUrl(scheme, authority, path, log.query()))
             .tag("http.status_code", log.status().codeAsText())
-            .tag("http.protocol", scheme.sessionProtocol().uriText())
-            .tag("http.serfmt", scheme.serializationFormat().uriText());
+            .tag("http.protocol", scheme.sessionProtocol().uriText());
+
+        final SerializationFormat serFmt = scheme.serializationFormat();
+        if (serFmt != SerializationFormat.NONE) {
+            span.tag("http.serfmt", serFmt.uriText());
+        }
 
         final Throwable responseCause = log.responseCause();
         if (responseCause != null) {
