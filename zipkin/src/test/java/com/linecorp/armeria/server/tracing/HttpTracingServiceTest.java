@@ -29,8 +29,6 @@ import java.util.concurrent.TimeUnit;
 import org.junit.After;
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableMap;
-
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -97,12 +95,12 @@ public class HttpTracingServiceTest {
         assertThat(span.annotations()).hasSize(2);
 
         // check tags
-        assertThat(span.tags()).containsAllEntriesOf(ImmutableMap.of(
-                "http.host", "foo.com",
-                "http.method", "POST",
-                "http.path", "/hello/trustin",
-                "http.status_code", "200",
-                "http.url", "none+h2c://foo.com/hello/trustin"));
+        assertThat(span.tags()).containsEntry("http.host", "foo.com")
+                               .containsEntry("http.method", "POST")
+                               .containsEntry("http.path", "/hello/trustin")
+                               .containsEntry("http.status_code", "200")
+                               .containsEntry("http.url", "http://foo.com/hello/trustin")
+                               .containsEntry("http.protocol", "h2c");
 
         // check service name
         assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);

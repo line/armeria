@@ -18,7 +18,12 @@ package com.linecorp.armeria.internal.tracing;
 
 import java.net.SocketAddress;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 
 import brave.Span;
@@ -38,21 +43,23 @@ public final class SpanTags {
      * Adds information about the raw HTTP request, RPC request, and endpoint to the span.
      */
     public static void addTags(Span span, RequestLog log) {
-        final String host = log.requestHeaders().authority();
-        assert host != null;
-        span.tag("http.host", host);
-        final StringBuilder uriBuilder = new StringBuilder()
-                .append(log.scheme().uriText())
-                .append("://")
-                .append(host)
-                .append(log.path());
-        if (log.query() != null) {
-            uriBuilder.append('?').append(log.query());
+        final Scheme scheme = log.scheme();
+        final String authority = log.requestHeaders().authority();
+        final String path = log.path();
+
+        assert authority != null;
+        span.tag("http.host", authority)
+            .tag("http.method", log.method().name())
+            .tag("http.path", path)
+            .tag("http.url", generateUrl(scheme, authority, path, log.query()))
+            .tag("http.status_code", log.status().codeAsText())
+            .tag("http.protocol", scheme.sessionProtocol().uriText());
+
+        final SerializationFormat serFmt = scheme.serializationFormat();
+        if (serFmt != SerializationFormat.NONE) {
+            span.tag("http.serfmt", serFmt.uriText());
         }
-        span.tag("http.method", log.method().name())
-            .tag("http.path", log.path())
-            .tag("http.url", uriBuilder.toString())
-            .tag("http.status_code", log.status().codeAsText());
+
         final Throwable responseCause = log.responseCause();
         if (responseCause != null) {
             span.tag("error", responseCause.toString());
@@ -62,6 +69,7 @@ public final class SpanTags {
         if (raddr != null) {
             span.tag("address.remote", raddr.toString());
         }
+
         final SocketAddress laddr = log.context().localAddress();
         if (laddr != null) {
             span.tag("address.local", laddr.toString());
@@ -71,6 +79,32 @@ public final class SpanTags {
         if (requestContent instanceof RpcRequest) {
             span.name(((RpcRequest) requestContent).method());
         }
+    }
+
+    private static String generateUrl(Scheme scheme, String authority, String path, @Nullable String query) {
+        final SessionProtocol sessionProtocol = scheme.sessionProtocol();
+        final String uriScheme;
+        if (SessionProtocol.httpValues().contains(sessionProtocol)) {
+            uriScheme = "http://";
+        } else if (SessionProtocol.httpsValues().contains(sessionProtocol)) {
+            uriScheme = "https://";
+        } else {
+            uriScheme = sessionProtocol.uriText() + "://";
+        }
+
+        final StringBuilder uriBuilder = new StringBuilder(
+                uriScheme.length() + authority.length() + path.length() +
+                (query != null ? query.length() + 1 : 0));
+
+        uriBuilder.append(uriScheme)
+                  .append(authority)
+                  .append(path);
+
+        if (query != null) {
+            uriBuilder.append('?').append(query);
+        }
+
+        return uriBuilder.toString();
     }
 
     public static void logWireSend(Span span, long wireSendTimeNanos, RequestLog requestLog) {

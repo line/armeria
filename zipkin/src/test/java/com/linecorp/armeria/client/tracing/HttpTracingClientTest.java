@@ -33,8 +33,6 @@ import javax.annotation.Nullable;
 import org.junit.After;
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableMap;
-
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextBuilder;
@@ -108,12 +106,12 @@ public class HttpTracingClientTest {
         assertThat(span.annotations()).hasSize(2);
 
         // check tags
-        assertThat(span.tags()).containsAllEntriesOf(ImmutableMap.of(
-                "http.host", "foo.com",
-                "http.method", "POST",
-                "http.path", "/hello/armeria",
-                "http.status_code", "200",
-                "http.url", "none+h2c://foo.com/hello/armeria"));
+        assertThat(span.tags()).containsEntry("http.host", "foo.com")
+                               .containsEntry("http.method", "POST")
+                               .containsEntry("http.path", "/hello/armeria")
+                               .containsEntry("http.status_code", "200")
+                               .containsEntry("http.url", "http://foo.com/hello/armeria")
+                               .containsEntry("http.protocol", "h2c");
 
         // check service name
         assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
@@ -137,12 +135,12 @@ public class HttpTracingClientTest {
         final Span span = reporter.spans().take();
 
         // check tags
-        assertThat(span.tags()).containsAllEntriesOf(ImmutableMap.of(
-                "http.host", "foo.com",
-                "http.method", "POST",
-                "http.path", "/hello/armeria",
-                "http.status_code", "200",
-                "http.url", "none+h2c://foo.com/hello/armeria"));
+        assertThat(span.tags()).containsEntry("http.host", "foo.com")
+                               .containsEntry("http.method", "POST")
+                               .containsEntry("http.path", "/hello/armeria")
+                               .containsEntry("http.status_code", "200")
+                               .containsEntry("http.url", "http://foo.com/hello/armeria")
+                               .containsEntry("http.protocol", "h2c");
 
         // check service name
         assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
