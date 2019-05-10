@@ -34,8 +34,6 @@ import javax.net.ssl.SSLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Iterables;
-
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.ChannelUtil;
@@ -137,7 +135,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     private void configurePipeline(ChannelPipeline p, Set<SessionProtocol> protocols,
                                    @Nullable ProxiedAddresses proxiedAddresses) {
         if (protocols.size() == 1) {
-            switch (Iterables.getFirst(protocols, null)) {
+            switch (protocols.iterator().next()) {
                 case HTTP:
                     configureHttp(p, proxiedAddresses);
                     break;

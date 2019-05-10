@@ -21,9 +21,11 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Sets;
 
 /**
  * Session-level protocol that provides facilities such as framing and flow control.
@@ -58,6 +60,10 @@ public enum SessionProtocol {
      */
     PROXY("proxy", false, false, 0);
 
+    private static final Set<SessionProtocol> HTTP_VALUES = Sets.immutableEnumSet(HTTP, H1C, H2C);
+
+    private static final Set<SessionProtocol> HTTPS_VALUES = Sets.immutableEnumSet(HTTPS, H1, H2);
+
     private static final Map<String, SessionProtocol> uriTextToProtocols;
 
     static {
@@ -87,6 +93,26 @@ public enum SessionProtocol {
     public static Optional<SessionProtocol> find(String uriText) {
         uriText = Ascii.toLowerCase(requireNonNull(uriText, "uriText"));
         return Optional.ofNullable(uriTextToProtocols.get(uriText));
+    }
+
+    /**
+     * Returns an immutable {@link Set} that contains {@link #HTTP}, {@link #H1C} and {@link #H2C}.
+     * Note that it does not contain HTTPS protocols such as {@link #HTTPS}, {@link #H1} and {@link #H2}.
+     *
+     * @see #httpsValues()
+     */
+    public static Set<SessionProtocol> httpValues() {
+        return HTTP_VALUES;
+    }
+
+    /**
+     * Returns an immutable {@link Set} that contains {@link #HTTPS}, {@link #H1} and {@link #H2}.
+     * Note that it does not contain HTTP protocols such as {@link #HTTP}, {@link #H1C} and {@link #H2C}.
+     *
+     * @see #httpValues()
+     */
+    public static Set<SessionProtocol> httpsValues() {
+        return HTTPS_VALUES;
     }
 
     private final String uriText;
