@@ -20,8 +20,11 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 
+import javax.annotation.Nullable;
+
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 
@@ -32,7 +35,12 @@ import com.linecorp.armeria.common.SessionProtocol;
  */
 public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpClientBuilder> {
 
-    private final URI uri;
+    @Nullable
+    private URI uri;
+    @Nullable
+    private Scheme scheme;
+    @Nullable
+    private Endpoint endpoint;
     private ClientFactory factory = ClientFactory.DEFAULT;
 
     /**
@@ -48,22 +56,23 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
     /**
      * Creates a new instance.
      *
-     * @throws IllegalArgumentException if the {@code scheme} is not one of the fields
-     *                                  in {@link SessionProtocol}
-     */
-    public HttpClientBuilder(String scheme, Endpoint endpoint) {
-        this(requireNonNull(endpoint).toURI(scheme));
-    }
-
-    /**
-     * Creates a new instance.
-     *
      * @throws IllegalArgumentException if the scheme of the uri is not one of the fields
      *                                  in {@link SessionProtocol}
      */
     public HttpClientBuilder(URI uri) {
         validateScheme(requireNonNull(uri, "uri").getScheme());
         this.uri = URI.create(SerializationFormat.NONE + "+" + uri);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @throws IllegalArgumentException if the {@link Scheme} is not one of the fields
+     *                                  in {@link SessionProtocol}
+     */
+    public HttpClientBuilder(Scheme scheme, Endpoint endpoint) {
+        this.scheme = requireNonNull(scheme, "scheme");
+        this.endpoint = requireNonNull(endpoint, "endpoint");
     }
 
     private static void validateScheme(String scheme) {
@@ -92,6 +101,10 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
      *                                  is not an HTTP scheme
      */
     public HttpClient build() {
-        return factory.newClient(uri, HttpClient.class, buildOptions());
+        if (uri != null) {
+            return factory.newClient(uri, HttpClient.class, buildOptions());
+        } else {
+            return factory.newClient(scheme, endpoint, HttpClient.class, buildOptions());
+        }
     }
 }

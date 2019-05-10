@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import static java.util.Objects.requireNonNull;
-
 import java.net.URI;
 import java.nio.charset.Charset;
 
@@ -27,6 +25,9 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
 
 /**
  * An HTTP client.
@@ -142,58 +143,57 @@ public interface HttpClient extends ClientBuilderParams {
     }
 
     /**
-     * Creates a new HTTP client that connects to the specified {@link Endpoint} with {@code scheme}
+     * Creates a new HTTP client that connects to the specified {@link Endpoint} with {@link SessionProtocol}
      * using the default {@link ClientFactory}.
      *
-     * @param scheme a scheme of URI
+     * @param protocol the {@link SessionProtocol} of the {@link Endpoint}
      * @param endpoint the server {@link Endpoint}
      * @param options the {@link ClientOptionValue}s
      */
-    static HttpClient of(String scheme, Endpoint endpoint, ClientOptionValue<?>... options) {
-        requireNonNull(endpoint, "endpoint");
-        return of(ClientFactory.DEFAULT, endpoint.toURI(scheme), options);
+    static HttpClient of(SessionProtocol protocol, Endpoint endpoint, ClientOptionValue<?>... options) {
+        return of(ClientFactory.DEFAULT, protocol, endpoint, ClientOptions.of(options));
     }
 
     /**
-     * Creates a new HTTP client that connects to the specified {@link Endpoint} with {@code scheme}
+     * Creates a new HTTP client that connects to the specified {@link Endpoint} with {@link SessionProtocol}
      * using the default {@link ClientFactory}.
      *
-     * @param scheme a scheme of URI
+     * @param protocol the {@link SessionProtocol} of the {@link Endpoint}
      * @param endpoint the server {@link Endpoint}
      * @param options the {@link ClientOptions}
      */
-    static HttpClient of(String scheme, Endpoint endpoint, ClientOptions options) {
-        requireNonNull(endpoint, "endpoint");
-        return of(ClientFactory.DEFAULT, endpoint.toURI(scheme), options);
+    static HttpClient of(SessionProtocol protocol, Endpoint endpoint, ClientOptions options) {
+        return of(ClientFactory.DEFAULT, protocol, endpoint, options);
     }
 
     /**
-     * Creates a new HTTP client that connects to the specified {@link Endpoint} with {@code scheme}
+     * Creates a new HTTP client that connects to the specified {@link Endpoint} with {@link SessionProtocol}
      * using an alternative {@link ClientFactory}.
      *
      * @param factory an alternative {@link ClientFactory}
-     * @param scheme a scheme of URI
+     * @param protocol the {@link SessionProtocol} of the {@link Endpoint}
      * @param endpoint the server {@link Endpoint}
      * @param options the {@link ClientOptionValue}s
      */
-    static HttpClient of(ClientFactory factory, String scheme, Endpoint endpoint,
+    static HttpClient of(ClientFactory factory, SessionProtocol protocol, Endpoint endpoint,
                          ClientOptionValue<?>... options) {
-        requireNonNull(endpoint, "endpoint");
-        return of(factory, endpoint.toURI(scheme), options);
+        return new HttpClientBuilder(Scheme.of(SerializationFormat.NONE, protocol), endpoint)
+                .factory(factory).options(options).build();
     }
 
     /**
-     * Creates a new HTTP client that connects to the specified {@link Endpoint} with {@code scheme}
+     * Creates a new HTTP client that connects to the specified {@link Endpoint} with {@link SessionProtocol}
      * using an alternative {@link ClientFactory}.
      *
      * @param factory an alternative {@link ClientFactory}
-     * @param scheme a scheme of URI
+     * @param protocol the {@link SessionProtocol} of the {@link Endpoint}
      * @param endpoint the server {@link Endpoint}
      * @param options the {@link ClientOptions}
      */
-    static HttpClient of(ClientFactory factory, String scheme, Endpoint endpoint, ClientOptions options) {
-        requireNonNull(endpoint, "endpoint");
-        return of(factory, endpoint.toURI(scheme), options);
+    static HttpClient of(ClientFactory factory, SessionProtocol protocol, Endpoint endpoint,
+                         ClientOptions options) {
+        return new HttpClientBuilder(Scheme.of(SerializationFormat.NONE, protocol), endpoint)
+                .factory(factory).options(options).build();
     }
 
     /**

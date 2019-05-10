@@ -87,6 +87,11 @@ public class DecoratingClientFactory extends AbstractClientFactory {
     }
 
     @Override
+    public <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType, ClientOptions options) {
+        return delegate().newClient(scheme, endpoint, clientType, options);
+    }
+
+    @Override
     public <T> Optional<ClientBuilderParams> clientBuilderParams(T client) {
         return delegate().clientBuilderParams(client);
     }

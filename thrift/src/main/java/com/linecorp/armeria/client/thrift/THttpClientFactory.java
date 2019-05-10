@@ -30,6 +30,7 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.DecoratingClientFactory;
 import com.linecorp.armeria.client.DefaultClientBuilderParams;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RpcRequest;
@@ -71,8 +72,22 @@ final class THttpClientFactory extends DecoratingClientFactory {
     }
 
     @Override
+    public <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType, ClientOptions options) {
+        final URI uri = endpoint.toUri(scheme);
+
+        return newClient(uri, scheme, endpoint, clientType, options);
+    }
+
+    @Override
     public <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
         final Scheme scheme = validateScheme(uri);
+        final Endpoint endpoint = newEndpoint(uri);
+
+        return newClient(uri, scheme, endpoint, clientType, options);
+    }
+
+    private <T> T newClient(URI uri, Scheme scheme, Endpoint endpoint, Class<T> clientType,
+                            ClientOptions options) {
         final SerializationFormat serializationFormat = scheme.serializationFormat();
 
         final Client<RpcRequest, RpcResponse> delegate = options.decoration().decorate(
@@ -85,13 +100,13 @@ final class THttpClientFactory extends DecoratingClientFactory {
             @SuppressWarnings("unchecked")
             final T client = (T) new DefaultTHttpClient(
                     new DefaultClientBuilderParams(this, uri, THttpClient.class, options),
-                    delegate, meterRegistry(), scheme.sessionProtocol(), newEndpoint(uri));
+                    delegate, meterRegistry(), scheme.sessionProtocol(), endpoint);
             return client;
         } else {
             // Create a THttpClient without path.
             final THttpClient thriftClient = new DefaultTHttpClient(
                     new DefaultClientBuilderParams(this, pathlessUri(uri), THttpClient.class, options),
-                    delegate, meterRegistry(), scheme.sessionProtocol(), newEndpoint(uri));
+                    delegate, meterRegistry(), scheme.sessionProtocol(), endpoint);
 
             @SuppressWarnings("unchecked")
             final T client = (T) Proxy.newProxyInstance(

@@ -32,6 +32,9 @@ import com.google.common.net.HostAndPort;
 import com.google.common.net.InternetDomainName;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
+import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.util.NetUtil;
 
@@ -420,40 +423,74 @@ public final class Endpoint implements Comparable<Endpoint> {
         if (isGroup()) {
             authority = "group:" + groupName;
         } else {
-            authority = buildAuthority(host());
+            authority = buildAuthority(host(), port);
         }
 
         return this.authority = authority;
     }
 
     /**
-     * Converts this endpoint into a URI.
+     * Converts this endpoint into a URI using the {@code scheme}.
+     *
+     * @param scheme the {@code scheme} for {@link URI}.
      *
      * @return the URI
      */
-    public URI toURI(String scheme) {
+    public URI toUri(String scheme) {
+        requireNonNull(scheme, "scheme");
+
+        return toUri(Scheme.parse(scheme));
+    }
+
+    /**
+     * Converts this endpoint into a URI using the {@link SessionProtocol} and {@link SerializationFormat}.
+     *
+     * @param sessionProtocol the {@link SessionProtocol} for {@link URI}.
+     * @param serializationFormat the {@link SerializationFormat} for {@link URI}
+     *
+     * @return the URI
+     */
+    public URI toUri(SessionProtocol sessionProtocol, SerializationFormat serializationFormat) {
+        requireNonNull(serializationFormat, "serializationFormat");
+        requireNonNull(sessionProtocol, "sessionProtocol");
+
+        return toUri(Scheme.of(serializationFormat, sessionProtocol));
+    }
+
+    /**
+     * Converts this endpoint into a URI using the {@link Scheme}.
+     *
+     * @param scheme the {@link Scheme} for {@link URI}.
+     *
+     * @return the URI
+     */
+    public URI toUri(Scheme scheme) {
         requireNonNull(scheme, "scheme");
 
         final String authority;
         if (isGroup()) {
             authority = "group:" + groupName;
         } else {
-            authority = buildAuthority(hasIpAddr() ? ipAddr() : host());
+            authority = buildAuthority(hasIpAddr() ? ipAddr() : host(), port);
         }
 
-        return URI.create(scheme + "://" + authority);
+        return URI.create(scheme.uriText() + "://" + authority);
     }
 
-    private String buildAuthority(String host) {
-        if (NetUtil.isValidIpV6Address(host)) {
-            host = '[' + host + ']';
-        }
-
+    private static String buildAuthority(String host, int port) {
         if (port != 0) {
-            host = host + ':' + port;
+            if (NetUtil.isValidIpV6Address(host)) {
+                return '[' + host + "]:" + port;
+            } else {
+                return host + ':' + port;
+            }
+        } else {
+            if (NetUtil.isValidIpV6Address(host)) {
+                return '[' + host + ']';
+            } else {
+                return host;
+            }
         }
-
-        return host;
     }
 
     private void ensureGroup() {

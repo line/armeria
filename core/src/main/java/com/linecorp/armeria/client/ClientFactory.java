@@ -112,6 +112,28 @@ public interface ClientFactory extends AutoCloseable {
     void setMeterRegistry(MeterRegistry meterRegistry);
 
     /**
+     * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme} using
+     * the default {@link ClientFactory}.
+     *
+     * @param scheme the {@link Scheme} for the {@code endpoint}
+     * @param endpoint the server {@link Endpoint}
+     * @param clientType the type of the new client
+     * @param options the {@link ClientOptionValue}s
+     */
+    <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType, ClientOptionValue<?>... options);
+
+    /**
+     * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme} using
+     * the default {@link ClientFactory}.
+     *
+     * @param scheme the {@link Scheme} for the {@code endpoint}
+     * @param endpoint the server {@link Endpoint}
+     * @param clientType the type of the new client
+     * @param options the {@link ClientOptions}
+     */
+    <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType, ClientOptions options);
+
+    /**
      * Creates a new client that connects to the specified {@code uri}.
      *
      * @param uri the URI of the server endpoint

@@ -42,10 +42,36 @@ public abstract class AbstractClientFactory implements ClientFactory {
         return newClient(URI.create(uri), clientType, options);
     }
 
+    /**
+     * Creates a new client that connects to the specified {@link URI} using the default
+     * {@link ClientFactory}.
+     *
+     * @param uri the URI of the server endpoint
+     * @param clientType the type of the new client
+     * @param options the {@link ClientOptionValue}s
+     */
     @Override
     public final <T> T newClient(URI uri, Class<T> clientType, ClientOptionValue<?>... options) {
         requireNonNull(options, "options");
         return newClient(uri, clientType, ClientOptions.of(options));
+    }
+
+    /**
+     * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme} using
+     * the default {@link ClientFactory}.
+     *
+     * @param scheme the {@link Scheme} for the {@code endpoint}
+     * @param endpoint the server {@link Endpoint}
+     * @param clientType the type of the new client
+     * @param options the {@link ClientOptionValue}s
+     */
+    @Override
+    public final <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType,
+                                 ClientOptionValue<?>... options) {
+        requireNonNull(scheme, "scheme");
+        requireNonNull(endpoint, "endpoint");
+        requireNonNull(options, "options");
+        return newClient(scheme, endpoint, clientType, ClientOptions.of(options));
     }
 
     /**
@@ -82,6 +108,26 @@ public abstract class AbstractClientFactory implements ClientFactory {
         }
 
         return parsedScheme;
+    }
+
+    /**
+     * Makes sure the scheme of the specified {@link Scheme} is supported by this {@link ClientFactory}.
+     *
+     * @param scheme the {@link Scheme} of the server endpoint
+     * @return the supported {@link Scheme}
+     *
+     * @throws IllegalArgumentException if the {@link Scheme} is not supported by this {@link ClientFactory}
+     */
+    protected final Scheme validateScheme(Scheme scheme) {
+        requireNonNull(scheme, "scheme");
+
+        final Set<Scheme> supportedSchemes = supportedSchemes();
+        if (!supportedSchemes.contains(scheme)) {
+            throw new IllegalArgumentException(
+                    "Unsupported scheme: " + scheme + " (expected: " + supportedSchemes + ')');
+        }
+
+        return scheme;
     }
 
     /**

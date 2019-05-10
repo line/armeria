@@ -26,6 +26,9 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 /**
@@ -161,6 +164,154 @@ public final class Clients {
      */
     public static <T> T newClient(ClientFactory factory, URI uri, Class<T> clientType, ClientOptions options) {
         return new ClientBuilder(uri).factory(factory).options(options).build(clientType);
+    }
+
+    /**
+     * Creates a new client that connects to the specified {@link Endpoint} with the {@link SessionProtocol} and
+     * the {@link SerializationFormat} using the default {@link ClientFactory}.
+     *
+     * @param protocol the session protocol
+     * @param format the {@link SerializationFormat} for remote procedure call
+     * @param endpoint the server {@link Endpoint}
+     * @param clientType the type of the new client
+     * @param options the {@link ClientOptionValue}s
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@link SessionProtocol} and
+     *                                     {@link SerializationFormat}, or the specified {@code clientType} is
+     *                                     unsupported for the scheme
+     */
+    public static <T> T newClient(SessionProtocol protocol, SerializationFormat format, Endpoint endpoint,
+                                  Class<T> clientType, ClientOptionValue<?>... options) {
+        return newClient(ClientFactory.DEFAULT, protocol, format, endpoint, clientType, options);
+    }
+
+    /**
+     * Creates a new client that connects to the specified {@link Endpoint} with the {@link SessionProtocol} and
+     * the {@link SerializationFormat} using the default {@link ClientFactory}.
+     *
+     * @param protocol the session protocol
+     * @param format the {@link SerializationFormat} for remote procedure call
+     * @param endpoint the server {@link Endpoint}
+     * @param clientType the type of the new client
+     * @param options the {@link ClientOptions}
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@link SessionProtocol} and
+     *                                     {@link SerializationFormat}, or the specified {@code clientType} is
+     *                                     unsupported for the scheme
+     */
+    public static <T> T newClient(SessionProtocol protocol, SerializationFormat format, Endpoint endpoint,
+                                  Class<T> clientType, ClientOptions options) {
+        return newClient(ClientFactory.DEFAULT, protocol, format, endpoint, clientType, options);
+    }
+
+    /**
+     * Creates a new client that connects to the specified {@link Endpoint} with the {@link SessionProtocol} and
+     * the {@link SerializationFormat} using an alternative {@link ClientFactory}.
+     *
+     * @param factory an alternative {@link ClientFactory}
+     * @param protocol the session protocol
+     * @param format the {@link SerializationFormat} for remote procedure call
+     * @param endpoint the server {@link Endpoint}
+     * @param clientType the type of the new client
+     * @param options the {@link ClientOptionValue}s
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@link SessionProtocol} and
+     *                                     {@link SerializationFormat}, or the specified {@code clientType} is
+     *                                     unsupported for the scheme
+     */
+    public static <T> T newClient(ClientFactory factory, SessionProtocol protocol, SerializationFormat format,
+                                  Endpoint endpoint, Class<T> clientType, ClientOptionValue<?>... options) {
+        return newClient(factory, Scheme.of(format, protocol), endpoint, clientType, options);
+    }
+
+    /**
+     * Creates a new client that connects to the specified {@link Endpoint} with the {@link SessionProtocol} and
+     * the {@link SerializationFormat} using an alternative {@link ClientFactory}.
+     *
+     * @param factory an alternative {@link ClientFactory}
+     * @param protocol the session protocol
+     * @param format the {@link SerializationFormat} for remote procedure call
+     * @param endpoint the server {@link Endpoint}
+     * @param clientType the type of the new client
+     * @param options the {@link ClientOptions}
+     *
+     * @throws IllegalArgumentException if the scheme of the specified {@link SessionProtocol} and
+     *                                     {@link SerializationFormat}, or the specified {@code clientType} is
+     *                                     unsupported for the scheme
+     */
+    public static <T> T newClient(ClientFactory factory, SessionProtocol protocol, SerializationFormat format,
+                                  Endpoint endpoint, Class<T> clientType, ClientOptions options) {
+        return newClient(factory, Scheme.of(format, protocol), endpoint, clientType, options);
+    }
+
+    /**
+     * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme} using
+     * the default {@link ClientFactory}.
+     *
+     * @param scheme the {@link Scheme}
+     * @param endpoint the server {@link Endpoint}
+     * @param clientType the type of the new client
+     * @param options the {@link ClientOptionValue}s
+     *
+     * @throws IllegalArgumentException if the specified {@link Scheme} or the specified {@code clientType} is
+     *                                     unsupported for the scheme
+     */
+    public static <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType,
+                                  ClientOptionValue<?>... options) {
+        return newClient(ClientFactory.DEFAULT, scheme, endpoint, clientType, options);
+    }
+
+    /**
+     * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme} using
+     * the default {@link ClientFactory}.
+     *
+     * @param scheme the {@link Scheme}
+     * @param endpoint the server {@link Endpoint}
+     * @param clientType the type of the new client
+     * @param options the {@link ClientOptions}
+     *
+     * @throws IllegalArgumentException if the specified {@link Scheme} or the specified {@code clientType} is
+     *                                     unsupported for the scheme
+     */
+    public static <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType,
+                                  ClientOptions options) {
+        return newClient(ClientFactory.DEFAULT, scheme, endpoint, clientType, options);
+    }
+
+    /**
+     * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme} using
+     * an alternative {@link ClientFactory}.
+     *
+     * @param factory an alternative {@link ClientFactory}
+     * @param scheme the {@link Scheme}
+     * @param endpoint the server {@link Endpoint}
+     * @param clientType the type of the new client
+     * @param options the {@link ClientOptionValue}s
+     *
+     * @throws IllegalArgumentException if the specified {@link Scheme} or the specified {@code clientType} is
+     *                                     unsupported for the scheme
+     */
+    public static <T> T newClient(ClientFactory factory, Scheme scheme, Endpoint endpoint, Class<T> clientType,
+                                  ClientOptionValue<?>... options) {
+        return new ClientBuilder(scheme, endpoint).factory(factory).options(options).build(clientType);
+    }
+
+    /**
+     * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme} using
+     * an alternative {@link ClientFactory}.
+     *
+     * @param factory an alternative {@link ClientFactory}
+     * @param scheme the {@link Scheme}
+     * @param endpoint the server {@link Endpoint}
+     * @param clientType the type of the new client
+     * @param options the {@link ClientOptions}
+     *
+     * @throws IllegalArgumentException if the specified {@link Scheme} or the specified {@code clientType} is
+     *                                     unsupported for the scheme
+     */
+    public static <T> T newClient(ClientFactory factory, Scheme scheme, Endpoint endpoint, Class<T> clientType,
+                                  ClientOptions options) {
+        return new ClientBuilder(scheme, endpoint).factory(factory).options(options).build(clientType);
     }
 
     /**

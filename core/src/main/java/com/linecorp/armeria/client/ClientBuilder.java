@@ -19,6 +19,12 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 
+import javax.annotation.Nullable;
+
+import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
+
 /**
  * Creates a new client that connects to the specified {@link URI} using the builder pattern. Use the factory
  * methods in {@link Clients} if you do not have many options to override. If you are creating an
@@ -49,7 +55,12 @@ import java.net.URI;
  */
 public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuilder> {
 
-    private final URI uri;
+    @Nullable
+    private URI uri;
+    @Nullable
+    private Scheme scheme;
+    @Nullable
+    private Endpoint endpoint;
     private ClientFactory factory = ClientFactory.DEFAULT;
 
     /**
@@ -60,18 +71,44 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
     }
 
     /**
-     * Creates a new {@link ClientBuilder} that builds the client that connects to
-     * the specified {@link Endpoint} with {@code scheme}.
-     */
-    public ClientBuilder(String scheme, Endpoint endpoint) {
-        this(requireNonNull(endpoint, "endpoint").toURI(scheme));
-    }
-
-    /**
      * Creates a new {@link ClientBuilder} that builds the client that connects to the specified {@link URI}.
      */
     public ClientBuilder(URI uri) {
         this.uri = requireNonNull(uri, "uri");
+    }
+
+    /**
+     * Creates a new {@link ClientBuilder} that builds the client that connects to the specified
+     * {@link Endpoint} with the {@link SessionProtocol} and the {@link SerializationFormat}.
+     */
+    public ClientBuilder(SessionProtocol protocol, SerializationFormat format, Endpoint endpoint) {
+        this(Scheme.of(format, protocol), requireNonNull(endpoint, "endpoint"));
+    }
+
+    /**
+     * Creates a new {@link ClientBuilder} that builds the client that connects to the specified
+     * {@link Endpoint} with the {@link SessionProtocol}.
+     */
+    public ClientBuilder(SessionProtocol protocol, Endpoint endpoint) {
+        this(requireNonNull(protocol, "protocol"), SerializationFormat.NONE,
+             requireNonNull(endpoint, "endpoint"));
+    }
+
+    /**
+     * Creates a new {@link ClientBuilder} that builds the client that connects to the specified
+     * {@link Endpoint} with the {@code Scheme}.
+     */
+    public ClientBuilder(String scheme, Endpoint endpoint) {
+        this(Scheme.parse(scheme), requireNonNull(endpoint, "endpoint"));
+    }
+
+    /**
+     * Creates a new {@link ClientBuilder} that builds the client that connects to the specified
+     * {@link Endpoint} with the {@link Scheme}.
+     */
+    public ClientBuilder(Scheme scheme, Endpoint endpoint) {
+        this.scheme = requireNonNull(scheme, "scheme");
+        this.endpoint = requireNonNull(endpoint, "endpoint");
     }
 
     /**
@@ -92,6 +129,11 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
      */
     public <T> T build(Class<T> clientType) {
         requireNonNull(clientType, "clientType");
-        return factory.newClient(uri, clientType, buildOptions());
+
+        if (uri != null) {
+            return factory.newClient(uri, clientType, buildOptions());
+        } else {
+            return factory.newClient(scheme, endpoint, clientType, buildOptions());
+        }
     }
 }

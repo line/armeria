@@ -220,9 +220,22 @@ final class HttpClientFactory extends AbstractClientFactory {
     }
 
     @Override
+    public <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType, ClientOptions options) {
+        final URI uri = endpoint.toUri(scheme);
+
+        return newClient(uri, scheme, endpoint, clientType, options);
+    }
+
+    @Override
     public <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
         final Scheme scheme = validateScheme(uri);
+        final Endpoint endpoint = newEndpoint(uri);
 
+        return newClient(uri, scheme, endpoint, clientType, options);
+    }
+
+    private <T> T newClient(URI uri, Scheme scheme, Endpoint endpoint, Class<T> clientType,
+                            ClientOptions options) {
         validateClientType(clientType);
 
         final Client<HttpRequest, HttpResponse> delegate = options.decoration().decorate(
@@ -233,8 +246,6 @@ final class HttpClientFactory extends AbstractClientFactory {
             final T castClient = (T) delegate;
             return castClient;
         }
-
-        final Endpoint endpoint = newEndpoint(uri);
 
         if (clientType == HttpClient.class) {
             final HttpClient client = newHttpClient(uri, scheme, endpoint, options, delegate);
