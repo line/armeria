@@ -257,7 +257,7 @@ public class WeightedRoundRobinStrategyTest {
         assertThat(selector.select(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 1111).withWeight(1));
     }
 
-    private static final class TestDynamicEndpointGroup extends DynamicEndpointGroup {
+    static final class TestDynamicEndpointGroup extends DynamicEndpointGroup {
         void updateEndpoints(List<Endpoint> endpoints) {
             setEndpoints(endpoints);
         }
