@@ -59,10 +59,10 @@ import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 /**
  * A builder class for binding a {@link Service} fluently.
  *
- * @see RouteBuilder
- * @see VirtualHostRouteBuilder
+ * @see ServiceBindingBuilder
+ * @see VirtualHostServiceBindingBuilder
  */
-abstract class AbstractRouteBuilder {
+abstract class AbstractServiceBindingBuilder {
 
     @Nullable
     private PathMapping defaultPathMapping;
@@ -92,7 +92,7 @@ abstract class AbstractRouteBuilder {
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public AbstractRouteBuilder path(String pathPattern) {
+    public AbstractServiceBindingBuilder path(String pathPattern) {
         defaultPathMapping = PathMapping.of(requireNonNull(pathPattern, "pathPattern"));
         return this;
     }
@@ -102,7 +102,7 @@ abstract class AbstractRouteBuilder {
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public AbstractRouteBuilder pathUnder(String prefix) {
+    public AbstractServiceBindingBuilder pathUnder(String prefix) {
         defaultPathMapping = PathMapping.ofPrefix(requireNonNull(prefix, "prefix"));
         return this;
     }
@@ -114,7 +114,7 @@ abstract class AbstractRouteBuilder {
      *                                  i.e. the {@link PathMapping} created by
      *                                  {@link PathMapping#withHttpHeaderInfo(Set, List, List)}
      */
-    public AbstractRouteBuilder pathMapping(PathMapping pathMapping) {
+    public AbstractServiceBindingBuilder pathMapping(PathMapping pathMapping) {
         requireNonNull(pathMapping, "pathMapping");
         if (!pathMapping.hasPathPatternOnly()) {
             throw new IllegalArgumentException(
@@ -133,7 +133,7 @@ abstract class AbstractRouteBuilder {
      * @see #pathUnder(String)
      * @see #pathMapping(PathMapping)
      */
-    public AbstractRouteBuilder methods(HttpMethod... methods) {
+    public AbstractServiceBindingBuilder methods(HttpMethod... methods) {
         return methods(ImmutableSet.copyOf(requireNonNull(methods, "methods")));
     }
 
@@ -145,7 +145,7 @@ abstract class AbstractRouteBuilder {
      * @see #pathUnder(String)
      * @see #pathMapping(PathMapping)
      */
-    public AbstractRouteBuilder methods(Iterable<HttpMethod> methods) {
+    public AbstractServiceBindingBuilder methods(Iterable<HttpMethod> methods) {
         requireNonNull(methods, "methods");
         checkArgument(!Iterables.isEmpty(methods), "methods can't be empty");
         this.methods = ImmutableSet.copyOf(methods);
@@ -157,7 +157,7 @@ abstract class AbstractRouteBuilder {
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public AbstractRouteBuilder get(String pathPattern) {
+    public AbstractServiceBindingBuilder get(String pathPattern) {
         addPathMapping(pathPattern, EnumSet.of(GET));
         return this;
     }
@@ -184,7 +184,7 @@ abstract class AbstractRouteBuilder {
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public AbstractRouteBuilder post(String pathPattern) {
+    public AbstractServiceBindingBuilder post(String pathPattern) {
         addPathMapping(pathPattern, EnumSet.of(POST));
         return this;
     }
@@ -194,7 +194,7 @@ abstract class AbstractRouteBuilder {
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public AbstractRouteBuilder put(String pathPattern) {
+    public AbstractServiceBindingBuilder put(String pathPattern) {
         addPathMapping(pathPattern, EnumSet.of(PUT));
         return this;
     }
@@ -204,7 +204,7 @@ abstract class AbstractRouteBuilder {
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public AbstractRouteBuilder patch(String pathPattern) {
+    public AbstractServiceBindingBuilder patch(String pathPattern) {
         addPathMapping(pathPattern, EnumSet.of(PATCH));
         return this;
     }
@@ -214,7 +214,7 @@ abstract class AbstractRouteBuilder {
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public AbstractRouteBuilder delete(String pathPattern) {
+    public AbstractServiceBindingBuilder delete(String pathPattern) {
         addPathMapping(pathPattern, EnumSet.of(DELETE));
         return this;
     }
@@ -224,7 +224,7 @@ abstract class AbstractRouteBuilder {
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public AbstractRouteBuilder options(String pathPattern) {
+    public AbstractServiceBindingBuilder options(String pathPattern) {
         addPathMapping(pathPattern, EnumSet.of(OPTIONS));
         return this;
     }
@@ -234,7 +234,7 @@ abstract class AbstractRouteBuilder {
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public AbstractRouteBuilder head(String pathPattern) {
+    public AbstractServiceBindingBuilder head(String pathPattern) {
         addPathMapping(pathPattern, EnumSet.of(HEAD));
         return this;
     }
@@ -244,7 +244,7 @@ abstract class AbstractRouteBuilder {
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public AbstractRouteBuilder trace(String pathPattern) {
+    public AbstractServiceBindingBuilder trace(String pathPattern) {
         addPathMapping(pathPattern, EnumSet.of(TRACE));
         return this;
     }
@@ -254,7 +254,7 @@ abstract class AbstractRouteBuilder {
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public AbstractRouteBuilder connect(String pathPattern) {
+    public AbstractServiceBindingBuilder connect(String pathPattern) {
         addPathMapping(pathPattern, EnumSet.of(CONNECT));
         return this;
     }
@@ -263,7 +263,7 @@ abstract class AbstractRouteBuilder {
      * Sets {@link MediaType}s that a {@link Service} will consume. If not set, the {@link Service}
      * will accept all media types.
      */
-    public AbstractRouteBuilder consumes(MediaType... consumeTypes) {
+    public AbstractServiceBindingBuilder consumes(MediaType... consumeTypes) {
         consumes(ImmutableList.copyOf(requireNonNull(consumeTypes, "consumeTypes")));
         return this;
     }
@@ -272,7 +272,7 @@ abstract class AbstractRouteBuilder {
      * Sets {@link MediaType}s that a {@link Service} will consume. If not set, the {@link Service}
      * will accept all media types.
      */
-    public AbstractRouteBuilder consumes(Iterable<MediaType> consumeTypes) {
+    public AbstractServiceBindingBuilder consumes(Iterable<MediaType> consumeTypes) {
         ensureUniqueTypes(consumeTypes, "consumeTypes");
         this.consumeTypes = ImmutableList.copyOf(consumeTypes);
         return this;
@@ -294,7 +294,7 @@ abstract class AbstractRouteBuilder {
      * content negotiation. See <a href="https://tools.ietf.org/html/rfc7231#section-5.3.2">Accept header</a>
      * for more information.
      */
-    public AbstractRouteBuilder produces(MediaType... produceTypes) {
+    public AbstractServiceBindingBuilder produces(MediaType... produceTypes) {
         this.produceTypes = ImmutableList.copyOf(requireNonNull(produceTypes, "produceTypes"));
         return this;
     }
@@ -304,7 +304,7 @@ abstract class AbstractRouteBuilder {
      * content negotiation. See <a href="https://tools.ietf.org/html/rfc7231#section-5.3.2">Accept header</a>
      * for more information.
      */
-    public AbstractRouteBuilder produces(Iterable<MediaType> produceTypes) {
+    public AbstractServiceBindingBuilder produces(Iterable<MediaType> produceTypes) {
         ensureUniqueTypes(produceTypes, "produceTypes");
         this.produceTypes = ImmutableList.copyOf(produceTypes);
         return this;
@@ -316,7 +316,7 @@ abstract class AbstractRouteBuilder {
      *
      * @param requestTimeout the timeout. {@code 0} disables the timeout.
      */
-    public AbstractRouteBuilder requestTimeout(Duration requestTimeout) {
+    public AbstractServiceBindingBuilder requestTimeout(Duration requestTimeout) {
         return requestTimeoutMillis(requireNonNull(requestTimeout, "requestTimeout").toMillis());
     }
 
@@ -326,7 +326,7 @@ abstract class AbstractRouteBuilder {
      *
      * @param requestTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
      */
-    public AbstractRouteBuilder requestTimeoutMillis(long requestTimeoutMillis) {
+    public AbstractServiceBindingBuilder requestTimeoutMillis(long requestTimeoutMillis) {
         this.requestTimeoutMillis = validateRequestTimeoutMillis(requestTimeoutMillis);
         return this;
     }
@@ -337,7 +337,7 @@ abstract class AbstractRouteBuilder {
      *
      * @param maxRequestLength the maximum allowed length. {@code 0} disables the length limit.
      */
-    public AbstractRouteBuilder maxRequestLength(long maxRequestLength) {
+    public AbstractServiceBindingBuilder maxRequestLength(long maxRequestLength) {
         this.maxRequestLength = validateMaxRequestLength(maxRequestLength);
         return this;
     }
@@ -348,7 +348,7 @@ abstract class AbstractRouteBuilder {
      * insecure. When disabled, the service response will not expose such server-side details to the client.
      * If not set, {@link VirtualHost#verboseResponses()} is used.
      */
-    public AbstractRouteBuilder verboseResponses(boolean verboseResponses) {
+    public AbstractServiceBindingBuilder verboseResponses(boolean verboseResponses) {
         this.verboseResponses = verboseResponses;
         return this;
     }
@@ -358,7 +358,7 @@ abstract class AbstractRouteBuilder {
      * If not set, {@link VirtualHost#requestContentPreviewerFactory()}
      * is used.
      */
-    public AbstractRouteBuilder requestContentPreviewerFactory(ContentPreviewerFactory factory) {
+    public AbstractServiceBindingBuilder requestContentPreviewerFactory(ContentPreviewerFactory factory) {
         requestContentPreviewerFactory = requireNonNull(factory, "factory");
         return this;
     }
@@ -368,7 +368,7 @@ abstract class AbstractRouteBuilder {
      * If not set, {@link VirtualHost#responseContentPreviewerFactory()}
      * is used.
      */
-    public AbstractRouteBuilder responseContentPreviewerFactory(ContentPreviewerFactory factory) {
+    public AbstractServiceBindingBuilder responseContentPreviewerFactory(ContentPreviewerFactory factory) {
         responseContentPreviewerFactory = requireNonNull(factory, "factory");
         return this;
     }
@@ -386,7 +386,7 @@ abstract class AbstractRouteBuilder {
      * </ul>
      * @param length the maximum length of the preview.
      */
-    public AbstractRouteBuilder contentPreview(int length) {
+    public AbstractServiceBindingBuilder contentPreview(int length) {
         return contentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
     }
 
@@ -405,14 +405,14 @@ abstract class AbstractRouteBuilder {
      * @param defaultCharset the default charset used when a charset is not specified in the
      *                       {@code "content-type"} header
      */
-    public AbstractRouteBuilder contentPreview(int length, Charset defaultCharset) {
+    public AbstractServiceBindingBuilder contentPreview(int length, Charset defaultCharset) {
         return contentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
     }
 
     /**
      * Sets the {@link ContentPreviewerFactory} for an HTTP request/response of a {@link Service}.
      */
-    public AbstractRouteBuilder contentPreviewerFactory(ContentPreviewerFactory factory) {
+    public AbstractServiceBindingBuilder contentPreviewerFactory(ContentPreviewerFactory factory) {
         requestContentPreviewerFactory(factory);
         responseContentPreviewerFactory(factory);
         return this;
@@ -426,7 +426,7 @@ abstract class AbstractRouteBuilder {
      * @param <R> the type of the {@link Service} {@code decorator} will produce
      */
     public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
-    AbstractRouteBuilder decorator(Function<T, R> decorator) {
+    AbstractServiceBindingBuilder decorator(Function<T, R> decorator) {
         requireNonNull(decorator, "decorator");
 
         @SuppressWarnings("unchecked")
@@ -444,7 +444,7 @@ abstract class AbstractRouteBuilder {
 
     abstract void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder);
 
-    void build(Service<HttpRequest, HttpResponse> service) {
+    final void build0(Service<HttpRequest, HttpResponse> service) {
         if (defaultPathMapping != null) {
             addPathMapping(defaultPathMapping, methods);
         }

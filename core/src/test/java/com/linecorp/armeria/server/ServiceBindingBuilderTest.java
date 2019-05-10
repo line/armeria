@@ -34,10 +34,10 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 
-public class RouteBuilderTest {
+public class ServiceBindingBuilderTest {
 
     @Test
-    public void routeBuilder() {
+    public void serviceBindingBuilder() {
         final ServerBuilder sb = new ServerBuilder();
         final ContentPreviewerFactory requestFactory = mock(ContentPreviewerFactory.class);
         final ContentPreviewerFactory responseFactory = mock(ContentPreviewerFactory.class);
@@ -51,7 +51,7 @@ public class RouteBuilderTest {
           .maxRequestLength(8192)
           .verboseResponses(true)
           .requestContentPreviewerFactory(ContentPreviewerFactory.disabled())
-          .service((ctx, req) -> HttpResponse.of(OK));
+          .build((ctx, req) -> HttpResponse.of(OK));
 
         final List<ServiceConfig> serviceConfigs = sb.build().serviceConfigs();
         assertThat(serviceConfigs.size()).isOne();
@@ -70,17 +70,41 @@ public class RouteBuilderTest {
     }
 
     @Test
+    public void withRoute() {
+        final ServerBuilder sb = new ServerBuilder();
+        sb.withRoute(builder -> builder.get("/foo/bar")
+                                       .consumes(JSON, PLAIN_TEXT_UTF_8)
+                                       .produces(JSON_UTF_8, PLAIN_TEXT_UTF_8)
+                                       .requestTimeoutMillis(10)
+                                       .maxRequestLength(8192)
+                                       .verboseResponses(true)
+                                       .build((ctx, req) -> HttpResponse.of(OK)));
+        final List<ServiceConfig> serviceConfigs = sb.build().serviceConfigs();
+        assertThat(serviceConfigs.size()).isOne();
+        final ServiceConfig serviceConfig = serviceConfigs.get(0);
+
+        final PathMapping pathMapping = serviceConfig.pathMapping();
+        assertThat(pathMapping.exactPath().get()).isEqualTo("/foo/bar");
+        assertThat(pathMapping.consumeTypes()).containsExactly(JSON, PLAIN_TEXT_UTF_8);
+        assertThat(pathMapping.produceTypes()).containsExactly(JSON_UTF_8,
+                                                               PLAIN_TEXT_UTF_8);
+        assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(10);
+        assertThat(serviceConfig.maxRequestLength()).isEqualTo(8192);
+        assertThat(serviceConfig.verboseResponses()).isEqualTo(true);
+    }
+
+    @Test
     public void overwriteServerBuilderProperty() {
         final ServerBuilder sb = new ServerBuilder();
-        sb.withDefaultVirtualHost()
+        sb.defaultVirtualHost()
           .maxRequestLength(1024)
           .requestTimeoutMillis(10000); // This is overwritten.
 
         sb.route().get("/foo/bar")
           .requestTimeout(Duration.ofMillis(10))
-          .service((ctx, req) -> HttpResponse.of(OK));
+          .build((ctx, req) -> HttpResponse.of(OK));
 
-        sb.withDefaultVirtualHost().maxRequestLength(1024);
+        sb.defaultVirtualHost().maxRequestLength(1024);
         sb.verboseResponses(true);
 
         final List<ServiceConfig> serviceConfigs = sb.build().serviceConfigs();
@@ -99,7 +123,7 @@ public class RouteBuilderTest {
         sb.route()
           .get("/foo/bar")
           .post("/foo/bar")
-          .service((ctx, req) -> HttpResponse.of(OK));
+          .build((ctx, req) -> HttpResponse.of(OK));
 
         List<ServiceConfig> serviceConfigs = sb.build().serviceConfigs();
         assertThat(serviceConfigs.size()).isOne();
@@ -108,7 +132,7 @@ public class RouteBuilderTest {
         sb = new ServerBuilder();
         sb.route().pathMapping(PathMapping.of("/foo/bar"))
           .methods(HttpMethod.GET, HttpMethod.POST)
-          .service((ctx, req) -> HttpResponse.of(OK));
+          .build((ctx, req) -> HttpResponse.of(OK));
 
         serviceConfigs = sb.build().serviceConfigs();
         assertThat(serviceConfigs.size()).isOne();
@@ -121,7 +145,7 @@ public class RouteBuilderTest {
         sb.route()
           .get("/foo/bar")
           .get("/foo/bar/baz")
-          .service((ctx, req) -> HttpResponse.of(OK));
+          .build((ctx, req) -> HttpResponse.of(OK));
 
         final List<ServiceConfig> serviceConfigs = sb.build().serviceConfigs();
         assertThat(serviceConfigs.size()).isEqualTo(2);
@@ -131,29 +155,29 @@ public class RouteBuilderTest {
 
     @Test(expected = IllegalStateException.class)
     public void shouldSpecifyAtLeastOnePath() {
-        final RouteBuilder routeBuilder = new RouteBuilder(new ServerBuilder());
-        routeBuilder.service((ctx, req) -> HttpResponse.of(OK));
+        final ServiceBindingBuilder serviceBindingBuilder = new ServiceBindingBuilder(new ServerBuilder());
+        serviceBindingBuilder.build((ctx, req) -> HttpResponse.of(OK));
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void methodsCannotBeEmpty() {
-        final RouteBuilder routeBuilder = new RouteBuilder(new ServerBuilder());
-        routeBuilder.methods(ImmutableSet.of());
+        final ServiceBindingBuilder serviceBindingBuilder = new ServiceBindingBuilder(new ServerBuilder());
+        serviceBindingBuilder.methods(ImmutableSet.of());
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void cannotSetSameMethodToTheSamePath() {
-        final RouteBuilder routeBuilder = new RouteBuilder(new ServerBuilder());
-        routeBuilder.get("/foo/bar");
-        routeBuilder.path("/foo/bar");
-        routeBuilder.methods(HttpMethod.GET);
-        routeBuilder.service((ctx, req) -> HttpResponse.of(OK));
+        final ServiceBindingBuilder serviceBindingBuilder = new ServiceBindingBuilder(new ServerBuilder());
+        serviceBindingBuilder.get("/foo/bar");
+        serviceBindingBuilder.path("/foo/bar");
+        serviceBindingBuilder.methods(HttpMethod.GET);
+        serviceBindingBuilder.build((ctx, req) -> HttpResponse.of(OK));
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void cannotSetSameMethodToTheSamePath2() {
-        final RouteBuilder routeBuilder = new RouteBuilder(new ServerBuilder());
-        routeBuilder.get("/foo/bar");
-        routeBuilder.get("/foo/bar");
+        final ServiceBindingBuilder serviceBindingBuilder = new ServiceBindingBuilder(new ServerBuilder());
+        serviceBindingBuilder.get("/foo/bar");
+        serviceBindingBuilder.get("/foo/bar");
     }
 }

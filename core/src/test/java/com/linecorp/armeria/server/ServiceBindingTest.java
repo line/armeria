@@ -40,7 +40,7 @@ import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-class RouteServiceTest {
+class ServiceBindingTest {
 
     private static final CountDownLatch propertyCheckLatch = new CountDownLatch(1);
 
@@ -83,7 +83,7 @@ class RouteServiceTest {
                   }, RequestLogAvailability.COMPLETE);
                   return delegate.serve(ctx, req);
               })
-              .service((ctx, req) -> {
+              .build((ctx, req) -> {
                   if (req.method() == HttpMethod.GET) {
                       return HttpResponse.of(ctx.pathParam("name"));
                   }
@@ -99,7 +99,7 @@ class RouteServiceTest {
               .methods(HttpMethod.POST)
               .consumes(MediaType.JSON, MediaType.PLAIN_TEXT_UTF_8)
               .produces(MediaType.JSON, MediaType.PLAIN_TEXT_UTF_8)
-              .service((ctx, req) -> HttpResponse.from(
+              .build((ctx, req) -> HttpResponse.from(
                       req.aggregate().thenApply(request -> {
                           final String resContent;
                           final MediaType contentType = req.contentType();

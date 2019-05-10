@@ -103,10 +103,10 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
  * ServerBuilder sb = new ServerBuilder();
  * Server server =
  *     sb.http(8080) // Add a port to listen
- *       .withDefaultVirtualHost() // Add services to the default virtual host.
+ *       .defaultVirtualHost() // Add services to the default virtual host.
  *           .service(...)
  *           .serviceUnder(...)
- *       .and().withVirtualHost("*.foo.com") // Add a another virtual host.
+ *       .and().virtualHost("*.foo.com") // Add a another virtual host.
  *           .service(...)
  *           .serviceUnder(...)
  *       .and().build(); // Build a server.
@@ -149,7 +149,7 @@ public final class ServerBuilder {
     private final List<ServerPort> ports = new ArrayList<>();
     private final List<ServerListener> serverListeners = new ArrayList<>();
     private final List<VirtualHostBuilder> virtualHostBuilders = new ArrayList<>();
-    private final VirtualHostBuilder defaultVirtualHostBuilder = new VirtualHostBuilder(this);
+    private final VirtualHostBuilder defaultVirtualHostBuilder = new VirtualHostBuilder(this, true);
 
     private EventLoopGroup workerGroup = CommonPools.workerGroup();
     private boolean shutdownWorkerGroupOnStop;
@@ -778,10 +778,19 @@ public final class ServerBuilder {
     }
 
     /**
-     * Returns a {@link RouteBuilder} which is for binding a {@link Service} fluently.
+     * Configures a {@link Service} of the default {@link VirtualHost} with the {@code customizer}.
      */
-    public RouteBuilder route() {
-        return new RouteBuilder(this);
+    public ServerBuilder withRoute(Consumer<ServiceBindingBuilder> customizer) {
+        final ServiceBindingBuilder serviceBindingBuilder = new ServiceBindingBuilder(this);
+        customizer.accept(serviceBindingBuilder);
+        return this;
+    }
+
+    /**
+     * Returns a {@link ServiceBindingBuilder} which is for binding a {@link Service} fluently.
+     */
+    public ServiceBindingBuilder route() {
+        return new ServiceBindingBuilder(this);
     }
 
     /**
@@ -1007,11 +1016,74 @@ public final class ServerBuilder {
     }
 
     /**
+     * Configures the default {@link VirtualHost} with the {@code customizer}.
+     */
+    public ServerBuilder withDefaultVirtualHost(Consumer<VirtualHostBuilder> customizer) {
+        customizer.accept(defaultVirtualHostBuilder);
+        return this;
+    }
+
+    /**
+     * Returns the {@link VirtualHostBuilder} for building the default
+     * <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>.
+     *
+     * @deprecated Use {@link #defaultVirtualHost()}.
+     */
+    @Deprecated
+    public VirtualHostBuilder withDefaultVirtualHost() {
+        return defaultVirtualHostBuilder;
+    }
+
+    /**
      * Returns the {@link VirtualHostBuilder} for building the default
      * <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>.
      */
-    public VirtualHostBuilder withDefaultVirtualHost() {
+    public VirtualHostBuilder defaultVirtualHost() {
         return defaultVirtualHostBuilder;
+    }
+
+    /**
+     * Configures a {@link VirtualHost} with the {@code customizer}.
+     */
+    public ServerBuilder withVirtualHost(Consumer<VirtualHostBuilder> customizer) {
+        final VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(this, false);
+        customizer.accept(virtualHostBuilder);
+        virtualHostBuilders.add(virtualHostBuilder);
+        return this;
+    }
+
+    /**
+     * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>.
+     *
+     * @deprecated Use {@link #virtualHost(String)}.
+     *
+     * @param hostnamePattern virtual host name regular expression
+     * @return {@link VirtualHostBuilder} for building the virtual host
+     */
+    @Deprecated
+    public VirtualHostBuilder withVirtualHost(String hostnamePattern) {
+        final VirtualHostBuilder virtualHostBuilder =
+                new VirtualHostBuilder(this, false).hostnamePattern(hostnamePattern);
+        virtualHostBuilders.add(virtualHostBuilder);
+        return virtualHostBuilder;
+    }
+
+    /**
+     * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>.
+     *
+     * @deprecated Use {@link #virtualHost(String, String)}.
+     *
+     * @param defaultHostname default hostname of this virtual host
+     * @param hostnamePattern virtual host name regular expression
+     * @return {@link VirtualHostBuilder} for building the virtual host
+     */
+    @Deprecated
+    public VirtualHostBuilder withVirtualHost(String defaultHostname, String hostnamePattern) {
+        final VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(this, false)
+                .defaultHostname(defaultHostname)
+                .hostnamePattern(hostnamePattern);
+        virtualHostBuilders.add(virtualHostBuilder);
+        return virtualHostBuilder;
     }
 
     /**
@@ -1020,9 +1092,9 @@ public final class ServerBuilder {
      * @param hostnamePattern virtual host name regular expression
      * @return {@link VirtualHostBuilder} for building the virtual host
      */
-    public VirtualHostBuilder withVirtualHost(String hostnamePattern) {
+    public VirtualHostBuilder virtualHost(String hostnamePattern) {
         final VirtualHostBuilder virtualHostBuilder =
-                new VirtualHostBuilder(hostnamePattern, this);
+                new VirtualHostBuilder(this, false).hostnamePattern(hostnamePattern);
         virtualHostBuilders.add(virtualHostBuilder);
         return virtualHostBuilder;
     }
@@ -1034,9 +1106,10 @@ public final class ServerBuilder {
      * @param hostnamePattern virtual host name regular expression
      * @return {@link VirtualHostBuilder} for building the virtual host
      */
-    public VirtualHostBuilder withVirtualHost(String defaultHostname, String hostnamePattern) {
-        final VirtualHostBuilder virtualHostBuilder =
-                new VirtualHostBuilder(defaultHostname, hostnamePattern, this);
+    public VirtualHostBuilder virtualHost(String defaultHostname, String hostnamePattern) {
+        final VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(this, false)
+                .defaultHostname(defaultHostname)
+                .hostnamePattern(hostnamePattern);
         virtualHostBuilders.add(virtualHostBuilder);
         return virtualHostBuilder;
     }

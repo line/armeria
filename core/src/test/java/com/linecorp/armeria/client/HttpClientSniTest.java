@@ -59,11 +59,11 @@ public class HttpClientSniTest {
             sscA = new SelfSignedCertificate("a.com");
             sscB = new SelfSignedCertificate("b.com");
 
-            sb.withVirtualHost("a.com")
+            sb.virtualHost("a.com")
               .service("/", new SniTestService("a.com"))
               .tls(sscA.certificate(), sscA.privateKey())
               .and()
-              .withDefaultVirtualHost()
+              .defaultVirtualHost()
               .defaultHostname("b.com")
               .service("/", new SniTestService("b.com"))
               .tls(sscB.certificate(), sscB.privateKey());

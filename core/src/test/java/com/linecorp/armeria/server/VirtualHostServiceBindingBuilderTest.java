@@ -31,15 +31,15 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 
-public class VirtualHostRouteBuilderTest {
+public class VirtualHostServiceBindingBuilderTest {
 
     @Test
-    public void routeBuilder() {
+    public void serviceBindingBuilder() {
         final ServerBuilder sb = new ServerBuilder();
         final ContentPreviewerFactory requestFactory = mock(ContentPreviewerFactory.class);
         final ContentPreviewerFactory responseFactory = mock(ContentPreviewerFactory.class);
 
-        sb.withVirtualHost("example.com")
+        sb.virtualHost("example.com")
           .route().pathUnder("/foo/bar")
           .methods(HttpMethod.GET)
           .consumes(JSON, PLAIN_TEXT_UTF_8)
@@ -65,5 +65,34 @@ public class VirtualHostRouteBuilderTest {
         assertThat(serviceConfig.verboseResponses()).isEqualTo(true);
         assertThat(serviceConfig.requestContentPreviewerFactory()).isSameAs(requestFactory);
         assertThat(serviceConfig.responseContentPreviewerFactory()).isSameAs(responseFactory);
+    }
+
+    @Test
+    public void withRoute() {
+        final ServerBuilder sb = new ServerBuilder();
+
+        sb.virtualHost("example.com").withRoute(builder -> {
+            builder.pathUnder("/foo/bar")
+                   .methods(HttpMethod.GET)
+                   .consumes(JSON, PLAIN_TEXT_UTF_8)
+                   .produces(JSON_UTF_8, PLAIN_TEXT_UTF_8)
+                   .requestTimeoutMillis(10)
+                   .maxRequestLength(8192)
+                   .verboseResponses(true)
+                   .service((ctx, req) -> HttpResponse.of(OK));
+        });
+
+        final List<ServiceConfig> serviceConfigs = sb.build().serviceConfigs();
+        assertThat(serviceConfigs.size()).isOne();
+        final ServiceConfig serviceConfig = serviceConfigs.get(0);
+
+        final PathMapping pathMapping = serviceConfig.pathMapping();
+        assertThat(pathMapping.prefix().get()).isEqualTo("/foo/bar/");
+        assertThat(pathMapping.consumeTypes()).containsExactly(JSON, PLAIN_TEXT_UTF_8);
+        assertThat(pathMapping.produceTypes()).containsExactly(JSON_UTF_8,
+                                                               PLAIN_TEXT_UTF_8);
+        assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(10);
+        assertThat(serviceConfig.maxRequestLength()).isEqualTo(8192);
+        assertThat(serviceConfig.verboseResponses()).isEqualTo(true);
     }
 }

@@ -18,181 +18,213 @@ package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.common.HttpStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.HttpResponse;
 
-public class VirtualHostBuilderTest {
+class VirtualHostBuilderTest {
 
     @Test
-    public void defaultVirtualHost() {
+    void defaultVirtualHost() {
         final ServerBuilder sb = new ServerBuilder();
-        final VirtualHostBuilder virtualHostBuilder = sb.withDefaultVirtualHost();
-        assertThat(virtualHostBuilder).isNotNull();
-        assertThat(virtualHostBuilder).isEqualTo(sb.withDefaultVirtualHost());
-
-        final Server server = sb.withDefaultVirtualHost()
+        final Server server = sb.defaultVirtualHost()
                                 .service("/test", (ctx, req) -> HttpResponse.of(OK))
                                 .and().build();
 
-        assertThat(server).isNotNull();
-
         final VirtualHost virtualHost = server.config().defaultVirtualHost();
-        assertThat(virtualHost).isNotNull();
         assertThat(virtualHost.hostnamePattern()).isEqualTo("*");
         assertThat(virtualHost.defaultHostname()).isNotEqualTo("*");
     }
 
     @Test
-    public void defaultVirtualHostSetDefaultHostname() {
+    void withDefaultVirtualHost() {
         final ServerBuilder sb = new ServerBuilder();
-        sb.defaultHostname("foo");
-        final VirtualHostBuilder virtualHostBuilder = sb.withDefaultVirtualHost();
-        assertThat(virtualHostBuilder).isNotNull();
-        assertThat(virtualHostBuilder).isEqualTo(sb.withDefaultVirtualHost());
 
-        final Server server = sb.withDefaultVirtualHost()
-                                .service("/test", (ctx, req) -> HttpResponse.of(OK))
-                                .and().build();
-
-        assertThat(server).isNotNull();
+        final Server server = sb.withDefaultVirtualHost(builder -> {
+            builder.defaultHostname("foo")
+                   .service("/test", (ctx, req) -> HttpResponse.of(OK));
+        }).build();
 
         final VirtualHost virtualHost = server.config().defaultVirtualHost();
-        assertThat(virtualHost).isNotNull();
         assertThat(virtualHost.hostnamePattern()).isEqualTo("*");
         assertThat(virtualHost.defaultHostname()).isEqualTo("foo");
     }
 
     @Test
-    public void defaultVirtualHostWithImplicitStyle() {
+    void defaultVirtualHostSetDefaultHostname() {
         final ServerBuilder sb = new ServerBuilder();
-        final Server server = sb.service("/test", (ctx, req) -> HttpResponse.of(OK)).build();
-        assertThat(server).isNotNull();
+        sb.defaultHostname("foo");
+        final Server server = sb.defaultVirtualHost()
+                                .service("/test", (ctx, req) -> HttpResponse.of(OK))
+                                .and().build();
 
         final VirtualHost virtualHost = server.config().defaultVirtualHost();
-        assertThat(virtualHost).isNotNull();
+        assertThat(virtualHost.hostnamePattern()).isEqualTo("*");
+        assertThat(virtualHost.defaultHostname()).isEqualTo("foo");
+    }
+
+    @Test
+    void defaultVirtualHostWithImplicitStyle() {
+        final ServerBuilder sb = new ServerBuilder();
+        final Server server = sb.service("/test", (ctx, req) -> HttpResponse.of(OK)).build();
+
+        final VirtualHost virtualHost = server.config().defaultVirtualHost();
         assertThat(virtualHost.hostnamePattern()).isEqualTo("*");
     }
 
     @Test
-    public void virtualHostWithHostnamePattern() {
+    void virtualHostWithHostnamePattern() {
         final ServerBuilder sb = new ServerBuilder();
-        final VirtualHostBuilder virtualHostBuilder = sb.withVirtualHost("*.foo.com");
-        assertThat(virtualHostBuilder).isNotNull();
-
-        final Server server = sb.withDefaultVirtualHost()
+        final Server server = sb.virtualHost("*.foo.com")
                                 .service("/test", (ctx, req) -> HttpResponse.of(OK))
-                                .and().build();
-
-        assertThat(server).isNotNull();
+                                .and()
+                                .build();
 
         final List<VirtualHost> virtualHosts = server.config().virtualHosts();
-        assertThat(virtualHosts).isNotNull();
         assertThat(virtualHosts.size()).isEqualTo(2);
 
         final VirtualHost virtualHost = virtualHosts.get(0);
-        assertThat(virtualHost).isNotNull();
         assertThat(virtualHost.hostnamePattern()).isEqualTo("*.foo.com");
         assertThat(virtualHost.defaultHostname()).isEqualTo("foo.com");
 
         final VirtualHost defaultVirtualHost = virtualHosts.get(1);
-        assertThat(defaultVirtualHost).isNotNull();
         assertThat(defaultVirtualHost).isEqualTo(server.config().defaultVirtualHost());
     }
 
     @Test
-    public void virtualHostWithDefaultHostnameAndHostnamePattern() {
+    void virtualHostWithDefaultHostnameAndHostnamePattern() {
         final ServerBuilder sb = new ServerBuilder();
-        final VirtualHostBuilder virtualHostBuilder = sb.withVirtualHost("foo", "*");
-        assertThat(virtualHostBuilder).isNotNull();
-
-        virtualHostBuilder.service("/test", (ctx, req) -> HttpResponse.of(OK));
-        final Server server = sb.build();
-        assertThat(server).isNotNull();
+        final Server server = sb.virtualHost("foo", "*")
+                                .service("/test", (ctx, req) -> HttpResponse.of(OK))
+                                .and()
+                                .build();
 
         final List<VirtualHost> virtualHosts = server.config().virtualHosts();
-        assertThat(virtualHosts).isNotNull();
         assertThat(virtualHosts.size()).isEqualTo(2);
 
         final VirtualHost virtualHost = virtualHosts.get(0);
-        assertThat(virtualHost).isNotNull();
         assertThat(virtualHost.hostnamePattern()).isEqualTo("*");
         assertThat(virtualHost.defaultHostname()).isEqualTo("foo");
 
         final VirtualHost defaultVirtualHost = virtualHosts.get(1);
-        assertThat(defaultVirtualHost).isNotNull();
         assertThat(defaultVirtualHost).isEqualTo(server.config().defaultVirtualHost());
     }
 
     @Test
-    public void defaultVirtualHostMixedStyle() {
+    void withVirtualHost() {
+        final ServerBuilder sb = new ServerBuilder();
+        final Server server = sb.withVirtualHost(builder -> {
+            builder.defaultHostname("foo")
+                   .service("/test", (ctx, req) -> HttpResponse.of(OK));
+        }).build();
+
+        final List<VirtualHost> virtualHosts = server.config().virtualHosts();
+        assertThat(virtualHosts.size()).isEqualTo(2);
+
+        final VirtualHost virtualHost = virtualHosts.get(0);
+        assertThat(virtualHost.hostnamePattern()).isEqualTo("*");
+        assertThat(virtualHost.defaultHostname()).isEqualTo("foo");
+    }
+
+    @Test
+    void defaultVirtualHostMixedStyle() {
         final ServerBuilder sb = new ServerBuilder();
         sb.service("/test", (ctx, req) -> HttpResponse.of(OK))
-          .withDefaultVirtualHost().service("/test2", (ctx, req) -> HttpResponse.of(OK));
+          .defaultVirtualHost().service("/test2", (ctx, req) -> HttpResponse.of(OK));
 
         final Server server = sb.build();
-        assertThat(server).isNotNull();
 
         final List<ServiceConfig> serviceConfigs = server.config().defaultVirtualHost().serviceConfigs();
         assertThat(serviceConfigs.size()).isEqualTo(2);
     }
 
     @Test
-    public void virtualHostWithoutPattern() {
-        final VirtualHost h = new VirtualHostBuilder("foo.com", "foo.com", new ServerBuilder()).build();
+    void virtualHostWithoutPattern() {
+        final VirtualHost h = new VirtualHostBuilder(new ServerBuilder(), false)
+                .defaultHostname("foo.com")
+                .hostnamePattern("foo.com")
+                .build();
         assertThat(h.hostnamePattern()).isEqualTo("foo.com");
         assertThat(h.defaultHostname()).isEqualTo("foo.com");
     }
 
     @Test
-    public void virtualHostWithPattern() {
-        final VirtualHost h = new VirtualHostBuilder("bar.foo.com", "*.foo.com",
-                                                     new ServerBuilder())
+    void virtualHostWithPattern() {
+        final VirtualHost h = new VirtualHostBuilder(new ServerBuilder(), false)
+                .defaultHostname("bar.foo.com")
+                .hostnamePattern("*.foo.com")
                 .build();
         assertThat(h.hostnamePattern()).isEqualTo("*.foo.com");
         assertThat(h.defaultHostname()).isEqualTo("bar.foo.com");
     }
 
     @Test
-    public void accessLoggerCustomization() {
-        final VirtualHost h2 = new VirtualHostBuilder("bar.foo.com", "*.foo.com", new ServerBuilder())
-                .accessLogger(host -> LoggerFactory.getLogger("customize.test")).build();
-        assertThat(h2.accessLogger().getName()).isEqualTo("customize.test");
+    void accessLoggerCustomization() {
+        final VirtualHost h1 = new VirtualHostBuilder(new ServerBuilder(), false)
+                .defaultHostname("bar.foo.com")
+                .hostnamePattern("*.foo.com")
+                .accessLogger(host -> LoggerFactory.getLogger("customize.test"))
+                .build();
+        assertThat(h1.accessLogger().getName()).isEqualTo("customize.test");
 
-        final VirtualHost h = new VirtualHostBuilder("bar.foo.com", "*.foo.com", new ServerBuilder())
-                .accessLogger(LoggerFactory.getLogger("com.foo.test")).build();
-        assertThat(h.accessLogger().getName()).isEqualTo("com.foo.test");
+        final VirtualHost h2 = new VirtualHostBuilder(new ServerBuilder(), false)
+                .defaultHostname("bar.foo.com")
+                .hostnamePattern("*.foo.com")
+                .accessLogger(LoggerFactory.getLogger("com.foo.test"))
+                .build();
+        assertThat(h2.accessLogger().getName()).isEqualTo("com.foo.test");
     }
 
-    @Test(expected = NullPointerException.class)
-    public void virtualHostWithNull() {
+    @Test
+    void hostnamePatternCannotBeSetForDefaultBuilder() {
         final ServerBuilder sb = new ServerBuilder();
-        sb.withVirtualHost(null);
+        assertThrows(UnsupportedOperationException.class,
+                     () -> sb.defaultVirtualHost().hostnamePattern("CannotSet"));
     }
 
-    @Test(expected = NullPointerException.class)
-    public void virtualHostWithNull2() {
+    @Test
+    void hostnamePatternCannotBeSetForDefaultBuilder2() {
         final ServerBuilder sb = new ServerBuilder();
-        sb.withVirtualHost(null,  "foo.com");
+        assertThrows(UnsupportedOperationException.class,
+                     () -> sb.withDefaultVirtualHost(builder -> builder.hostnamePattern("CannotSet")));
     }
 
-    @Test(expected = NullPointerException.class)
-    public void virtualHostWithNull3() {
+    @Test
+    void virtualHostWithNull2() {
         final ServerBuilder sb = new ServerBuilder();
-        sb.withVirtualHost(null,  null);
+        assertThrows(NullPointerException.class,
+                     () -> sb.virtualHost(null, "foo.com"));
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void virtualHostWithMismatch() {
-        new VirtualHostBuilder("bar.com", "foo.com", new ServerBuilder()).build();
+    @Test
+    void virtualHostWithNull3() {
+        final ServerBuilder sb = new ServerBuilder();
+        assertThrows(NullPointerException.class,
+                     () -> sb.virtualHost(null, null));
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void virtualHostWithMismatch2() {
-        new VirtualHostBuilder("bar.com", "*.foo.com", new ServerBuilder()).build();
+    @Test
+    void virtualHostWithMismatch() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            new VirtualHostBuilder(new ServerBuilder(), false)
+                    .defaultHostname("bar.com")
+                    .hostnamePattern("foo.com")
+                    .build();
+        });
+    }
+
+    @Test
+    void virtualHostWithMismatch2() {
+        assertThrows(IllegalArgumentException.class, () -> {
+            new VirtualHostBuilder(new ServerBuilder(), false)
+                    .defaultHostname("bar.com")
+                    .hostnamePattern("*.foo.com")
+                    .build();
+        });
     }
 }
