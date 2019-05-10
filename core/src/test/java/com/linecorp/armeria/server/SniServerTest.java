@@ -71,14 +71,14 @@ class SniServerTest {
             dnsResolver.add("mismatch.com", NetUtil.LOCALHOST4);
             dnsResolver.add("127.0.0.1", NetUtil.LOCALHOST4);
 
-            sb.withVirtualHost("a.com")
+            sb.virtualHost("a.com")
               .service("/", new SniTestService("a.com"))
               .tls(sscA.certificateFile(), sscA.privateKeyFile())
               .and()
-              .withVirtualHost("b.com")
+              .virtualHost("b.com")
               .service("/", new SniTestService("b.com"))
               .tls(sscB.certificateFile(), sscB.privateKeyFile());
-            sb.withDefaultVirtualHost()
+            sb.defaultVirtualHost()
               .defaultHostname("c.com")
               .service("/", new SniTestService("c.com"))
               .tls(sscC.certificateFile(), sscC.privateKeyFile());

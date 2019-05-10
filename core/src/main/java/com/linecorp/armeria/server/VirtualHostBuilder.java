@@ -78,8 +78,8 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 /**
  * Builds a new {@link VirtualHost}.
  *
- * <p>This class can only be instantiated through the {@link ServerBuilder#withDefaultVirtualHost()} or
- * {@link ServerBuilder#withVirtualHost(String)} method of the {@link ServerBuilder}.
+ * <p>This class can only be instantiated through the {@link ServerBuilder#defaultVirtualHost()} or
+ * {@link ServerBuilder#virtualHost(String)} method of the {@link ServerBuilder}.
  *
  * <p>Call {@link #and()} method and return to {@link ServerBuilder}.
  *
@@ -97,13 +97,13 @@ public final class VirtualHostBuilder {
             ApplicationProtocolNames.HTTP_2,
             ApplicationProtocolNames.HTTP_1_1);
 
-    /**
-     * Can be replaced later by {@link #defaultHostname(String)}.
-     */
-    private String defaultHostname;
-    private final String hostnamePattern;
     private final ServerBuilder serverBuilder;
+    private final boolean defaultVirtualHost;
     private final List<ServiceConfigBuilder> serviceConfigBuilders = new ArrayList<>();
+
+    @Nullable
+    private String defaultHostname;
+    private String hostnamePattern = "*";
     @Nullable
     private SslContext sslContext;
     private boolean tlsSelfSigned;
@@ -126,51 +126,14 @@ public final class VirtualHostBuilder {
     private ContentPreviewerFactory responseContentPreviewerFactory;
 
     /**
-     * Creates a new {@link VirtualHostBuilder} whose hostname pattern is {@code "*"} (match-all).
+     * Creates a new {@link VirtualHostBuilder}.
      *
-     * @param serverBuilder the parent {@link ServerBuilder} to be returned by {@link #and()}.
+     * @param serverBuilder the parent {@link ServerBuilder} to be returned by {@link #and()}
+     * @param defaultVirtualHost tells whether this builder is the default virtual host builder or not
      */
-    VirtualHostBuilder(ServerBuilder serverBuilder) {
-        this(SystemInfo.hostname(), "*", serverBuilder);
-    }
-
-    /**
-     * Creates a new {@link VirtualHostBuilder} with the specified hostname pattern.
-     *
-     * @param hostnamePattern the hostname pattern of this virtual host.
-     * @param serverBuilder the parent {@link ServerBuilder} to be returned by {@link #and()}.
-     */
-    VirtualHostBuilder(String hostnamePattern, ServerBuilder serverBuilder) {
-        hostnamePattern = normalizeHostnamePattern(hostnamePattern);
-
-        if ("*".equals(hostnamePattern)) {
-            defaultHostname = SystemInfo.hostname();
-        } else if (hostnamePattern.startsWith("*.")) {
-            defaultHostname = hostnamePattern.substring(2);
-        } else {
-            defaultHostname = hostnamePattern;
-        }
-
-        this.hostnamePattern = hostnamePattern;
+    VirtualHostBuilder(ServerBuilder serverBuilder, boolean defaultVirtualHost) {
         this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
-    }
-
-    /**
-     * Creates a new {@link VirtualHostBuilder} with
-     * the default host name and the specified hostname pattern.
-     *
-     * @param defaultHostname the default hostname of this virtual host.
-     * @param hostnamePattern the hostname pattern of this virtual host.
-     * @param serverBuilder the parent {@link ServerBuilder} to be returned by {@link #and()}.
-     */
-    VirtualHostBuilder(String defaultHostname, String hostnamePattern, ServerBuilder serverBuilder) {
-        defaultHostname = normalizeDefaultHostname(defaultHostname);
-        hostnamePattern = normalizeHostnamePattern(hostnamePattern);
-        ensureHostnamePatternMatchesDefaultHostname(hostnamePattern, defaultHostname);
-
-        this.defaultHostname = defaultHostname;
-        this.hostnamePattern = hostnamePattern;
-        this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
+        this.defaultVirtualHost = defaultVirtualHost;
     }
 
     /**
@@ -183,13 +146,24 @@ public final class VirtualHostBuilder {
     }
 
     /**
-     * Sets the default hostname.
+     * Sets the default hostname of this {@link VirtualHost}.
      */
     public VirtualHostBuilder defaultHostname(String defaultHostname) {
-        defaultHostname = normalizeDefaultHostname(defaultHostname);
-        ensureHostnamePatternMatchesDefaultHostname(hostnamePattern, defaultHostname);
+        this.defaultHostname = normalizeDefaultHostname(defaultHostname);
+        return this;
+    }
 
-        this.defaultHostname = defaultHostname;
+    /**
+     * Sets the hostname pattern of this {@link VirtualHost}.
+     *
+     * @throws UnsupportedOperationException if this is the default {@link VirtualHostBuilder}
+     */
+    public VirtualHostBuilder hostnamePattern(String hostnamePattern) {
+        if (defaultVirtualHost) {
+            throw new UnsupportedOperationException(
+                    "Cannot set hostnamePattern for the default virtual host builder");
+        }
+        this.hostnamePattern = normalizeHostnamePattern(hostnamePattern);
         return this;
     }
 
@@ -348,10 +322,19 @@ public final class VirtualHostBuilder {
     }
 
     /**
-     * Returns a {@link RouteBuilder} which is for binding a {@link Service} fluently.
+     * Configures a {@link Service} of the {@link VirtualHost} with the {@code customizer}.
      */
-    public VirtualHostRouteBuilder route() {
-        return new VirtualHostRouteBuilder(this);
+    public VirtualHostBuilder withRoute(Consumer<VirtualHostServiceBindingBuilder> customizer) {
+        final VirtualHostServiceBindingBuilder builder = new VirtualHostServiceBindingBuilder(this);
+        customizer.accept(builder);
+        return this;
+    }
+
+    /**
+     * Returns a {@link ServiceBindingBuilder} which is for binding a {@link Service} fluently.
+     */
+    public VirtualHostServiceBindingBuilder route() {
+        return new VirtualHostServiceBindingBuilder(this);
     }
 
     /**
@@ -762,6 +745,18 @@ public final class VirtualHostBuilder {
      * added to this builder.
      */
     VirtualHost build() {
+        if (defaultHostname == null) {
+            if ("*".equals(hostnamePattern)) {
+                defaultHostname = SystemInfo.hostname();
+            } else if (hostnamePattern.startsWith("*.")) {
+                defaultHostname = hostnamePattern.substring(2);
+            } else {
+                defaultHostname = hostnamePattern;
+            }
+        } else {
+            ensureHostnamePatternMatchesDefaultHostname(hostnamePattern, defaultHostname);
+        }
+
         final long requestTimeout = requestTimeoutMillis != null ? requestTimeoutMillis
                                                                  : serverBuilder.requestTimeoutMillis();
         final long maxRequest = maxRequestLength != null ? maxRequestLength

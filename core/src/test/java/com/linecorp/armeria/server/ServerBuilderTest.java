@@ -76,17 +76,17 @@ public class ServerBuilderTest {
         final Server sb = new ServerBuilder()
                 .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                 .accessLogger(LoggerFactory.getLogger("default"))
-                .withVirtualHost("*.example.com")
+                .virtualHost("*.example.com")
                 .and()
-                .withVirtualHost("*.example2.com")
+                .virtualHost("*.example2.com")
                 .accessLogger("com.ex2")
                 .and()
-                .withVirtualHost("*.example3.com")
+                .virtualHost("*.example3.com")
                 .accessLogger(host -> LoggerFactory.getLogger("com.ex3"))
                 .and()
-                .withVirtualHost("def.example4.com", "*.example4.com")
+                .virtualHost("def.example4.com", "*.example4.com")
                 .and()
-                .withVirtualHost("def.example5.com", "*.example5.com")
+                .virtualHost("def.example5.com", "*.example5.com")
                 .accessLogger("com.ex5")
                 .and()
                 .build();
@@ -118,7 +118,7 @@ public class ServerBuilderTest {
         final Server sb = new ServerBuilder()
                 .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                 .accessLogger("test.default")
-                .withVirtualHost("*.example.com")
+                .virtualHost("*.example.com")
                 .and()
                 .build();
         assertThat(sb.config().defaultVirtualHost().accessLogger().getName())
@@ -135,9 +135,9 @@ public class ServerBuilderTest {
     public void defaultAccessLoggerTest() {
         final Server sb = new ServerBuilder()
                 .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                .withVirtualHost("*.example.com")
+                .virtualHost("*.example.com")
                 .and()
-                .withVirtualHost("*.example2.com")
+                .virtualHost("*.example2.com")
                 .and()
                 .build();
         assertThat(sb.config().findVirtualHost("*.example.com").accessLogger().getName())
@@ -164,7 +164,7 @@ public class ServerBuilderTest {
                     }
                     return LoggerFactory.getLogger("default");
                 })
-                .withVirtualHost("*.example.com").and();
+                .virtualHost("*.example.com").and();
         assertThatThrownBy(sb2::build).isInstanceOf(IllegalStateException.class);
     }
 }
