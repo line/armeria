@@ -16,9 +16,10 @@
 
 package com.linecorp.armeria.server.annotation;
 
+import java.util.Arrays;
+
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -36,17 +37,17 @@ public class ByteArrayRequestConverterFunction implements RequestConverterFuncti
     @Override
     public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
                                  Class<?> expectedResultType) throws Exception {
-        final MediaType mediaType = request.contentType();
-        if (mediaType == null ||
-            mediaType.is(MediaType.OCTET_STREAM) ||
-            mediaType.is(MediaType.APPLICATION_BINARY)) {
-
-            if (expectedResultType == byte[].class) {
-                return request.content().array();
+        if (expectedResultType == byte[].class) {
+            final byte[] array = request.content().array();
+            final int length = request.content().length();
+            if (array.length == length) {
+                return array;
+            } else {
+                return Arrays.copyOf(array, length);
             }
-            if (expectedResultType == HttpData.class) {
-                return request.content();
-            }
+        }
+        if (expectedResultType == HttpData.class) {
+            return request.content();
         }
         return RequestConverterFunction.fallthrough();
     }

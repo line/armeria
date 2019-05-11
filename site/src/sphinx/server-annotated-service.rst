@@ -522,26 +522,19 @@ after your request converters, so you don't have to specify any :api:`@RequestCo
         @Post("/hello2")
         public HttpResponse hello2(MyJsonRequest body) { ... }
 
+        // StringRequestConverterFunction will work for regardless of the content type.
         @Post("/hello3")
-        public HttpResponse hello3(byte[] body) { ... }
+        public HttpResponse hello3(String body) { ... }
 
         @Post("/hello4")
-        public HttpResponse hello4(HttpData body) { ... }
+        public HttpResponse hello4(CharSequence body) { ... }
 
-        // StringRequestConverterFunction will work for the content type of any of 'text'.
+        // ByteArrayRequestConverterFunction will work for regardless of the content type.
         @Post("/hello5")
-        public HttpResponse hello5(String body) { ... }
+        public HttpResponse hello5(byte[] body) { ... }
 
         @Post("/hello6")
-        public HttpResponse hello6(CharSequence body) { ... }
-
-        // ByteArrayRequestConverterFunction will work for the content type of 'application/octet-stream',
-        // 'application/binary' or none.
-        @Post("/hello7")
-        public HttpResponse hello7(byte[] body) { ... }
-
-        @Post("/hello8")
-        public HttpResponse hello8(HttpData body) { ... }
+        public HttpResponse hello6(HttpData body) { ... }
     }
 
 Injecting value of parameters and HTTP headers into a Java object

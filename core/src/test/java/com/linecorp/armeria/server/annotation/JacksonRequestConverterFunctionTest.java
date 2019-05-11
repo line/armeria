@@ -13,6 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package com.linecorp.armeria.server.annotation;
 
 import static org.mockito.Mockito.mock;
@@ -26,6 +27,7 @@ import org.testng.Assert;
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.internal.FallthroughException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 public class JacksonRequestConverterFunctionTest {
@@ -34,32 +36,26 @@ public class JacksonRequestConverterFunctionTest {
     private static final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
     private static final AggregatedHttpMessage req = mock(AggregatedHttpMessage.class);
 
-    @Test
-    public void jsonText_to_byteArray() throws Exception {
-        final String JSON_TEXT = "\"value\"";
+    static final String JSON_TEXT = "{\"key\": \"value\"}";
 
+    @Test(expected = FallthroughException.class)
+    public void jsonTextToByteArray() throws Exception {
         when(req.contentType()).thenReturn(MediaType.JSON);
-        when(req.content()).thenReturn(HttpData.ofUtf8(JSON_TEXT));
+        when(req.content(StandardCharsets.UTF_8)).thenReturn(JSON_TEXT);
 
-        final Object result = function.convertRequest(ctx, req, byte[].class);
-        Assert.assertTrue(result instanceof byte[]);
+        function.convertRequest(ctx, req, byte[].class);
+    }
+
+    @Test(expected = FallthroughException.class)
+    public void jsonTextToHttpData() throws Exception {
+        when(req.contentType()).thenReturn(MediaType.JSON);
+        when(req.content(StandardCharsets.UTF_8)).thenReturn(JSON_TEXT);
+
+        function.convertRequest(ctx, req, HttpData.class);
     }
 
     @Test
-    public void jsonText_to_httpData() throws Exception {
-        final String JSON_TEXT = "\"value\"";
-
-        when(req.contentType()).thenReturn(MediaType.JSON);
-        when(req.content()).thenReturn(HttpData.ofUtf8(JSON_TEXT));
-
-        final Object result = function.convertRequest(ctx, req, HttpData.class);
-        Assert.assertTrue(result instanceof HttpData);
-    }
-
-    @Test
-    public void jsonText_to_jsonRequest() throws Exception {
-        final String JSON_TEXT = "{\"key\": \"value\"}";
-
+    public void jsonTextToJsonRequest() throws Exception {
         when(req.contentType()).thenReturn(MediaType.JSON);
         when(req.content(StandardCharsets.UTF_8)).thenReturn(JSON_TEXT);
 

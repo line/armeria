@@ -65,23 +65,20 @@ public class JacksonRequestConverterFunction implements RequestConverterFunction
     @Nullable
     public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
                                  Class<?> expectedResultType) throws Exception {
-
         final MediaType contentType = request.contentType();
         if (contentType != null && (contentType.is(MediaType.JSON) ||
                                     contentType.subtype().endsWith("+json"))) {
-            if (expectedResultType == byte[].class) {
-                return request.content().array();
-            }
-            if (expectedResultType == HttpData.class) {
-                return request.content();
-            }
-
             final ObjectReader reader = readers.computeIfAbsent(expectedResultType, mapper::readerFor);
             if (reader != null) {
                 final String content = request.content(contentType.charset().orElse(StandardCharsets.UTF_8));
                 try {
                     return reader.readValue(content);
                 } catch (JsonProcessingException e) {
+                    if (expectedResultType == byte[].class ||
+                        expectedResultType == HttpData.class) {
+                        return RequestConverterFunction.fallthrough();
+                    }
+
                     throw new IllegalArgumentException("failed to parse a JSON document: " + e, e);
                 }
             }
