@@ -51,15 +51,7 @@ export default abstract class Transport {
     return this.doSend(method, filledHeaders, bodyJson, endpointPath, queries);
   }
 
-  public curlPathAndBody(method: Method, body: string): [string, string] {
-    const endpoint = this.findDebugMimeTypeEndpoint(method);
-    return [
-      this.getCurlPath(endpoint),
-      this.getCurlBody(body, endpoint, method),
-    ];
-  }
-
-  protected findDebugMimeTypeEndpoint(method: Method): Endpoint {
+  public findDebugMimeTypeEndpoint(method: Method): Endpoint {
     const endpoint = method.endpoints.find((ep) =>
       ep.availableMimeTypes.includes(this.getDebugMimeType()),
     );
@@ -71,14 +63,10 @@ export default abstract class Transport {
     return endpoint;
   }
 
-  protected getCurlPath(endpoint: Endpoint): string {
-    return endpoint.pathMapping;
-  }
-
-  protected getCurlBody(
-    body: string,
+  public getCurlBody(
     _endpoint: Endpoint,
     _method: Method,
+    body: string,
   ): string {
     return body;
   }

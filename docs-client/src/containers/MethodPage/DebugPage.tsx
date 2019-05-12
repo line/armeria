@@ -285,9 +285,7 @@ class DebugPage extends React.PureComponent<Props, State> {
   private onExport = () => {
     const escapeSingleQuote = (text: string) => text.replace(/'/g, `'\\''`);
 
-    const endpointPath = this.state.endpointPath; // annotated service only
     const additionalHeaders = this.state.additionalHeaders;
-    const queries = this.state.additionalQueries;
     const requestBody = this.state.requestBody;
 
     try {
@@ -315,7 +313,10 @@ class DebugPage extends React.PureComponent<Props, State> {
       }
 
       const httpMethod = method.httpMethod;
-      const [path, body] = transport.curlPathAndBody(
+      const endpoint = transport.findDebugMimeTypeEndpoint(method);
+      const path = endpoint.pathMapping;
+      const body = transport.getCurlBody(
+        endpoint,
         method,
         escapeSingleQuote(requestBody),
       );
@@ -323,10 +324,12 @@ class DebugPage extends React.PureComponent<Props, State> {
 
       if (this.props.isAnnotatedHttpService) {
         if (this.props.exactPathMapping) {
+          const queries = this.state.additionalQueries;
           uri =
             `'${host}${escapeSingleQuote(path)}` +
             `${queries.length > 0 ? `?${escapeSingleQuote(queries)}` : ''}'`;
         } else {
+          const endpointPath = this.state.endpointPath;
           this.validateEndpointPath(endpointPath);
           uri = `'${host}${escapeSingleQuote(endpointPath)}'`;
         }

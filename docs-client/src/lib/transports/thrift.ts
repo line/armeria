@@ -35,11 +35,7 @@ export default class ThriftTransport extends Transport {
     return TTEXT_MIME_TYPE;
   }
 
-  protected getCurlBody(
-    body: string,
-    endpoint: Endpoint,
-    method: Method,
-  ): string {
+  public getCurlBody(endpoint: Endpoint, method: Method, body: string): string {
     const thriftMethod = ThriftTransport.thriftMethod(endpoint, method);
     return `{"method":"${thriftMethod}", "type": "CALL", "args": ${body}}`;
   }

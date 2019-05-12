@@ -14,7 +14,7 @@
  * under the License.
  */
 
-import { Endpoint, Method } from '../specification';
+import { Method } from '../specification';
 
 import Transport from './transport';
 
@@ -27,10 +27,6 @@ export default class AnnotatedHttpTransport extends Transport {
 
   public getDebugMimeType(): string {
     return ANNOTATED_HTTP_MIME_TYPE;
-  }
-
-  protected getCurlPath(endpoint: Endpoint): string {
-    return endpoint.pathMapping.substring('exact:'.length);
   }
 
   protected async doSend(
