@@ -340,8 +340,8 @@ class DebugPage extends React.PureComponent<Props, State> {
       }
 
       const headerOptions = Object.keys(headers)
-        .map((title) => {
-          return `-H '${title}: ${headers[title]}'`;
+        .map((name) => {
+          return `-H '${name}: ${headers[name]}'`;
         })
         .join(' ');
 
