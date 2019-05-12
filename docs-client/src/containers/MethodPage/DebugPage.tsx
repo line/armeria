@@ -339,14 +339,14 @@ class DebugPage extends React.PureComponent<Props, State> {
         headers[docServiceDebug] = 'true';
       }
 
-      const header = Object.keys(headers)
+      const headerOptions = Object.keys(headers)
         .map((title) => {
-          return `-H '${title}:${headers[title]}'`;
+          return `-H '${title}: ${headers[title]}'`;
         })
         .join(' ');
 
       const curlCommand =
-        `curl -X${httpMethod} ${header} ${uri}` +
+        `curl -X${httpMethod} ${headerOptions} ${uri}` +
         `${this.props.useRequestBody ? ` -d '${body}'` : ''}`;
 
       DebugPage.copyTextToClipboard(curlCommand);
