@@ -43,7 +43,7 @@ public class ByteArrayRequestConverterFunction implements RequestConverterFuncti
             if (array.length == length) {
                 return array;
             } else {
-                return Arrays.copyOf(array, length);
+                return Arrays.copyOfRange(array, request.content().offset(), length);
             }
         }
         if (expectedResultType == HttpData.class) {
