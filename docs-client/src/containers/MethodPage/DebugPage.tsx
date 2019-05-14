@@ -326,7 +326,7 @@ class DebugPage extends React.PureComponent<Props, State> {
         if (this.props.exactPathMapping) {
           const queries = this.state.additionalQueries;
           uri =
-            `'${host}${escapeSingleQuote(path)}` +
+            `'${host}${escapeSingleQuote(path.substring("exact:".length))}` +
             `${queries.length > 0 ? `?${escapeSingleQuote(queries)}` : ''}'`;
         } else {
           const endpointPath = this.state.endpointPath;
