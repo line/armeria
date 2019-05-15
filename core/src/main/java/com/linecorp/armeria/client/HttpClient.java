@@ -141,8 +141,8 @@ public interface HttpClient extends ClientBuilderParams {
     }
 
     /**
-     * Creates a new HTTP client that connects to the specified {@link Endpoint} with {@link SessionProtocol}
-     * using the default {@link ClientFactory}.
+     * Creates a new HTTP client that connects to the specified {@link Endpoint} with
+     * the {@link SessionProtocol} using the default {@link ClientFactory}.
      *
      * @param protocol the {@link SessionProtocol} of the {@link Endpoint}
      * @param endpoint the server {@link Endpoint}
@@ -153,8 +153,8 @@ public interface HttpClient extends ClientBuilderParams {
     }
 
     /**
-     * Creates a new HTTP client that connects to the specified {@link Endpoint} with {@link SessionProtocol}
-     * using the default {@link ClientFactory}.
+     * Creates a new HTTP client that connects to the specified {@link Endpoint} with
+     * the {@link SessionProtocol} using the default {@link ClientFactory}.
      *
      * @param protocol the {@link SessionProtocol} of the {@link Endpoint}
      * @param endpoint the server {@link Endpoint}
@@ -165,8 +165,8 @@ public interface HttpClient extends ClientBuilderParams {
     }
 
     /**
-     * Creates a new HTTP client that connects to the specified {@link Endpoint} with {@link SessionProtocol}
-     * using an alternative {@link ClientFactory}.
+     * Creates a new HTTP client that connects to the specified {@link Endpoint} with
+     * the {@link SessionProtocol} using an alternative {@link ClientFactory}.
      *
      * @param factory an alternative {@link ClientFactory}
      * @param protocol the {@link SessionProtocol} of the {@link Endpoint}
@@ -179,8 +179,8 @@ public interface HttpClient extends ClientBuilderParams {
     }
 
     /**
-     * Creates a new HTTP client that connects to the specified {@link Endpoint} with {@link SessionProtocol}
-     * using an alternative {@link ClientFactory}.
+     * Creates a new HTTP client that connects to the specified {@link Endpoint} with
+     * the {@link SessionProtocol} using an alternative {@link ClientFactory}.
      *
      * @param factory an alternative {@link ClientFactory}
      * @param protocol the {@link SessionProtocol} of the {@link Endpoint}

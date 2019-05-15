@@ -422,8 +422,16 @@ public final class Endpoint implements Comparable<Endpoint> {
 
         if (isGroup()) {
             authority = "group:" + groupName;
+        } else if (port != 0) {
+            if (hostType == HostType.IPv6_ONLY) {
+                authority = '[' + host() + "]:" + port;
+            } else {
+                authority = host() + ':' + port;
+            }
+        } else if (hostType == HostType.IPv6_ONLY) {
+            authority = '[' + host() + ']';
         } else {
-            authority = buildAuthority(host(), port);
+            authority = host();
         }
 
         return this.authority = authority;
@@ -467,30 +475,7 @@ public final class Endpoint implements Comparable<Endpoint> {
     public URI toUri(Scheme scheme) {
         requireNonNull(scheme, "scheme");
 
-        final String authority;
-        if (isGroup()) {
-            authority = "group:" + groupName;
-        } else {
-            authority = buildAuthority(hasIpAddr() ? ipAddr() : host(), port);
-        }
-
-        return URI.create(scheme.uriText() + "://" + authority);
-    }
-
-    private static String buildAuthority(String host, int port) {
-        if (port != 0) {
-            if (NetUtil.isValidIpV6Address(host)) {
-                return '[' + host + "]:" + port;
-            } else {
-                return host + ':' + port;
-            }
-        } else {
-            if (NetUtil.isValidIpV6Address(host)) {
-                return '[' + host + ']';
-            } else {
-                return host;
-            }
-        }
+        return URI.create(scheme.uriText() + "://" + authority());
     }
 
     private void ensureGroup() {

@@ -69,10 +69,10 @@ public final class Clients {
     }
 
     /**
-     * Creates a new client that connects to the specified {@code uri} using an alternative
+     * Creates a new client that connects to the specified {@code uri} using the specified
      * {@link ClientFactory}.
      *
-     * @param factory an alternative {@link ClientFactory}
+     * @param factory the specified {@link ClientFactory}
      * @param uri the URI of the server endpoint
      * @param clientType the type of the new client
      * @param options the {@link ClientOptionValue}s
@@ -87,10 +87,10 @@ public final class Clients {
     }
 
     /**
-     * Creates a new client that connects to the specified {@code uri} using an alternative
+     * Creates a new client that connects to the specified {@code uri} using the specified
      * {@link ClientFactory}.
      *
-     * @param factory an alternative {@link ClientFactory}
+     * @param factory the specified {@link ClientFactory}
      * @param uri the URI of the server endpoint
      * @param clientType the type of the new client
      * @param options the {@link ClientOptions}
@@ -134,10 +134,10 @@ public final class Clients {
     }
 
     /**
-     * Creates a new client that connects to the specified {@link URI} using an alternative
+     * Creates a new client that connects to the specified {@link URI} using the specified
      * {@link ClientFactory}.
      *
-     * @param factory an alternative {@link ClientFactory}
+     * @param factory the specified {@link ClientFactory}
      * @param uri the URI of the server endpoint
      * @param clientType the type of the new client
      * @param options the {@link ClientOptionValue}s
@@ -151,10 +151,10 @@ public final class Clients {
     }
 
     /**
-     * Creates a new client that connects to the specified {@link URI} using an alternative
+     * Creates a new client that connects to the specified {@link URI} using the specified
      * {@link ClientFactory}.
      *
-     * @param factory an alternative {@link ClientFactory}
+     * @param factory the specified {@link ClientFactory}
      * @param uri the URI of the server endpoint
      * @param clientType the type of the new client
      * @param options the {@link ClientOptions}
@@ -206,9 +206,9 @@ public final class Clients {
 
     /**
      * Creates a new client that connects to the specified {@link Endpoint} with the {@link SessionProtocol} and
-     * the {@link SerializationFormat} using an alternative {@link ClientFactory}.
+     * the {@link SerializationFormat} using the specified {@link ClientFactory}.
      *
-     * @param factory an alternative {@link ClientFactory}
+     * @param factory the specified {@link ClientFactory}
      * @param protocol the session protocol
      * @param format the {@link SerializationFormat} for remote procedure call
      * @param endpoint the server {@link Endpoint}
@@ -226,9 +226,9 @@ public final class Clients {
 
     /**
      * Creates a new client that connects to the specified {@link Endpoint} with the {@link SessionProtocol} and
-     * the {@link SerializationFormat} using an alternative {@link ClientFactory}.
+     * the {@link SerializationFormat} using the specified {@link ClientFactory}.
      *
-     * @param factory an alternative {@link ClientFactory}
+     * @param factory the specified {@link ClientFactory}
      * @param protocol the session protocol
      * @param format the {@link SerializationFormat} for remote procedure call
      * @param endpoint the server {@link Endpoint}
@@ -280,9 +280,9 @@ public final class Clients {
 
     /**
      * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme} using
-     * an alternative {@link ClientFactory}.
+     * the specified {@link ClientFactory}.
      *
-     * @param factory an alternative {@link ClientFactory}
+     * @param factory the specified {@link ClientFactory}
      * @param scheme the {@link Scheme}
      * @param endpoint the server {@link Endpoint}
      * @param clientType the type of the new client
@@ -298,9 +298,9 @@ public final class Clients {
 
     /**
      * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme} using
-     * an alternative {@link ClientFactory}.
+     * the specified {@link ClientFactory}.
      *
-     * @param factory an alternative {@link ClientFactory}
+     * @param factory the specified {@link ClientFactory}
      * @param scheme the {@link Scheme}
      * @param endpoint the server {@link Endpoint}
      * @param clientType the type of the new client
