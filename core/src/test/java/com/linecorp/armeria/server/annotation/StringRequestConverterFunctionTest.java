@@ -43,4 +43,13 @@ public class StringRequestConverterFunctionTest {
         final Object result = function.convertRequest(ctx, req, String.class);
         Assert.assertTrue(result instanceof String);
     }
+
+    @Test
+    public void jsonTextToCharSequence() throws Exception {
+        when(req.contentType()).thenReturn(MediaType.JSON);
+        when(req.content(ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET)).thenReturn(JSON_TEXT);
+
+        final Object result = function.convertRequest(ctx, req, CharSequence.class);
+        Assert.assertTrue(result instanceof CharSequence);
+    }
 }

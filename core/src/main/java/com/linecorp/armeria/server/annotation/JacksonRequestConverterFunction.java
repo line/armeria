@@ -76,7 +76,8 @@ public class JacksonRequestConverterFunction implements RequestConverterFunction
                 } catch (JsonProcessingException e) {
                     if (expectedResultType == byte[].class ||
                         expectedResultType == HttpData.class ||
-                        expectedResultType == String.class) {
+                        expectedResultType == String.class ||
+                        expectedResultType == CharSequence.class) {
                         return RequestConverterFunction.fallthrough();
                     }
 
