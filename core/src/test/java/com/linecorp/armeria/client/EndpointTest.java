@@ -22,6 +22,10 @@ import java.net.StandardProtocolFamily;
 
 import org.junit.Test;
 
+import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
+
 public class EndpointTest {
 
     @Test
@@ -242,30 +246,41 @@ public class EndpointTest {
     }
 
     @Test
-    public void toURI() {
+    public void toUri() {
         final Endpoint group = Endpoint.ofGroup("a");
-        assertThat(group.toUri("none+http").toString()).isEqualTo("none+http://group:a");
-        assertThat(group.toUri("none+https").toString()).isEqualTo("none+https://group:a");
+        assertThat(group.toUri("none+http").toString())
+                .isEqualTo("none+http://group:a");
+        assertThat(group.toUri(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP)).toString())
+                .isEqualTo("none+http://group:a");
 
         final Endpoint router = Endpoint.of("192.168.0.1");
-        assertThat(router.toUri("none+h1").toString()).isEqualTo("none+h1://192.168.0.1");
-        assertThat(router.toUri("none+h1c").toString()).isEqualTo("none+h1c://192.168.0.1");
-        assertThat(router.withDefaultPort(80).toUri("none+h1c").toString())
-                .isEqualTo("none+h1c://192.168.0.1:80");
+        assertThat(router.toUri("none+h1").toString())
+                .isEqualTo("none+h1://192.168.0.1");
+        assertThat(group.toUri(SessionProtocol.H1, SerializationFormat.NONE).toString())
+                .isEqualTo("none+h1://group:a");
+        assertThat(router.withDefaultPort(80).toUri("none+h1").toString())
+                .isEqualTo("none+h1://192.168.0.1:80");
 
         final Endpoint google = Endpoint.of("google.com");
-        assertThat(google.toUri("none+http").toString()).isEqualTo("none+http://google.com");
-        assertThat(google.withDefaultPort(80).toUri("none+http").toString())
-                .isEqualTo("none+http://google.com:80");
-
-        assertThat(google.toUri("none+https").toString()).isEqualTo("none+https://google.com");
+        assertThat(google.toUri("none+https").toString())
+                .isEqualTo("none+https://google.com");
+        assertThat(google.toUri(SessionProtocol.HTTPS, SerializationFormat.of("none")).toString())
+                .isEqualTo("none+https://google.com");
         assertThat(google.withDefaultPort(80).toUri("none+https").toString())
                 .isEqualTo("none+https://google.com:80");
 
         final Endpoint ipv6WithHostName = Endpoint.of("google.com").withIpAddr("[::1]");
-        assertThat(ipv6WithHostName.toUri("none+http").toString()).isEqualTo("none+http://[::1]");
-        assertThat(ipv6WithHostName.withDefaultPort(80).toUri("none+http").toString())
-                .isEqualTo("none+http://[::1]:80");
+        assertThat(ipv6WithHostName.toUri("none+h2").toString())
+                .isEqualTo("none+h2://[::1]");
+        assertThat(ipv6WithHostName.toUri(SessionProtocol.H2, SerializationFormat.NONE).toString())
+                .isEqualTo("none+h2://[::1]");
+        assertThat(ipv6WithHostName.withDefaultPort(80).toUri("none+h2").toString())
+                .isEqualTo("none+h2://[::1]:80");
+
+        assertThatThrownBy(() -> group.toUri("http://www.badguys.com"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> group.toUri(SessionProtocol.H1, SerializationFormat.THRIFT_JSON))
+                .isInstanceOf(NullPointerException.class);
     }
 
     @Test

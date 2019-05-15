@@ -56,11 +56,11 @@ import com.linecorp.armeria.common.SessionProtocol;
 public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuilder> {
 
     @Nullable
-    private URI uri;
+    private final URI uri;
     @Nullable
-    private Scheme scheme;
+    private final Scheme scheme;
     @Nullable
-    private Endpoint endpoint;
+    private final Endpoint endpoint;
     private ClientFactory factory = ClientFactory.DEFAULT;
 
     /**
@@ -74,7 +74,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
      * Creates a new {@link ClientBuilder} that builds the client that connects to the specified {@link URI}.
      */
     public ClientBuilder(URI uri) {
-        this.uri = requireNonNull(uri, "uri");
+        this(requireNonNull(uri), null, null);
     }
 
     /**
@@ -86,7 +86,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
     }
 
     /**
-     * Creates a new {@link ClientBuilder} that builds the client that connects to the specified
+     * Creates a new {@link ClientBuilder} that builds the HTTP client that connects to the specified
      * {@link Endpoint} with the {@link SessionProtocol}.
      */
     public ClientBuilder(SessionProtocol protocol, Endpoint endpoint) {
@@ -107,8 +107,13 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
      * {@link Endpoint} with the {@link Scheme}.
      */
     public ClientBuilder(Scheme scheme, Endpoint endpoint) {
-        this.scheme = requireNonNull(scheme, "scheme");
-        this.endpoint = requireNonNull(endpoint, "endpoint");
+        this(null, requireNonNull(scheme, "scheme"), requireNonNull(endpoint, "endpoint"));
+    }
+
+    private ClientBuilder(URI uri, Scheme scheme, Endpoint endpoint) {
+        this.uri = uri;
+        this.scheme = scheme;
+        this.endpoint = endpoint;
     }
 
     /**

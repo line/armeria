@@ -25,8 +25,6 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.Scheme;
-import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 
 /**
@@ -177,8 +175,7 @@ public interface HttpClient extends ClientBuilderParams {
      */
     static HttpClient of(ClientFactory factory, SessionProtocol protocol, Endpoint endpoint,
                          ClientOptionValue<?>... options) {
-        return new HttpClientBuilder(Scheme.of(SerializationFormat.NONE, protocol), endpoint)
-                .factory(factory).options(options).build();
+        return new HttpClientBuilder(protocol, endpoint).factory(factory).options(options).build();
     }
 
     /**
@@ -192,8 +189,7 @@ public interface HttpClient extends ClientBuilderParams {
      */
     static HttpClient of(ClientFactory factory, SessionProtocol protocol, Endpoint endpoint,
                          ClientOptions options) {
-        return new HttpClientBuilder(Scheme.of(SerializationFormat.NONE, protocol), endpoint)
-                .factory(factory).options(options).build();
+        return new HttpClientBuilder(protocol, endpoint).factory(factory).options(options).build();
     }
 
     /**

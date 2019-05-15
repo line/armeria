@@ -36,11 +36,11 @@ import com.linecorp.armeria.common.SessionProtocol;
 public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpClientBuilder> {
 
     @Nullable
-    private URI uri;
+    private final URI uri;
     @Nullable
-    private Scheme scheme;
+    private final Scheme scheme;
     @Nullable
-    private Endpoint endpoint;
+    private final Endpoint endpoint;
     private ClientFactory factory = ClientFactory.DEFAULT;
 
     /**
@@ -62,16 +62,25 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
     public HttpClientBuilder(URI uri) {
         validateScheme(requireNonNull(uri, "uri").getScheme());
         this.uri = URI.create(SerializationFormat.NONE + "+" + uri);
+        scheme = null;
+        endpoint = null;
     }
 
     /**
      * Creates a new instance.
      *
-     * @throws IllegalArgumentException if the {@link Scheme} is not one of the fields
+     * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields
      *                                  in {@link SessionProtocol}
      */
-    public HttpClientBuilder(Scheme scheme, Endpoint endpoint) {
-        this.scheme = requireNonNull(scheme, "scheme");
+    public HttpClientBuilder(SessionProtocol sessionProtocol, Endpoint endpoint) {
+        final Scheme scheme = Scheme.of(SerializationFormat.NONE, sessionProtocol);
+        if (scheme == null) {
+            throw new IllegalArgumentException("scheme: " + SerializationFormat.NONE.uriText() + '+' +
+                                               sessionProtocol.uriText() + " is unsupported");
+        }
+
+        uri = null;
+        this.scheme = scheme;
         this.endpoint = requireNonNull(endpoint, "endpoint");
     }
 

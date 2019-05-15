@@ -47,7 +47,7 @@ public final class Clients {
      * @param options the {@link ClientOptionValue}s
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
-     *                                     the specified {@code clientType} is unsupported for the scheme
+     *                                  the specified {@code clientType} is unsupported for the scheme
      */
     public static <T> T newClient(String uri, Class<T> clientType, ClientOptionValue<?>... options) {
         return newClient(ClientFactory.DEFAULT, uri, clientType, options);
@@ -62,7 +62,7 @@ public final class Clients {
      * @param options the {@link ClientOptions}
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
-     *                                     the specified {@code clientType} is unsupported for the scheme
+     *                                  the specified {@code clientType} is unsupported for the scheme
      */
     public static <T> T newClient(String uri, Class<T> clientType, ClientOptions options) {
         return newClient(ClientFactory.DEFAULT, uri, clientType, options);
@@ -78,7 +78,7 @@ public final class Clients {
      * @param options the {@link ClientOptionValue}s
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
-     *                                     the specified {@code clientType} is unsupported for the scheme
+     *                                  the specified {@code clientType} is unsupported for the scheme
      */
     public static <T> T newClient(ClientFactory factory, String uri,
                                   Class<T> clientType, ClientOptionValue<?>... options) {
@@ -96,7 +96,7 @@ public final class Clients {
      * @param options the {@link ClientOptions}
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
-     *                                     the specified {@code clientType} is unsupported for the scheme
+     *                                  the specified {@code clientType} is unsupported for the scheme
      */
     public static <T> T newClient(ClientFactory factory, String uri,
                                   Class<T> clientType, ClientOptions options) {
@@ -112,7 +112,7 @@ public final class Clients {
      * @param options the {@link ClientOptionValue}s
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
-     *                                     the specified {@code clientType} is unsupported for the scheme
+     *                                  the specified {@code clientType} is unsupported for the scheme
      */
     public static <T> T newClient(URI uri, Class<T> clientType, ClientOptionValue<?>... options) {
         return newClient(ClientFactory.DEFAULT, uri, clientType, options);
@@ -127,7 +127,7 @@ public final class Clients {
      * @param options the {@link ClientOptions}
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
-     *                                     the specified {@code clientType} is unsupported for the scheme
+     *                                  the specified {@code clientType} is unsupported for the scheme
      */
     public static <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
         return newClient(ClientFactory.DEFAULT, uri, clientType, options);
@@ -143,7 +143,7 @@ public final class Clients {
      * @param options the {@link ClientOptionValue}s
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
-     *                                     the specified {@code clientType} is unsupported for the scheme
+     *                                  the specified {@code clientType} is unsupported for the scheme
      */
     public static <T> T newClient(ClientFactory factory, URI uri, Class<T> clientType,
                                   ClientOptionValue<?>... options) {
@@ -160,7 +160,7 @@ public final class Clients {
      * @param options the {@link ClientOptions}
      *
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} or
-     *                                     the specified {@code clientType} is unsupported for the scheme
+     *                                  the specified {@code clientType} is unsupported for the scheme
      */
     public static <T> T newClient(ClientFactory factory, URI uri, Class<T> clientType, ClientOptions options) {
         return new ClientBuilder(uri).factory(factory).options(options).build(clientType);
@@ -177,8 +177,8 @@ public final class Clients {
      * @param options the {@link ClientOptionValue}s
      *
      * @throws IllegalArgumentException if the scheme of the specified {@link SessionProtocol} and
-     *                                     {@link SerializationFormat}, or the specified {@code clientType} is
-     *                                     unsupported for the scheme
+     *                                  {@link SerializationFormat}, or the specified {@code clientType} is
+     *                                  unsupported for the scheme
      */
     public static <T> T newClient(SessionProtocol protocol, SerializationFormat format, Endpoint endpoint,
                                   Class<T> clientType, ClientOptionValue<?>... options) {
@@ -196,8 +196,8 @@ public final class Clients {
      * @param options the {@link ClientOptions}
      *
      * @throws IllegalArgumentException if the scheme of the specified {@link SessionProtocol} and
-     *                                     {@link SerializationFormat}, or the specified {@code clientType} is
-     *                                     unsupported for the scheme
+     *                                  {@link SerializationFormat}, or the specified {@code clientType} is
+     *                                  unsupported for the scheme
      */
     public static <T> T newClient(SessionProtocol protocol, SerializationFormat format, Endpoint endpoint,
                                   Class<T> clientType, ClientOptions options) {
@@ -216,8 +216,8 @@ public final class Clients {
      * @param options the {@link ClientOptionValue}s
      *
      * @throws IllegalArgumentException if the scheme of the specified {@link SessionProtocol} and
-     *                                     {@link SerializationFormat}, or the specified {@code clientType} is
-     *                                     unsupported for the scheme
+     *                                  {@link SerializationFormat}, or the specified {@code clientType} is
+     *                                  unsupported for the scheme
      */
     public static <T> T newClient(ClientFactory factory, SessionProtocol protocol, SerializationFormat format,
                                   Endpoint endpoint, Class<T> clientType, ClientOptionValue<?>... options) {
@@ -236,8 +236,8 @@ public final class Clients {
      * @param options the {@link ClientOptions}
      *
      * @throws IllegalArgumentException if the scheme of the specified {@link SessionProtocol} and
-     *                                     {@link SerializationFormat}, or the specified {@code clientType} is
-     *                                     unsupported for the scheme
+     *                                  {@link SerializationFormat}, or the specified {@code clientType} is
+     *                                  unsupported for the scheme
      */
     public static <T> T newClient(ClientFactory factory, SessionProtocol protocol, SerializationFormat format,
                                   Endpoint endpoint, Class<T> clientType, ClientOptions options) {
@@ -254,7 +254,7 @@ public final class Clients {
      * @param options the {@link ClientOptionValue}s
      *
      * @throws IllegalArgumentException if the specified {@link Scheme} or the specified {@code clientType} is
-     *                                     unsupported for the scheme
+     *                                  unsupported for the scheme
      */
     public static <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType,
                                   ClientOptionValue<?>... options) {
@@ -271,7 +271,7 @@ public final class Clients {
      * @param options the {@link ClientOptions}
      *
      * @throws IllegalArgumentException if the specified {@link Scheme} or the specified {@code clientType} is
-     *                                     unsupported for the scheme
+     *                                  unsupported for the scheme
      */
     public static <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType,
                                   ClientOptions options) {
@@ -289,7 +289,7 @@ public final class Clients {
      * @param options the {@link ClientOptionValue}s
      *
      * @throws IllegalArgumentException if the specified {@link Scheme} or the specified {@code clientType} is
-     *                                     unsupported for the scheme
+     *                                  unsupported for the scheme
      */
     public static <T> T newClient(ClientFactory factory, Scheme scheme, Endpoint endpoint, Class<T> clientType,
                                   ClientOptionValue<?>... options) {
@@ -307,7 +307,7 @@ public final class Clients {
      * @param options the {@link ClientOptions}
      *
      * @throws IllegalArgumentException if the specified {@link Scheme} or the specified {@code clientType} is
-     *                                     unsupported for the scheme
+     *                                  unsupported for the scheme
      */
     public static <T> T newClient(ClientFactory factory, Scheme scheme, Endpoint endpoint, Class<T> clientType,
                                   ClientOptions options) {

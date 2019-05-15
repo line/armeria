@@ -111,10 +111,10 @@ public abstract class AbstractClientFactory implements ClientFactory {
     }
 
     /**
-     * Makes sure the scheme of the specified {@link Scheme} is supported by this {@link ClientFactory}.
+     * Makes sure the specified {@link Scheme} is supported by this {@link ClientFactory}.
      *
      * @param scheme the {@link Scheme} of the server endpoint
-     * @return the supported {@link Scheme}
+     * @return the {@link Scheme}
      *
      * @throws IllegalArgumentException if the {@link Scheme} is not supported by this {@link ClientFactory}
      */
