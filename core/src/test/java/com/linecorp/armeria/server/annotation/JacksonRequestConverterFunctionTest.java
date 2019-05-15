@@ -16,13 +16,13 @@
 
 package com.linecorp.armeria.server.annotation;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.nio.charset.StandardCharsets;
 
 import org.junit.Test;
-import org.testng.Assert;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
@@ -68,7 +68,7 @@ public class JacksonRequestConverterFunctionTest {
         when(req.content(StandardCharsets.UTF_8)).thenReturn(JSON_TEXT);
 
         final Object result = function.convertRequest(ctx, req, JsonRequest.class);
-        Assert.assertTrue(result instanceof JsonRequest);
+        assertThat(result).isInstanceOf(JsonRequest.class);
     }
 
     static class JsonRequest {

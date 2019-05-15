@@ -16,11 +16,11 @@
 
 package com.linecorp.armeria.server.annotation;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.junit.Test;
-import org.testng.Assert;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.MediaType;
@@ -41,7 +41,7 @@ public class StringRequestConverterFunctionTest {
         when(req.content(ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET)).thenReturn(JSON_TEXT);
 
         final Object result = function.convertRequest(ctx, req, String.class);
-        Assert.assertTrue(result instanceof String);
+        assertThat(result).isInstanceOf(String.class);
     }
 
     @Test
@@ -50,6 +50,6 @@ public class StringRequestConverterFunctionTest {
         when(req.content(ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET)).thenReturn(JSON_TEXT);
 
         final Object result = function.convertRequest(ctx, req, CharSequence.class);
-        Assert.assertTrue(result instanceof CharSequence);
+        assertThat(result).isInstanceOf(CharSequence.class);
     }
 }

@@ -16,11 +16,11 @@
 
 package com.linecorp.armeria.server.annotation;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.junit.Test;
-import org.testng.Assert;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.HttpData;
@@ -41,7 +41,7 @@ public class ByteArrayRequestConverterFunctionTest {
         when(req.content()).thenReturn(HttpData.ofUtf8(JSON_TEXT));
 
         final Object result = function.convertRequest(ctx, req, byte[].class);
-        Assert.assertTrue(result instanceof byte[]);
+        assertThat(result).isInstanceOf(byte[].class);
     }
 
     @Test
@@ -50,6 +50,6 @@ public class ByteArrayRequestConverterFunctionTest {
         when(req.content()).thenReturn(HttpData.ofUtf8(JSON_TEXT));
 
         final Object result = function.convertRequest(ctx, req, HttpData.class);
-        Assert.assertTrue(result instanceof HttpData);
+        assertThat(result).isInstanceOf(HttpData.class);
     }
 }
