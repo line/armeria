@@ -16,22 +16,21 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.server.PathMapping.ofExact;
-import static com.linecorp.armeria.server.PathMappingContextTest.create;
+import static com.linecorp.armeria.server.RoutingContextTest.create;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class ExactPathMappingTest {
+class ExactPathMappingTest {
 
     @Test
-    public void shouldReturnEmptyOnMismatch() {
+    void shouldReturnEmptyOnMismatch() {
         final PathMappingResult result = new ExactPathMapping("/find/me").apply(create("/find/me/not"));
         assertThat(result.isPresent()).isFalse();
     }
 
     @Test
-    public void shouldReturnNonEmptyOnMatch() {
+    void shouldReturnNonEmptyOnMatch() {
         final PathMappingResult result = new ExactPathMapping("/find/me").apply(create("/find/me"));
         assertThat(result.isPresent()).isTrue();
         assertThat(result.path()).isEqualTo("/find/me");
@@ -40,19 +39,16 @@ public class ExactPathMappingTest {
     }
 
     @Test
-    public void testLoggerNameEscaping() throws Exception {
-        assertThat(ofExact("/foo/bar.txt").loggerName()).isEqualTo("foo.bar_txt");
-        assertThat(ofExact("/bar/b-a-z").loggerName()).isEqualTo("bar.b_a_z");
-        assertThat(ofExact("/bar/baz/").loggerName()).isEqualTo("bar.baz");
+    void testLoggerNameEscaping() throws Exception {
+        assertThat(new ExactPathMapping("/foo/bar.txt").loggerName()).isEqualTo("foo.bar_txt");
+        assertThat(new ExactPathMapping("/bar/b-a-z").loggerName()).isEqualTo("bar.b_a_z");
+        assertThat(new ExactPathMapping("/bar/baz/").loggerName()).isEqualTo("bar.baz");
     }
 
     @Test
-    public void testLoggerName() throws Exception {
-        assertThat(ofExact("/foo/bar").loggerName()).isEqualTo("foo.bar");
-    }
-
-    @Test
-    public void testMetricName() throws Exception {
-        assertThat(ofExact("/foo/bar").meterTag()).isEqualTo("exact:/foo/bar");
+    void loggerAndMetricName() throws Exception {
+        final ExactPathMapping exactPathMapping = new ExactPathMapping("/foo/bar");
+        assertThat(exactPathMapping.loggerName()).isEqualTo("foo.bar");
+        assertThat(exactPathMapping.meterTag()).isEqualTo("exact:/foo/bar");
     }
 }

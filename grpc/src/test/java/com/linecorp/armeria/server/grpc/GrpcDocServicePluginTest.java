@@ -48,9 +48,9 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceImplBase;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
-import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServiceWithPathMappings;
+import com.linecorp.armeria.server.ServiceWithRoutes;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.EnumInfo;
@@ -175,18 +175,18 @@ public class GrpcDocServicePluginTest {
         final ServerBuilder serverBuilder = new ServerBuilder();
 
         // The case where a GrpcService is added to ServerBuilder without a prefix.
-        final ServiceWithPathMappings<HttpRequest, HttpResponse> prefixlessService =
+        final ServiceWithRoutes<HttpRequest, HttpResponse> prefixlessService =
                 new GrpcServiceBuilder().addService(mock(TestServiceImplBase.class)).build();
         serverBuilder.service(prefixlessService);
 
         // The case where a GrpcService is added to ServerBuilder with a prefix.
         serverBuilder.service(
-                PathMapping.ofPrefix("/test"),
+                Route.builder().prefix("/test").build(),
                 new GrpcServiceBuilder().addService(mock(UnitTestServiceImplBase.class)).build());
 
         // Another GrpcService with a different prefix.
         serverBuilder.service(
-                PathMapping.ofPrefix("/reconnect"),
+                Route.builder().prefix("/reconnect").build(),
                 new GrpcServiceBuilder().addService(mock(ReconnectServiceImplBase.class)).build());
 
         // Make sure all services and their endpoints exist in the specification.

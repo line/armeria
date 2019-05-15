@@ -22,7 +22,7 @@ import javax.validation.constraints.NotNull;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.server.ServiceWithPathMappings;
+import com.linecorp.armeria.server.ServiceWithRoutes;
 import com.linecorp.armeria.server.docs.DocService;
 
 /**
@@ -48,9 +48,8 @@ import com.linecorp.armeria.server.docs.DocService;
  * }</pre>
  */
 public class GrpcServiceRegistrationBean
-        extends
-        AbstractServiceRegistrationBean<ServiceWithPathMappings<HttpRequest, HttpResponse>,
-                GrpcServiceRegistrationBean> {
+        extends AbstractServiceRegistrationBean<ServiceWithRoutes<HttpRequest, HttpResponse>,
+        GrpcServiceRegistrationBean> {
 
     public static final class ExampleRequest {
         private final String serviceType;

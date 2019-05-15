@@ -15,10 +15,14 @@
  */
 package com.linecorp.armeria.server;
 
+import static java.util.Objects.requireNonNull;
+
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -35,6 +39,7 @@ import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.MediaType;
 
 import io.netty.util.AsciiString;
 import io.netty.util.NetUtil;
@@ -162,6 +167,17 @@ final class HttpHeaderUtil {
         // Skip if it is an invalid address.
         logger.debug("Failed to parse an address: {}", address);
         return null;
+    }
+
+    static void ensureUniqueMediaTypes(Iterable<MediaType> types, String typeName) {
+        requireNonNull(types, typeName);
+        final Set<MediaType> set = new HashSet<>();
+        for (final MediaType type : types) {
+            if (!set.add(type)) {
+                throw new IllegalArgumentException(
+                        "duplicated media type in " + typeName + ": " + type);
+            }
+        }
     }
 
     private HttpHeaderUtil() {}

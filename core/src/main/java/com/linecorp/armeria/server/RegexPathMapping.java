@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.PathMappingUtil.REGEX;
+import static com.linecorp.armeria.internal.RouteUtil.REGEX;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
@@ -54,26 +54,24 @@ final class RegexPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    protected PathMappingResult doApply(PathMappingContext mappingCtx) {
-        final Matcher matcher = regex.matcher(mappingCtx.path());
+    protected PathMappingResult doApply(RoutingContext routingCtx) {
+        final Matcher matcher = regex.matcher(routingCtx.path());
         if (!matcher.find()) {
             return PathMappingResult.empty();
         }
 
-        PathMappingResultBuilder builder = null;
+        final PathMappingResultBuilder builder = PathMappingResult.builder()
+                                                                  .path(routingCtx.path())
+                                                                  .query(routingCtx.query());
         for (String name : paramNames) {
             final String value = matcher.group(name);
             if (value == null) {
                 continue;
             }
-
-            if (builder == null) {
-                builder = new PathMappingResultBuilder(mappingCtx.path(), mappingCtx.query());
-            }
             builder.rawParam(name, value);
         }
 
-        return builder != null ? builder.build() : PathMappingResult.of(mappingCtx.path(), mappingCtx.query());
+        return builder.build();
     }
 
     @Override
@@ -110,11 +108,6 @@ final class RegexPathMapping extends AbstractPathMapping {
     @Override
     public Optional<String> regex() {
         return Optional.of(regex.pattern());
-    }
-
-    @Override
-    public boolean hasPathPatternOnly() {
-        return true;
     }
 
     @Override

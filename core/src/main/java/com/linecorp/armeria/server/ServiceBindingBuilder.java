@@ -76,11 +76,6 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     }
 
     @Override
-    public ServiceBindingBuilder pathMapping(PathMapping pathMapping) {
-        return (ServiceBindingBuilder) super.pathMapping(pathMapping);
-    }
-
-    @Override
     public ServiceBindingBuilder methods(HttpMethod... methods) {
         return (ServiceBindingBuilder) super.methods(methods);
     }

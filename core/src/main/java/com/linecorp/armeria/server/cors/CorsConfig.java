@@ -30,8 +30,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.Iterables;
 
-import com.linecorp.armeria.server.PathMapping;
-import com.linecorp.armeria.server.PathMappingContext;
+import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.RoutingContext;
 
 /**
  * <a href="https://en.wikipedia.org/wiki/Cross-origin_resource_sharing">Cross-Origin Resource Sharing
@@ -121,8 +121,8 @@ public final class CorsConfig {
      *         {@code null} if the {@code origin} is {@code null} or not allowed in any policy.
      */
     @Nullable
-    public CorsPolicy getPolicy(@Nullable String origin, PathMappingContext pathMappingContext) {
-        requireNonNull(pathMappingContext, "pathMappingContext");
+    public CorsPolicy getPolicy(@Nullable String origin, RoutingContext routingContext) {
+        requireNonNull(routingContext, "routingContext");
         if (origin == null) {
             return null;
         }
@@ -135,22 +135,22 @@ public final class CorsConfig {
         final boolean isNullOrigin = CorsService.NULL_ORIGIN.equals(lowerCaseOrigin);
         for (final CorsPolicy policy : policies) {
             if (isNullOrigin && policy.isNullOriginAllowed() &&
-                isPathMatched(policy, pathMappingContext)) {
+                isPathMatched(policy, routingContext)) {
                 return policy;
             } else if (!isNullOrigin && policy.origins().contains(lowerCaseOrigin) &&
-                       isPathMatched(policy, pathMappingContext)) {
+                       isPathMatched(policy, routingContext)) {
                 return policy;
             }
         }
         return null;
     }
 
-    private static boolean isPathMatched(CorsPolicy policy, PathMappingContext pathMappingContext) {
-        final List<PathMapping> mappings = policy.pathMappings();
-        // We do not consider the score of the mapping result for simplicity. It'd be enough to find
+    private static boolean isPathMatched(CorsPolicy policy, RoutingContext routingContext) {
+        final List<Route> routes = policy.routes();
+        // We do not consider the score of the routing result for simplicity. It'd be enough to find
         // whether the path is matched or not.
-        return mappings.isEmpty() ||
-               mappings.stream().anyMatch(mapping -> mapping.apply(pathMappingContext).isPresent());
+        return routes.isEmpty() ||
+               routes.stream().anyMatch(route -> route.apply(routingContext).isPresent());
     }
 
     private void ensureEnabled() {

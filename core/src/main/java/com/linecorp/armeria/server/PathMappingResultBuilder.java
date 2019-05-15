@@ -26,47 +26,35 @@ import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 /**
  * Builds a {@link PathMappingResult}.
  */
-public final class PathMappingResultBuilder {
+final class PathMappingResultBuilder {
 
-    private final String path;
     @Nullable
-    private final String query;
+    private String path;
+    @Nullable
+    private String query;
+
     private final ImmutableMap.Builder<String, String> params = ImmutableMap.builder();
-    private int score = PathMappingResult.LOWEST_SCORE;
 
     /**
-     * Creates a new instance.
-     *
-     * @param path the mapped path, encoded as defined in
-     *             <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>
+     * Sets the mapped path, encoded as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
      */
-    public PathMappingResultBuilder(String path) {
-        this(path, null);
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @param path the encoded mapped path
-     * @param query the encoded query string or {@code null}
-     */
-    public PathMappingResultBuilder(String path, @Nullable String query) {
+    PathMappingResultBuilder path(String path) {
         this.path = requireNonNull(path, "path");
-        this.query = query;
+        return this;
     }
 
     /**
-     * Sets the score of the result.
+     * Sets the specified query.
      */
-    public PathMappingResultBuilder score(int score) {
-        this.score = score;
+    PathMappingResultBuilder query(@Nullable String query) {
+        this.query = query;
         return this;
     }
 
     /**
      * Adds a decoded path parameter.
      */
-    public PathMappingResultBuilder decodedParam(String name, String value) {
+    PathMappingResultBuilder decodedParam(String name, String value) {
         params.put(requireNonNull(name, "name"), requireNonNull(value, "value"));
         return this;
     }
@@ -74,7 +62,7 @@ public final class PathMappingResultBuilder {
     /**
      * Adds an encoded path parameter, which will be decoded in UTF-8 automatically.
      */
-    public PathMappingResultBuilder rawParam(String name, String value) {
+    PathMappingResultBuilder rawParam(String name, String value) {
         params.put(requireNonNull(name, "name"), ArmeriaHttpUtil.decodePath(requireNonNull(value, "value")));
         return this;
     }
@@ -82,7 +70,7 @@ public final class PathMappingResultBuilder {
     /**
      * Returns a newly-created {@link PathMappingResult}.
      */
-    public PathMappingResult build() {
-        return new PathMappingResult(path, query, params.build(), score);
+    PathMappingResult build() {
+        return new PathMappingResult(path, query, params.build());
     }
 }

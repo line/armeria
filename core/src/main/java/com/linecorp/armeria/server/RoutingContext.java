@@ -32,10 +32,10 @@ import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 /**
  * Holds the parameters which are required to find a service available to handle the request.
  */
-public interface PathMappingContext {
+public interface RoutingContext {
 
     /**
-     * Returns the {@link VirtualHost} instance which belongs to this {@link PathMappingContext}.
+     * Returns the {@link VirtualHost} instance which belongs to this {@link RoutingContext}.
      */
     VirtualHost virtualHost();
 
@@ -76,7 +76,7 @@ public interface PathMappingContext {
     List<MediaType> acceptTypes();
 
     /**
-     * Returns an identifier of this {@link PathMappingContext} instance.
+     * Returns an identifier of this {@link RoutingContext} instance.
      * It would be used as a cache key to reduce pattern list traversal.
      */
     List<Object> summary();
@@ -92,17 +92,13 @@ public interface PathMappingContext {
     Optional<Throwable> delayedThrowable();
 
     /**
-     * Returns a wrapped {@link PathMappingContext} which holds the specified {@code path}.
+     * Returns a wrapped {@link RoutingContext} which holds the specified {@code path}.
      * It is usually used to find a {@link Service} with a prefix-stripped path.
      */
-    default PathMappingContext overridePath(String path) {
+    default RoutingContext overridePath(String path) {
         requireNonNull(path, "path");
-        return new PathMappingContextWrapper(this) {
-            @Override
-            public String path() {
-                return path;
-            }
-        };
+        return new DefaultRoutingContext(virtualHost(), hostname(), method(), path, query(),
+                                         contentType(), acceptTypes(), isCorsPreflight());
     }
 
     /**

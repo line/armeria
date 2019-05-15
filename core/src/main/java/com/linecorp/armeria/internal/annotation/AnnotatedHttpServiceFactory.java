@@ -19,13 +19,6 @@ package com.linecorp.armeria.internal.annotation;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Sets.toImmutableEnumSet;
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
-import static com.linecorp.armeria.internal.PathMappingUtil.EXACT;
-import static com.linecorp.armeria.internal.PathMappingUtil.GLOB;
-import static com.linecorp.armeria.internal.PathMappingUtil.PREFIX;
-import static com.linecorp.armeria.internal.PathMappingUtil.REGEX;
-import static com.linecorp.armeria.internal.PathMappingUtil.ensureAbsolutePath;
-import static com.linecorp.armeria.internal.PathMappingUtil.newLoggerName;
 import static com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.toRequestObjectResolvers;
 import static com.linecorp.armeria.internal.annotation.AnnotationUtil.findAll;
 import static com.linecorp.armeria.internal.annotation.AnnotationUtil.findFirst;
@@ -86,12 +79,9 @@ import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.DefaultValues;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.NoParameterException;
 import com.linecorp.armeria.internal.annotation.AnnotationUtil.FindOption;
-import com.linecorp.armeria.server.AbstractPathMapping;
 import com.linecorp.armeria.server.DecoratingServiceFunction;
 import com.linecorp.armeria.server.HttpStatusException;
-import com.linecorp.armeria.server.PathMapping;
-import com.linecorp.armeria.server.PathMappingContext;
-import com.linecorp.armeria.server.PathMappingResult;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
@@ -281,9 +271,13 @@ public final class AnnotatedHttpServiceFactory {
         }
 
         final Class<?> clazz = object.getClass();
-        final PathMapping pathMapping = pathStringMapping(pathPrefix, method, methodAnnotations)
-                .withHttpHeaderInfo(methods, consumableMediaTypes(method, clazz),
-                                    producibleMediaTypes(method, clazz));
+        final String pattern = findPattern(method, methodAnnotations);
+        final Route route = Route.builder()
+                                 .pathWithPrefix(pathPrefix, pattern)
+                                 .methods(methods)
+                                 .consumes(consumableMediaTypes(method, clazz))
+                                 .produces(producibleMediaTypes(method, clazz))
+                                 .build();
 
         final List<ExceptionHandlerFunction> eh =
                 getAnnotatedInstances(method, clazz, ExceptionHandler.class, ExceptionHandlerFunction.class)
@@ -297,7 +291,7 @@ public final class AnnotatedHttpServiceFactory {
 
         List<AnnotatedValueResolver> resolvers;
         try {
-            resolvers = AnnotatedValueResolver.ofServiceMethod(method, pathMapping.paramNames(),
+            resolvers = AnnotatedValueResolver.ofServiceMethod(method, route.paramNames(),
                                                                toRequestObjectResolvers(req));
         } catch (NoParameterException ignored) {
             // Allow no parameter like below:
@@ -308,7 +302,7 @@ public final class AnnotatedHttpServiceFactory {
             resolvers = ImmutableList.of();
         }
 
-        final Set<String> expectedParamNames = pathMapping.paramNames();
+        final Set<String> expectedParamNames = route.paramNames();
         final Set<String> requiredParamNames =
                 resolvers.stream()
                          .filter(AnnotatedValueResolver::isPathVariable)
@@ -377,11 +371,10 @@ public final class AnnotatedHttpServiceFactory {
                 }
             };
         }
-        return new AnnotatedHttpServiceElement(pathMapping,
-                                               new AnnotatedHttpService(object, method, resolvers,
-                                                                        eh, res, pathMapping,
-                                                                        defaultHeaders.build(),
-                                                                        defaultTrailers.build()),
+        return new AnnotatedHttpServiceElement(route, new AnnotatedHttpService(object, method, resolvers,
+                                                                               eh, res, route,
+                                                                               defaultHeaders.build(),
+                                                                               defaultTrailers.build()),
                                                decorator(method, clazz, initialDecorator));
     }
 
@@ -504,57 +497,6 @@ public final class AnnotatedHttpServiceFactory {
             }
         }
         return types;
-    }
-
-    /**
-     * Returns the {@link PathMapping} instance mapped to {@code method}.
-     */
-    private static PathMapping pathStringMapping(String pathPrefix, Method method,
-                                                 Set<Annotation> methodAnnotations) {
-        pathPrefix = ensureAbsolutePath(pathPrefix, "pathPrefix");
-        if (!pathPrefix.endsWith("/")) {
-            pathPrefix += '/';
-        }
-
-        final String pattern = findPattern(method, methodAnnotations);
-        final PathMapping mapping = PathMapping.of(pattern);
-        if ("/".equals(pathPrefix)) {
-            // pathPrefix is not specified or "/".
-            return mapping;
-        }
-
-        if (pattern.startsWith(EXACT)) {
-            return PathMapping.ofExact(concatPaths(
-                    pathPrefix, pattern.substring(EXACT.length())));
-        }
-
-        if (pattern.startsWith(PREFIX)) {
-            return PathMapping.ofPrefix(concatPaths(
-                    pathPrefix, pattern.substring(PREFIX.length())));
-        }
-
-        if (pattern.startsWith(GLOB)) {
-            final String glob = pattern.substring(GLOB.length());
-            if (glob.startsWith("/")) {
-                return PathMapping.ofGlob(concatPaths(pathPrefix, glob));
-            } else {
-                // NB: We cannot use PathMapping.ofGlob(pathPrefix + "/**/" + glob) here
-                //     because that will extract '/**/' as a path parameter, which a user never specified.
-                return new PrefixAddingPathMapping(pathPrefix, mapping);
-            }
-        }
-
-        if (pattern.startsWith(REGEX)) {
-            return new PrefixAddingPathMapping(pathPrefix, mapping);
-        }
-
-        if (pattern.startsWith("/")) {
-            // Default pattern
-            return PathMapping.of(concatPaths(pathPrefix, pattern));
-        }
-
-        // Should never reach here because we validated the path pattern.
-        throw new Error();
     }
 
     /**
@@ -814,97 +756,6 @@ public final class AnnotatedHttpServiceFactory {
     }
 
     private AnnotatedHttpServiceFactory() {}
-
-    /**
-     * A {@link PathMapping} implementation that combines path prefix and another {@link PathMapping}.
-     */
-    @VisibleForTesting
-    static final class PrefixAddingPathMapping extends AbstractPathMapping {
-
-        private final String pathPrefix;
-        private final PathMapping mapping;
-        private final String loggerName;
-        private final String meterTag;
-
-        PrefixAddingPathMapping(String pathPrefix, PathMapping mapping) {
-            requireNonNull(mapping, "mapping");
-            // mapping should be GlobPathMapping or RegexPathMapping
-            assert mapping.regex().isPresent() : "unexpected mapping type: " + mapping.getClass().getName();
-            this.pathPrefix = requireNonNull(pathPrefix, "pathPrefix");
-            this.mapping = mapping;
-            loggerName = newLoggerName(pathPrefix) + '.' + mapping.loggerName();
-            meterTag = PREFIX + pathPrefix + ',' + mapping.meterTag();
-        }
-
-        @Override
-        protected PathMappingResult doApply(PathMappingContext mappingCtx) {
-            final String path = mappingCtx.path();
-            if (!path.startsWith(pathPrefix)) {
-                return PathMappingResult.empty();
-            }
-
-            final PathMappingResult result =
-                    mapping.apply(mappingCtx.overridePath(path.substring(pathPrefix.length() - 1)));
-            if (result.isPresent()) {
-                return PathMappingResult.of(path, mappingCtx.query(), result.pathParams());
-            } else {
-                return PathMappingResult.empty();
-            }
-        }
-
-        @Override
-        public Set<String> paramNames() {
-            return mapping.paramNames();
-        }
-
-        @Override
-        public String loggerName() {
-            return loggerName;
-        }
-
-        @Override
-        public String meterTag() {
-            return meterTag;
-        }
-
-        @Override
-        public Optional<String> prefix() {
-            return Optional.of(pathPrefix);
-        }
-
-        @Override
-        public Optional<String> regex() {
-            return mapping.regex();
-        }
-
-        @Override
-        public boolean hasPathPatternOnly() {
-            return mapping.hasPathPatternOnly();
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (!(o instanceof PrefixAddingPathMapping)) {
-                return false;
-            }
-
-            final PrefixAddingPathMapping that = (PrefixAddingPathMapping) o;
-            return pathPrefix.equals(that.pathPrefix) && mapping.equals(that.mapping);
-        }
-
-        @Override
-        public int hashCode() {
-            return 31 * pathPrefix.hashCode() + mapping.hashCode();
-        }
-
-        @Override
-        public String toString() {
-            return '[' + PREFIX + pathPrefix + ", " + mapping + ']';
-        }
-    }
 
     /**
      * An internal class to hold a decorator with its order.

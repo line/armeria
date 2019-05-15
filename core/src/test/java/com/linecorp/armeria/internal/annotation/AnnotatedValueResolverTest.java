@@ -25,12 +25,11 @@ import static org.reflections.ReflectionUtils.getAllMethods;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
-import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.junit.AfterClass;
@@ -50,7 +49,7 @@ import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.NoAnnotatedParameterException;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.RequestObjectResolver;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.ResolverContext;
-import com.linecorp.armeria.server.PathMappingResult;
+import com.linecorp.armeria.server.RouteResult;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 import com.linecorp.armeria.server.annotation.Cookies;
@@ -97,14 +96,17 @@ public class AnnotatedValueResolverTest {
         originalHeaders = headers.build();
         request = HttpRequest.of(originalHeaders);
 
-        final PathMappingResult pathMappingResult = PathMappingResult.of(
-                path, query,
-                pathParams.stream()
-                          .map(v -> new SimpleImmutableEntry<>(v, v))
-                          .collect(toImmutableMap(Entry::getKey, Entry::getValue)));
+        final RouteResult routeResult =
+                RouteResult.builder()
+                           .path(path)
+                           .query(query)
+                           .pathParams(pathParams.stream()
+                                                 .collect(toImmutableMap(Function.identity(),
+                                                                         Function.identity())))
+                           .build();
 
         context = ServiceRequestContextBuilder.of(request)
-                                              .pathMappingResult(pathMappingResult)
+                                              .routeResult(routeResult)
                                               .build();
 
         resolverContext = new ResolverContext(context, request, null);

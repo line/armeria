@@ -43,7 +43,7 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
-import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
@@ -161,8 +161,8 @@ public class ThriftDocServicePluginTest {
 
     private static Map<String, ServiceInfo> services(DocServiceFilter include, DocServiceFilter exclude) {
         final Server server = new ServerBuilder()
-                .service(PathMapping.ofExact("/hello"), THttpService.of(mock(AsyncIface.class)))
-                .service(PathMapping.ofExact("/foo"),
+                .service(Route.builder().exact("/hello").build(), THttpService.of(mock(AsyncIface.class)))
+                .service(Route.builder().exact("/foo").build(),
                          THttpService.ofFormats(mock(FooService.AsyncIface.class),
                                                 ThriftSerializationFormats.COMPACT))
                 .build();

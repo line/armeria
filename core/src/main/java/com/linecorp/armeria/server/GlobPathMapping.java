@@ -17,8 +17,8 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
-import static com.linecorp.armeria.internal.PathMappingUtil.GLOB;
-import static com.linecorp.armeria.internal.PathMappingUtil.newLoggerName;
+import static com.linecorp.armeria.internal.RouteUtil.GLOB;
+import static com.linecorp.armeria.internal.RouteUtil.newLoggerName;
 
 import java.util.Optional;
 import java.util.Set;
@@ -77,18 +77,19 @@ final class GlobPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    protected PathMappingResult doApply(PathMappingContext mappingCtx) {
-        final Matcher m = pattern.matcher(mappingCtx.path());
+    protected PathMappingResult doApply(RoutingContext routingCtx) {
+        final Matcher m = pattern.matcher(routingCtx.path());
         if (!m.matches()) {
             return PathMappingResult.empty();
         }
 
+        final PathMappingResultBuilder builder = PathMappingResult.builder()
+                                                                  .path(routingCtx.path())
+                                                                  .query(routingCtx.query());
         if (numParams == 0) {
-            return PathMappingResult.of(mappingCtx.path(), mappingCtx.query());
+            return builder.build();
         }
 
-        final PathMappingResultBuilder builder =
-                new PathMappingResultBuilder(mappingCtx.path(), mappingCtx.query());
         for (int i = 1; i <= numParams; i++) {
             final String value = firstNonNull(m.group(i), "");
             builder.rawParam(int2str(i - 1), value);
@@ -115,11 +116,6 @@ final class GlobPathMapping extends AbstractPathMapping {
     @Override
     public Optional<String> regex() {
         return Optional.of(pattern.pattern());
-    }
-
-    @Override
-    public boolean hasPathPatternOnly() {
-        return true;
     }
 
     @Override
@@ -166,14 +162,98 @@ final class GlobPathMapping extends AbstractPathMapping {
             }
 
             switch (asterisks) {
+                case 1:
+                    if (createGroup) {
+                        buf.append('(');
+                        numGroups++;
+                    }
+
+                    // Handle '/*/' specially.
+                    if (beforeAsterisk == '/' && c == '/') {
+                        buf.append("[^/]+");
+                    } else {
+                        buf.append("[^/]*");
+                    }
+
+                    if (createGroup) {
+                        buf.append(')');
+                    } else {
+                        createGroup = true;
+                    }
+                    break;
+                case 2:
+                    // Handle '/**/' specially.
+                    if (beforeAsterisk == '/' && c == '/') {
+                        buf.append("(?:");
+
+                        if (createGroup) {
+                            buf.append('(');
+                            numGroups++;
+                        }
+
+                        buf.append(".+");
+
+                        if (createGroup) {
+                            buf.append(')');
+                        } else {
+                            createGroup = false;
+                        }
+
+                        buf.append("/)?");
+                        asterisks = 0;
+                        continue;
+                    } else {
+                        if (createGroup) {
+                            buf.append('(');
+                            numGroups++;
+                        }
+
+                        buf.append(".*");
+
+                        if (createGroup) {
+                            buf.append(')');
+                        } else {
+                            createGroup = false;
+                        }
+                        break;
+                    }
+            }
+
+            asterisks = 0;
+            beforeAsterisk = c;
+
+            switch (c) {
+                case '\\':
+                case '.':
+                case '^':
+                case '$':
+                case '?':
+                case '+':
+                case '{':
+                case '}':
+                case '[':
+                case ']':
+                case '(':
+                case ')':
+                case '|':
+                    buf.append('\\');
+                    buf.append(c);
+                    break;
+                default:
+                    buf.append(c);
+            }
+        }
+
+        // Handle the case where the pattern ends with asterisk(s).
+        switch (asterisks) {
             case 1:
                 if (createGroup) {
                     buf.append('(');
                     numGroups++;
                 }
 
-                // Handle '/*/' specially.
-                if (beforeAsterisk == '/' && c == '/') {
+                if (beforeAsterisk == '/') {
+                    // '/*<END>'
                     buf.append("[^/]+");
                 } else {
                     buf.append("[^/]*");
@@ -181,104 +261,20 @@ final class GlobPathMapping extends AbstractPathMapping {
 
                 if (createGroup) {
                     buf.append(')');
-                } else {
-                    createGroup = true;
                 }
                 break;
             case 2:
-                // Handle '/**/' specially.
-                if (beforeAsterisk == '/' && c == '/') {
-                    buf.append("(?:");
-
-                    if (createGroup) {
-                        buf.append('(');
-                        numGroups++;
-                    }
-
-                    buf.append(".+");
-
-                    if (createGroup) {
-                        buf.append(')');
-                    } else {
-                        createGroup = false;
-                    }
-
-                    buf.append("/)?");
-                    asterisks = 0;
-                    continue;
-                } else {
-                    if (createGroup) {
-                        buf.append('(');
-                        numGroups++;
-                    }
-
-                    buf.append(".*");
-
-                    if (createGroup) {
-                        buf.append(')');
-                    } else {
-                        createGroup = false;
-                    }
-                    break;
+                if (createGroup) {
+                    buf.append('(');
+                    numGroups++;
                 }
-            }
 
-            asterisks = 0;
-            beforeAsterisk = c;
+                buf.append(".*");
 
-            switch (c) {
-            case '\\':
-            case '.':
-            case '^':
-            case '$':
-            case '?':
-            case '+':
-            case '{':
-            case '}':
-            case '[':
-            case ']':
-            case '(':
-            case ')':
-            case '|':
-                buf.append('\\');
-                buf.append(c);
+                if (createGroup) {
+                    buf.append(')');
+                }
                 break;
-            default:
-                buf.append(c);
-            }
-        }
-
-        // Handle the case where the pattern ends with asterisk(s).
-        switch (asterisks) {
-        case 1:
-            if (createGroup) {
-                buf.append('(');
-                numGroups++;
-            }
-
-            if (beforeAsterisk == '/') {
-                // '/*<END>'
-                buf.append("[^/]+");
-            } else {
-                buf.append("[^/]*");
-            }
-
-            if (createGroup) {
-                buf.append(')');
-            }
-            break;
-        case 2:
-            if (createGroup) {
-                buf.append('(');
-                numGroups++;
-            }
-
-            buf.append(".*");
-
-            if (createGroup) {
-                buf.append(')');
-            }
-            break;
         }
 
         return new PatternAndParamCount(Pattern.compile(buf.append('$').toString()), numGroups);

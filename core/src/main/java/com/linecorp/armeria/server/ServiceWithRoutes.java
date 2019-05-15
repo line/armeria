@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -22,14 +22,14 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
 /**
- * An interface that enables getting all the {@link PathMapping} where a {@link Service} should be bound.
+ * An interface that enables getting all the {@link Route}s where a {@link Service} should be bound.
  *
  * @param <I> the {@link Request} type
  * @param <O> the {@link Response} type
  */
-public interface ServiceWithPathMappings<I extends Request, O extends Response> extends Service<I, O> {
+public interface ServiceWithRoutes<I extends Request, O extends Response> extends Service<I, O> {
     /**
-     * Returns the set of {@link PathMapping} to which this {@link Service} is bound.
+     * Returns the set of {@link Route}s to which this {@link Service} is bound.
      */
-    Set<PathMapping> pathMappings();
+    Set<Route> routes();
 }

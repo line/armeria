@@ -20,30 +20,30 @@ import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Route;
 
 /**
- * A utility class for {@link PathMapping}.
+ * A utility class for {@link Route}.
  */
-public final class PathMappingUtil {
+public final class RouteUtil {
 
     /**
-     * The prefix which represents an exact path mapping.
+     * The prefix which represents an exact path.
      */
     public static final String EXACT = "exact:";
 
     /**
-     * The prefix which represents a prefix path mapping.
+     * The prefix which represents a prefix path.
      */
     public static final String PREFIX = "prefix:";
 
     /**
-     * The prefix which represents a glob path mapping.
+     * The prefix which represents a glob path.
      */
     public static final String GLOB = "glob:";
 
     /**
-     * The prefix which represents a regex path mapping.
+     * The prefix which represents a regex path.
      */
     public static final String REGEX = "regex:";
 
@@ -52,12 +52,12 @@ public final class PathMappingUtil {
     public static final String ROOT_LOGGER_NAME = "__ROOT__";
 
     /**
-     * Ensures that the specified {@code path} is an absolute pathMapping.
+     * Ensures that the specified {@code path} is an absolute path.
      *
      * @return {@code path}
      *
      * @throws NullPointerException if {@code path} is {@code null}
-     * @throws IllegalArgumentException if {@code path} is not an absolute pathMapping
+     * @throws IllegalArgumentException if {@code path} is not an absolute path
      */
     public static String ensureAbsolutePath(String path, String paramName) {
         requireNonNull(path, paramName);
@@ -122,5 +122,5 @@ public final class PathMappingUtil {
         return buf.toString();
     }
 
-    private PathMappingUtil() {}
+    private RouteUtil() {}
 }

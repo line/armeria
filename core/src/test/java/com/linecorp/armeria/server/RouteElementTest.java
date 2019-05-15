@@ -19,26 +19,26 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class PathMappedTest {
+class RouteElementTest {
     /**
-     * Should not accept an empty {@link PathMappingResult} when creating a non-empty {@link PathMapped}.
+     * Should not accept an empty {@link RouteResult} when creating a non-empty {@link RouteElement}.
      */
     @Test
-    public void shouldNotAcceptEmptyResult() {
-        assertThatThrownBy(() -> PathMapped.of(PathMapping.ofCatchAll(),
-                                               PathMappingResult.empty(),
-                                               new Object()))
+    void shouldNotAcceptEmptyResult() {
+        assertThatThrownBy(() -> RouteElement.of(Route.builder().catchAll().build(),
+                                                 RouteResult.empty(),
+                                                 new Object()))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    public void empty() {
-        final PathMapped<?> mapped = PathMapped.empty();
-        assertThat(mapped.isPresent()).isFalse();
-        assertThatThrownBy(mapped::mapping).isInstanceOf(IllegalStateException.class);
-        assertThatThrownBy(mapped::mappingResult).isInstanceOf(IllegalStateException.class);
-        assertThatThrownBy(mapped::value).isInstanceOf(IllegalStateException.class);
+    void empty() {
+        final RouteElement<?> result = RouteElement.empty();
+        assertThat(result.isPresent()).isFalse();
+        assertThatThrownBy(result::route).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(result::routeResult).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(result::value).isInstanceOf(IllegalStateException.class);
     }
 }

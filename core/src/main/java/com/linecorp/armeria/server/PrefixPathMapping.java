@@ -16,9 +16,9 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.PathMappingUtil.PREFIX;
-import static com.linecorp.armeria.internal.PathMappingUtil.ensureAbsolutePath;
-import static com.linecorp.armeria.internal.PathMappingUtil.newLoggerName;
+import static com.linecorp.armeria.internal.RouteUtil.PREFIX;
+import static com.linecorp.armeria.internal.RouteUtil.ensureAbsolutePath;
+import static com.linecorp.armeria.internal.RouteUtil.newLoggerName;
 
 import java.util.Optional;
 import java.util.Set;
@@ -49,14 +49,16 @@ final class PrefixPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    protected PathMappingResult doApply(PathMappingContext mappingCtx) {
-        final String path = mappingCtx.path();
+    protected PathMappingResult doApply(RoutingContext routingCtx) {
+        final String path = routingCtx.path();
         if (!path.startsWith(prefix)) {
             return PathMappingResult.empty();
         }
 
-        return PathMappingResult.of(stripPrefix ? path.substring(prefix.length() - 1) : path,
-                                    mappingCtx.query());
+        return PathMappingResult.builder()
+                                .path(stripPrefix ? path.substring(prefix.length() - 1) : path)
+                                .query(routingCtx.query())
+                                .build();
     }
 
     @Override
@@ -77,11 +79,6 @@ final class PrefixPathMapping extends AbstractPathMapping {
     @Override
     public Optional<String> triePath() {
         return triePath;
-    }
-
-    @Override
-    public boolean hasPathPatternOnly() {
-        return true;
     }
 
     @Override

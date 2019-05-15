@@ -19,11 +19,12 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class PathMappingResultTest {
+class PathMappingResultTest {
+
     @Test
-    public void empty() {
+    void empty() {
         final PathMappingResult result = PathMappingResult.empty();
         assertThat(result.isPresent()).isFalse();
         assertThatThrownBy(result::path).isInstanceOf(IllegalStateException.class);

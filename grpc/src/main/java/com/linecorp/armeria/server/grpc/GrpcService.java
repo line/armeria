@@ -52,10 +52,10 @@ import com.linecorp.armeria.internal.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.server.AbstractHttpService;
-import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.ServiceWithPathMappings;
+import com.linecorp.armeria.server.ServiceWithRoutes;
 
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
@@ -82,14 +82,14 @@ import io.grpc.protobuf.services.ProtoReflectionService;
  * </ul>
  */
 public final class GrpcService extends AbstractHttpService
-        implements ServiceWithPathMappings<HttpRequest, HttpResponse> {
+        implements ServiceWithRoutes<HttpRequest, HttpResponse> {
 
     private static final Logger logger = LoggerFactory.getLogger(GrpcService.class);
 
     static final int NO_MAX_INBOUND_MESSAGE_SIZE = -1;
 
     private final HandlerRegistry registry;
-    private final Set<PathMapping> pathMappings;
+    private final Set<Route> routes;
     private final DecompressorRegistry decompressorRegistry;
     private final CompressorRegistry compressorRegistry;
     private final Set<SerializationFormat> supportedSerializationFormats;
@@ -105,7 +105,7 @@ public final class GrpcService extends AbstractHttpService
     private int maxInboundMessageSizeBytes;
 
     GrpcService(HandlerRegistry registry,
-                Set<PathMapping> pathMappings,
+                Set<Route> routes,
                 DecompressorRegistry decompressorRegistry,
                 CompressorRegistry compressorRegistry,
                 Set<SerializationFormat> supportedSerializationFormats,
@@ -116,7 +116,7 @@ public final class GrpcService extends AbstractHttpService
                 @Nullable ProtoReflectionService protoReflectionService,
                 int maxInboundMessageSizeBytes) {
         this.registry = requireNonNull(registry, "registry");
-        this.pathMappings = requireNonNull(pathMappings, "pathMappings");
+        this.routes = requireNonNull(routes, "routes");
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         this.supportedSerializationFormats = supportedSerializationFormats;
@@ -306,7 +306,7 @@ public final class GrpcService extends AbstractHttpService
     }
 
     @Override
-    public boolean shouldCachePath(String path, @Nullable String query, PathMapping pathMapping) {
+    public boolean shouldCachePath(String path, @Nullable String query, Route route) {
         // gRPC services always have a single path per method that is safe to cache.
         return true;
     }
@@ -351,8 +351,8 @@ public final class GrpcService extends AbstractHttpService
     }
 
     @Override
-    public Set<PathMapping> pathMappings() {
-        return pathMappings;
+    public Set<Route> routes() {
+        return routes;
     }
 
     private static class EmptyListener<T> extends ServerCall.Listener<T> {}

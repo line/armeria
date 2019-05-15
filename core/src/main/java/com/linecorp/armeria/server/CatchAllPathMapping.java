@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.PathMappingUtil.ROOT_LOGGER_NAME;
+import static com.linecorp.armeria.internal.RouteUtil.ROOT_LOGGER_NAME;
 
 import java.util.Optional;
 import java.util.Set;
@@ -33,8 +33,8 @@ final class CatchAllPathMapping extends AbstractPathMapping {
     private CatchAllPathMapping() {}
 
     @Override
-    protected PathMappingResult doApply(PathMappingContext mappingCtx) {
-        return PathMappingResult.of(mappingCtx.path(), mappingCtx.query());
+    protected PathMappingResult doApply(RoutingContext routingCtx) {
+        return PathMappingResult.builder().path(routingCtx.path()).query(routingCtx.query()).build();
     }
 
     @Override
@@ -60,11 +60,6 @@ final class CatchAllPathMapping extends AbstractPathMapping {
     @Override
     public Optional<String> triePath() {
         return TRIE_PATH_OPT;
-    }
-
-    @Override
-    public boolean hasPathPatternOnly() {
-        return true;
     }
 
     @Override

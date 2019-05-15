@@ -92,13 +92,13 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public PathMapping pathMapping() {
-        return delegate().pathMapping();
+    public Route route() {
+        return delegate().route();
     }
 
     @Override
-    public PathMappingContext pathMappingContext() {
-        return delegate().pathMappingContext();
+    public RoutingContext routingContext() {
+        return delegate().routingContext();
     }
 
     @Override

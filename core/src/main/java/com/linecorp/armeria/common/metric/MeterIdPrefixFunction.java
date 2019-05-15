@@ -30,7 +30,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
@@ -54,7 +54,7 @@ public interface MeterIdPrefixFunction {
      * <ul>
      *   <li>Server-side tags:<ul>
      *     <li>{@code hostnamePattern} - {@link VirtualHost#hostnamePattern()}
-     *     <li>{@code pathMapping} - {@link PathMapping#meterTag()}</li>
+     *     <li>{@code route} - {@link Route#meterTag()}</li>
      *     <li>{@code method} - RPC method name or {@link HttpMethod#name()} if RPC method name is not
      *                          available</li>
      *     <li>{@code httpStatus} - {@link HttpStatus#code()}</li>
@@ -104,13 +104,13 @@ public interface MeterIdPrefixFunction {
                     methodName = requestHeaders.method().name();
                 }
 
-                final List<Tag> tags = new ArrayList<>(4); // method, hostNamePattern, pathMapping, status
+                final List<Tag> tags = new ArrayList<>(4); // method, hostNamePattern, route, status
                 tags.add(Tag.of("method", methodName));
 
                 if (ctx instanceof ServiceRequestContext) {
                     final ServiceRequestContext sCtx = (ServiceRequestContext) ctx;
                     tags.add(Tag.of("hostnamePattern", sCtx.virtualHost().hostnamePattern()));
-                    tags.add(Tag.of("pathMapping", sCtx.pathMapping().meterTag()));
+                    tags.add(Tag.of("route", sCtx.route().meterTag()));
                 }
                 return tags;
             }

@@ -413,7 +413,7 @@ public class HttpServerTest {
                 }
 
                 @Override
-                public boolean shouldCachePath(String path, @Nullable String query, PathMapping pathMapping) {
+                public boolean shouldCachePath(String path, @Nullable String query, Route route) {
                     return true;
                 }
             });

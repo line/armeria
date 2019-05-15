@@ -75,7 +75,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.ServiceWithPathMappings;
+import com.linecorp.armeria.server.ServiceWithRoutes;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
@@ -288,7 +288,7 @@ public final class ArmeriaConfigurationUtil {
                 service = service.decorate(decorator);
             }
             service = setupMetricCollectingService(service, bean, meterIdPrefixFunctionFactory);
-            server.service(bean.getPathMapping(), service);
+            server.service(bean.getRoute(), service);
         });
     }
 
@@ -306,18 +306,18 @@ public final class ArmeriaConfigurationUtil {
 
         final List<ExampleRequest> docServiceRequests = new ArrayList<>();
         beans.forEach(bean -> {
-            final ServiceWithPathMappings<HttpRequest, HttpResponse> serviceWithPathMappings =
+            final ServiceWithRoutes<HttpRequest, HttpResponse> serviceWithRoutes =
                     bean.getService();
             docServiceRequests.addAll(bean.getExampleRequests());
-            serviceWithPathMappings.pathMappings().forEach(
-                    pathMapping -> {
+            serviceWithRoutes.routes().forEach(
+                    route -> {
                         Service<HttpRequest, HttpResponse> service = bean.getService();
                         for (Function<Service<HttpRequest, HttpResponse>,
                                 ? extends Service<HttpRequest, HttpResponse>> decorator
                                 : bean.getDecorators()) {
                             service = service.decorate(decorator);
                         }
-                        server.service(pathMapping,
+                        server.service(route,
                                        setupMetricCollectingService(service, bean,
                                                                     meterIdPrefixFunctionFactory));
                     }

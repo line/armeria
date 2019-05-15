@@ -114,7 +114,6 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
  *       .and().build(); // Build a server.
  * }</pre>
  *
- *
  * <h2 id="no_port_specified">What happens if no HTTP(S) port is specified?</h2>
  *
  * <p>When no TCP/IP port number or local address is specified, {@link ServerBuilder} will automatically bind
@@ -180,7 +179,7 @@ public final class ServerBuilder {
     private List<ClientAddressSource> clientAddressSources = ClientAddressSource.DEFAULT_SOURCES;
     private Predicate<InetAddress> clientAddressTrustedProxyFilter = address -> false;
     private Predicate<InetAddress> clientAddressFilter = address -> true;
-    private RejectedPathMappingHandler rejectedPathMappingHandler = RejectedPathMappingHandler.WARN;
+    private RejectedRouteHandler rejectedRouteHandler = RejectedRouteHandler.WARN;
 
     // These properties can also be set in the service level.
 
@@ -834,56 +833,42 @@ public final class ServerBuilder {
     }
 
     /**
-     * Binds the specified {@link Service} at the specified {@link PathMapping} of the default
+     * Binds the specified {@link Service} at the specified {@link Route} of the default
      * {@link VirtualHost}.
      */
-    public ServerBuilder service(PathMapping pathMapping, Service<HttpRequest, HttpResponse> service) {
-        defaultVirtualHostBuilder.service(pathMapping, service);
+    public ServerBuilder service(Route route, Service<HttpRequest, HttpResponse> service) {
+        defaultVirtualHostBuilder.service(route, service);
         return this;
     }
 
     /**
-     * Binds the specified {@link Service} at the specified {@link PathMapping} of the default
-     * {@link VirtualHost}.
-     *
-     * @deprecated Use a logging framework integration such as {@code RequestContextExportingAppender} in
-     *             {@code armeria-logback}.
-     */
-    @Deprecated
-    public ServerBuilder service(PathMapping pathMapping, Service<HttpRequest, HttpResponse> service,
-                                 String loggerName) {
-        defaultVirtualHostBuilder.service(pathMapping, service, loggerName);
-        return this;
-    }
-
-    /**
-     * Decorates and binds the specified {@link ServiceWithPathMappings} at multiple {@link PathMapping}s
+     * Decorates and binds the specified {@link ServiceWithRoutes} at multiple {@link Route}s
      * of the default {@link VirtualHost}.
      *
-     * @param serviceWithPathMappings the {@link ServiceWithPathMappings}.
+     * @param serviceWithRoutes the {@link ServiceWithRoutes}.
      * @param decorators the decorator functions, which will be applied in the order specified.
      */
     public ServerBuilder service(
-            ServiceWithPathMappings<HttpRequest, HttpResponse> serviceWithPathMappings,
+            ServiceWithRoutes<HttpRequest, HttpResponse> serviceWithRoutes,
             Iterable<Function<? super Service<HttpRequest, HttpResponse>,
                     ? extends Service<HttpRequest, HttpResponse>>> decorators) {
-        defaultVirtualHostBuilder.service(serviceWithPathMappings, decorators);
+        defaultVirtualHostBuilder.service(serviceWithRoutes, decorators);
         return this;
     }
 
     /**
-     * Decorates and binds the specified {@link ServiceWithPathMappings} at multiple {@link PathMapping}s
+     * Decorates and binds the specified {@link ServiceWithRoutes} at multiple {@link Route}s
      * of the default {@link VirtualHost}.
      *
-     * @param serviceWithPathMappings the {@link ServiceWithPathMappings}.
+     * @param serviceWithRoutes the {@link ServiceWithRoutes}.
      * @param decorators the decorator functions, which will be applied in the order specified.
      */
     @SafeVarargs
     public final ServerBuilder service(
-            ServiceWithPathMappings<HttpRequest, HttpResponse> serviceWithPathMappings,
+            ServiceWithRoutes<HttpRequest, HttpResponse> serviceWithRoutes,
             Function<? super Service<HttpRequest, HttpResponse>,
                     ? extends Service<HttpRequest, HttpResponse>>... decorators) {
-        defaultVirtualHostBuilder.service(serviceWithPathMappings, decorators);
+        defaultVirtualHostBuilder.service(serviceWithRoutes, decorators);
         return this;
     }
 
@@ -1217,18 +1202,18 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the {@link RejectedPathMappingHandler} which will be invoked when an attempt to bind
-     * a {@link Service} at a certain {@link PathMapping} is rejected. By default, the duplicate
-     * mappings are logged at WARN level.
+     * Sets the {@link RejectedRouteHandler} which will be invoked when an attempt to bind
+     * a {@link Service} at a certain {@link Route} is rejected. By default, the duplicate
+     * routes are logged at WARN level.
      */
-    public ServerBuilder rejectedPathMappingHandler(RejectedPathMappingHandler handler) {
-        rejectedPathMappingHandler = requireNonNull(handler, "handler");
-        defaultVirtualHostBuilder.rejectedPathMappingHandler(handler);
+    public ServerBuilder rejectedRouteHandler(RejectedRouteHandler handler) {
+        rejectedRouteHandler = requireNonNull(handler, "handler");
+        defaultVirtualHostBuilder.rejectedRouteHandler(handler);
         return this;
     }
 
-    RejectedPathMappingHandler rejectedPathMappingHandler() {
-        return rejectedPathMappingHandler;
+    RejectedRouteHandler rejectedRouteHandler() {
+        return rejectedRouteHandler;
     }
 
     /**

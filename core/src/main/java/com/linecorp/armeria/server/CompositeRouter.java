@@ -24,6 +24,7 @@ import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.Exceptions;
 
@@ -35,27 +36,32 @@ import io.micrometer.core.instrument.MeterRegistry;
 final class CompositeRouter<I, O> implements Router<O> {
 
     private final List<Router<I>> delegates;
-    private final Function<PathMapped<I>, PathMapped<O>> resultMapper;
+    private final Function<RouteElement<I>, RouteElement<O>> resultMapper;
 
-    CompositeRouter(Router<I> delegate, Function<PathMapped<I>, PathMapped<O>> resultMapper) {
+    CompositeRouter(Router<I> delegate, Function<RouteElement<I>, RouteElement<O>> resultMapper) {
         this(ImmutableList.of(requireNonNull(delegate, "delegate")), resultMapper);
     }
 
-    CompositeRouter(List<Router<I>> delegates, Function<PathMapped<I>, PathMapped<O>> resultMapper) {
+    CompositeRouter(List<Router<I>> delegates, Function<RouteElement<I>, RouteElement<O>> resultMapper) {
         this.delegates = requireNonNull(delegates, "delegates");
         this.resultMapper = requireNonNull(resultMapper, "resultMapper");
     }
 
     @Override
-    public PathMapped<O> find(PathMappingContext mappingCtx) {
+    public RouteElement<O> find(RoutingContext routingCtx) {
         for (Router<I> delegate : delegates) {
-            final PathMapped<I> result = delegate.find(mappingCtx);
+            final RouteElement<I> result = delegate.find(routingCtx);
             if (result.isPresent()) {
                 return resultMapper.apply(result);
             }
         }
-        mappingCtx.delayedThrowable().ifPresent(Exceptions::throwUnsafely);
-        return PathMapped.empty();
+        routingCtx.delayedThrowable().ifPresent(Exceptions::throwUnsafely);
+        if (routingCtx.isCorsPreflight()) {
+            // '403 Forbidden' is better for a CORS preflight request than '404 Not Found'.
+            throw HttpStatusException.of(HttpStatus.FORBIDDEN);
+        }
+
+        return RouteElement.empty();
     }
 
     @Override

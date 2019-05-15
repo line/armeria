@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 
 final class ServiceConfigBuilder {
 
-    private final PathMapping pathMapping;
+    private final Route route;
     private final Service<HttpRequest, HttpResponse> service;
     @Nullable
     private String loggerName;
@@ -44,8 +44,8 @@ final class ServiceConfigBuilder {
     @Nullable
     private ContentPreviewerFactory responseContentPreviewerFactory;
 
-    ServiceConfigBuilder(PathMapping pathMapping, Service<HttpRequest, HttpResponse> service) {
-        this.pathMapping = requireNonNull(pathMapping, "pathMapping");
+    ServiceConfigBuilder(Route route, Service<HttpRequest, HttpResponse> service) {
+        this.route = requireNonNull(route, "route");
         this.service = requireNonNull(service, "service");
     }
 
@@ -112,7 +112,7 @@ final class ServiceConfigBuilder {
         assert verboseResponses != null;
         assert requestContentPreviewerFactory != null;
         assert responseContentPreviewerFactory != null;
-        return new ServiceConfig(pathMapping, service, loggerName, requestTimeoutMillis,
+        return new ServiceConfig(route, service, loggerName, requestTimeoutMillis,
                                  maxRequestLength, verboseResponses,
                                  requestContentPreviewerFactory, responseContentPreviewerFactory);
     }
@@ -120,7 +120,7 @@ final class ServiceConfigBuilder {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this).omitNullValues()
-                          .add("pathMapping", pathMapping)
+                          .add("route", route)
                           .add("service", service)
                           .add("loggerName", loggerName)
                           .add("requestTimeoutMillis", requestTimeoutMillis)

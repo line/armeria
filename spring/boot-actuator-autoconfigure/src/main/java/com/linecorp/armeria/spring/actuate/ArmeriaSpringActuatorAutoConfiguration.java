@@ -56,7 +56,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 
 /**
@@ -108,20 +108,20 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                      .flatMap(endpoint -> endpoint.getOperations().stream())
                      .forEach(operation -> {
                          final WebOperationRequestPredicate predicate = operation.getRequestPredicate();
-                         sb.service(getPathMapping(predicate.getHttpMethod().name(),
-                                                   endpointMapping.createSubPath(predicate.getPath()),
-                                                   predicate.getConsumes(),
-                                                   predicate.getProduces()),
+                         sb.service(route(predicate.getHttpMethod().name(),
+                                          endpointMapping.createSubPath(predicate.getPath()),
+                                          predicate.getConsumes(),
+                                          predicate.getProduces()),
                                     new WebOperationHttpService(operation));
                      });
             if (StringUtils.hasText(endpointMapping.getPath())) {
-                final PathMapping mapping = getPathMapping(
+                final Route route = route(
                         HttpMethod.GET.name(),
                         endpointMapping.getPath(),
                         ImmutableList.of(),
                         mediaTypes.getProduced()
                 );
-                sb.service(mapping, (ctx, req) -> {
+                sb.service(route, (ctx, req) -> {
                     final Map<String, Link> links =
                             new EndpointLinksResolver(endpoints).resolveLinks(req.path());
                     return HttpResponse.of(
@@ -134,13 +134,14 @@ public class ArmeriaSpringActuatorAutoConfiguration {
         };
     }
 
-    private static PathMapping getPathMapping(
+    private static Route route(
             String method, String path, Collection<String> consumes, Collection<String> produces) {
-        return PathMapping.of(path)
-                          .withHttpHeaderInfo(
-                                  ImmutableSet.of(HttpMethod.valueOf(method)),
-                                  convertMediaTypes(consumes),
-                                  convertMediaTypes(produces));
+        return Route.builder()
+                    .path(path)
+                    .methods(ImmutableSet.of(HttpMethod.valueOf(method)))
+                    .consumes(convertMediaTypes(consumes))
+                    .produces(convertMediaTypes(produces))
+                    .build();
     }
 
     private static List<MediaType> convertMediaTypes(Iterable<String> mediaTypes) {

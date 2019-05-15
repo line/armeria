@@ -24,7 +24,7 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Service;
 
 /**
@@ -32,27 +32,27 @@ import com.linecorp.armeria.server.Service;
  */
 public final class AnnotatedHttpServiceElement {
 
-    private final PathMapping pathMapping;
+    private final Route route;
 
     private final AnnotatedHttpService service;
 
     private final Function<Service<HttpRequest, HttpResponse>,
             ? extends Service<HttpRequest, HttpResponse>> decorator;
 
-    AnnotatedHttpServiceElement(PathMapping pathMapping,
+    AnnotatedHttpServiceElement(Route route,
                                 AnnotatedHttpService service,
                                 Function<Service<HttpRequest, HttpResponse>,
                                         ? extends Service<HttpRequest, HttpResponse>> decorator) {
-        this.pathMapping = requireNonNull(pathMapping, "pathMapping");
+        this.route = requireNonNull(route, "route");
         this.service = requireNonNull(service, "service");
         this.decorator = requireNonNull(decorator, "decorator");
     }
 
     /**
-     * Returns the {@link PathMapping}.
+     * Returns the {@link Route}.
      */
-    public PathMapping pathMapping() {
-        return pathMapping;
+    public Route route() {
+        return route;
     }
 
     /**
@@ -74,7 +74,7 @@ public final class AnnotatedHttpServiceElement {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this).omitNullValues()
-                          .add("pathMapping", pathMapping())
+                          .add("route", route())
                           .add("service", service())
                           .add("decorator", decorator())
                           .toString();
