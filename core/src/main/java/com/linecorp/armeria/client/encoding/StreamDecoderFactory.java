@@ -18,6 +18,8 @@ package com.linecorp.armeria.client.encoding;
 
 import com.linecorp.armeria.common.HttpResponse;
 
+import io.netty.buffer.ByteBufAllocator;
+
 /**
  * An interface that constructs a new {@link StreamDecoder} for a given Content-Encoding header value.
  * A new decoder is valid for the lifetime of an {@link HttpResponse}.
@@ -32,6 +34,7 @@ public interface StreamDecoderFactory {
     /**
      * Construct a new {@link StreamDecoder} to use to decode an
      * {@link HttpResponse}.
+     * @param alloc
      */
-    StreamDecoder newDecoder();
+    StreamDecoder newDecoder(ByteBufAllocator alloc);
 }
