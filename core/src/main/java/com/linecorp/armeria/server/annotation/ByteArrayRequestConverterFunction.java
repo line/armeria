@@ -37,17 +37,18 @@ public class ByteArrayRequestConverterFunction implements RequestConverterFuncti
     @Override
     public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
                                  Class<?> expectedResultType) throws Exception {
+        final HttpData content = request.content();
         if (expectedResultType == byte[].class) {
-            final byte[] array = request.content().array();
-            final int length = request.content().length();
+            final byte[] array = content.array();
+            final int length = content.length();
             if (array.length == length) {
                 return array;
             } else {
-                return Arrays.copyOfRange(array, request.content().offset(), length);
+                return Arrays.copyOfRange(array, content.offset(), length);
             }
         }
         if (expectedResultType == HttpData.class) {
-            return request.content();
+            return content;
         }
         return RequestConverterFunction.fallthrough();
     }
