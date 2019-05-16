@@ -52,7 +52,7 @@ public class HttpDecodedResponseTest {
 
     static {
         final ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        try (final GZIPOutputStream gos = new GZIPOutputStream(bos)) {
+        try (GZIPOutputStream gos = new GZIPOutputStream(bos)) {
             gos.write("hello".getBytes(StandardCharsets.UTF_8));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
