@@ -51,7 +51,6 @@ import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -322,7 +321,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             return;
         }
 
-        headers = fillSchemeAndAuthorityIfMissing(ctx, headers);
         final String hostname = hostname(headers);
         final VirtualHost host = config.findVirtualHost(hostname);
 
@@ -405,7 +403,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             if (service.shouldCachePath(pathAndQuery.path(), pathAndQuery.query(), mapped.mapping())) {
                 reqCtx.log().addListener(log -> {
                     final HttpStatus status = log.responseHeaders().status();
-                    if (status != null && status.code() >= 200 && status.code() < 400) {
+                    if (status.code() >= 200 && status.code() < 400) {
                         pathAndQuery.storeInCache(originalPath);
                     }
                 }, RequestLogAvailability.COMPLETE);
@@ -482,30 +480,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         respond(ctx, req, HttpStatus.NOT_FOUND, null, null);
-    }
-
-    private RequestHeaders fillSchemeAndAuthorityIfMissing(ChannelHandlerContext ctx, RequestHeaders headers) {
-        final String scheme = headers.scheme();
-        final String authority = headers.authority();
-        if (scheme != null && authority != null) {
-            return headers;
-        }
-
-        final RequestHeadersBuilder builder = headers.toBuilder();
-        if (scheme == null) {
-            // Fill in the scheme, just in case the client did not send it.
-            builder.add(HttpHeaderNames.SCHEME, protocol.isTls() ? "https" : "http");
-        }
-
-        if (authority == null) {
-            // Fill in the authority with the default host name and current port, just in case the client
-            // did not send it.
-            final String defaultHostname = config.defaultVirtualHost().defaultHostname();
-            final int port = ((InetSocketAddress) ctx.channel().localAddress()).getPort();
-            builder.add(HttpHeaderNames.AUTHORITY, defaultHostname + ':' + port);
-        }
-
-        return builder.build();
     }
 
     private static String hostname(RequestHeaders headers) {

@@ -194,19 +194,17 @@ implementations that supports port unification:
 Virtual hosts
 -------------
 
-Use ``ServerBuilder.withVirtualHost()`` to configure `a name-based virtual host`_:
+Use ``ServerBuilder.virtualHost(...)`` to configure `a name-based virtual host`_:
 
 .. code-block:: java
 
-    import com.linecorp.armeria.server.VirtualHost;
-
     ServerBuilder sb = new ServerBuilder();
     // Configure foo.com.
-    sb.withVirtualHost("foo.com")
+    sb.virtualHost("foo.com")
       .service(...)
       .tls(...)
       .and() // Configure *.bar.com.
-      .withVirtualHost("*.bar.com")
+      .virtualHost("*.bar.com")
       .service(...)
       .tls(...)
       .and() // Configure the default virtual host.

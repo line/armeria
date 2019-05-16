@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
  * {@link VirtualHostBuilder#route()}. You can also configure a {@link Service} using
  * {@link VirtualHostBuilder#withRoute(Consumer)}.
  *
- * <p>Call {@link #service(Service)} to build the {@link Service} and return to the {@link VirtualHostBuilder}.
+ * <p>Call {@link #build(Service)} to build the {@link Service} and return to the {@link VirtualHostBuilder}.
  *
  * <pre>{@code
  * ServerBuilder sb = new ServerBuilder();
@@ -212,7 +212,7 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
      *
      * @throws IllegalStateException if the path that the {@link Service} will be bound to is not specified
      */
-    public VirtualHostBuilder service(Service<HttpRequest, HttpResponse> service) {
+    public VirtualHostBuilder build(Service<HttpRequest, HttpResponse> service) {
         build0(service);
         return virtualHostBuilder;
     }

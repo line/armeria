@@ -18,7 +18,13 @@ package com.linecorp.armeria.server.tomcat;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.startup.Tomcat;
@@ -33,6 +39,8 @@ import org.junit.Test;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.internal.webapp.WebAppContainerTest;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
+
+import io.netty.util.NetUtil;
 
 public class UnmanagedTomcatServiceTest {
 
@@ -121,6 +129,22 @@ public class UnmanagedTomcatServiceTest {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/some-webapp-nohostname/")))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+            }
+        }
+    }
+
+    @Test
+    public void okWithoutAuthorityHeader() throws Exception {
+        final int port = server.httpPort();
+        try (Socket s = new Socket(NetUtil.LOCALHOST, port)) {
+            final InputStream in = s.getInputStream();
+            final OutputStream out = s.getOutputStream();
+            out.write(("GET /some-webapp/ HTTP/1.1\r\n" +
+                       "Content-Length: 0\r\n" +
+                       "Connection: close\r\n\r\n").getBytes(StandardCharsets.US_ASCII));
+
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(in))) {
+                assertThat(br.readLine()).isEqualTo("HTTP/1.1 200 OK");
             }
         }
     }

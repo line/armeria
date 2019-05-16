@@ -49,7 +49,7 @@ public class VirtualHostServiceBindingBuilderTest {
           .verboseResponses(true)
           .requestContentPreviewerFactory(requestFactory)
           .responseContentPreviewerFactory(responseFactory)
-          .service((ctx, req) -> HttpResponse.of(OK));
+          .build((ctx, req) -> HttpResponse.of(OK));
 
         final List<ServiceConfig> serviceConfigs = sb.build().serviceConfigs();
         assertThat(serviceConfigs.size()).isOne();
@@ -79,7 +79,7 @@ public class VirtualHostServiceBindingBuilderTest {
                    .requestTimeoutMillis(10)
                    .maxRequestLength(8192)
                    .verboseResponses(true)
-                   .service((ctx, req) -> HttpResponse.of(OK));
+                   .build((ctx, req) -> HttpResponse.of(OK));
         });
 
         final List<ServiceConfig> serviceConfigs = sb.build().serviceConfigs();

@@ -303,8 +303,17 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     static HttpRequest of(HttpRequest request, RequestHeaders newHeaders) {
         requireNonNull(request, "request");
         requireNonNull(newHeaders, "newHeaders");
+        if (request.headers() == newHeaders) {
+            // Just check the reference only to avoid heavy comparison.
+            return request;
+        }
+
         if (request instanceof HeaderOverridingHttpRequest) {
             request = ((HeaderOverridingHttpRequest) request).unwrap();
+        }
+
+        if (request.headers() == newHeaders) {
+            return request;
         }
 
         return new HeaderOverridingHttpRequest(request, newHeaders);
