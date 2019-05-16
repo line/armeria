@@ -17,8 +17,10 @@
 import Button from '@material-ui/core/Button';
 import Grid from '@material-ui/core/Grid';
 import IconButton from '@material-ui/core/IconButton';
+import Snackbar from '@material-ui/core/Snackbar';
 import Tooltip from '@material-ui/core/Tooltip';
 import Typography from '@material-ui/core/Typography';
+import CloseIcon from '@material-ui/icons/Close';
 import DeleteSweepIcon from '@material-ui/icons/DeleteSweep';
 import FileCopyIcon from '@material-ui/icons/FileCopy';
 import React, { ChangeEvent } from 'react';
@@ -29,6 +31,7 @@ import githubGist from 'react-syntax-highlighter/styles/hljs/github-gist';
 import jsonMinify from 'jsonminify';
 import { RouteComponentProps } from 'react-router';
 import Section from '../../components/Section';
+import { docServiceDebug } from '../../lib/header-provider';
 import jsonPrettify from '../../lib/json-prettify';
 import { Method } from '../../lib/specification';
 import { TRANSPORTS } from '../../lib/transports';
@@ -56,6 +59,8 @@ interface State {
   additionalHeadersOpen: boolean;
   additionalHeaders: string;
   stickyHeaders: boolean;
+  snackbarOpen: boolean;
+  snackbarMessage: string;
 }
 
 type Props = OwnProps & RouteComponentProps;
@@ -76,6 +81,18 @@ class DebugPage extends React.PureComponent<Props, State> {
       );
     }
   }
+
+  private static copyTextToClipboard(text: string) {
+    const textArea = document.createElement('textarea');
+    textArea.style.opacity = '0.0';
+    textArea.value = text;
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+  }
+
   public state = {
     requestBodyOpen: true,
     requestBody: '',
@@ -87,6 +104,8 @@ class DebugPage extends React.PureComponent<Props, State> {
     additionalHeadersOpen: false,
     additionalHeaders: '',
     stickyHeaders: false,
+    snackbarOpen: false,
+    snackbarMessage: '',
   };
 
   public componentDidMount() {
@@ -150,15 +169,24 @@ class DebugPage extends React.PureComponent<Props, State> {
             <Button variant="contained" color="primary" onClick={this.onSubmit}>
               Submit
             </Button>
+            <Button variant="text" color="secondary" onClick={this.onExport}>
+              Copy as a curl command
+            </Button>
           </Grid>
           <Grid item xs={12} sm={6}>
             <Tooltip title="Copy response">
-              <IconButton onClick={this.onCopy}>
+              <IconButton
+                onClick={this.onCopy}
+                disabled={this.state.debugResponse.length === 0}
+              >
                 <FileCopyIcon />
               </IconButton>
             </Tooltip>
             <Tooltip title="Clear response">
-              <IconButton onClick={this.onClear}>
+              <IconButton
+                onClick={this.onClear}
+                disabled={this.state.debugResponse.length === 0}
+              >
                 <DeleteSweepIcon />
               </IconButton>
             </Tooltip>
@@ -171,6 +199,17 @@ class DebugPage extends React.PureComponent<Props, State> {
             </SyntaxHighlighter>
           </Grid>
         </Grid>
+        <Snackbar
+          open={this.state.snackbarOpen}
+          message={this.state.snackbarMessage}
+          autoHideDuration={3000}
+          onClose={this.onSnackbarDismiss}
+          action={
+            <IconButton color="inherit" onClick={this.onSnackbarDismiss}>
+              <CloseIcon />
+            </IconButton>
+          }
+        />
       </Section>
     );
   }
@@ -237,14 +276,89 @@ class DebugPage extends React.PureComponent<Props, State> {
 
   private onCopy = () => {
     const response = this.state.debugResponse;
-    const textArea = document.createElement('textarea');
-    textArea.style.opacity = '0.0';
-    textArea.value = response;
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textArea);
+    if (response.length > 0) {
+      DebugPage.copyTextToClipboard(response);
+      this.showSnackbar('The response has been copied to the clipboard.');
+    }
+  };
+
+  private onExport = () => {
+    const escapeSingleQuote = (text: string) => text.replace(/'/g, `'\\''`);
+
+    const additionalHeaders = this.state.additionalHeaders;
+    const requestBody = this.state.requestBody;
+
+    try {
+      if (this.props.useRequestBody) {
+        DebugPage.validateJsonObject(requestBody, 'request body');
+      }
+
+      if (additionalHeaders) {
+        DebugPage.validateJsonObject(additionalHeaders, 'headers');
+      }
+
+      const headers =
+        (additionalHeaders && JSON.parse(additionalHeaders)) || {};
+
+      // window.location.origin may have compatibility issue
+      // https://developer.mozilla.org/en-US/docs/Web/API/Window/location#Browser_compatibility
+      const host =
+        `${window.location.protocol}//${window.location.hostname}` +
+        `${window.location.port ? `:${window.location.port}` : ''}`;
+
+      const method = this.props.method;
+      const transport = TRANSPORTS.getDebugTransport(method);
+      if (!transport) {
+        throw new Error("This method doesn't have a debug transport.");
+      }
+
+      const httpMethod = method.httpMethod;
+      const endpoint = transport.findDebugMimeTypeEndpoint(method);
+      const path = endpoint.pathMapping;
+      const body = transport.getCurlBody(
+        endpoint,
+        method,
+        escapeSingleQuote(requestBody),
+      );
+      let uri;
+
+      if (this.props.isAnnotatedHttpService) {
+        if (this.props.exactPathMapping) {
+          const queries = this.state.additionalQueries;
+          uri =
+            `'${host}${escapeSingleQuote(path.substring('exact:'.length))}` +
+            `${queries.length > 0 ? `?${escapeSingleQuote(queries)}` : ''}'`;
+        } else {
+          const endpointPath = this.state.endpointPath;
+          this.validateEndpointPath(endpointPath);
+          uri = `'${host}${escapeSingleQuote(endpointPath)}'`;
+        }
+      } else {
+        uri = `'${host}${escapeSingleQuote(path)}'`;
+      }
+
+      headers['content-type'] = transport.getDebugMimeType();
+      if (process.env.WEBPACK_SERVE === 'true') {
+        headers[docServiceDebug] = 'true';
+      }
+
+      const headerOptions = Object.keys(headers)
+        .map((name) => {
+          return `-H '${name}: ${headers[name]}'`;
+        })
+        .join(' ');
+
+      const curlCommand =
+        `curl -X${httpMethod} ${headerOptions} ${uri}` +
+        `${this.props.useRequestBody ? ` -d '${body}'` : ''}`;
+
+      DebugPage.copyTextToClipboard(curlCommand);
+      this.showSnackbar('The curl command has been copied to the clipboard.');
+    } catch (e) {
+      this.setState({
+        debugResponse: e.toString(),
+      });
+    }
   };
 
   private onClear = () => {
@@ -319,6 +433,19 @@ class DebugPage extends React.PureComponent<Props, State> {
       );
     }
     this.executeRequest(params);
+  };
+
+  private showSnackbar = (text: string) => {
+    this.setState({
+      snackbarOpen: true,
+      snackbarMessage: text,
+    });
+  };
+
+  private onSnackbarDismiss = () => {
+    this.setState({
+      snackbarOpen: false,
+    });
   };
 
   private validateEndpointPath(endpointPath: string) {
@@ -408,6 +535,8 @@ class DebugPage extends React.PureComponent<Props, State> {
       additionalHeadersOpen: headersOpen,
       stickyHeaders:
         urlParams.has('http_headers_sticky') || this.state.stickyHeaders,
+      snackbarOpen: false,
+      snackbarMessage: '',
     });
   }
 

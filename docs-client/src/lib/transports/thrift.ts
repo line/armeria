@@ -14,15 +14,30 @@
  * under the License.
  */
 
-import { Method } from '../specification';
+import { Endpoint, Method } from '../specification';
 
 import Transport from './transport';
 
 const TTEXT_MIME_TYPE = 'application/x-thrift; protocol=TTEXT';
 
 export default class ThriftTransport extends Transport {
+  private static thriftMethod(endpoint: Endpoint, method: Method) {
+    return endpoint.fragment
+      ? `${endpoint.fragment}:${method.name}`
+      : method.name;
+  }
+
   public supportsMimeType(mimeType: string): boolean {
     return mimeType === TTEXT_MIME_TYPE;
+  }
+
+  public getDebugMimeType(): string {
+    return TTEXT_MIME_TYPE;
+  }
+
+  public getCurlBody(endpoint: Endpoint, method: Method, body: string): string {
+    const thriftMethod = ThriftTransport.thriftMethod(endpoint, method);
+    return `{"method":"${thriftMethod}", "type": "CALL", "args": ${body}}`;
   }
 
   protected async doSend(
@@ -33,17 +48,9 @@ export default class ThriftTransport extends Transport {
     if (!bodyJson) {
       throw new Error('A Thrift request must have body.');
     }
+    const endpoint = this.findDebugMimeTypeEndpoint(method);
 
-    const endpoint = method.endpoints.find((ep) =>
-      ep.availableMimeTypes.includes(TTEXT_MIME_TYPE),
-    );
-    if (!endpoint) {
-      throw new Error('Endpoint does not support Thrift debug transport.');
-    }
-
-    const thriftMethod = endpoint.fragment
-      ? `${endpoint.fragment}:${method.name}`
-      : method.name;
+    const thriftMethod = ThriftTransport.thriftMethod(endpoint, method);
 
     const hdrs = new Headers();
     hdrs.set('content-type', TTEXT_MIME_TYPE);
