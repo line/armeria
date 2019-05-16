@@ -34,6 +34,7 @@ import io.netty.buffer.ByteBufHolder;
 abstract class AbstractStreamDecoderTest {
 
     private static final byte[] PAYLOAD;
+
     static {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         try (DeflaterOutputStream zip = new DeflaterOutputStream(bos, new Deflater(-1, true))) {
@@ -70,6 +71,7 @@ abstract class AbstractStreamDecoderTest {
         HttpData data = decoder.decode(HttpData.EMPTY_DATA);
         assertThat(data).isNotInstanceOf(ByteBufHolder.class);
     }
+
     @Test
     public void empty_pooled() {
         final StreamDecoder decoder = newDecoder();

@@ -35,13 +35,12 @@ import io.netty.handler.codec.compression.ZlibWrapper;
 class ZlibStreamDecoder implements StreamDecoder {
 
     private final EmbeddedChannel decoder;
-    private final ByteBufAllocator alloc;
 
     private boolean withPooledObjects;
 
     ZlibStreamDecoder(ZlibWrapper zlibWrapper, ByteBufAllocator alloc) {
         decoder = new EmbeddedChannel(false, ZlibCodecFactory.newZlibDecoder(zlibWrapper));
-        this.alloc = alloc;
+        decoder.config().setAllocator(alloc);
     }
 
     @Override
