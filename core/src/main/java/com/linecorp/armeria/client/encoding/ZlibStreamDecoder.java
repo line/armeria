@@ -22,7 +22,6 @@ import com.linecorp.armeria.unsafe.ByteBufHttpData;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
@@ -36,8 +35,6 @@ class ZlibStreamDecoder implements StreamDecoder {
 
     private final EmbeddedChannel decoder;
 
-    private boolean withPooledObjects;
-
     ZlibStreamDecoder(ZlibWrapper zlibWrapper, ByteBufAllocator alloc) {
         decoder = new EmbeddedChannel(false, ZlibCodecFactory.newZlibDecoder(zlibWrapper));
         decoder.config().setAllocator(alloc);
@@ -47,9 +44,6 @@ class ZlibStreamDecoder implements StreamDecoder {
     public HttpData decode(HttpData obj) {
         if (obj instanceof ByteBufHolder) {
             decoder.writeInbound(((ByteBufHolder) obj).content());
-
-            // We go ahead and return a pooled object if any one of the inputs were pooled.
-            withPooledObjects = true;
         } else {
             final ByteBuf compressed = Unpooled.wrappedBuffer(obj.array(), obj.offset(), obj.length());
             decoder.writeInbound(compressed);
@@ -93,12 +87,6 @@ class ZlibStreamDecoder implements StreamDecoder {
             return HttpData.EMPTY_DATA;
         }
 
-        if (withPooledObjects) {
-            return new ByteBufHttpData(decoded, false);
-        } else {
-            final byte[] ret = ByteBufUtil.getBytes(decoded);
-            decoded.release();
-            return HttpData.of(ret);
-        }
+        return new ByteBufHttpData(decoded, false);
     }
 }

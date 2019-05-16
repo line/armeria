@@ -48,14 +48,7 @@ abstract class AbstractStreamDecoderTest {
     abstract StreamDecoder newDecoder();
 
     @Test
-    public void unpooledBuffers() {
-        final StreamDecoder decoder = newDecoder();
-        HttpData data = decoder.decode(HttpData.of(PAYLOAD));
-        assertThat(data).isNotInstanceOf(ByteBufHolder.class);
-    }
-
-    @Test
-    public void pooledBuffers() {
+    public void notEmpty() {
         final StreamDecoder decoder = newDecoder();
         final ByteBuf buf = ByteBufAllocator.DEFAULT.buffer();
         buf.writeBytes(PAYLOAD);

@@ -48,7 +48,7 @@ class HttpDecodedResponse extends FilteredHttpResponse {
 
     HttpDecodedResponse(HttpResponse delegate, Map<String, StreamDecoderFactory> availableDecoders,
                         ByteBufAllocator alloc) {
-        super(delegate);
+        super(delegate, false);
         this.availableDecoders = availableDecoders;
         this.alloc = alloc;
     }
