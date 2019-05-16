@@ -126,6 +126,9 @@ public final class SystemInfo {
         return Hostname.HOSTNAME;
     }
 
+    /**
+     * Whether the environment either supports ALPN natively or includes Jetty ALPN.
+     */
     public static boolean jettyAlpnOptionalOrAvailable() {
         return JETTY_ALPN_OPTIONAL_OR_AVAILABLE;
     }
