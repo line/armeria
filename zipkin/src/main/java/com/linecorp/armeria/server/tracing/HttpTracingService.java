@@ -91,7 +91,12 @@ public class HttpTracingService extends SimpleDecoratingService<HttpRequest, Htt
 
         ctx.log().addListener(log -> {
             SpanTags.logWireReceive(span, log.requestFirstBytesTransferredTimeNanos(), log);
-            SpanTags.logWireSend(span, log.responseFirstBytesTransferredTimeNanos(), log);
+
+            // If the client timed-out the request, we will have never sent any response data at all.
+            if (log.isAvailable(RequestLogAvailability.RESPONSE_FIRST_BYTES_TRANSFERRED)) {
+                SpanTags.logWireSend(span, log.responseFirstBytesTransferredTimeNanos(), log);
+            }
+
             SpanContextUtil.closeSpan(span, log);
         }, RequestLogAvailability.COMPLETE);
 

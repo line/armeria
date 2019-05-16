@@ -389,6 +389,11 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                 responseEncoder.writeHeaders(id, streamId, headers, false);
                 future = responseEncoder.writeData(id, streamId, content, true);
             }
+
+            if (!loggedResponseHeadersFirstBytesTransferred) {
+                logBuilder().responseFirstBytesTransferred();
+                loggedResponseHeadersFirstBytesTransferred = true;
+            }
         } else {
             // Wrote something already; we have to reset/cancel the stream.
             future = responseEncoder.writeReset(id, streamId, error);
