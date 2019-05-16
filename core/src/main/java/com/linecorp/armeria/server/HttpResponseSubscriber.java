@@ -334,10 +334,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
             // - every message has been sent successfully.
             // - any write operation is failed with a cause.
             if (isSuccess) {
-                if (!loggedResponseHeadersFirstBytesTransferred) {
-                    logBuilder().responseFirstBytesTransferred();
-                    loggedResponseHeadersFirstBytesTransferred = true;
-                }
+                maybeLogFirstResponseBytesTransferred();
 
                 if (endOfStream && tryComplete()) {
                     logBuilder().endResponse();
@@ -382,18 +379,17 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
         final ChannelFuture future;
         if (wroteNothing(oldState)) {
+            final ChannelFuture headersWriteFuture;
             // Did not write anything yet; we can send an error response instead of resetting the stream.
             if (content.isEmpty()) {
-                future = responseEncoder.writeHeaders(id, streamId, headers, true);
+                headersWriteFuture = responseEncoder.writeHeaders(id, streamId, headers, true);
+                future = headersWriteFuture;
             } else {
-                responseEncoder.writeHeaders(id, streamId, headers, false);
+                headersWriteFuture = responseEncoder.writeHeaders(id, streamId, headers, false);
                 future = responseEncoder.writeData(id, streamId, content, true);
             }
 
-            if (!loggedResponseHeadersFirstBytesTransferred) {
-                logBuilder().responseFirstBytesTransferred();
-                loggedResponseHeadersFirstBytesTransferred = true;
-            }
+            headersWriteFuture.addListener((ChannelFuture unused) -> maybeLogFirstResponseBytesTransferred());
         } else {
             // Wrote something already; we have to reset/cancel the stream.
             future = responseEncoder.writeReset(id, streamId, error);
@@ -431,6 +427,13 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         }
         isComplete = true;
         return true;
+    }
+
+    private void maybeLogFirstResponseBytesTransferred() {
+        if (!loggedResponseHeadersFirstBytesTransferred) {
+            logBuilder().responseFirstBytesTransferred();
+            loggedResponseHeadersFirstBytesTransferred = true;
+        }
     }
 
     private static boolean wroteNothing(State state) {
