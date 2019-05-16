@@ -101,7 +101,7 @@ public class HttpTracingIntegrationTest {
             sb.requestTimeout(Duration.ofSeconds(1));
 
             sb.service("/foo", decorate("service/foo", THttpService.of(
-                            (AsyncIface) (name, resultHandler) ->
+                    (AsyncIface) (name, resultHandler) ->
                             barClient.hello("Miss. " + name, new DelegatingCallback(resultHandler)))));
 
             sb.service("/bar", decorate("service/bar", THttpService.of(
