@@ -51,8 +51,8 @@ public class HttpDecodedResponseTest {
     private static final byte[] PAYLOAD;
 
     static {
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        try (GZIPOutputStream gos = new GZIPOutputStream(bos)) {
+        final ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        try (final GZIPOutputStream gos = new GZIPOutputStream(bos)) {
             gos.write("hello".getBytes(StandardCharsets.UTF_8));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
@@ -62,21 +62,21 @@ public class HttpDecodedResponseTest {
 
     @Test
     public void unpooledPayload_unpooledDrain() {
-        HttpData payload = HttpData.of(PAYLOAD);
-        HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
-        HttpResponse decoded = new HttpDecodedResponse(delegate, DECODERS, ByteBufAllocator.DEFAULT);
-        ByteBuf buf = responseBuf(decoded, false);
+        final HttpData payload = HttpData.of(PAYLOAD);
+        final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
+        final HttpResponse decoded = new HttpDecodedResponse(delegate, DECODERS, ByteBufAllocator.DEFAULT);
+        final ByteBuf buf = responseBuf(decoded, false);
 
         assertThat(buf).isInstanceOf(UnpooledHeapByteBuf.class);
     }
 
     @Test
     public void pooledPayload_unpooledDrain() {
-        ByteBufHttpData payload = new ByteBufHttpData(
+        final ByteBufHttpData payload = new ByteBufHttpData(
                 ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD), true);
-        HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
-        HttpResponse decoded = new HttpDecodedResponse(delegate, DECODERS, ByteBufAllocator.DEFAULT);
-        ByteBuf buf = responseBuf(decoded, false);
+        final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
+        final HttpResponse decoded = new HttpDecodedResponse(delegate, DECODERS, ByteBufAllocator.DEFAULT);
+        final ByteBuf buf = responseBuf(decoded, false);
 
         assertThat(buf).isInstanceOf(UnpooledHeapByteBuf.class);
         assertThat(payload.refCnt()).isZero();
@@ -85,21 +85,21 @@ public class HttpDecodedResponseTest {
     // Users that request pooled objects still always need to be ok with unpooled ones.
     @Test
     public void unpooledPayload_pooledDrain() {
-        HttpData payload = HttpData.of(PAYLOAD);
-        HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
-        HttpResponse decoded = new HttpDecodedResponse(delegate, DECODERS, ByteBufAllocator.DEFAULT);
-        ByteBuf buf = responseBuf(decoded, true);
+        final HttpData payload = HttpData.of(PAYLOAD);
+        final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
+        final HttpResponse decoded = new HttpDecodedResponse(delegate, DECODERS, ByteBufAllocator.DEFAULT);
+        final ByteBuf buf = responseBuf(decoded, true);
 
         assertThat(buf).isNotInstanceOf(UnpooledHeapByteBuf.class);
     }
 
     @Test
     public void pooledPayload_pooledDrain() {
-        ByteBufHttpData payload = new ByteBufHttpData(
+        final ByteBufHttpData payload = new ByteBufHttpData(
                 ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD), true);
-        HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
-        HttpResponse decoded = new HttpDecodedResponse(delegate, DECODERS, ByteBufAllocator.DEFAULT);
-        ByteBuf buf = responseBuf(decoded, true);
+        final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
+        final HttpResponse decoded = new HttpDecodedResponse(delegate, DECODERS, ByteBufAllocator.DEFAULT);
+        final ByteBuf buf = responseBuf(decoded, true);
 
         assertThat(buf).isNotInstanceOf(UnpooledHeapByteBuf.class);
         assertThat(payload.refCnt()).isZero();

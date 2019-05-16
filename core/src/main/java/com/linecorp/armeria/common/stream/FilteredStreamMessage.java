@@ -64,8 +64,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
      *                          this means, use {@link #FilteredStreamMessage(StreamMessage)}.
      */
     protected FilteredStreamMessage(StreamMessage<T> delegate, boolean withPooledObjects) {
-        requireNonNull(delegate, "delegate");
-        this.delegate = delegate;
+        this.delegate = requireNonNull(delegate, "delegate");
         this.filterSupportsPooledObjects = withPooledObjects;
     }
 
