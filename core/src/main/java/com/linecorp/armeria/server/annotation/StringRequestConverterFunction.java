@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.annotation;
 
+import java.nio.charset.Charset;
+
 import com.linecorp.armeria.common.AggregatedHttpMessage;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
@@ -34,11 +36,14 @@ public class StringRequestConverterFunction implements RequestConverterFunction 
                                  Class<?> expectedResultType) throws Exception {
         if (expectedResultType == String.class ||
             expectedResultType == CharSequence.class) {
+            final Charset charset;
             final MediaType contentType = request.contentType();
-            if (contentType != null && contentType.is(MediaType.ANY_TEXT_TYPE)) {
-                return request.content(
-                        contentType.charset().orElse(ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET));
+            if (contentType != null) {
+                charset = contentType.charset().orElse(ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
+            } else {
+                charset = ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET;
             }
+            return request.content(charset);
         }
         return RequestConverterFunction.fallthrough();
     }

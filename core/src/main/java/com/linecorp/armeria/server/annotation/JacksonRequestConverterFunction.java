@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 
 import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -64,7 +65,6 @@ public class JacksonRequestConverterFunction implements RequestConverterFunction
     @Nullable
     public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
                                  Class<?> expectedResultType) throws Exception {
-
         final MediaType contentType = request.contentType();
         if (contentType != null && (contentType.is(MediaType.JSON) ||
                                     contentType.subtype().endsWith("+json"))) {
@@ -74,6 +74,13 @@ public class JacksonRequestConverterFunction implements RequestConverterFunction
                 try {
                     return reader.readValue(content);
                 } catch (JsonProcessingException e) {
+                    if (expectedResultType == byte[].class ||
+                        expectedResultType == HttpData.class ||
+                        expectedResultType == String.class ||
+                        expectedResultType == CharSequence.class) {
+                        return RequestConverterFunction.fallthrough();
+                    }
+
                     throw new IllegalArgumentException("failed to parse a JSON document: " + e, e);
                 }
             }
