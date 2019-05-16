@@ -32,9 +32,7 @@ public interface StreamDecoderFactory {
     String encodingHeaderValue();
 
     /**
-     * Construct a new {@link StreamDecoder} to use to decode an
-     * {@link HttpResponse}.
-     * @param alloc
+     * Construct a new {@link StreamDecoder} to use to decode an {@link HttpResponse}.
      */
     StreamDecoder newDecoder(ByteBufAllocator alloc);
 }
