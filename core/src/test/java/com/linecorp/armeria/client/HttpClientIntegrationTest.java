@@ -26,6 +26,7 @@ import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
@@ -60,6 +61,9 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -617,5 +621,73 @@ class HttpClientIntegrationTest {
         final AggregatedHttpResponse response = client.get("/oneparam/foo%2Fbar").aggregate().get();
 
         assertEquals("routed", response.contentUtf8());
+    }
+
+    @Test
+    void givenHttpClient_thenBuildClient() throws Exception {
+        final URI uri = URI.create(server.httpUri("/"));
+        final Endpoint endpoint = Endpoint.of(uri.getHost()).withDefaultPort(uri.getPort());
+
+        final HttpClient client = HttpClient.of(SessionProtocol.HTTP, endpoint);
+
+        final AggregatedHttpMessage response = client.get("/hello/world").aggregate().get();
+
+        assertEquals("success", response.contentUtf8());
+    }
+
+    @Test
+    void givenHttpClinetBuilder_thenBuildClient() throws Exception {
+        final URI uri = URI.create(server.httpUri("/"));
+        final Endpoint endpoint = Endpoint.of(uri.getHost()).withDefaultPort(uri.getPort());
+
+        final HttpClient client = new HttpClientBuilder(SessionProtocol.HTTP, endpoint).build();
+
+        final AggregatedHttpMessage response = client.get("/hello/world").aggregate().get();
+
+        assertEquals("success", response.contentUtf8());
+    }
+
+    @Test
+    void givenClientFactory_thenBuildClient() throws Exception {
+        final URI uri = URI.create(server.httpUri("/"));
+        final Endpoint endpoint = Endpoint.of(uri.getHost())
+                                          .withDefaultPort(uri.getPort());
+
+        final Scheme scheme = Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP);
+        final ClientFactory factory = new ClientFactoryBuilder().build();
+        final HttpClient client = factory.newClient(scheme, endpoint, HttpClient.class);
+
+        final AggregatedHttpMessage response = client.get("/hello/world").aggregate().get();
+
+        assertEquals("success", response.contentUtf8());
+    }
+
+    @Test
+    void givenClients_thenBuildClient() throws Exception {
+        final URI uri = URI.create(server.httpUri("/"));
+        final Endpoint endpoint = Endpoint.of(uri.getHost())
+                                          .withDefaultPort(uri.getPort());
+
+        final Scheme scheme = Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP);
+        final HttpClient client = Clients.newClient(scheme, endpoint, HttpClient.class);
+
+        final AggregatedHttpMessage response = client.get("/hello/world").aggregate().get();
+
+        assertEquals("success", response.contentUtf8());
+    }
+
+    @Test
+    void givenClientBuilder_thenBuildClient() throws Exception {
+        final URI uri = URI.create(server.httpUri("/"));
+        final Endpoint endpoint = Endpoint.of(uri.getHost())
+                                          .withDefaultPort(uri.getPort());
+
+        final ClientFactory factory = new ClientFactoryBuilder().build();
+        final HttpClient client = new ClientBuilder("none+http", endpoint).factory(factory)
+                                                                          .build(HttpClient.class);
+
+        final AggregatedHttpMessage response = client.get("/hello/world").aggregate().get();
+
+        assertEquals("success", response.contentUtf8());
     }
 }
