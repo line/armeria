@@ -18,7 +18,6 @@ package com.linecorp.armeria.common;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
-import java.security.cert.CertificateException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -59,7 +58,6 @@ import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ReferenceCountUtil;
 
 /**
@@ -282,7 +280,7 @@ public final class Flags {
 
             if (dumpOpenSslInfo()) {
                 try {
-                    SSLEngine engine = SslContextBuilder
+                    final SSLEngine engine = SslContextBuilder
                             .forClient()
                             .ciphers(Http2SecurityUtil.CIPHERS)
                             .build()
