@@ -38,6 +38,7 @@ import com.github.benmanes.caffeine.cache.CaffeineSpec;
 import com.google.common.base.Ascii;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.retry.Backoff;
@@ -50,10 +51,14 @@ import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.epoll.Epoll;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Exception;
+import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.ssl.OpenSsl;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.util.ReferenceCountUtil;
 
 /**
  * The system properties that affect Armeria's runtime behavior.
@@ -80,6 +85,8 @@ public final class Flags {
 
     private static final boolean USE_OPENSSL = getBoolean("useOpenSsl", OpenSsl.isAvailable(),
                                                           value -> OpenSsl.isAvailable() || !value);
+
+    private static final boolean DUMP_OPENSSL_INFO = getBoolean("dumpOpenSslInfo", false);
 
     private static final int DEFAULT_MAX_NUM_CONNECTIONS = Integer.MAX_VALUE;
     private static final int MAX_NUM_CONNECTIONS =
@@ -270,6 +277,23 @@ public final class Flags {
             logger.info("Using OpenSSL: {}, 0x{}",
                         OpenSsl.versionString(),
                         Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
+
+            if (dumpOpenSslInfo()) {
+                try {
+                    final SSLEngine engine = SslContextBuilder
+                            .forClient()
+                            .ciphers(Http2SecurityUtil.CIPHERS)
+                            .build()
+                            .newEngine(ByteBufAllocator.DEFAULT);
+                    logger.info("All available SSL protocols: {}",
+                                ImmutableList.copyOf(engine.getSupportedProtocols()));
+                    ReferenceCountUtil.release(engine);
+                } catch (SSLException e) {
+                    // Just skip it if it doesn't work for some reason.
+                }
+                logger.info("All available SSL ciphers: {}", OpenSsl.availableJavaCipherSuites());
+                logger.info("Default enabled SSL ciphers: {}", Http2SecurityUtil.CIPHERS);
+            }
         }
     }
 
@@ -350,6 +374,17 @@ public final class Flags {
      */
     public static boolean useOpenSsl() {
         return USE_OPENSSL;
+    }
+
+    /**
+     * Returns whether information about the OpenSSL environment should be dumped when first starting the
+     * application, including supported ciphers.
+     *
+     * <p>This flag is disabled by default. Specify the {@code -Dcom.linecorp.armeria.dumpOpenSslInfo=true} JVM
+     * option to enable it.
+     */
+    public static boolean dumpOpenSslInfo() {
+        return DUMP_OPENSSL_INFO;
     }
 
     /**
