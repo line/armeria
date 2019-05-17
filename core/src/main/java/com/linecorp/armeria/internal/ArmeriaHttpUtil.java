@@ -519,13 +519,13 @@ public final class ArmeriaHttpUtil {
      * Converts the specified Netty HTTP/2 into Armeria HTTP/2 {@link RequestHeaders}.
      */
     public static RequestHeaders toArmeriaRequestHeaders(ChannelHandlerContext ctx, Http2Headers headers,
-                                                         boolean endOfStream, AsciiString scheme,
+                                                         boolean endOfStream, String scheme,
                                                          ServerConfig cfg) {
         final RequestHeadersBuilder builder = RequestHeaders.builder();
         toArmeria(builder, headers, endOfStream);
         // A CONNECT request might not have ":scheme". See https://tools.ietf.org/html/rfc7540#section-8.1.2.3
         if (!builder.contains(HttpHeaderNames.SCHEME)) {
-            builder.add(HttpHeaderNames.SCHEME, scheme.toString());
+            builder.add(HttpHeaderNames.SCHEME, scheme);
         }
         if (!builder.contains(HttpHeaderNames.AUTHORITY)) {
             final String defaultHostname = cfg.defaultVirtualHost().defaultHostname();

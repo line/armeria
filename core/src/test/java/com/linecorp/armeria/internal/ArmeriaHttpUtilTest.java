@@ -56,7 +56,6 @@ import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
-import io.netty.util.AsciiString;
 
 public class ArmeriaHttpUtilTest {
     @Test
@@ -467,8 +466,7 @@ public class ArmeriaHttpUtilTest {
           .set(HttpHeaderNames.PATH, "/");
         // Request headers without pseudo headers.
         final RequestHeaders headers =
-                ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, in, false,
-                                                        AsciiString.cached("https"), serverConfig());
+                ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, in, false, "https", serverConfig());
         assertThat(headers.scheme()).isEqualTo("https");
         assertThat(headers.authority()).isEqualTo("foo:36462");
     }

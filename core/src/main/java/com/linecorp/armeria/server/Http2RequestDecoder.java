@@ -69,14 +69,14 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     private final ServerConfig cfg;
     private final Channel channel;
     private final Http2ConnectionEncoder writer;
-    private final AsciiString scheme;
+    private final String scheme;
 
     private final InboundTrafficController inboundTrafficController;
     private final Http2GoAwayHandler goAwayHandler;
     private final IntObjectMap<DecodedHttpRequest> requests = new IntObjectHashMap<>();
     private int nextId;
 
-    Http2RequestDecoder(ServerConfig cfg, Channel channel, Http2ConnectionEncoder writer, AsciiString scheme) {
+    Http2RequestDecoder(ServerConfig cfg, Channel channel, Http2ConnectionEncoder writer, String scheme) {
         this.cfg = cfg;
         this.channel = channel;
         this.writer = writer;

@@ -185,7 +185,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         final Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(conn, encoder, reader);
 
         return new Http2ServerConnectionHandler(
-                decoder, encoder, http2Settings(), pipeline.channel(), config, gracefulShutdownSupport, scheme);
+                decoder, encoder, http2Settings(), pipeline.channel(),
+                config, gracefulShutdownSupport, scheme.toString());
     }
 
     private Http2Settings http2Settings() {
