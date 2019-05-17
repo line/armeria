@@ -90,6 +90,6 @@ public final class HttpDecodingClient extends SimpleDecoratingClient<HttpRequest
         ctx.updateRequest(req);
 
         final HttpResponse res = delegate().execute(ctx, req);
-        return new HttpDecodedResponse(res, decoderFactories);
+        return new HttpDecodedResponse(res, decoderFactories, ctx.alloc());
     }
 }
