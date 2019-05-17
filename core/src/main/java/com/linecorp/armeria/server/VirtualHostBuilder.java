@@ -250,10 +250,7 @@ public final class VirtualHostBuilder {
         try {
             return BouncyCastleKeyFactoryProvider.call(() -> {
                 final SslContextBuilder builder = builderSupplier.get();
-
-                SslContextUtil.configureDefaults(builder, false);
-                tlsCustomizer.accept(builder);
-
+                SslContextUtil.configureDefaults(builder, false, tlsCustomizer);
                 return builder.build();
             });
         } catch (RuntimeException | SSLException e) {

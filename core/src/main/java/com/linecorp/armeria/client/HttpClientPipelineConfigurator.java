@@ -136,10 +136,9 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         if (sessionProtocol.isTls()) {
             try {
                 final SslContextBuilder builder = SslContextBuilder.forClient();
-
-                SslContextUtil.configureDefaults(builder, httpPreference == HttpPreference.HTTP1_REQUIRED);
-                clientFactory.sslContextCustomizer().accept(builder);
-
+                SslContextUtil.configureDefaults(builder,
+                                                 httpPreference == HttpPreference.HTTP1_REQUIRED,
+                                                 clientFactory.sslContextCustomizer());
                 sslCtx = builder.build();
             } catch (SSLException e) {
                 throw new IllegalStateException("failed to create an SslContext", e);

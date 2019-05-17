@@ -17,6 +17,7 @@
 package com.linecorp.armeria.internal;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 import com.google.common.collect.ImmutableList;
 
@@ -62,10 +63,17 @@ public final class SslContextUtil {
      * Configures a {@link SslContextBuilder} with Armeria's defaults, enabling support for HTTP/2, TLSv1.3, and
      * TLSv1.2.
      */
-    public static void configureDefaults(SslContextBuilder sslContext, boolean forceHttp1) {
+    public static void configureDefaults(SslContextBuilder sslContext,
+                                         boolean forceHttp1,
+                                         Consumer<? super SslContextBuilder> userCustomizer) {
         sslContext.sslProvider(Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK)
-                  .protocols(DEFAULT_PROTOCOLS.toArray(new String[0]))
-                  .ciphers(DEFAULT_CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
+                  .protocols(DEFAULT_PROTOCOLS.toArray(new String[0]));
+
+        // We call user customization logic before setting ciphers and ALPN to make sure they don't break
+        // compatibility with HTTP/2.
+        userCustomizer.accept(sslContext);
+
+        sslContext.ciphers(DEFAULT_CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
         if (!forceHttp1) {
             sslContext.applicationProtocolConfig(ALPN_CONFIG);
         }
