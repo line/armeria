@@ -19,7 +19,7 @@ com.auth0:
 
 com.fasterxml.jackson.core:
   jackson-annotations:
-    version: &JACKSON_VERSION '2.9.8'
+    version: &JACKSON_VERSION '2.9.9'
     javadocs:
     - https://fasterxml.github.io/jackson-annotations/javadoc/2.9/
   jackson-core:
@@ -309,7 +309,7 @@ org.apache.thrift:
 
 org.apache.tomcat.embed:
   tomcat-embed-core:
-    version: &TOMCAT_VERSION '9.0.19'
+    version: &TOMCAT_VERSION '9.0.20'
     javadocs:
     - https://tomcat.apache.org/tomcat-9.0-doc/api/
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
@@ -376,7 +376,7 @@ org.jctools:
       to: com.linecorp.armeria.internal.shaded.jctools
 
 org.jsoup:
-  jsoup: { version: '1.11.3' }
+  jsoup: { version: '1.12.1' }
 
 org.mockito:
   mockito-core: { version: '2.27.0' }
@@ -423,7 +423,7 @@ org.slf4j:
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.1.4.RELEASE'
+    version: &SPRING_BOOT_VERSION '2.1.5.RELEASE'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }
