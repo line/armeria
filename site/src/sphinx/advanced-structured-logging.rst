@@ -291,7 +291,7 @@ You can enable it when you configure :api:`Server`, :api:`VirtualHost` or :api:`
     // Enable previewing the content with the maximum length of 100 for textual content.
     sb.contentPreview(100);
     ...
-    sb.withVirtualHost("http://example.com")
+    sb.virtualHost("http://example.com")
       // In this case, the property of virtual host takes precedence over that of server.
       .contentPreview(150);
     ...

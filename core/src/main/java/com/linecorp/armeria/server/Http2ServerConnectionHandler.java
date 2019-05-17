@@ -31,12 +31,12 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     Http2ServerConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                  Http2Settings initialSettings, Channel channel, ServerConfig config,
-                                 GracefulShutdownSupport gracefulShutdownSupport) {
+                                 GracefulShutdownSupport gracefulShutdownSupport, String scheme) {
 
         super(decoder, encoder, initialSettings);
 
         this.gracefulShutdownSupport = gracefulShutdownSupport;
-        requestDecoder = new Http2RequestDecoder(config, channel, encoder());
+        requestDecoder = new Http2RequestDecoder(config, channel, encoder(), scheme);
         connection().addListener(requestDecoder);
         decoder().frameListener(requestDecoder);
 

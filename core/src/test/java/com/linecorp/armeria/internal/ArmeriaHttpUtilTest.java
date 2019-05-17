@@ -24,7 +24,10 @@ import static com.linecorp.armeria.internal.ArmeriaHttpUtil.toArmeria;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.toNettyHttp1;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.toNettyHttp2;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import java.net.InetSocketAddress;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
@@ -34,11 +37,18 @@ import org.junit.Test;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServerConfig;
 
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpVersion;
@@ -130,7 +140,7 @@ public class ArmeriaHttpUtilTest {
         assertThat(values).hasSize(5)
                           .containsEntry("a", null)
                           .containsEntry("b", "c")
-                          .containsEntry("d",null)
+                          .containsEntry("d", null)
                           .containsEntry("e", "f")
                           .containsEntry("g", null);
     }
@@ -439,5 +449,32 @@ public class ArmeriaHttpUtilTest {
           .set(HttpHeaderNames.METHOD, "GET");
         assertThat(toArmeria(in, false, false)).isInstanceOf(ResponseHeaders.class)
                                                .isNotInstanceOf(RequestHeaders.class);
+    }
+
+    @Test
+    public void toArmeriaRequestHeaders() {
+        final Http2Headers in = new DefaultHttp2Headers().set("a", "b");
+
+        final InetSocketAddress socketAddress = new InetSocketAddress(36462);
+        final Channel channel = mock(Channel.class);
+        when(channel.localAddress()).thenReturn(socketAddress);
+
+        final ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
+        when(ctx.channel()).thenReturn(channel);
+
+        in.set(HttpHeaderNames.METHOD, "GET")
+          .set(HttpHeaderNames.PATH, "/");
+        // Request headers without pseudo headers.
+        final RequestHeaders headers =
+                ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, in, false, "https", serverConfig());
+        assertThat(headers.scheme()).isEqualTo("https");
+        assertThat(headers.authority()).isEqualTo("foo:36462");
+    }
+
+    private static ServerConfig serverConfig() {
+        final Server server = new ServerBuilder().defaultHostname("foo")
+                                                 .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                                 .build();
+        return server.config();
     }
 }

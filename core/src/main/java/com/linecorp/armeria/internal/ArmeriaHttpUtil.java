@@ -42,6 +42,7 @@ import static io.netty.util.internal.StringUtil.isNullOrEmpty;
 import static io.netty.util.internal.StringUtil.length;
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
@@ -74,7 +75,9 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.server.ServerConfig;
 
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DefaultHeaders;
 import io.netty.handler.codec.UnsupportedValueConverter;
 import io.netty.handler.codec.http.HttpHeaderValues;
@@ -513,20 +516,45 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
+     * Converts the specified Netty HTTP/2 into Armeria HTTP/2 {@link RequestHeaders}.
+     */
+    public static RequestHeaders toArmeriaRequestHeaders(ChannelHandlerContext ctx, Http2Headers headers,
+                                                         boolean endOfStream, String scheme,
+                                                         ServerConfig cfg) {
+        final RequestHeadersBuilder builder = RequestHeaders.builder();
+        toArmeria(builder, headers, endOfStream);
+        // A CONNECT request might not have ":scheme". See https://tools.ietf.org/html/rfc7540#section-8.1.2.3
+        if (!builder.contains(HttpHeaderNames.SCHEME)) {
+            builder.add(HttpHeaderNames.SCHEME, scheme);
+        }
+        if (!builder.contains(HttpHeaderNames.AUTHORITY)) {
+            final String defaultHostname = cfg.defaultVirtualHost().defaultHostname();
+            final int port = ((InetSocketAddress) ctx.channel().localAddress()).getPort();
+            builder.add(HttpHeaderNames.AUTHORITY, defaultHostname + ':' + port);
+        }
+        return builder.build();
+    }
+
+    /**
      * Converts the specified Netty HTTP/2 into Armeria HTTP/2 headers.
      */
     public static HttpHeaders toArmeria(Http2Headers headers, boolean request, boolean endOfStream) {
-        final HttpHeadersBuilder converted;
+        final HttpHeadersBuilder builder;
         if (request) {
-            converted = headers.contains(HttpHeaderNames.METHOD) ? RequestHeaders.builder()
-                                                                 : HttpHeaders.builder();
+            builder = headers.contains(HttpHeaderNames.METHOD) ? RequestHeaders.builder()
+                                                               : HttpHeaders.builder();
         } else {
-            converted = headers.contains(HttpHeaderNames.STATUS) ? ResponseHeaders.builder()
-                                                                 : HttpHeaders.builder();
+            builder = headers.contains(HttpHeaderNames.STATUS) ? ResponseHeaders.builder()
+                                                               : HttpHeaders.builder();
         }
 
-        converted.sizeHint(headers.size());
-        converted.endOfStream(endOfStream);
+        toArmeria(builder, headers, endOfStream);
+        return builder.build();
+    }
+
+    private static void toArmeria(HttpHeadersBuilder builder, Http2Headers headers, boolean endOfStream) {
+        builder.sizeHint(headers.size());
+        builder.endOfStream(endOfStream);
 
         StringJoiner cookieJoiner = null;
         for (Entry<CharSequence, CharSequence> e : headers) {
@@ -541,15 +569,13 @@ public final class ArmeriaHttpUtil {
                 }
                 COOKIE_SPLITTER.split(value).forEach(cookieJoiner::add);
             } else {
-                converted.add(name, convertHeaderValue(name, value));
+                builder.add(name, convertHeaderValue(name, value));
             }
         }
 
         if (cookieJoiner != null && cookieJoiner.length() != 0) {
-            converted.add(HttpHeaderNames.COOKIE, cookieJoiner.toString());
+            builder.add(HttpHeaderNames.COOKIE, cookieJoiner.toString());
         }
-
-        return converted.build();
     }
 
     /**
@@ -561,7 +587,8 @@ public final class ArmeriaHttpUtil {
      * </ul>
      * {@link ExtensionHeaderNames#PATH} is ignored and instead extracted from the {@code Request-Line}.
      */
-    public static RequestHeaders toArmeria(HttpRequest in) throws URISyntaxException {
+    public static RequestHeaders toArmeria(ChannelHandlerContext ctx, HttpRequest in,
+                                           ServerConfig cfg) throws URISyntaxException {
         final URI requestTargetUri = toUri(in);
 
         final io.netty.handler.codec.http.HttpHeaders inHeaders = in.headers();
@@ -576,6 +603,12 @@ public final class ArmeriaHttpUtil {
             // Attempt to take from HOST header before taking from the request-line
             final String host = inHeaders.getAsString(HttpHeaderNames.HOST);
             addHttp2Authority(host == null || host.isEmpty() ? requestTargetUri.getAuthority() : host, out);
+        }
+
+        if (out.authority() == null) {
+            final String defaultHostname = cfg.defaultVirtualHost().defaultHostname();
+            final int port = ((InetSocketAddress) ctx.channel().localAddress()).getPort();
+            out.add(HttpHeaderNames.AUTHORITY, defaultHostname + ':' + port);
         }
 
         // Add the HTTP headers which have not been consumed above

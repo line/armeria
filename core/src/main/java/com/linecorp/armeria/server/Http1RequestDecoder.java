@@ -171,7 +171,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     this.req = req = new DecodedHttpRequest(
                             ctx.channel().eventLoop(),
                             id, 1,
-                            ArmeriaHttpUtil.toArmeria(nettyReq),
+                            ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg),
                             HttpUtil.isKeepAlive(nettyReq),
                             inboundTrafficController,
                             cfg.maxRequestLength());

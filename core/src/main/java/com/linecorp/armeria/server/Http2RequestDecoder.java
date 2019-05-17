@@ -31,7 +31,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.Http2GoAwayHandler;
 import com.linecorp.armeria.internal.InboundTrafficController;
@@ -70,15 +69,18 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     private final ServerConfig cfg;
     private final Channel channel;
     private final Http2ConnectionEncoder writer;
+    private final String scheme;
+
     private final InboundTrafficController inboundTrafficController;
     private final Http2GoAwayHandler goAwayHandler;
     private final IntObjectMap<DecodedHttpRequest> requests = new IntObjectHashMap<>();
     private int nextId;
 
-    Http2RequestDecoder(ServerConfig cfg, Channel channel, Http2ConnectionEncoder writer) {
+    Http2RequestDecoder(ServerConfig cfg, Channel channel, Http2ConnectionEncoder writer, String scheme) {
         this.cfg = cfg;
         this.channel = channel;
         this.writer = writer;
+        this.scheme = scheme;
         inboundTrafficController =
                 InboundTrafficController.ofHttp2(channel, cfg.http2InitialConnectionWindowSize());
         goAwayHandler = new Http2GoAwayHandler();
@@ -130,7 +132,8 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             }
 
             req = new DecodedHttpRequest(ctx.channel().eventLoop(), ++nextId, streamId,
-                                         (RequestHeaders) ArmeriaHttpUtil.toArmeria(headers, true, endOfStream),
+                                         ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, headers, endOfStream,
+                                                                                 scheme, cfg),
                                          true, inboundTrafficController, cfg.maxRequestLength());
 
             // Close the request early when it is sure that there will be

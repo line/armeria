@@ -356,20 +356,20 @@ In this case, the mapper or logger you set for a specific :api:`VirtualHost` wil
 .. code-block:: java
 
     // Using the specific logger name.
-    sb.withVirtualHost("*.example.com")
+    sb.virtualHost("*.example.com")
       .accessLogger("com.example.my.access.logs")
       .and()
     ....
 
     // Using your own logger.
     Logger logger = LoggerFactory.getLogger("com.example2.my.access.logs");
-    sb.withVirtualHost("*.example2.com")
+    sb.virtualHost("*.example2.com")
       .accessLogger(Logger)
       .and()
     ....
 
     // Using the mapper which sets an access logger with the given VirtualHost instance.
-    sb.withVirtualHost("*.example3.com")
+    sb.virtualHost("*.example3.com")
       .accessLogger(virtualHost -> {
         // Return the logger.
         // Do not return null. Otherwise, it will raise an IllegalStateException.
