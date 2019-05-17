@@ -45,6 +45,7 @@ import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingHttpClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.SslContextUtil;
 import com.linecorp.armeria.server.PathMappingContext;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceConfig;
@@ -287,12 +288,13 @@ public final class Flags {
                             .newEngine(ByteBufAllocator.DEFAULT);
                     logger.info("All available SSL protocols: {}",
                                 ImmutableList.copyOf(engine.getSupportedProtocols()));
+                    logger.info("Default enabled SSL protocols: {}", SslContextUtil.DEFAULT_PROTOCOLS);
                     ReferenceCountUtil.release(engine);
                 } catch (SSLException e) {
                     // Just skip it if it doesn't work for some reason.
                 }
                 logger.info("All available SSL ciphers: {}", OpenSsl.availableJavaCipherSuites());
-                logger.info("Default enabled SSL ciphers: {}", Http2SecurityUtil.CIPHERS);
+                logger.info("Default enabled SSL ciphers: {}", SslContextUtil.DEFAULT_CIPHERS);
             }
         }
     }
