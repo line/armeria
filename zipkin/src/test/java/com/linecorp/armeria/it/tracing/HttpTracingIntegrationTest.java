@@ -23,7 +23,9 @@ import static com.google.common.util.concurrent.Futures.transformAsync;
 import static com.linecorp.armeria.common.HttpStatus.OK;
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -49,6 +51,8 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.InvalidResponseHeadersException;
+import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.tracing.HttpTracingClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -81,6 +85,8 @@ public class HttpTracingIntegrationTest {
 
     private HelloService.Iface fooClient;
     private HelloService.Iface fooClientWithoutTracing;
+    private HelloService.Iface timeoutClient;
+    private HelloService.Iface timeoutClientClientTimesOut;
     private HelloService.AsyncIface barClient;
     private HelloService.AsyncIface quxClient;
     private HelloService.Iface zipClient;
@@ -90,6 +96,10 @@ public class HttpTracingIntegrationTest {
     public final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
+            // Our test that triggers a timeout will take a second to run. Hopefully it doesn't cause flakiness
+            // for being too short.
+            sb.requestTimeout(Duration.ofSeconds(1));
+
             sb.service("/foo", decorate("service/foo", THttpService.of(
                     (AsyncIface) (name, resultHandler) ->
                             barClient.hello("Miss. " + name, new DelegatingCallback(resultHandler)))));
@@ -168,6 +178,10 @@ public class HttpTracingIntegrationTest {
                     return res;
                 }
             }));
+
+            sb.service("/timeout", decorate("service/timeout", THttpService.of(
+                    // This service never calls the handler and will timeout.
+                    (AsyncIface) (name, resultHandler) -> {})));
         }
     };
 
@@ -183,6 +197,13 @@ public class HttpTracingIntegrationTest {
         barClient = newClient("/bar");
         quxClient = newClient("/qux");
         poolHttpClient = HttpClient.of(server.uri("/"));
+        timeoutClient = new ClientBuilder(server.uri(BINARY, "/timeout"))
+                .decorator(HttpTracingClient.newDecorator(newTracing("client/timeout")))
+                .build(HelloService.Iface.class);
+        timeoutClientClientTimesOut = new ClientBuilder(server.uri(BINARY, "/timeout"))
+                .decorator(HttpTracingClient.newDecorator(newTracing("client/timeout")))
+                .responseTimeout(Duration.ofMillis(10))
+                .build(HelloService.Iface.class);
     }
 
     @After
@@ -362,6 +383,36 @@ public class HttpTracingIntegrationTest {
         assertThat(Arrays.stream(spans).map(Span::parentId)
                          .filter(Objects::nonNull)
                          .collect(toImmutableSet())).hasSize(1);
+    }
+
+    @Test(timeout = 10000)
+    public void testServerTimesOut() throws Exception {
+        assertThatThrownBy(() -> timeoutClient.hello("name"))
+                .isInstanceOf(InvalidResponseHeadersException.class);
+        final Span[] spans = spanReporter.take(2);
+
+        final Span serverSpan = findSpan(spans, "service/timeout");
+        final Span clientSpan = findSpan(spans, "client/timeout");
+
+        // Server timed out meaning it did still send a timeout response to the client and we have all
+        // annotations.
+        assertThat(serverSpan.annotations()).hasSize(2);
+        assertThat(clientSpan.annotations()).hasSize(2);
+    }
+
+    @Test(timeout = 10000)
+    public void testClientTimesOut() throws Exception {
+        assertThatThrownBy(() -> timeoutClientClientTimesOut.hello("name"))
+                .isInstanceOf(ResponseTimeoutException.class);
+        final Span[] spans = spanReporter.take(2);
+
+        final Span serverSpan = findSpan(spans, "service/timeout");
+        final Span clientSpan = findSpan(spans, "client/timeout");
+
+        // Client timed out, so no response data was ever sent from the server. There is no wire send in the
+        // server and no wire receive in the client.
+        assertThat(serverSpan.annotations()).hasSize(1);
+        assertThat(clientSpan.annotations()).hasSize(1);
     }
 
     private static Span findSpan(Span[] spans, String serviceName) {
