@@ -50,6 +50,8 @@ public final class SystemInfo {
 
     private static final int JAVA_VERSION;
 
+    private static boolean JETTY_ALPN_OPTIONAL_OR_AVAILABLE;
+
     static {
         int javaVersion = -1;
         try {
@@ -94,6 +96,20 @@ public final class SystemInfo {
         }
 
         JAVA_VERSION = javaVersion > 0 ? javaVersion : 8;
+
+        // ALPN check from https://github.com/netty/netty/blob/1065e0f26e0d47a67c479b0fad81efab5d9438d9/handler/src/main/java/io/netty/handler/ssl/JettyAlpnSslEngine.java
+        if (JAVA_VERSION >= 9) {
+            JETTY_ALPN_OPTIONAL_OR_AVAILABLE = true;
+        } else {
+            try {
+                // Always use bootstrap class loader.
+                Class.forName("sun.security.ssl.ALPNExtension", true, null);
+                JETTY_ALPN_OPTIONAL_OR_AVAILABLE = true;
+            } catch (Throwable ignore) {
+                // alpn-boot was not loaded.
+                JETTY_ALPN_OPTIONAL_OR_AVAILABLE = false;
+            }
+        }
     }
 
     /**
@@ -108,6 +124,13 @@ public final class SystemInfo {
      */
     public static String hostname() {
         return Hostname.HOSTNAME;
+    }
+
+    /**
+     * Whether the environment either supports ALPN natively or includes Jetty ALPN.
+     */
+    public static boolean jettyAlpnOptionalOrAvailable() {
+        return JETTY_ALPN_OPTIONAL_OR_AVAILABLE;
     }
 
     /**

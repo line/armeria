@@ -66,6 +66,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
@@ -77,6 +78,7 @@ import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.EpollChannelOption;
+import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.DomainNameMapping;
@@ -1453,6 +1455,15 @@ public final class ServerBuilder {
                 ports = ImmutableList.of(new ServerPort(0, HTTP));
             }
         } else {
+            if ((!OpenSsl.isAvailable() || !Flags.useOpenSsl()) && !SystemInfo.jettyAlpnOptionalOrAvailable()) {
+                throw new IllegalStateException(
+                        "TLS configured but this is Java 8 and neither OpenSSL nor Jetty ALPN could be " +
+                        "detected. To use TLS with Armeria, you must either use Java 9+, enable OpenSSL, " +
+                        "usually by adding a build dependency on the " +
+                        "io.netty:netty-tcnative-boringssl-static artifact or enable Jetty ALPN as described " +
+                        "at https://www.eclipse.org/jetty/documentation/9.4.x/alpn-chapter.html");
+            }
+
             if (!this.ports.isEmpty()) {
                 ports = resolveDistinctPorts(this.ports);
             } else {
