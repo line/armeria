@@ -47,7 +47,7 @@ public final class SslContextUtil {
             ApplicationProtocolNames.HTTP_1_1);
 
     // OpenSSL's default enabled TLSv1.3 ciphers as documented at https://wiki.openssl.org/index.php/TLS1.3
-    private static final List<String> TLS_V13_CIPHERS = ImmutableList.of("TLS_AES_256_GCM_SHA384" ,
+    private static final List<String> TLS_V13_CIPHERS = ImmutableList.of("TLS_AES_256_GCM_SHA384",
                                                                          "TLS_CHACHA20_POLY1305_SHA256",
                                                                          "TLS_AES_128_GCM_SHA256");
 
