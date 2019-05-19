@@ -280,19 +280,14 @@ public final class Flags {
                         Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
 
             if (dumpOpenSslInfo()) {
-                try {
-                    final SSLEngine engine = SslContextBuilder
-                            .forClient()
-                            .ciphers(Http2SecurityUtil.CIPHERS)
-                            .build()
-                            .newEngine(ByteBufAllocator.DEFAULT);
-                    logger.info("All available SSL protocols: {}",
-                                ImmutableList.copyOf(engine.getSupportedProtocols()));
-                    logger.info("Default enabled SSL protocols: {}", SslContextUtil.DEFAULT_PROTOCOLS);
-                    ReferenceCountUtil.release(engine);
-                } catch (SSLException e) {
-                    // Just skip it if it doesn't work for some reason.
-                }
+                final SSLEngine engine = SslContextUtil.createSslContext(
+                        SslContextBuilder::forClient,
+                        false,
+                        unused -> {}).newEngine(ByteBufAllocator.DEFAULT);
+                logger.info("All available SSL protocols: {}",
+                            ImmutableList.copyOf(engine.getSupportedProtocols()));
+                logger.info("Default enabled SSL protocols: {}", SslContextUtil.DEFAULT_PROTOCOLS);
+                ReferenceCountUtil.release(engine);
                 logger.info("All available SSL ciphers: {}", OpenSsl.availableJavaCipherSuites());
                 logger.info("Default enabled SSL ciphers: {}", SslContextUtil.DEFAULT_CIPHERS);
             }
