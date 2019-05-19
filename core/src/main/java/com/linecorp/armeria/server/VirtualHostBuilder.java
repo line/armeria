@@ -248,11 +248,8 @@ public final class VirtualHostBuilder {
             Supplier<SslContextBuilder> builderSupplier,
             Consumer<SslContextBuilder> tlsCustomizer) throws SSLException {
         try {
-            return BouncyCastleKeyFactoryProvider.call(() -> {
-                final SslContextBuilder builder = builderSupplier.get();
-                SslContextUtil.configureDefaults(builder, false, tlsCustomizer);
-                return builder.build();
-            });
+            return BouncyCastleKeyFactoryProvider.call(() -> SslContextUtil.createSslContext(
+                    builderSupplier, false, tlsCustomizer));
         } catch (RuntimeException | SSLException e) {
             throw e;
         } catch (Exception e) {
