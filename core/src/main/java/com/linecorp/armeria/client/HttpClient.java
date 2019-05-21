@@ -149,7 +149,7 @@ public interface HttpClient extends ClientBuilderParams {
      * @param options the {@link ClientOptionValue}s
      */
     static HttpClient of(SessionProtocol protocol, Endpoint endpoint, ClientOptionValue<?>... options) {
-        return of(ClientFactory.DEFAULT, protocol, endpoint, ClientOptions.of(options));
+        return of(ClientFactory.DEFAULT, protocol, endpoint, options);
     }
 
     /**
@@ -162,6 +162,33 @@ public interface HttpClient extends ClientBuilderParams {
      */
     static HttpClient of(SessionProtocol protocol, Endpoint endpoint, ClientOptions options) {
         return of(ClientFactory.DEFAULT, protocol, endpoint, options);
+    }
+
+    /**
+     * Creates a new HTTP client that connects to the specified {@link Endpoint} with
+     * the {@link SessionProtocol} and {@code path} using the default {@link ClientFactory}.
+     *
+     * @param protocol the {@link SessionProtocol} of the {@link Endpoint}
+     * @param endpoint the server {@link Endpoint}
+     * @param path the service {@code path}
+     * @param options the {@link ClientOptionValue}s
+     */
+    static HttpClient of(SessionProtocol protocol, Endpoint endpoint, String path,
+                         ClientOptionValue<?>... options) {
+        return of(ClientFactory.DEFAULT, protocol, endpoint, path, options);
+    }
+
+    /**
+     * Creates a new HTTP client that connects to the specified {@link Endpoint} with
+     * the {@link SessionProtocol} and {@code path} using the default {@link ClientFactory}.
+     *
+     * @param protocol the {@link SessionProtocol} of the {@link Endpoint}
+     * @param endpoint the server {@link Endpoint}
+     * @param path the service {@code path}
+     * @param options the {@link ClientOptionValue}s
+     */
+    static HttpClient of(SessionProtocol protocol, Endpoint endpoint, String path, ClientOptions options) {
+        return of(ClientFactory.DEFAULT, protocol, endpoint, path, options);
     }
 
     /**
@@ -190,6 +217,36 @@ public interface HttpClient extends ClientBuilderParams {
     static HttpClient of(ClientFactory factory, SessionProtocol protocol, Endpoint endpoint,
                          ClientOptions options) {
         return new HttpClientBuilder(protocol, endpoint).factory(factory).options(options).build();
+    }
+
+    /**
+     * Creates a new HTTP client that connects to the specified {@link Endpoint} with
+     * the {@link SessionProtocol} and {@code path} using an alternative {@link ClientFactory}.
+     *
+     * @param factory an alternative {@link ClientFactory}
+     * @param protocol the {@link SessionProtocol} of the {@link Endpoint}
+     * @param endpoint the server {@link Endpoint}
+     * @param path the service {@code path}
+     * @param options the {@link ClientOptionValue}s
+     */
+    static HttpClient of(ClientFactory factory, SessionProtocol protocol, Endpoint endpoint, String path,
+                         ClientOptionValue<?>... options) {
+        return new HttpClientBuilder(protocol, endpoint, path).factory(factory).options(options).build();
+    }
+
+    /**
+     * Creates a new HTTP client that connects to the specified {@link Endpoint} with
+     * the {@link SessionProtocol} and {@code path} using an alternative {@link ClientFactory}.
+     *
+     * @param factory an alternative {@link ClientFactory}
+     * @param protocol the {@link SessionProtocol} of the {@link Endpoint}
+     * @param endpoint the server {@link Endpoint}
+     * @param path the service {@code path}
+     * @param options the {@link ClientOptions}
+     */
+    static HttpClient of(ClientFactory factory, SessionProtocol protocol, Endpoint endpoint, String path,
+                         ClientOptions options) {
+        return new HttpClientBuilder(protocol, endpoint, path).factory(factory).options(options).build();
     }
 
     /**

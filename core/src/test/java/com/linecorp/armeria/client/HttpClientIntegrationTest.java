@@ -624,70 +624,54 @@ class HttpClientIntegrationTest {
     }
 
     @Test
-    void givenHttpClient_thenBuildClient() throws Exception {
-        final URI uri = URI.create(server.httpUri("/"));
-        final Endpoint endpoint = Endpoint.of(uri.getHost()).withDefaultPort(uri.getPort());
-
-        final HttpClient client = HttpClient.of(SessionProtocol.HTTP, endpoint);
-
-        final AggregatedHttpMessage response = client.get("/hello/world").aggregate().get();
-
-        assertEquals("success", response.contentUtf8());
-    }
-
-    @Test
-    void givenHttpClinetBuilder_thenBuildClient() throws Exception {
-        final URI uri = URI.create(server.httpUri("/"));
-        final Endpoint endpoint = Endpoint.of(uri.getHost()).withDefaultPort(uri.getPort());
-
-        final HttpClient client = new HttpClientBuilder(SessionProtocol.HTTP, endpoint).build();
-
-        final AggregatedHttpMessage response = client.get("/hello/world").aggregate().get();
-
-        assertEquals("success", response.contentUtf8());
-    }
-
-    @Test
-    void givenClientFactory_thenBuildClient() throws Exception {
-        final URI uri = URI.create(server.httpUri("/"));
-        final Endpoint endpoint = Endpoint.of(uri.getHost())
-                                          .withDefaultPort(uri.getPort());
-
-        final Scheme scheme = Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP);
-        final ClientFactory factory = new ClientFactoryBuilder().build();
-        final HttpClient client = factory.newClient(scheme, endpoint, HttpClient.class);
-
-        final AggregatedHttpMessage response = client.get("/hello/world").aggregate().get();
-
-        assertEquals("success", response.contentUtf8());
-    }
-
-    @Test
     void givenClients_thenBuildClient() throws Exception {
-        final URI uri = URI.create(server.httpUri("/"));
-        final Endpoint endpoint = Endpoint.of(uri.getHost())
-                                          .withDefaultPort(uri.getPort());
-
+        final Endpoint endpoint = newEndpoint();
         final Scheme scheme = Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP);
-        final HttpClient client = Clients.newClient(scheme, endpoint, HttpClient.class);
 
-        final AggregatedHttpMessage response = client.get("/hello/world").aggregate().get();
+        // with ClientOptionValues
+        HttpClient client = Clients.newClient(scheme, endpoint, HttpClient.class);
+        AggregatedHttpMessage response = client.get("/hello/world").aggregate().get();
+
+        assertEquals("success", response.contentUtf8());
+
+        // with ClientOptions
+        client = Clients.newClient(scheme, endpoint, HttpClient.class, ClientOptions.DEFAULT);
+        response = client.get("/hello/world").aggregate().get();
+
+        assertEquals("success", response.contentUtf8());
+
+        // with Path and ClientOptions
+        client = Clients.newClient(scheme, endpoint, "/hello", HttpClient.class, ClientOptions.DEFAULT);
+        response = client.get("/world").aggregate().get();
 
         assertEquals("success", response.contentUtf8());
     }
 
     @Test
-    void givenClientBuilder_thenBuildClient() throws Exception {
-        final URI uri = URI.create(server.httpUri("/"));
-        final Endpoint endpoint = Endpoint.of(uri.getHost())
-                                          .withDefaultPort(uri.getPort());
+    void givenHttpClient_thenBuildClient() throws Exception {
+        final Endpoint endpoint = newEndpoint();
 
-        final ClientFactory factory = new ClientFactoryBuilder().build();
-        final HttpClient client = new ClientBuilder("none+http", endpoint).factory(factory)
-                                                                          .build(HttpClient.class);
-
-        final AggregatedHttpMessage response = client.get("/hello/world").aggregate().get();
+        // with ClientOptionValues
+        HttpClient client = HttpClient.of(SessionProtocol.HTTP, endpoint);
+        AggregatedHttpMessage response = client.get("/hello/world").aggregate().get();
 
         assertEquals("success", response.contentUtf8());
+
+        // with ClientOptions
+        client = HttpClient.of(SessionProtocol.HTTP, endpoint, ClientOptions.DEFAULT);
+        response = client.get("/hello/world").aggregate().get();
+
+        assertEquals("success", response.contentUtf8());
+
+        // with Path and ClientOptions
+        client = HttpClient.of(SessionProtocol.HTTP, endpoint, "hello", ClientOptions.DEFAULT);
+        response = client.get("/world").aggregate().get();
+
+        assertEquals("success", response.contentUtf8());
+    }
+
+    private static Endpoint newEndpoint() {
+        final URI uri = URI.create(server.httpUri("/"));
+        return Endpoint.of(uri.getHost()).withDefaultPort(uri.getPort());
     }
 }

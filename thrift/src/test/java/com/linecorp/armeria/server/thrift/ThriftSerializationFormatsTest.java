@@ -23,6 +23,7 @@ import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.JSON
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.TEXT;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -36,11 +37,14 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import com.linecorp.armeria.client.ClientOption;
+import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
@@ -169,5 +173,36 @@ public class ThriftSerializationFormatsTest {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
             }
         }
+    }
+
+    @Test
+    public void givenClients_whenBinary_thenBuildClient() throws Exception {
+        // with ClientOptionValues
+        HelloService.Iface client = Clients.newClient(SessionProtocol.HTTP, BINARY, newEndpoint(BINARY),
+                                                      "/hello", HelloService.Iface.class);
+        assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
+
+        // with ClientOptions
+        client = Clients.newClient(SessionProtocol.HTTP, BINARY, newEndpoint(BINARY), "/hello",
+                                   HelloService.Iface.class, ClientOptions.DEFAULT);
+        assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
+    }
+
+    @Test
+    public void givenClients_whenText_thenBuildClient() throws Exception {
+        // with ClientOptionValues
+        HelloService.Iface client = Clients.newClient(SessionProtocol.HTTP, TEXT, newEndpoint(TEXT),
+                                                      "/hello", HelloService.Iface.class);
+        assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
+
+        // with ClientOptions
+        client = Clients.newClient(SessionProtocol.HTTP, TEXT, newEndpoint(TEXT), "/hello",
+                                   HelloService.Iface.class, ClientOptions.DEFAULT);
+        assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
+    }
+
+    private static Endpoint newEndpoint(SerializationFormat format) {
+        final URI uri = URI.create(server.uri(format, "/"));
+        return Endpoint.of(uri.getHost()).withDefaultPort(uri.getPort());
     }
 }

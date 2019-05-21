@@ -61,6 +61,8 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
     private final Scheme scheme;
     @Nullable
     private final Endpoint endpoint;
+    @Nullable
+    private final String path;
     private ClientFactory factory = ClientFactory.DEFAULT;
 
     /**
@@ -74,7 +76,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
      * Creates a new {@link ClientBuilder} that builds the client that connects to the specified {@link URI}.
      */
     public ClientBuilder(URI uri) {
-        this(requireNonNull(uri), null, null);
+        this(requireNonNull(uri, "uri"), null, null, null);
     }
 
     /**
@@ -107,13 +109,48 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
      * {@link Endpoint} with the {@link Scheme}.
      */
     public ClientBuilder(Scheme scheme, Endpoint endpoint) {
-        this(null, requireNonNull(scheme, "scheme"), requireNonNull(endpoint, "endpoint"));
+        this(null, requireNonNull(scheme, "scheme"), requireNonNull(endpoint, "endpoint"), "");
     }
 
-    private ClientBuilder(URI uri, Scheme scheme, Endpoint endpoint) {
+    /**
+     * Creates a new {@link ClientBuilder} that builds the client that connects to the specified
+     * {@link Endpoint} with the {@link SessionProtocol}, {@link SerializationFormat}, and {@code path}.
+     */
+    public ClientBuilder(SessionProtocol protocol, SerializationFormat format, Endpoint endpoint, String path) {
+        this(Scheme.of(format, protocol), requireNonNull(endpoint, "endpoint"), requireNonNull(path, "path"));
+    }
+
+    /**
+     * Creates a new {@link ClientBuilder} that builds the HTTP client that connects to the specified
+     * {@link Endpoint} with the {@link SessionProtocol} and {@code path}.
+     */
+    public ClientBuilder(SessionProtocol protocol, Endpoint endpoint, String path) {
+        this(requireNonNull(protocol, "protocol"), SerializationFormat.NONE,
+             requireNonNull(endpoint, "endpoint"), requireNonNull(path, "path"));
+    }
+
+    /**
+     * Creates a new {@link ClientBuilder} that builds the client that connects to the specified
+     * {@link Endpoint} with the {@code scheme} and {@code path}.
+     */
+    public ClientBuilder(String scheme, Endpoint endpoint, String path) {
+        this(Scheme.parse(scheme), requireNonNull(endpoint, "endpoint"), requireNonNull(path, "path"));
+    }
+
+    /**
+     * Creates a new {@link ClientBuilder} that builds the client that connects to the specified
+     * {@link Endpoint} with the {@link Scheme} and {@code path}.
+     */
+    public ClientBuilder(Scheme scheme, Endpoint endpoint, String path) {
+        this(null, requireNonNull(scheme, "scheme"), requireNonNull(endpoint, "endpoint"),
+             requireNonNull(path, "path"));
+    }
+
+    private ClientBuilder(URI uri, Scheme scheme, Endpoint endpoint, String path) {
         this.uri = uri;
         this.scheme = scheme;
         this.endpoint = endpoint;
+        this.path = path;
     }
 
     /**
@@ -138,7 +175,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
         if (uri != null) {
             return factory.newClient(uri, clientType, buildOptions());
         } else {
-            return factory.newClient(scheme, endpoint, clientType, buildOptions());
+            return factory.newClient(scheme, endpoint, path, clientType, buildOptions());
         }
     }
 }

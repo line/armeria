@@ -41,6 +41,8 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
     private final Scheme scheme;
     @Nullable
     private final Endpoint endpoint;
+    @Nullable
+    private final String path;
     private ClientFactory factory = ClientFactory.DEFAULT;
 
     /**
@@ -64,6 +66,7 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
         this.uri = URI.create(SerializationFormat.NONE + "+" + uri);
         scheme = null;
         endpoint = null;
+        path = null;
     }
 
     /**
@@ -73,6 +76,16 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
      *                                  in {@link SessionProtocol}
      */
     public HttpClientBuilder(SessionProtocol sessionProtocol, Endpoint endpoint) {
+        this(sessionProtocol, endpoint, "");
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields
+     *                                  in {@link SessionProtocol}
+     */
+    public HttpClientBuilder(SessionProtocol sessionProtocol, Endpoint endpoint, String path) {
         final Scheme scheme = Scheme.of(SerializationFormat.NONE, sessionProtocol);
         if (scheme == null) {
             throw new IllegalArgumentException("scheme: " + SerializationFormat.NONE.uriText() + '+' +
@@ -82,6 +95,7 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
         uri = null;
         this.scheme = scheme;
         this.endpoint = requireNonNull(endpoint, "endpoint");
+        this.path = path;
     }
 
     private static void validateScheme(String scheme) {
@@ -113,7 +127,7 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
         if (uri != null) {
             return factory.newClient(uri, HttpClient.class, buildOptions());
         } else {
-            return factory.newClient(scheme, endpoint, HttpClient.class, buildOptions());
+            return factory.newClient(scheme, endpoint, path, HttpClient.class, buildOptions());
         }
     }
 }

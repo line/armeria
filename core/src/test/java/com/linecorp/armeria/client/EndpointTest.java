@@ -277,6 +277,12 @@ public class EndpointTest {
         assertThat(ipv6WithHostName.withDefaultPort(80).toUri("none+h2").toString())
                 .isEqualTo("none+h2://google.com:80");
 
+        final Endpoint naver = Endpoint.of("naver.com");
+        assertThat(naver.toUri("none+https", "/hello").toString())
+                .isEqualTo("none+https://naver.com/hello");
+        assertThat(naver.toUri(SessionProtocol.HTTPS, SerializationFormat.NONE, "hello").toString())
+                .isEqualTo("none+https://naver.com/hello");
+
         assertThatThrownBy(() -> group.toUri("http://www.badguys.com"))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> group.toUri(SessionProtocol.H1, SerializationFormat.THRIFT_JSON))

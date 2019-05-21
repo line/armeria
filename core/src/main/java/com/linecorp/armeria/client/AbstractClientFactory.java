@@ -75,6 +75,43 @@ public abstract class AbstractClientFactory implements ClientFactory {
     }
 
     /**
+     * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme} using
+     * the default {@link ClientFactory}.
+     *
+     * @param scheme the {@link Scheme} for the {@code endpoint}
+     * @param endpoint the server {@link Endpoint}
+     * @param clientType the type of the new client
+     * @param options the {@link ClientOptions}
+     */
+    @Override
+    public final <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType, ClientOptions options) {
+        requireNonNull(scheme, "scheme");
+        requireNonNull(endpoint, "endpoint");
+        requireNonNull(options, "options");
+        return newClient(scheme, endpoint, "", clientType, options);
+    }
+
+    /**
+     * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme}
+     * and {@code path} using the default {@link ClientFactory}.
+     *
+     * @param scheme the {@link Scheme} for the {@code endpoint}
+     * @param endpoint the server {@link Endpoint}
+     * @param path the service {@code path}
+     * @param clientType the type of the new client
+     * @param options the {@link ClientOptionValue}s
+     */
+    @Override
+    public final <T> T newClient(Scheme scheme, Endpoint endpoint, String path, Class<T> clientType,
+                                 ClientOptionValue<?>... options) {
+        requireNonNull(scheme, "scheme");
+        requireNonNull(endpoint, "endpoint");
+        requireNonNull(path, "path");
+        requireNonNull(options, "options");
+        return newClient(scheme, endpoint, path, clientType, ClientOptions.of(options));
+    }
+
+    /**
      * Makes sure the scheme of the specified {@link URI} is supported by this {@link ClientFactory}.
      *
      * @param uri the {@link URI} of the server endpoint

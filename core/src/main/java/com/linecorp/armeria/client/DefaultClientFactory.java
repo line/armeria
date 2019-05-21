@@ -129,9 +129,11 @@ final class DefaultClientFactory extends AbstractClientFactory {
     }
 
     @Override
-    public <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType, ClientOptions options) {
+    public <T> T newClient(Scheme scheme, Endpoint endpoint, String path, Class<T> clientType,
+                           ClientOptions options) {
         final Scheme validatedScheme = validateScheme(scheme);
-        return clientFactories.get(validatedScheme).newClient(validatedScheme, endpoint, clientType, options);
+        return clientFactories.get(validatedScheme)
+                              .newClient(validatedScheme, endpoint, path, clientType, options);
     }
 
     @Override

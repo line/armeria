@@ -438,7 +438,7 @@ public final class Endpoint implements Comparable<Endpoint> {
     }
 
     /**
-     * Converts this endpoint into a URI using the {@code scheme}.
+     * Converts this endpoint into an URI using the {@code scheme}.
      *
      * @param scheme the {@code scheme} for {@link URI}.
      *
@@ -451,7 +451,22 @@ public final class Endpoint implements Comparable<Endpoint> {
     }
 
     /**
-     * Converts this endpoint into a URI using the {@link SessionProtocol} and {@link SerializationFormat}.
+     * Converts this endpoint into an URI using the {@code scheme} and {@code path}.
+     *
+     * @param scheme the {@code scheme} for {@link URI}.
+     * @param path the {@code path} for {@link URI}.
+     *
+     * @return the URI
+     */
+    public URI toUri(String scheme, String path) {
+        requireNonNull(scheme, "scheme");
+        requireNonNull(path, "path");
+
+        return toUri(Scheme.parse(scheme), path);
+    }
+
+    /**
+     * Converts this endpoint into an URI using the {@link SessionProtocol} and {@link SerializationFormat}.
      *
      * @param sessionProtocol the {@link SessionProtocol} for {@link URI}.
      * @param serializationFormat the {@link SerializationFormat} for {@link URI}
@@ -466,7 +481,25 @@ public final class Endpoint implements Comparable<Endpoint> {
     }
 
     /**
-     * Converts this endpoint into a URI using the {@link Scheme}.
+     * Converts this endpoint into an URI using the {@link SessionProtocol}, {@link SerializationFormat}
+     * and {@code path}.
+     *
+     * @param sessionProtocol the {@link SessionProtocol} for {@link URI}.
+     * @param serializationFormat the {@link SerializationFormat} for {@link URI}
+     * @param path the {@code path} for {@link URI}.
+     *
+     * @return the URI
+     */
+    public URI toUri(SessionProtocol sessionProtocol, SerializationFormat serializationFormat, String path) {
+        requireNonNull(serializationFormat, "serializationFormat");
+        requireNonNull(sessionProtocol, "sessionProtocol");
+        requireNonNull(path, "path");
+
+        return toUri(Scheme.of(serializationFormat, sessionProtocol), path);
+    }
+
+    /**
+     * Converts this endpoint into an URI using the {@link Scheme}.
      *
      * @param scheme the {@link Scheme} for {@link URI}.
      *
@@ -474,8 +507,30 @@ public final class Endpoint implements Comparable<Endpoint> {
      */
     public URI toUri(Scheme scheme) {
         requireNonNull(scheme, "scheme");
+        return toUri(scheme, "");
+    }
 
-        return URI.create(scheme.uriText() + "://" + authority());
+    /**
+     * Converts this endpoint into an URI using the {@link Scheme} and the {@code path}.
+     *
+     * @param scheme the {@link Scheme} for {@link URI}.
+     * @param path the {@code path} for {@link URI}.
+     *
+     * @return the URI
+     */
+    public URI toUri(Scheme scheme, String path) {
+        requireNonNull(scheme, "scheme");
+        requireNonNull(path, "path");
+
+        if (path.isEmpty()) {
+            return URI.create(scheme.uriText() + "://" + authority());
+        }
+
+        if (!path.startsWith("/")) {
+            path = '/' + path;
+        }
+
+        return URI.create(scheme.uriText() + "://" + authority() + path);
     }
 
     private void ensureGroup() {
