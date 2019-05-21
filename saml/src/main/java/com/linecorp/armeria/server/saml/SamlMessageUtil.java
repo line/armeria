@@ -118,7 +118,8 @@ final class SamlMessageUtil {
         try {
             return XMLObjectSupport.unmarshallFromInputStream(parserPool, is);
         } catch (XMLParserException | UnmarshallingException e) {
-            throw new SamlException("failed to deserialize an XML document bytes into a SAML object", e);
+            throw new InvalidSamlRequestException(
+                    "failed to deserialize an XML document bytes into a SAML object", e);
         }
     }
 
@@ -162,14 +163,14 @@ final class SamlMessageUtil {
 
         final Signature signature = signableObj.getSignature();
         if (signature == null) {
-            throw new SamlException("failed to validate a signature because no signature exists");
+            throw new InvalidSamlRequestException("failed to validate a signature because no signature exists");
         }
 
         try {
             signatureProfileValidator.validate(signature);
             SignatureValidator.validate(signature, validationCredential);
         } catch (SignatureException e) {
-            throw new SamlException("failed to validate a signature", e);
+            throw new InvalidSamlRequestException("failed to validate a signature", e);
         }
     }
 

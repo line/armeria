@@ -109,7 +109,8 @@ final class HttpPostBindingUtil {
         try {
             decoded = Base64.getMimeDecoder().decode(parameters.getFirstValue(name));
         } catch (IllegalArgumentException e) {
-            throw new SamlException("failed to decode a base64 string of the parameter: " + name, e);
+            throw new InvalidSamlRequestException(
+                    "failed to decode a base64 string of the parameter: " + name, e);
         }
 
         @SuppressWarnings("unchecked")
