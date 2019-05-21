@@ -172,7 +172,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                 final HttpHeaders additionalHeaders = reqCtx.additionalResponseHeaders();
                 final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
 
-                ResponseHeadersBuilder newHeaders = fillAdditionalHeaders(headers, additionalHeaders);
+                final ResponseHeadersBuilder newHeaders = fillAdditionalHeaders(headers, additionalHeaders);
                 if (endOfStream && !additionalTrailers.isEmpty()) {
                     newHeaders.setIfAbsent(additionalTrailers);
                 }
