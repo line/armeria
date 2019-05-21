@@ -178,7 +178,10 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                 }
 
                 if (newHeaders.contains(HttpHeaderNames.CONTENT_LENGTH) &&
-                    !reqCtx.additionalResponseTrailers().isEmpty()) {
+                    !additionalTrailers.isEmpty()) {
+                    // We don't apply chunked encoding when the content-length header is set, which would
+                    // prevent the trailers from being sent so we go ahead and remove content-length to force
+                    // chunked encoding.
                     newHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
                 }
 
