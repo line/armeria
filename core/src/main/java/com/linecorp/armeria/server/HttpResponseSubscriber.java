@@ -173,6 +173,26 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                 final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
 
                 final ResponseHeadersBuilder newHeaders = fillAdditionalHeaders(headers, additionalHeaders);
+
+                if (req.method() == HttpMethod.HEAD) {
+                    // HEAD responses always close the stream with the initial headers, even if not explicitly
+                    // set.
+                    endOfStream = true;
+                } else {
+                    final int statusCode = status.code();
+                    switch (statusCode) {
+                        case 204:
+                        case 205:
+                        case 304:
+                            // These responses are not allowed to have content so we always close the stream even if
+                            // not explicitly set.
+                            endOfStream = true;
+                            break;
+                        default:
+                            state = State.NEEDS_DATA_OR_TRAILING_HEADERS;
+                    }
+                }
+
                 if (endOfStream && !additionalTrailers.isEmpty()) {
                     newHeaders.setIfAbsent(additionalTrailers);
                 }
@@ -189,25 +209,6 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                 logBuilder().responseHeaders(headers);
                 o = headers;
 
-                if (req.method() == HttpMethod.HEAD) {
-                    // HEAD responses always close the stream with the initial headers, even if not explicitly
-                    // set.
-                    endOfStream = true;
-                    break;
-                }
-
-                final int statusCode = status.code();
-                switch (statusCode) {
-                    case 204:
-                    case 205:
-                    case 304:
-                        // These responses are not allowed to have content so we always close the stream even if
-                        // not explicitly set.
-                        endOfStream = true;
-                        break;
-                    default:
-                        state = State.NEEDS_DATA_OR_TRAILING_HEADERS;
-                }
                 break;
             }
             case NEEDS_DATA_OR_TRAILING_HEADERS: {

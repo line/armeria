@@ -326,7 +326,7 @@ public class GrpcServiceServerTest {
     private static final ServerInterceptor REPLACE_EXCEPTION = new ServerInterceptor() {
         @Override
         public <REQ, RESP> Listener<REQ> interceptCall(ServerCall<REQ, RESP> call, Metadata headers,
-                                                          ServerCallHandler<REQ, RESP> next) {
+                                                       ServerCallHandler<REQ, RESP> next) {
             if (!call.getMethodDescriptor().equals(UnitTestServiceGrpc.getErrorReplaceExceptionMethod())) {
                 return next.startCall(call, headers);
             }
