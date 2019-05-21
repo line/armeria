@@ -170,7 +170,13 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                 }
 
                 final HttpHeaders additionalHeaders = reqCtx.additionalResponseHeaders();
-                final ResponseHeadersBuilder newHeaders = fillAdditionalHeaders(headers, additionalHeaders);
+                final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
+
+                ResponseHeadersBuilder newHeaders = fillAdditionalHeaders(headers, additionalHeaders);
+                if (endOfStream && !additionalTrailers.isEmpty()) {
+                    newHeaders.setIfAbsent(additionalTrailers);
+                }
+
                 if (newHeaders.contains(HttpHeaderNames.CONTENT_LENGTH) &&
                     !reqCtx.additionalResponseTrailers().isEmpty()) {
                     newHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);

@@ -26,6 +26,7 @@ import static org.awaitility.Awaitility.await;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
@@ -53,6 +54,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.StringValue;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
@@ -96,6 +98,7 @@ import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
 import com.linecorp.armeria.internal.grpc.StreamRecorder;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
@@ -105,6 +108,7 @@ import io.grpc.ForwardingServerCall.SimpleForwardingServerCall;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Metadata;
+import io.grpc.Metadata.Key;
 import io.grpc.ServerCall;
 import io.grpc.ServerCall.Listener;
 import io.grpc.ServerCallHandler;
@@ -114,6 +118,7 @@ import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
+import io.grpc.protobuf.ProtoUtils;
 import io.grpc.protobuf.services.ProtoReflectionService;
 import io.grpc.reflection.v1alpha.ServerReflectionGrpc;
 import io.grpc.reflection.v1alpha.ServerReflectionGrpc.ServerReflectionStub;
@@ -129,6 +134,10 @@ import io.netty.util.AttributeKey;
 public class GrpcServiceServerTest {
 
     private static final int MAX_MESSAGE_SIZE = 16 * 1024 * 1024;
+
+    private static final Key<StringValue> ERROR_METADATA_KEY =
+            ProtoUtils.keyForProto(StringValue.getDefaultInstance());
+    private static final AsciiString ERROR_METADATA_HEADER = HttpHeaderNames.of(ERROR_METADATA_KEY.name());
 
     private static AsciiString LARGE_PAYLOAD;
 
@@ -298,6 +307,19 @@ public class GrpcServiceServerTest {
         public void errorReplaceException(SimpleRequest request,
                                           StreamObserver<SimpleResponse> responseObserver) {
             responseObserver.onError(new IllegalStateException("This error should be replaced"));
+        }
+
+        @Override
+        public void errorAdditionalMetadata(SimpleRequest request,
+                                            StreamObserver<SimpleResponse> responseObserver) {
+            ServiceRequestContext ctx = RequestContext.current();
+            ctx.addAdditionalResponseTrailer(
+                    ERROR_METADATA_HEADER,
+                    Base64.getEncoder().encodeToString(StringValue.newBuilder()
+                                                                  .setValue("an error occurred")
+                                                                  .build()
+                                                                  .toByteArray()));
+            responseObserver.onError(new IllegalStateException("This error should have metadata"));
         }
     }
 
@@ -1050,6 +1072,19 @@ public class GrpcServiceServerTest {
         assertThatThrownBy(() -> blockingClient.errorReplaceException(SimpleRequest.getDefaultInstance()))
                 .isInstanceOf(StatusRuntimeException.class)
                 .hasMessage("UNKNOWN: Error was replaced");
+
+        requestLogQueue.take();
+    }
+
+    @Test
+    public void errorAdditionalMetadata() throws Exception {
+        Throwable t = catchThrowable(
+                () -> blockingClient.errorAdditionalMetadata(SimpleRequest.getDefaultInstance()));
+        assertThat(t).isInstanceOfSatisfying(StatusRuntimeException.class, error -> {
+            assertThat(error).hasMessage("UNKNOWN");
+            assertThat(error.getTrailers().keys()).contains(ERROR_METADATA_HEADER.toString());
+            assertThat(error.getTrailers().get(ERROR_METADATA_KEY).getValue()).isEqualTo("an error occurred");
+        });
 
         requestLogQueue.take();
     }
