@@ -169,11 +169,6 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                     break;
                 }
 
-                final HttpHeaders additionalHeaders = reqCtx.additionalResponseHeaders();
-                final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
-
-                final ResponseHeadersBuilder newHeaders = fillAdditionalHeaders(headers, additionalHeaders);
-
                 if (req.method() == HttpMethod.HEAD) {
                     // HEAD responses always close the stream with the initial headers, even if not explicitly
                     // set.
@@ -184,14 +179,19 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                         case 204:
                         case 205:
                         case 304:
-                            // These responses are not allowed to have content so we always close the stream even if
-                            // not explicitly set.
+                            // These responses are not allowed to have content so we always close the stream
+                            // even if not explicitly set.
                             endOfStream = true;
                             break;
                         default:
                             state = State.NEEDS_DATA_OR_TRAILING_HEADERS;
                     }
                 }
+
+                final HttpHeaders additionalHeaders = reqCtx.additionalResponseHeaders();
+                final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
+
+                final ResponseHeadersBuilder newHeaders = fillAdditionalHeaders(headers, additionalHeaders);
 
                 if (endOfStream && !additionalTrailers.isEmpty()) {
                     newHeaders.setIfAbsent(additionalTrailers);
