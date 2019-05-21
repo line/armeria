@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.grpc;
 import static com.linecorp.armeria.internal.grpc.GrpcTestUtil.REQUEST_MESSAGE;
 import static com.linecorp.armeria.internal.grpc.GrpcTestUtil.RESPONSE_MESSAGE;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.assertj.core.api.Assertions.entry;
 import static org.awaitility.Awaitility.await;
@@ -100,8 +101,15 @@ import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.grpc.Codec;
 import io.grpc.DecompressorRegistry;
+import io.grpc.ForwardingServerCall.SimpleForwardingServerCall;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.Metadata;
+import io.grpc.ServerCall;
+import io.grpc.ServerCall.Listener;
+import io.grpc.ServerCallHandler;
+import io.grpc.ServerInterceptor;
+import io.grpc.ServerInterceptors;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.grpc.StatusException;
@@ -285,7 +293,33 @@ public class GrpcServiceServerTest {
             ((ServerCallStreamObserver<?>) responseObserver).setOnCancelHandler(() -> COMPLETED.set(true));
             responseObserver.onNext(SimpleResponse.getDefaultInstance());
         }
+
+        @Override
+        public void errorReplaceException(SimpleRequest request,
+                                          StreamObserver<SimpleResponse> responseObserver) {
+            responseObserver.onError(new IllegalStateException("This error should be replaced"));
+        }
     }
+
+    private static final ServerInterceptor REPLACE_EXCEPTION = new ServerInterceptor() {
+        @Override
+        public <REQ, RESP> Listener<REQ> interceptCall(ServerCall<REQ, RESP> call, Metadata headers,
+                                                          ServerCallHandler<REQ, RESP> next) {
+            if (!call.getMethodDescriptor().equals(UnitTestServiceGrpc.getErrorReplaceExceptionMethod())) {
+                return next.startCall(call, headers);
+            }
+            return next.startCall(new SimpleForwardingServerCall<REQ, RESP>(call) {
+                @Override
+                public void close(Status status, Metadata trailers) {
+                    if (status.getCause() instanceof IllegalStateException &&
+                        status.getCause().getMessage().equals("This error should be replaced")) {
+                        status = status.withDescription("Error was replaced");
+                    }
+                    delegate().close(status, trailers);
+                }
+            }, headers);
+        }
+    };
 
     private static final BlockingQueue<RequestLog> requestLogQueue = new LinkedTransferQueue<>();
 
@@ -299,7 +333,8 @@ public class GrpcServiceServerTest {
             sb.service(
                     new GrpcServiceBuilder()
                             .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
-                            .addService(new UnitTestServiceImpl())
+                            .addService(ServerInterceptors.intercept(
+                                    new UnitTestServiceImpl(), REPLACE_EXCEPTION))
                             .enableUnframedRequests(true)
                             .supportedSerializationFormats(GrpcSerializationFormats.values())
                             .build(),
@@ -336,7 +371,8 @@ public class GrpcServiceServerTest {
 
             sb.serviceUnder("/", new GrpcServiceBuilder()
                     .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
-                    .addService(new UnitTestServiceImpl())
+                    .addService(ServerInterceptors.intercept(
+                            new UnitTestServiceImpl(), REPLACE_EXCEPTION))
                     .enableUnframedRequests(true)
                     .supportedSerializationFormats(GrpcSerializationFormats.values())
                     .useBlockingTaskExecutor(true)
@@ -1007,6 +1043,15 @@ public class GrpcServiceServerTest {
                     assertThat(response.get().getListServicesResponse().getServiceList())
                             .hasSizeGreaterThanOrEqualTo(2);
                 });
+    }
+
+    @Test
+    public void replaceException() throws Exception {
+        assertThatThrownBy(() -> blockingClient.errorReplaceException(SimpleRequest.getDefaultInstance()))
+                .isInstanceOf(StatusRuntimeException.class)
+                .hasMessage("UNKNOWN: Error was replaced");
+
+        requestLogQueue.take();
     }
 
     private static void checkRequestLog(RequestLogChecker checker) throws Exception {
