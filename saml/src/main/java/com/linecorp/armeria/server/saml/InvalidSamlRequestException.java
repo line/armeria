@@ -18,7 +18,7 @@ package com.linecorp.armeria.server.saml;
 import javax.annotation.Nullable;
 
 /**
- * Indicates that a SAML request is not valid so that its problem should be propagated to the sender.
+ * Indicates that a SAML request is not valid.
  */
 public class InvalidSamlRequestException extends SamlException {
 
