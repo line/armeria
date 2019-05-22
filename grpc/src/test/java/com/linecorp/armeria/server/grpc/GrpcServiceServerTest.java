@@ -312,7 +312,7 @@ public class GrpcServiceServerTest {
         @Override
         public void errorAdditionalMetadata(SimpleRequest request,
                                             StreamObserver<SimpleResponse> responseObserver) {
-            ServiceRequestContext ctx = RequestContext.current();
+            final ServiceRequestContext ctx = RequestContext.current();
             ctx.addAdditionalResponseTrailer(
                     ERROR_METADATA_HEADER,
                     Base64.getEncoder().encodeToString(StringValue.newBuilder()
@@ -1078,7 +1078,7 @@ public class GrpcServiceServerTest {
 
     @Test
     public void errorAdditionalMetadata() throws Exception {
-        Throwable t = catchThrowable(
+        final Throwable t = catchThrowable(
                 () -> blockingClient.errorAdditionalMetadata(SimpleRequest.getDefaultInstance()));
         assertThat(t).isInstanceOfSatisfying(StatusRuntimeException.class, error -> {
             assertThat(error).hasMessage("UNKNOWN");
