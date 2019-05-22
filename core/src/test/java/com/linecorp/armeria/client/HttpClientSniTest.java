@@ -25,7 +25,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -119,7 +119,7 @@ public class HttpClientSniTest {
     private static String get(String fqdn) throws Exception {
         final HttpClient client = HttpClient.of(clientFactory, "https://" + fqdn + ':' + httpsPort);
 
-        final AggregatedHttpMessage response = client.get("/").aggregate().get();
+        final AggregatedHttpResponse response = client.get("/").aggregate().get();
 
         assertEquals(HttpStatus.OK, response.status());
         return response.contentUtf8();
@@ -128,7 +128,7 @@ public class HttpClientSniTest {
     @Test
     public void testCustomAuthority() throws Exception {
         final HttpClient client = HttpClient.of(clientFactory, "https://127.0.0.1:" + httpsPort);
-        final AggregatedHttpMessage response =
+        final AggregatedHttpResponse response =
                 client.execute(RequestHeaders.of(HttpMethod.GET, "/",
                                                  HttpHeaderNames.AUTHORITY, "a.com:" + httpsPort))
                       .aggregate().get();
@@ -141,7 +141,7 @@ public class HttpClientSniTest {
     public void testCustomAuthorityWithAdditionalHeaders() throws Exception {
         final HttpClient client = HttpClient.of(clientFactory, "https://127.0.0.1:" + httpsPort);
         try (SafeCloseable unused = Clients.withHttpHeader(HttpHeaderNames.AUTHORITY, "a.com:" + httpsPort)) {
-            final AggregatedHttpMessage response = client.get("/").aggregate().get();
+            final AggregatedHttpResponse response = client.get("/").aggregate().get();
             assertEquals(HttpStatus.OK, response.status());
             assertEquals("a.com: CN=a.com", response.contentUtf8());
         }

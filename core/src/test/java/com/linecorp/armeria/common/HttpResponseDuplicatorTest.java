@@ -19,12 +19,12 @@ package com.linecorp.armeria.common;
 import static com.linecorp.armeria.common.HttpHeaderNames.VARY;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class HttpResponseDuplicatorTest {
+class HttpResponseDuplicatorTest {
 
     @Test
-    public void aggregateTwice() {
+    void aggregateTwice() {
         final HttpResponseWriter publisher = HttpResponse.streaming();
         final HttpResponseDuplicator resDuplicator = new HttpResponseDuplicator(publisher);
 
@@ -35,8 +35,8 @@ public class HttpResponseDuplicatorTest {
         publisher.write(HttpData.ofUtf8("awesome!"));
         publisher.close();
 
-        final AggregatedHttpMessage res1 = resDuplicator.duplicateStream().aggregate().join();
-        final AggregatedHttpMessage res2 = resDuplicator.duplicateStream().aggregate().join();
+        final AggregatedHttpResponse res1 = resDuplicator.duplicateStream().aggregate().join();
+        final AggregatedHttpResponse res2 = resDuplicator.duplicateStream().aggregate().join();
 
         assertThat(res1.status()).isEqualTo(HttpStatus.OK);
         assertThat(res1.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);

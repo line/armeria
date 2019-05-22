@@ -19,9 +19,9 @@ package com.linecorp.armeria.server.grpc;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -38,18 +38,18 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 
 // Tests error cases, success cases are checked in ArmeriaGrpcServiceInteropTest
-public class GrpcServiceTest {
+class GrpcServiceTest {
 
     private final GrpcService grpcService = (GrpcService) new GrpcServiceBuilder()
             .addService(mock(TestServiceImplBase.class))
             .build();
 
     @Test
-    public void missingContentType() throws Exception {
+    void missingContentType() throws Exception {
         final HttpRequest req = HttpRequest.of(HttpMethod.POST, "/grpc.testing.TestService.UnaryCall");
         final ServiceRequestContext ctx = ServiceRequestContext.of(req);
         final HttpResponse response = grpcService.doPost(ctx, req);
-        assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
+        assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpResponse.of(
                 ResponseHeaders.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
                                    HttpHeaderNames.CONTENT_LENGTH, 39),
@@ -57,13 +57,13 @@ public class GrpcServiceTest {
     }
 
     @Test
-    public void badContentType() throws Exception {
+    void badContentType() throws Exception {
         final HttpRequest req = HttpRequest.of(
                 RequestHeaders.of(HttpMethod.POST, "/grpc.testing.TestService.UnaryCall",
                                   HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8));
         final ServiceRequestContext ctx = ServiceRequestContext.of(req);
         final HttpResponse response = grpcService.doPost(ctx, req);
-        assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
+        assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpResponse.of(
                 ResponseHeaders.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
                                    HttpHeaderNames.CONTENT_LENGTH, 39),
@@ -71,7 +71,7 @@ public class GrpcServiceTest {
     }
 
     @Test
-    public void pathMissingSlash() throws Exception {
+    void pathMissingSlash() throws Exception {
         final HttpRequest req = HttpRequest.of(
                 RequestHeaders.of(HttpMethod.POST, "/grpc.testing.TestService.UnaryCall",
                                   HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto"));
@@ -80,7 +80,7 @@ public class GrpcServiceTest {
                                                                       .pathMappingResult(pathMappingResult)
                                                                       .build();
         final HttpResponse response = grpcService.doPost(ctx, req);
-        assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
+        assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpResponse.of(
                 ResponseHeaders.of(HttpStatus.BAD_REQUEST,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
                                    HttpHeaderNames.CONTENT_LENGTH, 13),
@@ -88,7 +88,7 @@ public class GrpcServiceTest {
     }
 
     @Test
-    public void missingMethod() throws Exception {
+    void missingMethod() throws Exception {
         final HttpRequest req = HttpRequest.of(
                 RequestHeaders.of(HttpMethod.POST, "/grpc.testing.TestService/FooCall",
                                   HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto"));
@@ -97,7 +97,7 @@ public class GrpcServiceTest {
                                                                       .pathMappingResult(pathMappingResult)
                                                                       .build();
         final HttpResponse response = grpcService.doPost(ctx, req);
-        assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
+        assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpResponse.of(
                 ResponseHeaders.builder(HttpStatus.OK)
                                .endOfStream(true)
                                .add(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto")
@@ -109,7 +109,7 @@ public class GrpcServiceTest {
     }
 
     @Test
-    public void pathMappings() throws Exception {
+    void pathMappings() throws Exception {
         assertThat(grpcService.pathMappings())
                 .containsExactlyInAnyOrder(
                         PathMapping.ofExact("/armeria.grpc.testing.TestService/EmptyCall"),

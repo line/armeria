@@ -49,7 +49,7 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.client.ClientOptionsBuilder;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -108,7 +108,7 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
 
     @Test
     public void testHealth() throws Exception {
-        final AggregatedHttpMessage res = client.get("/internal/actuator/health").aggregate().get();
+        final AggregatedHttpResponse res = client.get("/internal/actuator/health").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
 
         final Map<String, Object> values = OBJECT_MAPPER.readValue(res.content().array(), JSON_MAP);
@@ -118,7 +118,7 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
     @Test
     public void testLoggers() throws Exception {
         final String loggerPath = "/internal/actuator/loggers/" + TEST_LOGGER_NAME;
-        AggregatedHttpMessage res = client.get(loggerPath).aggregate().get();
+        AggregatedHttpResponse res = client.get(loggerPath).aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
 
         Map<String, Object> values = OBJECT_MAPPER.readValue(res.content().array(), JSON_MAP);
@@ -140,7 +140,7 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
 
     @Test
     public void testPrometheus() throws Exception {
-        final AggregatedHttpMessage res = client.get("/internal/actuator/prometheus").aggregate().get();
+        final AggregatedHttpResponse res = client.get("/internal/actuator/prometheus").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentType()).isEqualTo(MediaType.parse(TextFormat.CONTENT_TYPE_004));
         assertThat(res.contentAscii()).startsWith("# HELP ");
@@ -181,7 +181,7 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
 
     @Test
     public void testLinks() throws Exception {
-        final AggregatedHttpMessage res = client.get("/internal/actuator").aggregate().get();
+        final AggregatedHttpResponse res = client.get("/internal/actuator").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         final Map<String, Object> values = OBJECT_MAPPER.readValue(res.content().array(), JSON_MAP);
         assertThat(values).containsKey("_links");
@@ -190,7 +190,7 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
     @Test
     public void testMissingMediaType() throws Exception {
         final String loggerPath = "/internal/actuator/loggers/" + TEST_LOGGER_NAME;
-        final AggregatedHttpMessage res =
+        final AggregatedHttpResponse res =
                 client.execute(RequestHeaders.of(HttpMethod.POST, loggerPath),
                                OBJECT_MAPPER.writeValueAsBytes(ImmutableMap.of("configuredLevel", "info")))
                       .aggregate().get();
@@ -200,7 +200,7 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
     @Test
     public void testInvalidMediaType() throws Exception {
         final String loggerPath = "/internal/actuator/loggers/" + TEST_LOGGER_NAME;
-        final AggregatedHttpMessage res =
+        final AggregatedHttpResponse res =
                 client.execute(RequestHeaders.of(HttpMethod.POST, loggerPath,
                                                  HttpHeaderNames.CONTENT_TYPE, MediaType.PROTOBUF),
                                OBJECT_MAPPER.writeValueAsBytes(ImmutableMap.of("configuredLevel", "info")))

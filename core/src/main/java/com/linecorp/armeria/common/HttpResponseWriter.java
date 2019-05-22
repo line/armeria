@@ -196,21 +196,11 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
 
     /**
      * Writes the specified HTTP response and closes the stream.
-     *
-     * @deprecated Use {@link #close(AggregatedHttpMessage)}.
      */
-    @Deprecated
-    default void respond(AggregatedHttpMessage res) {
-        close(res);
-    }
-
-    /**
-     * Writes the specified HTTP response and closes the stream.
-     */
-    default void close(AggregatedHttpMessage res) {
+    default void close(AggregatedHttpResponse res) {
         requireNonNull(res, "res");
 
-        final ResponseHeaders headers = ResponseHeaders.of(res.headers());
+        final ResponseHeaders headers = res.headers();
         final HttpStatus status = headers.status();
         final HttpData content = res.content();
         final HttpHeaders trailingHeaders = res.trailingHeaders();

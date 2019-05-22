@@ -41,7 +41,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -112,9 +112,9 @@ public class ArmeriaSslConfigurationTest {
     private void verify(SessionProtocol protocol) {
         final HttpResponse response = HttpClient.of(clientFactory, newUrl(protocol)).get("/ok");
 
-        final AggregatedHttpMessage msg = response.aggregate().join();
-        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
-        assertThat(msg.contentUtf8()).isEqualTo("ok");
+        final AggregatedHttpResponse res = response.aggregate().join();
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentUtf8()).isEqualTo("ok");
     }
 
     @Test

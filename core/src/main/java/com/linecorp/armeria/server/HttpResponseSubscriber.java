@@ -27,7 +27,7 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -54,10 +54,10 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
     private static final Logger logger = LoggerFactory.getLogger(HttpResponseSubscriber.class);
 
-    private static final AggregatedHttpMessage INTERNAL_SERVER_ERROR_MESSAGE =
-            AggregatedHttpMessage.of(HttpStatus.INTERNAL_SERVER_ERROR);
-    private static final AggregatedHttpMessage SERVICE_UNAVAILABLE_MESSAGE =
-            AggregatedHttpMessage.of(HttpStatus.SERVICE_UNAVAILABLE);
+    private static final AggregatedHttpResponse INTERNAL_SERVER_ERROR_MESSAGE =
+            AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
+    private static final AggregatedHttpResponse SERVICE_UNAVAILABLE_MESSAGE =
+            AggregatedHttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
 
     enum State {
         NEEDS_HEADERS,
@@ -245,19 +245,19 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
             // If timeout occurs, respond with 503 Service Unavailable.
             ((HttpResponseException) cause).httpResponse()
                                            .aggregate(ctx.executor())
-                                           .handleAsync((message, throwable) -> {
+                                           .handleAsync((res, throwable) -> {
                                                if (throwable != null) {
                                                    failAndRespond(throwable,
                                                                   INTERNAL_SERVER_ERROR_MESSAGE,
                                                                   Http2Error.CANCEL);
                                                } else {
-                                                   failAndRespond(cause, message, Http2Error.CANCEL);
+                                                   failAndRespond(cause, res, Http2Error.CANCEL);
                                                }
                                                return null;
                                            }, ctx.executor());
         } else if (cause instanceof HttpStatusException) {
             failAndRespond(cause,
-                           AggregatedHttpMessage.of(((HttpStatusException) cause).httpStatus()),
+                           AggregatedHttpResponse.of(((HttpStatusException) cause).httpStatus()),
                            Http2Error.CANCEL);
         } else if (cause instanceof AbortedStreamException) {
             // One of the two cases:
@@ -364,11 +364,11 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         return oldState;
     }
 
-    private void failAndRespond(Throwable cause, AggregatedHttpMessage message, Http2Error error) {
-        final HttpHeaders headers = message.headers();
-        final HttpData content = message.content();
+    private void failAndRespond(Throwable cause, AggregatedHttpResponse res, Http2Error error) {
+        final ResponseHeaders headers = res.headers();
+        final HttpData content = res.content();
 
-        logBuilder().responseHeaders((ResponseHeaders) headers);
+        logBuilder().responseHeaders(headers);
         logBuilder().increaseResponseLength(content);
 
         final State oldState = setDone();

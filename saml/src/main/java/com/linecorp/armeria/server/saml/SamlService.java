@@ -34,7 +34,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -144,13 +144,13 @@ final class SamlService implements ServiceWithPathMappings<HttpRequest, HttpResp
                                    DATA_INCORRECT_PATH);
         }
 
-        final CompletionStage<AggregatedHttpMessage> f;
+        final CompletionStage<AggregatedHttpRequest> f;
         if (portConfigHolder.isDone()) {
             f = req.aggregate();
         } else {
             f = portConfigHolder.future().thenCompose(unused -> req.aggregate());
         }
-        return HttpResponse.from(f.handle((msg, cause) -> {
+        return HttpResponse.from(f.handle((aggregatedReq, cause) -> {
             if (cause != null) {
                 logger.warn("{} Failed to aggregate a SAML request.", ctx, cause);
                 return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
@@ -174,7 +174,7 @@ final class SamlService implements ServiceWithPathMappings<HttpRequest, HttpResp
             // Use user-specified hostname if it exists.
             // If there's no hostname set by a user, the default virtual hostname will be used.
             final String defaultHostname = firstNonNull(sp.hostname(), ctx.virtualHost().defaultHostname());
-            return func.serve(ctx, msg, defaultHostname, portConfig);
+            return func.serve(ctx, aggregatedReq, defaultHostname, portConfig);
         }));
     }
 
@@ -185,18 +185,18 @@ final class SamlService implements ServiceWithPathMappings<HttpRequest, HttpResp
         private final Map<String, List<String>> parameters;
 
         /**
-         * Creates a {@link SamlParameters} instance with the specified {@link AggregatedHttpMessage}.
+         * Creates a {@link SamlParameters} instance with the specified {@link AggregatedHttpRequest}.
          */
-        SamlParameters(AggregatedHttpMessage msg) {
-            requireNonNull(msg, "msg");
-            final MediaType contentType = msg.contentType();
+        SamlParameters(AggregatedHttpRequest req) {
+            requireNonNull(req, "req");
+            final MediaType contentType = req.contentType();
 
             final QueryStringDecoder decoder;
             if (contentType != null && contentType.belongsTo(MediaType.FORM_DATA)) {
-                final String query = msg.content(contentType.charset().orElse(StandardCharsets.UTF_8));
+                final String query = req.content(contentType.charset().orElse(StandardCharsets.UTF_8));
                 decoder = new QueryStringDecoder(query, false);
             } else {
-                final String path = msg.path();
+                final String path = req.path();
                 assert path != null : "path";
                 decoder = new QueryStringDecoder(path, true);
             }

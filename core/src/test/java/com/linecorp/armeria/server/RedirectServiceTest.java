@@ -24,7 +24,7 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -275,10 +275,10 @@ public class RedirectServiceTest {
 
         final HttpClient client = HttpClient.of(serverRule1.uri("/"));
         for (int i = 0; i < testPaths.length; ++i) {
-            AggregatedHttpMessage msg = client.get(testPaths[i]).aggregate().get();
-            assertThat(msg.status()).isEqualTo(redirectStatuses[i]);
+            AggregatedHttpResponse res = client.get(testPaths[i]).aggregate().get();
+            assertThat(res.status()).isEqualTo(redirectStatuses[i]);
 
-            final String newLocation = msg.headers().get(HttpHeaderNames.LOCATION);
+            final String newLocation = res.headers().get(HttpHeaderNames.LOCATION);
             assertThat(newLocation).isEqualTo(expectedLocations[i]);
 
             if (expectedResponse[i] == null) {
@@ -287,13 +287,13 @@ public class RedirectServiceTest {
 
             if (newLocation.startsWith("http")) {
                 final HttpClient client2 = HttpClient.of(newLocation);
-                msg = client2.get("").aggregate().get();
+                res = client2.get("").aggregate().get();
             } else {
-                msg = client.get(newLocation).aggregate().get();
+                res = client.get(newLocation).aggregate().get();
             }
 
-            assertThat(msg.status()).isEqualTo(HttpStatus.OK);
-            assertThat(msg.contentUtf8()).isEqualTo(expectedResponse[i]);
+            assertThat(res.status()).isEqualTo(HttpStatus.OK);
+            assertThat(res.contentUtf8()).isEqualTo(expectedResponse[i]);
         }
         serverRule1.stop();
     }
@@ -371,14 +371,14 @@ public class RedirectServiceTest {
         serverRule2c.start();
 
         final HttpClient client = HttpClient.of(serverRule2c.uri("/"));
-        AggregatedHttpMessage msg = client.get("/test1a/qwe/asd/zxc").aggregate().get();
-        assertThat(msg.status()).isEqualTo(HttpStatus.TEMPORARY_REDIRECT);
+        AggregatedHttpResponse res = client.get("/test1a/qwe/asd/zxc").aggregate().get();
+        assertThat(res.status()).isEqualTo(HttpStatus.TEMPORARY_REDIRECT);
 
-        final String newLocation = msg.headers().get(HttpHeaderNames.LOCATION);
+        final String newLocation = res.headers().get(HttpHeaderNames.LOCATION);
         assertThat(newLocation).isEqualTo("/new1/null/new1/null/new1/null");
 
-        msg = client.get(newLocation).aggregate().get();
-        assertThat(msg.status()).isEqualTo(HttpStatus.NOT_FOUND);
+        res = client.get(newLocation).aggregate().get();
+        assertThat(res.status()).isEqualTo(HttpStatus.NOT_FOUND);
 
         serverRule2c.stop();
     }

@@ -29,7 +29,7 @@ import javax.annotation.Nullable;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
 
-final class HttpResponseAggregator extends HttpMessageAggregator {
+final class HttpResponseAggregator extends HttpMessageAggregator<AggregatedHttpResponse> {
 
     @Nullable
     private List<ResponseHeaders> informationals; // needs aggregation as well
@@ -39,7 +39,7 @@ final class HttpResponseAggregator extends HttpMessageAggregator {
 
     private boolean receivedMessageHeaders;
 
-    HttpResponseAggregator(CompletableFuture<AggregatedHttpMessage> future,
+    HttpResponseAggregator(CompletableFuture<AggregatedHttpResponse> future,
                            @Nullable ByteBufAllocator alloc) {
         super(future, alloc);
         trailingHeaders = HttpHeaders.of();
@@ -91,10 +91,10 @@ final class HttpResponseAggregator extends HttpMessageAggregator {
     }
 
     @Override
-    protected AggregatedHttpMessage onSuccess(HttpData content) {
+    protected AggregatedHttpResponse onSuccess(HttpData content) {
         checkState(headers != null, "An aggregated message does not have headers.");
-        return AggregatedHttpMessage.of(firstNonNull(informationals, Collections.emptyList()),
-                                        headers, content, trailingHeaders);
+        return AggregatedHttpResponse.of(firstNonNull(informationals, Collections.emptyList()),
+                                         headers, content, trailingHeaders);
     }
 
     @Override

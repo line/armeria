@@ -23,7 +23,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -168,7 +168,7 @@ public class AnnotatedHttpServiceDecorationTest {
     public void testDecoratingAnnotatedService() throws Exception {
         final HttpClient client = HttpClient.of(rule.uri("/"));
 
-        AggregatedHttpMessage response;
+        AggregatedHttpResponse response;
 
         response = client.execute(RequestHeaders.of(HttpMethod.GET, "/1/ok")).aggregate().get();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);

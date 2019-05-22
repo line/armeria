@@ -46,7 +46,7 @@ import io.netty.util.concurrent.EventExecutor;
 public interface HttpResponse extends Response, StreamMessage<HttpObject> {
 
     // Note: Ensure we provide the same set of `of()` methods with the `of()` methods of
-    //       AggregatedHttpMessage for consistency.
+    //       AggregatedHttpResponse for consistency.
 
     /**
      * Creates a new HTTP response that can stream an arbitrary number of {@link HttpObject} to the client.
@@ -112,11 +112,8 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * @param content the content of the response
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, CharSequence content) {
-        if (content instanceof String) {
-            return of(status, mediaType, (String) content);
-        }
-
         requireNonNull(mediaType, "mediaType");
+        requireNonNull(content, "content");
         return of(status, mediaType,
                   HttpData.of(mediaType.charset().orElse(StandardCharsets.UTF_8), content));
     }
@@ -129,6 +126,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, String content) {
         requireNonNull(mediaType, "mediaType");
+        requireNonNull(content, "content");
         return of(status, mediaType,
                   HttpData.of(mediaType.charset().orElse(StandardCharsets.UTF_8), content));
     }
@@ -199,6 +197,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * @param content the content of the response
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, byte[] content) {
+        requireNonNull(content, "content");
         return of(status, mediaType, HttpData.of(content));
     }
 
@@ -211,6 +210,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * @param length the length of {@code content}
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, byte[] content, int offset, int length) {
+        requireNonNull(content, "content");
         return of(status, mediaType, HttpData.of(content, offset, length));
     }
 
@@ -264,16 +264,6 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         requireNonNull(content, "content");
         requireNonNull(trailingHeaders, "trailingHeaders");
 
-        final HttpStatus status = headers.status();
-
-        // From the section 8.1.2.4 of RFC 7540:
-        //// For HTTP/2 responses, a single :status pseudo-header field is defined that carries the HTTP status
-        //// code field (see [RFC7231], Section 6). This pseudo-header field MUST be included in all responses;
-        //// otherwise, the response is malformed (Section 8.1.2.6).
-        if (status == null) {
-            throw new IllegalStateException("not a response (missing :status)");
-        }
-
         final ResponseHeaders newHeaders = setOrRemoveContentLength(headers, content, trailingHeaders);
         if (content.isEmpty() && trailingHeaders.isEmpty()) {
             ReferenceCountUtil.safeRelease(content);
@@ -299,13 +289,13 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Converts the {@link AggregatedHttpMessage} into a new complete {@link HttpResponse}.
+     * Converts the {@link AggregatedHttpResponse} into a new complete {@link HttpResponse}.
      */
-    static HttpResponse of(AggregatedHttpMessage res) {
+    static HttpResponse of(AggregatedHttpResponse res) {
         requireNonNull(res, "res");
 
         final List<ResponseHeaders> informationals = res.informationals();
-        final ResponseHeaders headers = ResponseHeaders.of(res.headers());
+        final ResponseHeaders headers = res.headers();
         final HttpData content = res.content();
         final HttpHeaders trailingHeaders = res.trailingHeaders();
 
@@ -370,8 +360,8 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailing headers of the response are received fully.
      */
-    default CompletableFuture<AggregatedHttpMessage> aggregate() {
-        final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
+    default CompletableFuture<AggregatedHttpResponse> aggregate() {
+        final CompletableFuture<AggregatedHttpResponse> future = new CompletableFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, null);
         completionFuture().handle(aggregator);
         subscribe(aggregator);
@@ -382,8 +372,8 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailing headers of the response are received fully.
      */
-    default CompletableFuture<AggregatedHttpMessage> aggregate(EventExecutor executor) {
-        final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
+    default CompletableFuture<AggregatedHttpResponse> aggregate(EventExecutor executor) {
+        final CompletableFuture<AggregatedHttpResponse> future = new CompletableFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, null);
         completionFuture().handleAsync(aggregator, executor);
         subscribe(aggregator, executor);
@@ -392,13 +382,13 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
 
     /**
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailing headers of the response are received fully. {@link AggregatedHttpMessage#content()} will
+     * the trailing headers of the response are received fully. {@link AggregatedHttpResponse#content()} will
      * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
      * use {@link #aggregate()}.
      */
-    default CompletableFuture<AggregatedHttpMessage> aggregateWithPooledObjects(ByteBufAllocator alloc) {
+    default CompletableFuture<AggregatedHttpResponse> aggregateWithPooledObjects(ByteBufAllocator alloc) {
         requireNonNull(alloc, "alloc");
-        final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
+        final CompletableFuture<AggregatedHttpResponse> future = new CompletableFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, alloc);
         completionFuture().handle(aggregator);
         subscribe(aggregator, true);
@@ -407,15 +397,15 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
 
     /**
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailing headers of the request is received fully. {@link AggregatedHttpMessage#content()} will
+     * the trailing headers of the request is received fully. {@link AggregatedHttpResponse#content()} will
      * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
      * use {@link #aggregate()}.
      */
-    default CompletableFuture<AggregatedHttpMessage> aggregateWithPooledObjects(
+    default CompletableFuture<AggregatedHttpResponse> aggregateWithPooledObjects(
             EventExecutor executor, ByteBufAllocator alloc) {
         requireNonNull(executor, "executor");
         requireNonNull(alloc, "alloc");
-        final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
+        final CompletableFuture<AggregatedHttpResponse> future = new CompletableFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, alloc);
         completionFuture().handleAsync(aggregator, executor);
         subscribe(aggregator, executor, true);

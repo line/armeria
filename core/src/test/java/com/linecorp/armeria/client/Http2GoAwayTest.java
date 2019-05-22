@@ -37,7 +37,7 @@ import org.junit.rules.Timeout;
 
 import com.google.common.io.ByteStreams;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 
 import io.netty.buffer.ByteBuf;
@@ -64,7 +64,7 @@ public class Http2GoAwayTest {
             final int port = ss.getLocalPort();
 
             final HttpClient client = HttpClient.of(clientFactory, "h2c://127.0.0.1:" + port);
-            final CompletableFuture<AggregatedHttpMessage> future = client.get("/").aggregate();
+            final CompletableFuture<AggregatedHttpResponse> future = client.get("/").aggregate();
 
             try (Socket s = ss.accept()) {
 
@@ -110,7 +110,7 @@ public class Http2GoAwayTest {
             final int port = ss.getLocalPort();
 
             final HttpClient client = HttpClient.of(clientFactory, "h2c://127.0.0.1:" + port);
-            final CompletableFuture<AggregatedHttpMessage> future = client.get("/").aggregate();
+            final CompletableFuture<AggregatedHttpResponse> future = client.get("/").aggregate();
 
             try (Socket s = ss.accept()) {
 
@@ -157,7 +157,7 @@ public class Http2GoAwayTest {
             final int port = ss.getLocalPort();
 
             final HttpClient client = HttpClient.of(clientFactory, "h2c://127.0.0.1:" + port);
-            final CompletableFuture<AggregatedHttpMessage> future1 = client.get("/").aggregate();
+            final CompletableFuture<AggregatedHttpResponse> future1 = client.get("/").aggregate();
             try (Socket s = ss.accept()) {
 
                 final InputStream in = s.getInputStream();
@@ -168,7 +168,7 @@ public class Http2GoAwayTest {
                 assertThat(readFrame(in).getByte(3)).isEqualTo(Http2FrameTypes.HEADERS);
 
                 // Send the second request.
-                final CompletableFuture<AggregatedHttpMessage> future2 = client.get("/").aggregate();
+                final CompletableFuture<AggregatedHttpResponse> future2 = client.get("/").aggregate();
 
                 // Read a HEADERS frame for the second request.
                 assertThat(readFrame(in).getByte(3)).isEqualTo(Http2FrameTypes.HEADERS);

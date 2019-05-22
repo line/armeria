@@ -31,7 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 
 import reactor.core.publisher.Mono;
 
@@ -71,7 +71,7 @@ public class ArmeriaClientAutoConfigurationTest {
     @Test
     public void shouldGetHelloFromRestController() throws Exception {
         final HttpClient client = HttpClient.of("http://127.0.0.1:" + port);
-        final AggregatedHttpMessage response = client.get("/proxy?port=" + port).aggregate().join();
+        final AggregatedHttpResponse response = client.get("/proxy?port=" + port).aggregate().join();
         assertThat(response.contentUtf8()).isEqualTo("hello");
     }
 }

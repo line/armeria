@@ -48,7 +48,7 @@ import io.netty.util.concurrent.EventExecutor;
 public interface HttpRequest extends Request, StreamMessage<HttpObject> {
 
     // Note: Ensure we provide the same set of `of()` methods with the `of()` methods of
-    //       AggregatedHttpMessage for consistency.
+    //       AggregatedHttpRequest for consistency.
 
     /**
      * Creates a new HTTP request that can be used to stream an arbitrary number of {@link HttpObject}
@@ -90,10 +90,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * @param content the content of the request
      */
     static HttpRequest of(HttpMethod method, String path, MediaType mediaType, CharSequence content) {
-        if (content instanceof String) {
-            return of(method, path, mediaType, (String) content);
-        }
-
         requireNonNull(content, "content");
         requireNonNull(mediaType, "mediaType");
         return of(method, path, mediaType,
@@ -246,8 +242,8 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * {@code objs} must not contain {@link RequestHeaders}.
      */
     static HttpRequest of(RequestHeaders headers, HttpObject... objs) {
-        if (Arrays.stream(objs).anyMatch(obj -> obj instanceof HttpHeaders)) {
-            throw new IllegalArgumentException("objs contains Headers, which is not allowed.");
+        if (Arrays.stream(objs).anyMatch(obj -> obj instanceof RequestHeaders)) {
+            throw new IllegalArgumentException("objs contains RequestHeaders, which is not allowed.");
         }
         switch (objs.length) {
             case 0:
@@ -262,9 +258,9 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     }
 
     /**
-     * Converts the {@link AggregatedHttpMessage} into a new {@link HttpRequest} and closes the stream.
+     * Converts the {@link AggregatedHttpRequest} into a new {@link HttpRequest} and closes the stream.
      */
-    static HttpRequest of(AggregatedHttpMessage message) {
+    static HttpRequest of(AggregatedHttpRequest message) {
         return of(RequestHeaders.of(message.headers()), message.content(), message.trailingHeaders());
     }
 
@@ -367,8 +363,8 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
      * the trailing headers of the request is received fully.
      */
-    default CompletableFuture<AggregatedHttpMessage> aggregate() {
-        final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
+    default CompletableFuture<AggregatedHttpRequest> aggregate() {
+        final CompletableFuture<AggregatedHttpRequest> future = new CompletableFuture<>();
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, null);
         completionFuture().handle(aggregator);
         subscribe(aggregator);
@@ -379,9 +375,9 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
      * the trailing headers of the request is received fully.
      */
-    default CompletableFuture<AggregatedHttpMessage> aggregate(EventExecutor executor) {
+    default CompletableFuture<AggregatedHttpRequest> aggregate(EventExecutor executor) {
         requireNonNull(executor, "executor");
-        final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
+        final CompletableFuture<AggregatedHttpRequest> future = new CompletableFuture<>();
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, null);
         completionFuture().handleAsync(aggregator, executor);
         subscribe(aggregator, executor);
@@ -390,13 +386,13 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
 
     /**
      * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailing headers of the request is received fully. {@link AggregatedHttpMessage#content()} will
+     * the trailing headers of the request is received fully. {@link AggregatedHttpRequest#content()} will
      * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
      * use {@link #aggregate()}.
      */
-    default CompletableFuture<AggregatedHttpMessage> aggregateWithPooledObjects(ByteBufAllocator alloc) {
+    default CompletableFuture<AggregatedHttpRequest> aggregateWithPooledObjects(ByteBufAllocator alloc) {
         requireNonNull(alloc, "alloc");
-        final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
+        final CompletableFuture<AggregatedHttpRequest> future = new CompletableFuture<>();
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, alloc);
         completionFuture().handle(aggregator);
         subscribe(aggregator, true);
@@ -405,15 +401,15 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
 
     /**
      * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailing headers of the request is received fully. {@link AggregatedHttpMessage#content()} will
+     * the trailing headers of the request is received fully. {@link AggregatedHttpRequest#content()} will
      * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
      * use {@link #aggregate()}.
      */
-    default CompletableFuture<AggregatedHttpMessage> aggregateWithPooledObjects(
+    default CompletableFuture<AggregatedHttpRequest> aggregateWithPooledObjects(
             EventExecutor executor, ByteBufAllocator alloc) {
         requireNonNull(executor, "executor");
         requireNonNull(alloc, "alloc");
-        final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
+        final CompletableFuture<AggregatedHttpRequest> future = new CompletableFuture<>();
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, alloc);
         completionFuture().handleAsync(aggregator, executor);
         subscribe(aggregator, executor, true);

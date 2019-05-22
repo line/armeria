@@ -25,7 +25,7 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -74,9 +74,9 @@ public class UnframedGrpcServiceTest {
     public void statusOk() throws Exception {
         final UnframedGrpcService unframedGrpcService = buildUnframedGrpcService(testService);
         final HttpResponse response = unframedGrpcService.serve(ctx, request);
-        final AggregatedHttpMessage aggregatedHttpMessage = response.aggregate().get();
-        assertThat(aggregatedHttpMessage.status()).isEqualTo(HttpStatus.OK);
-        assertThat(aggregatedHttpMessage.contentUtf8()).isEqualTo("{}");
+        final AggregatedHttpResponse res = response.aggregate().get();
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentUtf8()).isEqualTo("{}");
     }
 
     @Test
@@ -87,9 +87,9 @@ public class UnframedGrpcServiceTest {
                 .emptyCall(any(), any());
         final UnframedGrpcService unframedGrpcService = buildUnframedGrpcService(spyTestService);
         final HttpResponse response = unframedGrpcService.serve(ctx, request);
-        final AggregatedHttpMessage aggregatedHttpMessage = response.aggregate().get();
-        assertThat(aggregatedHttpMessage.status()).isEqualTo(HttpStatus.CLIENT_CLOSED_REQUEST);
-        assertThat(aggregatedHttpMessage.contentUtf8())
+        final AggregatedHttpResponse res = response.aggregate().get();
+        assertThat(res.status()).isEqualTo(HttpStatus.CLIENT_CLOSED_REQUEST);
+        assertThat(res.contentUtf8())
                 .isEqualTo("http-status: 499, Client Closed Request\n" +
                            "Caused by: \n" +
                            "grpc-status: 1, CANCELLED, grpc error message");
@@ -105,9 +105,9 @@ public class UnframedGrpcServiceTest {
             }
         });
         final HttpResponse response = unframedGrpcService.serve(ctx, request);
-        final AggregatedHttpMessage aggregatedHttpMessage = response.aggregate().get();
-        assertThat(aggregatedHttpMessage.status()).isEqualTo(HttpStatus.OK);
-        assertThat(aggregatedHttpMessage.content().isEmpty()).isTrue();
+        final AggregatedHttpResponse res = response.aggregate().get();
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.content().isEmpty()).isTrue();
     }
 
     private static UnframedGrpcService buildUnframedGrpcService(BindableService bindableService) {

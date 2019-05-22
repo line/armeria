@@ -41,7 +41,8 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
@@ -188,7 +189,7 @@ public class AnnotatedHttpService implements HttpService {
             } else if (arg instanceof Class) {
                 final Class<?> clazz = (Class<?>) arg;
                 if (HttpResponse.class.isAssignableFrom(clazz) ||
-                    AggregatedHttpMessage.class.isAssignableFrom(clazz)) {
+                    AggregatedHttpRequest.class.isAssignableFrom(clazz)) {
                     logger.warn("{} in the return type '{}' may take precedence over {}.",
                                 clazz.getSimpleName(), returnType, HttpResult.class.getSimpleName());
                 }
@@ -223,7 +224,7 @@ public class AnnotatedHttpService implements HttpService {
      * {@link HttpResponse}, it will be executed in the blocking task executor.
      */
     private CompletionStage<HttpResponse> serve0(ServiceRequestContext ctx, HttpRequest req) {
-        final CompletableFuture<AggregatedHttpMessage> f =
+        final CompletableFuture<AggregatedHttpRequest> f =
                 aggregationRequired(aggregationStrategy, req) ? req.aggregate()
                                                               : CompletableFuture.completedFuture(null);
 
@@ -251,9 +252,10 @@ public class AnnotatedHttpService implements HttpService {
     /**
      * Invokes the service method with arguments.
      */
-    private Object invoke(ServiceRequestContext ctx, HttpRequest req, @Nullable AggregatedHttpMessage message) {
+    private Object invoke(ServiceRequestContext ctx, HttpRequest req,
+                          @Nullable AggregatedHttpRequest aggregatedRequest) {
         try (SafeCloseable ignored = ctx.push(false)) {
-            final ResolverContext resolverContext = new ResolverContext(ctx, req, message);
+            final ResolverContext resolverContext = new ResolverContext(ctx, req, aggregatedRequest);
             final Object[] arguments = toArguments(resolvers, resolverContext);
             return method.invoke(object, arguments);
         } catch (Throwable cause) {
@@ -284,8 +286,8 @@ public class AnnotatedHttpService implements HttpService {
         if (result instanceof HttpResponse) {
             return new ExceptionFilteredHttpResponse(ctx, req, (HttpResponse) result, exceptionHandler);
         }
-        if (result instanceof AggregatedHttpMessage) {
-            return HttpResponse.of((AggregatedHttpMessage) result);
+        if (result instanceof AggregatedHttpResponse) {
+            return HttpResponse.of((AggregatedHttpResponse) result);
         }
         if (result instanceof CompletionStage) {
             return HttpResponse.from(

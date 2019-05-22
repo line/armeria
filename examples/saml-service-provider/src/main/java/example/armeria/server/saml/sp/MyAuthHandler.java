@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Strings;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
@@ -66,7 +66,7 @@ final class MyAuthHandler implements Authorizer<HttpRequest>, SamlSingleSignOnHa
      * browser via {@code Set-Cookie} header.
      */
     @Override
-    public HttpResponse loginSucceeded(ServiceRequestContext ctx, AggregatedHttpMessage req,
+    public HttpResponse loginSucceeded(ServiceRequestContext ctx, AggregatedHttpRequest req,
                                        MessageContext<Response> message, @Nullable String sessionIndex,
                                        @Nullable String relayState) {
         final String username =
@@ -95,7 +95,7 @@ final class MyAuthHandler implements Authorizer<HttpRequest>, SamlSingleSignOnHa
      * Invoked when a single sign-on request is rejected from the identity provider.
      */
     @Override
-    public HttpResponse loginFailed(ServiceRequestContext ctx, AggregatedHttpMessage req,
+    public HttpResponse loginFailed(ServiceRequestContext ctx, AggregatedHttpRequest req,
                                     @Nullable MessageContext<Response> message, Throwable cause) {
         return HttpResponse.of(HttpStatus.UNAUTHORIZED, MediaType.HTML_UTF_8,
                                "<html><body>Login failed.</body></html>");

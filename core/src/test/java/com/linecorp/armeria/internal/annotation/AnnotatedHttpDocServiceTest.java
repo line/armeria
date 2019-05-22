@@ -50,7 +50,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -142,10 +142,10 @@ public class AnnotatedHttpDocServiceTest {
         addExamples(expectedJson);
 
         final HttpClient client = HttpClient.of(server.uri("/"));
-        final AggregatedHttpMessage msg = client.get("/docs/specification.json").aggregate().join();
-        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
-        assertThat(msg.headers().get(HttpHeaderNames.CACHE_CONTROL)).isEqualTo("no-cache, must-revalidate");
-        assertThatJson(msg.contentUtf8()).when(IGNORING_ARRAY_ORDER).isEqualTo(expectedJson);
+        final AggregatedHttpResponse res = client.get("/docs/specification.json").aggregate().join();
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.headers().get(HttpHeaderNames.CACHE_CONTROL)).isEqualTo("no-cache, must-revalidate");
+        assertThatJson(res.contentUtf8()).when(IGNORING_ARRAY_ORDER).isEqualTo(expectedJson);
     }
 
     private static void addFooMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
@@ -277,9 +277,9 @@ public class AnnotatedHttpDocServiceTest {
     @Test
     public void excludeAllServices() throws IOException {
         final HttpClient client = HttpClient.of(server.uri("/"));
-        final AggregatedHttpMessage message = client.get("/excludeAll/specification.json").aggregate().join();
-        assertThat(message.status()).isEqualTo(HttpStatus.OK);
-        final JsonNode actualJson = mapper.readTree(message.contentUtf8());
+        final AggregatedHttpResponse res = client.get("/excludeAll/specification.json").aggregate().join();
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        final JsonNode actualJson = mapper.readTree(res.contentUtf8());
         final JsonNode expectedJson = mapper.valueToTree(new ServiceSpecification(ImmutableList.of(),
                                                                                   ImmutableList.of(),
                                                                                   ImmutableList.of(),

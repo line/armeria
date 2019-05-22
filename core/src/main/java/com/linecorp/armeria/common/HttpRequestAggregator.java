@@ -23,12 +23,12 @@ import javax.annotation.Nullable;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
 
-final class HttpRequestAggregator extends HttpMessageAggregator {
+final class HttpRequestAggregator extends HttpMessageAggregator<AggregatedHttpRequest> {
 
     private final HttpRequest request;
     private HttpHeaders trailingHeaders;
 
-    HttpRequestAggregator(HttpRequest request, CompletableFuture<AggregatedHttpMessage> future,
+    HttpRequestAggregator(HttpRequest request, CompletableFuture<AggregatedHttpRequest> future,
                           @Nullable ByteBufAllocator alloc) {
         super(future, alloc);
         this.request = request;
@@ -61,8 +61,8 @@ final class HttpRequestAggregator extends HttpMessageAggregator {
     }
 
     @Override
-    protected AggregatedHttpMessage onSuccess(HttpData content) {
-        return AggregatedHttpMessage.of(request.headers(), content, trailingHeaders);
+    protected AggregatedHttpRequest onSuccess(HttpData content) {
+        return AggregatedHttpRequest.of(request.headers(), content, trailingHeaders);
     }
 
     @Override

@@ -18,24 +18,24 @@ package com.linecorp.armeria.server.annotation;
 
 import java.util.Arrays;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * A default implementation of a {@link RequestConverterFunction} which converts a binary body of
- * the {@link AggregatedHttpMessage} to one of {@code byte[]} or {@link HttpData}.
+ * the {@link AggregatedHttpRequest} to one of {@code byte[]} or {@link HttpData}.
  */
 public class ByteArrayRequestConverterFunction implements RequestConverterFunction {
 
     /**
-     * Converts the specified {@link AggregatedHttpMessage} to an object of {@code expectedResultType}.
+     * Converts the specified {@link AggregatedHttpRequest} to an object of {@code expectedResultType}.
      * This converter allows only {@code byte[]} and {@link HttpData} as its return type, and
-     * {@link AggregatedHttpMessage} would be consumed only if it does not have a {@code Content-Type} header
+     * {@link AggregatedHttpRequest} would be consumed only if it does not have a {@code Content-Type} header
      * or if it has {@code Content-Type: application/octet-stream} or {@code Content-Type: application/binary}.
      */
     @Override
-    public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
+    public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
                                  Class<?> expectedResultType) throws Exception {
         final HttpData content = request.content();
         if (expectedResultType == byte[].class) {

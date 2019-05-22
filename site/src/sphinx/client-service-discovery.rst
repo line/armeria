@@ -111,7 +111,7 @@ Once an :api:`EndpointGroup` is registered, you can use its name in the authorit
     List<CompletableFuture<?>> futures = new ArrayList<>();
     for (int i = 0; i < 3; i++) {
         final HttpResponse res = client.get("/");
-        final CompletableFuture<AggregatedHttpMessage> f = res.aggregate();
+        final CompletableFuture<AggregatedHttpResponse> f = res.aggregate();
         futures.add(f.thenRun(() -> {
             // And print the response.
             System.err.println(f.getNow(null));

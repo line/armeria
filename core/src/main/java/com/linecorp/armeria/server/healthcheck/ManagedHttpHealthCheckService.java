@@ -21,7 +21,8 @@ import java.util.concurrent.CompletionStage;
 
 import com.google.common.base.Ascii;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -49,11 +50,11 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * }</pre>
  */
 public class ManagedHttpHealthCheckService extends HttpHealthCheckService {
-    private static final AggregatedHttpMessage TURN_ON_RES = AggregatedHttpMessage
+    private static final AggregatedHttpResponse TURN_ON_RES = AggregatedHttpResponse
             .of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, HttpData.ofUtf8("Set healthy."));
-    private static final AggregatedHttpMessage TURN_OFF_RES = AggregatedHttpMessage
+    private static final AggregatedHttpResponse TURN_OFF_RES = AggregatedHttpResponse
             .of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, HttpData.ofUtf8("Set unhealthy."));
-    private static final AggregatedHttpMessage BAD_REQUEST_RES = AggregatedHttpMessage
+    private static final AggregatedHttpResponse BAD_REQUEST_RES = AggregatedHttpResponse
             .of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8, HttpData.ofUtf8("Not supported."));
 
     @Override
@@ -66,7 +67,7 @@ public class ManagedHttpHealthCheckService extends HttpHealthCheckService {
     /**
      * Updates health status using the specified {@link HttpRequest}.
      */
-    private CompletionStage<AggregatedHttpMessage> updateHealthStatus(
+    private CompletionStage<AggregatedHttpResponse> updateHealthStatus(
             ServiceRequestContext ctx, HttpRequest req) {
         return mode(ctx, req).thenApply(mode -> {
             if (!mode.isPresent()) {
@@ -92,7 +93,7 @@ public class ManagedHttpHealthCheckService extends HttpHealthCheckService {
     protected CompletionStage<Optional<Boolean>> mode(@SuppressWarnings("unused") ServiceRequestContext ctx,
                                                       HttpRequest req) {
         return req.aggregate()
-                  .thenApply(AggregatedHttpMessage::content)
+                  .thenApply(AggregatedHttpRequest::content)
                   .thenApply(HttpData::toStringAscii)
                   .thenApply(content -> {
                       switch (Ascii.toUpperCase(content)) {

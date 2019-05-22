@@ -48,7 +48,7 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpClientBuilder;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -161,11 +161,11 @@ public class HttpServerStreamingTest {
         serverMaxRequestLength = maxContentLength;
 
         final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.POST, "/count");
-        final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
+        final CompletableFuture<AggregatedHttpResponse> f = client().execute(req).aggregate();
 
         stream(req, maxContentLength + 1, 1024);
 
-        final AggregatedHttpMessage res = f.get();
+        final AggregatedHttpResponse res = f.get();
 
         assertThat(res.status()).isEqualTo(HttpStatus.REQUEST_ENTITY_TOO_LARGE);
         assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
@@ -178,7 +178,7 @@ public class HttpServerStreamingTest {
         serverMaxRequestLength = maxContentLength;
 
         final byte[] content = new byte[maxContentLength + 1];
-        final AggregatedHttpMessage res = client().post("/non-existent", content).aggregate().get();
+        final AggregatedHttpResponse res = client().post("/non-existent", content).aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(res.contentUtf8()).isEqualTo("404 Not Found");
     }
@@ -200,7 +200,7 @@ public class HttpServerStreamingTest {
 
     private void runStreamingRequestTest(String path) throws InterruptedException, ExecutionException {
         final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.POST, path);
-        final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
+        final CompletableFuture<AggregatedHttpResponse> f = client().execute(req).aggregate();
 
         // Stream a large of the max memory.
         // This test will fail if the implementation keep the whole content in memory.
@@ -209,7 +209,7 @@ public class HttpServerStreamingTest {
         try {
             stream(req, expectedContentLength, STREAMING_CONTENT_CHUNK_LENGTH);
 
-            final AggregatedHttpMessage res = f.get();
+            final AggregatedHttpResponse res = f.get();
 
             assertThat(res.status()).isEqualTo(HttpStatus.OK);
             assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);

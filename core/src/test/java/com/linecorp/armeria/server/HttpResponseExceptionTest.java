@@ -17,9 +17,9 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
@@ -27,16 +27,17 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 
-public class HttpResponseExceptionTest {
+class HttpResponseExceptionTest {
+
     @Test
-    public void testHttpResponse() throws Exception {
+    void testHttpResponse() throws Exception {
         final HttpResponseWriter response = HttpResponse.streaming();
         final HttpResponseException exception = HttpResponseException.of(response);
         response.write(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR,
                                           HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8));
         response.close();
 
-        final AggregatedHttpMessage message = exception.httpResponse().aggregate().join();
+        final AggregatedHttpResponse message = exception.httpResponse().aggregate().join();
         assertThat(message.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThat(message.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
     }

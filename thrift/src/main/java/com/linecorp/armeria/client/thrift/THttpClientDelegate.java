@@ -42,7 +42,7 @@ import com.google.common.base.Strings;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -137,7 +137,7 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
 
             ctx.logBuilder().deferResponseContent();
 
-            final CompletableFuture<AggregatedHttpMessage> future =
+            final CompletableFuture<AggregatedHttpResponse> future =
                     httpClient.execute(ctx, httpReq).aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc());
 
             future.handle((res, cause) -> {
