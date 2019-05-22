@@ -626,25 +626,48 @@ class HttpClientIntegrationTest {
     @Test
     void givenClients_thenBuildClient() throws Exception {
         final Endpoint endpoint = newEndpoint();
+
+        // with ClientOptionValues
+        HttpClient client = Clients.newClient(SessionProtocol.HTTP, SerializationFormat.NONE, endpoint,
+                                              HttpClient.class);
+        checkGetRequest("/hello/world", client);
+
+        // with ClientOptions
+        client = Clients.newClient(SessionProtocol.HTTP, SerializationFormat.NONE, endpoint, HttpClient.class,
+                                   ClientOptions.DEFAULT);
+        checkGetRequest("/hello/world", client);
+
+        // with Path and ClientOptionValues
+        client = Clients.newClient(SessionProtocol.HTTP, SerializationFormat.NONE, endpoint, "/hello",
+                                   HttpClient.class);
+        checkGetRequest("/world", client);
+
+        // with Path and ClientOptions
+        client = Clients.newClient(SessionProtocol.HTTP, SerializationFormat.NONE, endpoint, "/hello",
+                                   HttpClient.class, ClientOptions.DEFAULT);
+        checkGetRequest("/world", client);
+    }
+
+    @Test
+    void givenClients_whenSchemeExist_thenBuildClient() throws Exception {
+        final Endpoint endpoint = newEndpoint();
         final Scheme scheme = Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP);
 
         // with ClientOptionValues
         HttpClient client = Clients.newClient(scheme, endpoint, HttpClient.class);
-        AggregatedHttpMessage response = client.get("/hello/world").aggregate().get();
-
-        assertEquals("success", response.contentUtf8());
+        checkGetRequest("/hello/world", client);
 
         // with ClientOptions
         client = Clients.newClient(scheme, endpoint, HttpClient.class, ClientOptions.DEFAULT);
-        response = client.get("/hello/world").aggregate().get();
+        checkGetRequest("/hello/world", client);
 
-        assertEquals("success", response.contentUtf8());
+        // with Path and ClientOptionValues
+        client = Clients.newClient(scheme, endpoint, "/hello", HttpClient.class);
+        checkGetRequest("/world", client);
 
         // with Path and ClientOptions
         client = Clients.newClient(scheme, endpoint, "/hello", HttpClient.class, ClientOptions.DEFAULT);
-        response = client.get("/world").aggregate().get();
-
-        assertEquals("success", response.contentUtf8());
+        checkGetRequest("/world", client);
     }
 
     @Test
@@ -653,20 +676,69 @@ class HttpClientIntegrationTest {
 
         // with ClientOptionValues
         HttpClient client = HttpClient.of(SessionProtocol.HTTP, endpoint);
-        AggregatedHttpMessage response = client.get("/hello/world").aggregate().get();
-
-        assertEquals("success", response.contentUtf8());
+        checkGetRequest("/hello/world", client);
 
         // with ClientOptions
         client = HttpClient.of(SessionProtocol.HTTP, endpoint, ClientOptions.DEFAULT);
-        response = client.get("/hello/world").aggregate().get();
+        checkGetRequest("/hello/world", client);
 
-        assertEquals("success", response.contentUtf8());
+        // with Path and ClientOptionValues
+        client = HttpClient.of(SessionProtocol.HTTP, endpoint, "hello");
+        checkGetRequest("/world", client);
 
         // with Path and ClientOptions
         client = HttpClient.of(SessionProtocol.HTTP, endpoint, "hello", ClientOptions.DEFAULT);
-        response = client.get("/world").aggregate().get();
+        checkGetRequest("/world", client);
+    }
 
+    @Test
+    void givenClientBuilder_thenBuildClient() throws Exception {
+        final Endpoint endpoint = newEndpoint();
+
+        HttpClient client = new ClientBuilder(SessionProtocol.HTTP, SerializationFormat.NONE, endpoint)
+                .build(HttpClient.class);
+        checkGetRequest("/hello/world", client);
+
+        client = new ClientBuilder(SessionProtocol.HTTP, endpoint).build(HttpClient.class);
+        checkGetRequest("/hello/world", client);
+
+        client = new ClientBuilder(SessionProtocol.HTTP, SerializationFormat.NONE, endpoint, "/hello")
+                .build(HttpClient.class);
+        checkGetRequest("/world", client);
+
+        client = new ClientBuilder(SessionProtocol.HTTP, endpoint, "/hello").build(HttpClient.class);
+        checkGetRequest("/world", client);
+    }
+
+    @Test
+    void givenClientBuilder_whenSchemeExist_thenBuildClient() throws Exception {
+        final Endpoint endpoint = newEndpoint();
+        final Scheme scheme = Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP);
+
+        HttpClient client = new ClientBuilder(scheme, endpoint).build(HttpClient.class);
+        checkGetRequest("/hello/world", client);
+
+        client = new ClientBuilder("none+http", endpoint).build(HttpClient.class);
+        checkGetRequest("/hello/world", client);
+
+        client = new ClientBuilder(scheme, endpoint, "/hello").build(HttpClient.class);
+        checkGetRequest("/world", client);
+
+        client = new ClientBuilder("none+http", endpoint, "/hello").build(HttpClient.class);
+        checkGetRequest("/world", client);
+    }
+
+    @Test
+    void givenHttpClientFactory_whenClientTypeNotHttp_thenThrowIllegalArgument() throws Exception {
+        final Endpoint endpoint = newEndpoint();
+        final ClientFactory factory = new ClientFactoryBuilder().build();
+
+        assertThatThrownBy(() -> factory.newClient(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP),
+                                                   endpoint, null));
+    }
+
+    private static void checkGetRequest(String path, HttpClient client) throws Exception {
+        final AggregatedHttpMessage response = client.get(path).aggregate().get();
         assertEquals("success", response.contentUtf8());
     }
 
