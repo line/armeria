@@ -27,6 +27,7 @@ import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -169,12 +170,13 @@ public class GrpcClientTest {
             return delegate.execute(ctx, req);
         };
 
-        blockingStub = new ClientBuilder("gproto+" + server.httpUri("/"))
+        final URI uri = URI.create(server.httpUri("/"));
+        blockingStub = new ClientBuilder("gproto+" + uri)
                 .maxResponseLength(MAX_MESSAGE_SIZE)
                 .decorator(new LoggingClientBuilder().newDecorator())
                 .decorator(requestLogRecorder)
                 .build(TestServiceBlockingStub.class);
-        asyncStub = new ClientBuilder("gproto+" + server.httpUri("/"))
+        asyncStub = new ClientBuilder("gproto+" + uri.getScheme() + "://" + uri.getAuthority())
                 .decorator(new LoggingClientBuilder().newDecorator())
                 .decorator(requestLogRecorder)
                 .build(TestServiceStub.class);
