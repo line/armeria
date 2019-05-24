@@ -23,6 +23,8 @@ import java.util.Map.Entry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.CharMatcher;
+
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 
@@ -36,6 +38,8 @@ import io.netty.util.AsciiString;
 public final class MetadataUtil {
 
     private static final Logger logger = LoggerFactory.getLogger(MetadataUtil.class);
+
+    private static final CharMatcher COMMA_MATCHER = CharMatcher.is(',');
 
     /**
      * Copies the headers in the gRPC {@link Metadata} to the Armeria {@link HttpHeadersBuilder}. Headers will
@@ -77,21 +81,47 @@ public final class MetadataUtil {
             return new Metadata();
         }
 
-        final byte[][] metadata = new byte[headers.size() * 2][];
+        int numHeaders = 0;
+        for (Entry<AsciiString, String> entry : headers) {
+            final AsciiString name = entry.getKey();
+            final String value = entry.getValue();
+            if (isBinary(name)) {
+                numHeaders += COMMA_MATCHER.countIn(value) + 1;
+            } else {
+                numHeaders += 1;
+            }
+        }
+
+        final byte[][] metadata = new byte[numHeaders * 2][];
 
         int i = 0;
         for (Entry<AsciiString, String> entry : headers) {
             final AsciiString name = entry.getKey();
             final String value = entry.getValue();
-            final byte[] valueBytes;
+            final byte[] nameBytes = name.isEntireArrayUsed() ? name.array() : name.toByteArray();
             if (isBinary(name)) {
-                valueBytes = InternalMetadata.BASE64_ENCODING_OMIT_PADDING.decode(value);
-            } else {
-                valueBytes = value.getBytes(StandardCharsets.UTF_8);
-            }
+                int commaIndex = COMMA_MATCHER.indexIn(value);
+                if (commaIndex == -1) {
+                    metadata[i++] = nameBytes;
+                    metadata[i++] = InternalMetadata.BASE64_ENCODING_OMIT_PADDING.decode(value);
+                } else {
+                    int substringStartIndex = 0;
+                    while (commaIndex != -1) {
+                        final String substring = value.substring(substringStartIndex, commaIndex);
+                        metadata[i++] = nameBytes;
+                        metadata[i++] = InternalMetadata.BASE64_ENCODING_OMIT_PADDING.decode(substring);
 
-            metadata[i++] = name.isEntireArrayUsed() ? name.array() : name.toByteArray();
-            metadata[i++] = valueBytes;
+                        substringStartIndex = commaIndex + 1;
+                        commaIndex = COMMA_MATCHER.indexIn(value, commaIndex + 1);
+                    }
+                    final String substring = value.substring(substringStartIndex);
+                    metadata[i++] = nameBytes;
+                    metadata[i++] = InternalMetadata.BASE64_ENCODING_OMIT_PADDING.decode(substring);
+                }
+            } else {
+                metadata[i++] = nameBytes;
+                metadata[i++] = value.getBytes(StandardCharsets.UTF_8);
+            }
         }
 
         return InternalMetadata.newMetadata(metadata);

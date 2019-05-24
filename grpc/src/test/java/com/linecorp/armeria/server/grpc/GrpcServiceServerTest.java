@@ -25,6 +25,7 @@ import static org.awaitility.Awaitility.await;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
@@ -96,6 +97,7 @@ import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
 import com.linecorp.armeria.internal.grpc.StreamRecorder;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
@@ -194,6 +196,17 @@ public class GrpcServiceServerTest {
             Metadata metadata = new Metadata();
             metadata.put(STRING_VALUE_KEY, StringValue.newBuilder().setValue("custom metadata").build());
             metadata.put(CUSTOM_VALUE_KEY, "custom value");
+
+            ServiceRequestContext ctx = RequestContext.current();
+            // gRPC allows multiple comma-separated binary values in a single trailer.
+            ctx.addAdditionalResponseTrailer(
+                    STRING_VALUE_KEY.name(),
+                    Base64.getEncoder().encodeToString(
+                            StringValue.newBuilder().setValue("context trailer 1").build().toByteArray()) +
+                    "," +
+                    Base64.getEncoder().encodeToString(
+                            StringValue.newBuilder().setValue("context trailer 2").build().toByteArray()));
+
             responseObserver.onError(Status.ABORTED.withDescription("aborted call").asException(metadata));
         }
 
@@ -497,8 +510,11 @@ public class GrpcServiceServerTest {
                 () -> blockingClient.errorWithMessage(REQUEST_MESSAGE));
         assertThat(t.getStatus().getCode()).isEqualTo(Code.ABORTED);
         assertThat(t.getStatus().getDescription()).isEqualTo("aborted call");
-        assertThat(t.getTrailers().get(STRING_VALUE_KEY))
-                .isEqualTo(StringValue.newBuilder().setValue("custom metadata").build());
+        assertThat(t.getTrailers().getAll(STRING_VALUE_KEY))
+                .containsExactly(
+                        StringValue.newBuilder().setValue("custom metadata").build(),
+                        StringValue.newBuilder().setValue("context trailer 1").build(),
+                        StringValue.newBuilder().setValue("context trailer 2").build());
         assertThat(t.getTrailers().get(CUSTOM_VALUE_KEY)).isEqualTo("custom value");
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
