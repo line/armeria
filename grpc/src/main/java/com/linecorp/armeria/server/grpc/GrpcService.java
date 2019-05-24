@@ -88,8 +88,6 @@ public final class GrpcService extends AbstractHttpService
 
     static final int NO_MAX_INBOUND_MESSAGE_SIZE = -1;
 
-    private static final Metadata EMPTY_METADATA = new Metadata();
-
     private final HandlerRegistry registry;
     private final Set<PathMapping> pathMappings;
     private final DecompressorRegistry decompressorRegistry;
@@ -157,7 +155,7 @@ public final class GrpcService extends AbstractHttpService
                     ArmeriaServerCall.statusToTrailers(
                             ctx,
                             Status.UNIMPLEMENTED.withDescription("Method not found: " + methodName),
-                            EMPTY_METADATA,
+                            new Metadata(),
                             false));
         }
 
@@ -169,7 +167,7 @@ public final class GrpcService extends AbstractHttpService
             } catch (IllegalArgumentException e) {
                 return HttpResponse.of(
                         ArmeriaServerCall.statusToTrailers(
-                                ctx, GrpcStatus.fromThrowable(e), EMPTY_METADATA, false));
+                                ctx, GrpcStatus.fromThrowable(e), new Metadata(), false));
             }
         }
 
@@ -180,7 +178,7 @@ public final class GrpcService extends AbstractHttpService
         final ArmeriaServerCall<?, ?> call = startCall(
                 methodName, method, ctx, req.headers(), res, serializationFormat);
         if (call != null) {
-            ctx.setRequestTimeoutHandler(() -> call.close(Status.DEADLINE_EXCEEDED, EMPTY_METADATA));
+            ctx.setRequestTimeoutHandler(() -> call.close(Status.DEADLINE_EXCEEDED, new Metadata()));
             req.subscribe(call.messageReader(), ctx.eventLoop(), true);
             req.completionFuture().handleAsync(call.messageReader(), ctx.eventLoop());
         }
@@ -214,7 +212,7 @@ public final class GrpcService extends AbstractHttpService
             listener = methodDef.getServerCallHandler().startCall(call, MetadataUtil.copyFromHeaders(headers));
         } catch (Throwable t) {
             call.setListener(new EmptyListener<>());
-            call.close(GrpcStatus.fromThrowable(t), EMPTY_METADATA);
+            call.close(GrpcStatus.fromThrowable(t), new Metadata());
             logger.warn(
                     "Exception thrown from streaming request stub method before processing any request data" +
                     " - this is likely a bug in the stub implementation.");

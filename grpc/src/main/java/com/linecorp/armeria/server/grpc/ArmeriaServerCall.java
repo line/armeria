@@ -103,8 +103,6 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     @VisibleForTesting
     static final byte TRAILERS_FRAME_HEADER = (byte) (1 << 7);
 
-    private static final Metadata EMPTY_METADATA = new Metadata();
-
     private static final Splitter ACCEPT_ENCODING_SPLITTER = Splitter.on(',').trimResults();
 
     private final MethodDescriptor<I, O> method;
@@ -186,7 +184,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 // Closed by client, not by server.
                 cancelled = true;
                 try (SafeCloseable ignore = ctx.pushIfAbsent()) {
-                    close(Status.CANCELLED, EMPTY_METADATA);
+                    close(Status.CANCELLED, new Metadata());
                 }
             }
             return null;
@@ -274,10 +272,10 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 }
             });
         } catch (RuntimeException e) {
-            close(GrpcStatus.fromThrowable(e), EMPTY_METADATA);
+            close(GrpcStatus.fromThrowable(e), new Metadata());
             throw e;
         } catch (Throwable t) {
-            close(GrpcStatus.fromThrowable(t), EMPTY_METADATA);
+            close(GrpcStatus.fromThrowable(t), new Metadata());
             throw new RuntimeException(t);
         }
     }
@@ -286,7 +284,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         try {
             listener.onReady();
         } catch (Throwable t) {
-            close(GrpcStatus.fromThrowable(t), EMPTY_METADATA);
+            close(GrpcStatus.fromThrowable(t), new Metadata());
         }
     }
 
@@ -412,7 +410,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         try (SafeCloseable ignored = ctx.push()) {
             listener.onMessage(request);
         } catch (Throwable t) {
-            close(GrpcStatus.fromThrowable(t), EMPTY_METADATA);
+            close(GrpcStatus.fromThrowable(t), new Metadata());
         }
     }
 
@@ -436,7 +434,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         try (SafeCloseable ignored = ctx.push()) {
             listener.onHalfClose();
         } catch (Throwable t) {
-            close(GrpcStatus.fromThrowable(t), EMPTY_METADATA);
+            close(GrpcStatus.fromThrowable(t), new Metadata());
         }
     }
 
@@ -505,7 +503,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 // A custom error when dealing with client cancel or transport issues should be
                 // returned. We have already closed the listener, so it will not receive any more
                 // callbacks as designed.
-                close(GrpcStatus.fromThrowable(t), EMPTY_METADATA);
+                close(GrpcStatus.fromThrowable(t), new Metadata());
             }
         }
     }
