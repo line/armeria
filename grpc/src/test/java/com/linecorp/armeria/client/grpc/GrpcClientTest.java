@@ -60,6 +60,7 @@ import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.logging.LoggingClientBuilder;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -86,6 +87,7 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceStub;
 import com.linecorp.armeria.grpc.testing.UnimplementedServiceGrpc;
 import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.grpc.GrpcStatus;
+import com.linecorp.armeria.internal.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.grpc.StreamRecorder;
 import com.linecorp.armeria.internal.grpc.TestServiceImpl;
 import com.linecorp.armeria.internal.grpc.TimeoutHeaderUtil;
@@ -97,11 +99,18 @@ import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.CallOptions;
 import io.grpc.ClientCall;
+import io.grpc.ForwardingServerCall.SimpleForwardingServerCall;
 import io.grpc.Metadata;
+import io.grpc.ServerCall;
+import io.grpc.ServerCall.Listener;
+import io.grpc.ServerCallHandler;
+import io.grpc.ServerInterceptor;
+import io.grpc.ServerInterceptors;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
+import io.grpc.stub.MetadataUtils;
 import io.grpc.stub.StreamObserver;
 import io.netty.buffer.ByteBuf;
 
@@ -126,16 +135,34 @@ public class GrpcClientTest {
             sb.idleTimeoutMillis(0);
 
             sb.serviceUnder("/", new GrpcServiceBuilder()
-                    .addService(new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()))
+                    .addService(
+                            ServerInterceptors.intercept(
+                                    new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()),
+                                    new ServerInterceptor() {
+                                        @Override
+                                        public <REQ, RESP> Listener<REQ> interceptCall(
+                                                ServerCall<REQ, RESP> call,
+                                                Metadata requestHeaders,
+                                                ServerCallHandler<REQ, RESP> next) {
+                                            HttpHeadersBuilder fromClient = HttpHeaders.builder();
+                                            MetadataUtil.fillHeaders(requestHeaders, fromClient);
+                                            CLIENT_HEADERS_CAPTURE.set(fromClient.build());
+                                            return next.startCall(
+                                                    new SimpleForwardingServerCall<REQ, RESP>(call) {
+                                                        @Override
+                                                        public void close(Status status, Metadata trailers) {
+                                                            trailers.merge(requestHeaders);
+                                                            super.close(status, trailers);
+                                                        }
+                                                    }, requestHeaders);
+                                        }
+                                    }))
                     .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
                     .setMaxOutboundMessageSizeBytes(MAX_MESSAGE_SIZE)
                     .build()
-                    .decorate(TestServiceImpl.EchoRequestHeadersInTrailers::new)
                     .decorate((client, ctx, req) -> {
-                        CLIENT_HEADERS_CAPTURE.set(req.headers());
                         final HttpResponse res = client.serve(ctx, req);
                         return new FilteredHttpResponse(res) {
-
                             private boolean headersReceived;
 
                             @Override
@@ -716,12 +743,30 @@ public class GrpcClientTest {
     }
 
     @Test
-    public void exchangeHeadersUnaryCall() throws Exception {
+    public void exchangeHeadersUnaryCall_armeriaHeaders() throws Exception {
         final TestServiceBlockingStub stub =
                 Clients.newDerivedClient(
                         blockingStub,
                         ClientOption.HTTP_HEADERS.newValue(
                                 HttpHeaders.of(TestServiceImpl.EXTRA_HEADER_NAME, "dog")));
+
+        assertThat(stub.emptyCall(EMPTY)).isNotNull();
+
+        // Assert that our side channel object is echoed back in both headers and trailers
+        assertThat(CLIENT_HEADERS_CAPTURE.get().get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("dog");
+        assertThat(SERVER_TRAILERS_CAPTURE.get().get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("dog");
+
+        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+            assertThat(rpcReq.params()).containsExactly(EMPTY);
+            assertThat(rpcRes.get()).isEqualTo(EMPTY);
+        });
+    }
+
+    @Test
+    public void exchangeHeadersUnaryCall_grpcMetadata() throws Exception {
+        Metadata metadata = new Metadata();
+        metadata.put(TestServiceImpl.EXTRA_HEADER_KEY, "dog");
+        final TestServiceBlockingStub stub = MetadataUtils.attachHeaders(blockingStub, metadata);
 
         assertThat(stub.emptyCall(EMPTY)).isNotNull();
 

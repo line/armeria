@@ -52,6 +52,8 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
 
+import io.grpc.Metadata;
+import io.grpc.Metadata.Key;
 import io.grpc.Status;
 import io.grpc.internal.LogExceptionRunnable;
 import io.grpc.stub.ServerCallStreamObserver;
@@ -61,6 +63,9 @@ import io.netty.util.AsciiString;
 public class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
 
     public static final AsciiString EXTRA_HEADER_NAME = HttpHeaderNames.of("extra-header");
+
+    public static final Key<String> EXTRA_HEADER_KEY = Key.of(EXTRA_HEADER_NAME.toString(),
+                                                              Metadata.ASCII_STRING_MARSHALLER);
 
     private static final String UNCOMPRESSABLE_FILE =
             "/io/grpc/testing/integration/testdata/uncompressable.bin";

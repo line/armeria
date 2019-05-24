@@ -49,6 +49,7 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.grpc.GrpcJsonUtil;
 import com.linecorp.armeria.internal.grpc.GrpcStatus;
+import com.linecorp.armeria.internal.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.PathMapping;
@@ -73,10 +74,6 @@ import io.grpc.protobuf.services.ProtoReflectionService;
  *
  * <p>Unsupported features:
  * <ul>
- *     <li>
- *         {@link Metadata} - use armeria's HttpHeaders and decorators for accessing custom metadata sent from
- *         the client. Any usages of {@link Metadata} in the server will be silently ignored.
- *     </li>
  *     <li>
  *         There are some differences in the HTTP/2 error code returned from an Armeria server vs gRPC server
  *         when dealing with transport errors and deadlines. Generally, the client will see an UNKNOWN status
@@ -160,6 +157,7 @@ public final class GrpcService extends AbstractHttpService
                     ArmeriaServerCall.statusToTrailers(
                             ctx,
                             Status.UNIMPLEMENTED.withDescription("Method not found: " + methodName),
+                            EMPTY_METADATA,
                             false));
         }
 
@@ -170,7 +168,8 @@ public final class GrpcService extends AbstractHttpService
                 ctx.setRequestTimeout(Duration.ofNanos(timeout));
             } catch (IllegalArgumentException e) {
                 return HttpResponse.of(
-                        ArmeriaServerCall.statusToTrailers(ctx, GrpcStatus.fromThrowable(e), false));
+                        ArmeriaServerCall.statusToTrailers(
+                                ctx, GrpcStatus.fromThrowable(e), EMPTY_METADATA, false));
             }
         }
 
@@ -212,7 +211,7 @@ public final class GrpcService extends AbstractHttpService
                 advertisedEncodingsHeader);
         final ServerCall.Listener<I> listener;
         try (SafeCloseable ignored = ctx.push()) {
-            listener = methodDef.getServerCallHandler().startCall(call, EMPTY_METADATA);
+            listener = methodDef.getServerCallHandler().startCall(call, MetadataUtil.copyFromHeaders(headers));
         } catch (Throwable t) {
             call.setListener(new EmptyListener<>());
             call.close(GrpcStatus.fromThrowable(t), EMPTY_METADATA);

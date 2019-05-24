@@ -45,6 +45,7 @@ import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 
 import io.grpc.Decompressor;
 import io.grpc.DecompressorRegistry;
+import io.grpc.Metadata;
 import io.grpc.Status;
 
 /**
@@ -149,7 +150,10 @@ public class HttpStreamReader implements Subscriber<HttpObject>, BiFunction<Void
                 if (grpcThrowable != null) {
                     status = addCause(status, grpcThrowable);
                 }
-                transportStatusListener.transportReportStatus(status);
+
+                Metadata metadata = MetadataUtil.copyFromHeaders(headers);
+
+                transportStatusListener.transportReportStatus(status, metadata);
                 return;
             }
             // Headers without grpc-status are the leading headers of a non-failing response, prepare to receive

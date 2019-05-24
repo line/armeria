@@ -52,6 +52,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.StringValue;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
@@ -102,10 +103,13 @@ import io.grpc.Codec;
 import io.grpc.DecompressorRegistry;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.Metadata;
+import io.grpc.Metadata.Key;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
+import io.grpc.protobuf.ProtoUtils;
 import io.grpc.protobuf.services.ProtoReflectionService;
 import io.grpc.reflection.v1alpha.ServerReflectionGrpc;
 import io.grpc.reflection.v1alpha.ServerReflectionGrpc.ServerReflectionStub;
@@ -121,6 +125,12 @@ import io.netty.util.AttributeKey;
 public class GrpcServiceServerTest {
 
     private static final int MAX_MESSAGE_SIZE = 16 * 1024 * 1024;
+
+    private static final Key<StringValue> STRING_VALUE_KEY =
+            ProtoUtils.keyForProto(StringValue.getDefaultInstance());
+
+    private static final Key<String> CUSTOM_VALUE_KEY = Key.of("custom-header",
+                                                               Metadata.ASCII_STRING_MARSHALLER);
 
     private static AsciiString LARGE_PAYLOAD;
 
@@ -181,7 +191,10 @@ public class GrpcServiceServerTest {
 
         @Override
         public void errorWithMessage(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
-            responseObserver.onError(Status.ABORTED.withDescription("aborted call").asException());
+            Metadata metadata = new Metadata();
+            metadata.put(STRING_VALUE_KEY, StringValue.newBuilder().setValue("custom metadata").build());
+            metadata.put(CUSTOM_VALUE_KEY, "custom value");
+            responseObserver.onError(Status.ABORTED.withDescription("aborted call").asException(metadata));
         }
 
         @Override
@@ -484,6 +497,9 @@ public class GrpcServiceServerTest {
                 () -> blockingClient.errorWithMessage(REQUEST_MESSAGE));
         assertThat(t.getStatus().getCode()).isEqualTo(Code.ABORTED);
         assertThat(t.getStatus().getDescription()).isEqualTo("aborted call");
+        assertThat(t.getTrailers().get(STRING_VALUE_KEY))
+                .isEqualTo(StringValue.newBuilder().setValue("custom metadata").build());
+        assertThat(t.getTrailers().get(CUSTOM_VALUE_KEY)).isEqualTo("custom value");
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
             assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/ErrorWithMessage");
