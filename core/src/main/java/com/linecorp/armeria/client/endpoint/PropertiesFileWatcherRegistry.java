@@ -180,15 +180,13 @@ final class PropertiesFileWatcherRegistry implements AutoCloseable {
                                 ((Path) key.watchable()).resolve(((WatchEvent<Path>) event).context()));
 
                         if (event.kind().equals(ENTRY_MODIFY) || event.kind().equals(ENTRY_CREATE)) {
-                            ctxRegistry.entrySet().stream()
-                                       .filter(entry -> entry.getKey().startsWith(watchedPath))
-                                       .forEach(entry -> {
+                            if (ctxRegistry.keySet().contains(watchedPath)) {
                                 try {
-                                    entry.getValue().reloader.run();
+                                    ctxRegistry.get(watchedPath).reloader.run();
                                 } catch (Exception e) {
                                     logger.warn("unexpected error from listener: {} ", watchedPath, e);
                                 }
-                            });
+                            }
                         } else if (event.kind().equals(OVERFLOW)) {
                             logger.info("failed to reload file: {}", watchedPath);
                         } else if (event.kind().equals(ENTRY_DELETE)) {

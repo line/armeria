@@ -17,8 +17,15 @@
 package com.linecorp.armeria.client.endpoint;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -48,5 +55,57 @@ public class PropertiesFileWatcherRegistryTest {
         propertiesFileWatcherRegistry.deregister(file2.toURI().toURL());
 
         assertThat(propertiesFileWatcherRegistry.isRunning()).isFalse();
+    }
+
+    @Test
+    public void closeStopsRegistry() throws Exception {
+
+        final File file = folder.newFile("temp-file.properties");
+
+        final PropertiesFileWatcherRegistry propertiesFileWatcherRegistry =
+                new PropertiesFileWatcherRegistry();
+        propertiesFileWatcherRegistry.register(file.toURI().toURL(), () -> {});
+
+        assertThat(propertiesFileWatcherRegistry.isRunning()).isTrue();
+
+        propertiesFileWatcherRegistry.close();
+
+        assertThat(propertiesFileWatcherRegistry.isRunning()).isFalse();
+    }
+
+    @Test
+    public void runnableWithException() throws Exception {
+
+        final File file = folder.newFile("temp-file.properties");
+
+        final PropertiesFileWatcherRegistry propertiesFileWatcherRegistry =
+                new PropertiesFileWatcherRegistry();
+
+        final AtomicInteger val = new AtomicInteger(0);
+        propertiesFileWatcherRegistry.register(file.toURI().toURL(), () -> {
+            try {
+                final BufferedReader bufferedReader = new BufferedReader(new FileReader(file));
+                val.set(Integer.valueOf(bufferedReader.readLine()));
+            } catch (IOException e) {
+                // do nothing
+            }
+            throw new RuntimeException();
+        });
+
+        PrintWriter printWriter = new PrintWriter(file);
+        printWriter.print(1);
+        printWriter.close();
+
+        await().atMost(20, TimeUnit.SECONDS).until(() -> val.get() == 1);
+
+        assertThat(propertiesFileWatcherRegistry.isRunning()).isTrue();
+
+        printWriter = new PrintWriter(file);
+        printWriter.print(2);
+        printWriter.close();
+
+        await().atMost(20, TimeUnit.SECONDS).until(() -> val.get() == 2);
+
+        assertThat(propertiesFileWatcherRegistry.isRunning()).isTrue();
     }
 }

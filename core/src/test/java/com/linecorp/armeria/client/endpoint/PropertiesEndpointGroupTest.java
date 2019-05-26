@@ -152,7 +152,7 @@ public class PropertiesEndpointGroupTest {
     }
 
     @Test
-    public void testDuplicateResourceUrl() throws IOException {
+    public void duplicateResourceUrl() throws IOException {
         PropertiesEndpointGroup.of(
                 getClass().getClassLoader(), "server-list.properties", "serverA.hosts", 80, true);
 
@@ -195,5 +195,43 @@ public class PropertiesEndpointGroupTest {
 
         await().atMost(20, TimeUnit.SECONDS).until(() -> endpointGroupB.endpoints().size() == 2);
         endpointGroupB.close();
+    }
+
+    @Test
+    public void endpointChangePropagatesToListeners() throws Exception {
+        final File file = folder.newFile("temp-file.properties");
+        final URL url = file.getParentFile().toURI().toURL();
+        final URLClassLoader classLoader = URLClassLoader.newInstance(new URL[]{url});
+
+        PrintWriter printWriter = new PrintWriter(file);
+        Properties props = new Properties();
+        props.setProperty("serverA.hosts.0", "127.0.0.1:8080");
+        props.setProperty("serverA.hosts.1", "127.0.0.1:8081");
+        props.store(printWriter, "");
+        printWriter.close();
+
+        final PropertiesEndpointGroup propertiesEndpointGroup = PropertiesEndpointGroup.of(
+                classLoader, file.getName(), "serverA.hosts", 80, true);
+        final StaticEndpointGroup staticEndpointGroup = new StaticEndpointGroup(Endpoint.of("127.0.0.1", 8081));
+        final EndpointGroup endpointGroup = propertiesEndpointGroup.orElse(staticEndpointGroup);
+
+        await().atMost(20, TimeUnit.SECONDS).until(() -> endpointGroup.endpoints().size() == 2);
+
+        printWriter = new PrintWriter(file);
+        props = new Properties();
+        props.store(printWriter, "");
+        printWriter.close();
+
+        await().atMost(20, TimeUnit.SECONDS).until(() -> endpointGroup.endpoints().size() == 1);
+
+        printWriter = new PrintWriter(file);
+        props = new Properties();
+        props.setProperty("serverA.hosts.0", "127.0.0.1:8080");
+        props.setProperty("serverA.hosts.1", "127.0.0.1:8081");
+        props.setProperty("serverA.hosts.2", "127.0.0.1:8082");
+        props.store(printWriter, "");
+        printWriter.close();
+
+        await().atMost(20, TimeUnit.SECONDS).until(() -> endpointGroup.endpoints().size() == 3);
     }
 }
