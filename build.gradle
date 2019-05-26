@@ -93,6 +93,7 @@ configure(projectsWithFlags('java')) {
         testCompile 'com.google.guava:guava-testlib'
         testCompile 'junit:junit'
         testCompile 'org.junit.jupiter:junit-jupiter-api'
+        testRuntime 'org.junit.platform:junit-platform-commons'
         testRuntime 'org.junit.platform:junit-platform-launcher'
         testRuntime 'org.junit.jupiter:junit-jupiter-engine'
         testRuntime 'org.junit.vintage:junit-vintage-engine'
