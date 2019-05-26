@@ -20,18 +20,17 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Properties;
 
 import javax.annotation.Nullable;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
@@ -42,7 +41,6 @@ import com.linecorp.armeria.client.Endpoint;
  * {@link Properties}.
  */
 public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
-    private static final Logger logger = LoggerFactory.getLogger(PropertiesEndpointGroup.class);
     private static final PropertiesFileWatcherRegistry registry = new PropertiesFileWatcherRegistry();
 
     @Nullable
@@ -195,11 +193,13 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
                 0);
         setEndpoints(endpoints);
 
+        final Path filePath = new File(resourceUrl.getFile()).toPath();
+
         if (reloadable) {
-            registry.register(resourceUrl, () -> {
+            registry.register(filePath, () -> {
                 setEndpoints(loadEndpoints(resourceUrl, endpointKeyPrefix, defaultPort));
             });
-            closeCallback = () -> registry.deregister(resourceUrl);
+            closeCallback = () -> registry.deregister(filePath);
         }
     }
 

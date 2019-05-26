@@ -43,16 +43,16 @@ public class PropertiesFileWatcherRegistryTest {
 
         final PropertiesFileWatcherRegistry propertiesFileWatcherRegistry =
                 new PropertiesFileWatcherRegistry();
-        propertiesFileWatcherRegistry.register(file.toURI().toURL(), () -> {});
-        propertiesFileWatcherRegistry.register(file2.toURI().toURL(), () -> {});
+        propertiesFileWatcherRegistry.register(file.toPath(), () -> {});
+        propertiesFileWatcherRegistry.register(file2.toPath(), () -> {});
 
         assertThat(propertiesFileWatcherRegistry.isRunning()).isTrue();
 
-        propertiesFileWatcherRegistry.deregister(file.toURI().toURL());
+        propertiesFileWatcherRegistry.deregister(file.toPath());
 
         assertThat(propertiesFileWatcherRegistry.isRunning()).isTrue();
 
-        propertiesFileWatcherRegistry.deregister(file2.toURI().toURL());
+        propertiesFileWatcherRegistry.deregister(file2.toPath());
 
         assertThat(propertiesFileWatcherRegistry.isRunning()).isFalse();
     }
@@ -64,7 +64,7 @@ public class PropertiesFileWatcherRegistryTest {
 
         final PropertiesFileWatcherRegistry propertiesFileWatcherRegistry =
                 new PropertiesFileWatcherRegistry();
-        propertiesFileWatcherRegistry.register(file.toURI().toURL(), () -> {});
+        propertiesFileWatcherRegistry.register(file.toPath(), () -> {});
 
         assertThat(propertiesFileWatcherRegistry.isRunning()).isTrue();
 
@@ -82,7 +82,7 @@ public class PropertiesFileWatcherRegistryTest {
                 new PropertiesFileWatcherRegistry();
 
         final AtomicInteger val = new AtomicInteger(0);
-        propertiesFileWatcherRegistry.register(file.toURI().toURL(), () -> {
+        propertiesFileWatcherRegistry.register(file.toPath(), () -> {
             try {
                 final BufferedReader bufferedReader = new BufferedReader(new FileReader(file));
                 val.set(Integer.valueOf(bufferedReader.readLine()));
