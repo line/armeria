@@ -93,7 +93,7 @@ abstract class AbstractServiceBindingBuilder {
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
     public AbstractServiceBindingBuilder path(String pathPattern) {
-        defaultRouteBuilder = Route.builder().path(pathPattern);
+        defaultRouteBuilder = Route.builder().path(requireNonNull(pathPattern, "pathPattern"));
         return this;
     }
 

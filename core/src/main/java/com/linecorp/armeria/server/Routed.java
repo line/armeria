@@ -27,45 +27,45 @@ import com.google.common.base.MoreObjects;
  *
  * @param <T> the type of the mapped value
  */
-public final class RouteElement<T> {
+public final class Routed<T> {
 
-    private static final RouteElement<Object> EMPTY = new RouteElement<>(null, RouteResult.empty(), null);
+    private static final Routed<Object> EMPTY = new Routed<>(null, RoutingResult.empty(), null);
 
     /**
-     * Returns a singleton instance of a {@link RouteElement} that represents a non-existent value.
+     * Returns a singleton instance of a {@link Routed} that represents a non-existent value.
      */
     @SuppressWarnings("unchecked")
-    public static <T> RouteElement<T> empty() {
-        return (RouteElement<T>) EMPTY;
+    public static <T> Routed<T> empty() {
+        return (Routed<T>) EMPTY;
     }
 
     /**
-     * Creates a new {@link RouteElement} with the specified {@link Route}, {@link RouteResult} and
+     * Creates a new {@link Routed} with the specified {@link Route}, {@link RoutingResult} and
      * {@code value}.
      */
-    static <T> RouteElement<T> of(Route route, RouteResult routeResult, T value) {
+    static <T> Routed<T> of(Route route, RoutingResult routingResult, T value) {
         requireNonNull(route, "route");
-        requireNonNull(routeResult, "routeResult");
+        requireNonNull(routingResult, "routingResult");
         requireNonNull(value, "value");
-        if (!routeResult.isPresent()) {
-            throw new IllegalArgumentException("routeResult: " + routeResult + " (must be present)");
+        if (!routingResult.isPresent()) {
+            throw new IllegalArgumentException("routingResult: " + routingResult + " (must be present)");
         }
 
-        return new RouteElement<>(route, routeResult, value);
+        return new Routed<>(route, routingResult, value);
     }
 
     @Nullable
     private final Route route;
-    private final RouteResult routeResult;
+    private final RoutingResult routingResult;
     @Nullable
     private final T value;
 
-    private RouteElement(@Nullable Route route, RouteResult routeResult, @Nullable T value) {
+    private Routed(@Nullable Route route, RoutingResult routingResult, @Nullable T value) {
         assert route != null && value != null ||
                route == null && value == null;
 
         this.route = route;
-        this.routeResult = routeResult;
+        this.routingResult = routingResult;
         this.value = value;
     }
 
@@ -87,13 +87,13 @@ public final class RouteElement<T> {
     }
 
     /**
-     * Returns the {@link RouteResult}.
+     * Returns the {@link RoutingResult}.
      *
      * @throws IllegalStateException if there's no match
      */
-    public RouteResult routeResult() {
+    public RoutingResult routingResult() {
         ensurePresence();
-        return routeResult;
+        return routingResult;
     }
 
     /**
@@ -117,7 +117,7 @@ public final class RouteElement<T> {
         if (isPresent()) {
             return MoreObjects.toStringHelper(this)
                                   .add("route", route)
-                                  .add("routeResult", routeResult)
+                                  .add("routingResult", routingResult)
                                   .add("value", value)
                                   .toString();
         } else {

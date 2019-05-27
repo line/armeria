@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.server.RouteResult.HIGHEST_SCORE;
+import static com.linecorp.armeria.server.RoutingResult.HIGHEST_SCORE;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -74,14 +74,14 @@ final class DefaultRoute implements Route {
     }
 
     @Override
-    public RouteResult apply(RoutingContext routingCtx) {
+    public RoutingResult apply(RoutingContext routingCtx) {
         final PathMappingResult result = pathMapping.apply(requireNonNull(routingCtx, "routingCtx"));
         if (!result.isPresent()) {
-            return RouteResult.empty();
+            return RoutingResult.empty();
         }
 
         if (methods.isEmpty()) {
-            return RouteResult.builder().pathMappingResult(result).build();
+            return RoutingResult.builder().pathMappingResult(result).build();
         }
 
         // We need to check the method after checking the path, in order to return '405 Method Not Allowed'.
@@ -94,7 +94,7 @@ final class DefaultRoute implements Route {
             if (!routingCtx.delayedThrowable().isPresent()) {
                 routingCtx.delayThrowable(HttpStatusException.of(HttpStatus.METHOD_NOT_ALLOWED));
             }
-            return RouteResult.empty();
+            return RoutingResult.empty();
         }
 
         if (!consumes.isEmpty()) {
@@ -110,15 +110,15 @@ final class DefaultRoute implements Route {
             }
             if (!found) {
                 routingCtx.delayThrowable(HttpStatusException.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE));
-                return RouteResult.empty();
+                return RoutingResult.empty();
             }
         }
 
         final List<MediaType> types = routingCtx.acceptTypes();
         if (types.isEmpty()) {
-            final RouteResultBuilder builder = RouteResult.builder()
-                                                          .pathMappingResult(result)
-                                                          .score(HIGHEST_SCORE);
+            final RoutingResultBuilder builder = RoutingResult.builder()
+                                                              .pathMappingResult(result)
+                                                              .score(HIGHEST_SCORE);
             for (MediaType produceType : produces) {
                 if (!isAnyType(produceType)) {
                     return builder.negotiatedResponseMediaType(produceType).build();
@@ -135,9 +135,10 @@ final class DefaultRoute implements Route {
                         // To early stop path mapping traversal,
                         // we set the score as the best score when the index is 0.
 
-                        final RouteResultBuilder builder = RouteResult.builder()
-                                                                      .pathMappingResult(result)
-                                                                      .score(i == 0 ? HIGHEST_SCORE : -1 * i);
+                        final int score = i == 0 ? HIGHEST_SCORE : -1 * i;
+                        final RoutingResultBuilder builder = RoutingResult.builder()
+                                                                          .pathMappingResult(result)
+                                                                          .score(score);
                         if (!isAnyType(produceType)) {
                             return builder.negotiatedResponseMediaType(produceType).build();
                         }
@@ -146,10 +147,10 @@ final class DefaultRoute implements Route {
                 }
             }
             routingCtx.delayThrowable(HttpStatusException.of(HttpStatus.NOT_ACCEPTABLE));
-            return RouteResult.empty();
+            return RoutingResult.empty();
         }
 
-        return RouteResult.builder().pathMappingResult(result).build();
+        return RoutingResult.builder().pathMappingResult(result).build();
     }
 
     private static boolean isAnyType(MediaType contentType) {

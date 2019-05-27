@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.Route;
-import com.linecorp.armeria.server.RouteElement;
+import com.linecorp.armeria.server.Routed;
 import com.linecorp.armeria.server.Router;
 import com.linecorp.armeria.server.Routers;
 import com.linecorp.armeria.server.RoutingContext;
@@ -130,10 +130,10 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
      *
      * @param routingCtx a context to find the {@link Service}.
      *
-     * @return the {@link Service} wrapped by {@link RouteElement} if there's a match.
-     *         {@link RouteElement#empty()} if there's no match.
+     * @return the {@link Service} wrapped by {@link Routed} if there's a match.
+     *         {@link Routed#empty()} if there's no match.
      */
-    protected RouteElement<Service<I, O>> findService(RoutingContext routingCtx) {
+    protected Routed<Service<I, O>> findService(RoutingContext routingCtx) {
         assert router != null;
         return router.find(routingCtx);
     }
@@ -141,7 +141,7 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
     @Override
     public O serve(ServiceRequestContext ctx, I req) throws Exception {
         final RoutingContext routingCtx = ctx.routingContext();
-        final RouteElement<Service<I, O>> result = findService(routingCtx.overridePath(ctx.mappedPath()));
+        final Routed<Service<I, O>> result = findService(routingCtx.overridePath(ctx.mappedPath()));
         if (!result.isPresent()) {
             throw HttpStatusException.of(HttpStatus.NOT_FOUND);
         }
@@ -152,7 +152,7 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
                                                           childPrefix.get().substring(1)).build();
 
             final ServiceRequestContext newCtx = new CompositeServiceRequestContext(
-                    ctx, newRoute, result.routeResult().path());
+                    ctx, newRoute, result.routingResult().path());
             try (SafeCloseable ignored = newCtx.push(false)) {
                 return result.value().serve(newCtx, req);
             }

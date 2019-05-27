@@ -70,7 +70,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     private final Channel ch;
     private final ServiceConfig cfg;
     private final RoutingContext routingContext;
-    private final RouteResult routeResult;
+    private final RoutingResult routingResult;
     @Nullable
     private final SSLSession sslSession;
 
@@ -109,7 +109,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      * @param meterRegistry the {@link MeterRegistry} that collects various stats
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
      * @param routingContext the parameters which are used when finding a matched {@link Route}
-     * @param routeResult the result of finding a matched {@link Route}
+     * @param routingResult the result of finding a matched {@link Route}
      * @param request the request associated with this context
      * @param sslSession the {@link SSLSession} for this invocation if it is over TLS
      * @param proxiedAddresses source and destination addresses retrieved from PROXY protocol header
@@ -117,10 +117,10 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      */
     public DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            RoutingContext routingContext, RouteResult routeResult, HttpRequest request,
+            RoutingContext routingContext, RoutingResult routingResult, HttpRequest request,
             @Nullable SSLSession sslSession, @Nullable ProxiedAddresses proxiedAddresses,
             InetAddress clientAddress) {
-        this(cfg, ch, meterRegistry, sessionProtocol, routingContext, routeResult, request,
+        this(cfg, ch, meterRegistry, sessionProtocol, routingContext, routingResult, request,
              sslSession, proxiedAddresses, clientAddress, false, 0, 0);
     }
 
@@ -132,7 +132,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      * @param meterRegistry the {@link MeterRegistry} that collects various stats
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
      * @param routingContext the parameters which are used when finding a matched {@link Route}
-     * @param routeResult the result of finding a matched {@link Route}
+     * @param routingResult the result of finding a matched {@link Route}
      * @param request the request associated with this context
      * @param sslSession the {@link SSLSession} for this invocation if it is over TLS
      * @param proxiedAddresses source and destination addresses retrieved from PROXY protocol header
@@ -143,29 +143,29 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      */
     public DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            RoutingContext routingContext, RouteResult routeResult, HttpRequest request,
+            RoutingContext routingContext, RoutingResult routingResult, HttpRequest request,
             @Nullable SSLSession sslSession, @Nullable ProxiedAddresses proxiedAddresses,
             InetAddress clientAddress, long requestStartTimeNanos, long requestStartTimeMicros) {
-        this(cfg, ch, meterRegistry, sessionProtocol, routingContext, routeResult, request,
+        this(cfg, ch, meterRegistry, sessionProtocol, routingContext, routingResult, request,
              sslSession, proxiedAddresses, clientAddress, true, requestStartTimeNanos, requestStartTimeMicros);
     }
 
     private DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            RoutingContext routingContext, RouteResult routeResult, HttpRequest request,
+            RoutingContext routingContext, RoutingResult routingResult, HttpRequest request,
             @Nullable SSLSession sslSession, @Nullable ProxiedAddresses proxiedAddresses,
             InetAddress clientAddress, boolean requestStartTimeSet, long requestStartTimeNanos,
             long requestStartTimeMicros) {
 
         super(meterRegistry, sessionProtocol,
               requireNonNull(routingContext, "routingContext").method(), routingContext.path(),
-              requireNonNull(routeResult, "routeResult").query(),
+              requireNonNull(routingResult, "routingResult").query(),
               request);
 
         this.ch = requireNonNull(ch, "ch");
         this.cfg = requireNonNull(cfg, "cfg");
         this.routingContext = routingContext;
-        this.routeResult = routeResult;
+        this.routingResult = routingResult;
         this.sslSession = sslSession;
         this.proxiedAddresses = proxiedAddresses;
         this.clientAddress = requireNonNull(clientAddress, "clientAddress");
@@ -240,7 +240,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     public ServiceRequestContext newDerivedContext(Request request) {
         final DefaultServiceRequestContext ctx = new DefaultServiceRequestContext(
                 cfg, ch, meterRegistry(), sessionProtocol(), routingContext,
-                routeResult, (HttpRequest) request, sslSession(), proxiedAddresses(), clientAddress);
+                routingResult, (HttpRequest) request, sslSession(), proxiedAddresses(), clientAddress);
 
         final HttpHeaders additionalHeaders = additionalResponseHeaders();
         if (!additionalHeaders.isEmpty()) {
@@ -323,7 +323,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
     @Override
     public Map<String, String> pathParams() {
-        return routeResult.pathParams();
+        return routingResult.pathParams();
     }
 
     @Override
@@ -342,18 +342,18 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
     @Override
     public String mappedPath() {
-        return routeResult.path();
+        return routingResult.path();
     }
 
     @Override
     public String decodedMappedPath() {
-        return routeResult.decodedPath();
+        return routingResult.decodedPath();
     }
 
     @Nullable
     @Override
     public MediaType negotiatedResponseMediaType() {
-        return routeResult.negotiatedResponseMediaType();
+        return routingResult.negotiatedResponseMediaType();
     }
 
     @Override

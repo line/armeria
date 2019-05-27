@@ -340,10 +340,10 @@ public final class VirtualHost {
      *
      * @param routingCtx a context to find the {@link Service}.
      *
-     * @return the {@link ServiceConfig} wrapped by a {@link RouteElement} if there's a match.
-     *         {@link RouteElement#empty()} if there's no match.
+     * @return the {@link ServiceConfig} wrapped by a {@link Routed} if there's a match.
+     *         {@link Routed#empty()} if there's no match.
      */
-    public RouteElement<ServiceConfig> findServiceConfig(RoutingContext routingCtx) {
+    public Routed<ServiceConfig> findServiceConfig(RoutingContext routingCtx) {
         return router.find(requireNonNull(routingCtx, "routingCtx"));
     }
 

@@ -132,7 +132,7 @@ class GlobPathMappingTest {
     @Test
     void utf8() throws Exception {
         final Route route = glob("/foo/*");
-        final RouteResult res = route.apply(create("/foo/%C2%A2"));
+        final RoutingResult res = route.apply(create("/foo/%C2%A2"));
         assertThat(res.path()).isEqualTo("/foo/%C2%A2");
         assertThat(res.decodedPath()).isEqualTo("/foo/¢");
         assertThat(res.pathParams()).containsEntry("0", "¢").hasSize(1);

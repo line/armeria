@@ -29,28 +29,28 @@ import com.linecorp.armeria.common.MediaType;
 /**
  * The result returned by {@link Route#apply(RoutingContext)}.
  */
-public class RouteResult {
+public final class RoutingResult {
 
     static final int LOWEST_SCORE = Integer.MIN_VALUE;
     static final int HIGHEST_SCORE = Integer.MAX_VALUE;
 
-    private static final RouteResult EMPTY =
-            new RouteResult(PathMappingResult.empty(), LOWEST_SCORE, null);
+    private static final RoutingResult EMPTY =
+            new RoutingResult(PathMappingResult.empty(), LOWEST_SCORE, null);
 
     /**
-     * The {@link RouteResult} whose {@link #isPresent()} returns {@code false}. It is returned by
+     * The {@link RoutingResult} whose {@link #isPresent()} returns {@code false}. It is returned by
      * {@link Route#apply(RoutingContext)} when the {@link RoutingContext} did not match the
      * conditions in the {@link Route}.
      */
-    public static RouteResult empty() {
+    public static RoutingResult empty() {
         return EMPTY;
     }
 
     /**
      * Returns a new builder.
      */
-    public static RouteResultBuilder builder() {
-        return new RouteResultBuilder();
+    public static RoutingResultBuilder builder() {
+        return new RoutingResultBuilder();
     }
 
     private final PathMappingResult pathMappingResult;
@@ -59,8 +59,8 @@ public class RouteResult {
     @Nullable
     private final MediaType negotiatedResponseMediaType;
 
-    RouteResult(PathMappingResult pathMappingResult, int score,
-                @Nullable MediaType negotiatedResponseMediaType) {
+    RoutingResult(PathMappingResult pathMappingResult, int score,
+                  @Nullable MediaType negotiatedResponseMediaType) {
         this.pathMappingResult = requireNonNull(pathMappingResult, "pathMappingResult");
         this.score = score;
         this.negotiatedResponseMediaType = negotiatedResponseMediaType;

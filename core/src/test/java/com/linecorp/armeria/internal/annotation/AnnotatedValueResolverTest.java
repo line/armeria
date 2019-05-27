@@ -49,7 +49,7 @@ import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.NoAnnotatedParameterException;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.RequestObjectResolver;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.ResolverContext;
-import com.linecorp.armeria.server.RouteResult;
+import com.linecorp.armeria.server.RoutingResult;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 import com.linecorp.armeria.server.annotation.Cookies;
@@ -96,17 +96,17 @@ public class AnnotatedValueResolverTest {
         originalHeaders = headers.build();
         request = HttpRequest.of(originalHeaders);
 
-        final RouteResult routeResult =
-                RouteResult.builder()
-                           .path(path)
-                           .query(query)
-                           .pathParams(pathParams.stream()
+        final RoutingResult routingResult =
+                RoutingResult.builder()
+                             .path(path)
+                             .query(query)
+                             .pathParams(pathParams.stream()
                                                  .collect(toImmutableMap(Function.identity(),
                                                                          Function.identity())))
-                           .build();
+                             .build();
 
         context = ServiceRequestContextBuilder.of(request)
-                                              .routeResult(routeResult)
+                                              .routingResult(routingResult)
                                               .build();
 
         resolverContext = new ResolverContext(context, request, null);

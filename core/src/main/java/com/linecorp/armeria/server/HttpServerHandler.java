@@ -328,9 +328,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 DefaultRoutingContext.of(host, hostname, pathAndQuery.path(), pathAndQuery.query(),
                                          headers, isCorsPreflightRequest(req));
         // Find the service that matches the path.
-        final RouteElement<ServiceConfig> routeElement;
+        final Routed<ServiceConfig> routed;
         try {
-            routeElement = host.findServiceConfig(routingCtx);
+            routed = host.findServiceConfig(routingCtx);
         } catch (HttpStatusException cause) {
             // We do not need to handle HttpResponseException here because we do not use it internally.
             respond(ctx, req, pathAndQuery, cause.httpStatus(), null, cause);
@@ -340,15 +340,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             respond(ctx, req, pathAndQuery, HttpStatus.INTERNAL_SERVER_ERROR, null, cause);
             return;
         }
-        if (!routeElement.isPresent()) {
+        if (!routed.isPresent()) {
             // No services matched the path.
             handleNonExistentMapping(ctx, req, host, pathAndQuery, routingCtx);
             return;
         }
 
         // Decode the request and create a new invocation context from it to perform an invocation.
-        final RouteResult routeResult = routeElement.routeResult();
-        final ServiceConfig serviceCfg = routeElement.value();
+        final RoutingResult routingResult = routed.routingResult();
+        final ServiceConfig serviceCfg = routed.value();
         final Service<HttpRequest, HttpResponse> service = serviceCfg.service();
         final Channel channel = ctx.channel();
         final InetAddress remoteAddress = ((InetSocketAddress) channel.remoteAddress()).getAddress();
@@ -363,7 +363,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
                 serviceCfg, channel, serviceCfg.server().meterRegistry(),
-                protocol, routingCtx, routeResult, req, getSSLSession(channel),
+                protocol, routingCtx, routingResult, req, getSSLSession(channel),
                 proxiedAddresses, clientAddress);
 
         try (SafeCloseable ignored = reqCtx.push()) {
@@ -400,7 +400,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             }
             unfinishedRequests.put(req, res);
 
-            if (service.shouldCachePath(pathAndQuery.path(), pathAndQuery.query(), routeElement.route())) {
+            if (service.shouldCachePath(pathAndQuery.path(), pathAndQuery.query(), routed.route())) {
                 reqCtx.log().addListener(log -> {
                     final HttpStatus status = log.responseHeaders().status();
                     if (status.code() >= 200 && status.code() < 400) {

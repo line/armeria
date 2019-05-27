@@ -20,7 +20,7 @@ import java.util.List;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.server.RouteElement;
+import com.linecorp.armeria.server.Routed;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.Service;
 
@@ -60,7 +60,7 @@ public class SimpleCompositeService<I extends Request, O extends Response>
     }
 
     @Override
-    public RouteElement<Service<I, O>> findService(RoutingContext routingCtx) {
+    public Routed<Service<I, O>> findService(RoutingContext routingCtx) {
         return super.findService(routingCtx);
     }
 }

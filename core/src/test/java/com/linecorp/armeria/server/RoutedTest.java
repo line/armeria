@@ -21,24 +21,24 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
-class RouteElementTest {
+class RoutedTest {
     /**
-     * Should not accept an empty {@link RouteResult} when creating a non-empty {@link RouteElement}.
+     * Should not accept an empty {@link RoutingResult} when creating a non-empty {@link Routed}.
      */
     @Test
     void shouldNotAcceptEmptyResult() {
-        assertThatThrownBy(() -> RouteElement.of(Route.builder().catchAll().build(),
-                                                 RouteResult.empty(),
-                                                 new Object()))
+        assertThatThrownBy(() -> Routed.of(Route.builder().catchAll().build(),
+                                           RoutingResult.empty(),
+                                           new Object()))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void empty() {
-        final RouteElement<?> result = RouteElement.empty();
+        final Routed<?> result = Routed.empty();
         assertThat(result.isPresent()).isFalse();
         assertThatThrownBy(result::route).isInstanceOf(IllegalStateException.class);
-        assertThatThrownBy(result::routeResult).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(result::routingResult).isInstanceOf(IllegalStateException.class);
         assertThatThrownBy(result::value).isInstanceOf(IllegalStateException.class);
     }
 }

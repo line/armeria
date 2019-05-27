@@ -43,17 +43,17 @@ public interface Route {
      *
      * @param routingCtx a context to find the {@link Service}
      *
-     * @return a non-empty {@link RouteResult} if the {@linkplain RoutingContext#path() path},
+     * @return a non-empty {@link RoutingResult} if the {@linkplain RoutingContext#path() path},
      *         {@linkplain RoutingContext#method() method},
      *         {@linkplain RoutingContext#contentType() contentType} and
      *         {@linkplain RoutingContext#acceptTypes() acceptTypes} matches the equivalent conditions in
-     *         {@link Route}. {@link RouteResult#empty()} otherwise.
+     *         {@link Route}. {@link RoutingResult#empty()} otherwise.
      *
      * @see RouteBuilder#methods(Iterable)
      * @see RouteBuilder#consumes(Iterable)
      * @see RouteBuilder#produces(Iterable)
      */
-    RouteResult apply(RoutingContext routingCtx);
+    RoutingResult apply(RoutingContext routingCtx);
 
     /**
      * Returns the names of the path parameters extracted by this mapping.

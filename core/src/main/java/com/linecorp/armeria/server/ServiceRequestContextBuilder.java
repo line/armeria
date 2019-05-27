@@ -64,7 +64,7 @@ public final class ServiceRequestContextBuilder
 
     private Service<HttpRequest, HttpResponse> service = fakeService;
     @Nullable
-    private RouteResult routeResult;
+    private RoutingResult routingResult;
     @Nullable
     private ProxiedAddresses proxiedAddresses;
     @Nullable
@@ -84,10 +84,10 @@ public final class ServiceRequestContextBuilder
     }
 
     /**
-     * Sets the {@link RouteResult} of the request. If not set, it is auto-generated from the request.
+     * Sets the {@link RoutingResult} of the request. If not set, it is auto-generated from the request.
      */
-    public ServiceRequestContextBuilder routeResult(RouteResult routeResult) {
-        this.routeResult = requireNonNull(routeResult, "routeResult");
+    public ServiceRequestContextBuilder routingResult(RoutingResult routingResult) {
+        this.routingResult = requireNonNull(routingResult, "routingResult");
         return this;
     }
 
@@ -153,20 +153,20 @@ public final class ServiceRequestContextBuilder
                 ((HttpRequest) request()).headers(),
                 false);
 
-        final RouteResult routeResult =
-                this.routeResult != null ? this.routeResult
-                                         : RouteResult.builder().path(path()).query(query()).build();
+        final RoutingResult routingResult =
+                this.routingResult != null ? this.routingResult
+                                           : RoutingResult.builder().path(path()).query(query()).build();
 
         // Build the context with the properties set by a user and the fake objects.
         if (isRequestStartTimeSet()) {
             return new DefaultServiceRequestContext(
                     serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), routingCtx,
-                    routeResult, request(), sslSession(), proxiedAddresses, clientAddress,
+                    routingResult, request(), sslSession(), proxiedAddresses, clientAddress,
                     requestStartTimeNanos(), requestStartTimeMicros());
         } else {
             return new DefaultServiceRequestContext(
                     serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), routingCtx,
-                    routeResult, request(), sslSession(), proxiedAddresses, clientAddress);
+                    routingResult, request(), sslSession(), proxiedAddresses, clientAddress);
         }
     }
 

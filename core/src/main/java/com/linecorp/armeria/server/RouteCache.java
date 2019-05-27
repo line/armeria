@@ -96,17 +96,17 @@ final class RouteCache {
         }
 
         @Override
-        public RouteElement<V> find(RoutingContext routingCtx) {
+        public Routed<V> find(RoutingContext routingCtx) {
             final V cached = cache.getIfPresent(routingCtx);
             if (cached != null) {
-                // RouteResult may be different to each other for every requests, so we cannot
+                // RoutingResult may be different to each other for every requests, so we cannot
                 // use it as a cache value.
                 final Route route = routeResolver.apply(cached);
-                final RouteResult routeResult = route.apply(routingCtx);
-                return RouteElement.of(route, routeResult, cached);
+                final RoutingResult routingResult = route.apply(routingCtx);
+                return Routed.of(route, routingResult, cached);
             }
 
-            final RouteElement<V> result = delegate.find(routingCtx);
+            final Routed<V> result = delegate.find(routingCtx);
             if (result.isPresent()) {
                 cache.put(routingCtx, result.value());
             }

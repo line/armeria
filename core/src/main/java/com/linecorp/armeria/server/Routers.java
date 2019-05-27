@@ -98,9 +98,9 @@ public final class Routers {
                 }));
 
         return new CompositeRouter<>(delegate, result ->
-                result.isPresent() ? RouteElement.of(result.route(), result.routeResult(),
-                                                     result.value().service())
-                                   : RouteElement.empty());
+                result.isPresent() ? Routed.of(result.route(), result.routingResult(),
+                                               result.value().service())
+                                   : Routed.empty());
     }
 
     /**
@@ -241,14 +241,14 @@ public final class Routers {
     /**
      * Finds the most suitable service from the given {@link ServiceConfig} list.
      */
-    private static <V> RouteElement<V> findBest(RoutingContext routingCtx, @Nullable List<V> values,
-                                                Function<V, Route> routeResolver) {
-        RouteElement<V> result = RouteElement.empty();
+    private static <V> Routed<V> findBest(RoutingContext routingCtx, @Nullable List<V> values,
+                                          Function<V, Route> routeResolver) {
+        Routed<V> result = Routed.empty();
         if (values != null) {
             for (V value : values) {
                 final Route route = routeResolver.apply(value);
-                final RouteResult routeResult = route.apply(routingCtx);
-                if (routeResult.isPresent()) {
+                final RoutingResult routingResult = route.apply(routingCtx);
+                if (routingResult.isPresent()) {
                     //
                     // The services are sorted as follows:
                     //
@@ -265,30 +265,30 @@ public final class Routers {
                     //
 
                     // Found the best matching.
-                    if (routeResult.hasHighestScore()) {
-                        result = RouteElement.of(route, routeResult, value);
+                    if (routingResult.hasHighestScore()) {
+                        result = Routed.of(route, routingResult, value);
                         break;
                     }
 
-                    // This means that the 'routeResult' is produced by one of 3), 4) and 5).
+                    // This means that the 'routingResult' is produced by one of 3), 4) and 5).
                     // So we have no more chance to find a better matching from now.
-                    if (routeResult.hasLowestScore()) {
+                    if (routingResult.hasLowestScore()) {
                         if (!result.isPresent()) {
-                            result = RouteElement.of(route, routeResult, value);
+                            result = Routed.of(route, routingResult, value);
                         }
                         break;
                     }
 
                     // We have still a chance to find a better matching.
                     if (result.isPresent()) {
-                        if (routeResult.score() > result.routeResult().score()) {
+                        if (routingResult.score() > result.routingResult().score()) {
                             // Replace the candidate with the new one only if the score is better.
                             // If the score is same, we respect the order of service registration.
-                            result = RouteElement.of(route, routeResult, value);
+                            result = Routed.of(route, routingResult, value);
                         }
                     } else {
                         // Keep the result as a candidate.
-                        result = RouteElement.of(route, routeResult, value);
+                        result = Routed.of(route, routingResult, value);
                     }
                 }
             }
@@ -307,7 +307,7 @@ public final class Routers {
         }
 
         @Override
-        public RouteElement<V> find(RoutingContext routingCtx) {
+        public Routed<V> find(RoutingContext routingCtx) {
             return findBest(routingCtx, trie.find(routingCtx.path()), routeResolver);
         }
 
@@ -328,7 +328,7 @@ public final class Routers {
         }
 
         @Override
-        public RouteElement<V> find(RoutingContext routingCtx) {
+        public Routed<V> find(RoutingContext routingCtx) {
             return findBest(routingCtx, values, routeResolver);
         }
 

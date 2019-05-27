@@ -33,7 +33,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.server.Route;
-import com.linecorp.armeria.server.RouteResult;
+import com.linecorp.armeria.server.RoutingResult;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 
@@ -75,11 +75,11 @@ class GrpcServiceTest {
         final HttpRequest req = HttpRequest.of(
                 RequestHeaders.of(HttpMethod.POST, "/grpc.testing.TestService.UnaryCall",
                                   HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto"));
-        final RouteResult routeResult = RouteResult.builder()
-                                                   .path("grpc.testing.TestService.UnaryCall")
-                                                   .build();
+        final RoutingResult routingResult = RoutingResult.builder()
+                                                         .path("grpc.testing.TestService.UnaryCall")
+                                                         .build();
         final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(req)
-                                                                      .routeResult(routeResult)
+                                                                      .routingResult(routingResult)
                                                                       .build();
         final HttpResponse response = grpcService.doPost(ctx, req);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpResponse.of(
@@ -94,11 +94,11 @@ class GrpcServiceTest {
         final HttpRequest req = HttpRequest.of(
                 RequestHeaders.of(HttpMethod.POST, "/grpc.testing.TestService/FooCall",
                                   HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto"));
-        final RouteResult routeResult = RouteResult.builder()
-                                                   .path("/grpc.testing.TestService/FooCall")
-                                                   .build();
+        final RoutingResult routingResult = RoutingResult.builder()
+                                                         .path("/grpc.testing.TestService/FooCall")
+                                                         .build();
         final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(req)
-                                                                      .routeResult(routeResult)
+                                                                      .routingResult(routingResult)
                                                                       .build();
         final HttpResponse response = grpcService.doPost(ctx, req);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpResponse.of(

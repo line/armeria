@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.server.RouteResult.LOWEST_SCORE;
+import static com.linecorp.armeria.server.RoutingResult.LOWEST_SCORE;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
@@ -28,9 +28,9 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.common.MediaType;
 
 /**
- * Builds a new {@link RouteResult}.
+ * Builds a new {@link RoutingResult}.
  */
-public final class RouteResultBuilder {
+public final class RoutingResultBuilder {
 
     @Nullable
     private PathMappingResult pathMappingResult;
@@ -46,7 +46,7 @@ public final class RouteResultBuilder {
     @Nullable
     private MediaType negotiatedResponseMediaType;
 
-    RouteResultBuilder pathMappingResult(PathMappingResult pathMappingResult) {
+    RoutingResultBuilder pathMappingResult(PathMappingResult pathMappingResult) {
         this.pathMappingResult = requireNonNull(pathMappingResult, "pathMappingResult");
         return this;
     }
@@ -54,7 +54,7 @@ public final class RouteResultBuilder {
     /**
      * Sets the mapped path, encoded as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
      */
-    public RouteResultBuilder path(String path) {
+    public RoutingResultBuilder path(String path) {
         this.path = requireNonNull(path, "path");
         return this;
     }
@@ -62,7 +62,7 @@ public final class RouteResultBuilder {
     /**
      * Sets the specified query.
      */
-    public RouteResultBuilder query(@Nullable String query) {
+    public RoutingResultBuilder query(@Nullable String query) {
         this.query = query;
         return this;
     }
@@ -70,7 +70,7 @@ public final class RouteResultBuilder {
     /**
      * Sets the path parameters.
      */
-    public RouteResultBuilder pathParams(Map<String, String> pathParams) {
+    public RoutingResultBuilder pathParams(Map<String, String> pathParams) {
         this.pathParams = requireNonNull(pathParams, "pathParams");
         return this;
     }
@@ -78,7 +78,7 @@ public final class RouteResultBuilder {
     /**
      * Sets the score.
      */
-    public RouteResultBuilder score(int score) {
+    public RoutingResultBuilder score(int score) {
         this.score = score;
         return this;
     }
@@ -86,25 +86,25 @@ public final class RouteResultBuilder {
     /**
      * Sets the negotiated producible {@link MediaType}.
      */
-    public RouteResultBuilder negotiatedResponseMediaType(MediaType negotiatedResponseMediaType) {
+    public RoutingResultBuilder negotiatedResponseMediaType(MediaType negotiatedResponseMediaType) {
         this.negotiatedResponseMediaType = requireNonNull(negotiatedResponseMediaType,
                                                           "negotiatedResponseMediaType");
         return this;
     }
 
     /**
-     * Returns a newly-created {@link RouteResult}.
+     * Returns a newly-created {@link RoutingResult}.
      */
-    public RouteResult build() {
+    public RoutingResult build() {
         if (pathMappingResult != null) {
-            return new RouteResult(pathMappingResult, score, negotiatedResponseMediaType);
+            return new RoutingResult(pathMappingResult, score, negotiatedResponseMediaType);
         }
 
         if (path == null) {
-            return RouteResult.empty();
+            return RoutingResult.empty();
         }
 
-        return new RouteResult(new PathMappingResult(path, query, pathParams), score,
-                               negotiatedResponseMediaType);
+        return new RoutingResult(new PathMappingResult(path, query, pathParams), score,
+                                 negotiatedResponseMediaType);
     }
 }

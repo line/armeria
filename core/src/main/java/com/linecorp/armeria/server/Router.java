@@ -30,10 +30,10 @@ public interface Router<V> {
     /**
      * Finds the value of mapping that matches the specified {@link RoutingContext}.
      *
-     * @return a {@link RouteElement} that wraps the matching value if there's a match.
-     *         {@link RouteElement#empty()} if there's no match.
+     * @return a {@link Routed} that wraps the matching value if there's a match.
+     *         {@link Routed#empty()} if there's no match.
      */
-    RouteElement<V> find(RoutingContext routingCtx);
+    Routed<V> find(RoutingContext routingCtx);
 
     /**
      * Registers the stats of this {@link Router} to the specified {@link MeterRegistry}.

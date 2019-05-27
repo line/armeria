@@ -36,32 +36,32 @@ import io.micrometer.core.instrument.MeterRegistry;
 final class CompositeRouter<I, O> implements Router<O> {
 
     private final List<Router<I>> delegates;
-    private final Function<RouteElement<I>, RouteElement<O>> resultMapper;
+    private final Function<Routed<I>, Routed<O>> resultMapper;
 
-    CompositeRouter(Router<I> delegate, Function<RouteElement<I>, RouteElement<O>> resultMapper) {
+    CompositeRouter(Router<I> delegate, Function<Routed<I>, Routed<O>> resultMapper) {
         this(ImmutableList.of(requireNonNull(delegate, "delegate")), resultMapper);
     }
 
-    CompositeRouter(List<Router<I>> delegates, Function<RouteElement<I>, RouteElement<O>> resultMapper) {
+    CompositeRouter(List<Router<I>> delegates, Function<Routed<I>, Routed<O>> resultMapper) {
         this.delegates = requireNonNull(delegates, "delegates");
         this.resultMapper = requireNonNull(resultMapper, "resultMapper");
     }
 
     @Override
-    public RouteElement<O> find(RoutingContext routingCtx) {
+    public Routed<O> find(RoutingContext routingCtx) {
         for (Router<I> delegate : delegates) {
-            final RouteElement<I> result = delegate.find(routingCtx);
+            final Routed<I> result = delegate.find(routingCtx);
             if (result.isPresent()) {
                 return resultMapper.apply(result);
             }
         }
-        routingCtx.delayedThrowable().ifPresent(Exceptions::throwUnsafely);
         if (routingCtx.isCorsPreflight()) {
             // '403 Forbidden' is better for a CORS preflight request than '404 Not Found'.
             throw HttpStatusException.of(HttpStatus.FORBIDDEN);
         }
+        routingCtx.delayedThrowable().ifPresent(Exceptions::throwUnsafely);
 
-        return RouteElement.empty();
+        return Routed.empty();
     }
 
     @Override

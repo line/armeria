@@ -18,13 +18,14 @@ package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.internal.RouteUtil.UNKNOWN_LOGGER_NAME;
 import static com.linecorp.armeria.internal.RouteUtil.ensureAbsolutePath;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
 
 /**
  * A skeletal {@link PathMapping} implementation. Implement {@link #doApply(RoutingContext)}.
  */
-public abstract class AbstractPathMapping implements PathMapping {
+abstract class AbstractPathMapping implements PathMapping {
 
     /**
      * {@inheritDoc} This method performs sanity checks on the specified {@code path} and calls
@@ -32,7 +33,7 @@ public abstract class AbstractPathMapping implements PathMapping {
      */
     @Override
     public final PathMappingResult apply(RoutingContext routingCtx) {
-        ensureAbsolutePath(routingCtx.path(), "path");
+        ensureAbsolutePath(requireNonNull(routingCtx, "routingCtx").path(), "path");
         return doApply(routingCtx);
     }
 

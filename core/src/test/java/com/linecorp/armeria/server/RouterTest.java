@@ -78,7 +78,7 @@ public class RouterTest {
             logger.debug("Entry: path {} router {}", entry.getKey(), entry.getValue());
             for (int i = 0; i < 5; i++) {
                 when(routingCtx.path()).thenReturn(entry.getKey());
-                final RouteElement<Route> result = routers.get(i).find(routingCtx);
+                final Routed<Route> result = routers.get(i).find(routingCtx);
                 assertThat(result.isPresent()).isEqualTo(i == entry.getValue());
             }
         });

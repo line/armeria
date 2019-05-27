@@ -76,7 +76,7 @@ provide sensible defaults, you can override its default properties using a build
 
     import com.linecorp.armeria.common.SessionProtocol;
     import com.linecorp.armeria.client.ClientRequestContextBuilder;
-    import com.linecorp.armeria.server.RouteResult;
+    import com.linecorp.armeria.server.RoutingResult;
     import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 
     HttpRequest req = HttpRequest.of(...);
@@ -87,18 +87,18 @@ provide sensible defaults, you can override its default properties using a build
                                        .remoteAddress(new InetSocketAddress("192.168.0.2", 443))
                                        .build();
 
-    RouteResult routeResult =
-            RouteResult.builder()
-                       .path("/mapped/path")                       // Mapped path
-                       .query("foo=bar&baz=qux")                   // Query string
-                       .pathParams(Map.of("pathParam1", "value1",  // Path parameters
-                                          "pathParam2", "value2"))
-                       .build();
+    RoutingResult routingResult =
+            RoutingResult.builder()
+                         .path("/mapped/path")                       // Mapped path
+                         .query("foo=bar&baz=qux")                   // Query string
+                         .pathParams(Map.of("pathParam1", "value1",  // Path parameters
+                                            "pathParam2", "value2"))
+                         .build();
 
     ServiceRequestContext sctx =
             ServiceRequestContextBuilder.of(req)
                                         .clientAddress(InetAddress.getByName("192.168.1.2"))
-                                        .routeResult(routeResult);
+                                        .routingResult(routingResult);
                                         .build();
 
 Using a fake context to emulate an incoming request
