@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.thrift;
+package com.linecorp.armeria.internal.thrift;
 
 import static java.util.Objects.requireNonNull;
 
@@ -25,11 +25,11 @@ import org.apache.thrift.transport.TTransportException;
 
 import io.netty.buffer.ByteBuf;
 
-final class TByteBufTransport extends TTransport {
+public final class TByteBufTransport extends TTransport {
 
     private final ByteBuf buf;
 
-    TByteBufTransport(ByteBuf buf) {
+    public TByteBufTransport(ByteBuf buf) {
         this.buf = requireNonNull(buf, "buf");
     }
 
