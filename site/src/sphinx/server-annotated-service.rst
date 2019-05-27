@@ -618,11 +618,12 @@ convert the result to an :api:`HttpResponse`.
         HttpResponse convertResponse(ServiceRequestContext ctx,
                                      ResponseHeaders headers,
                                      @Nullable Object result,
-                                     HttpHeaders trailingHeaders) throws Exception {
+                                     HttpHeaders trailers) throws Exception {
             if (result instanceof MyObject) {
                 return HttpResponse.of(HttpStatus.OK,
                                        MediaType.PLAIN_TEXT_UTF_8,
-                                       "Hello, %s!", ((MyObject) result).processedName());
+                                       "Hello, %s!", ((MyObject) result).processedName(),
+                                       trailers);
             }
 
             // To the next response converter.
@@ -663,7 +664,7 @@ as follows.
         HttpResponse convertResponse(ServiceRequestContext ctx,
                                      ResponseHeaders headers,
                                      @Nullable Object result,
-                                     HttpHeaders trailingHeaders) throws Exception {
+                                     HttpHeaders trailers) throws Exception {
             MediaType mediaType = ctx.negotiatedResponseMediaType();
             if (mediaType != null) {
                 // Do something based on the media type.
@@ -754,7 +755,7 @@ in a single class and add it to your :api:`ServerBuilder` at once, e.g.
         HttpResponse convertResponse(ServiceRequestContext ctx,
                                      ResponseHeaders headers,
                                      @Nullable Object result,
-                                     HttpHeaders trailingHeaders) throws Exception { ... }
+                                     HttpHeaders trailers) throws Exception { ... }
 
         @Override
         public HttpResponse handleException(RequestContext ctx, HttpRequest req,

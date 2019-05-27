@@ -184,11 +184,11 @@ public class MessageConverterService {
         public HttpResponse convertResponse(ServiceRequestContext ctx,
                                             ResponseHeaders headers,
                                             @Nullable Object result,
-                                            HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailers) throws Exception {
             if (result instanceof Response) {
                 final Response response = (Response) result;
                 final HttpData body = HttpData.ofUtf8(response.result() + ':' + response.from());
-                return HttpResponse.of(headers, body, trailingHeaders);
+                return HttpResponse.of(headers, body, trailers);
             }
             return ResponseConverterFunction.fallthrough();
         }

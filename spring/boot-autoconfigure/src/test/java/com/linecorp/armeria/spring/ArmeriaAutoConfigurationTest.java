@@ -147,11 +147,12 @@ public class ArmeriaAutoConfigurationTest {
         public HttpResponse convertResponse(ServiceRequestContext ctx,
                                             ResponseHeaders headers,
                                             @Nullable Object result,
-                                            HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailers) throws Exception {
             if (result instanceof String) {
                 return HttpResponse.of(HttpStatus.OK,
                                        MediaType.ANY_TEXT_TYPE,
-                                       result.toString());
+                                       result.toString(),
+                                       trailers);
             }
             return ResponseConverterFunction.fallthrough();
         }

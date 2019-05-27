@@ -203,15 +203,14 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
             }
             case NEEDS_DATA_OR_TRAILING_HEADERS: {
                 if (o instanceof HttpHeaders) {
-                    final HttpHeaders trailingHeaders = (HttpHeaders) o;
-                    if (trailingHeaders.contains(HttpHeaderNames.STATUS)) {
+                    final HttpHeaders trailers = (HttpHeaders) o;
+                    if (trailers.contains(HttpHeaderNames.STATUS)) {
                         throw newIllegalStateException(
                                 "published a trailing HttpHeaders with status: " + o +
                                 " (service: " + service() + ')');
                     }
                     final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
-                    final HttpHeaders addedTrailers = fillAdditionalTrailers(trailingHeaders,
-                                                                             additionalTrailers);
+                    final HttpHeaders addedTrailers = fillAdditionalTrailers(trailers, additionalTrailers);
                     logBuilder().responseTrailers(addedTrailers);
                     o = addedTrailers;
 

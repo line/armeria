@@ -221,8 +221,7 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
         requireNonNull(trailers, "trailers");
 
         // Set the 'content-length' header if possible.
-        final ResponseHeaders newHeaders = setOrRemoveContentLength(ResponseHeaders.of(headers),
-                                                                    content, trailers);
+        final ResponseHeaders newHeaders = setOrRemoveContentLength(headers, content, trailers);
 
         return new DefaultAggregatedHttpResponse(ImmutableList.copyOf(informationals),
                                                  newHeaders, content, trailers);

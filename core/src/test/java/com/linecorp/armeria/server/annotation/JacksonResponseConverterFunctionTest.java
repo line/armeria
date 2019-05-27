@@ -139,9 +139,9 @@ public class JacksonResponseConverterFunctionTest {
 
     private static Step<HttpObject> expectAggregatedJson(Object publisherOrStream,
                                                          ResponseHeaders headers,
-                                                         HttpHeaders trailingHeaders) throws Exception {
+                                                         HttpHeaders trailers) throws Exception {
         final HttpResponse response =
-                function.convertResponse(ctx, headers, publisherOrStream, trailingHeaders);
+                function.convertResponse(ctx, headers, publisherOrStream, trailers);
         return StepVerifier.create(response)
                            .expectNext(headers)
                            .assertNext(content -> {
@@ -234,9 +234,9 @@ public class JacksonResponseConverterFunctionTest {
 
     private static Step<HttpObject> expectJsonSeqContents(Object publisherOrStream,
                                                           ResponseHeaders headers,
-                                                          HttpHeaders trailingHeaders) throws Exception {
+                                                          HttpHeaders trailers) throws Exception {
         final HttpResponse response =
-                function.convertResponse(ctx, headers, publisherOrStream, trailingHeaders);
+                function.convertResponse(ctx, headers, publisherOrStream, trailers);
         return StepVerifier.create(response)
                            .expectNext(headers)
                            .expectNext(EXPECTED_CONTENTS[0])

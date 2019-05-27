@@ -257,8 +257,8 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     /**
      * Converts the {@link AggregatedHttpRequest} into a new {@link HttpRequest} and closes the stream.
      */
-    static HttpRequest of(AggregatedHttpRequest message) {
-        return of(RequestHeaders.of(message.headers()), message.content(), message.trailers());
+    static HttpRequest of(AggregatedHttpRequest request) {
+        return of(request.headers(), request.content(), request.trailers());
     }
 
     /**

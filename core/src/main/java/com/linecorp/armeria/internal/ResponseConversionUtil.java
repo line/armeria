@@ -46,22 +46,21 @@ public final class ResponseConversionUtil {
      *
      * @param stream a sequence of objects
      * @param headers to be written to the returned {@link HttpResponseWriter}
-     * @param trailingHeaders to be written to the returned {@link HttpResponseWriter}
+     * @param trailers to be written to the returned {@link HttpResponseWriter}
      * @param contentConverter converts the collected objects into a content of the response
      * @param executor executes the collecting job
      */
     public static HttpResponseWriter aggregateFrom(Stream<?> stream,
-                                                   ResponseHeaders headers, HttpHeaders trailingHeaders,
+                                                   ResponseHeaders headers, HttpHeaders trailers,
                                                    Function<Object, HttpData> contentConverter,
                                                    Executor executor) {
         requireNonNull(stream, "stream");
         requireNonNull(headers, "headers");
-        requireNonNull(trailingHeaders, "trailingHeaders");
+        requireNonNull(trailers, "trailers");
         requireNonNull(contentConverter, "contentConverter");
         requireNonNull(executor, "executor");
 
-        return aggregateFrom(collectFrom(stream, executor),
-                             headers, trailingHeaders, contentConverter);
+        return aggregateFrom(collectFrom(stream, executor), headers, trailers, contentConverter);
     }
 
     /**
@@ -69,23 +68,22 @@ public final class ResponseConversionUtil {
      *
      * @param publisher publishes objects
      * @param headers to be written to the returned {@link HttpResponseWriter}
-     * @param trailingHeaders to be written to the returned {@link HttpResponseWriter}
+     * @param trailers to be written to the returned {@link HttpResponseWriter}
      * @param contentConverter converts the collected objects into a content of the response
      */
     public static HttpResponseWriter aggregateFrom(Publisher<?> publisher,
-                                                   ResponseHeaders headers, HttpHeaders trailingHeaders,
+                                                   ResponseHeaders headers, HttpHeaders trailers,
                                                    Function<Object, HttpData> contentConverter) {
         requireNonNull(publisher, "publisher");
         requireNonNull(headers, "headers");
-        requireNonNull(trailingHeaders, "trailingHeaders");
+        requireNonNull(trailers, "trailers");
         requireNonNull(contentConverter, "contentConverter");
 
-        return aggregateFrom(collectFrom(publisher),
-                             headers, trailingHeaders, contentConverter);
+        return aggregateFrom(collectFrom(publisher), headers, trailers, contentConverter);
     }
 
     private static HttpResponseWriter aggregateFrom(CompletableFuture<?> future,
-                                                    ResponseHeaders headers, HttpHeaders trailingHeaders,
+                                                    ResponseHeaders headers, HttpHeaders trailers,
                                                     Function<Object, HttpData> contentConverter) {
         final HttpResponseWriter writer = HttpResponse.streaming();
         future.handle((result, cause) -> {
@@ -97,8 +95,8 @@ public final class ResponseConversionUtil {
                 final HttpData content = contentConverter.apply(result);
                 writer.write(headers);
                 writer.write(content);
-                if (!trailingHeaders.isEmpty()) {
-                    writer.write(trailingHeaders);
+                if (!trailers.isEmpty()) {
+                    writer.write(trailers);
                 }
                 writer.close();
             } catch (Exception e) {
@@ -115,17 +113,17 @@ public final class ResponseConversionUtil {
      *
      * @param stream a sequence of objects
      * @param headers to be written to the returned {@link HttpResponseWriter}
-     * @param trailingHeaders to be written to the returned {@link HttpResponseWriter}
+     * @param trailers to be written to the returned {@link HttpResponseWriter}
      * @param contentConverter converts the published objects into streaming contents of the response
      * @param executor executes the iteration of the stream
      */
     public static <T> HttpResponseWriter streamingFrom(Stream<T> stream,
-                                                       ResponseHeaders headers, HttpHeaders trailingHeaders,
+                                                       ResponseHeaders headers, HttpHeaders trailers,
                                                        Function<T, HttpData> contentConverter,
                                                        Executor executor) {
         requireNonNull(stream, "stream");
         requireNonNull(headers, "headers");
-        requireNonNull(trailingHeaders, "trailingHeaders");
+        requireNonNull(trailers, "trailers");
         requireNonNull(contentConverter, "contentConverter");
         requireNonNull(executor, "executor");
 
@@ -142,8 +140,8 @@ public final class ResponseConversionUtil {
                     }
                     writer.write(content);
                 }
-                if (!trailingHeaders.isEmpty()) {
-                    writer.write(trailingHeaders);
+                if (!trailers.isEmpty()) {
+                    writer.write(trailers);
                 }
                 writer.close();
             } catch (Exception e) {
@@ -159,14 +157,14 @@ public final class ResponseConversionUtil {
      *
      * @param publisher publishes objects
      * @param headers to be written to the returned {@link HttpResponseWriter}
-     * @param trailingHeaders to be written to the returned {@link HttpResponseWriter}
+     * @param trailers to be written to the returned {@link HttpResponseWriter}
      * @param contentConverter converts the published objects into streaming contents of the response
      */
     public static <T> HttpResponseWriter streamingFrom(Publisher<T> publisher,
-                                                       ResponseHeaders headers, HttpHeaders trailingHeaders,
+                                                       ResponseHeaders headers, HttpHeaders trailers,
                                                        Function<T, HttpData> contentConverter) {
         final HttpResponseWriter writer = HttpResponse.streaming();
-        publisher.subscribe(new StreamingSubscriber<>(writer, headers, trailingHeaders, contentConverter));
+        publisher.subscribe(new StreamingSubscriber<>(writer, headers, trailers, contentConverter));
         return writer;
     }
 
@@ -178,18 +176,18 @@ public final class ResponseConversionUtil {
 
         private final HttpResponseWriter writer;
         private final ResponseHeaders headers;
-        private final HttpHeaders trailingHeaders;
+        private final HttpHeaders trailers;
         private final Function<T, HttpData> contentConverter;
         @Nullable
         private Subscription subscription;
         private boolean headersSent;
 
         StreamingSubscriber(HttpResponseWriter writer,
-                            ResponseHeaders headers, HttpHeaders trailingHeaders,
+                            ResponseHeaders headers, HttpHeaders trailers,
                             Function<T, HttpData> contentConverter) {
             this.writer = requireNonNull(writer, "writer");
             this.headers = requireNonNull(headers, "headers");
-            this.trailingHeaders = requireNonNull(trailingHeaders, "trailingHeaders");
+            this.trailers = requireNonNull(trailers, "trailers");
             this.contentConverter = requireNonNull(contentConverter, "contentConverter");
         }
 
@@ -249,8 +247,8 @@ public final class ResponseConversionUtil {
             if (!writer.isOpen()) {
                 return;
             }
-            if (!trailingHeaders.isEmpty()) {
-                writer.write(trailingHeaders);
+            if (!trailers.isEmpty()) {
+                writer.write(trailers);
             }
             writer.close();
         }

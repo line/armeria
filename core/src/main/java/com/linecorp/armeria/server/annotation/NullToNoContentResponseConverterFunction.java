@@ -33,7 +33,7 @@ public final class NullToNoContentResponseConverterFunction implements ResponseC
     public HttpResponse convertResponse(ServiceRequestContext ctx,
                                         ResponseHeaders headers,
                                         @Nullable Object result,
-                                        HttpHeaders trailingHeaders) throws Exception {
+                                        HttpHeaders trailers) throws Exception {
         if (result == null) {
             // Ignore the specified headers and return '204 No Content'.
             return HttpResponse.of(HttpStatus.NO_CONTENT);

@@ -135,8 +135,8 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
         @Override
         public HttpResponse convertResponse(
                 ServiceRequestContext ctx, ResponseHeaders headers,
-                @Nullable Object result, HttpHeaders trailingHeaders) throws Exception {
-            return HttpResponse.of(headers, HttpData.ofUtf8("Hello, %s!", result), trailingHeaders);
+                @Nullable Object result, HttpHeaders trailers) throws Exception {
+            return HttpResponse.of(headers, HttpData.ofUtf8("Hello, %s!", result), trailers);
         }
     }
 

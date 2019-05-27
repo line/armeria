@@ -52,7 +52,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -151,7 +150,7 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
                     if (status.code() != HttpStatus.OK.code()) {
                         handlePreDecodeException(
                                 ctx, reply, func,
-                                new InvalidResponseHeadersException(ResponseHeaders.of(res.headers())));
+                                new InvalidResponseHeadersException(res.headers()));
                         return null;
                     }
 

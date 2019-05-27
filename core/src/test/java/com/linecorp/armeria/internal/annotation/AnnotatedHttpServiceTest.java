@@ -234,7 +234,7 @@ public class AnnotatedHttpServiceTest {
         public HttpResponse convertResponse(ServiceRequestContext ctx,
                                             ResponseHeaders headers,
                                             @Nullable Object result,
-                                            HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailers) throws Exception {
             if (result == null) {
                 return HttpResponse.of(HttpStatus.OK);
             }

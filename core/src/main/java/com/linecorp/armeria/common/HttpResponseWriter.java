@@ -158,24 +158,24 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
-     * @param trailingHeaders the trailing HTTP headers
+     * @param trailers the trailing HTTP headers
      *
      * @deprecated Use {@link HttpResponse#of(HttpStatus, MediaType, HttpData, HttpHeaders)}.
      */
     @Deprecated
     default void respond(HttpStatus status, MediaType mediaType, HttpData content,
-                         HttpHeaders trailingHeaders) {
+                         HttpHeaders trailers) {
         requireNonNull(status, "status");
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
-        requireNonNull(trailingHeaders, "trailingHeaders");
+        requireNonNull(trailers, "trailers");
 
         final ResponseHeaders headers =
                 ResponseHeaders.of(status,
                                    HttpHeaderNames.CONTENT_TYPE, mediaType,
                                    HttpHeaderNames.CONTENT_LENGTH, content.length());
 
-        if (isContentAlwaysEmptyWithValidation(status, content, trailingHeaders)) {
+        if (isContentAlwaysEmptyWithValidation(status, content, trailers)) {
             ReferenceCountUtil.safeRelease(content);
             write(headers);
         } else {
@@ -187,8 +187,8 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
         }
 
         // Add trailing headers if not empty.
-        if (!trailingHeaders.isEmpty()) {
-            write(trailingHeaders);
+        if (!trailers.isEmpty()) {
+            write(trailers);
         }
 
         close();
@@ -203,9 +203,9 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
         final ResponseHeaders headers = res.headers();
         final HttpStatus status = headers.status();
         final HttpData content = res.content();
-        final HttpHeaders trailingHeaders = res.trailers();
+        final HttpHeaders trailers = res.trailers();
 
-        if (isContentAlwaysEmptyWithValidation(status, content, trailingHeaders)) {
+        if (isContentAlwaysEmptyWithValidation(status, content, trailers)) {
             ReferenceCountUtil.safeRelease(content);
             write(headers);
         } else {
@@ -217,8 +217,8 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
         }
 
         // Add trailing headers if not empty.
-        if (!trailingHeaders.isEmpty()) {
-            write(trailingHeaders);
+        if (!trailers.isEmpty()) {
+            write(trailers);
         }
 
         close();

@@ -371,11 +371,11 @@ public final class ArmeriaHttpUtil {
      * Returns {@code true} if the content of the response with the given {@link HttpStatus} is expected to
      * be always empty (1xx, 204, 205 and 304 responses.)
      *
-     * @throws IllegalArgumentException if the specified {@code content} or {@code trailingHeaders} are
+     * @throws IllegalArgumentException if the specified {@code content} or {@code trailers} are
      *                                  non-empty when the content is always empty
      */
     public static boolean isContentAlwaysEmptyWithValidation(
-            HttpStatus status, HttpData content, HttpHeaders trailingHeaders) {
+            HttpStatus status, HttpData content, HttpHeaders trailers) {
         if (!isContentAlwaysEmpty(status)) {
             return false;
         }
@@ -384,9 +384,9 @@ public final class ArmeriaHttpUtil {
             throw new IllegalArgumentException(
                     "A " + status + " response must have empty content: " + content.length() + " byte(s)");
         }
-        if (!trailingHeaders.isEmpty()) {
+        if (!trailers.isEmpty()) {
             throw new IllegalArgumentException(
-                    "A " + status + " response must not have trailing headers: " + trailingHeaders);
+                    "A " + status + " response must not have trailing headers: " + trailers);
         }
 
         return true;
@@ -907,7 +907,7 @@ public final class ArmeriaHttpUtil {
 
     /**
      * Returns a {@link ResponseHeaders} whose {@link HttpHeaderNames#CONTENT_LENGTH} is added or removed
-     * according to the status of the specified {@code headers}, {@code content} and {@code trailingHeaders}.
+     * according to the status of the specified {@code headers}, {@code content} and {@code trailers}.
      * The {@link HttpHeaderNames#CONTENT_LENGTH} is removed when:
      * <ul>
      *   <li>the status of the specified {@code headers} is one of informational headers,
@@ -918,18 +918,18 @@ public final class ArmeriaHttpUtil {
      * does not meet the conditions above and {@link HttpHeaderNames#CONTENT_LENGTH} is not present
      * regardless of the fact that the content is empty or not.
      *
-     * @throws IllegalArgumentException if the specified {@code content} or {@code trailingHeaders} are
+     * @throws IllegalArgumentException if the specified {@code content} or {@code trailers} are
      *                                  non-empty when the content is always empty
      */
     public static ResponseHeaders setOrRemoveContentLength(ResponseHeaders headers, HttpData content,
-                                                           HttpHeaders trailingHeaders) {
+                                                           HttpHeaders trailers) {
         requireNonNull(headers, "headers");
         requireNonNull(content, "content");
-        requireNonNull(trailingHeaders, "trailingHeaders");
+        requireNonNull(trailers, "trailers");
 
         final HttpStatus status = headers.status();
 
-        if (isContentAlwaysEmptyWithValidation(status, content, trailingHeaders)) {
+        if (isContentAlwaysEmptyWithValidation(status, content, trailers)) {
             if (status != HttpStatus.NOT_MODIFIED) {
                 if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
                     final ResponseHeadersBuilder builder = headers.toBuilder();
@@ -944,7 +944,7 @@ public final class ArmeriaHttpUtil {
             return headers;
         }
 
-        if (!trailingHeaders.isEmpty()) {
+        if (!trailers.isEmpty()) {
             // Some of the client implementations such as "curl" ignores trailing headers if
             // the "content-length" header is present. We should not set "content-length" header when trailing
             // headers exists so that those clients can receive the trailing headers.

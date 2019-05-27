@@ -222,13 +222,13 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         switch (state) {
             case NEEDS_DATA_OR_TRAILING_HEADERS: {
                 if (o instanceof HttpHeaders) {
-                    final HttpHeaders trailingHeaders = (HttpHeaders) o;
-                    if (trailingHeaders.contains(HttpHeaderNames.STATUS)) {
+                    final HttpHeaders trailers = (HttpHeaders) o;
+                    if (trailers.contains(HttpHeaderNames.STATUS)) {
                         throw newIllegalStateException("published a trailing HttpHeaders with status: " + o);
                     }
                     // Trailing headers always end the stream even if not explicitly set.
                     endOfStream = true;
-                    logBuilder.requestTrailers(trailingHeaders);
+                    logBuilder.requestTrailers(trailers);
                 } else {
                     logBuilder.increaseRequestLength((HttpData) o);
                 }

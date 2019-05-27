@@ -156,7 +156,7 @@ public class AnnotatedHttpServiceHandlersOrderTest {
         public HttpResponse convertResponse(ServiceRequestContext ctx,
                                             ResponseHeaders headers,
                                             @Nullable Object result,
-                                            HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailers) throws Exception {
             if (result instanceof String && "hello foo".equals(result)) {
                 assertThat(responseCounter.getAndIncrement()).isZero();
             }
@@ -169,7 +169,7 @@ public class AnnotatedHttpServiceHandlersOrderTest {
         public HttpResponse convertResponse(ServiceRequestContext ctx,
                                             ResponseHeaders headers,
                                             @Nullable Object result,
-                                            HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailers) throws Exception {
             if (result instanceof String && "hello foo".equals(result)) {
                 assertThat(responseCounter.getAndIncrement()).isOne();
             }
@@ -182,7 +182,7 @@ public class AnnotatedHttpServiceHandlersOrderTest {
         public HttpResponse convertResponse(ServiceRequestContext ctx,
                                             ResponseHeaders headers,
                                             @Nullable Object result,
-                                            HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailers) throws Exception {
             if (result instanceof String && "hello foo".equals(result)) {
                 assertThat(responseCounter.getAndIncrement()).isEqualTo(2);
                 return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, HttpData.ofUtf8(

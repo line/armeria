@@ -26,13 +26,13 @@ import io.netty.util.ReferenceCountUtil;
 final class HttpRequestAggregator extends HttpMessageAggregator<AggregatedHttpRequest> {
 
     private final HttpRequest request;
-    private HttpHeaders trailingHeaders;
+    private HttpHeaders trailers;
 
     HttpRequestAggregator(HttpRequest request, CompletableFuture<AggregatedHttpRequest> future,
                           @Nullable ByteBufAllocator alloc) {
         super(future, alloc);
         this.request = request;
-        trailingHeaders = HttpHeaders.of();
+        trailers = HttpHeaders.of();
     }
 
     @Override
@@ -41,8 +41,8 @@ final class HttpRequestAggregator extends HttpMessageAggregator<AggregatedHttpRe
             return;
         }
 
-        if (trailingHeaders.isEmpty()) {
-            trailingHeaders = headers;
+        if (trailers.isEmpty()) {
+            trailers = headers;
         } else {
             // Optionally, only one trailers can be present.
             // See https://tools.ietf.org/html/rfc7540#section-8.1
@@ -51,7 +51,7 @@ final class HttpRequestAggregator extends HttpMessageAggregator<AggregatedHttpRe
 
     @Override
     protected void onData(HttpData data) {
-        if (!trailingHeaders.isEmpty()) {
+        if (!trailers.isEmpty()) {
             ReferenceCountUtil.safeRelease(data);
             // Data can't come after trailers.
             // See https://tools.ietf.org/html/rfc7540#section-8.1
@@ -62,11 +62,11 @@ final class HttpRequestAggregator extends HttpMessageAggregator<AggregatedHttpRe
 
     @Override
     protected AggregatedHttpRequest onSuccess(HttpData content) {
-        return AggregatedHttpRequest.of(request.headers(), content, trailingHeaders);
+        return AggregatedHttpRequest.of(request.headers(), content, trailers);
     }
 
     @Override
     protected void onFailure() {
-        trailingHeaders = HttpHeaders.of();
+        trailers = HttpHeaders.of();
     }
 }

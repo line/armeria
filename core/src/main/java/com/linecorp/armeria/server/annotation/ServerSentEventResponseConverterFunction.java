@@ -44,22 +44,22 @@ public class ServerSentEventResponseConverterFunction implements ResponseConvert
     public HttpResponse convertResponse(ServiceRequestContext ctx,
                                         ResponseHeaders headers,
                                         @Nullable Object result,
-                                        HttpHeaders trailingHeaders) throws Exception {
+                                        HttpHeaders trailers) throws Exception {
         final MediaType contentType = headers.contentType();
         if (contentType != null && contentType.is(MediaType.EVENT_STREAM)) {
             if (result instanceof Publisher) {
-                return fromPublisher(headers, (Publisher<?>) result, trailingHeaders,
+                return fromPublisher(headers, (Publisher<?>) result, trailers,
                                      ServerSentEventResponseConverterFunction::toSse);
             }
             if (result instanceof Stream) {
-                return fromStream(headers, (Stream<?>) result, trailingHeaders, ctx.blockingTaskExecutor(),
+                return fromStream(headers, (Stream<?>) result, trailers, ctx.blockingTaskExecutor(),
                                   ServerSentEventResponseConverterFunction::toSse);
             }
-            return fromEvent(headers, toSse(result), trailingHeaders);
+            return fromEvent(headers, toSse(result), trailers);
         }
 
         if (result instanceof ServerSentEvent) {
-            return fromEvent(headers, (ServerSentEvent) result, trailingHeaders);
+            return fromEvent(headers, (ServerSentEvent) result, trailers);
         }
 
         return ResponseConverterFunction.fallthrough();

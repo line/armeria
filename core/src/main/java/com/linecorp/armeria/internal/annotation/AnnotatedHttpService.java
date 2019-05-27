@@ -268,19 +268,19 @@ public class AnnotatedHttpService implements HttpService {
      */
     private HttpResponse convertResponse(ServiceRequestContext ctx, HttpRequest req,
                                          @Nullable HttpHeaders headers, @Nullable Object result,
-                                         HttpHeaders trailingHeaders) {
+                                         HttpHeaders trailers) {
         final ResponseHeaders newHeaders;
-        final HttpHeaders newTrailingHeaders;
+        final HttpHeaders newTrailers;
         if (result instanceof HttpResult) {
             final HttpResult<?> httpResult = (HttpResult<?>) result;
             newHeaders = setHttpStatus(addNegotiatedResponseMediaType(ctx, httpResult.headers()));
             result = httpResult.content().orElse(null);
-            newTrailingHeaders = httpResult.trailers();
+            newTrailers = httpResult.trailers();
         } else {
             newHeaders = setHttpStatus(
                     headers == null ? addNegotiatedResponseMediaType(ctx, HttpHeaders.of())
                                     : ResponseHeaders.builder().add(headers));
-            newTrailingHeaders = trailingHeaders;
+            newTrailers = trailers;
         }
 
         if (result instanceof HttpResponse) {
@@ -293,13 +293,13 @@ public class AnnotatedHttpService implements HttpService {
             return HttpResponse.from(
                     ((CompletionStage<?>) result)
                             .thenApply(object -> convertResponse(ctx, req, newHeaders, object,
-                                                                 newTrailingHeaders))
+                                                                 newTrailers))
                             .exceptionally(cause -> exceptionHandler.handleException(ctx, req, cause)));
         }
 
         try {
             final HttpResponse response =
-                    responseConverter.convertResponse(ctx, newHeaders, result, newTrailingHeaders);
+                    responseConverter.convertResponse(ctx, newHeaders, result, newTrailers);
             if (response instanceof HttpResponseWriter) {
                 // A streaming response has more chance to get an exception.
                 return new ExceptionFilteredHttpResponse(ctx, req, response, exceptionHandler);
@@ -433,11 +433,11 @@ public class AnnotatedHttpService implements HttpService {
         public HttpResponse convertResponse(ServiceRequestContext ctx,
                                             ResponseHeaders headers,
                                             @Nullable Object result,
-                                            HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailers) throws Exception {
             try (SafeCloseable ignored = ctx.push(false)) {
                 for (final ResponseConverterFunction func : functions) {
                     try {
-                        return func.convertResponse(ctx, headers, result, trailingHeaders);
+                        return func.convertResponse(ctx, headers, result, trailers);
                     } catch (FallthroughException ignore) {
                         // Do nothing.
                     } catch (Exception e) {
@@ -452,7 +452,7 @@ public class AnnotatedHttpService implements HttpService {
             // If you want to force to send '204 No Content' for this case, add
             // 'NullToNoContentResponseConverterFunction' to the list of response converters.
             if (result == null) {
-                return HttpResponse.of(headers, HttpData.EMPTY_DATA, trailingHeaders);
+                return HttpResponse.of(headers, HttpData.EMPTY_DATA, trailers);
             }
             throw new IllegalStateException(
                     "No response converter exists for a result: " + result.getClass().getName());
@@ -526,7 +526,7 @@ public class AnnotatedHttpService implements HttpService {
         public HttpResponse convertResponse(ServiceRequestContext ctx,
                                             ResponseHeaders headers,
                                             @Nullable Object result,
-                                            HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailers) throws Exception {
             final CompletableFuture<?> f;
             if (result instanceof Publisher) {
                 f = collectFrom((Publisher<Object>) result);
@@ -542,7 +542,7 @@ public class AnnotatedHttpService implements HttpService {
                     return exceptionHandler.handleException(ctx, ctx.request(), cause);
                 }
                 try {
-                    return responseConverter.convertResponse(ctx, headers, aggregated, trailingHeaders);
+                    return responseConverter.convertResponse(ctx, headers, aggregated, trailers);
                 } catch (Exception e) {
                     return exceptionHandler.handleException(ctx, ctx.request(), e);
                 }
