@@ -33,8 +33,8 @@ import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
-import org.apache.thrift.transport.TMemoryBuffer;
 import org.apache.thrift.transport.TMemoryInputTransport;
+import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 
 import com.google.common.base.Strings;
@@ -62,9 +62,15 @@ import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.thrift.TApplicationExceptions;
+import com.linecorp.armeria.internal.thrift.TByteBufTransport;
 import com.linecorp.armeria.internal.thrift.ThriftFieldAccess;
 import com.linecorp.armeria.internal.thrift.ThriftFunction;
 import com.linecorp.armeria.internal.thrift.ThriftServiceMetadata;
+import com.linecorp.armeria.unsafe.ByteBufHttpData;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
+import io.netty.util.ReferenceCountUtil;
 
 final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
 
@@ -105,27 +111,34 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
         }
 
         try {
-            final TMemoryBuffer outTransport = new TMemoryBuffer(128);
-            final TProtocol tProtocol = protocolFactory.getProtocol(outTransport);
             final TMessage header = new TMessage(fullMethod(ctx, method), func.messageType(), seqId);
 
-            tProtocol.writeMessageBegin(header);
-            @SuppressWarnings("rawtypes")
-            final TBase tArgs = func.newArgs(args);
-            tArgs.write(tProtocol);
-            tProtocol.writeMessageEnd();
+            final ByteBuf buf = ctx.alloc().buffer(128);
 
-            ctx.logBuilder().requestContent(call, new ThriftCall(header, tArgs));
+            try {
+                final TByteBufTransport outTransport = new TByteBufTransport(buf);
+                final TProtocol tProtocol = protocolFactory.getProtocol(outTransport);
+                tProtocol.writeMessageBegin(header);
+                @SuppressWarnings("rawtypes")
+                final TBase tArgs = func.newArgs(args);
+                tArgs.write(tProtocol);
+                tProtocol.writeMessageEnd();
+
+                ctx.logBuilder().requestContent(call, new ThriftCall(header, tArgs));
+            } catch (Throwable t) {
+                buf.release();
+                Exceptions.throwUnsafely(t);
+            }
 
             final HttpRequest httpReq = HttpRequest.of(
                     RequestHeaders.of(HttpMethod.POST, ctx.path(),
                                       HttpHeaderNames.CONTENT_TYPE, mediaType),
-                    HttpData.of(outTransport.getArray(), 0, outTransport.length()));
+                    new ByteBufHttpData(buf, true));
 
             ctx.logBuilder().deferResponseContent();
 
             final CompletableFuture<AggregatedHttpMessage> future =
-                    httpClient.execute(ctx, httpReq).aggregate();
+                    httpClient.execute(ctx, httpReq).aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc());
 
             future.handle((res, cause) -> {
                 if (cause != null) {
@@ -133,18 +146,22 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
                     return null;
                 }
 
-                final HttpStatus status = res.status();
-                if (status.code() != HttpStatus.OK.code()) {
-                    handlePreDecodeException(
-                            ctx, reply, func,
-                            new InvalidResponseHeadersException(ResponseHeaders.of(res.headers())));
-                    return null;
-                }
-
                 try {
-                    handle(ctx, seqId, reply, func, res.content());
-                } catch (Throwable t) {
-                    handlePreDecodeException(ctx, reply, func, t);
+                    final HttpStatus status = res.status();
+                    if (status.code() != HttpStatus.OK.code()) {
+                        handlePreDecodeException(
+                                ctx, reply, func,
+                                new InvalidResponseHeadersException(ResponseHeaders.of(res.headers())));
+                        return null;
+                    }
+
+                    try {
+                        handle(ctx, seqId, reply, func, res.content());
+                    } catch (Throwable t) {
+                        handlePreDecodeException(ctx, reply, func, t);
+                    }
+                } finally {
+                    ReferenceCountUtil.safeRelease(res.content());
                 }
 
                 return null;
@@ -186,8 +203,13 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
             throw new TApplicationException(TApplicationException.MISSING_RESULT);
         }
 
-        final TMemoryInputTransport inputTransport =
-                new TMemoryInputTransport(content.array(), content.offset(), content.length());
+        final TTransport inputTransport;
+        if (content instanceof ByteBufHolder) {
+            inputTransport = new TByteBufTransport(((ByteBufHolder) content).content());
+        } else {
+            inputTransport = new TMemoryInputTransport(content.array(), content.offset(), content.length());
+        }
+
         final TProtocol inputProtocol = protocolFactory.getProtocol(inputTransport);
 
         final TMessage header = inputProtocol.readMessageBegin();
