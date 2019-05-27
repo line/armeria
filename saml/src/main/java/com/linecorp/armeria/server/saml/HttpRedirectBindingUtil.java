@@ -156,12 +156,12 @@ final class HttpRedirectBindingUtil {
         try {
             final byte[] decodedSignature = Base64.getMimeDecoder().decode(signature);
             if (!XMLSigningUtil.verifyWithURI(validationCredential, sigAlg, decodedSignature, input)) {
-                throw new SamlException("failed to validate a signature");
+                throw new InvalidSamlRequestException("failed to validate a signature");
             }
         } catch (IllegalArgumentException e) {
-            throw new SamlException("failed to decode a base64 signature string", e);
+            throw new InvalidSamlRequestException("failed to decode a base64 signature string", e);
         } catch (SecurityException e) {
-            throw new SamlException("failed to validate a signature", e);
+            throw new InvalidSamlRequestException("failed to validate a signature", e);
         }
     }
 
@@ -214,7 +214,7 @@ final class HttpRedirectBindingUtil {
         try {
             base64decoded = Base64.getMimeDecoder().decode(base64Encoded);
         } catch (IllegalArgumentException e) {
-            throw new SamlException("failed to decode a deflated base64 string", e);
+            throw new InvalidSamlRequestException("failed to decode a deflated base64 string", e);
         }
 
         final ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
@@ -222,7 +222,7 @@ final class HttpRedirectBindingUtil {
                      new InflaterOutputStream(bytesOut, new Inflater(true))) {
             inflaterOutputStream.write(base64decoded);
         } catch (IOException e) {
-            throw new SamlException("failed to inflate a SAML message", e);
+            throw new InvalidSamlRequestException("failed to inflate a SAML message", e);
         }
 
         return SamlMessageUtil.deserialize(bytesOut.toByteArray());
@@ -253,7 +253,8 @@ final class HttpRedirectBindingUtil {
         } else if (message instanceof StatusResponseType) {
             issuer = ((StatusResponseType) message).getIssuer();
         } else {
-            throw new SamlException("invalid message type: " + message.getClass().getSimpleName());
+            throw new InvalidSamlRequestException(
+                    "invalid message type: " + message.getClass().getSimpleName());
         }
 
         // Use the default identity provider config if there's no issuer.
@@ -262,11 +263,12 @@ final class HttpRedirectBindingUtil {
             final String idpEntityId = issuer.getValue();
             config = idpConfigs.get(idpEntityId);
             if (config == null) {
-                throw new SamlException("a message from unknown identity provider: " + idpEntityId);
+                throw new InvalidSamlRequestException(
+                        "a message from unknown identity provider: " + idpEntityId);
             }
         } else {
             if (defaultIdpConfig == null) {
-                throw new SamlException("failed to get an Issuer element");
+                throw new InvalidSamlRequestException("failed to get an Issuer element");
             }
             config = defaultIdpConfig;
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,38 +17,36 @@ package com.linecorp.armeria.server.saml;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.Flags;
-
 /**
- * Indicates that an error occurred while processing a SAML request.
+ * Indicates that a SAML request is not valid.
  */
-public class SamlException extends RuntimeException {
+public class InvalidSamlRequestException extends SamlException {
 
-    private static final long serialVersionUID = -6694912876733624005L;
+    private static final long serialVersionUID = -8253266781662471590L;
 
     /**
      * Creates a new exception.
      */
-    public SamlException() {}
+    public InvalidSamlRequestException() {}
 
     /**
      * Creates a new instance with the specified {@code message}.
      */
-    public SamlException(@Nullable String message) {
+    public InvalidSamlRequestException(@Nullable String message) {
         super(message);
     }
 
     /**
      * Creates a new instance with the specified {@code message} and {@code cause}.
      */
-    public SamlException(@Nullable String message, @Nullable Throwable cause) {
+    public InvalidSamlRequestException(@Nullable String message, @Nullable Throwable cause) {
         super(message, cause);
     }
 
     /**
      * Creates a new instance with the specified {@code cause}.
      */
-    public SamlException(@Nullable Throwable cause) {
+    public InvalidSamlRequestException(@Nullable Throwable cause) {
         super(cause);
     }
 
@@ -56,16 +54,8 @@ public class SamlException extends RuntimeException {
      * Creates a new instance with the specified {@code message}, {@code cause}, suppression enabled or
      * disabled, and writable stack trace enabled or disabled.
      */
-    protected SamlException(@Nullable String message, @Nullable Throwable cause,
-                            boolean enableSuppression, boolean writableStackTrace) {
+    protected InvalidSamlRequestException(@Nullable String message, @Nullable Throwable cause,
+                                          boolean enableSuppression, boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
-    }
-
-    @Override
-    public Throwable fillInStackTrace() {
-        if (Flags.verboseExceptions()) {
-            return super.fillInStackTrace();
-        }
-        return this;
     }
 }

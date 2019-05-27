@@ -120,27 +120,27 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
                 return config;
             }
         }
-        throw new SamlException("failed to find identity provider from configuration " +
-                                issuer.getValue());
+        throw new InvalidSamlRequestException("failed to find identity provider from configuration: " +
+                                              issuer.getValue());
     }
 
     private Assertion getValidatedAssertion(Response response, String endpointUri) {
         final Status status = response.getStatus();
         final String statusCode = status.getStatusCode().getValue();
         if (!StatusCode.SUCCESS.equals(statusCode)) {
-            throw new SamlException("response status code: " + statusCode +
-                                    " (expected: " + StatusCode.SUCCESS + ')');
+            throw new InvalidSamlRequestException("response status code: " + statusCode +
+                                                  " (expected: " + StatusCode.SUCCESS + ')');
         }
 
         final DateTime now = new DateTime();
         final DateTime issueInstant = response.getIssueInstant();
         if (issueInstant == null) {
-            throw new SamlException("failed to get IssueInstant attribute");
+            throw new InvalidSamlRequestException("failed to get IssueInstant attribute");
         }
         if (Math.abs(now.getMillis() - issueInstant.getMillis()) > MILLIS_IN_MINUTE) {
             // Allow if 'issueInstant' is in [now - 60s, now + 60s] because there might be the
             // time difference between SP's timer and IdP's timer.
-            throw new SamlException("invalid IssueInstant: " + issueInstant);
+            throw new InvalidSamlRequestException("invalid IssueInstant: " + issueInstant);
         }
 
         final List<Assertion> assertions;
@@ -175,7 +175,7 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
         //   unique identifier of the issuing identity provider; the Format attribute MUST be omitted or
         //   have a value of urn:oasis:names:tc:SAML:2.0:nameid-format:entity.
         if (assertions.isEmpty()) {
-            throw new SamlException("failed to get Assertion elements from the response");
+            throw new InvalidSamlRequestException("failed to get Assertion elements from the response");
         }
 
         // - The set of one or more assertions MUST contain at least one <AuthnStatement> that reflects the
@@ -183,7 +183,7 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
         for (final Assertion assertion : assertions) {
             final Issuer issuer = assertion.getIssuer();
             if (issuer == null || issuer.getValue() == null) {
-                throw new SamlException("failed to get an Issuer element from the assertion");
+                throw new InvalidSamlRequestException("failed to get an Issuer element from the assertion");
             }
 
             final SamlIdentityProviderConfig idp = resolveIdpConfig(issuer);
@@ -225,18 +225,21 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
                 }
 
                 if (!endpointUri.equals(data.getRecipient())) {
-                    throw new SamlException("recipient is not matched: " + data.getRecipient());
+                    throw new InvalidSamlRequestException(
+                            "recipient is not matched: " + data.getRecipient());
                 }
                 if (now.isAfter(data.getNotOnOrAfter())) {
-                    throw new SamlException("response has been expired: " + data.getNotOnOrAfter());
+                    throw new InvalidSamlRequestException(
+                            "response has been expired: " + data.getNotOnOrAfter());
                 }
                 if (!requestIdManager.validateId(data.getInResponseTo())) {
-                    throw new SamlException("request ID is not valid: " + data.getInResponseTo());
+                    throw new InvalidSamlRequestException(
+                            "request ID is not valid: " + data.getInResponseTo());
                 }
 
                 final Conditions conditions = assertion.getConditions();
                 if (conditions == null) {
-                    throw new SamlException("no condition found from the assertion");
+                    throw new InvalidSamlRequestException("no condition found from the assertion");
                 }
 
                 // - The assertion(s) containing a bearer subject confirmation MUST contain an
@@ -251,12 +254,13 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
                           .flatMap(r -> r.getAudiences().stream())
                           .filter(audience -> entityId.equals(audience.getAudienceURI()))
                           .findAny()
-                          .orElseThrow(() -> new SamlException("no audience found from the assertion"));
+                          .orElseThrow(() -> new InvalidSamlRequestException(
+                                  "no audience found from the assertion"));
 
                 return assertion;
             }
         }
-        throw new SamlException("no subject found from the assertions");
+        throw new InvalidSamlRequestException("no subject found from the assertions");
     }
 
     private static Assertion decryptAssertion(EncryptedAssertion encryptedAssertion,
@@ -269,7 +273,7 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
         try {
             return decrypter.decrypt(encryptedAssertion);
         } catch (DecryptionException e) {
-            throw new SamlException("failed to decrypt an assertion", e);
+            throw new InvalidSamlRequestException("failed to decrypt an assertion", e);
         }
     }
 }
