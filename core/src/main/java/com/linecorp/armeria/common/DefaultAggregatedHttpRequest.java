@@ -22,8 +22,8 @@ final class DefaultAggregatedHttpRequest extends AbstractAggregatedHttpMessage
     private final RequestHeaders headers;
 
     DefaultAggregatedHttpRequest(RequestHeaders headers, HttpData content,
-                                 HttpHeaders trailingHeaders) {
-        super(content, trailingHeaders);
+                                 HttpHeaders trailers) {
+        super(content, trailers);
         this.headers = headers;
     }
 

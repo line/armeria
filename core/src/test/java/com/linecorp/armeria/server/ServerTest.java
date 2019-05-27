@@ -432,7 +432,7 @@ public class ServerTest {
             assertThat(in.readLine()).isEqualTo(expectedStatusLine);
             // Read till the end of the connection.
             final List<String> headers = new ArrayList<>();
-            for (;;)  {
+            for (;;) {
                 final String line = in.readLine();
                 if (line == null) {
                     break;

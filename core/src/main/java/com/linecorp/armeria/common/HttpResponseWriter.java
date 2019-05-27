@@ -203,7 +203,7 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
         final ResponseHeaders headers = res.headers();
         final HttpStatus status = headers.status();
         final HttpData content = res.content();
-        final HttpHeaders trailingHeaders = res.trailingHeaders();
+        final HttpHeaders trailingHeaders = res.trailers();
 
         if (isContentAlwaysEmptyWithValidation(status, content, trailingHeaders)) {
             ReferenceCountUtil.safeRelease(content);

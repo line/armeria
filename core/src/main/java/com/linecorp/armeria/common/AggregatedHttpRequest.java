@@ -158,18 +158,18 @@ public interface AggregatedHttpRequest extends AggregatedHttpMessage {
      * @param path the path of the request
      * @param mediaType the {@link MediaType} of the request content
      * @param content the content of the request
-     * @param trailingHeaders the trailing HTTP headers
+     * @param trailers the trailing HTTP headers
      */
     static AggregatedHttpRequest of(HttpMethod method, String path, MediaType mediaType,
-                                    HttpData content, HttpHeaders trailingHeaders) {
+                                    HttpData content, HttpHeaders trailers) {
         requireNonNull(method, "method");
         requireNonNull(path, "path");
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
-        requireNonNull(trailingHeaders, "trailingHeaders");
+        requireNonNull(trailers, "trailers");
         return of(RequestHeaders.builder(method, path)
                                 .contentType(mediaType).build(),
-                  content, trailingHeaders);
+                  content, trailers);
     }
 
     /**
@@ -199,12 +199,12 @@ public interface AggregatedHttpRequest extends AggregatedHttpMessage {
      *
      * @param headers the HTTP request headers
      * @param content the content of the request
-     * @param trailingHeaders the trailing HTTP headers
+     * @param trailers the trailing HTTP headers
      */
-    static AggregatedHttpRequest of(RequestHeaders headers, HttpData content, HttpHeaders trailingHeaders) {
+    static AggregatedHttpRequest of(RequestHeaders headers, HttpData content, HttpHeaders trailers) {
         requireNonNull(headers, "headers");
         requireNonNull(content, "content");
-        requireNonNull(trailingHeaders, "trailingHeaders");
+        requireNonNull(trailers, "trailers");
 
         final RequestHeadersBuilder builder = headers.toBuilder();
         if (content.isEmpty()) {
@@ -213,7 +213,7 @@ public interface AggregatedHttpRequest extends AggregatedHttpMessage {
             builder.setInt(CONTENT_LENGTH, content.length());
         }
         headers = builder.build();
-        return new DefaultAggregatedHttpRequest(headers, content, trailingHeaders);
+        return new DefaultAggregatedHttpRequest(headers, content, trailers);
     }
 
     /**

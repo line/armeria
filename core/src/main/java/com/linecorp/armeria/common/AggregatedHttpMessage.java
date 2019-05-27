@@ -33,9 +33,19 @@ interface AggregatedHttpMessage {
     HttpHeaders headers();
 
     /**
-     * Returns the trailing HTTP headers.
+     * Returns the HTTP trailers.
+     *
+     * @deprecated Use {@link #trailers()}.
      */
-    HttpHeaders trailingHeaders();
+    @Deprecated
+    default HttpHeaders trailingHeaders() {
+        return trailers();
+    }
+
+    /**
+     * Returns the HTTP trailers.
+     */
+    HttpHeaders trailers();
 
     /**
      * Returns the content of this message.

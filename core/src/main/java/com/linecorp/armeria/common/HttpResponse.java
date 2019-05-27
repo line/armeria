@@ -229,17 +229,17 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
-     * @param trailingHeaders the trailing HTTP headers
+     * @param trailers the trailing HTTP headers
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, HttpData content,
-                           HttpHeaders trailingHeaders) {
+                           HttpHeaders trailers) {
         requireNonNull(status, "status");
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
 
         final ResponseHeaders headers = ResponseHeaders.of(status,
                                                            HttpHeaderNames.CONTENT_TYPE, mediaType);
-        return of(headers, content, trailingHeaders);
+        return of(headers, content, trailers);
     }
 
     /**
@@ -259,26 +259,26 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     /**
      * Creates a new HTTP response of the specified objects.
      */
-    static HttpResponse of(ResponseHeaders headers, HttpData content, HttpHeaders trailingHeaders) {
+    static HttpResponse of(ResponseHeaders headers, HttpData content, HttpHeaders trailers) {
         requireNonNull(headers, "headers");
         requireNonNull(content, "content");
-        requireNonNull(trailingHeaders, "trailingHeaders");
+        requireNonNull(trailers, "trailers");
 
-        final ResponseHeaders newHeaders = setOrRemoveContentLength(headers, content, trailingHeaders);
-        if (content.isEmpty() && trailingHeaders.isEmpty()) {
+        final ResponseHeaders newHeaders = setOrRemoveContentLength(headers, content, trailers);
+        if (content.isEmpty() && trailers.isEmpty()) {
             ReferenceCountUtil.safeRelease(content);
             return new OneElementFixedHttpResponse(newHeaders);
         }
 
         if (!content.isEmpty()) {
-            if (trailingHeaders.isEmpty()) {
+            if (trailers.isEmpty()) {
                 return new TwoElementFixedHttpResponse(newHeaders, content);
             } else {
-                return new RegularFixedHttpResponse(newHeaders, content, trailingHeaders);
+                return new RegularFixedHttpResponse(newHeaders, content, trailers);
             }
         }
 
-        return new TwoElementFixedHttpResponse(newHeaders, trailingHeaders);
+        return new TwoElementFixedHttpResponse(newHeaders, trailers);
     }
 
     /**
@@ -297,16 +297,16 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         final List<ResponseHeaders> informationals = res.informationals();
         final ResponseHeaders headers = res.headers();
         final HttpData content = res.content();
-        final HttpHeaders trailingHeaders = res.trailingHeaders();
+        final HttpHeaders trailers = res.trailers();
 
         if (informationals.isEmpty()) {
-            return of(headers, content, trailingHeaders);
+            return of(headers, content, trailers);
         }
 
         final int numObjects = informationals.size() +
                                1 /* headers */ +
                                (!content.isEmpty() ? 1 : 0) +
-                               (!trailingHeaders.isEmpty() ? 1 : 0);
+                               (!trailers.isEmpty() ? 1 : 0);
         final HttpObject[] objs = new HttpObject[numObjects];
         int writerIndex = 0;
         for (ResponseHeaders informational : informationals) {
@@ -316,8 +316,8 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         if (!content.isEmpty()) {
             objs[writerIndex++] = content;
         }
-        if (!trailingHeaders.isEmpty()) {
-            objs[writerIndex] = trailingHeaders;
+        if (!trailers.isEmpty()) {
+            objs[writerIndex] = trailers;
         }
         return new RegularFixedHttpResponse(objs);
     }

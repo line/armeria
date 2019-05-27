@@ -160,7 +160,7 @@ public class UnaryGrpcClient {
                                    responseFuture.complete(HttpResponse.of(
                                            msg.headers(),
                                            new ByteBufHttpData(buf, true),
-                                           msg.trailingHeaders()));
+                                           msg.trailers()));
                                }
 
                                @Override
@@ -168,7 +168,7 @@ public class UnaryGrpcClient {
                                    if (!responseFuture.isDone()) {
                                        responseFuture.complete(HttpResponse.of(msg.headers(),
                                                                                HttpData.EMPTY_DATA,
-                                                                               msg.trailingHeaders()));
+                                                                               msg.trailers()));
                                    }
                                }
                            }, Integer.MAX_VALUE, ctx.alloc())) {

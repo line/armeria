@@ -28,8 +28,8 @@ final class DefaultAggregatedHttpResponse extends AbstractAggregatedHttpMessage
     private final ResponseHeaders headers;
 
     DefaultAggregatedHttpResponse(List<ResponseHeaders> informationals, ResponseHeaders headers,
-                                 HttpData content, HttpHeaders trailingHeaders) {
-        super(content, trailingHeaders);
+                                 HttpData content, HttpHeaders trailers) {
+        super(content, trailers);
         this.informationals = informationals;
         this.headers = headers;
     }
@@ -60,8 +60,8 @@ final class DefaultAggregatedHttpResponse extends AbstractAggregatedHttpMessage
         helper.add("headers", headers())
               .add("content", content());
 
-        if (!trailingHeaders().isEmpty()) {
-            helper.add("trailingHandlers", trailingHeaders());
+        if (!trailers().isEmpty()) {
+            helper.add("trailingHandlers", trailers());
         }
 
         return helper.toString();
@@ -82,7 +82,7 @@ final class DefaultAggregatedHttpResponse extends AbstractAggregatedHttpMessage
         return informationals().equals(that.informationals()) &&
                headers().equals(that.headers()) &&
                content().equals(that.content()) &&
-               trailingHeaders().equals(that.trailingHeaders());
+               trailers().equals(that.trailers());
     }
 
     @Override
@@ -90,7 +90,7 @@ final class DefaultAggregatedHttpResponse extends AbstractAggregatedHttpMessage
         int result = informationals().hashCode();
         result = 31 * result + headers().hashCode();
         result = 31 * result + content().hashCode();
-        result = 31 * result + trailingHeaders().hashCode();
+        result = 31 * result + trailers().hashCode();
         return result;
     }
 }

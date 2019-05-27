@@ -20,7 +20,6 @@ import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Formatter;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
@@ -177,17 +176,17 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * @param path the path of the request
      * @param mediaType the {@link MediaType} of the request content
      * @param content the content of the request
-     * @param trailingHeaders the trailing HTTP headers
+     * @param trailers the trailing HTTP headers
      */
     static HttpRequest of(HttpMethod method, String path, MediaType mediaType, HttpData content,
-                          HttpHeaders trailingHeaders) {
+                          HttpHeaders trailers) {
         requireNonNull(method, "method");
         requireNonNull(path, "path");
         requireNonNull(mediaType, "mediaType");
         return of(RequestHeaders.builder(method, path)
                                 .contentType(mediaType)
                                 .build(),
-                  content, trailingHeaders);
+                  content, trailers);
     }
 
     /**
@@ -209,10 +208,10 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      *
      * @throws IllegalStateException if the headers are malformed.
      */
-    static HttpRequest of(RequestHeaders headers, HttpData content, HttpHeaders trailingHeaders) {
+    static HttpRequest of(RequestHeaders headers, HttpData content, HttpHeaders trailers) {
         requireNonNull(headers, "headers");
         requireNonNull(content, "content");
-        requireNonNull(trailingHeaders, "trailingHeaders");
+        requireNonNull(trailers, "trailers");
 
         if (content.isEmpty()) {
             final RequestHeadersBuilder builder = headers.toBuilder();
@@ -225,13 +224,13 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
         }
 
         if (!content.isEmpty()) {
-            if (trailingHeaders.isEmpty()) {
+            if (trailers.isEmpty()) {
                 return new OneElementFixedHttpRequest(headers, content);
             } else {
-                return new TwoElementFixedHttpRequest(headers, content, trailingHeaders);
+                return new TwoElementFixedHttpRequest(headers, content, trailers);
             }
-        } else if (!trailingHeaders.isEmpty()) {
-            return new OneElementFixedHttpRequest(headers, trailingHeaders);
+        } else if (!trailers.isEmpty()) {
+            return new OneElementFixedHttpRequest(headers, trailers);
         } else {
             return new EmptyFixedHttpRequest(headers);
         }
@@ -239,21 +238,19 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
 
     /**
      * Creates a new {@link HttpRequest} that publishes the given {@link HttpObject}s and closes the stream.
-     * {@code objs} must not contain {@link RequestHeaders}.
      */
-    static HttpRequest of(RequestHeaders headers, HttpObject... objs) {
-        if (Arrays.stream(objs).anyMatch(obj -> obj instanceof RequestHeaders)) {
-            throw new IllegalArgumentException("objs contains RequestHeaders, which is not allowed.");
-        }
-        switch (objs.length) {
+    static HttpRequest of(RequestHeaders headers, HttpData... contents) {
+        requireNonNull(headers, "headers");
+        requireNonNull(contents, "contents");
+        switch (contents.length) {
             case 0:
                 return new EmptyFixedHttpRequest(headers);
             case 1:
-                return new OneElementFixedHttpRequest(headers, objs[0]);
+                return new OneElementFixedHttpRequest(headers, contents[0]);
             case 2:
-                return new TwoElementFixedHttpRequest(headers, objs[0], objs[1]);
+                return new TwoElementFixedHttpRequest(headers, contents[0], contents[1]);
             default:
-                return new RegularFixedHttpRequest(headers, objs);
+                return new RegularFixedHttpRequest(headers, contents);
         }
     }
 
@@ -261,7 +258,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * Converts the {@link AggregatedHttpRequest} into a new {@link HttpRequest} and closes the stream.
      */
     static HttpRequest of(AggregatedHttpRequest message) {
-        return of(RequestHeaders.of(message.headers()), message.content(), message.trailingHeaders());
+        return of(RequestHeaders.of(message.headers()), message.content(), message.trailers());
     }
 
     /**

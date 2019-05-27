@@ -44,7 +44,7 @@ public class HttpRequestDuplicatorTest {
                                   HttpHeaderNames.CONTENT_TYPE, PLAIN_TEXT_UTF_8,
                                   CONTENT_LENGTH, 3));
         assertThat(req1.content()).isEqualTo(HttpData.of(StandardCharsets.UTF_8, "bar"));
-        assertThat(req1.trailingHeaders()).isEqualTo(
+        assertThat(req1.trailers()).isEqualTo(
                 HttpHeaders.of(CONTENT_MD5, "37b51d194a7513e45b56f6524f2d51f2"));
 
         assertThat(req2.headers()).isEqualTo(
@@ -52,7 +52,7 @@ public class HttpRequestDuplicatorTest {
                                   HttpHeaderNames.CONTENT_TYPE, PLAIN_TEXT_UTF_8,
                                   CONTENT_LENGTH, 3));
         assertThat(req2.content()).isEqualTo(HttpData.of(StandardCharsets.UTF_8, "bar"));
-        assertThat(req2.trailingHeaders()).isEqualTo(
+        assertThat(req2.trailers()).isEqualTo(
                 HttpHeaders.of(CONTENT_MD5, "37b51d194a7513e45b56f6524f2d51f2"));
         reqDuplicator.close();
     }

@@ -248,8 +248,8 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
         assertThat(msg.headers().get(HttpHeaderNames.of("x-bar"))).isEqualTo("bar");
         assertThat(msg.contentUtf8())
                 .isEqualTo("Hello, Armeria (decorated-1) (decorated-2) (decorated-3)!");
-        assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("x-baz"))).isEqualTo("baz");
-        assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("x-qux"))).isEqualTo("qux");
+        assertThat(msg.trailers().get(HttpHeaderNames.of("x-baz"))).isEqualTo("baz");
+        assertThat(msg.trailers().get(HttpHeaderNames.of("x-qux"))).isEqualTo("qux");
     }
 
     @Test
@@ -267,8 +267,8 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
         assertThat(msg.headers().get(HttpHeaderNames.of("x-bar"))).isEqualTo("bar");
         assertThat(msg.contentUtf8())
                 .isEqualTo("Hello, Armeria (decorated-1) (decorated-2) (decorated-3)!");
-        assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("x-baz"))).isEqualTo("baz");
-        assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("x-qux"))).isEqualTo("qux");
+        assertThat(msg.trailers().get(HttpHeaderNames.of("x-baz"))).isEqualTo("baz");
+        assertThat(msg.trailers().get(HttpHeaderNames.of("x-qux"))).isEqualTo("qux");
     }
 
     @Test
@@ -281,7 +281,7 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
         assertThat(msg.headers().get(HttpHeaderNames.of("x-foo"))).isEqualTo("foo");
         assertThat(msg.contentUtf8())
                 .isEqualTo("Cause:" + IllegalArgumentException.class.getSimpleName());
-        assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("x-bar"))).isEqualTo("bar");
+        assertThat(msg.trailers().get(HttpHeaderNames.of("x-bar"))).isEqualTo("bar");
     }
 
     @Test
@@ -294,6 +294,6 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
         assertThat(msg.headers().get(HttpHeaderNames.of("x-foo"))).isEqualTo("foo");
         assertThat(msg.contentUtf8())
                 .isEqualTo("Cause:" + IllegalStateException.class.getSimpleName());
-        assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("x-bar"))).isEqualTo("bar");
+        assertThat(msg.trailers().get(HttpHeaderNames.of("x-bar"))).isEqualTo("bar");
     }
 }

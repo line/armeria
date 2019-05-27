@@ -189,7 +189,7 @@ public class AnnotatedHttpService implements HttpService {
             } else if (arg instanceof Class) {
                 final Class<?> clazz = (Class<?>) arg;
                 if (HttpResponse.class.isAssignableFrom(clazz) ||
-                    AggregatedHttpRequest.class.isAssignableFrom(clazz)) {
+                    AggregatedHttpResponse.class.isAssignableFrom(clazz)) {
                     logger.warn("{} in the return type '{}' may take precedence over {}.",
                                 clazz.getSimpleName(), returnType, HttpResult.class.getSimpleName());
                 }

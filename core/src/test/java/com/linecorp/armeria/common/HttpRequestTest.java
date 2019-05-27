@@ -16,23 +16,21 @@
 
 package com.linecorp.armeria.common;
 
-abstract class AbstractAggregatedHttpMessage implements AggregatedHttpMessage {
+import static org.assertj.core.api.Assertions.assertThat;
 
-    private final HttpData content;
-    private final HttpHeaders trailers;
+import java.util.List;
 
-    AbstractAggregatedHttpMessage(HttpData content, HttpHeaders trailers) {
-        this.content = content;
-        this.trailers = trailers;
-    }
+import org.junit.jupiter.api.Test;
 
-    @Override
-    public HttpData content() {
-        return content;
-    }
+class HttpRequestTest {
 
-    @Override
-    public HttpHeaders trailers() {
-        return trailers;
+    @Test
+    void createWithVarArgs() {
+        final RequestHeaders requestHeaders = RequestHeaders.of(HttpMethod.GET, "/foo");
+        final HttpRequest request = HttpRequest.of(requestHeaders, HttpData.ofUtf8("a"), HttpData.ofUtf8("b"),
+                                                   HttpData.ofUtf8("c"));
+
+        final List<HttpObject> objects = request.drainAll().join();
+        assertThat(objects).containsExactly(HttpData.ofUtf8("a"), HttpData.ofUtf8("b"), HttpData.ofUtf8("c"));
     }
 }

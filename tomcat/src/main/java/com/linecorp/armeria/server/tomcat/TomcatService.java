@@ -383,7 +383,7 @@ public abstract class TomcatService implements HttpService {
         // Set the headers.
         final MimeHeaders cHeaders = coyoteReq.getMimeHeaders();
         convertHeaders(req.headers(), cHeaders);
-        convertHeaders(req.trailingHeaders(), cHeaders);
+        convertHeaders(req.trailers(), cHeaders);
 
         // Set the content.
         final HttpData content = req.content();

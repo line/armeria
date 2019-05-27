@@ -130,6 +130,6 @@ public class DefaultHttpResponseTest {
         assertThat(aggregated.headers()).isEqualTo(ResponseHeaders.of(200));
 
         assertThat(aggregated.contentUtf8()).isEmpty();
-        assertThat(aggregated.trailingHeaders()).isEqualTo(HttpHeaders.of(HttpHeaderNames.of("c"), "d"));
+        assertThat(aggregated.trailers()).isEqualTo(HttpHeaders.of(HttpHeaderNames.of("c"), "d"));
     }
 }

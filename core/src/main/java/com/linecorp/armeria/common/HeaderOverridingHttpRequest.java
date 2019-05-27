@@ -171,7 +171,7 @@ final class HeaderOverridingHttpRequest implements HttpRequest {
     }
 
     private AggregatedHttpRequest replaceHeaders(AggregatedHttpRequest req) {
-        return AggregatedHttpRequest.of(headers, req.content(), req.trailingHeaders());
+        return AggregatedHttpRequest.of(headers, req.content(), req.trailers());
     }
 
     @Override

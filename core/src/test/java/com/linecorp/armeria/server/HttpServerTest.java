@@ -837,7 +837,7 @@ public class HttpServerTest {
         final CompletableFuture<AggregatedHttpResponse> f = client().get("/trailers").aggregate();
 
         final AggregatedHttpResponse res = f.get();
-        assertThat(res.trailingHeaders().get(HttpHeaderNames.of("foo"))).isEqualTo("bar");
+        assertThat(res.trailers().get(HttpHeaderNames.of("foo"))).isEqualTo("bar");
     }
 
     @Test(timeout = 10000)
@@ -867,7 +867,7 @@ public class HttpServerTest {
             return;
         }
         final HttpHeaders trailers = client().get("/additional-trailers-other-trailers")
-                                             .aggregate().join().trailingHeaders();
+                                             .aggregate().join().trailers();
         assertThat(trailers.get(HttpHeaderNames.of("original-trailer"))).isEqualTo("value1");
         assertThat(trailers.get(HttpHeaderNames.of("additional-trailer"))).isEqualTo("value2");
     }
@@ -878,7 +878,7 @@ public class HttpServerTest {
             return;
         }
         final HttpHeaders trailers = client().get("/additional-trailers-no-eos")
-                                             .aggregate().join().trailingHeaders();
+                                             .aggregate().join().trailers();
         assertThat(trailers.get(HttpHeaderNames.of("additional-trailer"))).isEqualTo("value2");
     }
 
@@ -888,7 +888,7 @@ public class HttpServerTest {
             return;
         }
         final HttpHeaders trailers = client().get("/additional-trailers-no-other-trailers")
-                                             .aggregate().join().trailingHeaders();
+                                             .aggregate().join().trailers();
         assertThat(trailers.get(HttpHeaderNames.of("additional-trailer"))).isEqualTo("value2");
     }
 

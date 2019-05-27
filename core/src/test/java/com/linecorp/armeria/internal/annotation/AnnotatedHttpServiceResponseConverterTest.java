@@ -460,10 +460,10 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
         assertThat(res.headers().get(HttpHeaderNames.of("class_header_1"))).isEqualTo("class_value_1");
         assertThat(res.headers().get(HttpHeaderNames.of("class_header_2"))).isEqualTo("class_value_2");
-        assertThat(res.trailingHeaders().get(HttpHeaderNames.of("class_trailer_1"))).isEqualTo("class_value_1");
-        assertThat(res.trailingHeaders().get(HttpHeaderNames.of("class_trailer_2"))).isEqualTo("class_value_2");
+        assertThat(res.trailers().get(HttpHeaderNames.of("class_trailer_1"))).isEqualTo("class_value_1");
+        assertThat(res.trailers().get(HttpHeaderNames.of("class_trailer_2"))).isEqualTo("class_value_2");
         assertThat(res.headers().get(HttpHeaderNames.of("method_header_1"))).isEqualTo("method_value_1");
-        assertThat(res.trailingHeaders().get(HttpHeaderNames.of("method_trailer_1"))).isEqualTo(
+        assertThat(res.trailers().get(HttpHeaderNames.of("method_trailer_1"))).isEqualTo(
                 "method_value_1");
 
         res = aggregated(client.get("/expect-combined2"));
@@ -471,9 +471,9 @@ public class AnnotatedHttpServiceResponseConverterTest {
         assertThat(res.headers().get(HttpHeaderNames.of("class_header_2"))).isEqualTo("class_value_2");
         assertThat(res.headers().get(HttpHeaderNames.of("method_header_1"))).isEqualTo("method_value_1");
         assertThat(res.headers().get(HttpHeaderNames.of("method_header_2"))).isEqualTo("method_value_2");
-        assertThat(res.trailingHeaders().get(HttpHeaderNames.of("method_trailer_1"))).isEqualTo(
+        assertThat(res.trailers().get(HttpHeaderNames.of("method_trailer_1"))).isEqualTo(
                 "method_value_1");
-        assertThat(res.trailingHeaders().get(HttpHeaderNames.of("method_trailer_2"))).isEqualTo(
+        assertThat(res.trailers().get(HttpHeaderNames.of("method_trailer_2"))).isEqualTo(
                 "method_value_2");
 
         res = aggregated(client.get("/expect-overwritten"));
@@ -618,9 +618,9 @@ public class AnnotatedHttpServiceResponseConverterTest {
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             assertThat(response.headers().get(HttpHeaderNames.of("x-custom-header"))).isEqualTo("value");
             assertThatJson(response.contentUtf8()).isEqualTo(ImmutableList.of("a", "b"));
-            assertThat(response.trailingHeaders().get(HttpHeaderNames.of("x-custom-trailing-header")))
+            assertThat(response.trailers().get(HttpHeaderNames.of("x-custom-trailing-header")))
                     .isEqualTo("value");
-            assertThat(response.trailingHeaders().get(HttpHeaderNames.of("x-custom-annotated-trailing-header")))
+            assertThat(response.trailers().get(HttpHeaderNames.of("x-custom-annotated-trailing-header")))
                     .isEqualTo("annotated-value");
         });
 

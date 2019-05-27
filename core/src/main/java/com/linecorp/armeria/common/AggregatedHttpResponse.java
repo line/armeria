@@ -21,7 +21,6 @@ import static com.linecorp.armeria.internal.ArmeriaHttpUtil.setOrRemoveContentLe
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
 import java.util.Formatter;
 import java.util.List;
 import java.util.Locale;
@@ -154,19 +153,19 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
-     * @param trailingHeaders the trailing HTTP headers
+     * @param trailers the trailing HTTP headers
      */
     static AggregatedHttpResponse of(HttpStatus status, MediaType mediaType, HttpData content,
-                                     HttpHeaders trailingHeaders) {
+                                     HttpHeaders trailers) {
         requireNonNull(status, "status");
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
-        requireNonNull(trailingHeaders, "trailingHeaders");
+        requireNonNull(trailers, "trailers");
 
         final ResponseHeaders headers = ResponseHeaders.builder(status)
                                                        .contentType(mediaType)
                                                        .build();
-        return of(headers, content, trailingHeaders);
+        return of(headers, content, trailers);
     }
 
     /**
@@ -196,13 +195,13 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
      *
      * @param headers the HTTP headers
      * @param content the content of the HTTP response
-     * @param trailingHeaders the trailing HTTP headers
+     * @param trailers the trailing HTTP headers
      */
-    static AggregatedHttpResponse of(ResponseHeaders headers, HttpData content, HttpHeaders trailingHeaders) {
+    static AggregatedHttpResponse of(ResponseHeaders headers, HttpData content, HttpHeaders trailers) {
         requireNonNull(headers, "headers");
         requireNonNull(content, "content");
-        requireNonNull(trailingHeaders, "trailingHeaders");
-        return of(Collections.emptyList(), headers, content, trailingHeaders);
+        requireNonNull(trailers, "trailers");
+        return of(ImmutableList.of(), headers, content, trailers);
     }
 
     /**
@@ -211,22 +210,22 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
      * @param informationals the informational class (1xx) HTTP headers
      * @param headers the HTTP headers
      * @param content the content of the HTTP response
-     * @param trailingHeaders the trailing HTTP headers
+     * @param trailers the trailing HTTP headers
      */
     static AggregatedHttpResponse of(Iterable<ResponseHeaders> informationals, ResponseHeaders headers,
-                                     HttpData content, HttpHeaders trailingHeaders) {
+                                     HttpData content, HttpHeaders trailers) {
 
         requireNonNull(informationals, "informationals");
         requireNonNull(headers, "headers");
         requireNonNull(content, "content");
-        requireNonNull(trailingHeaders, "trailingHeaders");
+        requireNonNull(trailers, "trailers");
 
         // Set the 'content-length' header if possible.
         final ResponseHeaders newHeaders = setOrRemoveContentLength(ResponseHeaders.of(headers),
-                                                                    content, trailingHeaders);
+                                                                    content, trailers);
 
         return new DefaultAggregatedHttpResponse(ImmutableList.copyOf(informationals),
-                                                 newHeaders, content, trailingHeaders);
+                                                 newHeaders, content, trailers);
     }
 
     /**

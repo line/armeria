@@ -220,8 +220,8 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
             ServiceRequestContext ctx,
             AggregatedHttpResponse grpcResponse,
             CompletableFuture<HttpResponse> res) {
-        final HttpHeaders trailers = !grpcResponse.trailingHeaders().isEmpty() ?
-                                     grpcResponse.trailingHeaders() : grpcResponse.headers();
+        final HttpHeaders trailers = !grpcResponse.trailers().isEmpty() ?
+                                     grpcResponse.trailers() : grpcResponse.headers();
         final String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
         final Status grpcStatus = Status.fromCodeValue(Integer.parseInt(grpcStatusCode));
 

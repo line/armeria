@@ -164,16 +164,16 @@ public class HttpServiceTest {
         final HttpClient client = HttpClient.of(rule.uri("/"));
         AggregatedHttpResponse res = client.get("/trailersWithoutData").aggregate().join();
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
-        assertThat(res.trailingHeaders().get(HttpHeaderNames.of("foo"))).isEqualTo("bar");
+        assertThat(res.trailers().get(HttpHeaderNames.of("foo"))).isEqualTo("bar");
         assertThat(res.content()).isSameAs(HttpData.EMPTY_DATA);
 
         res = client.get("/dataAndTrailers").aggregate().join();
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
-        assertThat(res.trailingHeaders().get(HttpHeaderNames.of("foo"))).isEqualTo("bar");
+        assertThat(res.trailers().get(HttpHeaderNames.of("foo"))).isEqualTo("bar");
         assertThat(res.contentUtf8()).isEqualTo("trailer");
 
         res = client.get("/additionalTrailers").aggregate().join();
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
-        assertThat(res.trailingHeaders().get(HttpHeaderNames.of("foo"))).isEqualTo("baz");
+        assertThat(res.trailers().get(HttpHeaderNames.of("foo"))).isEqualTo("baz");
     }
 }

@@ -125,6 +125,6 @@ public class DefaultHttpRequestTest {
         // Content
         assertThat(aggregated.contentUtf8()).isEqualTo("foo");
         // Trailing headers
-        assertThat(aggregated.trailingHeaders()).isEqualTo(HttpHeaders.of(HttpHeaderNames.of("a"), "b"));
+        assertThat(aggregated.trailers()).isEqualTo(HttpHeaders.of(HttpHeaderNames.of("a"), "b"));
     }
 }
