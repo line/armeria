@@ -81,7 +81,7 @@ public final class SslContextUtil {
 
         userCustomizer.accept(builder);
 
-        // We call user customization logic before setting ALPN to make sure they don't break
+        // We called user customization logic before setting ALPN to make sure they don't break
         // compatibility with HTTP/2.
         if (!forceHttp1) {
             builder.applicationProtocolConfig(ALPN_CONFIG);
