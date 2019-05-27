@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.CharMatcher;
+import com.google.common.io.BaseEncoding;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
@@ -40,6 +41,8 @@ public final class MetadataUtil {
     private static final Logger logger = LoggerFactory.getLogger(MetadataUtil.class);
 
     private static final CharMatcher COMMA_MATCHER = CharMatcher.is(',');
+
+    private static final BaseEncoding BASE64_ENCODING_OMIT_PADDING = BaseEncoding.base64().omitPadding();
 
     /**
      * Copies the headers in the gRPC {@link Metadata} to the Armeria {@link HttpHeadersBuilder}. Headers will
@@ -60,7 +63,7 @@ public final class MetadataUtil {
 
             final String value;
             if (isBinary(name)) {
-                value = InternalMetadata.BASE64_ENCODING_OMIT_PADDING.encode(valueBytes);
+                value = BASE64_ENCODING_OMIT_PADDING.encode(valueBytes);
             } else {
                 if (!isGrpcAscii(valueBytes)) {
                     logger.warn("Metadata name=" + name + ", value=" + Arrays.toString(valueBytes) +
@@ -103,20 +106,20 @@ public final class MetadataUtil {
                 int commaIndex = COMMA_MATCHER.indexIn(value);
                 if (commaIndex == -1) {
                     metadata[i++] = nameBytes;
-                    metadata[i++] = InternalMetadata.BASE64_ENCODING_OMIT_PADDING.decode(value);
+                    metadata[i++] = BASE64_ENCODING_OMIT_PADDING.decode(value);
                 } else {
                     int substringStartIndex = 0;
                     while (commaIndex != -1) {
                         final String substring = value.substring(substringStartIndex, commaIndex);
                         metadata[i++] = nameBytes;
-                        metadata[i++] = InternalMetadata.BASE64_ENCODING_OMIT_PADDING.decode(substring);
+                        metadata[i++] = BASE64_ENCODING_OMIT_PADDING.decode(substring);
 
                         substringStartIndex = commaIndex + 1;
                         commaIndex = COMMA_MATCHER.indexIn(value, commaIndex + 1);
                     }
                     final String substring = value.substring(substringStartIndex);
                     metadata[i++] = nameBytes;
-                    metadata[i++] = InternalMetadata.BASE64_ENCODING_OMIT_PADDING.decode(substring);
+                    metadata[i++] = BASE64_ENCODING_OMIT_PADDING.decode(substring);
                 }
             } else {
                 metadata[i++] = nameBytes;
