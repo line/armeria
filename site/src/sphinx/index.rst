@@ -30,7 +30,7 @@ Check out `the introductory slides`_:
 
 .. raw:: html
 
-    <div style="max-width: 512px; margin-bottom: 1em"><script async class="speakerdeck-embed" data-id="aa6b9f1dc9b34401997e8d737ebb2e52" data-ratio="1.77777777777778" src="//speakerdeck.com/assets/embed.js"></script></div>
+    <div style="max-width: 640px; margin-bottom: 1em"><script async class="speakerdeck-embed" data-id="c160591ad87c4edaa8ca62afb26b1904" data-ratio="1.77777777777778" src="//speakerdeck.com/assets/embed.js"></script></div>
 
 Features
 --------
