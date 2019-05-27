@@ -20,7 +20,7 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.common.Flags;
 
 /**
- * Indicates that an error occurs while processing a SAML request.
+ * Indicates that an error occurred while processing a SAML request.
  */
 public class SamlException extends RuntimeException {
 

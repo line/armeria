@@ -120,7 +120,7 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
                 return config;
             }
         }
-        throw new InvalidSamlRequestException("failed to find identity provider from configuration " +
+        throw new InvalidSamlRequestException("failed to find identity provider from configuration: " +
                                               issuer.getValue());
     }
 
