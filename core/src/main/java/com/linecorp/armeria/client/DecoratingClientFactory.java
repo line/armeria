@@ -23,6 +23,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 
@@ -87,7 +89,7 @@ public class DecoratingClientFactory extends AbstractClientFactory {
     }
 
     @Override
-    public <T> T newClient(Scheme scheme, Endpoint endpoint, String path, Class<T> clientType,
+    public <T> T newClient(Scheme scheme, Endpoint endpoint, @Nullable String path, Class<T> clientType,
                            ClientOptions options) {
         return delegate().newClient(scheme, endpoint, path, clientType, options);
     }

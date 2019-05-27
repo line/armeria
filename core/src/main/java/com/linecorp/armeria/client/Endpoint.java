@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.StandardProtocolFamily;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Comparator;
 import java.util.Objects;
 
@@ -507,7 +508,7 @@ public final class Endpoint implements Comparable<Endpoint> {
      */
     public URI toUri(Scheme scheme) {
         requireNonNull(scheme, "scheme");
-        return toUri(scheme, "");
+        return toUri(scheme, null);
     }
 
     /**
@@ -518,19 +519,13 @@ public final class Endpoint implements Comparable<Endpoint> {
      *
      * @return the URI
      */
-    public URI toUri(Scheme scheme, String path) {
+    public URI toUri(Scheme scheme, @Nullable String path) {
         requireNonNull(scheme, "scheme");
-        requireNonNull(path, "path");
-
-        if (path.isEmpty()) {
-            return URI.create(scheme.uriText() + "://" + authority());
+        try {
+            return new URI(scheme.uriText(), authority(), path, null, null);
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException(e.getMessage(), e);
         }
-
-        if (!path.startsWith("/")) {
-            path = '/' + path;
-        }
-
-        return URI.create(scheme.uriText() + "://" + authority() + path);
     }
 
     private void ensureGroup() {

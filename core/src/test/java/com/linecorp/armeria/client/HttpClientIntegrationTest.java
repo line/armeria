@@ -626,115 +626,76 @@ class HttpClientIntegrationTest {
     @Test
     void givenClients_thenBuildClient() throws Exception {
         final Endpoint endpoint = newEndpoint();
+        final ClientFactory factory = new ClientFactoryBuilder().build();
 
-        // with ClientOptionValues
-        HttpClient client = Clients.newClient(SessionProtocol.HTTP, SerializationFormat.NONE, endpoint,
-                                              HttpClient.class);
+        HttpClient client = Clients.newClient(factory, SessionProtocol.HTTP, SerializationFormat.NONE,
+                                              endpoint, HttpClient.class);
         checkGetRequest("/hello/world", client);
 
-        // with ClientOptions
+        client = Clients.newClient(factory, SessionProtocol.HTTP, SerializationFormat.NONE, endpoint,
+                                   HttpClient.class, ClientOptions.DEFAULT);
+        checkGetRequest("/hello/world", client);
+
+        client = Clients.newClient(SessionProtocol.HTTP, SerializationFormat.NONE, endpoint, HttpClient.class);
+        checkGetRequest("/hello/world", client);
+
         client = Clients.newClient(SessionProtocol.HTTP, SerializationFormat.NONE, endpoint, HttpClient.class,
                                    ClientOptions.DEFAULT);
         checkGetRequest("/hello/world", client);
-
-        // with Path and ClientOptionValues
-        client = Clients.newClient(SessionProtocol.HTTP, SerializationFormat.NONE, endpoint, "/hello",
-                                   HttpClient.class);
-        checkGetRequest("/world", client);
-
-        // with Path and ClientOptions
-        client = Clients.newClient(SessionProtocol.HTTP, SerializationFormat.NONE, endpoint, "/hello",
-                                   HttpClient.class, ClientOptions.DEFAULT);
-        checkGetRequest("/world", client);
-    }
-
-    @Test
-    void givenClients_whenSchemeExist_thenBuildClient() throws Exception {
-        final Endpoint endpoint = newEndpoint();
-        final Scheme scheme = Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP);
-
-        // with ClientOptionValues
-        HttpClient client = Clients.newClient(scheme, endpoint, HttpClient.class);
-        checkGetRequest("/hello/world", client);
-
-        // with ClientOptions
-        client = Clients.newClient(scheme, endpoint, HttpClient.class, ClientOptions.DEFAULT);
-        checkGetRequest("/hello/world", client);
-
-        // with Path and ClientOptionValues
-        client = Clients.newClient(scheme, endpoint, "/hello", HttpClient.class);
-        checkGetRequest("/world", client);
-
-        // with Path and ClientOptions
-        client = Clients.newClient(scheme, endpoint, "/hello", HttpClient.class, ClientOptions.DEFAULT);
-        checkGetRequest("/world", client);
     }
 
     @Test
     void givenHttpClient_thenBuildClient() throws Exception {
         final Endpoint endpoint = newEndpoint();
+        final ClientFactory factory = new ClientFactoryBuilder().build();
 
-        // with ClientOptionValues
-        HttpClient client = HttpClient.of(SessionProtocol.HTTP, endpoint);
+        HttpClient client = HttpClient.of(factory, SessionProtocol.HTTP, endpoint);
         checkGetRequest("/hello/world", client);
 
-        // with ClientOptions
+        client = HttpClient.of(factory, SessionProtocol.HTTP, endpoint, ClientOptions.DEFAULT);
+        checkGetRequest("/hello/world", client);
+
+        client = HttpClient.of(SessionProtocol.HTTP, endpoint);
+        checkGetRequest("/hello/world", client);
+
         client = HttpClient.of(SessionProtocol.HTTP, endpoint, ClientOptions.DEFAULT);
         checkGetRequest("/hello/world", client);
-
-        // with Path and ClientOptionValues
-        client = HttpClient.of(SessionProtocol.HTTP, endpoint, "hello");
-        checkGetRequest("/world", client);
-
-        // with Path and ClientOptions
-        client = HttpClient.of(SessionProtocol.HTTP, endpoint, "hello", ClientOptions.DEFAULT);
-        checkGetRequest("/world", client);
     }
 
     @Test
     void givenClientBuilder_thenBuildClient() throws Exception {
         final Endpoint endpoint = newEndpoint();
-
-        HttpClient client = new ClientBuilder(SessionProtocol.HTTP, SerializationFormat.NONE, endpoint)
-                .build(HttpClient.class);
-        checkGetRequest("/hello/world", client);
-
-        client = new ClientBuilder(SessionProtocol.HTTP, endpoint).build(HttpClient.class);
-        checkGetRequest("/hello/world", client);
-
-        client = new ClientBuilder(SessionProtocol.HTTP, SerializationFormat.NONE, endpoint, "/hello")
-                .build(HttpClient.class);
-        checkGetRequest("/world", client);
-
-        client = new ClientBuilder(SessionProtocol.HTTP, endpoint, "/hello").build(HttpClient.class);
-        checkGetRequest("/world", client);
-    }
-
-    @Test
-    void givenClientBuilder_whenSchemeExist_thenBuildClient() throws Exception {
-        final Endpoint endpoint = newEndpoint();
-        final Scheme scheme = Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP);
-
-        HttpClient client = new ClientBuilder(scheme, endpoint).build(HttpClient.class);
-        checkGetRequest("/hello/world", client);
-
-        client = new ClientBuilder("none+http", endpoint).build(HttpClient.class);
-        checkGetRequest("/hello/world", client);
-
-        client = new ClientBuilder(scheme, endpoint, "/hello").build(HttpClient.class);
-        checkGetRequest("/world", client);
-
-        client = new ClientBuilder("none+http", endpoint, "/hello").build(HttpClient.class);
-        checkGetRequest("/world", client);
-    }
-
-    @Test
-    void givenHttpClientFactory_whenClientTypeNotHttp_thenThrowIllegalArgument() throws Exception {
-        final Endpoint endpoint = newEndpoint();
         final ClientFactory factory = new ClientFactoryBuilder().build();
 
-        assertThatThrownBy(() -> factory.newClient(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP),
-                                                   endpoint, null));
+        HttpClient client = new ClientBuilder(SessionProtocol.HTTP, endpoint)
+                .serializationFormat(SerializationFormat.NONE)
+                .factory(factory)
+                .build(HttpClient.class);
+        checkGetRequest("/hello/world", client);
+
+        client = new ClientBuilder(SessionProtocol.HTTP, endpoint)
+                .build(HttpClient.class);
+        checkGetRequest("/hello/world", client);
+
+        client = new ClientBuilder("none+http", endpoint)
+                .path("/hello")
+                .build(HttpClient.class);
+        checkGetRequest("/world", client);
+
+        client = new ClientBuilder(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP), endpoint)
+                .path("/hello")
+                .build(HttpClient.class);
+        checkGetRequest("/world", client);
+
+        client = new ClientBuilder(SessionProtocol.HTTP, endpoint)
+                .serializationFormat(SerializationFormat.NONE)
+                .path("/hello")
+                .build(HttpClient.class);
+        checkGetRequest("/world", client);
+
+        assertThatThrownBy(() -> new ClientBuilder("none+http", endpoint)
+                .serializationFormat(SerializationFormat.NONE)
+                .build(HttpClient.class));
     }
 
     private static void checkGetRequest(String path, HttpClient client) throws Exception {

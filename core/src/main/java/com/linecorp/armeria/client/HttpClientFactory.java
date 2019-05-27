@@ -31,6 +31,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import javax.annotation.Nullable;
+
 import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.common.HttpRequest;
@@ -228,7 +230,7 @@ final class HttpClientFactory extends AbstractClientFactory {
     }
 
     @Override
-    public <T> T newClient(Scheme scheme, Endpoint endpoint, String path, Class<T> clientType,
+    public <T> T newClient(Scheme scheme, Endpoint endpoint, @Nullable String path, Class<T> clientType,
                            ClientOptions options) {
         final URI uri = endpoint.toUri(scheme, path);
         return newClient(uri, scheme, endpoint, clientType, options);

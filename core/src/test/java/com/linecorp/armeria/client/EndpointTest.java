@@ -280,7 +280,7 @@ public class EndpointTest {
         final Endpoint naver = Endpoint.of("naver.com");
         assertThat(naver.toUri("none+https", "/hello").toString())
                 .isEqualTo("none+https://naver.com/hello");
-        assertThat(naver.toUri(SessionProtocol.HTTPS, SerializationFormat.NONE, "hello").toString())
+        assertThat(naver.toUri(SessionProtocol.HTTPS, SerializationFormat.NONE, "/hello").toString())
                 .isEqualTo("none+https://naver.com/hello");
 
         assertThatThrownBy(() -> group.toUri("http://www.badguys.com"))

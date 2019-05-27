@@ -36,13 +36,14 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientOption;
-import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -177,27 +178,15 @@ public class ThriftSerializationFormatsTest {
 
     @Test
     public void givenClients_whenBinary_thenBuildClient() throws Exception {
-        // with ClientOptionValues
-        HelloService.Iface client = Clients.newClient(SessionProtocol.HTTP, BINARY, newEndpoint(BINARY),
-                                                      "/hello", HelloService.Iface.class);
+        HelloService.Iface client =
+                new ClientBuilder(Scheme.of(BINARY, SessionProtocol.HTTP), newEndpoint(BINARY))
+                        .path("/hello")
+                        .build(HelloService.Iface.class);
         assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
 
-        // with ClientOptions
-        client = Clients.newClient(SessionProtocol.HTTP, BINARY, newEndpoint(BINARY), "/hello",
-                                   HelloService.Iface.class, ClientOptions.DEFAULT);
-        assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
-    }
-
-    @Test
-    public void givenClients_whenText_thenBuildClient() throws Exception {
-        // with ClientOptionValues
-        HelloService.Iface client = Clients.newClient(SessionProtocol.HTTP, TEXT, newEndpoint(TEXT),
-                                                      "/hello", HelloService.Iface.class);
-        assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
-
-        // with ClientOptions
-        client = Clients.newClient(SessionProtocol.HTTP, TEXT, newEndpoint(TEXT), "/hello",
-                                   HelloService.Iface.class, ClientOptions.DEFAULT);
+        client = new ClientBuilder(Scheme.of(TEXT, SessionProtocol.HTTP), newEndpoint(TEXT))
+                .path("/hello")
+                .build(HelloService.Iface.class);
         assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
     }
 

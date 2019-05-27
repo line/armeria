@@ -21,6 +21,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.Scheme;
@@ -130,8 +132,7 @@ public interface ClientFactory extends AutoCloseable {
     <T> T newClient(String uri, Class<T> clientType, ClientOptions options);
 
     /**
-     * Creates a new client that connects to the specified {@link URI} using the default
-     * {@link ClientFactory}.
+     * Creates a new client that connects to the specified {@link URI}.
      *
      * @param uri the URI of the server endpoint
      * @param clientType the type of the new client
@@ -140,8 +141,7 @@ public interface ClientFactory extends AutoCloseable {
     <T> T newClient(URI uri, Class<T> clientType, ClientOptionValue<?>... options);
 
     /**
-     * Creates a new client that connects to the specified {@link URI} using the default
-     * {@link ClientFactory}.
+     * Creates a new client that connects to the specified {@link URI}.
      *
      * @param uri the URI of the server endpoint
      * @param clientType the type of the new client
@@ -150,8 +150,7 @@ public interface ClientFactory extends AutoCloseable {
     <T> T newClient(URI uri, Class<T> clientType, ClientOptions options);
 
     /**
-     * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme} using
-     * the default {@link ClientFactory}.
+     * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme}.
      *
      * @param scheme the {@link Scheme} for the {@code endpoint}
      * @param endpoint the server {@link Endpoint}
@@ -161,8 +160,7 @@ public interface ClientFactory extends AutoCloseable {
     <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType, ClientOptionValue<?>... options);
 
     /**
-     * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme} using
-     * the default {@link ClientFactory}.
+     * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme}.
      *
      * @param scheme the {@link Scheme} for the {@code endpoint}
      * @param endpoint the server {@link Endpoint}
@@ -173,7 +171,7 @@ public interface ClientFactory extends AutoCloseable {
 
     /**
      * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme}
-     * and {@code path} using the default {@link ClientFactory}.
+     * and {@code path}.
      *
      * @param scheme the {@link Scheme} for the {@code endpoint}
      * @param endpoint the server {@link Endpoint}
@@ -181,12 +179,12 @@ public interface ClientFactory extends AutoCloseable {
      * @param clientType the type of the new client
      * @param options the {@link ClientOptionValue}s
      */
-    <T> T newClient(Scheme scheme, Endpoint endpoint, String path, Class<T> clientType,
+    <T> T newClient(Scheme scheme, Endpoint endpoint, @Nullable String path, Class<T> clientType,
                     ClientOptionValue<?>... options);
 
     /**
      * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme}
-     * and {@code path} using the default {@link ClientFactory}.
+     * and {@code path}.
      *
      * @param scheme the {@link Scheme} for the {@code endpoint}
      * @param endpoint the server {@link Endpoint}
@@ -194,7 +192,8 @@ public interface ClientFactory extends AutoCloseable {
      * @param clientType the type of the new client
      * @param options the {@link ClientOptions}
      */
-    <T> T newClient(Scheme scheme, Endpoint endpoint, String path, Class<T> clientType, ClientOptions options);
+    <T> T newClient(Scheme scheme, Endpoint endpoint, @Nullable String path, Class<T> clientType,
+                    ClientOptions options);
 
     /**
      * Returns the {@link ClientBuilderParams} held in {@code client}. This is used when creating a new derived

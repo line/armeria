@@ -23,6 +23,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.Client;
@@ -80,7 +82,7 @@ final class THttpClientFactory extends DecoratingClientFactory {
     }
 
     @Override
-    public <T> T newClient(Scheme scheme, Endpoint endpoint, String path, Class<T> clientType,
+    public <T> T newClient(Scheme scheme, Endpoint endpoint, @Nullable String path, Class<T> clientType,
                            ClientOptions options) {
         final URI uri = endpoint.toUri(scheme, path);
 

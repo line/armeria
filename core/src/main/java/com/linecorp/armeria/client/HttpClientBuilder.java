@@ -38,11 +38,11 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
     @Nullable
     private final URI uri;
     @Nullable
-    private final Scheme scheme;
-    @Nullable
     private final Endpoint endpoint;
     @Nullable
-    private final String path;
+    private final Scheme scheme;
+    @Nullable
+    private String path;
     private ClientFactory factory = ClientFactory.DEFAULT;
 
     /**
@@ -63,10 +63,10 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
      */
     public HttpClientBuilder(URI uri) {
         validateScheme(requireNonNull(uri, "uri").getScheme());
+
         this.uri = URI.create(SerializationFormat.NONE + "+" + uri);
         scheme = null;
         endpoint = null;
-        path = null;
     }
 
     /**
@@ -76,26 +76,11 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
      *                                  in {@link SessionProtocol}
      */
     public HttpClientBuilder(SessionProtocol sessionProtocol, Endpoint endpoint) {
-        this(sessionProtocol, endpoint, "");
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields
-     *                                  in {@link SessionProtocol}
-     */
-    public HttpClientBuilder(SessionProtocol sessionProtocol, Endpoint endpoint, String path) {
-        final Scheme scheme = Scheme.of(SerializationFormat.NONE, sessionProtocol);
-        if (scheme == null) {
-            throw new IllegalArgumentException("scheme: " + SerializationFormat.NONE.uriText() + '+' +
-                                               sessionProtocol.uriText() + " is unsupported");
-        }
+        validateScheme(requireNonNull(sessionProtocol).uriText());
 
         uri = null;
-        this.scheme = scheme;
+        scheme = Scheme.of(SerializationFormat.NONE, sessionProtocol);
         this.endpoint = requireNonNull(endpoint, "endpoint");
-        this.path = path;
     }
 
     private static void validateScheme(String scheme) {
@@ -117,6 +102,14 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
     }
 
     /**
+     * Sets the {@code path} of the client.
+     */
+    public HttpClientBuilder path(String path) {
+        this.path = requireNonNull(path, "path");
+        return this;
+    }
+
+    /**
      * Returns a newly-created HTTP client based on the properties of this builder.
      *
      * @throws IllegalArgumentException if the scheme of the {@code uri} specified in
@@ -126,8 +119,10 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
     public HttpClient build() {
         if (uri != null) {
             return factory.newClient(uri, HttpClient.class, buildOptions());
-        } else {
+        } else if (path != null) {
             return factory.newClient(scheme, endpoint, path, HttpClient.class, buildOptions());
+        } else {
+            return factory.newClient(scheme, endpoint, HttpClient.class, buildOptions());
         }
     }
 }

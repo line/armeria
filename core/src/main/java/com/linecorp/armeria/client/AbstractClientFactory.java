@@ -22,6 +22,8 @@ import java.net.URI;
 import java.util.Optional;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.Scheme;
 
 /**
@@ -42,29 +44,12 @@ public abstract class AbstractClientFactory implements ClientFactory {
         return newClient(URI.create(uri), clientType, options);
     }
 
-    /**
-     * Creates a new client that connects to the specified {@link URI} using the default
-     * {@link ClientFactory}.
-     *
-     * @param uri the URI of the server endpoint
-     * @param clientType the type of the new client
-     * @param options the {@link ClientOptionValue}s
-     */
     @Override
     public final <T> T newClient(URI uri, Class<T> clientType, ClientOptionValue<?>... options) {
         requireNonNull(options, "options");
         return newClient(uri, clientType, ClientOptions.of(options));
     }
 
-    /**
-     * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme} using
-     * the default {@link ClientFactory}.
-     *
-     * @param scheme the {@link Scheme} for the {@code endpoint}
-     * @param endpoint the server {@link Endpoint}
-     * @param clientType the type of the new client
-     * @param options the {@link ClientOptionValue}s
-     */
     @Override
     public final <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType,
                                  ClientOptionValue<?>... options) {
@@ -74,15 +59,6 @@ public abstract class AbstractClientFactory implements ClientFactory {
         return newClient(scheme, endpoint, clientType, ClientOptions.of(options));
     }
 
-    /**
-     * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme} using
-     * the default {@link ClientFactory}.
-     *
-     * @param scheme the {@link Scheme} for the {@code endpoint}
-     * @param endpoint the server {@link Endpoint}
-     * @param clientType the type of the new client
-     * @param options the {@link ClientOptions}
-     */
     @Override
     public final <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType, ClientOptions options) {
         requireNonNull(scheme, "scheme");
@@ -91,22 +67,11 @@ public abstract class AbstractClientFactory implements ClientFactory {
         return newClient(scheme, endpoint, "", clientType, options);
     }
 
-    /**
-     * Creates a new client that connects to the specified {@link Endpoint} with the {@link Scheme}
-     * and {@code path} using the default {@link ClientFactory}.
-     *
-     * @param scheme the {@link Scheme} for the {@code endpoint}
-     * @param endpoint the server {@link Endpoint}
-     * @param path the service {@code path}
-     * @param clientType the type of the new client
-     * @param options the {@link ClientOptionValue}s
-     */
     @Override
-    public final <T> T newClient(Scheme scheme, Endpoint endpoint, String path, Class<T> clientType,
+    public final <T> T newClient(Scheme scheme, Endpoint endpoint, @Nullable String path, Class<T> clientType,
                                  ClientOptionValue<?>... options) {
         requireNonNull(scheme, "scheme");
         requireNonNull(endpoint, "endpoint");
-        requireNonNull(path, "path");
         requireNonNull(options, "options");
         return newClient(scheme, endpoint, path, clientType, ClientOptions.of(options));
     }

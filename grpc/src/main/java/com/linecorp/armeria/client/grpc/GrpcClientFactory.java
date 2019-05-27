@@ -27,6 +27,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 
+import javax.annotation.Nullable;
+
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 
 import com.google.common.base.Strings;
@@ -89,7 +91,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
     }
 
     @Override
-    public <T> T newClient(Scheme scheme, Endpoint endpoint, String path, Class<T> clientType,
+    public <T> T newClient(Scheme scheme, Endpoint endpoint, @Nullable String path, Class<T> clientType,
                            ClientOptions options) {
         final URI uri = endpoint.toUri(scheme, path);
 
