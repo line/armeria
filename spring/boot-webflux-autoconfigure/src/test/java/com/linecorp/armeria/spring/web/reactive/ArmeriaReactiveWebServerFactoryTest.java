@@ -17,18 +17,13 @@ package com.linecorp.armeria.spring.web.reactive;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.function.Consumer;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.NoSuchBeanDefinitionException;
-import org.springframework.beans.factory.NoUniqueBeanDefinitionException;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.boot.web.reactive.server.ReactiveWebServerFactory;
 import org.springframework.boot.web.server.Compression;
 import org.springframework.boot.web.server.Ssl;
@@ -49,7 +44,9 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.server.HttpStatusException;
+import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.testing.internal.MockAddressResolverGroup;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -60,20 +57,12 @@ class ArmeriaReactiveWebServerFactoryTest {
 
     static final String POST_BODY = "Hello, world!";
 
-    static final String[] names = new String[0];
-
-    private final ConfigurableListableBeanFactory beanFactory = mock(ConfigurableListableBeanFactory.class);
+    private final DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
     private final ClientFactory clientFactory =
             new ClientFactoryBuilder()
                     .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
                     .addressResolverGroupFactory(eventLoopGroup -> MockAddressResolverGroup.localhost())
                     .build();
-
-    @BeforeEach
-    public void beforeEach() {
-        when(beanFactory.getBean((Class<?>) any(Class.class))).thenThrow(NoSuchBeanDefinitionException.class);
-        when(beanFactory.getBeanNamesForType((Class<?>) any(Class.class))).thenReturn(names);
-    }
 
     private ArmeriaReactiveWebServerFactory factory() {
         return new ArmeriaReactiveWebServerFactory(beanFactory);
@@ -237,14 +226,42 @@ class ArmeriaReactiveWebServerFactoryTest {
     }
 
     @Test
-    void testFindBean() {
-        when(beanFactory.getBean(eq(MeterRegistry.class))).thenReturn(mock(MeterRegistry.class));
-        assertThat(factory().findBean(MeterRegistry.class).isPresent()).isEqualTo(true);
+    void testMultipleBeansRegistered_TooManyMeterRegistryBeans() {
+        final ArmeriaReactiveWebServerFactory factory = factory();
 
-        when(beanFactory.getBean(eq(MeterRegistry.class))).thenThrow(NoSuchBeanDefinitionException.class);
-        assertThat(factory().findBean(MeterRegistry.class).isPresent()).isEqualTo(false);
+        RootBeanDefinition rbd = new RootBeanDefinition(ArmeriaSettings.class);
+        beanFactory.registerBeanDefinition("armeriaSettings", rbd);
 
-        when(beanFactory.getBean(eq(MeterRegistry.class))).thenThrow(NoUniqueBeanDefinitionException.class);
-        assertThrows(IllegalStateException.class, () -> factory().findBean(MeterRegistry.class));
+        rbd = new RootBeanDefinition(MeterRegistry.class, PrometheusMeterRegistries::newRegistry);
+        beanFactory.registerBeanDefinition("meterRegistry1", rbd);
+
+        rbd = new RootBeanDefinition(MeterRegistry.class, PrometheusMeterRegistries::newRegistry);
+        beanFactory.registerBeanDefinition("meterRegistry2", rbd);
+
+        assertThrows(IllegalStateException.class, () -> runEchoServer(factory, server -> fail()));
+    }
+
+    @Test
+    void testMultipleBeansRegistered_shouldUsePrimaryBean() {
+        final ArmeriaReactiveWebServerFactory factory = factory();
+
+        RootBeanDefinition rbd = new RootBeanDefinition(ArmeriaSettings.class);
+        beanFactory.registerBeanDefinition("armeriaSettings", rbd);
+
+        rbd = new RootBeanDefinition(MeterRegistry.class, PrometheusMeterRegistries::newRegistry);
+        beanFactory.registerBeanDefinition("meterRegistry1", rbd);
+
+        rbd = new RootBeanDefinition(MeterRegistry.class, PrometheusMeterRegistries::newRegistry);
+        rbd.setPrimary(true);
+        beanFactory.registerBeanDefinition("meterRegistry2", rbd);
+
+        runEchoServer(factory, server -> {
+            final HttpClient client = httpClient(server);
+            validateEchoResponse(sendPostRequest(client));
+
+            final AggregatedHttpMessage res = client.get("/hello").aggregate().join();
+            assertThat(res.status()).isEqualTo(com.linecorp.armeria.common.HttpStatus.OK);
+            assertThat(res.contentUtf8()).isEmpty();
+        });
     }
 }

@@ -54,7 +54,6 @@ import org.springframework.boot.web.server.SslStoreProvider;
 import org.springframework.boot.web.server.WebServer;
 import org.springframework.http.server.reactive.HttpHandler;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
@@ -260,8 +259,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
         }
     }
 
-    @VisibleForTesting
-    <T> Optional<T> findBean(Class<T> clazz) {
+    private <T> Optional<T> findBean(Class<T> clazz) {
         try {
             return Optional.of(beanFactory.getBean(clazz));
         } catch (NoUniqueBeanDefinitionException e) {
