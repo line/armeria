@@ -114,10 +114,10 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
             final TMessage header = new TMessage(fullMethod(ctx, method), func.messageType(), seqId);
 
             final ByteBuf buf = ctx.alloc().buffer(128);
-            final TByteBufTransport outTransport = new TByteBufTransport(buf);
-            final TProtocol tProtocol = protocolFactory.getProtocol(outTransport);
 
             try {
+                final TByteBufTransport outTransport = new TByteBufTransport(buf);
+                final TProtocol tProtocol = protocolFactory.getProtocol(outTransport);
                 tProtocol.writeMessageBegin(header);
                 @SuppressWarnings("rawtypes")
                 final TBase tArgs = func.newArgs(args);
