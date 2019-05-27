@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
@@ -169,23 +170,12 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                     break;
                 }
 
-                if (req.method() == HttpMethod.HEAD) {
-                    // HEAD responses always close the stream with the initial headers, even if not explicitly
-                    // set.
+                if (req.method() == HttpMethod.HEAD || ArmeriaHttpUtil.isContentAlwaysEmpty(status)) {
+                    // We're done with the response if it is a response to a HEAD request or one of the
+                    // no-content response statuses.
                     endOfStream = true;
                 } else {
-                    final int statusCode = status.code();
-                    switch (statusCode) {
-                        case 204:
-                        case 205:
-                        case 304:
-                            // These responses are not allowed to have content so we always close the stream
-                            // even if not explicitly set.
-                            endOfStream = true;
-                            break;
-                        default:
-                            state = State.NEEDS_DATA_OR_TRAILING_HEADERS;
-                    }
+                    state = State.NEEDS_DATA_OR_TRAILING_HEADERS;
                 }
 
                 final HttpHeaders additionalHeaders = reqCtx.additionalResponseHeaders();
