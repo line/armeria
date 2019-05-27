@@ -54,7 +54,7 @@ public interface ResponseConverterFunction {
      * @param result The result of the service method.
      * @param trailingHeaders The HTTP trailers that you might want to use to create the {@link HttpResponse}.
      *                        If the annotated method returns {@link HttpResult}, this trailers is the same
-     *                        trailers from {@link HttpResult#trailingHeaders()}.
+     *                        trailers from {@link HttpResult#trailers()}.
      *                        Please note that the additional trailers set by
      *                        {@link ServiceRequestContext#addAdditionalResponseTrailer(CharSequence, Object)}
      *                        and {@link AdditionalTrailer} are not included in this trailers.

@@ -275,7 +275,7 @@ public class AnnotatedHttpService implements HttpService {
             final HttpResult<?> httpResult = (HttpResult<?>) result;
             newHeaders = setHttpStatus(addNegotiatedResponseMediaType(ctx, httpResult.headers()));
             result = httpResult.content().orElse(null);
-            newTrailingHeaders = httpResult.trailingHeaders();
+            newTrailingHeaders = httpResult.trailers();
         } else {
             newHeaders = setHttpStatus(
                     headers == null ? addNegotiatedResponseMediaType(ctx, HttpHeaders.of())

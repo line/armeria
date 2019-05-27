@@ -58,7 +58,7 @@ final class DefaultHttpResult<T> implements HttpResult<T> {
     }
 
     @Override
-    public HttpHeaders trailingHeaders() {
+    public HttpHeaders trailers() {
         return trailingHeaders;
     }
 }
