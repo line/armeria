@@ -8,7 +8,6 @@
 .. _`Netty`: https://netty.io/
 .. _`Reactive Streams`: http://www.reactive-streams.org/
 .. _`Spring Boot`: https://projects.spring.io/spring-boot/
-.. _`the introductory slides`: https://speakerdeck.com/trustin/building-asynchronous-microservices-with-armeria
 .. _`Thrift`: https://thrift.apache.org/
 .. _`traditional HTTP/1 upgrade request`: https://tools.ietf.org/html/rfc7540#section-3.2
 .. _`Zipkin`: http://zipkin.io/
@@ -26,7 +25,7 @@ It is open-sourced and licensed under `Apache License 2.0`_ by `LINE Corporation
 
 Want a quick tour?
 ------------------
-Check out `the introductory slides`_:
+Check out `the introductory slides <https://speakerdeck.com/trustin/armeria-the-only-thrift-grpc-rest-microservice-framework-youll-need>`_:
 
 .. raw:: html
 
