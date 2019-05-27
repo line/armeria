@@ -54,6 +54,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.Int32Value;
 import com.google.protobuf.StringValue;
 
 import com.linecorp.armeria.client.ClientBuilder;
@@ -138,6 +139,9 @@ public class GrpcServiceServerTest {
     private static final Key<StringValue> STRING_VALUE_KEY =
             ProtoUtils.keyForProto(StringValue.getDefaultInstance());
 
+    private static final Key<Int32Value> INT_32_VALUE_KEY =
+            ProtoUtils.keyForProto(Int32Value.getDefaultInstance());
+
     private static final Key<String> CUSTOM_VALUE_KEY = Key.of("custom-header",
                                                                Metadata.ASCII_STRING_MARSHALLER);
     private static final Key<StringValue> ERROR_METADATA_KEY =
@@ -208,14 +212,20 @@ public class GrpcServiceServerTest {
             metadata.put(CUSTOM_VALUE_KEY, "custom value");
 
             ServiceRequestContext ctx = RequestContext.current();
-            // gRPC allows multiple comma-separated binary values in a single trailer.
+            // Metadata takes priority, this trailer will not be written since it has the same name.
             ctx.addAdditionalResponseTrailer(
                     STRING_VALUE_KEY.name(),
                     Base64.getEncoder().encodeToString(
-                            StringValue.newBuilder().setValue("context trailer 1").build().toByteArray()) +
+                            StringValue.newBuilder().setValue("context trailer 1").build().toByteArray()));
+
+            // gRPC wire format allow comma-separated binary headers.
+            ctx.addAdditionalResponseTrailer(
+                    INT_32_VALUE_KEY.name(),
+                    Base64.getEncoder().encodeToString(
+                            Int32Value.newBuilder().setValue(10).build().toByteArray()) +
                     "," +
                     Base64.getEncoder().encodeToString(
-                            StringValue.newBuilder().setValue("context trailer 2").build().toByteArray()));
+                            Int32Value.newBuilder().setValue(20).build().toByteArray()));
 
             responseObserver.onError(Status.ABORTED.withDescription("aborted call").asException(metadata));
         }
@@ -562,10 +572,10 @@ public class GrpcServiceServerTest {
         assertThat(t.getStatus().getCode()).isEqualTo(Code.ABORTED);
         assertThat(t.getStatus().getDescription()).isEqualTo("aborted call");
         assertThat(t.getTrailers().getAll(STRING_VALUE_KEY))
-                .containsExactly(
-                        StringValue.newBuilder().setValue("custom metadata").build(),
-                        StringValue.newBuilder().setValue("context trailer 1").build(),
-                        StringValue.newBuilder().setValue("context trailer 2").build());
+                .containsExactly(StringValue.newBuilder().setValue("custom metadata").build());
+        assertThat(t.getTrailers().getAll(INT_32_VALUE_KEY))
+                .containsExactly(Int32Value.newBuilder().setValue(10).build(),
+                                 Int32Value.newBuilder().setValue(20).build());
         assertThat(t.getTrailers().get(CUSTOM_VALUE_KEY)).isEqualTo("custom value");
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
