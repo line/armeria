@@ -29,6 +29,7 @@ import java.util.function.Consumer;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Client;
@@ -121,7 +122,9 @@ final class GrpcClientFactory extends DecoratingClientFactory {
                         stubMethods(stubClass),
                         options.getOrElse(GrpcClientOptions.JSON_MARSHALLER_CUSTOMIZER, NO_OP)) : null;
         final ArmeriaChannel channel = new ArmeriaChannel(
-                new DefaultClientBuilderParams(this, uri, clientType, options),
+                new DefaultClientBuilderParams(this,
+                                               Strings.isNullOrEmpty(uri.getPath()) ? rootPathUri(uri) : uri,
+                                               clientType, options),
                 httpClient,
                 meterRegistry(),
                 scheme.sessionProtocol(),
@@ -176,6 +179,15 @@ final class GrpcClientFactory extends DecoratingClientFactory {
                     Client.class,
                     options);
             return client;
+        } catch (URISyntaxException e) {
+            throw new Error(e); // Should never happen.
+        }
+    }
+
+    private static URI rootPathUri(URI uri) {
+        try {
+            return new URI(uri.getScheme(), uri.getRawAuthority(), "/", uri.getRawQuery(),
+                           uri.getRawFragment());
         } catch (URISyntaxException e) {
             throw new Error(e); // Should never happen.
         }

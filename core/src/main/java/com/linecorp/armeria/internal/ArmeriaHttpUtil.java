@@ -346,17 +346,7 @@ public final class ArmeriaHttpUtil {
      * be always empty (1xx, 204, 205 and 304 responses.)
      */
     public static boolean isContentAlwaysEmpty(HttpStatus status) {
-        if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
-            return true;
-        }
-
-        switch (status.code()) {
-            case 204:
-            case 205:
-            case 304:
-                return true;
-        }
-        return false;
+        return isContentAlwaysEmpty(status.code());
     }
 
     /**
@@ -369,9 +359,9 @@ public final class ArmeriaHttpUtil {
         }
 
         switch (statusCode) {
-            case 204:
-            case 205:
-            case 304:
+            case /* NO_CONTENT */ 204:
+            case /* RESET_CONTENT */ 205:
+            case /* NOT_MODIFIED */ 304:
                 return true;
         }
         return false;
