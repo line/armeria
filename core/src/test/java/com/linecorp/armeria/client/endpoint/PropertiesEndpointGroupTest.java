@@ -24,10 +24,12 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URL;
-import java.net.URLClassLoader;
+import java.nio.file.Path;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
+import org.awaitility.Awaitility;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -37,6 +39,11 @@ import com.linecorp.armeria.client.Endpoint;
 public class PropertiesEndpointGroupTest {
 
     private static final Properties PROPS = new Properties();
+
+    @BeforeClass
+    public static void before() {
+        Awaitility.setDefaultTimeout(20, TimeUnit.SECONDS);
+    }
 
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
@@ -86,12 +93,37 @@ public class PropertiesEndpointGroupTest {
                 getClass().getClassLoader(), "server-list.properties", "serverA.hosts", 80);
         final PropertiesEndpointGroup endpointGroupB = PropertiesEndpointGroup.of(
                 getClass().getClassLoader(), "server-list.properties", "serverB.hosts", 8080);
-
         assertThat(endpointGroupA.endpoints()).containsExactlyInAnyOrder(Endpoint.parse("127.0.0.1:8080"),
                                                                          Endpoint.parse("127.0.0.1:8081"),
                                                                          Endpoint.parse("127.0.0.1:80"));
         assertThat(endpointGroupB.endpoints()).containsExactlyInAnyOrder(Endpoint.parse("127.0.0.1:8082"),
                                                                          Endpoint.parse("127.0.0.1:8083"));
+    }
+
+    @Test
+    public void pathWithDefaultPort() throws Exception {
+        final URL resourceUrl = getClass().getClassLoader().getResource("server-list.properties");
+        assert resourceUrl != null;
+        final Path resourcePath = new File(resourceUrl.getFile()).toPath();
+        final PropertiesEndpointGroup endpointGroupA = PropertiesEndpointGroup.of(
+                resourcePath, "serverA.hosts", 80);
+        assertThat(endpointGroupA.endpoints()).containsExactlyInAnyOrder(Endpoint.parse("127.0.0.1:8080"),
+                                                                         Endpoint.parse("127.0.0.1:8081"),
+                                                                         Endpoint.parse("127.0.0.1:80"));
+        endpointGroupA.close();
+    }
+
+    @Test
+    public void pathWithoutDefaultPort() {
+        final URL resourceUrl = getClass().getClassLoader().getResource("server-list.properties");
+        assert resourceUrl != null;
+        final Path resourcePath = new File(resourceUrl.getFile()).toPath();
+        final PropertiesEndpointGroup endpointGroup = PropertiesEndpointGroup.of(
+                resourcePath, "serverA.hosts");
+        assertThat(endpointGroup.endpoints()).containsExactlyInAnyOrder(Endpoint.parse("127.0.0.1:8080"),
+                                                                        Endpoint.parse("127.0.0.1:8081"),
+                                                                        Endpoint.parse("127.0.0.1"));
+        endpointGroup.close();
     }
 
     @Test
@@ -122,10 +154,7 @@ public class PropertiesEndpointGroupTest {
 
     @Test
     public void propertiesFileUpdatesCorrectly() throws Exception {
-
         final File file = folder.newFile("temp-file.properties");
-        final URL url = file.getParentFile().toURI().toURL();
-        final URLClassLoader classLoader = URLClassLoader.newInstance(new URL[]{url});
 
         PrintWriter printWriter = new PrintWriter(file);
         Properties props = new Properties();
@@ -134,9 +163,9 @@ public class PropertiesEndpointGroupTest {
         printWriter.close();
 
         final PropertiesEndpointGroup endpointGroupA = PropertiesEndpointGroup.of(
-                classLoader, file.getName(), "serverA.hosts", 80, true);
+                file.toPath(), "serverA.hosts");
 
-        await().atMost(20, TimeUnit.SECONDS).until(() -> endpointGroupA.endpoints().size() == 1);
+        await().untilAsserted(() -> assertThat(endpointGroupA.endpoints()).hasSize(1));
 
         // Update resource
         printWriter = new PrintWriter(file);
@@ -146,27 +175,25 @@ public class PropertiesEndpointGroupTest {
         props.store(printWriter, "");
         printWriter.close();
 
-        await().atMost(20, TimeUnit.SECONDS).until(() -> endpointGroupA.endpoints().size() == 2);
+        await().untilAsserted(() -> assertThat(endpointGroupA.endpoints()).hasSize(2));
 
         endpointGroupA.close();
     }
 
     @Test
     public void duplicateResourceUrl() throws IOException {
-        PropertiesEndpointGroup.of(
-                getClass().getClassLoader(), "server-list.properties", "serverA.hosts", 80, true);
-
-        assertThatThrownBy(() -> PropertiesEndpointGroup.of(
-                getClass().getClassLoader(), "server-list.properties", "serverA.hosts", 80, true))
-                .isInstanceOf(IllegalArgumentException.class);
+        final File file = folder.newFile("temp-file.properties");
+        final PropertiesEndpointGroup propertiesEndpointGroupA =
+                PropertiesEndpointGroup.of(file.toPath(), "serverA.hosts");
+        final PropertiesEndpointGroup propertiesEndpointGroupB =
+                PropertiesEndpointGroup.of(file.toPath(), "serverA.hosts");
+        propertiesEndpointGroupA.close();
+        propertiesEndpointGroupB.close();
     }
 
     @Test
     public void propertiesFileRestart() throws Exception {
-
         final File file = folder.newFile("temp-file.properties");
-        final URL url = file.getParentFile().toURI().toURL();
-        final URLClassLoader classLoader = URLClassLoader.newInstance(new URL[]{url});
 
         PrintWriter printWriter = new PrintWriter(file);
         Properties props = new Properties();
@@ -175,17 +202,14 @@ public class PropertiesEndpointGroupTest {
         printWriter.close();
 
         final PropertiesEndpointGroup endpointGroupA = PropertiesEndpointGroup.of(
-                classLoader, file.getName(), "serverA.hosts", 80, true);
-
-        await().atMost(20, TimeUnit.SECONDS).until(() -> endpointGroupA.endpoints().size() == 1);
-
+                file.toPath(), "serverA.hosts");
+        await().untilAsserted(() -> assertThat(endpointGroupA.endpoints()).hasSize(1));
         endpointGroupA.close();
 
         final PropertiesEndpointGroup endpointGroupB = PropertiesEndpointGroup.of(
-                classLoader, file.getName(), "serverB.hosts", 80, true);
-        await().atMost(20, TimeUnit.SECONDS).until(() -> endpointGroupB.endpoints().isEmpty());
+                file.toPath(), "serverB.hosts");
+        await().untilAsserted(() -> assertThat(endpointGroupB.endpoints()).isEmpty());
 
-        // Update resource
         printWriter = new PrintWriter(file);
         props = new Properties();
         props.setProperty("serverB.hosts.0", "127.0.0.1:8080");
@@ -193,15 +217,13 @@ public class PropertiesEndpointGroupTest {
         props.store(printWriter, "");
         printWriter.close();
 
-        await().atMost(20, TimeUnit.SECONDS).until(() -> endpointGroupB.endpoints().size() == 2);
+        await().untilAsserted(() -> assertThat(endpointGroupB.endpoints()).hasSize(2));
         endpointGroupB.close();
     }
 
     @Test
     public void endpointChangePropagatesToListeners() throws Exception {
         final File file = folder.newFile("temp-file.properties");
-        final URL url = file.getParentFile().toURI().toURL();
-        final URLClassLoader classLoader = URLClassLoader.newInstance(new URL[]{url});
 
         PrintWriter printWriter = new PrintWriter(file);
         Properties props = new Properties();
@@ -211,18 +233,18 @@ public class PropertiesEndpointGroupTest {
         printWriter.close();
 
         final PropertiesEndpointGroup propertiesEndpointGroup = PropertiesEndpointGroup.of(
-                classLoader, file.getName(), "serverA.hosts", 80, true);
+                file.toPath(), "serverA.hosts");
         final StaticEndpointGroup staticEndpointGroup = new StaticEndpointGroup(Endpoint.of("127.0.0.1", 8081));
         final EndpointGroup endpointGroup = propertiesEndpointGroup.orElse(staticEndpointGroup);
 
-        await().atMost(20, TimeUnit.SECONDS).until(() -> endpointGroup.endpoints().size() == 2);
+        await().untilAsserted(() -> assertThat(endpointGroup.endpoints()).hasSize(2));
 
         printWriter = new PrintWriter(file);
         props = new Properties();
         props.store(printWriter, "");
         printWriter.close();
 
-        await().atMost(20, TimeUnit.SECONDS).until(() -> endpointGroup.endpoints().size() == 1);
+        await().untilAsserted(() -> assertThat(endpointGroup.endpoints()).hasSize(1));
 
         printWriter = new PrintWriter(file);
         props = new Properties();
@@ -232,6 +254,7 @@ public class PropertiesEndpointGroupTest {
         props.store(printWriter, "");
         printWriter.close();
 
-        await().atMost(20, TimeUnit.SECONDS).until(() -> endpointGroup.endpoints().size() == 3);
+        await().untilAsserted(() -> assertThat(endpointGroup.endpoints()).hasSize(3));
+        endpointGroup.close();
     }
 }

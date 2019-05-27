@@ -20,17 +20,15 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Properties;
-
-import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 
@@ -43,13 +41,10 @@ import com.linecorp.armeria.client.Endpoint;
 public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
     private static final PropertiesFileWatcherRegistry registry = new PropertiesFileWatcherRegistry();
 
-    @Nullable
-    private Runnable closeCallback;
-
     /**
      * Creates a new {@link EndpointGroup} instance that loads the host names (or IP address) and the port
-     * numbers of the {@link Endpoint} from the {@code resourceName} resource file. The resource file must
-     * contain at least one property whose name starts with {@code endpointKeyPrefix}:
+     * numbers of the {@link Endpoint} from the {@code resourceName} resource file. The resource file loads
+     * properties whose name starts with {@code endpointKeyPrefix}:
      *
      * <pre>{@code
      * example.hosts.0=example1.com:36462
@@ -59,8 +54,6 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
      *
      * @param resourceName the name of the resource where the list of {@link Endpoint}s is loaded from
      * @param endpointKeyPrefix the property name prefix
-     *
-     * @throws IllegalArgumentException if failed to load any hosts from the specified resource file
      */
     public static PropertiesEndpointGroup of(ClassLoader classLoader, String resourceName,
                                              String endpointKeyPrefix) {
@@ -75,8 +68,8 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
 
     /**
      * Creates a new {@link EndpointGroup} instance that loads the host names (or IP address) and the port
-     * numbers of the {@link Endpoint} from the {@code resourceName} resource file. The resource file must
-     * contain at least one property whose name starts with {@code endpointKeyPrefix}:
+     * numbers of the {@link Endpoint} from the {@code resourceName} resource file. The resource file loads
+     * properties whose name starts with {@code endpointKeyPrefix}:
      *
      * <pre>{@code
      * example.hosts.0=example1.com:36462
@@ -87,8 +80,6 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
      * @param resourceName the name of the resource where the list of {@link Endpoint}s is loaded from
      * @param endpointKeyPrefix the property name prefix
      * @param defaultPort the default port number to use
-     *
-     * @throws IllegalArgumentException if failed to load any hosts from the specified resource file
      */
     public static PropertiesEndpointGroup of(ClassLoader classLoader, String resourceName,
                                              String endpointKeyPrefix, int defaultPort) {
@@ -104,35 +95,8 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
 
     /**
      * Creates a new {@link EndpointGroup} instance that loads the host names (or IP address) and the port
-     * numbers of the {@link Endpoint} from the {@code resourceName} resource file. The resource file must
-     * contain at least one property whose name starts with {@code endpointKeyPrefix}:. Reloading property files
-     * for changes is {@code false} by default.
-     *
-     * <pre>{@code
-     * example.hosts.0=example1.com:36462
-     * example.hosts.1=example2.com:36462
-     * example.hosts.2=example3.com:36462
-     * }</pre>
-     *
-     * @param resourceName the name of the resource where the list of {@link Endpoint}s is loaded from
-     * @param endpointKeyPrefix the property name prefix
-     * @param defaultPort the default port number to use
-     * @param reloadable whether to watch and reload resource.
-     *
-     * @throws IllegalArgumentException if failed to load any hosts from the specified resource file
-     */
-    public static PropertiesEndpointGroup of(ClassLoader classLoader, String resourceName,
-                                             String endpointKeyPrefix, int defaultPort,
-                                             boolean reloadable) {
-        validateDefaultPort(defaultPort);
-        return new PropertiesEndpointGroup(classLoader, resourceName,
-                                           endpointKeyPrefix, defaultPort, reloadable);
-    }
-
-    /**
-     * Creates a new {@link EndpointGroup} instance that loads the host names (or IP address) and the port
-     * numbers of the {@link Endpoint} from the {@link Properties}. The {@link Properties} must contain at
-     * least one property whose name starts with {@code endpointKeyPrefix}:
+     * numbers of the {@link Endpoint} from the {@link Properties}. The {@link Properties} is filtered
+     * to properties whose name starts with {@code endpointKeyPrefix}:
      *
      * <pre>{@code
      * example.hosts.0=example1.com:36462
@@ -142,8 +106,6 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
      *
      * @param properties the {@link Properties} where the list of {@link Endpoint}s is loaded from
      * @param endpointKeyPrefix the property name prefix
-     *
-     * @throws IllegalArgumentException if failed to load any hosts from the specified {@link Properties}
      */
     public static PropertiesEndpointGroup of(Properties properties, String endpointKeyPrefix) {
         return new PropertiesEndpointGroup(loadEndpoints(
@@ -154,8 +116,8 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
 
     /**
      * Creates a new {@link EndpointGroup} instance that loads the host names (or IP address) and the port
-     * numbers of the {@link Endpoint} from the {@link Properties}. The {@link Properties} must contain at
-     * least one property whose name starts with {@code endpointKeyPrefix}:
+     * numbers of the {@link Endpoint} from the {@link Properties}. The {@link Properties} is filtered
+     * to properties whose name starts with {@code endpointKeyPrefix}:
      *
      * <pre>{@code
      * example.hosts.0=example1.com:36462
@@ -166,8 +128,6 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
      * @param properties the {@link Properties} where the list of {@link Endpoint}s is loaded from
      * @param endpointKeyPrefix the property name prefix
      * @param defaultPort the default port number to use
-     *
-     * @throws IllegalArgumentException if failed to load any hosts from the specified {@link Properties}
      */
     public static PropertiesEndpointGroup of(Properties properties, String endpointKeyPrefix,
                                              int defaultPort) {
@@ -178,29 +138,46 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
                 defaultPort));
     }
 
-    private PropertiesEndpointGroup(List<Endpoint> endpoints) {
-        setEndpoints(endpoints);
+    /**
+     * Creates a new {@link EndpointGroup} instance that loads the host names (or IP address) and the port
+     * numbers of the {@link Endpoint} from the {@code path} of a resource file. The resource file loads
+     * properties whose name starts with {@code endpointKeyPrefix}:
+     *
+     * <pre>{@code
+     * example.hosts.0=example1.com:36462
+     * example.hosts.1=example2.com:36462
+     * example.hosts.2=example3.com:36462
+     * }</pre>
+     *
+     * @param path the path of the file where list of {@link Endpoint}s is loaded from
+     * @param endpointKeyPrefix the property name prefix
+     * @param defaultPort the default port number to use
+     */
+    public static PropertiesEndpointGroup of(Path path, String endpointKeyPrefix, int defaultPort) {
+        validateDefaultPort(defaultPort);
+        return new PropertiesEndpointGroup(requireNonNull(path, "path"),
+                                           requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
+                                           defaultPort);
     }
 
-    private PropertiesEndpointGroup(ClassLoader classLoader, String resourceName,
-                                    String endpointKeyPrefix, int defaultPort, boolean reloadable) {
-        final URL resourceUrl = getResourceUrl(
-                requireNonNull(classLoader, "classLoader"),
-                requireNonNull(resourceName, "fileName"));
-        final List<Endpoint> endpoints = loadEndpoints(
-                resourceUrl,
-                requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
-                0);
-        setEndpoints(endpoints);
-
-        final Path filePath = new File(resourceUrl.getFile()).toPath();
-
-        if (reloadable) {
-            registry.register(filePath, () -> {
-                setEndpoints(loadEndpoints(resourceUrl, endpointKeyPrefix, defaultPort));
-            });
-            closeCallback = () -> registry.deregister(filePath);
-        }
+    /**
+     * Creates a new {@link EndpointGroup} instance that loads the host names (or IP address) and the port
+     * numbers of the {@link Endpoint} from the {@code path} of a resource file. The resource file loads
+     * properties whose name starts with {@code endpointKeyPrefix}:
+     *
+     * <pre>{@code
+     * example.hosts.0=example1.com:36462
+     * example.hosts.1=example2.com:36462
+     * example.hosts.2=example3.com:36462
+     * }</pre>
+     *
+     * @param path the path of the file where list of {@link Endpoint}s is loaded from
+     * @param endpointKeyPrefix the property name prefix
+     */
+    public static PropertiesEndpointGroup of(Path path, String endpointKeyPrefix) {
+        return new PropertiesEndpointGroup(requireNonNull(path, "path"),
+                                           requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
+                                           0);
     }
 
     private static URL getResourceUrl(ClassLoader classLoader, String resourceName) {
@@ -222,6 +199,17 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
         } catch (IOException e) {
             throw new IllegalArgumentException("failed to load: " + resourceUrl.getFile(), e);
         }
+    }
+
+    private static List<Endpoint> loadEndpoints(Path path, String endpointKeyPrefix, int defaultPort) {
+        final URL resourceUrl;
+        try {
+            resourceUrl = path.toUri().toURL();
+        } catch (MalformedURLException e) {
+            throw new IllegalArgumentException("invalid path: " + path, e);
+        }
+
+        return loadEndpoints(resourceUrl, endpointKeyPrefix, defaultPort);
     }
 
     private static List<Endpoint> loadEndpoints(Properties properties, String endpointKeyPrefix,
@@ -247,11 +235,26 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
                       "defaultPort: %s (expected: 1-65535)", defaultPort);
     }
 
+    private PropertiesEndpointGroup(List<Endpoint> endpoints) {
+        setEndpoints(endpoints);
+    }
+
+    private PropertiesEndpointGroup(Path path, String endpointKeyPrefix, int defaultPort) {
+        setEndpoints(loadEndpoints(
+                path,
+                requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
+                defaultPort));
+        registry.register(this, path, () -> {
+            setEndpoints(loadEndpoints(path, endpointKeyPrefix, defaultPort));
+        });
+    }
+
     @Override
     public void close() {
-        super.close();
-        if (closeCallback != null) {
-            closeCallback.run();
+        try {
+            super.close();
+        } finally {
+            registry.deregister(this);
         }
     }
 }

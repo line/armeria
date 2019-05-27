@@ -27,11 +27,19 @@ import java.io.PrintWriter;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.awaitility.Awaitility;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 public class PropertiesFileWatcherRegistryTest {
+
+    @BeforeClass
+    public static void before() {
+        Awaitility.setDefaultTimeout(20, TimeUnit.SECONDS);
+    }
+
     @Rule
     public TemporaryFolder folder = new TemporaryFolder();
 
@@ -39,20 +47,22 @@ public class PropertiesFileWatcherRegistryTest {
     public void stopFutureCorrectly() throws Exception {
 
         final File file = folder.newFile("temp-file.properties");
+        final PropertiesEndpointGroup group1 = PropertiesEndpointGroup.of(file.toPath(), "");
         final File file2 = folder.newFile("temp-file2.properties");
+        final PropertiesEndpointGroup group2 = PropertiesEndpointGroup.of(file.toPath(), "");
 
         final PropertiesFileWatcherRegistry propertiesFileWatcherRegistry =
                 new PropertiesFileWatcherRegistry();
-        propertiesFileWatcherRegistry.register(file.toPath(), () -> {});
-        propertiesFileWatcherRegistry.register(file2.toPath(), () -> {});
+        propertiesFileWatcherRegistry.register(group1, file.toPath(), () -> {});
+        propertiesFileWatcherRegistry.register(group2, file2.toPath(), () -> {});
 
         assertThat(propertiesFileWatcherRegistry.isRunning()).isTrue();
 
-        propertiesFileWatcherRegistry.deregister(file.toPath());
+        propertiesFileWatcherRegistry.deregister(group1);
 
         assertThat(propertiesFileWatcherRegistry.isRunning()).isTrue();
 
-        propertiesFileWatcherRegistry.deregister(file2.toPath());
+        propertiesFileWatcherRegistry.deregister(group2);
 
         assertThat(propertiesFileWatcherRegistry.isRunning()).isFalse();
     }
@@ -61,10 +71,11 @@ public class PropertiesFileWatcherRegistryTest {
     public void closeStopsRegistry() throws Exception {
 
         final File file = folder.newFile("temp-file.properties");
+        final PropertiesEndpointGroup group = PropertiesEndpointGroup.of(file.toPath(), "");
 
         final PropertiesFileWatcherRegistry propertiesFileWatcherRegistry =
                 new PropertiesFileWatcherRegistry();
-        propertiesFileWatcherRegistry.register(file.toPath(), () -> {});
+        propertiesFileWatcherRegistry.register(group, file.toPath(), () -> {});
 
         assertThat(propertiesFileWatcherRegistry.isRunning()).isTrue();
 
@@ -77,12 +88,12 @@ public class PropertiesFileWatcherRegistryTest {
     public void runnableWithException() throws Exception {
 
         final File file = folder.newFile("temp-file.properties");
-
         final PropertiesFileWatcherRegistry propertiesFileWatcherRegistry =
                 new PropertiesFileWatcherRegistry();
+        final PropertiesEndpointGroup group = PropertiesEndpointGroup.of(file.toPath(), "");
 
         final AtomicInteger val = new AtomicInteger(0);
-        propertiesFileWatcherRegistry.register(file.toPath(), () -> {
+        propertiesFileWatcherRegistry.register(group, file.toPath(), () -> {
             try {
                 final BufferedReader bufferedReader = new BufferedReader(new FileReader(file));
                 val.set(Integer.valueOf(bufferedReader.readLine()));
@@ -96,7 +107,7 @@ public class PropertiesFileWatcherRegistryTest {
         printWriter.print(1);
         printWriter.close();
 
-        await().atMost(20, TimeUnit.SECONDS).until(() -> val.get() == 1);
+        await().untilAsserted(() -> assertThat(val.get()).isEqualTo(1));
 
         assertThat(propertiesFileWatcherRegistry.isRunning()).isTrue();
 
@@ -104,7 +115,7 @@ public class PropertiesFileWatcherRegistryTest {
         printWriter.print(2);
         printWriter.close();
 
-        await().atMost(20, TimeUnit.SECONDS).until(() -> val.get() == 2);
+        await().untilAsserted(() -> assertThat(val.get()).isEqualTo(2));
 
         assertThat(propertiesFileWatcherRegistry.isRunning()).isTrue();
     }
