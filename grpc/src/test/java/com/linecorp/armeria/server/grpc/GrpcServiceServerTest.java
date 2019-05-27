@@ -19,12 +19,14 @@ package com.linecorp.armeria.server.grpc;
 import static com.linecorp.armeria.internal.grpc.GrpcTestUtil.REQUEST_MESSAGE;
 import static com.linecorp.armeria.internal.grpc.GrpcTestUtil.RESPONSE_MESSAGE;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.assertj.core.api.Assertions.entry;
 import static org.awaitility.Awaitility.await;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
@@ -52,6 +54,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.StringValue;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
@@ -95,17 +98,27 @@ import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
 import com.linecorp.armeria.internal.grpc.StreamRecorder;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.grpc.Codec;
 import io.grpc.DecompressorRegistry;
+import io.grpc.ForwardingServerCall.SimpleForwardingServerCall;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.Metadata;
+import io.grpc.Metadata.Key;
+import io.grpc.ServerCall;
+import io.grpc.ServerCall.Listener;
+import io.grpc.ServerCallHandler;
+import io.grpc.ServerInterceptor;
+import io.grpc.ServerInterceptors;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
+import io.grpc.protobuf.ProtoUtils;
 import io.grpc.protobuf.services.ProtoReflectionService;
 import io.grpc.reflection.v1alpha.ServerReflectionGrpc;
 import io.grpc.reflection.v1alpha.ServerReflectionGrpc.ServerReflectionStub;
@@ -121,6 +134,10 @@ import io.netty.util.AttributeKey;
 public class GrpcServiceServerTest {
 
     private static final int MAX_MESSAGE_SIZE = 16 * 1024 * 1024;
+
+    private static final Key<StringValue> ERROR_METADATA_KEY =
+            ProtoUtils.keyForProto(StringValue.getDefaultInstance());
+    private static final AsciiString ERROR_METADATA_HEADER = HttpHeaderNames.of(ERROR_METADATA_KEY.name());
 
     private static AsciiString LARGE_PAYLOAD;
 
@@ -285,7 +302,46 @@ public class GrpcServiceServerTest {
             ((ServerCallStreamObserver<?>) responseObserver).setOnCancelHandler(() -> COMPLETED.set(true));
             responseObserver.onNext(SimpleResponse.getDefaultInstance());
         }
+
+        @Override
+        public void errorReplaceException(SimpleRequest request,
+                                          StreamObserver<SimpleResponse> responseObserver) {
+            responseObserver.onError(new IllegalStateException("This error should be replaced"));
+        }
+
+        @Override
+        public void errorAdditionalMetadata(SimpleRequest request,
+                                            StreamObserver<SimpleResponse> responseObserver) {
+            final ServiceRequestContext ctx = RequestContext.current();
+            ctx.addAdditionalResponseTrailer(
+                    ERROR_METADATA_HEADER,
+                    Base64.getEncoder().encodeToString(StringValue.newBuilder()
+                                                                  .setValue("an error occurred")
+                                                                  .build()
+                                                                  .toByteArray()));
+            responseObserver.onError(new IllegalStateException("This error should have metadata"));
+        }
     }
+
+    private static final ServerInterceptor REPLACE_EXCEPTION = new ServerInterceptor() {
+        @Override
+        public <REQ, RESP> Listener<REQ> interceptCall(ServerCall<REQ, RESP> call, Metadata headers,
+                                                       ServerCallHandler<REQ, RESP> next) {
+            if (!call.getMethodDescriptor().equals(UnitTestServiceGrpc.getErrorReplaceExceptionMethod())) {
+                return next.startCall(call, headers);
+            }
+            return next.startCall(new SimpleForwardingServerCall<REQ, RESP>(call) {
+                @Override
+                public void close(Status status, Metadata trailers) {
+                    if (status.getCause() instanceof IllegalStateException &&
+                        status.getCause().getMessage().equals("This error should be replaced")) {
+                        status = status.withDescription("Error was replaced");
+                    }
+                    delegate().close(status, trailers);
+                }
+            }, headers);
+        }
+    };
 
     private static final BlockingQueue<RequestLog> requestLogQueue = new LinkedTransferQueue<>();
 
@@ -299,7 +355,8 @@ public class GrpcServiceServerTest {
             sb.service(
                     new GrpcServiceBuilder()
                             .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
-                            .addService(new UnitTestServiceImpl())
+                            .addService(ServerInterceptors.intercept(
+                                    new UnitTestServiceImpl(), REPLACE_EXCEPTION))
                             .enableUnframedRequests(true)
                             .supportedSerializationFormats(GrpcSerializationFormats.values())
                             .build(),
@@ -336,7 +393,8 @@ public class GrpcServiceServerTest {
 
             sb.serviceUnder("/", new GrpcServiceBuilder()
                     .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
-                    .addService(new UnitTestServiceImpl())
+                    .addService(ServerInterceptors.intercept(
+                            new UnitTestServiceImpl(), REPLACE_EXCEPTION))
                     .enableUnframedRequests(true)
                     .supportedSerializationFormats(GrpcSerializationFormats.values())
                     .useBlockingTaskExecutor(true)
@@ -1007,6 +1065,28 @@ public class GrpcServiceServerTest {
                     assertThat(response.get().getListServicesResponse().getServiceList())
                             .hasSizeGreaterThanOrEqualTo(2);
                 });
+    }
+
+    @Test
+    public void replaceException() throws Exception {
+        assertThatThrownBy(() -> blockingClient.errorReplaceException(SimpleRequest.getDefaultInstance()))
+                .isInstanceOf(StatusRuntimeException.class)
+                .hasMessage("UNKNOWN: Error was replaced");
+
+        requestLogQueue.take();
+    }
+
+    @Test
+    public void errorAdditionalMetadata() throws Exception {
+        final Throwable t = catchThrowable(
+                () -> blockingClient.errorAdditionalMetadata(SimpleRequest.getDefaultInstance()));
+        assertThat(t).isInstanceOfSatisfying(StatusRuntimeException.class, error -> {
+            assertThat(error).hasMessage("UNKNOWN");
+            assertThat(error.getTrailers().keys()).contains(ERROR_METADATA_HEADER.toString());
+            assertThat(error.getTrailers().get(ERROR_METADATA_KEY).getValue()).isEqualTo("an error occurred");
+        });
+
+        requestLogQueue.take();
     }
 
     private static void checkRequestLog(RequestLogChecker checker) throws Exception {
