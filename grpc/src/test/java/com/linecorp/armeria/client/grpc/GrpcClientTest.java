@@ -52,6 +52,7 @@ import org.junit.rules.Timeout;
 import org.mockito.ArgumentCaptor;
 
 import com.google.protobuf.ByteString;
+import com.google.protobuf.StringValue;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientOption;
@@ -746,17 +747,27 @@ public class GrpcClientTest {
 
     @Test
     public void exchangeHeadersUnaryCall_armeriaHeaders() throws Exception {
-        final TestServiceBlockingStub stub =
+        TestServiceBlockingStub stub =
                 Clients.newDerivedClient(
                         blockingStub,
                         ClientOption.HTTP_HEADERS.newValue(
                                 HttpHeaders.of(TestServiceImpl.EXTRA_HEADER_NAME, "dog")));
+
+        AtomicReference<Metadata> headers = new AtomicReference<>();
+        AtomicReference<Metadata> trailers = new AtomicReference<>();
+        stub = MetadataUtils.captureMetadata(stub, headers, trailers);
 
         assertThat(stub.emptyCall(EMPTY)).isNotNull();
 
         // Assert that our side channel object is echoed back in both headers and trailers
         assertThat(CLIENT_HEADERS_CAPTURE.get().get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("dog");
         assertThat(SERVER_TRAILERS_CAPTURE.get().get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("dog");
+
+        assertThat(headers.get()).isNull();
+        assertThat(trailers.get().get(TestServiceImpl.EXTRA_HEADER_KEY)).isEqualTo("dog");
+        assertThat(trailers.get().getAll(TestServiceImpl.STRING_VALUE_KEY)).containsExactly(
+                StringValue.newBuilder().setValue("hello").build(),
+                StringValue.newBuilder().setValue("world").build());
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
             assertThat(rpcReq.params()).containsExactly(EMPTY);
@@ -768,13 +779,24 @@ public class GrpcClientTest {
     public void exchangeHeadersUnaryCall_grpcMetadata() throws Exception {
         Metadata metadata = new Metadata();
         metadata.put(TestServiceImpl.EXTRA_HEADER_KEY, "dog");
-        final TestServiceBlockingStub stub = MetadataUtils.attachHeaders(blockingStub, metadata);
+
+        TestServiceBlockingStub stub = MetadataUtils.attachHeaders(blockingStub, metadata);
+
+        AtomicReference<Metadata> headers = new AtomicReference<>();
+        AtomicReference<Metadata> trailers = new AtomicReference<>();
+        stub = MetadataUtils.captureMetadata(stub, headers, trailers);
 
         assertThat(stub.emptyCall(EMPTY)).isNotNull();
 
         // Assert that our side channel object is echoed back in both headers and trailers
         assertThat(CLIENT_HEADERS_CAPTURE.get().get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("dog");
         assertThat(SERVER_TRAILERS_CAPTURE.get().get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("dog");
+
+        assertThat(headers.get()).isNull();
+        assertThat(trailers.get().get(TestServiceImpl.EXTRA_HEADER_KEY)).isEqualTo("dog");
+        assertThat(trailers.get().getAll(TestServiceImpl.STRING_VALUE_KEY)).containsExactly(
+                StringValue.newBuilder().setValue("hello").build(),
+                StringValue.newBuilder().setValue("world").build());
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
             assertThat(rpcReq.params()).containsExactly(EMPTY);

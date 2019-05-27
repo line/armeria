@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.grpc;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Map.Entry;
 
 import org.slf4j.Logger;
@@ -106,20 +107,20 @@ public final class MetadataUtil {
                 int commaIndex = COMMA_MATCHER.indexIn(value);
                 if (commaIndex == -1) {
                     metadata[i++] = nameBytes;
-                    metadata[i++] = BASE64_ENCODING_OMIT_PADDING.decode(value);
+                    metadata[i++] = Base64.getDecoder().decode(value);
                 } else {
                     int substringStartIndex = 0;
                     while (commaIndex != -1) {
                         final String substring = value.substring(substringStartIndex, commaIndex);
                         metadata[i++] = nameBytes;
-                        metadata[i++] = BASE64_ENCODING_OMIT_PADDING.decode(substring);
+                        metadata[i++] = Base64.getDecoder().decode(substring);
 
                         substringStartIndex = commaIndex + 1;
                         commaIndex = COMMA_MATCHER.indexIn(value, commaIndex + 1);
                     }
                     final String substring = value.substring(substringStartIndex);
                     metadata[i++] = nameBytes;
-                    metadata[i++] = BASE64_ENCODING_OMIT_PADDING.decode(substring);
+                    metadata[i++] = Base64.getDecoder().decode(substring);
                 }
             } else {
                 metadata[i++] = nameBytes;
