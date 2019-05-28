@@ -138,7 +138,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      */
     static HttpRequest of(HttpMethod method, String path, MediaType mediaType, byte[] content) {
         requireNonNull(content, "content");
-        return of(method, path, mediaType, HttpData.of(content));
+        return of(method, path, mediaType, HttpData.wrap(content));
     }
 
     /**

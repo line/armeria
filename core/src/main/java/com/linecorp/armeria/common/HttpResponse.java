@@ -198,7 +198,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, byte[] content) {
         requireNonNull(content, "content");
-        return of(status, mediaType, HttpData.of(content));
+        return of(status, mediaType, HttpData.wrap(content));
     }
 
     /**

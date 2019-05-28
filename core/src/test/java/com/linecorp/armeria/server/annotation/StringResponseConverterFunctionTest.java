@@ -70,7 +70,7 @@ public class StringResponseConverterFunctionTest {
             StepVerifier.create(from(result))
                         .expectNext(result instanceof Iterable ? expectedHeadersWithContentLength
                                                                : expectedHeadersWithoutContentLength)
-                        .expectNext(HttpData.of("foo,bar,baz".getBytes()))
+                        .expectNext(HttpData.wrap("foo,bar,baz".getBytes()))
                         .expectComplete()
                         .verify();
         }

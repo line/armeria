@@ -116,7 +116,7 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
         requireNonNull(status, "status");
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
-        return of(status, mediaType, HttpData.of(content));
+        return of(status, mediaType, HttpData.wrap(content));
     }
 
     /**

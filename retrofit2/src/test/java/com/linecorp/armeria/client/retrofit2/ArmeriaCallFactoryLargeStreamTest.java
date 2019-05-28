@@ -69,7 +69,7 @@ public class ArmeriaCallFactoryLargeStreamTest {
                                 if (count == 0) {
                                     s.onNext(ResponseHeaders.of(HttpStatus.OK));
                                 } else {
-                                    s.onNext(HttpData.of(new byte[1024]));
+                                    s.onNext(HttpData.wrap(new byte[1024]));
                                 }
                             }
                             count += n;

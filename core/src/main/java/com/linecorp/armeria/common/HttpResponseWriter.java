@@ -116,7 +116,7 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
         requireNonNull(status, "status");
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
-        respond(status, mediaType, HttpData.of(content));
+        respond(status, mediaType, HttpData.wrap(content));
     }
 
     /**

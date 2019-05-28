@@ -242,7 +242,7 @@ public interface HttpData extends HttpObject {
             return EMPTY_DATA;
         }
 
-        return of(String.format(Locale.ENGLISH, format, args).getBytes(charset));
+        return wrap(String.format(Locale.ENGLISH, format, args).getBytes(charset));
     }
 
     /**

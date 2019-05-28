@@ -113,7 +113,7 @@ public class JacksonResponseConverterFunction implements ResponseConverterFuncti
 
     private HttpData toJsonHttpData(@Nullable Object value) {
         try {
-            return HttpData.of(mapper.writeValueAsBytes(value));
+            return HttpData.wrap(mapper.writeValueAsBytes(value));
         } catch (Exception e) {
             return Exceptions.throwUnsafely(e);
         }

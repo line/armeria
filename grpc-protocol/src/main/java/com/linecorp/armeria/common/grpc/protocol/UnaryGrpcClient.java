@@ -80,7 +80,7 @@ public class UnaryGrpcClient {
         final HttpRequest request = HttpRequest.of(
                 RequestHeaders.of(HttpMethod.POST, uri,
                                   HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto"),
-                HttpData.of(payload));
+                HttpData.wrap(payload));
         return httpClient.execute(request).aggregate()
                          .thenApply(msg -> {
                              if (!HttpStatus.OK.equals(msg.status())) {

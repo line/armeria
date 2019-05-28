@@ -91,9 +91,9 @@ public class ByteArrayResponseConverterFunctionTest {
                                                     contents.stream())) {
             StepVerifier.create(from(result))
                         .expectNext(OCTET_STREAM_HEADERS)
-                        .expectNext(HttpData.of(contents.get(0)))
-                        .expectNext(HttpData.of(contents.get(1)))
-                        .expectNext(HttpData.of(contents.get(2)))
+                        .expectNext(HttpData.wrap(contents.get(0)))
+                        .expectNext(HttpData.wrap(contents.get(1)))
+                        .expectNext(HttpData.wrap(contents.get(2)))
                         .expectComplete()
                         .verify();
         }
@@ -102,7 +102,7 @@ public class ByteArrayResponseConverterFunctionTest {
                     .expectNext(OCTET_STREAM_HEADERS.toBuilder()
                                                     .addInt(HttpHeaderNames.CONTENT_LENGTH, 3)
                                                     .build())
-                    .expectNext(HttpData.of(contents.get(0)))
+                    .expectNext(HttpData.wrap(contents.get(0)))
                     .expectComplete()
                     .verify();
     }
@@ -143,7 +143,7 @@ public class ByteArrayResponseConverterFunctionTest {
                     .expectNext(OCTET_STREAM_HEADERS.toBuilder()
                                                     .addInt(HttpHeaderNames.CONTENT_LENGTH, 3)
                                                     .build())
-                    .expectNext(HttpData.of("foo".getBytes()))
+                    .expectNext(HttpData.wrap("foo".getBytes()))
                     .expectComplete()
                     .verify();
 

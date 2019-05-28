@@ -348,7 +348,7 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
 
         void setContent(byte[] content, MediaType mediaType) {
             assert file == HttpFile.nonExistent();
-            file = HttpFileBuilder.of(HttpData.of(content))
+            file = HttpFileBuilder.of(HttpData.wrap(content))
                                   .contentType(mediaType)
                                   .cacheControl(ServerCacheControl.REVALIDATED)
                                   .build();

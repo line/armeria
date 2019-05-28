@@ -29,7 +29,7 @@ public class HttpDataTest {
     public void toInputStream() throws Exception {
         assertThat(HttpData.EMPTY_DATA.toInputStream().read()).isEqualTo(-1);
 
-        final InputStream in1 = HttpData.of(new byte[] { 1, 2, 3, 4 }).toInputStream();
+        final InputStream in1 = HttpData.wrap(new byte[] { 1, 2, 3, 4 }).toInputStream();
         assertThat(in1.read()).isOne();
         assertThat(in1.read()).isEqualTo(2);
         assertThat(in1.read()).isEqualTo(3);

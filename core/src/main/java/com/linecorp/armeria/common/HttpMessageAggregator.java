@@ -144,7 +144,7 @@ abstract class HttpMessageAggregator<T extends AggregatedHttpMessage>
                     System.arraycopy(data.array(), 0, merged, offset, dataLength);
                     offset += dataLength;
                 }
-                content = HttpData.of(merged);
+                content = HttpData.wrap(merged);
             }
         }
 
