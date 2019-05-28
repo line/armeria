@@ -241,8 +241,10 @@ org.junit.jupiter:
   junit-jupiter-engine:
     version: *JUNIT_JUPITER_VERSION
 org.junit.platform:
+  junit-platform-commons:
+    version: &JUNIT_PLATFORM_VERSION '1.4.2'
   junit-platform-launcher:
-    version: '1.4.2'
+    version: *JUNIT_PLATFORM_VERSION
 org.junit.vintage:
   junit-vintage-engine:
     version: '5.4.2'

@@ -42,6 +42,8 @@ import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
+import org.springframework.beans.factory.NoUniqueBeanDefinitionException;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.boot.web.reactive.server.AbstractReactiveWebServerFactory;
 import org.springframework.boot.web.reactive.server.ReactiveWebServerFactory;
@@ -258,15 +260,12 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
     }
 
     private <T> Optional<T> findBean(Class<T> clazz) {
-        final List<T> beans = findBeans(clazz);
-        switch (beans.size()) {
-            case 0:
-                return Optional.empty();
-            case 1:
-                return Optional.of(beans.get(0));
-            default:
-                throw new IllegalStateException("Too many " + clazz.getSimpleName() + " beans: " +
-                                                beans + " (expected: 1)");
+        try {
+            return Optional.of(beanFactory.getBean(clazz));
+        } catch (NoUniqueBeanDefinitionException e) {
+            throw new IllegalStateException("Too many " + clazz.getSimpleName() + " beans: (expected: 1)", e);
+        } catch (NoSuchBeanDefinitionException e) {
+            return Optional.empty();
         }
     }
 

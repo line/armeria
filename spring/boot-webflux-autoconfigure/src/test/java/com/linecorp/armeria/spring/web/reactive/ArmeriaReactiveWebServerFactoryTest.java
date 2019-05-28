@@ -16,15 +16,14 @@
 package com.linecorp.armeria.spring.web.reactive;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.function.Consumer;
 
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.boot.web.reactive.server.ReactiveWebServerFactory;
 import org.springframework.boot.web.server.Compression;
 import org.springframework.boot.web.server.Ssl;
@@ -45,44 +44,40 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.server.HttpStatusException;
+import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.testing.internal.MockAddressResolverGroup;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import reactor.core.publisher.Mono;
 
-public class ArmeriaReactiveWebServerFactoryTest {
+class ArmeriaReactiveWebServerFactoryTest {
 
     static final String POST_BODY = "Hello, world!";
 
-    static final String[] names = new String[0];
-    static ConfigurableListableBeanFactory beanFactory;
-    static ClientFactory clientFactory;
+    private final DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
+    private final ClientFactory clientFactory =
+            new ClientFactoryBuilder()
+                    .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                    .addressResolverGroupFactory(eventLoopGroup -> MockAddressResolverGroup.localhost())
+                    .build();
 
-    @BeforeClass
-    public static void beforeClass() {
-        beanFactory = mock(ConfigurableListableBeanFactory.class);
-        clientFactory = new ClientFactoryBuilder()
-                .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
-                .addressResolverGroupFactory(eventLoopGroup -> MockAddressResolverGroup.localhost())
-                .build();
-    }
-
-    private static ArmeriaReactiveWebServerFactory factory() {
-        when(beanFactory.getBeanNamesForType((Class<?>) any())).thenReturn(names);
+    private ArmeriaReactiveWebServerFactory factory() {
         return new ArmeriaReactiveWebServerFactory(beanFactory);
     }
 
-    private static HttpClient httpsClient(WebServer server) {
+    private HttpClient httpsClient(WebServer server) {
         return HttpClient.of(clientFactory, "https://example.com:" + server.getPort());
     }
 
-    private static HttpClient httpClient(WebServer server) {
+    private HttpClient httpClient(WebServer server) {
         return HttpClient.of(clientFactory, "http://example.com:" + server.getPort());
     }
 
     @Test
-    public void shouldRunOnSpecifiedPort() {
+    void shouldRunOnSpecifiedPort() {
         final ArmeriaReactiveWebServerFactory factory = factory();
         final int port = SocketUtils.findAvailableTcpPort();
         factory.setPort(port);
@@ -90,7 +85,7 @@ public class ArmeriaReactiveWebServerFactoryTest {
     }
 
     @Test
-    public void shouldReturnEchoResponse() {
+    void shouldReturnEchoResponse() {
         final ArmeriaReactiveWebServerFactory factory = factory();
         runEchoServer(factory, server -> {
             final HttpClient client = httpClient(server);
@@ -103,7 +98,7 @@ public class ArmeriaReactiveWebServerFactoryTest {
     }
 
     @Test
-    public void shouldConfigureTlsWithSelfSignedCertificate() {
+    void shouldConfigureTlsWithSelfSignedCertificate() {
         final ArmeriaReactiveWebServerFactory factory = factory();
         final Ssl ssl = new Ssl();
         ssl.setEnabled(true);
@@ -112,7 +107,7 @@ public class ArmeriaReactiveWebServerFactoryTest {
     }
 
     @Test
-    public void shouldReturnBadRequestDueToException() {
+    void shouldReturnBadRequestDueToException() {
         final ArmeriaReactiveWebServerFactory factory = factory();
         runServer(factory, AlwaysFailureHandler.INSTANCE, server -> {
             final HttpClient client = httpClient(server);
@@ -126,7 +121,7 @@ public class ArmeriaReactiveWebServerFactoryTest {
     }
 
     @Test
-    public void shouldReturnCompressedResponse() {
+    void shouldReturnCompressedResponse() {
         final ArmeriaReactiveWebServerFactory factory = factory();
         final Compression compression = new Compression();
         compression.setEnabled(true);
@@ -143,7 +138,7 @@ public class ArmeriaReactiveWebServerFactoryTest {
     }
 
     @Test
-    public void shouldReturnNonCompressedResponse_dueToContentType() {
+    void shouldReturnNonCompressedResponse_dueToContentType() {
         final ArmeriaReactiveWebServerFactory factory = factory();
         final Compression compression = new Compression();
         compression.setEnabled(true);
@@ -158,7 +153,7 @@ public class ArmeriaReactiveWebServerFactoryTest {
     }
 
     @Test
-    public void shouldReturnNonCompressedResponse_dueToUserAgent() {
+    void shouldReturnNonCompressedResponse_dueToUserAgent() {
         final ArmeriaReactiveWebServerFactory factory = factory();
         final Compression compression = new Compression();
         compression.setEnabled(true);
@@ -228,5 +223,45 @@ public class ArmeriaReactiveWebServerFactoryTest {
                 throw HttpStatusException.of(com.linecorp.armeria.common.HttpStatus.BAD_REQUEST);
             }).then();
         }
+    }
+
+    @Test
+    void testMultipleBeansRegistered_TooManyMeterRegistryBeans() {
+        final ArmeriaReactiveWebServerFactory factory = factory();
+
+        RootBeanDefinition rbd = new RootBeanDefinition(ArmeriaSettings.class);
+        beanFactory.registerBeanDefinition("armeriaSettings", rbd);
+
+        rbd = new RootBeanDefinition(MeterRegistry.class, PrometheusMeterRegistries::newRegistry);
+        beanFactory.registerBeanDefinition("meterRegistry1", rbd);
+
+        rbd = new RootBeanDefinition(MeterRegistry.class, PrometheusMeterRegistries::newRegistry);
+        beanFactory.registerBeanDefinition("meterRegistry2", rbd);
+
+        assertThrows(IllegalStateException.class, () -> runEchoServer(factory, server -> fail()));
+    }
+
+    @Test
+    void testMultipleBeansRegistered_shouldUsePrimaryBean() {
+        final ArmeriaReactiveWebServerFactory factory = factory();
+
+        RootBeanDefinition rbd = new RootBeanDefinition(ArmeriaSettings.class);
+        beanFactory.registerBeanDefinition("armeriaSettings", rbd);
+
+        rbd = new RootBeanDefinition(MeterRegistry.class, PrometheusMeterRegistries::newRegistry);
+        beanFactory.registerBeanDefinition("meterRegistry1", rbd);
+
+        rbd = new RootBeanDefinition(MeterRegistry.class, PrometheusMeterRegistries::newRegistry);
+        rbd.setPrimary(true);
+        beanFactory.registerBeanDefinition("meterRegistry2", rbd);
+
+        runEchoServer(factory, server -> {
+            final HttpClient client = httpClient(server);
+            validateEchoResponse(sendPostRequest(client));
+
+            final AggregatedHttpMessage res = client.get("/hello").aggregate().join();
+            assertThat(res.status()).isEqualTo(com.linecorp.armeria.common.HttpStatus.OK);
+            assertThat(res.contentUtf8()).isEmpty();
+        });
     }
 }
