@@ -113,7 +113,7 @@ configure(projectsWithFlags('java')) {
         }
     }
 
-    test {
+    tasks.withType(Test) {
         useJUnitPlatform()
     }
 }
