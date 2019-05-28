@@ -36,7 +36,7 @@ public class HttpDataTest {
         assertThat(in1.read()).isEqualTo(4);
         assertThat(in1.read()).isEqualTo(-1);
 
-        final InputStream in2 = HttpData.of(new byte[] { 1, 2, 3, 4 }, 1, 2).toInputStream();
+        final InputStream in2 = HttpData.wrap(new byte[] { 1, 2, 3, 4 }, 1, 2).toInputStream();
         assertThat(in2.read()).isEqualTo(2);
         assertThat(in2.read()).isEqualTo(3);
         assertThat(in2.read()).isEqualTo(-1);

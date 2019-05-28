@@ -148,22 +148,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * @param path the path of the request
      * @param mediaType the {@link MediaType} of the request content
      * @param content the content of the request
-     * @param offset the start offset of {@code content}
-     * @param length the length of {@code content}
-     */
-    static HttpRequest of(
-            HttpMethod method, String path, MediaType mediaType, byte[] content, int offset, int length) {
-        requireNonNull(content, "content");
-        return of(method, path, mediaType, HttpData.of(content, offset, length));
-    }
-
-    /**
-     * Creates a new HTTP request and closes the stream.
-     *
-     * @param method the HTTP method of the request
-     * @param path the path of the request
-     * @param mediaType the {@link MediaType} of the request content
-     * @param content the content of the request
      */
     static HttpRequest of(HttpMethod method, String path, MediaType mediaType, HttpData content) {
         return of(method, path, mediaType, content, HttpHeaders.of());

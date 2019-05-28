@@ -571,7 +571,7 @@ public class ThriftServiceTest {
         client1.send_removeMiddle(new Name(BAZ, BAR, FOO));
         assertThat(out.length()).isGreaterThan(0);
 
-        final HttpData req1 = HttpData.of(out.getArray(), 0, out.length());
+        final HttpData req1 = HttpData.wrap(out.getArray(), 0, out.length());
 
         out = new TMemoryBuffer(128);
         outProto = ThriftProtocolFactories.get(defaultSerializationFormat).getProtocol(out);
@@ -581,7 +581,7 @@ public class ThriftServiceTest {
         client2.send_sort(Arrays.asList(NAME_C, NAME_B, NAME_A));
         assertThat(out.length()).isGreaterThan(0);
 
-        final HttpData req2 = HttpData.of(out.getArray(), 0, out.length());
+        final HttpData req2 = HttpData.wrap(out.getArray(), 0, out.length());
 
         final THttpService service = THttpService.of(
                 (UberNameService) (names, callback) -> callback.onComplete(
@@ -621,14 +621,14 @@ public class ThriftServiceTest {
     }
 
     private void invoke(THttpService service) throws Exception {
-        invoke0(service, HttpData.of(out.getArray(), 0, out.length()), promise);
+        invoke0(service, HttpData.wrap(out.getArray(), 0, out.length()), promise);
 
         final HttpData res = promise.get();
         in.reset(res.array());
     }
 
     private void invokeTwice(THttpService service1, THttpService service2) throws Exception {
-        final HttpData content = HttpData.of(out.getArray(), 0, out.length());
+        final HttpData content = HttpData.wrap(out.getArray(), 0, out.length());
         invoke0(service1, content, promise);
         invoke0(service2, content, promise2);
     }

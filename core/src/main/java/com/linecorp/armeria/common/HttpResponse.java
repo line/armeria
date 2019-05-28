@@ -206,19 +206,6 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
-     * @param offset the start offset of {@code content}
-     * @param length the length of {@code content}
-     */
-    static HttpResponse of(HttpStatus status, MediaType mediaType, byte[] content, int offset, int length) {
-        requireNonNull(content, "content");
-        return of(status, mediaType, HttpData.of(content, offset, length));
-    }
-
-    /**
-     * Creates a new HTTP response of the specified {@link HttpStatus}.
-     *
-     * @param mediaType the {@link MediaType} of the response content
-     * @param content the content of the response
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, HttpData content) {
         return of(status, mediaType, content, HttpHeaders.of());
