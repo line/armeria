@@ -55,7 +55,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -140,7 +140,7 @@ public class ReactiveWebServerAutoConfigurationTest {
     public void shouldGetHelloFromRestController() throws Exception {
         protocols.forEach(scheme -> {
             final HttpClient client = HttpClient.of(clientFactory, scheme + "://example.com:" + port);
-            final AggregatedHttpMessage response = client.get("/hello").aggregate().join();
+            final AggregatedHttpResponse response = client.get("/hello").aggregate().join();
             assertThat(response.contentUtf8()).isEqualTo("hello");
         });
     }
@@ -150,10 +150,10 @@ public class ReactiveWebServerAutoConfigurationTest {
         protocols.forEach(scheme -> {
             final HttpClient client = HttpClient.of(clientFactory, scheme + "://example.com:" + port);
 
-            final AggregatedHttpMessage res = client.get("/route").aggregate().join();
+            final AggregatedHttpResponse res = client.get("/route").aggregate().join();
             assertThat(res.contentUtf8()).isEqualTo("route");
 
-            final AggregatedHttpMessage res2 =
+            final AggregatedHttpResponse res2 =
                     client.execute(RequestHeaders.of(HttpMethod.POST, "/route2",
                                                      HttpHeaderNames.CONTENT_TYPE, JSON_UTF_8),
                                    HttpData.of("{\"a\":1}".getBytes())).aggregate().join();

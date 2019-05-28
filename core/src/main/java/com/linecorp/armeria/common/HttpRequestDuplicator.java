@@ -43,7 +43,7 @@ import io.netty.util.concurrent.EventExecutor;
  *     // Do something according to the first few elements of the request.
  * });
  *
- * final CompletableFuture<AggregatedHttpMessage> future2 = dupReq2.aggregate();
+ * final CompletableFuture<AggregatedHttpRequest> future2 = dupReq2.aggregate();
  * future2.handle((message, cause) -> {
  *     // Do something with message.
  * }

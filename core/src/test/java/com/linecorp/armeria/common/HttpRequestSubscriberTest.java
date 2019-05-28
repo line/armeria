@@ -100,7 +100,7 @@ public class HttpRequestSubscriberTest {
 
     @Test
     public void shouldCompleteFutureWithoutCause() throws Exception {
-        final AggregatedHttpMessage response = client.execute(request).aggregate().join();
+        final AggregatedHttpResponse response = client.execute(request).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
 
         final CompletableFuture<Void> f = request.completionFuture();

@@ -10,7 +10,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
@@ -42,7 +42,7 @@ public class AnnotatedHttpServiceTest {
 
     @Test
     public void testPathPatternService() {
-        AggregatedHttpMessage res;
+        AggregatedHttpResponse res;
 
         res = client.get("/pathPattern/path/armeria").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("path: armeria");
@@ -59,7 +59,7 @@ public class AnnotatedHttpServiceTest {
 
     @Test
     public void testInjectionService() {
-        AggregatedHttpMessage res;
+        AggregatedHttpResponse res;
 
         res = client.get("/injection/param/armeria/1?gender=male").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
@@ -87,7 +87,7 @@ public class AnnotatedHttpServiceTest {
 
     @Test
     public void testMessageConverterService() {
-        AggregatedHttpMessage res;
+        AggregatedHttpResponse res;
         String body;
 
         // JSON
@@ -118,7 +118,7 @@ public class AnnotatedHttpServiceTest {
 
     @Test
     public void testExceptionHandlerService() {
-        AggregatedHttpMessage res;
+        AggregatedHttpResponse res;
 
         res = client.get("/exception/locallySpecific").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);

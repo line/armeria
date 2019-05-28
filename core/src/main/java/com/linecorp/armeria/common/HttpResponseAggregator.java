@@ -29,28 +29,28 @@ import javax.annotation.Nullable;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
 
-final class HttpResponseAggregator extends HttpMessageAggregator {
+final class HttpResponseAggregator extends HttpMessageAggregator<AggregatedHttpResponse> {
 
     @Nullable
     private List<ResponseHeaders> informationals; // needs aggregation as well
     @Nullable
     private ResponseHeaders headers;
-    private HttpHeaders trailingHeaders;
+    private HttpHeaders trailers;
 
     private boolean receivedMessageHeaders;
 
-    HttpResponseAggregator(CompletableFuture<AggregatedHttpMessage> future,
+    HttpResponseAggregator(CompletableFuture<AggregatedHttpResponse> future,
                            @Nullable ByteBufAllocator alloc) {
         super(future, alloc);
-        trailingHeaders = HttpHeaders.of();
+        trailers = HttpHeaders.of();
     }
 
     @Override
     protected void onHeaders(HttpHeaders headers) {
         if (!receivedMessageHeaders) {
             onInformationalOrMessageHeaders(headers);
-        } else if (trailingHeaders.isEmpty()) {
-            trailingHeaders = headers;
+        } else if (trailers.isEmpty()) {
+            trailers = headers;
         } else {
             // Optionally, only one trailers can be present.
             // See https://tools.ietf.org/html/rfc7540#section-8.1
@@ -59,7 +59,7 @@ final class HttpResponseAggregator extends HttpMessageAggregator {
 
     @Override
     protected void onData(HttpData data) {
-        if (!trailingHeaders.isEmpty()) {
+        if (!trailers.isEmpty()) {
             ReferenceCountUtil.safeRelease(data);
             // Data can't come after trailers.
             // See https://tools.ietf.org/html/rfc7540#section-8.1
@@ -91,15 +91,15 @@ final class HttpResponseAggregator extends HttpMessageAggregator {
     }
 
     @Override
-    protected AggregatedHttpMessage onSuccess(HttpData content) {
+    protected AggregatedHttpResponse onSuccess(HttpData content) {
         checkState(headers != null, "An aggregated message does not have headers.");
-        return AggregatedHttpMessage.of(firstNonNull(informationals, Collections.emptyList()),
-                                        headers, content, trailingHeaders);
+        return AggregatedHttpResponse.of(firstNonNull(informationals, Collections.emptyList()),
+                                         headers, content, trailers);
     }
 
     @Override
     protected void onFailure() {
         headers = null;
-        trailingHeaders = HttpHeaders.of();
+        trailers = HttpHeaders.of();
     }
 }

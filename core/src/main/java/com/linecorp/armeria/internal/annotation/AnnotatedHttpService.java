@@ -41,7 +41,8 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
@@ -188,7 +189,7 @@ public class AnnotatedHttpService implements HttpService {
             } else if (arg instanceof Class) {
                 final Class<?> clazz = (Class<?>) arg;
                 if (HttpResponse.class.isAssignableFrom(clazz) ||
-                    AggregatedHttpMessage.class.isAssignableFrom(clazz)) {
+                    AggregatedHttpResponse.class.isAssignableFrom(clazz)) {
                     logger.warn("{} in the return type '{}' may take precedence over {}.",
                                 clazz.getSimpleName(), returnType, HttpResult.class.getSimpleName());
                 }
@@ -223,7 +224,7 @@ public class AnnotatedHttpService implements HttpService {
      * {@link HttpResponse}, it will be executed in the blocking task executor.
      */
     private CompletionStage<HttpResponse> serve0(ServiceRequestContext ctx, HttpRequest req) {
-        final CompletableFuture<AggregatedHttpMessage> f =
+        final CompletableFuture<AggregatedHttpRequest> f =
                 aggregationRequired(aggregationStrategy, req) ? req.aggregate()
                                                               : CompletableFuture.completedFuture(null);
 
@@ -251,9 +252,10 @@ public class AnnotatedHttpService implements HttpService {
     /**
      * Invokes the service method with arguments.
      */
-    private Object invoke(ServiceRequestContext ctx, HttpRequest req, @Nullable AggregatedHttpMessage message) {
+    private Object invoke(ServiceRequestContext ctx, HttpRequest req,
+                          @Nullable AggregatedHttpRequest aggregatedRequest) {
         try (SafeCloseable ignored = ctx.push(false)) {
-            final ResolverContext resolverContext = new ResolverContext(ctx, req, message);
+            final ResolverContext resolverContext = new ResolverContext(ctx, req, aggregatedRequest);
             final Object[] arguments = toArguments(resolvers, resolverContext);
             return method.invoke(object, arguments);
         } catch (Throwable cause) {
@@ -266,38 +268,38 @@ public class AnnotatedHttpService implements HttpService {
      */
     private HttpResponse convertResponse(ServiceRequestContext ctx, HttpRequest req,
                                          @Nullable HttpHeaders headers, @Nullable Object result,
-                                         HttpHeaders trailingHeaders) {
+                                         HttpHeaders trailers) {
         final ResponseHeaders newHeaders;
-        final HttpHeaders newTrailingHeaders;
+        final HttpHeaders newTrailers;
         if (result instanceof HttpResult) {
             final HttpResult<?> httpResult = (HttpResult<?>) result;
             newHeaders = setHttpStatus(addNegotiatedResponseMediaType(ctx, httpResult.headers()));
             result = httpResult.content().orElse(null);
-            newTrailingHeaders = httpResult.trailingHeaders();
+            newTrailers = httpResult.trailers();
         } else {
             newHeaders = setHttpStatus(
                     headers == null ? addNegotiatedResponseMediaType(ctx, HttpHeaders.of())
                                     : ResponseHeaders.builder().add(headers));
-            newTrailingHeaders = trailingHeaders;
+            newTrailers = trailers;
         }
 
         if (result instanceof HttpResponse) {
             return new ExceptionFilteredHttpResponse(ctx, req, (HttpResponse) result, exceptionHandler);
         }
-        if (result instanceof AggregatedHttpMessage) {
-            return HttpResponse.of((AggregatedHttpMessage) result);
+        if (result instanceof AggregatedHttpResponse) {
+            return HttpResponse.of((AggregatedHttpResponse) result);
         }
         if (result instanceof CompletionStage) {
             return HttpResponse.from(
                     ((CompletionStage<?>) result)
                             .thenApply(object -> convertResponse(ctx, req, newHeaders, object,
-                                                                 newTrailingHeaders))
+                                                                 newTrailers))
                             .exceptionally(cause -> exceptionHandler.handleException(ctx, req, cause)));
         }
 
         try {
             final HttpResponse response =
-                    responseConverter.convertResponse(ctx, newHeaders, result, newTrailingHeaders);
+                    responseConverter.convertResponse(ctx, newHeaders, result, newTrailers);
             if (response instanceof HttpResponseWriter) {
                 // A streaming response has more chance to get an exception.
                 return new ExceptionFilteredHttpResponse(ctx, req, response, exceptionHandler);
@@ -431,11 +433,11 @@ public class AnnotatedHttpService implements HttpService {
         public HttpResponse convertResponse(ServiceRequestContext ctx,
                                             ResponseHeaders headers,
                                             @Nullable Object result,
-                                            HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailers) throws Exception {
             try (SafeCloseable ignored = ctx.push(false)) {
                 for (final ResponseConverterFunction func : functions) {
                     try {
-                        return func.convertResponse(ctx, headers, result, trailingHeaders);
+                        return func.convertResponse(ctx, headers, result, trailers);
                     } catch (FallthroughException ignore) {
                         // Do nothing.
                     } catch (Exception e) {
@@ -450,7 +452,7 @@ public class AnnotatedHttpService implements HttpService {
             // If you want to force to send '204 No Content' for this case, add
             // 'NullToNoContentResponseConverterFunction' to the list of response converters.
             if (result == null) {
-                return HttpResponse.of(headers, HttpData.EMPTY_DATA, trailingHeaders);
+                return HttpResponse.of(headers, HttpData.EMPTY_DATA, trailers);
             }
             throw new IllegalStateException(
                     "No response converter exists for a result: " + result.getClass().getName());
@@ -524,7 +526,7 @@ public class AnnotatedHttpService implements HttpService {
         public HttpResponse convertResponse(ServiceRequestContext ctx,
                                             ResponseHeaders headers,
                                             @Nullable Object result,
-                                            HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailers) throws Exception {
             final CompletableFuture<?> f;
             if (result instanceof Publisher) {
                 f = collectFrom((Publisher<Object>) result);
@@ -540,7 +542,7 @@ public class AnnotatedHttpService implements HttpService {
                     return exceptionHandler.handleException(ctx, ctx.request(), cause);
                 }
                 try {
-                    return responseConverter.convertResponse(ctx, headers, aggregated, trailingHeaders);
+                    return responseConverter.convertResponse(ctx, headers, aggregated, trailers);
                 } catch (Exception e) {
                     return exceptionHandler.handleException(ctx, ctx.request(), e);
                 }

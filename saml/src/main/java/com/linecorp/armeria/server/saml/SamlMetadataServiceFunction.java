@@ -49,7 +49,7 @@ import org.w3c.dom.Element;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.MapMaker;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpResponse;
@@ -97,7 +97,7 @@ final class SamlMetadataServiceFunction implements SamlServiceFunction {
     }
 
     @Override
-    public HttpResponse serve(ServiceRequestContext ctx, AggregatedHttpMessage msg,
+    public HttpResponse serve(ServiceRequestContext ctx, AggregatedHttpRequest req,
                               String defaultHostname, SamlPortConfig portConfig) {
         final HttpData metadata = metadataMap.computeIfAbsent(defaultHostname, h -> {
             try {

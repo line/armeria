@@ -43,7 +43,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -83,15 +83,15 @@ final class WebOperationHttpService implements HttpService {
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
         final CompletableFuture<HttpResponse> resFuture = new CompletableFuture<>();
-        req.aggregate().handle((msg, t) -> {
+        req.aggregate().handle((aggregatedReq, t) -> {
             if (t != null) {
                 resFuture.completeExceptionally(t);
                 return null;
             }
             if (operation.isBlocking()) {
-                ctx.blockingTaskExecutor().execute(() -> invoke(ctx, msg, resFuture));
+                ctx.blockingTaskExecutor().execute(() -> invoke(ctx, aggregatedReq, resFuture));
             } else {
-                invoke(ctx, msg, resFuture);
+                invoke(ctx, aggregatedReq, resFuture);
             }
             return null;
         });
@@ -99,7 +99,7 @@ final class WebOperationHttpService implements HttpService {
     }
 
     private void invoke(ServiceRequestContext ctx,
-                        AggregatedHttpMessage req,
+                        AggregatedHttpRequest req,
                         CompletableFuture<HttpResponse> resFuture) {
         final Map<String, Object> arguments = getArguments(ctx, req);
         final Object result = operation.invoke(new InvocationContext(SecurityContext.NONE, arguments));
@@ -112,12 +112,12 @@ final class WebOperationHttpService implements HttpService {
         }
     }
 
-    private static Map<String, Object> getArguments(ServiceRequestContext ctx, AggregatedHttpMessage msg) {
+    private static Map<String, Object> getArguments(ServiceRequestContext ctx, AggregatedHttpRequest req) {
         final Map<String, Object> arguments = new LinkedHashMap<>(ctx.pathParams());
-        if (!msg.content().isEmpty()) {
+        if (!req.content().isEmpty()) {
             final Map<String, Object> bodyParams;
             try {
-                bodyParams = OBJECT_MAPPER.readValue(msg.content().array(), JSON_MAP);
+                bodyParams = OBJECT_MAPPER.readValue(req.content().array(), JSON_MAP);
             } catch (IOException e) {
                 throw new IllegalArgumentException("Invalid JSON in request.");
             }

@@ -38,7 +38,7 @@ import org.springframework.util.unit.DataSize;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -91,7 +91,7 @@ class ArmeriaReactiveWebServerFactoryTest {
             final HttpClient client = httpClient(server);
             validateEchoResponse(sendPostRequest(client));
 
-            final AggregatedHttpMessage res = client.get("/hello").aggregate().join();
+            final AggregatedHttpResponse res = client.get("/hello").aggregate().join();
             assertThat(res.status()).isEqualTo(com.linecorp.armeria.common.HttpStatus.OK);
             assertThat(res.contentUtf8()).isEmpty();
         });
@@ -112,10 +112,10 @@ class ArmeriaReactiveWebServerFactoryTest {
         runServer(factory, AlwaysFailureHandler.INSTANCE, server -> {
             final HttpClient client = httpClient(server);
 
-            final AggregatedHttpMessage res1 = client.post("/hello", "hello").aggregate().join();
+            final AggregatedHttpResponse res1 = client.post("/hello", "hello").aggregate().join();
             assertThat(res1.status()).isEqualTo(com.linecorp.armeria.common.HttpStatus.BAD_REQUEST);
 
-            final AggregatedHttpMessage res2 = client.get("/hello").aggregate().join();
+            final AggregatedHttpResponse res2 = client.get("/hello").aggregate().join();
             assertThat(res2.status()).isEqualTo(com.linecorp.armeria.common.HttpStatus.BAD_REQUEST);
         });
     }
@@ -130,7 +130,7 @@ class ArmeriaReactiveWebServerFactoryTest {
         compression.setExcludedUserAgents(new String[] { "unknown-agent/[0-9]+\\.[0-9]+\\.[0-9]+$" });
         factory.setCompression(compression);
         runEchoServer(factory, server -> {
-            final AggregatedHttpMessage res = sendPostRequest(httpClient(server));
+            final AggregatedHttpResponse res = sendPostRequest(httpClient(server));
             assertThat(res.status()).isEqualTo(com.linecorp.armeria.common.HttpStatus.OK);
             assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("gzip");
             assertThat(res.contentUtf8()).isNotEqualTo("hello");
@@ -146,7 +146,7 @@ class ArmeriaReactiveWebServerFactoryTest {
         compression.setMimeTypes(new String[] { "text/html" });
         factory.setCompression(compression);
         runEchoServer(factory, server -> {
-            final AggregatedHttpMessage res = sendPostRequest(httpClient(server));
+            final AggregatedHttpResponse res = sendPostRequest(httpClient(server));
             validateEchoResponse(res);
             assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isNull();
         });
@@ -161,13 +161,13 @@ class ArmeriaReactiveWebServerFactoryTest {
         compression.setExcludedUserAgents(new String[] { "test-agent/[0-9]+\\.[0-9]+\\.[0-9]+$" });
         factory.setCompression(compression);
         runEchoServer(factory, server -> {
-            final AggregatedHttpMessage res = sendPostRequest(httpClient(server));
+            final AggregatedHttpResponse res = sendPostRequest(httpClient(server));
             validateEchoResponse(res);
             assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isNull();
         });
     }
 
-    private static AggregatedHttpMessage sendPostRequest(HttpClient client) {
+    private static AggregatedHttpResponse sendPostRequest(HttpClient client) {
         final RequestHeaders requestHeaders =
                 RequestHeaders.of(HttpMethod.POST, "/hello",
                                   HttpHeaderNames.USER_AGENT, "test-agent/1.0.0",
@@ -175,7 +175,7 @@ class ArmeriaReactiveWebServerFactoryTest {
         return client.execute(requestHeaders, HttpData.of(POST_BODY.getBytes())).aggregate().join();
     }
 
-    private static void validateEchoResponse(AggregatedHttpMessage res) {
+    private static void validateEchoResponse(AggregatedHttpResponse res) {
         assertThat(res.status()).isEqualTo(com.linecorp.armeria.common.HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo(POST_BODY);
     }
@@ -259,7 +259,7 @@ class ArmeriaReactiveWebServerFactoryTest {
             final HttpClient client = httpClient(server);
             validateEchoResponse(sendPostRequest(client));
 
-            final AggregatedHttpMessage res = client.get("/hello").aggregate().join();
+            final AggregatedHttpResponse res = client.get("/hello").aggregate().join();
             assertThat(res.status()).isEqualTo(com.linecorp.armeria.common.HttpStatus.OK);
             assertThat(res.contentUtf8()).isEmpty();
         });

@@ -70,7 +70,7 @@ public class JacksonResponseConverterFunction implements ResponseConverterFuncti
     public HttpResponse convertResponse(ServiceRequestContext ctx,
                                         ResponseHeaders headers,
                                         @Nullable Object result,
-                                        HttpHeaders trailingHeaders) throws Exception {
+                                        HttpHeaders trailers) throws Exception {
         final MediaType mediaType = headers.contentType();
         if (mediaType != null) {
             // @Produces("application/json") or @ProducesJson is specified.
@@ -81,33 +81,31 @@ public class JacksonResponseConverterFunction implements ResponseConverterFuncti
                 // because ObjectMapper always writes JSON document as UTF-8.
                 if (charset.contains(StandardCharsets.UTF_8)) {
                     if (result instanceof Publisher) {
-                        return aggregateFrom((Publisher<?>) result, headers, trailingHeaders,
-                                             this::toJsonHttpData);
+                        return aggregateFrom((Publisher<?>) result, headers, trailers, this::toJsonHttpData);
                     }
                     if (result instanceof Stream) {
-                        return aggregateFrom((Stream<?>) result, headers, trailingHeaders,
+                        return aggregateFrom((Stream<?>) result, headers, trailers,
                                              this::toJsonHttpData, ctx.blockingTaskExecutor());
                     }
-                    return HttpResponse.of(headers, toJsonHttpData(result), trailingHeaders);
+                    return HttpResponse.of(headers, toJsonHttpData(result), trailers);
                 }
             }
 
             // @Produces("application/json-seq") or @ProducesJsonSequences is specified.
             if (mediaType.is(MediaType.JSON_SEQ)) {
                 if (result instanceof Publisher) {
-                    return JsonTextSequences.fromPublisher(headers, (Publisher<?>) result, trailingHeaders,
-                                                           mapper);
+                    return JsonTextSequences.fromPublisher(headers, (Publisher<?>) result, trailers, mapper);
                 }
                 if (result instanceof Stream) {
-                    return JsonTextSequences.fromStream(headers, (Stream<?>) result, trailingHeaders,
+                    return JsonTextSequences.fromStream(headers, (Stream<?>) result, trailers,
                                                         ctx.blockingTaskExecutor(), mapper);
                 }
-                return JsonTextSequences.fromObject(headers, result, trailingHeaders, mapper);
+                return JsonTextSequences.fromObject(headers, result, trailers, mapper);
             }
         } else if (result instanceof JsonNode) {
             // No media type is specified, but the result is a JsonNode type.
             return HttpResponse.of(headers.toBuilder().contentType(MediaType.JSON_UTF_8).build(),
-                                   toJsonHttpData(result), trailingHeaders);
+                                   toJsonHttpData(result), trailers);
         }
 
         return ResponseConverterFunction.fallthrough();

@@ -67,7 +67,7 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpClientBuilder;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.DefaultHttpData;
 import com.linecorp.armeria.common.HttpData;
@@ -225,8 +225,8 @@ public class HttpServerTest {
                                     final HttpData data;
                                     if (pooled) {
                                         final ByteBuf content = PooledByteBufAllocator.DEFAULT
-                                                                                      .buffer(1)
-                                                                                      .writeByte('0' + finalI);
+                                                .buffer(1)
+                                                .writeByte('0' + finalI);
                                         data = new ByteBufHttpData(content, false);
                                     } else {
                                         data = HttpData.ofAscii(String.valueOf(finalI));
@@ -477,14 +477,14 @@ public class HttpServerTest {
 
     @Test(timeout = 10000)
     public void testGet() throws Exception {
-        final AggregatedHttpMessage res = client().get("/path/foo").aggregate().get();
+        final AggregatedHttpResponse res = client().get("/path/foo").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("/foo");
     }
 
     @Test(timeout = 10000)
     public void testHead() throws Exception {
-        final AggregatedHttpMessage res = client().head("/path/blah").aggregate().get();
+        final AggregatedHttpResponse res = client().head("/path/blah").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.content().isEmpty()).isTrue();
         assertThat(res.headers().getInt(HttpHeaderNames.CONTENT_LENGTH)).isEqualTo(5);
@@ -492,7 +492,7 @@ public class HttpServerTest {
 
     @Test(timeout = 10000)
     public void testPost() throws Exception {
-        final AggregatedHttpMessage res = client().post("/echo", "foo").aggregate().get();
+        final AggregatedHttpResponse res = client().post("/echo", "foo").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("foo");
     }
@@ -500,7 +500,7 @@ public class HttpServerTest {
     @Test(timeout = 10000)
     public void testTimeout() throws Exception {
         serverRequestTimeoutMillis = 100L;
-        final AggregatedHttpMessage res = client().get("/delay/2000").aggregate().get();
+        final AggregatedHttpResponse res = client().get("/delay/2000").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(res.contentUtf8()).isEqualTo("503 Service Unavailable");
@@ -510,7 +510,7 @@ public class HttpServerTest {
     @Test(timeout = 10000)
     public void testTimeout_deferred() throws Exception {
         serverRequestTimeoutMillis = 100L;
-        final AggregatedHttpMessage res = client().get("/delay-deferred/2000").aggregate().get();
+        final AggregatedHttpResponse res = client().get("/delay-deferred/2000").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(res.contentUtf8()).isEqualTo("503 Service Unavailable");
@@ -520,7 +520,7 @@ public class HttpServerTest {
     @Test(timeout = 10000)
     public void testTimeout_customHandler() throws Exception {
         serverRequestTimeoutMillis = 100L;
-        final AggregatedHttpMessage res = client().get("/delay-custom/2000").aggregate().get();
+        final AggregatedHttpResponse res = client().get("/delay-custom/2000").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(res.contentUtf8()).isEqualTo("timed out");
@@ -530,7 +530,7 @@ public class HttpServerTest {
     @Test(timeout = 10000)
     public void testTimeout_customHandler_deferred() throws Exception {
         serverRequestTimeoutMillis = 100L;
-        final AggregatedHttpMessage res = client().get("/delay-custom-deferred/2000").aggregate().get();
+        final AggregatedHttpResponse res = client().get("/delay-custom-deferred/2000").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(res.contentUtf8()).isEqualTo("timed out");
@@ -540,7 +540,7 @@ public class HttpServerTest {
     @Test(timeout = 10000)
     public void testTimeoutAfterInformationals() throws Exception {
         serverRequestTimeoutMillis = 1000L;
-        final AggregatedHttpMessage res = client().get("/informed_delay/2000").aggregate().get();
+        final AggregatedHttpResponse res = client().get("/informed_delay/2000").aggregate().get();
         assertThat(res.informationals()).isNotEmpty();
         res.informationals().forEach(h -> {
             assertThat(h.status()).isEqualTo(HttpStatus.PROCESSING);
@@ -556,7 +556,7 @@ public class HttpServerTest {
     @Test(timeout = 10000)
     public void testTimeoutAfterPartialContent() throws Exception {
         serverRequestTimeoutMillis = 1000L;
-        final CompletableFuture<AggregatedHttpMessage> f = client().get("/content_delay/2000").aggregate();
+        final CompletableFuture<AggregatedHttpResponse> f = client().get("/content_delay/2000").aggregate();
 
         // Because the service has written out the content partially, there's no way for the service
         // to reply with '503 Service Unavailable', so it will just close the stream.
@@ -575,7 +575,7 @@ public class HttpServerTest {
     @Test(timeout = 10000)
     public void testTimeoutAfterPartialContentWithPooling() throws Exception {
         serverRequestTimeoutMillis = 1000L;
-        final CompletableFuture<AggregatedHttpMessage> f =
+        final CompletableFuture<AggregatedHttpResponse> f =
                 client().get("/content_delay/2000?pooled").aggregate();
 
         // Because the service has written out the content partially, there's no way for the service
@@ -591,7 +591,7 @@ public class HttpServerTest {
     @Test(timeout = 10000)
     public void testTooLargeContentToNonExistentService() throws Exception {
         final byte[] content = new byte[(int) MAX_CONTENT_LENGTH + 1];
-        final AggregatedHttpMessage res = client().post("/non-existent", content).aggregate().get();
+        final AggregatedHttpResponse res = client().post("/non-existent", content).aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(res.contentUtf8()).isEqualTo("404 Not Found");
     }
@@ -599,9 +599,9 @@ public class HttpServerTest {
     @Test(timeout = 10000)
     public void testStrings_noAcceptEncoding() throws Exception {
         final RequestHeaders req = RequestHeaders.of(HttpMethod.GET, "/strings");
-        final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
+        final CompletableFuture<AggregatedHttpResponse> f = client().execute(req).aggregate();
 
-        final AggregatedHttpMessage res = f.get();
+        final AggregatedHttpResponse res = f.get();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isNull();
@@ -613,9 +613,9 @@ public class HttpServerTest {
     public void testStrings_acceptEncodingGzip() throws Exception {
         final RequestHeaders req = RequestHeaders.of(HttpMethod.GET, "/strings",
                                                      HttpHeaderNames.ACCEPT_ENCODING, "gzip");
-        final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
+        final CompletableFuture<AggregatedHttpResponse> f = client().execute(req).aggregate();
 
-        final AggregatedHttpMessage res = f.get();
+        final AggregatedHttpResponse res = f.get();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("gzip");
@@ -634,9 +634,9 @@ public class HttpServerTest {
     public void testStrings_acceptEncodingGzip_imageContentType() throws Exception {
         final RequestHeaders req = RequestHeaders.of(HttpMethod.GET, "/images",
                                                      HttpHeaderNames.ACCEPT_ENCODING, "gzip");
-        final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
+        final CompletableFuture<AggregatedHttpResponse> f = client().execute(req).aggregate();
 
-        final AggregatedHttpMessage res = f.get();
+        final AggregatedHttpResponse res = f.get();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isNull();
@@ -648,9 +648,9 @@ public class HttpServerTest {
     public void testStrings_acceptEncodingGzip_smallFixedContent() throws Exception {
         final RequestHeaders req = RequestHeaders.of(HttpMethod.GET, "/small",
                                                      HttpHeaderNames.ACCEPT_ENCODING, "gzip");
-        final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
+        final CompletableFuture<AggregatedHttpResponse> f = client().execute(req).aggregate();
 
-        final AggregatedHttpMessage res = f.get();
+        final AggregatedHttpResponse res = f.get();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isNull();
@@ -662,9 +662,9 @@ public class HttpServerTest {
     public void testStrings_acceptEncodingGzip_largeFixedContent() throws Exception {
         final RequestHeaders req = RequestHeaders.of(HttpMethod.GET, "/large",
                                                      HttpHeaderNames.ACCEPT_ENCODING, "gzip");
-        final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
+        final CompletableFuture<AggregatedHttpResponse> f = client().execute(req).aggregate();
 
-        final AggregatedHttpMessage res = f.get();
+        final AggregatedHttpResponse res = f.get();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("gzip");
@@ -681,9 +681,9 @@ public class HttpServerTest {
     public void testStrings_acceptEncodingDeflate() throws Exception {
         final RequestHeaders req = RequestHeaders.of(HttpMethod.GET, "/strings",
                                                      HttpHeaderNames.ACCEPT_ENCODING, "deflate");
-        final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
+        final CompletableFuture<AggregatedHttpResponse> f = client().execute(req).aggregate();
 
-        final AggregatedHttpMessage res = f.get();
+        final AggregatedHttpResponse res = f.get();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("deflate");
@@ -701,9 +701,9 @@ public class HttpServerTest {
     public void testStrings_acceptEncodingUnknown() throws Exception {
         final RequestHeaders req = RequestHeaders.of(HttpMethod.GET, "/strings",
                                                      HttpHeaderNames.ACCEPT_ENCODING, "piedpiper");
-        final CompletableFuture<AggregatedHttpMessage> f = client().execute(req).aggregate();
+        final CompletableFuture<AggregatedHttpResponse> f = client().execute(req).aggregate();
 
-        final AggregatedHttpMessage res = f.get();
+        final AggregatedHttpResponse res = f.get();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isNull();
@@ -713,9 +713,9 @@ public class HttpServerTest {
 
     @Test(timeout = 10000)
     public void testSslSession() throws Exception {
-        final CompletableFuture<AggregatedHttpMessage> f = client().get("/sslsession").aggregate();
+        final CompletableFuture<AggregatedHttpResponse> f = client().get("/sslsession").aggregate();
 
-        final AggregatedHttpMessage res = f.get();
+        final AggregatedHttpResponse res = f.get();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
     }
@@ -742,7 +742,7 @@ public class HttpServerTest {
     @Test(timeout = 10000)
     public void testExpect100Continue() throws Exception {
         // Makes sure the server sends a '100 Continue' response if 'expect: 100-continue' header exists.
-        final AggregatedHttpMessage res =
+        final AggregatedHttpResponse res =
                 client().execute(RequestHeaders.of(HttpMethod.POST, "/echo",
                                                    HttpHeaderNames.EXPECT, "100-continue"),
                                  "met expectation")
@@ -754,7 +754,7 @@ public class HttpServerTest {
 
         // Makes sure the server does not send a '100 Continue' response if 'expect: 100-continue' header
         // does not exists.
-        final AggregatedHttpMessage res2 =
+        final AggregatedHttpResponse res2 =
                 client().execute(RequestHeaders.of(HttpMethod.POST, "/echo"), "without expectation")
                         .aggregate().join();
 
@@ -815,9 +815,9 @@ public class HttpServerTest {
 
     @Test(timeout = 10000)
     public void testHeaders() throws Exception {
-        final CompletableFuture<AggregatedHttpMessage> f = client().get("/headers").aggregate();
+        final CompletableFuture<AggregatedHttpResponse> f = client().get("/headers").aggregate();
 
-        final AggregatedHttpMessage res = f.get();
+        final AggregatedHttpResponse res = f.get();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
 
@@ -834,10 +834,10 @@ public class HttpServerTest {
 
     @Test(timeout = 10000)
     public void testTrailers() throws Exception {
-        final CompletableFuture<AggregatedHttpMessage> f = client().get("/trailers").aggregate();
+        final CompletableFuture<AggregatedHttpResponse> f = client().get("/trailers").aggregate();
 
-        final AggregatedHttpMessage res = f.get();
-        assertThat(res.trailingHeaders().get(HttpHeaderNames.of("foo"))).isEqualTo("bar");
+        final AggregatedHttpResponse res = f.get();
+        assertThat(res.trailers().get(HttpHeaderNames.of("foo"))).isEqualTo("bar");
     }
 
     @Test(timeout = 10000)
@@ -867,7 +867,7 @@ public class HttpServerTest {
             return;
         }
         final HttpHeaders trailers = client().get("/additional-trailers-other-trailers")
-                                             .aggregate().join().trailingHeaders();
+                                             .aggregate().join().trailers();
         assertThat(trailers.get(HttpHeaderNames.of("original-trailer"))).isEqualTo("value1");
         assertThat(trailers.get(HttpHeaderNames.of("additional-trailer"))).isEqualTo("value2");
     }
@@ -878,7 +878,7 @@ public class HttpServerTest {
             return;
         }
         final HttpHeaders trailers = client().get("/additional-trailers-no-eos")
-                                             .aggregate().join().trailingHeaders();
+                                             .aggregate().join().trailers();
         assertThat(trailers.get(HttpHeaderNames.of("additional-trailer"))).isEqualTo("value2");
     }
 
@@ -888,7 +888,7 @@ public class HttpServerTest {
             return;
         }
         final HttpHeaders trailers = client().get("/additional-trailers-no-other-trailers")
-                                             .aggregate().join().trailingHeaders();
+                                             .aggregate().join().trailers();
         assertThat(trailers.get(HttpHeaderNames.of("additional-trailer"))).isEqualTo("value2");
     }
 

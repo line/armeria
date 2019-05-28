@@ -485,7 +485,7 @@ public interface RequestLog extends AttributeMap {
     Object rawRequestContent();
 
     /**
-     * Returns the trailing {@link HttpHeaders} of the {@link Request}.
+     * Returns the HTTP trailers of the {@link Request}.
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
@@ -538,7 +538,7 @@ public interface RequestLog extends AttributeMap {
     String responseContentPreview();
 
     /**
-     * Returns the trailing {@link HttpHeaders} of the {@link Response}.
+     * Returns the HTTP trailers of the {@link Response}.
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
      */

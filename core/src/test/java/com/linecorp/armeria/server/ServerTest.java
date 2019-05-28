@@ -50,7 +50,7 @@ import org.junit.Test;
 
 import com.google.common.util.concurrent.MoreExecutors;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -94,7 +94,7 @@ public class ServerTest {
 
             final Service<HttpRequest, HttpResponse> delayedResponseOnIoThread = new EchoService() {
                 @Override
-                protected HttpResponse echo(AggregatedHttpMessage aReq) {
+                protected HttpResponse echo(AggregatedHttpRequest aReq) {
                     try {
                         Thread.sleep(processDelayMillis);
                         return super.echo(aReq);
@@ -106,7 +106,7 @@ public class ServerTest {
 
             final Service<HttpRequest, HttpResponse> lazyResponseNotOnIoThread = new EchoService() {
                 @Override
-                protected HttpResponse echo(AggregatedHttpMessage aReq) {
+                protected HttpResponse echo(AggregatedHttpRequest aReq) {
                     final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
                     final HttpResponse res = HttpResponse.from(responseFuture);
                     asyncExecutorGroup.schedule(
@@ -203,7 +203,7 @@ public class ServerTest {
 
     @Test
     public void testRequestTimeoutInvocation() throws Exception {
-         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             final HttpPost req = new HttpPost(server.uri("/timeout"));
             req.setEntity(new StringEntity("Hello, world!", StandardCharsets.UTF_8));
 
@@ -458,10 +458,8 @@ public class ServerTest {
                                         .exceptionally(CompletionActions::log));
         }
 
-        protected HttpResponse echo(AggregatedHttpMessage aReq) {
-            return HttpResponse.of(
-                    ResponseHeaders.of(HttpStatus.OK),
-                    aReq.content());
+        protected HttpResponse echo(AggregatedHttpRequest aReq) {
+            return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK), aReq.content());
         }
     }
 

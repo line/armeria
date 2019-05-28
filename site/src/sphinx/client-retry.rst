@@ -26,7 +26,7 @@ You can just use the ``decorator()`` method in :api:`ClientBuilder` to build a :
     import com.linecorp.armeria.client.HttpClient;
     import com.linecorp.armeria.client.retry.RetryingHttpClient;
     import com.linecorp.armeria.client.retry.RetryStrategy;
-    import com.linecorp.armeria.common.AggregatedHttpMessage;
+    import com.linecorp.armeria.common.AggregatedHttpResponse;
     import com.linecorp.armeria.common.HttpRequest;
     import com.linecorp.armeria.common.HttpResponse;
 
@@ -35,7 +35,7 @@ You can just use the ``decorator()`` method in :api:`ClientBuilder` to build a :
             .decorator(RetryingHttpClient.newDecorator(strategy))
             .build(HttpClient.class);
 
-    final AggregatedHttpMessage res = client.execute(...).aggregate().join();
+    final AggregatedHttpResponse res = client.execute(...).aggregate().join();
 
 or even simply,
 
@@ -48,7 +48,7 @@ or even simply,
             .decorator(RetryingHttpClient.newDecorator(strategy))
             .build();
 
-    final AggregatedHttpMessage res = client.execute(...).aggregate().join();
+    final AggregatedHttpResponse res = client.execute(...).aggregate().join();
 
 That's it. The client will keep attempting until it succeeds or the number of attempts exceeds the maximum
 number of total attempts. You can configure the ``maxTotalAttempts`` when making the decorator using
@@ -187,7 +187,7 @@ using :api:`RetryingHttpClientBuilder`:
             .decorator(new RetryingHttpClientBuilder(strategy).newDecorator())
             .build();
 
-    final AggregatedHttpMessage res = client.execute(...).aggregate().join();
+    final AggregatedHttpResponse res = client.execute(...).aggregate().join();
 
 .. tip::
 
@@ -406,7 +406,7 @@ You might want to use :ref:`client-circuit-breaker` with :api:`RetryingHttpClien
             .decorator(new RetryingHttpClientBuilder(myRetryStrategy).newDecorator())
             .build();
 
-    final AggregatedHttpMessage res = client.execute(...).aggregate().join();
+    final AggregatedHttpResponse res = client.execute(...).aggregate().join();
 
 This decorates :api:`CircuitBreakerHttpClient` with :api:`RetryingHttpClient` so that the :api:`CircuitBreaker`
 judges every request and retried request as successful or failed. If the failure rate exceeds a certain

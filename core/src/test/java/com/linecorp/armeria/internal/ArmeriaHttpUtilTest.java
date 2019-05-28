@@ -371,7 +371,7 @@ public class ArmeriaHttpUtilTest {
     }
 
     @Test
-    public void excludeBlacklistInTrailingHeaders() throws Http2Exception {
+    public void excludeBlacklistInTrailers() throws Http2Exception {
         final HttpHeaders in = HttpHeaders.builder()
                                           .add(HttpHeaderNames.of("foo"), "bar")
                                           .add(HttpHeaderNames.TRANSFER_ENCODING, "dummy")

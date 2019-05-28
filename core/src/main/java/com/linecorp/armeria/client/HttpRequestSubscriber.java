@@ -56,7 +56,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
     enum State {
         NEEDS_TO_WRITE_FIRST_HEADER,
-        NEEDS_DATA_OR_TRAILING_HEADERS,
+        NEEDS_DATA_OR_TRAILERS,
         DONE
     }
 
@@ -169,7 +169,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
             state = State.DONE;
             write0(firstHeaders, true, true);
         } else {
-            state = State.NEEDS_DATA_OR_TRAILING_HEADERS;
+            state = State.NEEDS_DATA_OR_TRAILERS;
             write0(firstHeaders, false, true);
         }
     }
@@ -220,15 +220,15 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
         boolean endOfStream = o.isEndOfStream();
         switch (state) {
-            case NEEDS_DATA_OR_TRAILING_HEADERS: {
+            case NEEDS_DATA_OR_TRAILERS: {
                 if (o instanceof HttpHeaders) {
-                    final HttpHeaders trailingHeaders = (HttpHeaders) o;
-                    if (trailingHeaders.contains(HttpHeaderNames.STATUS)) {
-                        throw newIllegalStateException("published a trailing HttpHeaders with status: " + o);
+                    final HttpHeaders trailers = (HttpHeaders) o;
+                    if (trailers.contains(HttpHeaderNames.STATUS)) {
+                        throw newIllegalStateException("published a trailers with status: " + o);
                     }
-                    // Trailing headers always end the stream even if not explicitly set.
+                    // Trailers always end the stream even if not explicitly set.
                     endOfStream = true;
-                    logBuilder.requestTrailers(trailingHeaders);
+                    logBuilder.requestTrailers(trailers);
                 } else {
                     logBuilder.increaseRequestLength((HttpData) o);
                 }

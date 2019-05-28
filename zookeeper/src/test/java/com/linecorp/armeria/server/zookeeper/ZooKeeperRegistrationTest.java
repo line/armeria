@@ -30,7 +30,7 @@ import org.junit.Test;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.zookeeper.ZooKeeperTestBase;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -131,7 +131,7 @@ public class ZooKeeperRegistrationTest extends ZooKeeperTestBase {
                                         .exceptionally(CompletionActions::log));
         }
 
-        protected HttpResponse echo(AggregatedHttpMessage aReq) {
+        protected HttpResponse echo(AggregatedHttpRequest aReq) {
             return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK), aReq.content());
         }
     }

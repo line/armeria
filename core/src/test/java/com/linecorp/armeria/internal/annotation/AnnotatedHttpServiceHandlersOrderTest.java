@@ -28,7 +28,8 @@ import org.junit.Test;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -94,9 +95,9 @@ public class AnnotatedHttpServiceHandlersOrderTest {
         @ExceptionHandler(MethodLevelExceptionHandler.class)
         public HttpResponse exceptionHandlerOrder(@RequestObject String name) {
             assertThat(name).isEqualTo("foo");
-            final AggregatedHttpMessage message = AggregatedHttpMessage.of(
+            final AggregatedHttpResponse response = AggregatedHttpResponse.of(
                     HttpStatus.NOT_IMPLEMENTED, MediaType.PLAIN_TEXT_UTF_8, "hello " + name);
-            throw HttpResponseException.of(message);
+            throw HttpResponseException.of(response);
         }
     }
 
@@ -104,7 +105,7 @@ public class AnnotatedHttpServiceHandlersOrderTest {
 
     private static class ParameterLevelRequestConverter implements RequestConverterFunction {
         @Override
-        public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
+        public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
                                      Class<?> expectedResultType) throws Exception {
             if (expectedResultType == JsonNode.class) {
                 assertThat(requestCounter.getAndIncrement()).isZero();
@@ -115,7 +116,7 @@ public class AnnotatedHttpServiceHandlersOrderTest {
 
     private static class MethodLevelRequestConverter implements RequestConverterFunction {
         @Override
-        public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
+        public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
                                      Class<?> expectedResultType) throws Exception {
             if (expectedResultType == JsonNode.class) {
                 assertThat(requestCounter.getAndIncrement()).isOne();
@@ -126,7 +127,7 @@ public class AnnotatedHttpServiceHandlersOrderTest {
 
     private static class ClassLevelRequestConverter implements RequestConverterFunction {
         @Override
-        public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
+        public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
                                      Class<?> expectedResultType) throws Exception {
             if (expectedResultType == JsonNode.class) {
                 assertThat(requestCounter.getAndIncrement()).isEqualTo(2);
@@ -137,7 +138,7 @@ public class AnnotatedHttpServiceHandlersOrderTest {
 
     private static class ServiceLevelRequestConverter implements RequestConverterFunction {
         @Override
-        public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
+        public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
                                      Class<?> expectedResultType) throws Exception {
             if (expectedResultType == JsonNode.class) {
                 assertThat(requestCounter.getAndIncrement()).isEqualTo(3);
@@ -155,7 +156,7 @@ public class AnnotatedHttpServiceHandlersOrderTest {
         public HttpResponse convertResponse(ServiceRequestContext ctx,
                                             ResponseHeaders headers,
                                             @Nullable Object result,
-                                            HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailers) throws Exception {
             if (result instanceof String && "hello foo".equals(result)) {
                 assertThat(responseCounter.getAndIncrement()).isZero();
             }
@@ -168,7 +169,7 @@ public class AnnotatedHttpServiceHandlersOrderTest {
         public HttpResponse convertResponse(ServiceRequestContext ctx,
                                             ResponseHeaders headers,
                                             @Nullable Object result,
-                                            HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailers) throws Exception {
             if (result instanceof String && "hello foo".equals(result)) {
                 assertThat(responseCounter.getAndIncrement()).isOne();
             }
@@ -181,7 +182,7 @@ public class AnnotatedHttpServiceHandlersOrderTest {
         public HttpResponse convertResponse(ServiceRequestContext ctx,
                                             ResponseHeaders headers,
                                             @Nullable Object result,
-                                            HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailers) throws Exception {
             if (result instanceof String && "hello foo".equals(result)) {
                 assertThat(responseCounter.getAndIncrement()).isEqualTo(2);
                 return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, HttpData.ofUtf8(
@@ -224,10 +225,10 @@ public class AnnotatedHttpServiceHandlersOrderTest {
     @Test
     public void requestConverterOrder() throws Exception {
         final String body = "{\"foo\":\"bar\"}";
-        final AggregatedHttpMessage aReq = AggregatedHttpMessage.of(
+        final AggregatedHttpRequest aReq = AggregatedHttpRequest.of(
                 HttpMethod.POST, "/1/requestConverterOrder", MediaType.JSON, body);
 
-        final AggregatedHttpMessage aRes = executeRequest(aReq);
+        final AggregatedHttpResponse aRes = executeRequest(aReq);
 
         assertThat(aRes.status()).isEqualTo(HttpStatus.OK);
         // Converted from the default converter which is JacksonRequestConverterFunction.
@@ -239,9 +240,9 @@ public class AnnotatedHttpServiceHandlersOrderTest {
 
     @Test
     public void responseConverterOrder() throws Exception {
-        final AggregatedHttpMessage aReq = AggregatedHttpMessage.of(
+        final AggregatedHttpRequest aReq = AggregatedHttpRequest.of(
                 HttpMethod.POST, "/1/responseConverterOrder", MediaType.PLAIN_TEXT_UTF_8, "foo");
-        final AggregatedHttpMessage aRes = executeRequest(aReq);
+        final AggregatedHttpResponse aRes = executeRequest(aReq);
 
         assertThat(aRes.status()).isEqualTo(HttpStatus.OK);
         // Converted from the ServiceLevelResponseConverter.
@@ -253,9 +254,9 @@ public class AnnotatedHttpServiceHandlersOrderTest {
 
     @Test
     public void exceptionHandlerOrder() throws Exception {
-        final AggregatedHttpMessage aReq = AggregatedHttpMessage.of(
+        final AggregatedHttpRequest aReq = AggregatedHttpRequest.of(
                 HttpMethod.POST, "/1/exceptionHandlerOrder", MediaType.PLAIN_TEXT_UTF_8, "foo");
-        final AggregatedHttpMessage aRes = executeRequest(aReq);
+        final AggregatedHttpResponse aRes = executeRequest(aReq);
 
         assertThat(aRes.status()).isEqualTo(HttpStatus.NOT_IMPLEMENTED);
         // Converted from the default Handler which is DefaultExceptionHandler in AnnotatedHttpServices.
@@ -265,7 +266,7 @@ public class AnnotatedHttpServiceHandlersOrderTest {
         assertThat(exceptionCounter.get()).isEqualTo(3);
     }
 
-    private static AggregatedHttpMessage executeRequest(AggregatedHttpMessage req) {
+    private static AggregatedHttpResponse executeRequest(AggregatedHttpRequest req) {
         final HttpClient client = HttpClient.of(server.uri("/"));
         return client.execute(req).aggregate().join();
     }

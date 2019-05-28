@@ -26,7 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.sse.ServerSentEvent;
@@ -61,7 +61,7 @@ public class ServerSentEventsTest {
     public void fromPublisherOrStream() {
         final HttpClient client = HttpClient.of(rule.uri("/sse"));
         for (final String path : ImmutableList.of("/publisher", "/stream")) {
-            final AggregatedHttpMessage response = client.get(path).aggregate().join();
+            final AggregatedHttpResponse response = client.get(path).aggregate().join();
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             assertThat(response.headers().contentType()).isEqualTo(MediaType.EVENT_STREAM);
             assertThat(response.content().toStringUtf8()).isEqualTo("data:foo\n\ndata:bar\n\n");
@@ -72,7 +72,7 @@ public class ServerSentEventsTest {
     public void withConverter() {
         final HttpClient client = HttpClient.of(rule.uri("/converter"));
         for (final String path : ImmutableList.of("/publisher", "/stream")) {
-            final AggregatedHttpMessage response = client.get(path).aggregate().join();
+            final AggregatedHttpResponse response = client.get(path).aggregate().join();
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             assertThat(response.headers().contentType()).isEqualTo(MediaType.EVENT_STREAM);
             assertThat(response.content().toStringUtf8()).isEqualTo(":foo\n\n:bar\n\n");
@@ -81,7 +81,7 @@ public class ServerSentEventsTest {
 
     @Test
     public void singleEvent() {
-        final AggregatedHttpMessage response =
+        final AggregatedHttpResponse response =
                 HttpClient.of(rule.uri("/single")).get("/sse").aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.headers().contentType()).isEqualTo(MediaType.EVENT_STREAM);

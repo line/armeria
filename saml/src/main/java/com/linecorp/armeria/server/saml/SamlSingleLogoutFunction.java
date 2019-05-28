@@ -39,7 +39,7 @@ import org.opensaml.security.credential.Credential;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -83,15 +83,15 @@ final class SamlSingleLogoutFunction implements SamlServiceFunction {
     }
 
     @Override
-    public HttpResponse serve(ServiceRequestContext ctx, AggregatedHttpMessage msg,
+    public HttpResponse serve(ServiceRequestContext ctx, AggregatedHttpRequest req,
                               String defaultHostname, SamlPortConfig portConfig) {
         try {
             final MessageContext<LogoutRequest> messageContext;
             if (endpoint.bindingProtocol() == SamlBindingProtocol.HTTP_REDIRECT) {
-                messageContext = HttpRedirectBindingUtil.toSamlObject(msg, SAML_REQUEST,
+                messageContext = HttpRedirectBindingUtil.toSamlObject(req, SAML_REQUEST,
                                                                       idpConfigs, defaultIdpConfig);
             } else {
-                messageContext = HttpPostBindingUtil.toSamlObject(msg, SAML_REQUEST);
+                messageContext = HttpPostBindingUtil.toSamlObject(req, SAML_REQUEST);
             }
 
             final String endpointUri = endpoint.toUriString(portConfig.scheme().uriText(),
@@ -106,20 +106,20 @@ final class SamlSingleLogoutFunction implements SamlServiceFunction {
             final SamlEndpoint sloResEndpoint = idp.sloResEndpoint().orElse(null);
             if (sloResEndpoint == null) {
                 // No response URL. Just return 200 OK.
-                return HttpResponse.from(sloHandler.logoutSucceeded(ctx, msg, messageContext)
+                return HttpResponse.from(sloHandler.logoutSucceeded(ctx, req, messageContext)
                                                    .thenApply(unused -> HttpResponse.of(HttpStatus.OK)));
             }
 
             final LogoutResponse logoutResponse = createLogoutResponse(logoutRequest, StatusCode.SUCCESS);
             try {
                 final HttpResponse response = respond(logoutResponse, sloResEndpoint);
-                return HttpResponse.from(sloHandler.logoutSucceeded(ctx, msg, messageContext)
+                return HttpResponse.from(sloHandler.logoutSucceeded(ctx, req, messageContext)
                                                    .thenApply(unused -> response));
             } catch (SamlException e) {
                 logger.warn("{} Cannot respond a logout response in response to {}",
                             ctx, logoutRequest.getID(), e);
                 final HttpResponse response = fail(ctx, logoutRequest, sloResEndpoint);
-                return HttpResponse.from(sloHandler.logoutFailed(ctx, msg, e)
+                return HttpResponse.from(sloHandler.logoutFailed(ctx, req, e)
                                                    .thenApply(unused -> response));
             }
         } catch (SamlException e) {

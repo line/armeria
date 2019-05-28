@@ -40,7 +40,7 @@ public class ByteArrayResponseConverterFunction implements ResponseConverterFunc
     public HttpResponse convertResponse(ServiceRequestContext ctx,
                                         ResponseHeaders headers,
                                         @Nullable Object result,
-                                        HttpHeaders trailingHeaders) throws Exception {
+                                        HttpHeaders trailers) throws Exception {
         final MediaType contentType = headers.contentType();
         if (contentType != null) {
             // @Produces("application/binary") or @ProducesBinary
@@ -50,29 +50,29 @@ public class ByteArrayResponseConverterFunction implements ResponseConverterFunc
                 // We assume that the publisher and stream produces HttpData or byte[].
                 // An IllegalStateException will be raised for other types due to conversion failure.
                 if (result instanceof Publisher) {
-                    return streamingFrom((Publisher<?>) result, headers, trailingHeaders,
+                    return streamingFrom((Publisher<?>) result, headers, trailers,
                                          ByteArrayResponseConverterFunction::toHttpData);
                 }
                 if (result instanceof Stream) {
-                    return streamingFrom((Stream<?>) result, headers, trailingHeaders,
+                    return streamingFrom((Stream<?>) result, headers, trailers,
                                          ByteArrayResponseConverterFunction::toHttpData,
                                          ctx.blockingTaskExecutor());
                 }
                 if (result instanceof HttpData) {
-                    return HttpResponse.of(headers, (HttpData) result, trailingHeaders);
+                    return HttpResponse.of(headers, (HttpData) result, trailers);
                 }
                 if (result instanceof byte[]) {
-                    return HttpResponse.of(headers, HttpData.of((byte[]) result), trailingHeaders);
+                    return HttpResponse.of(headers, HttpData.of((byte[]) result), trailers);
                 }
 
                 return ResponseConverterFunction.fallthrough();
             }
         } else if (result instanceof HttpData) {
             return HttpResponse.of(headers.toBuilder().contentType(MediaType.OCTET_STREAM).build(),
-                                   (HttpData) result, trailingHeaders);
+                                   (HttpData) result, trailers);
         } else if (result instanceof byte[]) {
             return HttpResponse.of(headers.toBuilder().contentType(MediaType.OCTET_STREAM).build(),
-                                   HttpData.of((byte[]) result), trailingHeaders);
+                                   HttpData.of((byte[]) result), trailers);
         }
 
         return ResponseConverterFunction.fallthrough();

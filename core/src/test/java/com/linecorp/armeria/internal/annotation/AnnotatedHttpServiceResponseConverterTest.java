@@ -45,7 +45,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -264,14 +264,14 @@ public class AnnotatedHttpServiceResponseConverterTest {
                                          ImmutableMap.of("a", "b"));
                 }
 
-                @Get("/expect-custom-trailing-header")
-                @AdditionalTrailer(name = "x-custom-annotated-trailing-header", value = "annotated-value")
+                @Get("/expect-custom-trailers")
+                @AdditionalTrailer(name = "x-custom-annotated-trailers", value = "annotated-value")
                 @ProducesJson
-                public HttpResult<List<String>> expectCustomTrailingHeader() {
+                public HttpResult<List<String>> expectCustomTrailers() {
                     return HttpResult.of(HttpHeaders.of(HttpHeaderNames.of("x-custom-header"), "value"),
                                          ImmutableList.of("a", "b"),
                                          HttpHeaders
-                                                 .of(HttpHeaderNames.of("x-custom-trailing-header"), "value"));
+                                                 .of(HttpHeaderNames.of("x-custom-trailers"), "value"));
                 }
 
                 @Get("/async/expect-custom-header")
@@ -282,10 +282,10 @@ public class AnnotatedHttpServiceResponseConverterTest {
                                          CompletableFuture.completedFuture(ImmutableMap.of("a", "b")));
                 }
 
-                @Get("/async/expect-custom-trailing-header")
-                @AdditionalTrailer(name = "x-custom-annotated-trailing-header", value = "annotated-value")
+                @Get("/async/expect-custom-trailers")
+                @AdditionalTrailer(name = "x-custom-annotated-trailers", value = "annotated-value")
                 @ProducesJson
-                public HttpResult<CompletionStage<List<String>>> asyncExpectCustomTrailingHeader(
+                public HttpResult<CompletionStage<List<String>>> asyncExpectCustomTrailers(
                         ServiceRequestContext ctx) {
                     final CompletableFuture<List<String>> future = new CompletableFuture<>();
                     ctx.eventLoop().schedule(() -> future.complete(ImmutableList.of("a", "b")),
@@ -293,7 +293,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
                     return HttpResult.of(HttpHeaders.of(HttpHeaderNames.of("x-custom-header"), "value"),
                                          future,
                                          HttpHeaders
-                                                 .of(HttpHeaderNames.of("x-custom-trailing-header"), "value"));
+                                                 .of(HttpHeaderNames.of("x-custom-trailers"), "value"));
                 }
 
                 @Get("/async/expect-bad-request")
@@ -384,7 +384,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
     @AdditionalHeader(name = "class_header_1", value = "class_value_1")
     @AdditionalHeader(name = "class_header_2", value = "class_value_2")
-    @AdditionalHeader(name = "overwritten_1", value = {"unchanged_1", "unchanged_2"})
+    @AdditionalHeader(name = "overwritten_1", value = { "unchanged_1", "unchanged_2" })
     @AdditionalTrailer(name = "class_trailer_1", value = "class_value_1")
     @AdditionalTrailer(name = "class_trailer_2", value = "class_value_2")
     private static class AnnotatedService {
@@ -446,40 +446,40 @@ public class AnnotatedHttpServiceResponseConverterTest {
     @Test
     public void customizedClassLevelResponse() {
         final HttpClient client = HttpClient.of(rule.uri("/custom-classlevel"));
-        AggregatedHttpMessage msg;
+        AggregatedHttpResponse res;
 
-        msg = aggregated(client.get("/expect-class"));
+        res = aggregated(client.get("/expect-class"));
 
-        assertThat(msg.headers().get(HttpHeaderNames.of("class_header_1"))).isEqualTo("class_value_1");
-        assertThat(msg.headers().get(HttpHeaderNames.of("class_header_2"))).isEqualTo("class_value_2");
+        assertThat(res.headers().get(HttpHeaderNames.of("class_header_1"))).isEqualTo("class_value_1");
+        assertThat(res.headers().get(HttpHeaderNames.of("class_header_2"))).isEqualTo("class_value_2");
 
-        assertThat(msg.headers().getAll(HttpHeaderNames.of("overwritten_1"))).containsExactly(
+        assertThat(res.headers().getAll(HttpHeaderNames.of("overwritten_1"))).containsExactly(
                 "unchanged_1", "unchanged_2");
 
-        msg = aggregated(client.get("/expect-combined"));
+        res = aggregated(client.get("/expect-combined"));
 
-        assertThat(msg.headers().get(HttpHeaderNames.of("class_header_1"))).isEqualTo("class_value_1");
-        assertThat(msg.headers().get(HttpHeaderNames.of("class_header_2"))).isEqualTo("class_value_2");
-        assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("class_trailer_1"))).isEqualTo("class_value_1");
-        assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("class_trailer_2"))).isEqualTo("class_value_2");
-        assertThat(msg.headers().get(HttpHeaderNames.of("method_header_1"))).isEqualTo("method_value_1");
-        assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("method_trailer_1"))).isEqualTo(
+        assertThat(res.headers().get(HttpHeaderNames.of("class_header_1"))).isEqualTo("class_value_1");
+        assertThat(res.headers().get(HttpHeaderNames.of("class_header_2"))).isEqualTo("class_value_2");
+        assertThat(res.trailers().get(HttpHeaderNames.of("class_trailer_1"))).isEqualTo("class_value_1");
+        assertThat(res.trailers().get(HttpHeaderNames.of("class_trailer_2"))).isEqualTo("class_value_2");
+        assertThat(res.headers().get(HttpHeaderNames.of("method_header_1"))).isEqualTo("method_value_1");
+        assertThat(res.trailers().get(HttpHeaderNames.of("method_trailer_1"))).isEqualTo(
                 "method_value_1");
 
-        msg = aggregated(client.get("/expect-combined2"));
-        assertThat(msg.headers().get(HttpHeaderNames.of("class_header_1"))).isEqualTo("class_value_1");
-        assertThat(msg.headers().get(HttpHeaderNames.of("class_header_2"))).isEqualTo("class_value_2");
-        assertThat(msg.headers().get(HttpHeaderNames.of("method_header_1"))).isEqualTo("method_value_1");
-        assertThat(msg.headers().get(HttpHeaderNames.of("method_header_2"))).isEqualTo("method_value_2");
-        assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("method_trailer_1"))).isEqualTo(
+        res = aggregated(client.get("/expect-combined2"));
+        assertThat(res.headers().get(HttpHeaderNames.of("class_header_1"))).isEqualTo("class_value_1");
+        assertThat(res.headers().get(HttpHeaderNames.of("class_header_2"))).isEqualTo("class_value_2");
+        assertThat(res.headers().get(HttpHeaderNames.of("method_header_1"))).isEqualTo("method_value_1");
+        assertThat(res.headers().get(HttpHeaderNames.of("method_header_2"))).isEqualTo("method_value_2");
+        assertThat(res.trailers().get(HttpHeaderNames.of("method_trailer_1"))).isEqualTo(
                 "method_value_1");
-        assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("method_trailer_2"))).isEqualTo(
+        assertThat(res.trailers().get(HttpHeaderNames.of("method_trailer_2"))).isEqualTo(
                 "method_value_2");
 
-        msg = aggregated(client.get("/expect-overwritten"));
-        assertThat(msg.headers().get(HttpHeaderNames.of("class_header_1"))).isEqualTo("class_value_1");
-        assertThat(msg.headers().get(HttpHeaderNames.of("class_header_2"))).isEqualTo("class_value_2");
-        assertThat(msg.headers().getAll(HttpHeaderNames.of("overwritten_1"))).containsExactly(
+        res = aggregated(client.get("/expect-overwritten"));
+        assertThat(res.headers().get(HttpHeaderNames.of("class_header_1"))).isEqualTo("class_value_1");
+        assertThat(res.headers().get(HttpHeaderNames.of("class_header_2"))).isEqualTo("class_value_2");
+        assertThat(res.headers().getAll(HttpHeaderNames.of("overwritten_1"))).containsExactly(
                 "overwritten_value_1", "overwritten_value_2");
     }
 
@@ -499,42 +499,42 @@ public class AnnotatedHttpServiceResponseConverterTest {
     }
 
     private static void shouldBeConvertedByDefaultResponseConverter(HttpClient client) throws Exception {
-        AggregatedHttpMessage msg;
+        AggregatedHttpResponse res;
 
-        msg = aggregated(client.get("/string"));
-        assertThat(msg.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(msg.contentUtf8()).isEqualTo("¥");
-        assertThat(msg.contentAscii()).isNotEqualTo("¥");
+        res = aggregated(client.get("/string"));
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("¥");
+        assertThat(res.contentAscii()).isNotEqualTo("¥");
 
-        msg = aggregated(client.get("/byteArray"));
-        assertThat(msg.contentType()).isEqualTo(MediaType.OCTET_STREAM);
-        assertThat(msg.content().array()).isEqualTo("¥".getBytes());
+        res = aggregated(client.get("/byteArray"));
+        assertThat(res.contentType()).isEqualTo(MediaType.OCTET_STREAM);
+        assertThat(res.content().array()).isEqualTo("¥".getBytes());
 
-        msg = aggregated(client.get("/httpData"));
-        assertThat(msg.contentType()).isEqualTo(MediaType.OCTET_STREAM);
-        assertThat(msg.content().array()).isEqualTo("¥".getBytes());
+        res = aggregated(client.get("/httpData"));
+        assertThat(res.contentType()).isEqualTo(MediaType.OCTET_STREAM);
+        assertThat(res.content().array()).isEqualTo("¥".getBytes());
 
-        msg = aggregated(client.get("/jsonNode"));
-        assertThat(msg.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        res = aggregated(client.get("/jsonNode"));
+        assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         final JsonNode expected = mapper.readTree("{\"a\":\"¥\"}");
-        assertThat(msg.content().array()).isEqualTo(mapper.writeValueAsBytes(expected));
+        assertThat(res.content().array()).isEqualTo(mapper.writeValueAsBytes(expected));
     }
 
     @Test
     public void multipleObjectPublisherBasedResponseConverter() throws Exception {
         final HttpClient client = HttpClient.of(rule.uri("/publish/multi"));
 
-        AggregatedHttpMessage msg;
+        AggregatedHttpResponse res;
 
-        msg = aggregated(client.get("/string"));
-        assertThat(msg.contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        assertThatJson(msg.contentUtf8())
+        res = aggregated(client.get("/string"));
+        assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThatJson(res.contentUtf8())
                 .isArray().ofLength(3)
                 .thatContains("a").thatContains("b").thatContains("c");
 
-        msg = aggregated(client.get("/jsonNode"));
-        assertThat(msg.contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        assertThatJson(msg.contentUtf8())
+        res = aggregated(client.get("/jsonNode"));
+        assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThatJson(res.contentUtf8())
                 .isEqualTo("[{\"a\":\"1\"},{\"b\":\"2\"},{\"c\":\"3\"}]");
     }
 
@@ -542,127 +542,127 @@ public class AnnotatedHttpServiceResponseConverterTest {
     public void publisherBasedResponseConversionFailure() throws Exception {
         final HttpClient client = HttpClient.of(rule.uri("/publish/failure"));
 
-        AggregatedHttpMessage msg;
+        AggregatedHttpResponse res;
 
-        msg = aggregated(client.get("/immediate"));
-        assertThat(msg.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        res = aggregated(client.get("/immediate"));
+        assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
 
-        msg = aggregated(client.get("/defer"));
-        assertThat(msg.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        res = aggregated(client.get("/defer"));
+        assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
     public void produceTypeAnnotationBasedDefaultResponseConverter() throws Exception {
         final HttpClient client = HttpClient.of(rule.uri("/produce"));
 
-        AggregatedHttpMessage msg;
+        AggregatedHttpResponse res;
 
-        msg = aggregated(client.get("/string"));
-        assertThat(msg.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(msg.content().array()).isEqualTo("100".getBytes());
+        res = aggregated(client.get("/string"));
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.content().array()).isEqualTo("100".getBytes());
 
-        msg = aggregated(client.get("/byteArray"));
-        assertThat(msg.contentType()).isEqualTo(MediaType.OCTET_STREAM);
-        assertThat(msg.content().array()).isEqualTo("¥".getBytes());
+        res = aggregated(client.get("/byteArray"));
+        assertThat(res.contentType()).isEqualTo(MediaType.OCTET_STREAM);
+        assertThat(res.content().array()).isEqualTo("¥".getBytes());
 
-        msg = aggregated(client.get("/httpData"));
-        assertThat(msg.contentType()).isEqualTo(MediaType.OCTET_STREAM);
-        assertThat(msg.content().array()).isEqualTo("¥".getBytes());
+        res = aggregated(client.get("/httpData"));
+        assertThat(res.contentType()).isEqualTo(MediaType.OCTET_STREAM);
+        assertThat(res.content().array()).isEqualTo("¥".getBytes());
 
-        msg = aggregated(client.get("/jsonNode"));
-        assertThat(msg.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        res = aggregated(client.get("/jsonNode"));
+        assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         final JsonNode expected = mapper.readTree("{\"a\":\"¥\"}");
-        assertThat(msg.content().array()).isEqualTo(mapper.writeValueAsBytes(expected));
+        assertThat(res.content().array()).isEqualTo(mapper.writeValueAsBytes(expected));
     }
 
     @Test
     public void customizedHttpResponse() {
         final HttpClient client = HttpClient.of(rule.uri("/custom-response"));
 
-        AggregatedHttpMessage msg;
+        AggregatedHttpResponse res;
 
-        msg = aggregated(client.get("/expect-specified-status"));
-        assertThat(msg.status()).isEqualTo(HttpStatus.ACCEPTED);
+        res = aggregated(client.get("/expect-specified-status"));
+        assertThat(res.status()).isEqualTo(HttpStatus.ACCEPTED);
 
-        msg = aggregated(client.get("/expect-no-content"));
-        assertThat(msg.status()).isEqualTo(HttpStatus.NO_CONTENT);
+        res = aggregated(client.get("/expect-no-content"));
+        assertThat(res.status()).isEqualTo(HttpStatus.NO_CONTENT);
 
-        msg = aggregated(client.get("/expect-ok"));
-        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
+        res = aggregated(client.get("/expect-ok"));
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
 
-        msg = aggregated(client.get("/expect-specified-no-content"));
-        assertThat(msg.status()).isEqualTo(HttpStatus.NO_CONTENT);
+        res = aggregated(client.get("/expect-specified-no-content"));
+        assertThat(res.status()).isEqualTo(HttpStatus.NO_CONTENT);
 
-        msg = aggregated(client.get("/expect-not-modified"));
-        assertThat(msg.status()).isEqualTo(HttpStatus.NOT_MODIFIED);
+        res = aggregated(client.get("/expect-not-modified"));
+        assertThat(res.status()).isEqualTo(HttpStatus.NOT_MODIFIED);
 
-        msg = aggregated(client.get("/expect-unauthorized"));
-        assertThat(msg.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        res = aggregated(client.get("/expect-unauthorized"));
+        assertThat(res.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
 
-        msg = aggregated(client.get("/expect-no-content-from-converter"));
-        assertThat(msg.status()).isEqualTo(HttpStatus.NO_CONTENT);
+        res = aggregated(client.get("/expect-no-content-from-converter"));
+        assertThat(res.status()).isEqualTo(HttpStatus.NO_CONTENT);
 
         ImmutableList.of("/expect-custom-header",
                          "/async/expect-custom-header").forEach(path -> {
-            final AggregatedHttpMessage message = aggregated(client.get(path));
-            assertThat(message.status()).isEqualTo(HttpStatus.OK);
-            assertThat(message.headers().get(HttpHeaderNames.of("x-custom-header"))).isEqualTo("value");
-            assertThatJson(message.contentUtf8()).isEqualTo(ImmutableMap.of("a", "b"));
-            assertThat(message.headers().get(HttpHeaderNames.of("x-custom-annotated-header"))).isEqualTo(
+            final AggregatedHttpResponse response = aggregated(client.get(path));
+            assertThat(response.status()).isEqualTo(HttpStatus.OK);
+            assertThat(response.headers().get(HttpHeaderNames.of("x-custom-header"))).isEqualTo("value");
+            assertThatJson(response.contentUtf8()).isEqualTo(ImmutableMap.of("a", "b"));
+            assertThat(response.headers().get(HttpHeaderNames.of("x-custom-annotated-header"))).isEqualTo(
                     "annotated-value");
         });
 
-        ImmutableList.of("/expect-custom-trailing-header",
-                         "/async/expect-custom-trailing-header").forEach(path -> {
-            final AggregatedHttpMessage message = aggregated(client.get(path));
-            assertThat(message.status()).isEqualTo(HttpStatus.OK);
-            assertThat(message.headers().get(HttpHeaderNames.of("x-custom-header"))).isEqualTo("value");
-            assertThatJson(message.contentUtf8()).isEqualTo(ImmutableList.of("a", "b"));
-            assertThat(message.trailingHeaders().get(HttpHeaderNames.of("x-custom-trailing-header")))
+        ImmutableList.of("/expect-custom-trailers",
+                         "/async/expect-custom-trailers").forEach(path -> {
+            final AggregatedHttpResponse response = aggregated(client.get(path));
+            assertThat(response.status()).isEqualTo(HttpStatus.OK);
+            assertThat(response.headers().get(HttpHeaderNames.of("x-custom-header"))).isEqualTo("value");
+            assertThatJson(response.contentUtf8()).isEqualTo(ImmutableList.of("a", "b"));
+            assertThat(response.trailers().get(HttpHeaderNames.of("x-custom-trailers")))
                     .isEqualTo("value");
-            assertThat(message.trailingHeaders().get(HttpHeaderNames.of("x-custom-annotated-trailing-header")))
+            assertThat(response.trailers().get(HttpHeaderNames.of("x-custom-annotated-trailers")))
                     .isEqualTo("annotated-value");
         });
 
-        msg = aggregated(client.get("/async/expect-bad-request"));
-        assertThat(msg.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        res = aggregated(client.get("/async/expect-bad-request"));
+        assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
 
         ImmutableList.of("/wildcard", "/generic").forEach(path -> {
-            final AggregatedHttpMessage message = aggregated(client.get(path));
-            assertThat(message.status()).isEqualTo(HttpStatus.OK);
-            assertThatJson(message.contentUtf8()).isEqualTo(ImmutableList.of("a", "b"));
+            final AggregatedHttpResponse response = aggregated(client.get(path));
+            assertThat(response.status()).isEqualTo(HttpStatus.OK);
+            assertThatJson(response.contentUtf8()).isEqualTo(ImmutableList.of("a", "b"));
         });
 
-        msg = aggregated(client.get("/header"));
-        assertThat(msg.status()).isEqualTo(HttpStatus.NO_CONTENT);
-        assertThat(msg.headers().getAll(HttpHeaderNames.of("header_name_1")).toString()).isEqualTo(
+        res = aggregated(client.get("/header"));
+        assertThat(res.status()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(res.headers().getAll(HttpHeaderNames.of("header_name_1")).toString()).isEqualTo(
                 "[header_value_1]");
 
-        msg = aggregated(client.get("/header-overwrite"));
-        assertThat(msg.headers().get(HttpHeaderNames.of("header_name_1"))).isEqualTo("header_value_changed");
+        res = aggregated(client.get("/header-overwrite"));
+        assertThat(res.headers().get(HttpHeaderNames.of("header_name_1"))).isEqualTo("header_value_changed");
     }
 
     @Test
     public void httpResultWithPublisher() {
         final HttpClient client = HttpClient.of(rule.uri("/publish/http-result"));
 
-        AggregatedHttpMessage msg;
+        AggregatedHttpResponse res;
 
-        msg = aggregated(client.get("/mono/jsonNode"));
-        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
-        assertThat(msg.contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        assertThatJson(msg.contentUtf8()).isEqualTo(ImmutableMap.of("a", "¥"));
+        res = aggregated(client.get("/mono/jsonNode"));
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThatJson(res.contentUtf8()).isEqualTo(ImmutableMap.of("a", "¥"));
 
-        msg = aggregated(client.get("/jsonNode"));
-        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
-        assertThat(msg.contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        assertThatJson(msg.contentUtf8()).isEqualTo(ImmutableList.of(ImmutableMap.of("a", "¥")));
+        res = aggregated(client.get("/jsonNode"));
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThatJson(res.contentUtf8()).isEqualTo(ImmutableList.of(ImmutableMap.of("a", "¥")));
 
-        msg = aggregated(client.get("/defer"));
-        assertThat(msg.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        res = aggregated(client.get("/defer"));
+        assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
-    private static AggregatedHttpMessage aggregated(HttpResponse response) {
+    private static AggregatedHttpResponse aggregated(HttpResponse response) {
         return response.aggregate().join();
     }
 

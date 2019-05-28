@@ -46,7 +46,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -339,7 +339,7 @@ class HttpClientIntegrationTest {
     void testRequestNoBody() throws Exception {
         final HttpClient client = HttpClient.of(server.uri("/"));
 
-        final AggregatedHttpMessage response = client.execute(
+        final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.GET, "/httptestbody",
                                   HttpHeaderNames.ACCEPT, "utf-8")).aggregate().get();
 
@@ -352,7 +352,7 @@ class HttpClientIntegrationTest {
     void testRequestWithBody() throws Exception {
         final HttpClient client = HttpClient.of(server.uri("/"));
 
-        final AggregatedHttpMessage response = client.execute(
+        final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.POST, "/httptestbody",
                                   HttpHeaderNames.ACCEPT, "utf-8"),
                 "requestbody日本語").aggregate().get();
@@ -383,7 +383,7 @@ class HttpClientIntegrationTest {
                     .setHttpHeader(HttpHeaderNames.AUTHORITY, "255.255.255.255.xip.io")
                     .build();
 
-            final AggregatedHttpMessage res = client.get("/hello/world").aggregate().join();
+            final AggregatedHttpResponse res = client.get("/hello/world").aggregate().join();
             assertThat(res.status()).isEqualTo(HttpStatus.OK);
             assertThat(res.contentUtf8()).isEqualTo("success");
         } finally {
@@ -395,7 +395,7 @@ class HttpClientIntegrationTest {
     void testNot200() throws Exception {
         final HttpClient client = HttpClient.of(server.uri("/"));
 
-        final AggregatedHttpMessage response = client.get("/not200").aggregate().get();
+        final AggregatedHttpResponse response = client.get("/not200").aggregate().get();
 
         assertEquals(HttpStatus.NOT_FOUND, response.status());
     }
@@ -434,7 +434,7 @@ class HttpClientIntegrationTest {
         final ClientOptions options = ClientOptions.of(ClientOption.HTTP_HEADERS.newValue(headers));
         final HttpClient client = HttpClient.of(server.uri("/"), options);
 
-        final AggregatedHttpMessage response = client.get(path).aggregate().get();
+        final AggregatedHttpResponse response = client.get(path).aggregate().get();
 
         assertEquals(headerValue, response.contentUtf8());
     }
@@ -447,7 +447,7 @@ class HttpClientIntegrationTest {
 
         final String OVERRIDDEN_VALUE = "Overridden";
 
-        final AggregatedHttpMessage response =
+        final AggregatedHttpResponse response =
                 client.execute(RequestHeaders.of(HttpMethod.GET, path,
                                                  headerName, OVERRIDDEN_VALUE))
                       .aggregate().get();
@@ -460,7 +460,7 @@ class HttpClientIntegrationTest {
         final HttpClient client = new HttpClientBuilder(server.uri("/"))
                 .factory(clientFactory).decorator(HttpDecodingClient.newDecorator()).build();
 
-        final AggregatedHttpMessage response =
+        final AggregatedHttpResponse response =
                 client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding")).aggregate().get();
         assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("gzip");
         assertThat(response.contentUtf8()).isEqualTo(
@@ -473,7 +473,7 @@ class HttpClientIntegrationTest {
                 .factory(clientFactory)
                 .decorator(HttpDecodingClient.newDecorator(new DeflateStreamDecoderFactory())).build();
 
-        final AggregatedHttpMessage response =
+        final AggregatedHttpResponse response =
                 client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding")).aggregate().get();
         assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("deflate");
         assertThat(response.contentUtf8()).isEqualTo(
@@ -486,7 +486,7 @@ class HttpClientIntegrationTest {
                 .factory(clientFactory)
                 .decorator(HttpDecodingClient.newDecorator(new DeflateStreamDecoderFactory())).build();
 
-        final AggregatedHttpMessage response =
+        final AggregatedHttpResponse response =
                 client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding-toosmall")).aggregate().get();
         assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isNull();
         assertThat(response.contentUtf8()).isEqualTo("small content");
@@ -527,7 +527,7 @@ class HttpClientIntegrationTest {
     void givenHttpClientUriPathAndRequestPath_whenGet_thenRequestToConcatenatedPath() throws Exception {
         final HttpClient client = HttpClient.of(server.uri("/hello"));
 
-        final AggregatedHttpMessage response = client.get("/world").aggregate().get();
+        final AggregatedHttpResponse response = client.get("/world").aggregate().get();
 
         assertEquals("success", response.contentUtf8());
     }
@@ -536,7 +536,7 @@ class HttpClientIntegrationTest {
     void givenRequestPath_whenGet_thenRequestToPath() throws Exception {
         final HttpClient client = HttpClient.of(server.uri("/"));
 
-        final AggregatedHttpMessage response = client.get("/hello/world").aggregate().get();
+        final AggregatedHttpResponse response = client.get("/hello/world").aggregate().get();
 
         assertEquals("success", response.contentUtf8());
     }
@@ -545,7 +545,7 @@ class HttpClientIntegrationTest {
     void testPooledResponseDefaultSubscriber() throws Exception {
         final HttpClient client = HttpClient.of(server.uri("/"));
 
-        final AggregatedHttpMessage response = client.execute(
+        final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.GET, "/pooled")).aggregate().get();
 
         assertEquals(HttpStatus.OK, response.status());
@@ -557,7 +557,7 @@ class HttpClientIntegrationTest {
     void testPooledResponsePooledSubscriber() throws Exception {
         final HttpClient client = HttpClient.of(server.uri("/"));
 
-        final AggregatedHttpMessage response = client.execute(
+        final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.GET, "/pooled-aware")).aggregate().get();
 
         assertEquals(HttpStatus.OK, response.status());
@@ -569,7 +569,7 @@ class HttpClientIntegrationTest {
     void testUnpooledResponsePooledSubscriber() throws Exception {
         final HttpClient client = HttpClient.of(server.uri("/"));
 
-        final AggregatedHttpMessage response = client.execute(
+        final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.GET, "/pooled-unaware")).aggregate().get();
 
         assertEquals(HttpStatus.OK, response.status());
@@ -614,7 +614,7 @@ class HttpClientIntegrationTest {
     void testEscapedPathParam() throws Exception {
         final HttpClient client = HttpClient.of(server.uri("/"));
 
-        final AggregatedHttpMessage response = client.get("/oneparam/foo%2Fbar").aggregate().get();
+        final AggregatedHttpResponse response = client.get("/oneparam/foo%2Fbar").aggregate().get();
 
         assertEquals("routed", response.contentUtf8());
     }

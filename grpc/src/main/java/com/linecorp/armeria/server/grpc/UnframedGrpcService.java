@@ -23,7 +23,8 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -33,7 +34,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
-import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
@@ -170,7 +170,7 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
     private void frameAndServe(
             ServiceRequestContext ctx,
             RequestHeaders grpcHeaders,
-            AggregatedHttpMessage clientRequest,
+            AggregatedHttpRequest clientRequest,
             CompletableFuture<HttpResponse> res) {
         final HttpRequest grpcRequest;
         try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
@@ -218,10 +218,10 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
 
     private static void deframeAndRespond(
             ServiceRequestContext ctx,
-            AggregatedHttpMessage grpcResponse,
+            AggregatedHttpResponse grpcResponse,
             CompletableFuture<HttpResponse> res) {
-        final HttpHeaders trailers = !grpcResponse.trailingHeaders().isEmpty() ?
-                                     grpcResponse.trailingHeaders() : grpcResponse.headers();
+        final HttpHeaders trailers = !grpcResponse.trailers().isEmpty() ?
+                                     grpcResponse.trailers() : grpcResponse.headers();
         final String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
         final Status grpcStatus = Status.fromCodeValue(Integer.parseInt(grpcStatusCode));
 
@@ -247,7 +247,7 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
         }
 
         final MediaType grpcMediaType = grpcResponse.contentType();
-        final ResponseHeadersBuilder unframedHeaders = ResponseHeaders.of(grpcResponse.headers()).toBuilder();
+        final ResponseHeadersBuilder unframedHeaders = grpcResponse.headers().toBuilder();
         if (grpcMediaType != null) {
             if (grpcMediaType.is(GrpcSerializationFormats.PROTO.mediaType())) {
                 unframedHeaders.contentType(MediaType.PROTOBUF);

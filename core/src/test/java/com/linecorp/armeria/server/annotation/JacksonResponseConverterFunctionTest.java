@@ -59,7 +59,7 @@ public class JacksonResponseConverterFunctionTest {
     private static final ResponseHeaders JSON_SEQ_HEADERS =
             ResponseHeaders.of(HttpStatus.OK,
                                HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_SEQ);
-    private static final HttpHeaders DEFAULT_TRAILING_HEADERS = HttpHeaders.of();
+    private static final HttpHeaders DEFAULT_TRAILERS = HttpHeaders.of();
 
     /**
      * Strings which are used for a publisher.
@@ -92,7 +92,7 @@ public class JacksonResponseConverterFunctionTest {
                 .expectComplete()
                 .verify();
 
-        // Iterable with trailing headers.
+        // Iterable with trailers.
         final HttpHeaders trailer = HttpHeaders.of(AsciiString.of("x-trailer"), "value");
         expectAggregatedJson(Arrays.asList(TEST_STRINGS), JSON_HEADERS, trailer)
                 .expectNext(trailer)
@@ -106,7 +106,7 @@ public class JacksonResponseConverterFunctionTest {
             throw new AnticipatedException();
         });
         final HttpResponse response =
-                function.convertResponse(ctx, JSON_HEADERS, stream, DEFAULT_TRAILING_HEADERS);
+                function.convertResponse(ctx, JSON_HEADERS, stream, DEFAULT_TRAILERS);
         StepVerifier.create(response)
                     .expectError(AnticipatedException.class)
                     .verify();
@@ -115,7 +115,7 @@ public class JacksonResponseConverterFunctionTest {
     @Test
     public void aggregatedJson_otherTypes() throws Exception {
         StepVerifier.create(function.convertResponse(
-                ctx, JSON_HEADERS, "abc", DEFAULT_TRAILING_HEADERS))
+                ctx, JSON_HEADERS, "abc", DEFAULT_TRAILERS))
                     .expectNext(JSON_HEADERS.toBuilder()
                                             .setInt(HttpHeaderNames.CONTENT_LENGTH, 5)
                                             .build())
@@ -124,7 +124,7 @@ public class JacksonResponseConverterFunctionTest {
                     .verify();
 
         StepVerifier.create(function.convertResponse(
-                ctx, JSON_HEADERS, 123, DEFAULT_TRAILING_HEADERS))
+                ctx, JSON_HEADERS, 123, DEFAULT_TRAILERS))
                     .expectNext(JSON_HEADERS.toBuilder()
                                             .setInt(HttpHeaderNames.CONTENT_LENGTH, 3)
                                             .build())
@@ -134,14 +134,14 @@ public class JacksonResponseConverterFunctionTest {
     }
 
     private static Step<HttpObject> expectAggregatedJson(Object publisherOrStream) throws Exception {
-        return expectAggregatedJson(publisherOrStream, JSON_HEADERS, DEFAULT_TRAILING_HEADERS);
+        return expectAggregatedJson(publisherOrStream, JSON_HEADERS, DEFAULT_TRAILERS);
     }
 
     private static Step<HttpObject> expectAggregatedJson(Object publisherOrStream,
                                                          ResponseHeaders headers,
-                                                         HttpHeaders trailingHeaders) throws Exception {
+                                                         HttpHeaders trailers) throws Exception {
         final HttpResponse response =
-                function.convertResponse(ctx, headers, publisherOrStream, trailingHeaders);
+                function.convertResponse(ctx, headers, publisherOrStream, trailers);
         return StepVerifier.create(response)
                            .expectNext(headers)
                            .assertNext(content -> {
@@ -172,7 +172,7 @@ public class JacksonResponseConverterFunctionTest {
             throw new AnticipatedException();
         });
         final HttpResponse response =
-                function.convertResponse(ctx, JSON_SEQ_HEADERS, stream, DEFAULT_TRAILING_HEADERS);
+                function.convertResponse(ctx, JSON_SEQ_HEADERS, stream, DEFAULT_TRAILERS);
         StepVerifier.create(response)
                     .expectError(AnticipatedException.class)
                     .verify();
@@ -184,7 +184,7 @@ public class JacksonResponseConverterFunctionTest {
                 .expectComplete()
                 .verify();
 
-        // With trailing headers.
+        // With trailers.
         final HttpHeaders trailer = HttpHeaders.of(AsciiString.of("x-trailer"), "value");
         expectJsonSeqContents(Flux.fromArray(TEST_STRINGS), JSON_SEQ_HEADERS, trailer)
                 .expectNext(trailer)
@@ -208,7 +208,7 @@ public class JacksonResponseConverterFunctionTest {
     @Test
     public void jsonTextSequences_otherTypes() throws Exception {
         StepVerifier.create(function.convertResponse(
-                ctx, JSON_SEQ_HEADERS, "abc", DEFAULT_TRAILING_HEADERS))
+                ctx, JSON_SEQ_HEADERS, "abc", DEFAULT_TRAILERS))
                     .expectNext(JSON_SEQ_HEADERS.toBuilder()
                                                 .setInt(HttpHeaderNames.CONTENT_LENGTH, 7)
                                                 .build())
@@ -218,7 +218,7 @@ public class JacksonResponseConverterFunctionTest {
                     .verify();
 
         StepVerifier.create(function.convertResponse(
-                ctx, JSON_SEQ_HEADERS, 123, DEFAULT_TRAILING_HEADERS))
+                ctx, JSON_SEQ_HEADERS, 123, DEFAULT_TRAILERS))
                     .expectNext(JSON_SEQ_HEADERS.toBuilder()
                                                 .setInt(HttpHeaderNames.CONTENT_LENGTH, 5)
                                                 .build())
@@ -229,14 +229,14 @@ public class JacksonResponseConverterFunctionTest {
     }
 
     private static Step<HttpObject> expectJsonSeqContents(Object publisherOrStream) throws Exception {
-        return expectJsonSeqContents(publisherOrStream, JSON_SEQ_HEADERS, DEFAULT_TRAILING_HEADERS);
+        return expectJsonSeqContents(publisherOrStream, JSON_SEQ_HEADERS, DEFAULT_TRAILERS);
     }
 
     private static Step<HttpObject> expectJsonSeqContents(Object publisherOrStream,
                                                           ResponseHeaders headers,
-                                                          HttpHeaders trailingHeaders) throws Exception {
+                                                          HttpHeaders trailers) throws Exception {
         final HttpResponse response =
-                function.convertResponse(ctx, headers, publisherOrStream, trailingHeaders);
+                function.convertResponse(ctx, headers, publisherOrStream, trailers);
         return StepVerifier.create(response)
                            .expectNext(headers)
                            .expectNext(EXPECTED_CONTENTS[0])

@@ -14,7 +14,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.Server;
 
@@ -35,7 +35,7 @@ public class HelloApplicationIntegrationTest {
 
     @Test
     public void success() {
-        final AggregatedHttpMessage response = client.get("/hello/Spring").aggregate().join();
+        final AggregatedHttpResponse response = client.get("/hello/Spring").aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8())
                 .isEqualTo("Hello, Spring! This message is from Armeria annotated service!");
@@ -43,7 +43,7 @@ public class HelloApplicationIntegrationTest {
 
     @Test
     public void failure() {
-        final AggregatedHttpMessage response = client.get("/hello/a").aggregate().join();
+        final AggregatedHttpResponse response = client.get("/hello/a").aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThatJson(response.contentUtf8())
                 .node("message")

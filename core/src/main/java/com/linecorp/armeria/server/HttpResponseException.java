@@ -17,7 +17,7 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -47,10 +47,10 @@ public class HttpResponseException extends RuntimeException {
     }
 
     /**
-     * Returns a new {@link HttpResponseException} instance with the specified {@link AggregatedHttpMessage}.
+     * Returns a new {@link HttpResponseException} instance with the specified {@link AggregatedHttpResponse}.
      */
-    public static HttpResponseException of(AggregatedHttpMessage httpMessage) {
-        return of(HttpResponse.of(requireNonNull(httpMessage, "httpMessage")));
+    public static HttpResponseException of(AggregatedHttpResponse aggregatedResponse) {
+        return of(HttpResponse.of(requireNonNull(aggregatedResponse, "aggregatedResponse")));
     }
 
     /**

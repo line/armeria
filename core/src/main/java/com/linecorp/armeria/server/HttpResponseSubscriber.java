@@ -27,7 +27,7 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -54,14 +54,14 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
     private static final Logger logger = LoggerFactory.getLogger(HttpResponseSubscriber.class);
 
-    private static final AggregatedHttpMessage INTERNAL_SERVER_ERROR_MESSAGE =
-            AggregatedHttpMessage.of(HttpStatus.INTERNAL_SERVER_ERROR);
-    private static final AggregatedHttpMessage SERVICE_UNAVAILABLE_MESSAGE =
-            AggregatedHttpMessage.of(HttpStatus.SERVICE_UNAVAILABLE);
+    private static final AggregatedHttpResponse INTERNAL_SERVER_ERROR_MESSAGE =
+            AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
+    private static final AggregatedHttpResponse SERVICE_UNAVAILABLE_MESSAGE =
+            AggregatedHttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
 
     enum State {
         NEEDS_HEADERS,
-        NEEDS_DATA_OR_TRAILING_HEADERS,
+        NEEDS_DATA_OR_TRAILERS,
         DONE,
     }
 
@@ -175,7 +175,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                     // no-content response statuses.
                     endOfStream = true;
                 } else {
-                    state = State.NEEDS_DATA_OR_TRAILING_HEADERS;
+                    state = State.NEEDS_DATA_OR_TRAILERS;
                 }
 
                 final HttpHeaders additionalHeaders = reqCtx.additionalResponseHeaders();
@@ -201,21 +201,20 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
                 break;
             }
-            case NEEDS_DATA_OR_TRAILING_HEADERS: {
+            case NEEDS_DATA_OR_TRAILERS: {
                 if (o instanceof HttpHeaders) {
-                    final HttpHeaders trailingHeaders = (HttpHeaders) o;
-                    if (trailingHeaders.contains(HttpHeaderNames.STATUS)) {
+                    final HttpHeaders trailers = (HttpHeaders) o;
+                    if (trailers.contains(HttpHeaderNames.STATUS)) {
                         throw newIllegalStateException(
-                                "published a trailing HttpHeaders with status: " + o +
+                                "published an HTTP trailers with status: " + o +
                                 " (service: " + service() + ')');
                     }
                     final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
-                    final HttpHeaders addedTrailers = fillAdditionalTrailers(trailingHeaders,
-                                                                             additionalTrailers);
+                    final HttpHeaders addedTrailers = fillAdditionalTrailers(trailers, additionalTrailers);
                     logBuilder().responseTrailers(addedTrailers);
                     o = addedTrailers;
 
-                    // Trailing headers always end the stream even if not explicitly set.
+                    // Trailers always end the stream even if not explicitly set.
                     endOfStream = true;
                 } else if (endOfStream) { // Last DATA frame
                     final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
@@ -245,19 +244,19 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
             // If timeout occurs, respond with 503 Service Unavailable.
             ((HttpResponseException) cause).httpResponse()
                                            .aggregate(ctx.executor())
-                                           .handleAsync((message, throwable) -> {
+                                           .handleAsync((res, throwable) -> {
                                                if (throwable != null) {
                                                    failAndRespond(throwable,
                                                                   INTERNAL_SERVER_ERROR_MESSAGE,
                                                                   Http2Error.CANCEL);
                                                } else {
-                                                   failAndRespond(cause, message, Http2Error.CANCEL);
+                                                   failAndRespond(cause, res, Http2Error.CANCEL);
                                                }
                                                return null;
                                            }, ctx.executor());
         } else if (cause instanceof HttpStatusException) {
             failAndRespond(cause,
-                           AggregatedHttpMessage.of(((HttpStatusException) cause).httpStatus()),
+                           AggregatedHttpResponse.of(((HttpStatusException) cause).httpStatus()),
                            Http2Error.CANCEL);
         } else if (cause instanceof AbortedStreamException) {
             // One of the two cases:
@@ -364,11 +363,11 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         return oldState;
     }
 
-    private void failAndRespond(Throwable cause, AggregatedHttpMessage message, Http2Error error) {
-        final HttpHeaders headers = message.headers();
-        final HttpData content = message.content();
+    private void failAndRespond(Throwable cause, AggregatedHttpResponse res, Http2Error error) {
+        final ResponseHeaders headers = res.headers();
+        final HttpData content = res.content();
 
-        logBuilder().responseHeaders((ResponseHeaders) headers);
+        logBuilder().responseHeaders(headers);
         logBuilder().increaseResponseLength(content);
 
         final State oldState = setDone();

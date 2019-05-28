@@ -29,7 +29,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
@@ -172,77 +172,77 @@ public class ObservableResponseConverterFunctionTest {
     public void maybe() {
         final HttpClient client = HttpClient.of(rule.uri("/maybe"));
 
-        AggregatedHttpMessage msg;
+        AggregatedHttpResponse res;
 
-        msg = client.get("/string").aggregate().join();
-        assertThat(msg.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(msg.contentUtf8()).isEqualTo("a");
+        res = client.get("/string").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("a");
 
-        msg = client.get("/json").aggregate().join();
-        assertThat(msg.contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        assertThatJson(msg.contentUtf8()).isStringEqualTo("a");
+        res = client.get("/json").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThatJson(res.contentUtf8()).isStringEqualTo("a");
 
-        msg = client.get("/empty").aggregate().join();
-        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
-        assertThat(msg.content().isEmpty()).isTrue();
+        res = client.get("/empty").aggregate().join();
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.content().isEmpty()).isTrue();
 
-        msg = client.get("/error").aggregate().join();
-        assertThat(msg.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        res = client.get("/error").aggregate().join();
+        assertThat(res.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @Test
     public void single() {
         final HttpClient client = HttpClient.of(rule.uri("/single"));
 
-        AggregatedHttpMessage msg;
+        AggregatedHttpResponse res;
 
-        msg = client.get("/string").aggregate().join();
-        assertThat(msg.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(msg.contentUtf8()).isEqualTo("a");
+        res = client.get("/string").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("a");
 
-        msg = client.get("/json").aggregate().join();
-        assertThat(msg.contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        assertThatJson(msg.contentUtf8()).isStringEqualTo("a");
+        res = client.get("/json").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThatJson(res.contentUtf8()).isStringEqualTo("a");
 
-        msg = client.get("/error").aggregate().join();
-        assertThat(msg.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        res = client.get("/error").aggregate().join();
+        assertThat(res.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @Test
     public void completable() {
         final HttpClient client = HttpClient.of(rule.uri("/completable"));
 
-        AggregatedHttpMessage msg;
+        AggregatedHttpResponse res;
 
-        msg = client.get("/done").aggregate().join();
-        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
+        res = client.get("/done").aggregate().join();
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
 
-        msg = client.get("/error").aggregate().join();
-        assertThat(msg.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        res = client.get("/error").aggregate().join();
+        assertThat(res.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @Test
     public void observable() {
         final HttpClient client = HttpClient.of(rule.uri("/observable"));
 
-        AggregatedHttpMessage msg;
+        AggregatedHttpResponse res;
 
-        msg = client.get("/string").aggregate().join();
-        assertThat(msg.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(msg.contentUtf8()).isEqualTo("a");
+        res = client.get("/string").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("a");
 
-        msg = client.get("/json/1").aggregate().join();
-        assertThat(msg.contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        assertThatJson(msg.contentUtf8())
+        res = client.get("/json/1").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThatJson(res.contentUtf8())
                 .isArray().ofLength(1).thatContains("a");
 
-        msg = client.get("/json/3").aggregate().join();
-        assertThat(msg.contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        assertThatJson(msg.contentUtf8())
+        res = client.get("/json/3").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThatJson(res.contentUtf8())
                 .isArray().ofLength(3).thatContains("a").thatContains("b").thatContains("c");
 
-        msg = client.get("/error").aggregate().join();
-        assertThat(msg.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        res = client.get("/error").aggregate().join();
+        assertThat(res.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @Test
@@ -287,18 +287,18 @@ public class ObservableResponseConverterFunctionTest {
     public void failure() {
         final HttpClient client = HttpClient.of(rule.uri("/failure"));
 
-        AggregatedHttpMessage msg;
+        AggregatedHttpResponse res;
 
-        msg = client.get("/immediate1").aggregate().join();
-        assertThat(msg.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        res = client.get("/immediate1").aggregate().join();
+        assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
 
-        msg = client.get("/immediate2").aggregate().join();
-        assertThat(msg.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        res = client.get("/immediate2").aggregate().join();
+        assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
 
-        msg = client.get("/defer1").aggregate().join();
-        assertThat(msg.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        res = client.get("/defer1").aggregate().join();
+        assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
 
-        msg = client.get("/defer2").aggregate().join();
-        assertThat(msg.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        res = client.get("/defer2").aggregate().join();
+        assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 }

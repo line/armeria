@@ -24,7 +24,7 @@ import java.nio.charset.StandardCharsets;
 
 import org.junit.Test;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.FallthroughException;
@@ -34,7 +34,7 @@ public class JacksonRequestConverterFunctionTest {
 
     private static final RequestConverterFunction function = new JacksonRequestConverterFunction();
     private static final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-    private static final AggregatedHttpMessage req = mock(AggregatedHttpMessage.class);
+    private static final AggregatedHttpRequest req = mock(AggregatedHttpRequest.class);
 
     static final String JSON_TEXT = "{\"key\": \"value\"}";
 

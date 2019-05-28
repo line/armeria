@@ -42,7 +42,7 @@ public class StringResponseConverterFunction implements ResponseConverterFunctio
     public HttpResponse convertResponse(ServiceRequestContext ctx,
                                         ResponseHeaders headers,
                                         @Nullable Object result,
-                                        HttpHeaders trailingHeaders) throws Exception {
+                                        HttpHeaders trailers) throws Exception {
         final MediaType mediaType = headers.contentType();
         if (mediaType != null) {
             // @Produces("text/plain") or @ProducesText is specified.
@@ -52,19 +52,18 @@ public class StringResponseConverterFunction implements ResponseConverterFunctio
 
                 // To avoid sending an unfinished text to the client, always aggregate the published strings.
                 if (result instanceof Publisher) {
-                    return aggregateFrom((Publisher<?>) result, headers, trailingHeaders,
-                                         o -> toHttpData(o, charset));
+                    return aggregateFrom((Publisher<?>) result, headers, trailers, o -> toHttpData(o, charset));
                 }
                 if (result instanceof Stream) {
-                    return aggregateFrom((Stream<?>) result, headers, trailingHeaders,
+                    return aggregateFrom((Stream<?>) result, headers, trailers,
                                          o -> toHttpData(o, charset), ctx.blockingTaskExecutor());
                 }
-                return HttpResponse.of(headers, toHttpData(result, charset), trailingHeaders);
+                return HttpResponse.of(headers, toHttpData(result, charset), trailers);
             }
         } else if (result instanceof CharSequence) {
             return HttpResponse.of(headers.toBuilder().contentType(MediaType.PLAIN_TEXT_UTF_8).build(),
                                    HttpData.ofUtf8(((CharSequence) result).toString()),
-                                   trailingHeaders);
+                                   trailers);
         }
 
         return ResponseConverterFunction.fallthrough();

@@ -22,10 +22,10 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 
 /**
- * Specifies a {@link RequestConverterFunction} class which converts an {@link AggregatedHttpMessage} to
+ * Specifies a {@link RequestConverterFunction} class which converts an {@link AggregatedHttpRequest} to
  * an object.
  *
  * <p>It can be specified on a class, a method and a parameter in an annotated service.

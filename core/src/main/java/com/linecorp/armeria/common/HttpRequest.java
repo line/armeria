@@ -20,7 +20,6 @@ import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Formatter;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
@@ -48,7 +47,7 @@ import io.netty.util.concurrent.EventExecutor;
 public interface HttpRequest extends Request, StreamMessage<HttpObject> {
 
     // Note: Ensure we provide the same set of `of()` methods with the `of()` methods of
-    //       AggregatedHttpMessage for consistency.
+    //       AggregatedHttpRequest for consistency.
 
     /**
      * Creates a new HTTP request that can be used to stream an arbitrary number of {@link HttpObject}
@@ -90,10 +89,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * @param content the content of the request
      */
     static HttpRequest of(HttpMethod method, String path, MediaType mediaType, CharSequence content) {
-        if (content instanceof String) {
-            return of(method, path, mediaType, (String) content);
-        }
-
         requireNonNull(content, "content");
         requireNonNull(mediaType, "mediaType");
         return of(method, path, mediaType,
@@ -181,17 +176,17 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * @param path the path of the request
      * @param mediaType the {@link MediaType} of the request content
      * @param content the content of the request
-     * @param trailingHeaders the trailing HTTP headers
+     * @param trailers the HTTP trailers
      */
     static HttpRequest of(HttpMethod method, String path, MediaType mediaType, HttpData content,
-                          HttpHeaders trailingHeaders) {
+                          HttpHeaders trailers) {
         requireNonNull(method, "method");
         requireNonNull(path, "path");
         requireNonNull(mediaType, "mediaType");
         return of(RequestHeaders.builder(method, path)
                                 .contentType(mediaType)
                                 .build(),
-                  content, trailingHeaders);
+                  content, trailers);
     }
 
     /**
@@ -213,10 +208,10 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      *
      * @throws IllegalStateException if the headers are malformed.
      */
-    static HttpRequest of(RequestHeaders headers, HttpData content, HttpHeaders trailingHeaders) {
+    static HttpRequest of(RequestHeaders headers, HttpData content, HttpHeaders trailers) {
         requireNonNull(headers, "headers");
         requireNonNull(content, "content");
-        requireNonNull(trailingHeaders, "trailingHeaders");
+        requireNonNull(trailers, "trailers");
 
         if (content.isEmpty()) {
             final RequestHeadersBuilder builder = headers.toBuilder();
@@ -229,13 +224,13 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
         }
 
         if (!content.isEmpty()) {
-            if (trailingHeaders.isEmpty()) {
+            if (trailers.isEmpty()) {
                 return new OneElementFixedHttpRequest(headers, content);
             } else {
-                return new TwoElementFixedHttpRequest(headers, content, trailingHeaders);
+                return new TwoElementFixedHttpRequest(headers, content, trailers);
             }
-        } else if (!trailingHeaders.isEmpty()) {
-            return new OneElementFixedHttpRequest(headers, trailingHeaders);
+        } else if (!trailers.isEmpty()) {
+            return new OneElementFixedHttpRequest(headers, trailers);
         } else {
             return new EmptyFixedHttpRequest(headers);
         }
@@ -243,29 +238,27 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
 
     /**
      * Creates a new {@link HttpRequest} that publishes the given {@link HttpObject}s and closes the stream.
-     * {@code objs} must not contain {@link RequestHeaders}.
      */
-    static HttpRequest of(RequestHeaders headers, HttpObject... objs) {
-        if (Arrays.stream(objs).anyMatch(obj -> obj instanceof HttpHeaders)) {
-            throw new IllegalArgumentException("objs contains Headers, which is not allowed.");
-        }
-        switch (objs.length) {
+    static HttpRequest of(RequestHeaders headers, HttpData... contents) {
+        requireNonNull(headers, "headers");
+        requireNonNull(contents, "contents");
+        switch (contents.length) {
             case 0:
                 return new EmptyFixedHttpRequest(headers);
             case 1:
-                return new OneElementFixedHttpRequest(headers, objs[0]);
+                return new OneElementFixedHttpRequest(headers, contents[0]);
             case 2:
-                return new TwoElementFixedHttpRequest(headers, objs[0], objs[1]);
+                return new TwoElementFixedHttpRequest(headers, contents[0], contents[1]);
             default:
-                return new RegularFixedHttpRequest(headers, objs);
+                return new RegularFixedHttpRequest(headers, contents);
         }
     }
 
     /**
-     * Converts the {@link AggregatedHttpMessage} into a new {@link HttpRequest} and closes the stream.
+     * Converts the {@link AggregatedHttpRequest} into a new {@link HttpRequest} and closes the stream.
      */
-    static HttpRequest of(AggregatedHttpMessage message) {
-        return of(RequestHeaders.of(message.headers()), message.content(), message.trailingHeaders());
+    static HttpRequest of(AggregatedHttpRequest request) {
+        return of(request.headers(), request.content(), request.trailers());
     }
 
     /**
@@ -365,10 +358,10 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
 
     /**
      * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailing headers of the request is received fully.
+     * the trailers of the request is received fully.
      */
-    default CompletableFuture<AggregatedHttpMessage> aggregate() {
-        final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
+    default CompletableFuture<AggregatedHttpRequest> aggregate() {
+        final CompletableFuture<AggregatedHttpRequest> future = new CompletableFuture<>();
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, null);
         completionFuture().handle(aggregator);
         subscribe(aggregator);
@@ -377,11 +370,11 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
 
     /**
      * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailing headers of the request is received fully.
+     * the trailers of the request is received fully.
      */
-    default CompletableFuture<AggregatedHttpMessage> aggregate(EventExecutor executor) {
+    default CompletableFuture<AggregatedHttpRequest> aggregate(EventExecutor executor) {
         requireNonNull(executor, "executor");
-        final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
+        final CompletableFuture<AggregatedHttpRequest> future = new CompletableFuture<>();
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, null);
         completionFuture().handleAsync(aggregator, executor);
         subscribe(aggregator, executor);
@@ -390,13 +383,13 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
 
     /**
      * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailing headers of the request is received fully. {@link AggregatedHttpMessage#content()} will
+     * the trailers of the request is received fully. {@link AggregatedHttpRequest#content()} will
      * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
      * use {@link #aggregate()}.
      */
-    default CompletableFuture<AggregatedHttpMessage> aggregateWithPooledObjects(ByteBufAllocator alloc) {
+    default CompletableFuture<AggregatedHttpRequest> aggregateWithPooledObjects(ByteBufAllocator alloc) {
         requireNonNull(alloc, "alloc");
-        final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
+        final CompletableFuture<AggregatedHttpRequest> future = new CompletableFuture<>();
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, alloc);
         completionFuture().handle(aggregator);
         subscribe(aggregator, true);
@@ -405,15 +398,15 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
 
     /**
      * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailing headers of the request is received fully. {@link AggregatedHttpMessage#content()} will
+     * the trailers of the request is received fully. {@link AggregatedHttpRequest#content()} will
      * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
      * use {@link #aggregate()}.
      */
-    default CompletableFuture<AggregatedHttpMessage> aggregateWithPooledObjects(
+    default CompletableFuture<AggregatedHttpRequest> aggregateWithPooledObjects(
             EventExecutor executor, ByteBufAllocator alloc) {
         requireNonNull(executor, "executor");
         requireNonNull(alloc, "alloc");
-        final CompletableFuture<AggregatedHttpMessage> future = new CompletableFuture<>();
+        final CompletableFuture<AggregatedHttpRequest> future = new CompletableFuture<>();
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, alloc);
         completionFuture().handleAsync(aggregator, executor);
         subscribe(aggregator, executor, true);

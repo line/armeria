@@ -134,7 +134,7 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
         final HttpObject converted = convertServerHeaders(streamId, headers, endStream);
         final String status = headers.get(HttpHeaderNames.STATUS);
         if (status == null) {
-            // Trailing headers
+            // Trailers
             final ChannelFuture f = write(id, converted, endStream);
             ch.flush();
             return f;

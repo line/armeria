@@ -19,7 +19,7 @@ object easily:
 
     import com.linecorp.armeria.common.HttpRequest;
     import com.linecorp.armeria.common.HttpResponse;
-    import com.linecorp.armeria.common.AggregatedHttpMessage;
+    import com.linecorp.armeria.common.AggregatedHttpResponse;
     import com.linecorp.armeria.client.ClientRequestContext;
     import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -44,7 +44,7 @@ object easily:
             HttpResponse res = client.execute(cctx, req);
 
             // Then
-            AggregatedHttpMessage aggregatedRes = res.aggregate().get();
+            AggregatedHttpResponse aggregatedRes = res.aggregate().get();
             assertEquals(200, aggregatedRes.status().code());
         }
 
@@ -60,7 +60,7 @@ object easily:
             HttpResponse res = service.serve(sctx, req);
 
             // Then
-            AggregatedHttpMessage aggregatedRes = res.aggregate().get();
+            AggregatedHttpResponse aggregatedRes = res.aggregate().get();
             assertEquals(200, aggregatedRes.status().code());
         }
     }
@@ -130,7 +130,7 @@ The following example shows how to emit a fake request every minute:
         ServiceRequestContext ctx = ServiceRequestContext.of(req);
         try {
             HttpResponse res = sessionManagementService.servce(ctx, req);
-            AggregatedHttpMessage aggregatedRes = res.aggregate().get();
+            AggregatedHttpResponse aggregatedRes = res.aggregate().get();
             if (aggregatedRes.status().code() != 200) {
                 System.err.println("Failed to expire stall sessions: " +
                                    aggregatedRes);

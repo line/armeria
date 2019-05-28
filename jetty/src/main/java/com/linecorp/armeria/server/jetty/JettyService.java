@@ -48,7 +48,7 @@ import org.eclipse.jetty.util.thread.Scheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -57,6 +57,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.util.CompletionActions;
@@ -300,7 +301,7 @@ public final class JettyService implements HttpService {
     }
 
     private static void fillRequest(
-            ServiceRequestContext ctx, AggregatedHttpMessage aReq, Request jReq) {
+            ServiceRequestContext ctx, AggregatedHttpRequest aReq, Request jReq) {
 
         jReq.setDispatcherType(DispatcherType.REQUEST);
         jReq.setAsyncSupported(false, "armeria");
@@ -315,15 +316,15 @@ public final class JettyService implements HttpService {
         jReq.getHttpInput().eof();
     }
 
-    private static MetaData.Request toRequestMetadata(ServiceRequestContext ctx, AggregatedHttpMessage aReq) {
+    private static MetaData.Request toRequestMetadata(ServiceRequestContext ctx, AggregatedHttpRequest aReq) {
         // Construct the HttpURI
         final StringBuilder uriBuf = new StringBuilder();
-        final HttpHeaders aHeaders = aReq.headers();
+        final RequestHeaders aHeaders = aReq.headers();
 
         uriBuf.append(ctx.sessionProtocol().isTls() ? "https" : "http");
         uriBuf.append("://");
-        uriBuf.append(aHeaders.get(HttpHeaderNames.AUTHORITY));
-        uriBuf.append(aHeaders.get(HttpHeaderNames.PATH));
+        uriBuf.append(aHeaders.authority());
+        uriBuf.append(aHeaders.path());
 
         final HttpURI uri = new HttpURI(uriBuf.toString());
         uri.setPath(ctx.mappedPath());

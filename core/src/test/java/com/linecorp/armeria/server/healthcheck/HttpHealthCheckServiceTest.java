@@ -34,7 +34,7 @@ import org.mockito.junit.MockitoRule;
 
 import com.google.common.io.ByteStreams;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
@@ -74,7 +74,7 @@ public class HttpHealthCheckServiceTest {
 
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final ServiceRequestContext context = ServiceRequestContext.of(req);
-        final AggregatedHttpMessage res = service.serve(context, req).aggregate().get();
+        final AggregatedHttpResponse res = service.serve(context, req).aggregate().get();
 
         assertEquals(HttpStatus.OK, res.status());
         assertEquals("ok", res.contentUtf8());
@@ -102,7 +102,7 @@ public class HttpHealthCheckServiceTest {
     private void assertNotOk() throws Exception {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         final ServiceRequestContext context = ServiceRequestContext.of(req);
-        final AggregatedHttpMessage res = service.serve(context, req).aggregate().get();
+        final AggregatedHttpResponse res = service.serve(context, req).aggregate().get();
 
         assertEquals(HttpStatus.SERVICE_UNAVAILABLE, res.status());
         assertEquals("not ok", res.contentUtf8());

@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -479,7 +479,7 @@ public final class THttpService extends AbstractHttpService {
     }
 
     private void decodeAndInvoke(
-            ServiceRequestContext ctx, AggregatedHttpMessage req,
+            ServiceRequestContext ctx, AggregatedHttpRequest req,
             SerializationFormat serializationFormat, CompletableFuture<HttpResponse> httpRes) {
         final HttpData content = req.content();
         final ByteBuf buf;

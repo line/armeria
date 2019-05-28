@@ -30,7 +30,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -74,8 +74,8 @@ public class RetryingClientAuthorityHeaderTest {
     public void authorityIsDifferentByBackendsWhenRetry() {
         final HttpClient client = newHttpClientWithEndpointGroup();
 
-        final AggregatedHttpMessage msg = client.get("/").aggregate().join();
-        assertThat(msg.contentUtf8()).contains("www.bar.com");
+        final AggregatedHttpResponse res = client.get("/").aggregate().join();
+        assertThat(res.contentUtf8()).contains("www.bar.com");
     }
 
     @Test
@@ -84,8 +84,8 @@ public class RetryingClientAuthorityHeaderTest {
 
         final RequestHeaders headers = RequestHeaders.of(GET, "/",
                                                          HttpHeaderNames.AUTHORITY, "www.armeria.com");
-        final AggregatedHttpMessage msg = client.execute(headers).aggregate().join();
-        assertThat(msg.contentUtf8()).contains("www.armeria.com");
+        final AggregatedHttpResponse res = client.execute(headers).aggregate().join();
+        assertThat(res.contentUtf8()).contains("www.armeria.com");
     }
 
     private static HttpClient newHttpClientWithEndpointGroup() {
