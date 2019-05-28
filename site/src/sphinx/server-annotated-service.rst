@@ -801,8 +801,7 @@ more response types which can be used in the annotated service.
 - :api:`HttpResult`
 
   - It contains the :api:`HttpHeaders` and the object which can be converted into HTTP response body by
-    response converters. A user can customize the HTTP status and headers including the trailers,
-    with this type.
+    response converters. A user can customize the HTTP status and headers including the trailers, with this type.
 
   .. code-block:: java
 

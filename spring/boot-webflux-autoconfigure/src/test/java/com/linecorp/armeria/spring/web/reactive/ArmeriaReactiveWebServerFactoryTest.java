@@ -259,7 +259,7 @@ class ArmeriaReactiveWebServerFactoryTest {
             final HttpClient client = httpClient(server);
             validateEchoResponse(sendPostRequest(client));
 
-            final AggregatedHttpMessage res = client.get("/hello").aggregate().join();
+            final AggregatedHttpResponse res = client.get("/hello").aggregate().join();
             assertThat(res.status()).isEqualTo(com.linecorp.armeria.common.HttpStatus.OK);
             assertThat(res.contentUtf8()).isEmpty();
         });
