@@ -242,7 +242,7 @@ public class ContentPreviewerTest {
         public void onData(HttpData data) {
             // Invoked when a new content is received.
             assert builder != null;
-            builder.append(ByteBufUtil.hexDump(data.array(), data.offset(), data.length()));
+            builder.append(ByteBufUtil.hexDump(data.array()));
         }
 
         @Override

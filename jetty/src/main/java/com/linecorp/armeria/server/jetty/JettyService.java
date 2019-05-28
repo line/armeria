@@ -310,8 +310,7 @@ public final class JettyService implements HttpService {
 
         final HttpData content = aReq.content();
         if (!content.isEmpty()) {
-            jReq.getHttpInput().addContent(new Content(ByteBuffer.wrap(
-                    content.array(), content.offset(), content.length())));
+            jReq.getHttpInput().addContent(new Content(ByteBuffer.wrap(content.array())));
         }
         jReq.getHttpInput().eof();
     }

@@ -245,7 +245,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
             if (data instanceof ByteBufHolder) {
                 buf = ((ByteBufHolder) data).content();
             } else {
-                buf = Unpooled.wrappedBuffer(data.array(), data.offset(), dataLength);
+                buf = Unpooled.wrappedBuffer(data.array());
             }
             assert unprocessed != null;
             unprocessed.add(buf);

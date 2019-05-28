@@ -363,7 +363,7 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
 
     private ChannelFuture doWriteSplitData(int id, HttpData data, boolean endStream) {
         try {
-            int offset = data.offset();
+            int offset = 0;
             int remaining = data.length();
             ChannelFuture lastFuture;
             for (;;) {

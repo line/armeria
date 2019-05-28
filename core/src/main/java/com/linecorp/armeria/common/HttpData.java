@@ -349,7 +349,7 @@ public interface HttpData extends HttpObject {
      */
     default String toString(Charset charset) {
         requireNonNull(charset, "charset");
-        return new String(array(), offset(), length(), charset);
+        return new String(array(), charset);
     }
 
     /**
@@ -374,7 +374,7 @@ public interface HttpData extends HttpObject {
      * Returns a new {@link InputStream} that is sourced from this data.
      */
     default InputStream toInputStream() {
-        return new FastByteArrayInputStream(array(), offset(), length());
+        return new FastByteArrayInputStream(array());
     }
 
     /**

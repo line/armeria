@@ -126,7 +126,7 @@ class HttpEncodedResponse extends FilteredHttpResponse {
         final HttpData data = (HttpData) obj;
         assert encodedStream != null;
         try {
-            encodingStream.write(data.array(), data.offset(), data.length());
+            encodingStream.write(data.array());
             encodingStream.flush();
             return HttpData.of(encodedStream.toByteArray());
         } catch (IOException e) {

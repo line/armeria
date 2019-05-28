@@ -120,9 +120,7 @@ public class UnaryGrpcClient {
                                    if (msg.content() instanceof ByteBufHolder) {
                                        buf = ((ByteBufHolder) msg.content()).content();
                                    } else {
-                                       buf = Unpooled.wrappedBuffer(
-                                               msg.content().array(), msg.content().offset(),
-                                               msg.content().length());
+                                       buf = Unpooled.wrappedBuffer(msg.content().array());
                                    }
                                    final HttpData framed;
                                    try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(

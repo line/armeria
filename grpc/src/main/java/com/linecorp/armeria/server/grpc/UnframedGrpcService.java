@@ -181,7 +181,7 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
                 message = ((ByteBufHolder) content).content();
             } else {
                 message = ctx.alloc().buffer(content.length());
-                message.writeBytes(content.array(), content.offset(), content.length());
+                message.writeBytes(content.array());
             }
             final HttpData frame;
             boolean success = false;

@@ -119,7 +119,7 @@ public abstract class HttpObjectEncoder {
             return ((ByteBufHolder) data).content();
         }
         final ByteBuf buf = channel().alloc().directBuffer(data.length(), data.length());
-        buf.writeBytes(data.array(), data.offset(), data.length());
+        buf.writeBytes(data.array());
         return buf;
     }
 }

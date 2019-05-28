@@ -594,10 +594,10 @@ public class ThriftServiceTest {
         final HttpData res1 = promise.get();
         final HttpData res2 = promise2.get();
 
-        in.reset(res1.array(), res1.offset(), res1.length());
+        in.reset(res1.array());
         assertThat(client1.recv_removeMiddle()).isEqualTo(new Name(BAZ, null, FOO));
 
-        in.reset(res2.array(), res2.offset(), res2.length());
+        in.reset(res2.array());
         assertThat(client2.recv_sort()).containsExactly(NAME_A, NAME_B, NAME_C);
     }
 
@@ -624,7 +624,7 @@ public class ThriftServiceTest {
         invoke0(service, HttpData.of(out.getArray(), 0, out.length()), promise);
 
         final HttpData res = promise.get();
-        in.reset(res.array(), res.offset(), res.length());
+        in.reset(res.array());
     }
 
     private void invokeTwice(THttpService service1, THttpService service2) throws Exception {

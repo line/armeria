@@ -123,25 +123,6 @@ public interface AggregatedHttpRequest extends AggregatedHttpMessage {
      * @param path the path of the request
      * @param mediaType the {@link MediaType} of the request content
      * @param content the content of the request
-     * @param offset the start offset of {@code content}
-     * @param length the length of {@code content}
-     */
-    static AggregatedHttpRequest of(
-            HttpMethod method, String path, MediaType mediaType, byte[] content, int offset, int length) {
-        requireNonNull(method, "method");
-        requireNonNull(path, "path");
-        requireNonNull(mediaType, "mediaType");
-        requireNonNull(content, "content");
-        return of(method, path, mediaType, HttpData.of(content, offset, length));
-    }
-
-    /**
-     * Creates a new HTTP request.
-     *
-     * @param method the HTTP method of the request
-     * @param path the path of the request
-     * @param mediaType the {@link MediaType} of the request content
-     * @param content the content of the request
      */
     static AggregatedHttpRequest of(HttpMethod method, String path, MediaType mediaType, HttpData content) {
         requireNonNull(method, "method");

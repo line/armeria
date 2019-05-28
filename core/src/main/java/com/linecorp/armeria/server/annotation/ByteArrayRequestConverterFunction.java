@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server.annotation;
 
-import java.util.Arrays;
-
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -39,13 +37,7 @@ public class ByteArrayRequestConverterFunction implements RequestConverterFuncti
                                  Class<?> expectedResultType) throws Exception {
         final HttpData content = request.content();
         if (expectedResultType == byte[].class) {
-            final byte[] array = content.array();
-            final int length = content.length();
-            if (array.length == length) {
-                return array;
-            } else {
-                return Arrays.copyOfRange(array, content.offset(), length);
-            }
+            return content.array();
         }
         if (expectedResultType == HttpData.class) {
             return content;
