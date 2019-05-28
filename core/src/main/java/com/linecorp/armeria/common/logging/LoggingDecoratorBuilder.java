@@ -136,7 +136,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     }
 
     /**
-     * Sets the {@link Function} to use to sanitize request trailing headers before logging. If unset,
+     * Sets the {@link Function} to use to sanitize request trailers before logging. If unset,
      * will use {@link Function#identity()}.
      */
     public T requestTrailersSanitizer(
@@ -146,14 +146,14 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     }
 
     /**
-     * Returns the {@link Function} to use to sanitize request trailing headers before logging.
+     * Returns the {@link Function} to use to sanitize request trailers before logging.
      */
     protected Function<? super HttpHeaders, ? extends HttpHeaders> requestTrailersSanitizer() {
         return requestTrailersSanitizer;
     }
 
     /**
-     * Sets the {@link Function} to use to sanitize response trailing headers before logging. If unset,
+     * Sets the {@link Function} to use to sanitize response trailers before logging. If unset,
      * will use {@link Function#identity()}.
      */
     public T responseTrailersSanitizer(
@@ -163,14 +163,14 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     }
 
     /**
-     * Returns the {@link Function} to use to sanitize response trailing headers before logging.
+     * Returns the {@link Function} to use to sanitize response trailers before logging.
      */
     protected Function<? super HttpHeaders, ? extends HttpHeaders> responseTrailersSanitizer() {
         return responseTrailersSanitizer;
     }
 
     /**
-     * Sets the {@link Function} to use to sanitize request, response and trailing headers before logging.
+     * Sets the {@link Function} to use to sanitize request, response and trailers before logging.
      * It is common to have the {@link Function} that removes sensitive headers, like {@code "Cookie"} and
      * {@code "Set-Cookie"}, before logging. This method is a shortcut of:
      * <pre>{@code

@@ -35,7 +35,7 @@ import org.junit.runners.Parameterized.Parameters;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -78,7 +78,7 @@ public class DefaultHttpResponseTest {
     public void abortedAggregation() {
         final Thread mainThread = Thread.currentThread();
         final HttpResponseWriter res = HttpResponse.streaming();
-        final CompletableFuture<AggregatedHttpMessage> future;
+        final CompletableFuture<AggregatedHttpResponse> future;
 
         // Practically same execution, but we need to test the both case due to code duplication.
         if (executorSpecified) {
@@ -99,7 +99,7 @@ public class DefaultHttpResponseTest {
         final AtomicReference<Thread> callbackThread = new AtomicReference<>();
 
         assertThatThrownBy(() -> {
-            final CompletableFuture<AggregatedHttpMessage> f =
+            final CompletableFuture<AggregatedHttpResponse> f =
                     future.whenComplete((unused, cause) -> callbackThread.set(Thread.currentThread()));
             res.abort();
             f.join();
@@ -122,7 +122,7 @@ public class DefaultHttpResponseTest {
         res.write(HttpHeaders.of(HttpHeaderNames.of("g"), "h"));
         res.close();
 
-        final AggregatedHttpMessage aggregated = res.aggregate().join();
+        final AggregatedHttpResponse aggregated = res.aggregate().join();
         // Informational headers
         assertThat(aggregated.informationals()).containsExactly(
                 ResponseHeaders.of(HttpStatus.CONTINUE, HttpHeaderNames.of("a"), "b"));
@@ -130,6 +130,6 @@ public class DefaultHttpResponseTest {
         assertThat(aggregated.headers()).isEqualTo(ResponseHeaders.of(200));
 
         assertThat(aggregated.contentUtf8()).isEmpty();
-        assertThat(aggregated.trailingHeaders()).isEqualTo(HttpHeaders.of(HttpHeaderNames.of("c"), "d"));
+        assertThat(aggregated.trailers()).isEqualTo(HttpHeaders.of(HttpHeaderNames.of("c"), "d"));
     }
 }

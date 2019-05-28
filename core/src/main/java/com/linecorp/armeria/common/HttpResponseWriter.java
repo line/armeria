@@ -158,24 +158,24 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
-     * @param trailingHeaders the trailing HTTP headers
+     * @param trailers the HTTP trailers
      *
      * @deprecated Use {@link HttpResponse#of(HttpStatus, MediaType, HttpData, HttpHeaders)}.
      */
     @Deprecated
     default void respond(HttpStatus status, MediaType mediaType, HttpData content,
-                         HttpHeaders trailingHeaders) {
+                         HttpHeaders trailers) {
         requireNonNull(status, "status");
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
-        requireNonNull(trailingHeaders, "trailingHeaders");
+        requireNonNull(trailers, "trailers");
 
         final ResponseHeaders headers =
                 ResponseHeaders.of(status,
                                    HttpHeaderNames.CONTENT_TYPE, mediaType,
                                    HttpHeaderNames.CONTENT_LENGTH, content.length());
 
-        if (isContentAlwaysEmptyWithValidation(status, content, trailingHeaders)) {
+        if (isContentAlwaysEmptyWithValidation(status, content, trailers)) {
             ReferenceCountUtil.safeRelease(content);
             write(headers);
         } else {
@@ -186,9 +186,9 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
             }
         }
 
-        // Add trailing headers if not empty.
-        if (!trailingHeaders.isEmpty()) {
-            write(trailingHeaders);
+        // Add trailers if not empty.
+        if (!trailers.isEmpty()) {
+            write(trailers);
         }
 
         close();
@@ -196,26 +196,16 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
 
     /**
      * Writes the specified HTTP response and closes the stream.
-     *
-     * @deprecated Use {@link #close(AggregatedHttpMessage)}.
      */
-    @Deprecated
-    default void respond(AggregatedHttpMessage res) {
-        close(res);
-    }
-
-    /**
-     * Writes the specified HTTP response and closes the stream.
-     */
-    default void close(AggregatedHttpMessage res) {
+    default void close(AggregatedHttpResponse res) {
         requireNonNull(res, "res");
 
-        final ResponseHeaders headers = ResponseHeaders.of(res.headers());
+        final ResponseHeaders headers = res.headers();
         final HttpStatus status = headers.status();
         final HttpData content = res.content();
-        final HttpHeaders trailingHeaders = res.trailingHeaders();
+        final HttpHeaders trailers = res.trailers();
 
-        if (isContentAlwaysEmptyWithValidation(status, content, trailingHeaders)) {
+        if (isContentAlwaysEmptyWithValidation(status, content, trailers)) {
             ReferenceCountUtil.safeRelease(content);
             write(headers);
         } else {
@@ -226,9 +216,9 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
             }
         }
 
-        // Add trailing headers if not empty.
-        if (!trailingHeaders.isEmpty()) {
-            write(trailingHeaders);
+        // Add trailers if not empty.
+        if (!trailers.isEmpty()) {
+            write(trailers);
         }
 
         close();

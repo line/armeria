@@ -22,7 +22,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Annotation for an additional HTTP trailing header.
+ * Annotation for an additional HTTP trailer.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Repeatable(AdditionalTrailers.class)
@@ -30,12 +30,12 @@ import java.lang.annotation.Target;
 public @interface AdditionalTrailer {
 
     /**
-     * The name of the HTTP trailing header to set.
+     * The name of the HTTP trailer to set.
      */
     String name();
 
     /**
-     * The values of the HTTP trailing header to set.
+     * The values of the HTTP trailer to set.
      */
     String[] value();
 }

@@ -24,7 +24,7 @@ import org.opensaml.messaging.context.MessageContext;
 import org.opensaml.saml.saml2.core.AuthnRequest;
 import org.opensaml.saml.saml2.core.Response;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
@@ -56,13 +56,13 @@ public interface SamlSingleSignOnHandler {
      * to the client in response to the incoming {@code req}.
      *
      * @param ctx the {@link ServiceRequestContext} of {@code req}
-     * @param req the {@link AggregatedHttpMessage} being handled
+     * @param req the {@link AggregatedHttpRequest} being handled
      * @param message the {@link MessageContext} of the {@link Response} received from the identity provider
      * @param sessionIndex the retrieved value from the {@link Response} message. {@code null} if it is omitted.
      * @param relayState the string which is sent with the {@link AuthnRequest} message and is returned
      *                   with the {@link Response} message. {@code null} if it is omitted.
      */
-    HttpResponse loginSucceeded(ServiceRequestContext ctx, AggregatedHttpMessage req,
+    HttpResponse loginSucceeded(ServiceRequestContext ctx, AggregatedHttpRequest req,
                                 MessageContext<Response> message,
                                 @Nullable String sessionIndex,
                                 @Nullable String relayState);
@@ -73,13 +73,13 @@ public interface SamlSingleSignOnHandler {
      * examples.
      *
      * @param ctx the {@link ServiceRequestContext} of {@code req}
-     * @param req the {@link AggregatedHttpMessage} being handled
+     * @param req the {@link AggregatedHttpRequest} being handled
      * @param message the {@link MessageContext} of the {@link Response} received from the identity provider.
      *                {@code null} if the content of the {@code req} was failed to be parsed as a
      *                {@link Response} message.
      * @param cause the reason of the failure
      */
-    HttpResponse loginFailed(ServiceRequestContext ctx, AggregatedHttpMessage req,
+    HttpResponse loginFailed(ServiceRequestContext ctx, AggregatedHttpRequest req,
                              @Nullable MessageContext<Response> message,
                              Throwable cause);
 }

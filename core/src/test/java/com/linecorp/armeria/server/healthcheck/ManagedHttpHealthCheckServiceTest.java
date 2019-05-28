@@ -18,9 +18,9 @@ package com.linecorp.armeria.server.healthcheck;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -31,7 +31,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 
-public class ManagedHttpHealthCheckServiceTest {
+class ManagedHttpHealthCheckServiceTest {
 
     private final ManagedHttpHealthCheckService service = new ManagedHttpHealthCheckService();
 
@@ -43,15 +43,15 @@ public class ManagedHttpHealthCheckServiceTest {
             HttpRequest.of(HttpMethod.PUT, "/", MediaType.PLAIN_TEXT_UTF_8, "on");
 
     @Test
-    public void turnOff() throws Exception {
+    void turnOff() throws Exception {
         service.serverHealth.setHealthy(true);
 
         ServiceRequestContext ctx = ServiceRequestContext.of(hcTurnOffReq);
-        AggregatedHttpMessage res = service.serve(ctx, hcTurnOffReq).aggregate().get();
+        AggregatedHttpResponse res = service.serve(ctx, hcTurnOffReq).aggregate().get();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE))
-                  .isEqualTo(MediaType.PLAIN_TEXT_UTF_8.toString());
+                .isEqualTo(MediaType.PLAIN_TEXT_UTF_8.toString());
         assertThat(res.contentUtf8()).isEqualTo("Set unhealthy.");
 
         ctx = ServiceRequestContextBuilder.of(hcReq).service(service).build();
@@ -63,9 +63,9 @@ public class ManagedHttpHealthCheckServiceTest {
     }
 
     @Test
-    public void turnOn() throws Exception {
+    void turnOn() throws Exception {
         ServiceRequestContext ctx = ServiceRequestContext.of(hcTurnOnReq);
-        AggregatedHttpMessage res = service.serve(ctx, hcTurnOnReq).aggregate().get();
+        AggregatedHttpResponse res = service.serve(ctx, hcTurnOnReq).aggregate().get();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo(
@@ -81,13 +81,13 @@ public class ManagedHttpHealthCheckServiceTest {
     }
 
     @Test
-    public void notSupported() throws Exception {
+    void notSupported() throws Exception {
         HttpRequestWriter noopRequest = HttpRequest.streaming(HttpMethod.PUT, "/");
         noopRequest.write(() -> HttpData.ofAscii("noop"));
         noopRequest.close();
 
         ServiceRequestContext ctx = ServiceRequestContext.of(noopRequest);
-        AggregatedHttpMessage res = service.serve(ctx, noopRequest).aggregate().get();
+        AggregatedHttpResponse res = service.serve(ctx, noopRequest).aggregate().get();
 
         assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo(

@@ -52,7 +52,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     private enum State {
         NEED_HEADERS,
         NEED_INFORMATIONAL_DATA,
-        NEED_DATA_OR_TRAILING_HEADERS,
+        NEED_DATA_OR_TRAILERS,
         DISCARD
     }
 
@@ -158,7 +158,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         if (nettyRes.status().codeClass() == HttpStatusClass.INFORMATIONAL) {
                             state = State.NEED_INFORMATIONAL_DATA;
                         } else {
-                            state = State.NEED_DATA_OR_TRAILING_HEADERS;
+                            state = State.NEED_DATA_OR_TRAILERS;
                         }
 
                         res.scheduleTimeout(channel().eventLoop());
@@ -174,7 +174,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         failWithUnexpectedMessageType(ctx, msg);
                     }
                     break;
-                case NEED_DATA_OR_TRAILING_HEADERS:
+                case NEED_DATA_OR_TRAILERS:
                     if (msg instanceof HttpContent) {
                         final HttpContent content = (HttpContent) msg;
                         final DecoderResult decoderResult = content.decoderResult();

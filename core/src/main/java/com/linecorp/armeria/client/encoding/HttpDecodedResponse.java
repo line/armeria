@@ -65,7 +65,7 @@ class HttpDecodedResponse extends FilteredHttpResponse {
             }
 
             if (headersReceived) {
-                // Trailing headers, no modification.
+                // Trailers, no modification.
                 return obj;
             }
 

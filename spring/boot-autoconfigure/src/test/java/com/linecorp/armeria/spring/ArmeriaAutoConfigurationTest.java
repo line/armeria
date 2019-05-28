@@ -44,7 +44,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
@@ -147,11 +147,12 @@ public class ArmeriaAutoConfigurationTest {
         public HttpResponse convertResponse(ServiceRequestContext ctx,
                                             ResponseHeaders headers,
                                             @Nullable Object result,
-                                            HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailers) throws Exception {
             if (result instanceof String) {
                 return HttpResponse.of(HttpStatus.OK,
                                        MediaType.ANY_TEXT_TYPE,
-                                       result.toString());
+                                       result.toString(),
+                                       trailers);
             }
             return ResponseConverterFunction.fallthrough();
         }
@@ -159,13 +160,13 @@ public class ArmeriaAutoConfigurationTest {
 
     public static class AnnotatedService {
         @Get("/get")
-        public AggregatedHttpMessage get() {
-            return AggregatedHttpMessage.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "annotated");
+        public AggregatedHttpResponse get() {
+            return AggregatedHttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "annotated");
         }
 
         // Handles by AnnotatedServiceRegistrationBean#exceptionHandlers
         @Get("/get/2")
-        public AggregatedHttpMessage getV2() {
+        public AggregatedHttpResponse getV2() {
             throw new IllegalArgumentException();
         }
     }
@@ -198,9 +199,9 @@ public class ArmeriaAutoConfigurationTest {
 
         final HttpResponse response = client.get("/ok");
 
-        final AggregatedHttpMessage msg = response.aggregate().get();
-        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
-        assertThat(msg.contentUtf8()).isEqualTo("ok");
+        final AggregatedHttpResponse res = response.aggregate().get();
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentUtf8()).isEqualTo("ok");
     }
 
     @Test
@@ -209,14 +210,14 @@ public class ArmeriaAutoConfigurationTest {
 
         HttpResponse response = client.get("/annotated/get");
 
-        AggregatedHttpMessage msg = response.aggregate().get();
-        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
-        assertThat(msg.contentUtf8()).isEqualTo("annotated");
+        AggregatedHttpResponse res = response.aggregate().get();
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentUtf8()).isEqualTo("annotated");
 
         response = client.get("/annotated/get/2");
-        msg = response.aggregate().get();
-        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
-        assertThat(msg.contentUtf8()).isEqualTo("exception");
+        res = response.aggregate().get();
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentUtf8()).isEqualTo("exception");
     }
 
     @Test
@@ -229,11 +230,11 @@ public class ArmeriaAutoConfigurationTest {
         final HttpClient httpClient = HttpClient.of(newUrl("h1c"));
         final HttpResponse response = httpClient.get("/internal/docs/specification.json");
 
-        final AggregatedHttpMessage msg = response.aggregate().get();
-        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
-        assertThatJson(msg.contentUtf8()).node("services[2].name").isStringEqualTo(
+        final AggregatedHttpResponse res = response.aggregate().get();
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThatJson(res.contentUtf8()).node("services[2].name").isStringEqualTo(
                 "com.linecorp.armeria.spring.test.thrift.main.HelloService");
-        assertThatJson(msg.contentUtf8())
+        assertThatJson(res.contentUtf8())
                 .node("services[2].exampleHttpHeaders[0].x-additional-header").isStringEqualTo("headerVal");
     }
 
@@ -249,11 +250,11 @@ public class ArmeriaAutoConfigurationTest {
         final HttpClient httpClient = HttpClient.of(newUrl("h1c"));
         final HttpResponse response = httpClient.get("/internal/docs/specification.json");
 
-        final AggregatedHttpMessage msg = response.aggregate().get();
-        assertThat(msg.status()).isEqualTo(HttpStatus.OK);
-        assertThatJson(msg.contentUtf8()).node("services[1].name").isStringEqualTo(
+        final AggregatedHttpResponse res = response.aggregate().get();
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThatJson(res.contentUtf8()).node("services[1].name").isStringEqualTo(
                 "com.linecorp.armeria.spring.test.grpc.main.HelloService");
-        assertThatJson(msg.contentUtf8())
+        assertThatJson(res.contentUtf8())
                 .node("services[1].exampleHttpHeaders").isEqualTo(Collections.emptyList());
     }
 

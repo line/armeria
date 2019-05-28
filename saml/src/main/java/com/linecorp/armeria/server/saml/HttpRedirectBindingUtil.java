@@ -48,7 +48,7 @@ import org.opensaml.xmlsec.crypto.XMLSigningUtil;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -127,7 +127,7 @@ final class HttpRedirectBindingUtil {
     }
 
     /**
-     * Validates a signature in the specified {@link AggregatedHttpMessage}.
+     * Validates a signature in the specified {@link AggregatedHttpRequest}.
      */
     private static void validateSignature(Credential validationCredential,
                                           SamlParameters parameters,
@@ -229,19 +229,19 @@ final class HttpRedirectBindingUtil {
     }
 
     /**
-     * Converts an {@link AggregatedHttpMessage} which is received from the remote entity to
+     * Converts an {@link AggregatedHttpRequest} which is received from the remote entity to
      * a {@link SAMLObject}.
      */
     @SuppressWarnings("unchecked")
     static <T extends SAMLObject> MessageContext<T> toSamlObject(
-            AggregatedHttpMessage msg, String name,
+            AggregatedHttpRequest req, String name,
             Map<String, SamlIdentityProviderConfig> idpConfigs,
             @Nullable SamlIdentityProviderConfig defaultIdpConfig) {
-        requireNonNull(msg, "msg");
+        requireNonNull(req, "req");
         requireNonNull(name, "name");
         requireNonNull(idpConfigs, "idpConfigs");
 
-        final SamlParameters parameters = new SamlParameters(msg);
+        final SamlParameters parameters = new SamlParameters(req);
         final T message = (T) fromDeflatedBase64(parameters.getFirstValue(name));
 
         final MessageContext<T> messageContext = new MessageContext<>();

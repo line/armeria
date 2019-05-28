@@ -28,7 +28,8 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -123,7 +124,7 @@ public class AnnotatedHttpServiceExceptionHandlerTest {
 
         @Get("/async/aggregation")
         public CompletionStage<String> async(ServiceRequestContext ctx,
-                                             AggregatedHttpMessage req) {
+                                             AggregatedHttpRequest req) {
             // Aggregate the request then throw an exception.
             throw new IllegalArgumentException("Oops!");
         }
@@ -248,7 +249,7 @@ public class AnnotatedHttpServiceExceptionHandlerTest {
     public void testExceptionHandler() throws Exception {
         final HttpClient client = HttpClient.of(rule.uri("/"));
 
-        AggregatedHttpMessage response;
+        AggregatedHttpResponse response;
 
         NoExceptionHandler.counter.set(0);
 

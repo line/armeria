@@ -27,7 +27,8 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -120,7 +121,7 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
     static class MyRequestConverter implements RequestConverterFunction {
         @Nullable
         @Override
-        public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
+        public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
                                      Class<?> expectedResultType) throws Exception {
             if (expectedResultType == MyRequest.class) {
                 final String decorated = ctx.attr(decoratedFlag).get();
@@ -134,8 +135,8 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
         @Override
         public HttpResponse convertResponse(
                 ServiceRequestContext ctx, ResponseHeaders headers,
-                @Nullable Object result, HttpHeaders trailingHeaders) throws Exception {
-            return HttpResponse.of(headers, HttpData.ofUtf8("Hello, %s!", result), trailingHeaders);
+                @Nullable Object result, HttpHeaders trailers) throws Exception {
+            return HttpResponse.of(headers, HttpData.ofUtf8("Hello, %s!", result), trailers);
         }
     }
 
@@ -234,7 +235,7 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
 
     @Test
     public void metaAnnotations() {
-        final AggregatedHttpMessage msg =
+        final AggregatedHttpResponse msg =
                 HttpClient.of(rule.uri("/"))
                           .execute(RequestHeaders.of(HttpMethod.POST, "/hello",
                                                      HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
@@ -247,13 +248,13 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
         assertThat(msg.headers().get(HttpHeaderNames.of("x-bar"))).isEqualTo("bar");
         assertThat(msg.contentUtf8())
                 .isEqualTo("Hello, Armeria (decorated-1) (decorated-2) (decorated-3)!");
-        assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("x-baz"))).isEqualTo("baz");
-        assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("x-qux"))).isEqualTo("qux");
+        assertThat(msg.trailers().get(HttpHeaderNames.of("x-baz"))).isEqualTo("baz");
+        assertThat(msg.trailers().get(HttpHeaderNames.of("x-qux"))).isEqualTo("qux");
     }
 
     @Test
     public void metaOfMetaAnnotation_ProducesJson() {
-        final AggregatedHttpMessage msg =
+        final AggregatedHttpResponse msg =
                 HttpClient.of(rule.uri("/"))
                           .execute(RequestHeaders.of(HttpMethod.POST, "/hello",
                                                      HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
@@ -266,13 +267,13 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
         assertThat(msg.headers().get(HttpHeaderNames.of("x-bar"))).isEqualTo("bar");
         assertThat(msg.contentUtf8())
                 .isEqualTo("Hello, Armeria (decorated-1) (decorated-2) (decorated-3)!");
-        assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("x-baz"))).isEqualTo("baz");
-        assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("x-qux"))).isEqualTo("qux");
+        assertThat(msg.trailers().get(HttpHeaderNames.of("x-baz"))).isEqualTo("baz");
+        assertThat(msg.trailers().get(HttpHeaderNames.of("x-qux"))).isEqualTo("qux");
     }
 
     @Test
     public void exception1() {
-        final AggregatedHttpMessage msg =
+        final AggregatedHttpResponse msg =
                 HttpClient.of(rule.uri("/")).get("/exception1").aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         // @AdditionalHeader/Trailer is added using ServiceRequestContext, so they are added even if
@@ -280,12 +281,12 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
         assertThat(msg.headers().get(HttpHeaderNames.of("x-foo"))).isEqualTo("foo");
         assertThat(msg.contentUtf8())
                 .isEqualTo("Cause:" + IllegalArgumentException.class.getSimpleName());
-        assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("x-bar"))).isEqualTo("bar");
+        assertThat(msg.trailers().get(HttpHeaderNames.of("x-bar"))).isEqualTo("bar");
     }
 
     @Test
     public void exception2() {
-        final AggregatedHttpMessage msg =
+        final AggregatedHttpResponse msg =
                 HttpClient.of(rule.uri("/")).get("/exception2").aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         // @AdditionalHeader/Trailer is added using ServiceRequestContext, so they are added even if
@@ -293,6 +294,6 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
         assertThat(msg.headers().get(HttpHeaderNames.of("x-foo"))).isEqualTo("foo");
         assertThat(msg.contentUtf8())
                 .isEqualTo("Cause:" + IllegalStateException.class.getSimpleName());
-        assertThat(msg.trailingHeaders().get(HttpHeaderNames.of("x-bar"))).isEqualTo("bar");
+        assertThat(msg.trailers().get(HttpHeaderNames.of("x-bar"))).isEqualTo("bar");
     }
 }

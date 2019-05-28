@@ -45,6 +45,7 @@ import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingHttpClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.SslContextUtil;
 import com.linecorp.armeria.server.PathMappingContext;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceConfig;
@@ -55,7 +56,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.epoll.Epoll;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Exception;
-import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.ReferenceCountUtil;
@@ -279,20 +279,16 @@ public final class Flags {
                         Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
 
             if (dumpOpenSslInfo()) {
-                try {
-                    final SSLEngine engine = SslContextBuilder
-                            .forClient()
-                            .ciphers(Http2SecurityUtil.CIPHERS)
-                            .build()
-                            .newEngine(ByteBufAllocator.DEFAULT);
-                    logger.info("All available SSL protocols: {}",
-                                ImmutableList.copyOf(engine.getSupportedProtocols()));
-                    ReferenceCountUtil.release(engine);
-                } catch (SSLException e) {
-                    // Just skip it if it doesn't work for some reason.
-                }
+                final SSLEngine engine = SslContextUtil.createSslContext(
+                        SslContextBuilder::forClient,
+                        false,
+                        unused -> {}).newEngine(ByteBufAllocator.DEFAULT);
+                logger.info("All available SSL protocols: {}",
+                            ImmutableList.copyOf(engine.getSupportedProtocols()));
+                logger.info("Default enabled SSL protocols: {}", SslContextUtil.DEFAULT_PROTOCOLS);
+                ReferenceCountUtil.release(engine);
                 logger.info("All available SSL ciphers: {}", OpenSsl.availableJavaCipherSuites());
-                logger.info("Default enabled SSL ciphers: {}", Http2SecurityUtil.CIPHERS);
+                logger.info("Default enabled SSL ciphers: {}", SslContextUtil.DEFAULT_CIPHERS);
             }
         }
     }

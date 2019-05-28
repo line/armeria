@@ -46,7 +46,7 @@ public class StringResponseConverterFunctionTest {
     private static final ResponseConverterFunction function = new StringResponseConverterFunction();
     private static final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
 
-    private static final HttpHeaders DEFAULT_TRAILING_HEADERS = HttpHeaders.of();
+    private static final HttpHeaders DEFAULT_TRAILERS = HttpHeaders.of();
 
     @BeforeClass
     public static void setup() {
@@ -79,7 +79,7 @@ public class StringResponseConverterFunctionTest {
     @Test
     public void withoutContentType() throws Exception {
         StepVerifier.create(function.convertResponse(ctx, ResponseHeaders.of(HttpStatus.OK),
-                                                     "foo", DEFAULT_TRAILING_HEADERS))
+                                                     "foo", DEFAULT_TRAILERS))
                     .expectNext(ResponseHeaders.of(HttpStatus.OK,
                                                    HttpHeaderNames.CONTENT_TYPE,
                                                    MediaType.PLAIN_TEXT_UTF_8,
@@ -89,7 +89,7 @@ public class StringResponseConverterFunctionTest {
                     .verify();
 
         assertThatThrownBy(() -> function.convertResponse(
-                ctx, ResponseHeaders.of(HttpStatus.OK), ImmutableList.of(), DEFAULT_TRAILING_HEADERS))
+                ctx, ResponseHeaders.of(HttpStatus.OK), ImmutableList.of(), DEFAULT_TRAILERS))
                 .isInstanceOf(FallthroughException.class);
     }
 
@@ -98,7 +98,7 @@ public class StringResponseConverterFunctionTest {
         final ResponseHeaders headers = ResponseHeaders.of(HttpStatus.OK,
                                                            HttpHeaderNames.CONTENT_TYPE,
                                                            "text/plain; charset=euc-kr");
-        StepVerifier.create(function.convertResponse(ctx, headers, "한글", DEFAULT_TRAILING_HEADERS))
+        StepVerifier.create(function.convertResponse(ctx, headers, "한글", DEFAULT_TRAILERS))
                     .expectNext(headers.toBuilder()
                                        .addInt(HttpHeaderNames.CONTENT_LENGTH, 4)
                                        .build())
@@ -111,6 +111,6 @@ public class StringResponseConverterFunctionTest {
         final ResponseHeaders headers =
                 ResponseHeaders.of(HttpStatus.OK,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
-        return function.convertResponse(ctx, headers, result, DEFAULT_TRAILING_HEADERS);
+        return function.convertResponse(ctx, headers, result, DEFAULT_TRAILERS);
     }
 }

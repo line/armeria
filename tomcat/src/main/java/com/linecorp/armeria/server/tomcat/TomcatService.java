@@ -49,7 +49,7 @@ import org.apache.tomcat.util.http.MimeHeaders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -334,7 +334,7 @@ public abstract class TomcatService implements HttpService {
     }
 
     @Nullable
-    private Request convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage req) throws Throwable {
+    private Request convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest req) throws Throwable {
         final String mappedPath = ctx.mappedPath();
         final Request coyoteReq = new Request();
 
@@ -352,7 +352,7 @@ public abstract class TomcatService implements HttpService {
         coyoteReq.localName().setString(hostName());
         coyoteReq.setLocalPort(localAddr.getPort());
 
-        final String hostHeader = req.headers().get(HttpHeaderNames.AUTHORITY);
+        final String hostHeader = req.authority();
         final int colonPos = hostHeader.indexOf(':');
         if (colonPos < 0) {
             coyoteReq.serverName().setString(hostHeader);
@@ -383,7 +383,7 @@ public abstract class TomcatService implements HttpService {
         // Set the headers.
         final MimeHeaders cHeaders = coyoteReq.getMimeHeaders();
         convertHeaders(req.headers(), cHeaders);
-        convertHeaders(req.trailingHeaders(), cHeaders);
+        convertHeaders(req.trailers(), cHeaders);
 
         // Set the content.
         final HttpData content = req.content();

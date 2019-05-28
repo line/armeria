@@ -31,7 +31,7 @@ import org.mockito.junit.MockitoRule;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextBuilder;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -202,7 +202,7 @@ public class DefaultRequestLogTest {
                 RequestHeaders.of(HttpMethod.POST, "/armeria/awesome",
                                   HttpHeaderNames.CONTENT_LENGTH, VERY_LONG_STRING.length());
         final HttpRequest req = HttpRequest.of(
-                AggregatedHttpMessage.of(reqHeaders, HttpData.ofUtf8(VERY_LONG_STRING)));
+                AggregatedHttpRequest.of(reqHeaders, HttpData.ofUtf8(VERY_LONG_STRING)));
         final ClientRequestContext ctx = ClientRequestContextBuilder.of(req).build();
 
         final RequestLogBuilder logBuilder = ctx.logBuilder();
@@ -229,7 +229,7 @@ public class DefaultRequestLogTest {
                 RequestHeaders.of(HttpMethod.POST, "/armeria/awesome",
                                   HttpHeaderNames.CONTENT_LENGTH, VERY_LONG_STRING.length());
         final HttpRequest req = HttpRequest.of(
-                AggregatedHttpMessage.of(reqHeaders, HttpData.ofUtf8(VERY_LONG_STRING)));
+                AggregatedHttpRequest.of(reqHeaders, HttpData.ofUtf8(VERY_LONG_STRING)));
         final ClientRequestContext ctx = ClientRequestContextBuilder.of(req).build();
         final RequestLogBuilder logBuilder = ctx.logBuilder();
         logBuilder.endRequest();

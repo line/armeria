@@ -34,7 +34,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.Server;
@@ -71,7 +71,7 @@ public class ArmeriaAutoConfigurationWithoutMeterTest {
 
         final HttpResponse response = client.get("/ok");
 
-        final AggregatedHttpMessage msg = response.aggregate().get();
+        final AggregatedHttpResponse msg = response.aggregate().get();
         assertThat(msg.status()).isEqualTo(HttpStatus.OK);
         assertThat(msg.contentUtf8()).isEqualTo("ok");
     }

@@ -148,7 +148,7 @@ public final class ArmeriaHttpUtil {
     private static final CharSequenceMap HTTP2_TO_HTTP_HEADER_BLACKLIST = new CharSequenceMap();
 
     /**
-     * The set of headers that must not be directly copied when converting trailing headers.
+     * The set of headers that must not be directly copied when converting trailers.
      */
     private static final CharSequenceMap HTTP_TRAILER_BLACKLIST = new CharSequenceMap();
 
@@ -371,11 +371,11 @@ public final class ArmeriaHttpUtil {
      * Returns {@code true} if the content of the response with the given {@link HttpStatus} is expected to
      * be always empty (1xx, 204, 205 and 304 responses.)
      *
-     * @throws IllegalArgumentException if the specified {@code content} or {@code trailingHeaders} are
+     * @throws IllegalArgumentException if the specified {@code content} or {@code trailers} are
      *                                  non-empty when the content is always empty
      */
     public static boolean isContentAlwaysEmptyWithValidation(
-            HttpStatus status, HttpData content, HttpHeaders trailingHeaders) {
+            HttpStatus status, HttpData content, HttpHeaders trailers) {
         if (!isContentAlwaysEmpty(status)) {
             return false;
         }
@@ -384,9 +384,9 @@ public final class ArmeriaHttpUtil {
             throw new IllegalArgumentException(
                     "A " + status + " response must have empty content: " + content.length() + " byte(s)");
         }
-        if (!trailingHeaders.isEmpty()) {
+        if (!trailers.isEmpty()) {
             throw new IllegalArgumentException(
-                    "A " + status + " response must not have trailing headers: " + trailingHeaders);
+                    "A " + status + " response must not have trailers: " + trailers);
         }
 
         return true;
@@ -811,7 +811,7 @@ public final class ArmeriaHttpUtil {
     public static Http2Headers toNettyHttp2(HttpHeaders in, boolean server) {
         final Http2Headers out = new DefaultHttp2Headers(false, in.size());
 
-        // Trailing headers if it does not have :status.
+        // Trailers if it does not have :status.
         if (server && !in.contains(HttpHeaderNames.STATUS)) {
             for (Entry<AsciiString, String> entry : in) {
                 final AsciiString name = entry.getKey();
@@ -849,7 +849,7 @@ public final class ArmeriaHttpUtil {
      * @param outputHeaders The object which will contain the resulting HTTP/1.x headers..
      * @param httpVersion What HTTP/1.x version {@code outputHeaders} should be treated as
      *                    when doing the conversion.
-     * @param isTrailer {@code true} if {@code outputHeaders} should be treated as trailing headers.
+     * @param isTrailer {@code true} if {@code outputHeaders} should be treated as trailers.
      *                  {@code false} otherwise.
      * @param isRequest {@code true} if the {@code outputHeaders} will be used in a request message.
      *                  {@code false} for response message.
@@ -907,29 +907,29 @@ public final class ArmeriaHttpUtil {
 
     /**
      * Returns a {@link ResponseHeaders} whose {@link HttpHeaderNames#CONTENT_LENGTH} is added or removed
-     * according to the status of the specified {@code headers}, {@code content} and {@code trailingHeaders}.
+     * according to the status of the specified {@code headers}, {@code content} and {@code trailers}.
      * The {@link HttpHeaderNames#CONTENT_LENGTH} is removed when:
      * <ul>
      *   <li>the status of the specified {@code headers} is one of informational headers,
      *   {@link HttpStatus#NO_CONTENT} or {@link HttpStatus#RESET_CONTENT}</li>
-     *   <li>the trailing headers exists</li>
+     *   <li>the trailers exists</li>
      * </ul>
      * The {@link HttpHeaderNames#CONTENT_LENGTH} is added when the state of the specified {@code headers}
      * does not meet the conditions above and {@link HttpHeaderNames#CONTENT_LENGTH} is not present
      * regardless of the fact that the content is empty or not.
      *
-     * @throws IllegalArgumentException if the specified {@code content} or {@code trailingHeaders} are
+     * @throws IllegalArgumentException if the specified {@code content} or {@code trailers} are
      *                                  non-empty when the content is always empty
      */
     public static ResponseHeaders setOrRemoveContentLength(ResponseHeaders headers, HttpData content,
-                                                           HttpHeaders trailingHeaders) {
+                                                           HttpHeaders trailers) {
         requireNonNull(headers, "headers");
         requireNonNull(content, "content");
-        requireNonNull(trailingHeaders, "trailingHeaders");
+        requireNonNull(trailers, "trailers");
 
         final HttpStatus status = headers.status();
 
-        if (isContentAlwaysEmptyWithValidation(status, content, trailingHeaders)) {
+        if (isContentAlwaysEmptyWithValidation(status, content, trailers)) {
             if (status != HttpStatus.NOT_MODIFIED) {
                 if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
                     final ResponseHeadersBuilder builder = headers.toBuilder();
@@ -944,10 +944,10 @@ public final class ArmeriaHttpUtil {
             return headers;
         }
 
-        if (!trailingHeaders.isEmpty()) {
-            // Some of the client implementations such as "curl" ignores trailing headers if
-            // the "content-length" header is present. We should not set "content-length" header when trailing
-            // headers exists so that those clients can receive the trailing headers.
+        if (!trailers.isEmpty()) {
+            // Some of the client implementations such as "curl" ignores trailers if
+            // the "content-length" header is present. We should not set "content-length" header when
+            // trailers exists so that those clients can receive the trailers.
             // The response is sent using chunked transfer encoding in HTTP/1 or a DATA frame payload
             // in HTTP/2, so it's no worry.
             if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {

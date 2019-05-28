@@ -21,7 +21,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -48,7 +48,7 @@ public class HttpFileServiceAdditionalHeadersTest {
     @Test
     public void testAdditionalHeaders() {
         final HttpClient client = HttpClient.of(server.uri("/"));
-        final AggregatedHttpMessage res = client.get("/java/lang/Object.class").aggregate().join();
+        final AggregatedHttpResponse res = client.get("/java/lang/Object.class").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().getAll(HttpHeaderNames.of("foo"))).containsExactly("1", "2");
         assertThat(res.headers().getAll(HttpHeaderNames.of("bar"))).containsExactly("3");

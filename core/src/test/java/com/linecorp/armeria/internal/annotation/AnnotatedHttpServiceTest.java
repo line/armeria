@@ -49,7 +49,8 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpParameters;
@@ -233,7 +234,7 @@ public class AnnotatedHttpServiceTest {
         public HttpResponse convertResponse(ServiceRequestContext ctx,
                                             ResponseHeaders headers,
                                             @Nullable Object result,
-                                            HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailers) throws Exception {
             if (result == null) {
                 return HttpResponse.of(HttpStatus.OK);
             }
@@ -314,44 +315,44 @@ public class AnnotatedHttpServiceTest {
     public static class MyAnnotatedService5 {
         @Post
         @Path("/a/string")
-        public String postString(AggregatedHttpMessage message, RequestContext ctx) {
+        public String postString(AggregatedHttpRequest request, RequestContext ctx) {
             validateContext(ctx);
-            return message.contentUtf8();
+            return request.contentUtf8();
         }
 
         @Post
         @Path("/a/string-async1")
-        public CompletionStage<String> postStringAsync1(AggregatedHttpMessage message, RequestContext ctx) {
+        public CompletionStage<String> postStringAsync1(AggregatedHttpRequest request, RequestContext ctx) {
             validateContext(ctx);
-            return CompletableFuture.supplyAsync(message::contentUtf8);
+            return CompletableFuture.supplyAsync(request::contentUtf8);
         }
 
         @Post
         @Path("/a/string-async2")
-        public HttpResponse postStringAsync2(AggregatedHttpMessage message, RequestContext ctx) {
+        public HttpResponse postStringAsync2(AggregatedHttpRequest request, RequestContext ctx) {
             validateContext(ctx);
             final HttpResponseWriter response = HttpResponse.streaming();
             response.write(ResponseHeaders.of(HttpStatus.OK));
-            response.write(message.content());
+            response.write(request.content());
             response.close();
             return response;
         }
 
         @Post
         @Path("/a/string-aggregate-response1")
-        public AggregatedHttpMessage postStringAggregateResponse1(AggregatedHttpMessage message,
-                                                                  RequestContext ctx) {
+        public AggregatedHttpResponse postStringAggregateResponse1(AggregatedHttpRequest request,
+                                                                   RequestContext ctx) {
             validateContext(ctx);
-            return AggregatedHttpMessage.of(ResponseHeaders.of(HttpStatus.OK), message.content());
+            return AggregatedHttpResponse.of(ResponseHeaders.of(HttpStatus.OK), request.content());
         }
 
         @Post
         @Path("/a/string-aggregate-response2")
-        public AggregatedHttpMessage postStringAggregateResponse2(HttpRequest req,
-                                                                  RequestContext ctx) {
+        public AggregatedHttpResponse postStringAggregateResponse2(HttpRequest req,
+                                                                   RequestContext ctx) {
             validateContextAndRequest(ctx, req);
-            final AggregatedHttpMessage message = req.aggregate().join();
-            return AggregatedHttpMessage.of(ResponseHeaders.of(HttpStatus.OK), message.content());
+            final AggregatedHttpRequest request = req.aggregate().join();
+            return AggregatedHttpResponse.of(ResponseHeaders.of(HttpStatus.OK), request.content());
         }
     }
 

@@ -20,23 +20,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-public class ByteArrayRequestConverterFunctionTest {
+class ByteArrayRequestConverterFunctionTest {
 
     private static final RequestConverterFunction function = new ByteArrayRequestConverterFunction();
     private static final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-    private static final AggregatedHttpMessage req = mock(AggregatedHttpMessage.class);
+    private static final AggregatedHttpRequest req = mock(AggregatedHttpRequest.class);
 
     static final String JSON_TEXT = "{\"key\": \"value\"}";
 
     @Test
-    public void jsonTextToByteArray() throws Exception {
+    void jsonTextToByteArray() throws Exception {
         when(req.contentType()).thenReturn(MediaType.JSON);
         when(req.content()).thenReturn(HttpData.ofUtf8(JSON_TEXT));
 
@@ -45,7 +45,7 @@ public class ByteArrayRequestConverterFunctionTest {
     }
 
     @Test
-    public void jsonTextToHttpData() throws Exception {
+    void jsonTextToHttpData() throws Exception {
         when(req.contentType()).thenReturn(MediaType.JSON);
         when(req.content()).thenReturn(HttpData.ofUtf8(JSON_TEXT));
 

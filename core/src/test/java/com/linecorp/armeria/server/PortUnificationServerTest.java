@@ -34,7 +34,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -87,8 +87,8 @@ public class PortUnificationServerTest {
     public void test() throws Exception {
         final HttpClient client = HttpClient.of(clientFactory,
                                                 scheme + "://127.0.0.1:" + server.httpsPort() + '/');
-        final AggregatedHttpMessage response = client.execute(HttpRequest.of(HttpMethod.GET, "/"))
-                                                     .aggregate().join();
+        final AggregatedHttpResponse response = client.execute(HttpRequest.of(HttpMethod.GET, "/"))
+                                                      .aggregate().join();
         assertThat(response.contentUtf8()).isEqualToIgnoringCase(scheme);
     }
 }

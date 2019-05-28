@@ -150,29 +150,28 @@ final class HeaderOverridingHttpRequest implements HttpRequest {
     }
 
     @Override
-    public CompletableFuture<AggregatedHttpMessage> aggregate() {
+    public CompletableFuture<AggregatedHttpRequest> aggregate() {
         return delegate.aggregate().thenApply(this::replaceHeaders);
     }
 
     @Override
-    public CompletableFuture<AggregatedHttpMessage> aggregate(EventExecutor executor) {
+    public CompletableFuture<AggregatedHttpRequest> aggregate(EventExecutor executor) {
         return delegate.aggregate(executor).thenApply(this::replaceHeaders);
     }
 
     @Override
-    public CompletableFuture<AggregatedHttpMessage> aggregateWithPooledObjects(ByteBufAllocator alloc) {
+    public CompletableFuture<AggregatedHttpRequest> aggregateWithPooledObjects(ByteBufAllocator alloc) {
         return delegate.aggregateWithPooledObjects(alloc).thenApply(this::replaceHeaders);
     }
 
     @Override
-    public CompletableFuture<AggregatedHttpMessage> aggregateWithPooledObjects(
+    public CompletableFuture<AggregatedHttpRequest> aggregateWithPooledObjects(
             EventExecutor executor, ByteBufAllocator alloc) {
         return delegate.aggregateWithPooledObjects(executor, alloc).thenApply(this::replaceHeaders);
     }
 
-    private AggregatedHttpMessage replaceHeaders(AggregatedHttpMessage req) {
-        return AggregatedHttpMessage.of(req.informationals(), headers,
-                                        req.content(), req.trailingHeaders());
+    private AggregatedHttpRequest replaceHeaders(AggregatedHttpRequest req) {
+        return AggregatedHttpRequest.of(headers, req.content(), req.trailers());
     }
 
     @Override

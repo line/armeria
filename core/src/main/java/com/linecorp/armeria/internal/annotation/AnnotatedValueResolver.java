@@ -65,7 +65,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MapMaker;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpParameters;
@@ -546,10 +546,10 @@ final class AnnotatedValueResolver {
                     .build();
         }
 
-        if (actual == AggregatedHttpMessage.class) {
+        if (actual == AggregatedHttpRequest.class) {
             return builder(annotatedElement, type)
                     .supportOptional(true)
-                    .resolver((unused, ctx) -> ctx.message())
+                    .resolver((unused, ctx) -> ctx.aggregatedRequest())
                     .aggregation(AggregationStrategy.ALWAYS)
                     .build();
         }
@@ -1075,7 +1075,7 @@ final class AnnotatedValueResolver {
                 // Here, 'type' should be one of the following types:
                 // - RequestContext (or ServiceRequestContext)
                 // - Request (or HttpRequest)
-                // - AggregatedHttpMessage
+                // - AggregatedHttpRequest
                 // - HttpParameters
                 // - User classes which can be converted by request converter
                 //
@@ -1139,16 +1139,16 @@ final class AnnotatedValueResolver {
         private final HttpRequest request;
 
         @Nullable
-        private final AggregatedHttpMessage message;
+        private final AggregatedHttpRequest aggregatedRequest;
 
         @Nullable
         private volatile HttpParameters httpParameters;
 
         ResolverContext(ServiceRequestContext context, HttpRequest request,
-                        @Nullable AggregatedHttpMessage message) {
+                        @Nullable AggregatedHttpRequest aggregatedRequest) {
             this.context = requireNonNull(context, "context");
             this.request = requireNonNull(request, "request");
-            this.message = message;
+            this.aggregatedRequest = aggregatedRequest;
         }
 
         ServiceRequestContext context() {
@@ -1160,8 +1160,8 @@ final class AnnotatedValueResolver {
         }
 
         @Nullable
-        AggregatedHttpMessage message() {
-            return message;
+        AggregatedHttpRequest aggregatedRequest() {
+            return aggregatedRequest;
         }
 
         HttpParameters httpParameters() {
@@ -1172,7 +1172,7 @@ final class AnnotatedValueResolver {
                     if (result == null) {
                         httpParameters = result = httpParametersOf(context.query(),
                                                                    request.contentType(),
-                                                                   message);
+                                                                   aggregatedRequest);
                     }
                 }
             }
@@ -1181,10 +1181,10 @@ final class AnnotatedValueResolver {
 
         @Override
         public String toString() {
-            return MoreObjects.toStringHelper(this)
+            return MoreObjects.toStringHelper(this).omitNullValues()
                               .add("context", context)
                               .add("request", request)
-                              .add("message", message)
+                              .add("aggregatedRequest", aggregatedRequest)
                               .add("httpParameters", httpParameters)
                               .toString();
         }
@@ -1202,7 +1202,7 @@ final class AnnotatedValueResolver {
          */
         private static HttpParameters httpParametersOf(@Nullable String query,
                                                        @Nullable MediaType contentType,
-                                                       @Nullable AggregatedHttpMessage message) {
+                                                       @Nullable AggregatedHttpRequest message) {
             try {
                 Map<String, List<String>> parameters = null;
                 if (query != null) {
@@ -1281,12 +1281,12 @@ final class AnnotatedValueResolver {
     interface RequestObjectResolver {
         static RequestObjectResolver of(RequestConverterFunction function) {
             return (resolverContext, expectedResultType, beanFactoryId) -> {
-                final AggregatedHttpMessage message = resolverContext.message();
-                if (message == null) {
+                final AggregatedHttpRequest request = resolverContext.aggregatedRequest();
+                if (request == null) {
                     throw new IllegalArgumentException(
                             "Cannot convert this request to an object because it is not aggregated.");
                 }
-                return function.convertRequest(resolverContext.context(), message, expectedResultType);
+                return function.convertRequest(resolverContext.context(), request, expectedResultType);
             };
         }
 

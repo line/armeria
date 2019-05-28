@@ -52,17 +52,17 @@ public interface ResponseConverterFunction {
      *                {@link ServiceRequestContext#addAdditionalResponseHeader(CharSequence, Object)}
      *                and {@link AdditionalHeader} are not included in this headers.
      * @param result The result of the service method.
-     * @param trailingHeaders The HTTP trailers that you might want to use to create the {@link HttpResponse}.
-     *                        If the annotated method returns {@link HttpResult}, this trailers is the same
-     *                        trailers from {@link HttpResult#trailingHeaders()}.
-     *                        Please note that the additional trailers set by
-     *                        {@link ServiceRequestContext#addAdditionalResponseTrailer(CharSequence, Object)}
-     *                        and {@link AdditionalTrailer} are not included in this trailers.
+     * @param trailers The HTTP trailers that you might want to use to create the {@link HttpResponse}.
+     *                 If the annotated method returns {@link HttpResult}, this trailers is the same
+     *                 trailers from {@link HttpResult#trailers()}.
+     *                 Please note that the additional trailers set by
+     *                 {@link ServiceRequestContext#addAdditionalResponseTrailer(CharSequence, Object)}
+     *                 and {@link AdditionalTrailer} are not included in this trailers.
      */
     HttpResponse convertResponse(ServiceRequestContext ctx,
                                  ResponseHeaders headers,
                                  @Nullable Object result,
-                                 HttpHeaders trailingHeaders) throws Exception;
+                                 HttpHeaders trailers) throws Exception;
 
     /**
      * Throws a {@link FallthroughException} in order to try to convert {@code result} to

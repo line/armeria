@@ -107,15 +107,15 @@ public final class ServerSentEvents {
      *
      * @param headers the HTTP headers supposed to send
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
-     * @param trailingHeaders the trailing HTTP headers supposed to send
+     * @param trailers the HTTP trailers
      */
     public static HttpResponse fromPublisher(ResponseHeaders headers,
                                              Publisher<? extends ServerSentEvent> contentPublisher,
-                                             HttpHeaders trailingHeaders) {
+                                             HttpHeaders trailers) {
         requireNonNull(headers, "headers");
         requireNonNull(contentPublisher, "contentPublisher");
-        requireNonNull(trailingHeaders, "trailingHeaders");
-        return streamingFrom(contentPublisher, sanitizeHeaders(headers), trailingHeaders,
+        requireNonNull(trailers, "trailers");
+        return streamingFrom(contentPublisher, sanitizeHeaders(headers), trailers,
                              ServerSentEvents::toHttpData);
     }
 
@@ -148,18 +148,18 @@ public final class ServerSentEvents {
      *
      * @param headers the HTTP headers supposed to send
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
-     * @param trailingHeaders the trailing HTTP headers supposed to send
+     * @param trailers the HTTP trailers
      * @param converter the converter which converts published objects into {@link ServerSentEvent}s
      */
     public static <T> HttpResponse fromPublisher(ResponseHeaders headers,
                                                  Publisher<T> contentPublisher,
-                                                 HttpHeaders trailingHeaders,
+                                                 HttpHeaders trailers,
                                                  Function<? super T, ? extends ServerSentEvent> converter) {
         requireNonNull(headers, "headers");
         requireNonNull(contentPublisher, "contentPublisher");
-        requireNonNull(trailingHeaders, "trailingHeaders");
+        requireNonNull(trailers, "trailers");
         requireNonNull(converter, "converter");
-        return streamingFrom(contentPublisher, sanitizeHeaders(headers), trailingHeaders,
+        return streamingFrom(contentPublisher, sanitizeHeaders(headers), trailers,
                              o -> toHttpData(converter, o));
     }
 
@@ -192,17 +192,17 @@ public final class ServerSentEvents {
      *
      * @param headers the HTTP headers supposed to send
      * @param contentStream the {@link Stream} which publishes the objects supposed to send as contents
-     * @param trailingHeaders the trailing HTTP headers supposed to send
+     * @param trailers the HTTP trailers
      * @param executor the executor which iterates the stream
      */
     public static HttpResponse fromStream(ResponseHeaders headers,
                                           Stream<? extends ServerSentEvent> contentStream,
-                                          HttpHeaders trailingHeaders, Executor executor) {
+                                          HttpHeaders trailers, Executor executor) {
         requireNonNull(headers, "headers");
         requireNonNull(contentStream, "contentStream");
-        requireNonNull(trailingHeaders, "trailingHeaders");
+        requireNonNull(trailers, "trailers");
         requireNonNull(executor, "executor");
-        return streamingFrom(contentStream, sanitizeHeaders(headers), trailingHeaders,
+        return streamingFrom(contentStream, sanitizeHeaders(headers), trailers,
                              ServerSentEvents::toHttpData, executor);
     }
 
@@ -237,19 +237,19 @@ public final class ServerSentEvents {
      *
      * @param headers the HTTP headers supposed to send
      * @param contentStream the {@link Stream} which publishes the objects supposed to send as contents
-     * @param trailingHeaders the trailing HTTP headers supposed to send
+     * @param trailers the HTTP trailers
      * @param executor the executor which iterates the stream
      * @param converter the converter which converts published objects into {@link ServerSentEvent}s
      */
     public static <T> HttpResponse fromStream(ResponseHeaders headers, Stream<T> contentStream,
-                                              HttpHeaders trailingHeaders, Executor executor,
+                                              HttpHeaders trailers, Executor executor,
                                               Function<? super T, ? extends ServerSentEvent> converter) {
         requireNonNull(headers, "headers");
         requireNonNull(contentStream, "contentStream");
-        requireNonNull(trailingHeaders, "trailingHeaders");
+        requireNonNull(trailers, "trailers");
         requireNonNull(executor, "executor");
         requireNonNull(converter, "converter");
-        return streamingFrom(contentStream, sanitizeHeaders(headers), trailingHeaders,
+        return streamingFrom(contentStream, sanitizeHeaders(headers), trailers,
                              o -> toHttpData(converter, o), executor);
     }
 
@@ -277,14 +277,13 @@ public final class ServerSentEvents {
      *
      * @param headers the HTTP headers supposed to send
      * @param sse the {@link ServerSentEvent} object supposed to send as contents
-     * @param trailingHeaders the trailing HTTP headers supposed to send
+     * @param trailers the HTTP trailers
      */
-    public static HttpResponse fromEvent(ResponseHeaders headers, ServerSentEvent sse,
-                                         HttpHeaders trailingHeaders) {
+    public static HttpResponse fromEvent(ResponseHeaders headers, ServerSentEvent sse, HttpHeaders trailers) {
         requireNonNull(headers, "headers");
         requireNonNull(sse, "sse");
-        requireNonNull(trailingHeaders, "trailingHeaders");
-        return HttpResponse.of(sanitizeHeaders(headers), toHttpData(sse), trailingHeaders);
+        requireNonNull(trailers, "trailers");
+        return HttpResponse.of(sanitizeHeaders(headers), toHttpData(sse), trailers);
     }
 
     private static ResponseHeaders sanitizeHeaders(ResponseHeaders headers) {

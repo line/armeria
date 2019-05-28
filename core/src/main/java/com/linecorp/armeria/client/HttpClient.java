@@ -19,7 +19,7 @@ package com.linecorp.armeria.client;
 import java.net.URI;
 import java.nio.charset.Charset;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -147,41 +147,41 @@ public interface HttpClient extends ClientBuilderParams {
     /**
      * Sends the specified HTTP request.
      */
-    HttpResponse execute(AggregatedHttpMessage aggregatedReq);
+    HttpResponse execute(AggregatedHttpRequest aggregatedReq);
 
     /**
      * Sends an empty HTTP request with the specified headers.
      */
     default HttpResponse execute(RequestHeaders headers) {
-        return execute(AggregatedHttpMessage.of(headers));
+        return execute(AggregatedHttpRequest.of(headers));
     }
 
     /**
      * Sends an HTTP request with the specified headers and content.
      */
     default HttpResponse execute(RequestHeaders headers, HttpData content) {
-        return execute(AggregatedHttpMessage.of(headers, content));
+        return execute(AggregatedHttpRequest.of(headers, content));
     }
 
     /**
      * Sends an HTTP request with the specified headers and content.
      */
     default HttpResponse execute(RequestHeaders headers, byte[] content) {
-        return execute(AggregatedHttpMessage.of(headers, HttpData.of(content)));
+        return execute(AggregatedHttpRequest.of(headers, HttpData.of(content)));
     }
 
     /**
      * Sends an HTTP request with the specified headers and content.
      */
     default HttpResponse execute(RequestHeaders headers, String content) {
-        return execute(AggregatedHttpMessage.of(headers, HttpData.ofUtf8(content)));
+        return execute(AggregatedHttpRequest.of(headers, HttpData.ofUtf8(content)));
     }
 
     /**
      * Sends an HTTP request with the specified headers and content.
      */
     default HttpResponse execute(RequestHeaders headers, String content, Charset charset) {
-        return execute(AggregatedHttpMessage.of(headers, HttpData.of(charset, content)));
+        return execute(AggregatedHttpRequest.of(headers, HttpData.of(charset, content)));
     }
 
     /**

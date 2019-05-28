@@ -55,7 +55,7 @@ import net.shibboleth.utilities.java.support.resolver.CriteriaSet;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -116,14 +116,14 @@ public final class SamlServiceProviderBuilder {
         }
 
         @Override
-        public HttpResponse loginSucceeded(ServiceRequestContext ctx, AggregatedHttpMessage req,
+        public HttpResponse loginSucceeded(ServiceRequestContext ctx, AggregatedHttpRequest req,
                                            MessageContext<Response> message, @Nullable String sessionIndex,
                                            @Nullable String relayState) {
             return responseWithLocation(firstNonNull(relayState, "/"));
         }
 
         @Override
-        public HttpResponse loginFailed(ServiceRequestContext ctx, AggregatedHttpMessage req,
+        public HttpResponse loginFailed(ServiceRequestContext ctx, AggregatedHttpRequest req,
                                         @Nullable MessageContext<Response> message, Throwable cause) {
             logger.warn("{} SAML SSO failed", ctx, cause);
             return responseWithLocation("/error");
@@ -132,13 +132,13 @@ public final class SamlServiceProviderBuilder {
 
     private SamlSingleLogoutHandler sloHandler = new SamlSingleLogoutHandler() {
         @Override
-        public CompletionStage<Void> logoutSucceeded(ServiceRequestContext ctx, AggregatedHttpMessage req,
+        public CompletionStage<Void> logoutSucceeded(ServiceRequestContext ctx, AggregatedHttpRequest req,
                                                      MessageContext<LogoutRequest> message) {
             return CompletableFuture.completedFuture(null);
         }
 
         @Override
-        public CompletionStage<Void> logoutFailed(ServiceRequestContext ctx, AggregatedHttpMessage req,
+        public CompletionStage<Void> logoutFailed(ServiceRequestContext ctx, AggregatedHttpRequest req,
                                                   Throwable cause) {
             logger.warn("{} SAML SLO failed", ctx, cause);
             return CompletableFuture.completedFuture(null);

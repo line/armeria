@@ -128,7 +128,7 @@ like ``MyAuthorizer`` in this example.
 
     class MySamlSingleSignOnHandler implements SamlSingleSignOnHandler {
         @Override
-        public HttpResponse loginSucceeded(ServiceRequestContext ctx, AggregatedHttpMessage req,
+        public HttpResponse loginSucceeded(ServiceRequestContext ctx, AggregatedHttpRequest req,
                                            MessageContext<Response> message, @Nullable String sessionIndex,
                                            @Nullable String relayState) {
             final Response response = message.getMessage();
@@ -158,7 +158,7 @@ like ``MyAuthorizer`` in this example.
         }
 
         @Override
-        public HttpResponse loginFailed(ServiceRequestContext ctx, AggregatedHttpMessage req,
+        public HttpResponse loginFailed(ServiceRequestContext ctx, AggregatedHttpRequest req,
                                         @Nullable MessageContext<Response> message, Throwable cause) {
             return HttpResponse.of(HttpStatus.UNAUTHORIZED, MediaType.HTML_UTF_8,
                                    "<html><body>Login failed.</body></html>");

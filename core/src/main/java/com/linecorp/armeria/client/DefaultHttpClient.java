@@ -20,7 +20,7 @@ import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -70,11 +70,11 @@ final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> impl
     }
 
     @Override
-    public HttpResponse execute(AggregatedHttpMessage aggregatedReq) {
+    public HttpResponse execute(AggregatedHttpRequest aggregatedReq) {
         return execute(null, aggregatedReq);
     }
 
-    HttpResponse execute(@Nullable EventLoop eventLoop, AggregatedHttpMessage aggregatedReq) {
+    HttpResponse execute(@Nullable EventLoop eventLoop, AggregatedHttpRequest aggregatedReq) {
         return execute(eventLoop, HttpRequest.of(aggregatedReq));
     }
 }

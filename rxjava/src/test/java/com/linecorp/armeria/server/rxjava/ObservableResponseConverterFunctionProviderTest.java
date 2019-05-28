@@ -83,7 +83,7 @@ public class ObservableResponseConverterFunctionProviderTest {
         public HttpResponse convertResponse(ServiceRequestContext ctx,
                                             ResponseHeaders headers,
                                             @Nullable Object result,
-                                            HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailers) throws Exception {
             return HttpResponse.of(HttpStatus.OK);
         }
     }

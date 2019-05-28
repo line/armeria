@@ -340,22 +340,22 @@ public final class AnnotatedHttpServiceFactory {
         final ResponseHeadersBuilder defaultHeaders =
                 ResponseHeaders.builder(defaultResponseStatus(defaultResponseStatus, method));
 
-        final HttpHeadersBuilder defaultTrailingHeaders = HttpHeaders.builder();
+        final HttpHeadersBuilder defaultTrailers = HttpHeaders.builder();
         final String classAlias = clazz.getName();
         final String methodAlias = String.format("%s.%s()", classAlias, method.getName());
         setAdditionalHeader(defaultHeaders, clazz, "header", classAlias, "class", AdditionalHeader.class,
                             AdditionalHeader::name, AdditionalHeader::value);
         setAdditionalHeader(defaultHeaders, method, "header", methodAlias, "method", AdditionalHeader.class,
                             AdditionalHeader::name, AdditionalHeader::value);
-        setAdditionalHeader(defaultTrailingHeaders, clazz, "trailer", classAlias, "class",
+        setAdditionalHeader(defaultTrailers, clazz, "trailer", classAlias, "class",
                             AdditionalTrailer.class, AdditionalTrailer::name, AdditionalTrailer::value);
-        setAdditionalHeader(defaultTrailingHeaders, method, "trailer", methodAlias, "method",
+        setAdditionalHeader(defaultTrailers, method, "trailer", methodAlias, "method",
                             AdditionalTrailer.class, AdditionalTrailer::name, AdditionalTrailer::value);
 
         if (ArmeriaHttpUtil.isContentAlwaysEmpty(defaultHeaders.status()) &&
-            !defaultTrailingHeaders.isEmpty()) {
+            !defaultTrailers.isEmpty()) {
             logger.warn("A response with HTTP status code '{}' cannot have a content. " +
-                        "Trailing headers defined at '{}' might be ignored.",
+                        "Trailers defined at '{}' might be ignored.",
                         defaultHeaders.status().code(), methodAlias);
         }
 
@@ -381,7 +381,7 @@ public final class AnnotatedHttpServiceFactory {
                                                new AnnotatedHttpService(object, method, resolvers,
                                                                         eh, res, pathMapping,
                                                                         defaultHeaders.build(),
-                                                                        defaultTrailingHeaders.build()),
+                                                                        defaultTrailers.build()),
                                                decorator(method, clazz, initialDecorator));
     }
 

@@ -352,7 +352,7 @@ The following classes are automatically injected when you specify them on the pa
 - :api:`ServiceRequestContext` (or :api:`RequestContext`)
 - :api:`RequestHeaders` (or :api:`HttpHeaders`)
 - :api:`HttpRequest` (or :api:`Request`)
-- :api:`AggregatedHttpMessage`
+- :api:`AggregatedHttpRequest`
 - :api:`HttpParameters`
 - :api:`Cookies`
 
@@ -366,7 +366,7 @@ The following classes are automatically injected when you specify them on the pa
         }
 
         @Post("/hello2")
-        public HttpResponse hello2(AggregatedHttpMessage aggregatedMessage) {
+        public HttpResponse hello2(AggregatedHttpRequest aggregatedRequest) {
             // Armeria aggregates the received HttpRequest and calls this method with the aggregated request.
         }
 
@@ -454,7 +454,7 @@ converter is not able to convert the request.
 
     public class ToEnglishConverter implements RequestConverterFunction {
         @Override
-        public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
+        public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
                                      Class<?> expectedResultType) {
             if (expectedResultType == Greeting.class) {
                 // Convert the request to a Java object.
@@ -605,7 +605,7 @@ Converting a Java object to an HTTP response
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Every object returned by an annotated service method can be converted to an HTTP response message by
-response converters, except for :api:`HttpResponse` and :api:`AggregatedHttpMessage` which are already
+response converters, except for :api:`HttpResponse` and :api:`AggregatedHttpResponse` which are already
 in a form of response message. You can also write your own response converter by implementing
 :api:`ResponseConverterFunction` as follows. Also similar to :api:`RequestConverterFunction`,
 you can call ``ResponseConverterFunction.fallthrough()`` when your response converter is not able to
@@ -618,11 +618,12 @@ convert the result to an :api:`HttpResponse`.
         HttpResponse convertResponse(ServiceRequestContext ctx,
                                      ResponseHeaders headers,
                                      @Nullable Object result,
-                                     HttpHeaders trailingHeaders) throws Exception {
+                                     HttpHeaders trailers) throws Exception {
             if (result instanceof MyObject) {
                 return HttpResponse.of(HttpStatus.OK,
                                        MediaType.PLAIN_TEXT_UTF_8,
-                                       "Hello, %s!", ((MyObject) result).processedName());
+                                       "Hello, %s!", ((MyObject) result).processedName(),
+                                       trailers);
             }
 
             // To the next response converter.
@@ -663,7 +664,7 @@ as follows.
         HttpResponse convertResponse(ServiceRequestContext ctx,
                                      ResponseHeaders headers,
                                      @Nullable Object result,
-                                     HttpHeaders trailingHeaders) throws Exception {
+                                     HttpHeaders trailers) throws Exception {
             MediaType mediaType = ctx.negotiatedResponseMediaType();
             if (mediaType != null) {
                 // Do something based on the media type.
@@ -747,14 +748,14 @@ in a single class and add it to your :api:`ServerBuilder` at once, e.g.
                                               ResponseConverterFunction,
                                               ExceptionHandlerFunction {
         @Override
-        public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
+        public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
                                      Class<?> expectedResultType) { ... }
 
         @Override
         HttpResponse convertResponse(ServiceRequestContext ctx,
                                      ResponseHeaders headers,
                                      @Nullable Object result,
-                                     HttpHeaders trailingHeaders) throws Exception { ... }
+                                     HttpHeaders trailers) throws Exception { ... }
 
         @Override
         public HttpResponse handleException(RequestContext ctx, HttpRequest req,
@@ -791,7 +792,7 @@ Returning a response
 In the earlier examples, the annotated service methods only return :api:`HttpResponse`, however there are
 more response types which can be used in the annotated service.
 
-- :api:`HttpResponse` and :api:`AggregatedHttpMessage`
+- :api:`HttpResponse` and :api:`AggregatedHttpResponse`
 
   - It will be sent to the client without any modification. If an exception is raised while the response is
     being sent, exception handlers will handle it. If no message has been sent to the client yet,
@@ -800,8 +801,7 @@ more response types which can be used in the annotated service.
 - :api:`HttpResult`
 
   - It contains the :api:`HttpHeaders` and the object which can be converted into HTTP response body by
-    response converters. A user can customize the HTTP status and headers including the trailing headers,
-    with this type.
+    response converters. A user can customize the HTTP status and headers including the trailers, with this type.
 
   .. code-block:: java
 
@@ -1147,14 +1147,14 @@ You can annotate them with :api:`@Consumes` annotation.
 
         @Post("/hello")
         @Consumes("text/plain")
-        public HttpResponse helloText(AggregatedHttpMessage message) {
-            // Get a text content by calling message.contentAscii().
+        public HttpResponse helloText(AggregatedHttpRequest request) {
+            // Get a text content by calling request.contentAscii().
         }
 
         @Post("/hello")
         @Consumes("application/json")
-        public HttpResponse helloJson(AggregatedHttpMessage message) {
-            // Get a JSON object by calling message.contentUtf8().
+        public HttpResponse helloJson(AggregatedHttpRequest request) {
+            // Get a JSON object by calling request.contentUtf8().
         }
     }
 
@@ -1189,14 +1189,14 @@ as follows. ``helloCatchAll()`` method would accept every request except for the
     public class MyAnnotatedService {
 
         @Post("/hello")
-        public HttpResponse helloCatchAll(AggregatedHttpMessage message) {
-            // Get a content by calling message.content() and handle it as a text document or something else.
+        public HttpResponse helloCatchAll(AggregatedHttpRequest request) {
+            // Get a content by calling request.content() and handle it as a text document or something else.
         }
 
         @Post("/hello")
         @Consumes("application/json")
-        public HttpResponse helloJson(AggregatedHttpMessage message) {
-            // Get a JSON object by calling message.contentUtf8().
+        public HttpResponse helloJson(AggregatedHttpRequest request) {
+            // Get a JSON object by calling request.contentUtf8().
         }
     }
 

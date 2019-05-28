@@ -29,7 +29,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
@@ -85,7 +85,7 @@ public class JsonTextSequencesTest {
 
     @Test
     public void singleSequence() {
-        final AggregatedHttpMessage response =
+        final AggregatedHttpResponse response =
                 HttpClient.of(rule.uri("/seq")).get("/single").aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.headers().contentType()).isEqualTo(MediaType.JSON_SEQ);

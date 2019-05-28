@@ -18,51 +18,51 @@ package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class HttpResponseTest {
+class HttpResponseTest {
 
     @Test
-    public void ofWithPlainContent() {
+    void ofWithPlainContent() {
         // Using non-ascii to test UTF-8 conversion
         final HttpResponse res = HttpResponse.of("Armeriaはいろんな使い方がアルメリア");
-        final AggregatedHttpMessage message = res.aggregate().join();
-        assertThat(message.status()).isEqualTo(HttpStatus.OK);
-        assertThat(message.contentUtf8())
+        final AggregatedHttpResponse aggregatedRes = res.aggregate().join();
+        assertThat(aggregatedRes.status()).isEqualTo(HttpStatus.OK);
+        assertThat(aggregatedRes.contentUtf8())
                 .isEqualTo("Armeriaはいろんな使い方がアルメリア");
     }
 
     @Test
-    public void ofWithPlainFormat() {
+    void ofWithPlainFormat() {
         // Using non-ascii to test UTF-8 conversion
         final HttpResponse res = HttpResponse.of(
                 "%sはいろんな使い方が%s", "Armeria", "アルメリア");
-        final AggregatedHttpMessage message = res.aggregate().join();
-        assertThat(message.status()).isEqualTo(HttpStatus.OK);
-        assertThat(message.contentUtf8())
+        final AggregatedHttpResponse aggregatedRes = res.aggregate().join();
+        assertThat(aggregatedRes.status()).isEqualTo(HttpStatus.OK);
+        assertThat(aggregatedRes.contentUtf8())
                 .isEqualTo("Armeriaはいろんな使い方がアルメリア");
     }
 
     @Test
-    public void ofWithContent() {
+    void ofWithContent() {
         // Using non-ascii to test UTF-8 conversion
         final HttpResponse res = HttpResponse.of(
                 MediaType.PLAIN_TEXT_UTF_8, "Armeriaはいろんな使い方がアルメリア");
-        final AggregatedHttpMessage message = res.aggregate().join();
-        assertThat(message.status()).isEqualTo(HttpStatus.OK);
-        assertThat(message.contentUtf8())
+        final AggregatedHttpResponse aggregatedRes = res.aggregate().join();
+        assertThat(aggregatedRes.status()).isEqualTo(HttpStatus.OK);
+        assertThat(aggregatedRes.contentUtf8())
                 .isEqualTo("Armeriaはいろんな使い方がアルメリア");
     }
 
     @Test
-    public void ofWithFormat() {
+    void ofWithFormat() {
         // Using non-ascii to test UTF-8 conversion
         final HttpResponse res = HttpResponse.of(
                 MediaType.PLAIN_TEXT_UTF_8,
                 "%sはいろんな使い方が%s", "Armeria", "アルメリア");
-        final AggregatedHttpMessage message = res.aggregate().join();
-        assertThat(message.status()).isEqualTo(HttpStatus.OK);
-        assertThat(message.contentUtf8())
+        final AggregatedHttpResponse aggregatedRes = res.aggregate().join();
+        assertThat(aggregatedRes.status()).isEqualTo(HttpStatus.OK);
+        assertThat(aggregatedRes.contentUtf8())
                 .isEqualTo("Armeriaはいろんな使い方がアルメリア");
     }
 }

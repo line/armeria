@@ -18,21 +18,21 @@ package com.linecorp.armeria.server.annotation;
 
 import java.nio.charset.Charset;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * A default implementation of a {@link RequestConverterFunction} which converts a text body of
- * the {@link AggregatedHttpMessage} to a {@link String}.
+ * the {@link AggregatedHttpRequest} to a {@link String}.
  */
 public class StringRequestConverterFunction implements RequestConverterFunction {
     /**
-     * Converts the specified {@link AggregatedHttpMessage} to a {@link String}.
+     * Converts the specified {@link AggregatedHttpRequest} to a {@link String}.
      */
     @Override
-    public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
+    public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
                                  Class<?> expectedResultType) throws Exception {
         if (expectedResultType == String.class ||
             expectedResultType == CharSequence.class) {

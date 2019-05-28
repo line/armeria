@@ -81,7 +81,7 @@ class HttpEncodedResponse extends FilteredHttpResponse {
             }
 
             if (headersSent) {
-                // Trailing headers, no modification.
+                // Trailers, no modification.
                 return obj;
             }
 

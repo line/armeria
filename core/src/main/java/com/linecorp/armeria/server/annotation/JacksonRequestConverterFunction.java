@@ -28,14 +28,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * A default implementation of a {@link RequestConverterFunction} which converts a JSON body of
- * the {@link AggregatedHttpMessage} to an object by {@link ObjectMapper}.
+ * the {@link AggregatedHttpRequest} to an object by {@link ObjectMapper}.
  */
 public class JacksonRequestConverterFunction implements RequestConverterFunction {
 
@@ -59,11 +59,11 @@ public class JacksonRequestConverterFunction implements RequestConverterFunction
     }
 
     /**
-     * Converts the specified {@link AggregatedHttpMessage} to an object of {@code expectedResultType}.
+     * Converts the specified {@link AggregatedHttpRequest} to an object of {@code expectedResultType}.
      */
     @Override
     @Nullable
-    public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
+    public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
                                  Class<?> expectedResultType) throws Exception {
         final MediaType contentType = request.contentType();
         if (contentType != null && (contentType.is(MediaType.JSON) ||

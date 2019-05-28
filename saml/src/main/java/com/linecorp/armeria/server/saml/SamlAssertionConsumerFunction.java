@@ -47,7 +47,7 @@ import org.opensaml.xmlsec.keyinfo.impl.StaticKeyInfoCredentialResolver;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -81,15 +81,15 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
     }
 
     @Override
-    public HttpResponse serve(ServiceRequestContext ctx, AggregatedHttpMessage msg,
+    public HttpResponse serve(ServiceRequestContext ctx, AggregatedHttpRequest req,
                               String defaultHostname, SamlPortConfig portConfig) {
         try {
             final MessageContext<Response> messageContext;
             if (cfg.endpoint().bindingProtocol() == SamlBindingProtocol.HTTP_REDIRECT) {
-                messageContext = HttpRedirectBindingUtil.toSamlObject(msg, SAML_RESPONSE,
+                messageContext = HttpRedirectBindingUtil.toSamlObject(req, SAML_RESPONSE,
                                                                       idpConfigs, defaultIdpConfig);
             } else {
-                messageContext = HttpPostBindingUtil.toSamlObject(msg, SAML_RESPONSE);
+                messageContext = HttpPostBindingUtil.toSamlObject(req, SAML_RESPONSE);
             }
 
             final String endpointUri = cfg.endpoint().toUriString(portConfig.scheme().uriText(),
@@ -106,9 +106,9 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
             final SAMLBindingContext bindingContext = messageContext.getSubcontext(SAMLBindingContext.class);
             final String relayState = bindingContext != null ? bindingContext.getRelayState() : null;
 
-            return ssoHandler.loginSucceeded(ctx, msg, messageContext, sessionIndex, relayState);
+            return ssoHandler.loginSucceeded(ctx, req, messageContext, sessionIndex, relayState);
         } catch (SamlException e) {
-            return ssoHandler.loginFailed(ctx, msg, null, e);
+            return ssoHandler.loginFailed(ctx, req, null, e);
         }
     }
 

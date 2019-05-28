@@ -23,28 +23,28 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.charset.StandardCharsets;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class HttpRequestDuplicatorTest {
 
     @Test
-    public void aggregateTwice() {
-        final AggregatedHttpMessage aReq = AggregatedHttpMessage.of(
+    void aggregateTwice() {
+        final AggregatedHttpRequest aReq = AggregatedHttpRequest.of(
                 HttpMethod.PUT, "/foo", PLAIN_TEXT_UTF_8, HttpData.ofUtf8("bar"),
                 HttpHeaders.of(CONTENT_MD5, "37b51d194a7513e45b56f6524f2d51f2"));
 
         final HttpRequest publisher = HttpRequest.of(aReq);
         final HttpRequestDuplicator reqDuplicator = new HttpRequestDuplicator(publisher);
 
-        final AggregatedHttpMessage req1 = reqDuplicator.duplicateStream().aggregate().join();
-        final AggregatedHttpMessage req2 = reqDuplicator.duplicateStream().aggregate().join();
+        final AggregatedHttpRequest req1 = reqDuplicator.duplicateStream().aggregate().join();
+        final AggregatedHttpRequest req2 = reqDuplicator.duplicateStream().aggregate().join();
 
         assertThat(req1.headers()).isEqualTo(
                 RequestHeaders.of(HttpMethod.PUT, "/foo",
                                   HttpHeaderNames.CONTENT_TYPE, PLAIN_TEXT_UTF_8,
                                   CONTENT_LENGTH, 3));
         assertThat(req1.content()).isEqualTo(HttpData.of(StandardCharsets.UTF_8, "bar"));
-        assertThat(req1.trailingHeaders()).isEqualTo(
+        assertThat(req1.trailers()).isEqualTo(
                 HttpHeaders.of(CONTENT_MD5, "37b51d194a7513e45b56f6524f2d51f2"));
 
         assertThat(req2.headers()).isEqualTo(
@@ -52,7 +52,7 @@ public class HttpRequestDuplicatorTest {
                                   HttpHeaderNames.CONTENT_TYPE, PLAIN_TEXT_UTF_8,
                                   CONTENT_LENGTH, 3));
         assertThat(req2.content()).isEqualTo(HttpData.of(StandardCharsets.UTF_8, "bar"));
-        assertThat(req2.trailingHeaders()).isEqualTo(
+        assertThat(req2.trailers()).isEqualTo(
                 HttpHeaders.of(CONTENT_MD5, "37b51d194a7513e45b56f6524f2d51f2"));
         reqDuplicator.close();
     }

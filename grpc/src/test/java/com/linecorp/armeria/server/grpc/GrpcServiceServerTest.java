@@ -63,7 +63,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.client.grpc.GrpcClientOptions;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -795,7 +795,7 @@ public class GrpcServiceServerTest {
     @Test
     public void unframed() throws Exception {
         final HttpClient client = HttpClient.of(server.httpUri("/"));
-        final AggregatedHttpMessage response = client.execute(
+        final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.POST,
                                   UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
                                   HttpHeaderNames.CONTENT_TYPE, "application/protobuf"),
@@ -815,7 +815,7 @@ public class GrpcServiceServerTest {
     @Test
     public void unframed_acceptEncoding() throws Exception {
         final HttpClient client = HttpClient.of(server.httpUri("/"));
-        final AggregatedHttpMessage response = client.execute(
+        final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.POST,
                                   UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
                                   HttpHeaderNames.CONTENT_TYPE, "application/protobuf",
@@ -836,7 +836,7 @@ public class GrpcServiceServerTest {
     @Test
     public void unframed_streamingApi() throws Exception {
         final HttpClient client = HttpClient.of(server.httpUri("/"));
-        final AggregatedHttpMessage response = client.execute(
+        final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.POST,
                                   UnitTestServiceGrpc.getStaticStreamedOutputCallMethod().getFullMethodName(),
                                   HttpHeaderNames.CONTENT_TYPE, "application/protobuf"),
@@ -848,7 +848,7 @@ public class GrpcServiceServerTest {
     @Test
     public void unframed_noContentType() throws Exception {
         final HttpClient client = HttpClient.of(server.httpUri("/"));
-        final AggregatedHttpMessage response = client.execute(
+        final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.POST,
                                   UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName()),
                 REQUEST_MESSAGE.toByteArray()).aggregate().get();
@@ -859,7 +859,7 @@ public class GrpcServiceServerTest {
     @Test
     public void unframed_grpcEncoding() throws Exception {
         final HttpClient client = HttpClient.of(server.httpUri("/"));
-        final AggregatedHttpMessage response = client.execute(
+        final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.POST,
                                   UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
                                   HttpHeaderNames.CONTENT_TYPE, "application/protobuf",
@@ -878,7 +878,7 @@ public class GrpcServiceServerTest {
                                      EchoStatus.newBuilder()
                                                .setCode(Status.DEADLINE_EXCEEDED.getCode().value()))
                              .build();
-        final AggregatedHttpMessage response = client.execute(
+        final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.POST,
                                   UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
                                   HttpHeaderNames.CONTENT_TYPE, "application/protobuf"),
@@ -896,7 +896,7 @@ public class GrpcServiceServerTest {
     @Test
     public void grpcWeb() throws Exception {
         final HttpClient client = HttpClient.of(server.httpUri("/"));
-        final AggregatedHttpMessage response = client.execute(
+        final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.POST,
                                   UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
                                   HttpHeaderNames.CONTENT_TYPE, "application/grpc-web"),
@@ -922,7 +922,7 @@ public class GrpcServiceServerTest {
     @Test
     public void grpcWeb_error() throws Exception {
         final HttpClient client = HttpClient.of(server.httpUri("/"));
-        final AggregatedHttpMessage response = client.execute(
+        final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.POST,
                                   UnitTestServiceGrpc.getErrorWithMessageMethod().getFullMethodName(),
                                   HttpHeaderNames.CONTENT_TYPE, "application/grpc-web"),

@@ -31,7 +31,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -162,18 +162,18 @@ public class HttpServiceTest {
     @Test
     public void contentLengthIsNotSetWhenTrailerExists() {
         final HttpClient client = HttpClient.of(rule.uri("/"));
-        AggregatedHttpMessage message = client.get("/trailersWithoutData").aggregate().join();
-        assertThat(message.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
-        assertThat(message.trailingHeaders().get(HttpHeaderNames.of("foo"))).isEqualTo("bar");
-        assertThat(message.content()).isSameAs(HttpData.EMPTY_DATA);
+        AggregatedHttpResponse res = client.get("/trailersWithoutData").aggregate().join();
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
+        assertThat(res.trailers().get(HttpHeaderNames.of("foo"))).isEqualTo("bar");
+        assertThat(res.content()).isSameAs(HttpData.EMPTY_DATA);
 
-        message = client.get("/dataAndTrailers").aggregate().join();
-        assertThat(message.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
-        assertThat(message.trailingHeaders().get(HttpHeaderNames.of("foo"))).isEqualTo("bar");
-        assertThat(message.contentUtf8()).isEqualTo("trailer");
+        res = client.get("/dataAndTrailers").aggregate().join();
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
+        assertThat(res.trailers().get(HttpHeaderNames.of("foo"))).isEqualTo("bar");
+        assertThat(res.contentUtf8()).isEqualTo("trailer");
 
-        message = client.get("/additionalTrailers").aggregate().join();
-        assertThat(message.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
-        assertThat(message.trailingHeaders().get(HttpHeaderNames.of("foo"))).isEqualTo("baz");
+        res = client.get("/additionalTrailers").aggregate().join();
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
+        assertThat(res.trailers().get(HttpHeaderNames.of("foo"))).isEqualTo("baz");
     }
 }

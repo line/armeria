@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -21,19 +21,17 @@ import java.util.List;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
-final class DefaultAggregatedHttpMessage implements AggregatedHttpMessage {
+final class DefaultAggregatedHttpResponse extends AbstractAggregatedHttpMessage
+        implements AggregatedHttpResponse {
 
     private final List<ResponseHeaders> informationals;
-    private final HttpHeaders headers;
-    private final HttpData content;
-    private final HttpHeaders trailingHeaders;
+    private final ResponseHeaders headers;
 
-    DefaultAggregatedHttpMessage(List<ResponseHeaders> informationals, HttpHeaders headers,
-                                 HttpData content, HttpHeaders trailingHeaders) {
+    DefaultAggregatedHttpResponse(List<ResponseHeaders> informationals, ResponseHeaders headers,
+                                 HttpData content, HttpHeaders trailers) {
+        super(content, trailers);
         this.informationals = informationals;
         this.headers = headers;
-        this.content = content;
-        this.trailingHeaders = trailingHeaders;
     }
 
     @Override
@@ -42,18 +40,13 @@ final class DefaultAggregatedHttpMessage implements AggregatedHttpMessage {
     }
 
     @Override
-    public HttpHeaders headers() {
+    public HttpStatus status() {
+        return headers.status();
+    }
+
+    @Override
+    public ResponseHeaders headers() {
         return headers;
-    }
-
-    @Override
-    public HttpHeaders trailingHeaders() {
-        return trailingHeaders;
-    }
-
-    @Override
-    public HttpData content() {
-        return content;
     }
 
     @Override
@@ -67,8 +60,8 @@ final class DefaultAggregatedHttpMessage implements AggregatedHttpMessage {
         helper.add("headers", headers())
               .add("content", content());
 
-        if (!trailingHeaders().isEmpty()) {
-            helper.add("trailingHandlers", trailingHeaders());
+        if (!trailers().isEmpty()) {
+            helper.add("trailers", trailers());
         }
 
         return helper.toString();
@@ -80,24 +73,24 @@ final class DefaultAggregatedHttpMessage implements AggregatedHttpMessage {
             return true;
         }
 
-        if (!(obj instanceof DefaultAggregatedHttpMessage)) {
+        if (!(obj instanceof DefaultAggregatedHttpResponse)) {
             return false;
         }
 
-        final DefaultAggregatedHttpMessage that = (DefaultAggregatedHttpMessage) obj;
+        final DefaultAggregatedHttpResponse that = (DefaultAggregatedHttpResponse) obj;
 
-        return informationals.equals(that.informationals) &&
-               headers.equals(that.headers) &&
-               content.equals(that.content) &&
-               trailingHeaders.equals(that.trailingHeaders);
+        return informationals().equals(that.informationals()) &&
+               headers().equals(that.headers()) &&
+               content().equals(that.content()) &&
+               trailers().equals(that.trailers());
     }
 
     @Override
     public int hashCode() {
-        int result = informationals.hashCode();
-        result = 31 * result + headers.hashCode();
-        result = 31 * result + content.hashCode();
-        result = 31 * result + trailingHeaders.hashCode();
+        int result = informationals().hashCode();
+        result = 31 * result + headers().hashCode();
+        result = 31 * result + content().hashCode();
+        result = 31 * result + trailers().hashCode();
         return result;
     }
 }

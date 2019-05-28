@@ -42,7 +42,7 @@ import org.junit.Test;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
@@ -143,7 +143,7 @@ public abstract class WebAppContainerTest {
                 .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
                 .build();
         final HttpClient client = HttpClient.of(clientFactory, server().httpsUri("/"));
-        final AggregatedHttpMessage response = client.get("/jsp/index.jsp").aggregate().get();
+        final AggregatedHttpResponse response = client.get("/jsp/index.jsp").aggregate().get();
         final String actualContent = CR_OR_LF.matcher(response.contentUtf8())
                                              .replaceAll("");
         assertThat(actualContent).isEqualTo(

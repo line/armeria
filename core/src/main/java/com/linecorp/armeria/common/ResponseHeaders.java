@@ -179,6 +179,10 @@ public interface ResponseHeaders extends HttpHeaders, ResponseHeaderGetters {
         }
 
         requireNonNull(headers, "headers");
+        // From the section 8.1.2.4 of RFC 7540:
+        //// For HTTP/2 responses, a single :status pseudo-header field is defined that carries the HTTP status
+        //// code field (see [RFC7231], Section 6). This pseudo-header field MUST be included in all responses;
+        //// otherwise, the response is malformed (Section 8.1.2.6).
         checkArgument(headers.contains(HttpHeaderNames.STATUS), ":status header does not exist.");
 
         if (headers instanceof HttpHeadersBase) {
