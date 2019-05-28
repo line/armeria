@@ -34,6 +34,7 @@ public abstract class AbstractClientFactory implements ClientFactory {
     @Override
     public final <T> T newClient(String uri, Class<T> clientType, ClientOptionValue<?>... options) {
         requireNonNull(uri, "uri");
+        requireNonNull(clientType, "clientType");
         requireNonNull(options, "options");
         return newClient(URI.create(uri), clientType, ClientOptions.of(options));
     }
@@ -41,11 +42,15 @@ public abstract class AbstractClientFactory implements ClientFactory {
     @Override
     public final <T> T newClient(String uri, Class<T> clientType, ClientOptions options) {
         requireNonNull(uri, "uri");
+        requireNonNull(clientType, "clientType");
+        requireNonNull(options, "options");
         return newClient(URI.create(uri), clientType, options);
     }
 
     @Override
     public final <T> T newClient(URI uri, Class<T> clientType, ClientOptionValue<?>... options) {
+        requireNonNull(uri, "uri");
+        requireNonNull(clientType, "clientType");
         requireNonNull(options, "options");
         return newClient(uri, clientType, ClientOptions.of(options));
     }
@@ -55,6 +60,7 @@ public abstract class AbstractClientFactory implements ClientFactory {
                                  ClientOptionValue<?>... options) {
         requireNonNull(scheme, "scheme");
         requireNonNull(endpoint, "endpoint");
+        requireNonNull(clientType, "clientType");
         requireNonNull(options, "options");
         return newClient(scheme, endpoint, clientType, ClientOptions.of(options));
     }
@@ -63,8 +69,9 @@ public abstract class AbstractClientFactory implements ClientFactory {
     public final <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType, ClientOptions options) {
         requireNonNull(scheme, "scheme");
         requireNonNull(endpoint, "endpoint");
+        requireNonNull(clientType, "clientType");
         requireNonNull(options, "options");
-        return newClient(scheme, endpoint, "", clientType, options);
+        return newClient(scheme, endpoint, null, clientType, options);
     }
 
     @Override
@@ -72,6 +79,7 @@ public abstract class AbstractClientFactory implements ClientFactory {
                                  ClientOptionValue<?>... options) {
         requireNonNull(scheme, "scheme");
         requireNonNull(endpoint, "endpoint");
+        requireNonNull(clientType, "clientType");
         requireNonNull(options, "options");
         return newClient(scheme, endpoint, path, clientType, ClientOptions.of(options));
     }
