@@ -113,7 +113,7 @@ final class PropertiesFileWatcherRegistry implements AutoCloseable {
     }
 
     /**
-     * Stops watching a properties file corresponding to the {@code resourceUrl}.
+     * Stops watching a properties file corresponding to the {@code PropertiesEndpointGroup}.
      * @param group group to stop watching
      */
     synchronized void deregister(PropertiesEndpointGroup group) {

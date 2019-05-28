@@ -42,7 +42,7 @@ public class PropertiesEndpointGroupTest {
 
     @BeforeClass
     public static void before() {
-        Awaitility.setDefaultTimeout(20, TimeUnit.SECONDS);
+        Awaitility.setDefaultTimeout(1, TimeUnit.MINUTES);
     }
 
     @Rule

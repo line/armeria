@@ -22,8 +22,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -187,11 +187,6 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
     }
 
     private static List<Endpoint> loadEndpoints(URL resourceUrl, String endpointKeyPrefix, int defaultPort) {
-
-        if (!endpointKeyPrefix.endsWith(".")) {
-            endpointKeyPrefix += ".";
-        }
-
         try (InputStream in = resourceUrl.openStream()) {
             final Properties props = new Properties();
             props.load(in);
@@ -202,18 +197,20 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
     }
 
     private static List<Endpoint> loadEndpoints(Path path, String endpointKeyPrefix, int defaultPort) {
-        final URL resourceUrl;
-        try {
-            resourceUrl = path.toUri().toURL();
-        } catch (MalformedURLException e) {
-            throw new IllegalArgumentException("invalid path: " + path, e);
+        try (InputStream in = Files.newInputStream(path)) {
+            final Properties props = new Properties();
+            props.load(in);
+            return loadEndpoints(props, endpointKeyPrefix, defaultPort);
+        } catch (IOException e) {
+            throw new IllegalArgumentException("failed to load: " + path, e);
         }
-
-        return loadEndpoints(resourceUrl, endpointKeyPrefix, defaultPort);
     }
 
     private static List<Endpoint> loadEndpoints(Properties properties, String endpointKeyPrefix,
                                                 int defaultPort) {
+        if (!endpointKeyPrefix.endsWith(".")) {
+            endpointKeyPrefix += ".";
+        }
         final List<Endpoint> newEndpoints = new ArrayList<>();
         for (Entry<Object, Object> e : properties.entrySet()) {
             final String key = (String) e.getKey();
@@ -244,9 +241,8 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
                 path,
                 requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
                 defaultPort));
-        registry.register(this, path, () -> {
-            setEndpoints(loadEndpoints(path, endpointKeyPrefix, defaultPort));
-        });
+        registry.register(this, path, () ->
+                setEndpoints(loadEndpoints(path, endpointKeyPrefix, defaultPort)));
     }
 
     @Override
