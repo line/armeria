@@ -32,7 +32,7 @@ abstract class AbstractPathMapping implements PathMapping {
      * {@link #doApply(RoutingContext)}.
      */
     @Override
-    public final PathMappingResult apply(RoutingContext routingCtx) {
+    public final RoutingResultBuilder apply(RoutingContext routingCtx) {
         ensureAbsolutePath(requireNonNull(routingCtx, "routingCtx").path(), "path");
         return doApply(routingCtx);
     }
@@ -43,10 +43,10 @@ abstract class AbstractPathMapping implements PathMapping {
      *
      * @param routingCtx a context to find the {@link Service}
      *
-     * @return a non-empty {@link PathMappingResult} if the specified {@code path} matches this mapping.
-     *         {@link PathMappingResult#empty()} if not matches.
+     * @return a settable {@link RoutingResultBuilder} if the specified {@code path} matches this mapping.
+     *         {@link RoutingResult#immutableBuilder()} if not matches.
      */
-    protected abstract PathMappingResult doApply(RoutingContext routingCtx);
+    abstract RoutingResultBuilder doApply(RoutingContext routingCtx);
 
     @Override
     public String loggerName() {

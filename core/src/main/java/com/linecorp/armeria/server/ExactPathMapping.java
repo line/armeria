@@ -40,12 +40,11 @@ final class ExactPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    protected PathMappingResult doApply(RoutingContext routingCtx) {
-        return exactPath.equals(routingCtx.path()) ? PathMappingResult.builder()
-                                                                      .path(routingCtx.path())
-                                                                      .query(routingCtx.query())
-                                                                      .build()
-                                                   : PathMappingResult.empty();
+    RoutingResultBuilder doApply(RoutingContext routingCtx) {
+        return exactPath.equals(routingCtx.path()) ? RoutingResult.builder()
+                                                                  .path(routingCtx.path())
+                                                                  .query(routingCtx.query())
+                                                   : RoutingResult.immutableBuilder();
     }
 
     @Override

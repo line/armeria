@@ -19,59 +19,96 @@ package com.linecorp.armeria.server;
 import static com.linecorp.armeria.server.RoutingResult.LOWEST_SCORE;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Map;
-
 import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 
 /**
  * Builds a new {@link RoutingResult}.
  */
 public final class RoutingResultBuilder {
 
-    @Nullable
-    private PathMappingResult pathMappingResult;
+    private static final RoutingResultBuilder immutableBuilder = new RoutingResultBuilder(true);
+
+    private final boolean isImmutable;
 
     @Nullable
     private String path;
 
     @Nullable
     private String query;
-    private Map<String, String> pathParams = ImmutableMap.of();
+
+    private final ImmutableMap.Builder<String, String> pathParams = ImmutableMap.builder();
+
     private int score = LOWEST_SCORE;
 
     @Nullable
     private MediaType negotiatedResponseMediaType;
 
-    RoutingResultBuilder pathMappingResult(PathMappingResult pathMappingResult) {
-        this.pathMappingResult = requireNonNull(pathMappingResult, "pathMappingResult");
-        return this;
+    /**
+     * Returns the immutable {@link RoutingResultBuilder}.
+     */
+    static RoutingResultBuilder immutable() {
+        return immutableBuilder;
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    RoutingResultBuilder(boolean isImmutable) {
+        this.isImmutable = isImmutable;
+    }
+
+    /**
+     * Returns {@code true} if this result is not immutable.
+     */
+    boolean isImmutable() {
+        return isImmutable;
     }
 
     /**
      * Sets the mapped path, encoded as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
      */
     public RoutingResultBuilder path(String path) {
+        ensureMutable();
         this.path = requireNonNull(path, "path");
         return this;
+    }
+
+    private void ensureMutable() {
+        if (isImmutable) {
+            throw new IllegalStateException("Cannot set to the immutable builder.");
+        }
     }
 
     /**
      * Sets the specified query.
      */
     public RoutingResultBuilder query(@Nullable String query) {
+        ensureMutable();
         this.query = query;
         return this;
     }
 
     /**
-     * Sets the path parameters.
+     * Adds a decoded path parameter.
      */
-    public RoutingResultBuilder pathParams(Map<String, String> pathParams) {
-        this.pathParams = requireNonNull(pathParams, "pathParams");
+    public RoutingResultBuilder decodedParam(String name, String value) {
+        ensureMutable();
+        pathParams.put(requireNonNull(name, "name"), requireNonNull(value, "value"));
+        return this;
+    }
+
+    /**
+     * Adds an encoded path parameter, which will be decoded in UTF-8 automatically.
+     */
+    public RoutingResultBuilder rawParam(String name, String value) {
+        ensureMutable();
+        pathParams.put(requireNonNull(name, "name"),
+                       ArmeriaHttpUtil.decodePath(requireNonNull(value, "value")));
         return this;
     }
 
@@ -79,6 +116,7 @@ public final class RoutingResultBuilder {
      * Sets the score.
      */
     public RoutingResultBuilder score(int score) {
+        ensureMutable();
         this.score = score;
         return this;
     }
@@ -87,6 +125,7 @@ public final class RoutingResultBuilder {
      * Sets the negotiated producible {@link MediaType}.
      */
     public RoutingResultBuilder negotiatedResponseMediaType(MediaType negotiatedResponseMediaType) {
+        ensureMutable();
         this.negotiatedResponseMediaType = requireNonNull(negotiatedResponseMediaType,
                                                           "negotiatedResponseMediaType");
         return this;
@@ -96,15 +135,10 @@ public final class RoutingResultBuilder {
      * Returns a newly-created {@link RoutingResult}.
      */
     public RoutingResult build() {
-        if (pathMappingResult != null) {
-            return new RoutingResult(pathMappingResult, score, negotiatedResponseMediaType);
-        }
-
-        if (path == null) {
+        if (isImmutable || path == null) {
             return RoutingResult.empty();
         }
 
-        return new RoutingResult(new PathMappingResult(path, query, pathParams), score,
-                                 negotiatedResponseMediaType);
+        return new RoutingResult(path, query, pathParams.build(), score, negotiatedResponseMediaType);
     }
 }

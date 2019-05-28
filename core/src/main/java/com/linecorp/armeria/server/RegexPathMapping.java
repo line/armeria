@@ -54,15 +54,15 @@ final class RegexPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    protected PathMappingResult doApply(RoutingContext routingCtx) {
+    protected RoutingResultBuilder doApply(RoutingContext routingCtx) {
         final Matcher matcher = regex.matcher(routingCtx.path());
         if (!matcher.find()) {
-            return PathMappingResult.empty();
+            return RoutingResult.immutableBuilder();
         }
 
-        final PathMappingResultBuilder builder = PathMappingResult.builder()
-                                                                  .path(routingCtx.path())
-                                                                  .query(routingCtx.query());
+        final RoutingResultBuilder builder = RoutingResult.builder()
+                                                          .path(routingCtx.path())
+                                                          .query(routingCtx.query());
         for (String name : paramNames) {
             final String value = matcher.group(name);
             if (value == null) {
@@ -71,7 +71,7 @@ final class RegexPathMapping extends AbstractPathMapping {
             builder.rawParam(name, value);
         }
 
-        return builder.build();
+        return builder;
     }
 
     @Override

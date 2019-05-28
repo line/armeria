@@ -31,10 +31,10 @@ interface PathMapping {
      *
      * @param routingCtx a context to find the {@link Service}.
      *
-     * @return a non-empty {@link PathMappingResult} if the specified {@code path} matches this mapping.
-     *         {@link PathMappingResult#empty()} if not matches.
+     * @return a settable {@link RoutingResultBuilder} if the specified {@code path} matches this mapping.
+     *         {@link RoutingResult#immutableBuilder()} if not matches.
      */
-    PathMappingResult apply(RoutingContext routingCtx);
+    RoutingResultBuilder apply(RoutingContext routingCtx);
 
     /**
      * Returns the names of the path parameters extracted by this mapping.

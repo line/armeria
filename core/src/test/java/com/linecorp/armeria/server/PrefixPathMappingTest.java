@@ -32,9 +32,9 @@ class PrefixPathMappingTest {
     }
 
     @Test
-    void pathMappingResult() {
+    void routingResult() {
         final PrefixPathMapping prefixPathMapping = new PrefixPathMapping("/foo", true);
-        final PathMappingResult result = prefixPathMapping.apply(create("/foo/bar/cat"));
+        final RoutingResult result = prefixPathMapping.apply(create("/foo/bar/cat")).build();
         assertThat(result.path()).isEqualTo("/bar/cat");
     }
 

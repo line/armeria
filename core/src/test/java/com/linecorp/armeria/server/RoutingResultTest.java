@@ -21,27 +21,35 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.net.URISyntaxException;
 import java.util.AbstractMap.SimpleEntry;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-
-import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.MediaType;
 
-public class RoutingResultTest {
+class RoutingResultTest {
 
     @Test
-    public void empty() {
+    void empty() {
         final RoutingResultBuilder builder = RoutingResult.builder();
         final RoutingResult routingResult = builder.build();
         assertThat(routingResult).isSameAs(RoutingResult.empty());
     }
 
     @Test
-    public void routingResult() throws URISyntaxException {
+    void immutableBuilder() {
+        final RoutingResultBuilder builder = RoutingResult.immutableBuilder();
+        assertThat(builder.build()).isSameAs(RoutingResult.empty());
+
+        Assertions.assertThrows(IllegalStateException.class,
+                                () -> builder.path("/foo"));
+    }
+
+    @Test
+    void routingResult() throws URISyntaxException {
         final RoutingResultBuilder builder = RoutingResult.builder();
         final RoutingResult routingResult = builder.path("/foo")
                                                    .query("bar=baz")
-                                                   .pathParams(ImmutableMap.of("qux", "quux"))
+                                                   .rawParam("qux", "quux")
                                                    .negotiatedResponseMediaType(MediaType.JSON_UTF_8)
                                                    .build();
         assertThat(routingResult.isPresent()).isTrue();

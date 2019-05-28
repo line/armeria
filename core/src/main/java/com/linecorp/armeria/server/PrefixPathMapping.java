@@ -49,16 +49,15 @@ final class PrefixPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    protected PathMappingResult doApply(RoutingContext routingCtx) {
+    RoutingResultBuilder doApply(RoutingContext routingCtx) {
         final String path = routingCtx.path();
         if (!path.startsWith(prefix)) {
-            return PathMappingResult.empty();
+            return RoutingResult.immutableBuilder();
         }
 
-        return PathMappingResult.builder()
-                                .path(stripPrefix ? path.substring(prefix.length() - 1) : path)
-                                .query(routingCtx.query())
-                                .build();
+        return RoutingResult.builder()
+                            .path(stripPrefix ? path.substring(prefix.length() - 1) : path)
+                            .query(routingCtx.query());
     }
 
     @Override

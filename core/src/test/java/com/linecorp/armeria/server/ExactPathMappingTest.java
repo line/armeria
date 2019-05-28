@@ -25,13 +25,13 @@ class ExactPathMappingTest {
 
     @Test
     void shouldReturnEmptyOnMismatch() {
-        final PathMappingResult result = new ExactPathMapping("/find/me").apply(create("/find/me/not"));
+        final RoutingResult result = new ExactPathMapping("/find/me").apply(create("/find/me/not")).build();
         assertThat(result.isPresent()).isFalse();
     }
 
     @Test
     void shouldReturnNonEmptyOnMatch() {
-        final PathMappingResult result = new ExactPathMapping("/find/me").apply(create("/find/me"));
+        final RoutingResult result = new ExactPathMapping("/find/me").apply(create("/find/me")).build();
         assertThat(result.isPresent()).isTrue();
         assertThat(result.path()).isEqualTo("/find/me");
         assertThat(result.query()).isNull();

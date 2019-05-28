@@ -75,13 +75,13 @@ final class DefaultRoute implements Route {
 
     @Override
     public RoutingResult apply(RoutingContext routingCtx) {
-        final PathMappingResult result = pathMapping.apply(requireNonNull(routingCtx, "routingCtx"));
-        if (!result.isPresent()) {
+        final RoutingResultBuilder builder = pathMapping.apply(requireNonNull(routingCtx, "routingCtx"));
+        if (builder.isImmutable()) {
             return RoutingResult.empty();
         }
 
         if (methods.isEmpty()) {
-            return RoutingResult.builder().pathMappingResult(result).build();
+            return builder.build();
         }
 
         // We need to check the method after checking the path, in order to return '405 Method Not Allowed'.
@@ -116,9 +116,7 @@ final class DefaultRoute implements Route {
 
         final List<MediaType> types = routingCtx.acceptTypes();
         if (types.isEmpty()) {
-            final RoutingResultBuilder builder = RoutingResult.builder()
-                                                              .pathMappingResult(result)
-                                                              .score(HIGHEST_SCORE);
+            builder.score(HIGHEST_SCORE);
             for (MediaType produceType : produces) {
                 if (!isAnyType(produceType)) {
                     return builder.negotiatedResponseMediaType(produceType).build();
@@ -136,9 +134,7 @@ final class DefaultRoute implements Route {
                         // we set the score as the best score when the index is 0.
 
                         final int score = i == 0 ? HIGHEST_SCORE : -1 * i;
-                        final RoutingResultBuilder builder = RoutingResult.builder()
-                                                                          .pathMappingResult(result)
-                                                                          .score(score);
+                        builder.score(score);
                         if (!isAnyType(produceType)) {
                             return builder.negotiatedResponseMediaType(produceType).build();
                         }
@@ -150,7 +146,7 @@ final class DefaultRoute implements Route {
             return RoutingResult.empty();
         }
 
-        return RoutingResult.builder().pathMappingResult(result).build();
+        return builder.build();
     }
 
     private static boolean isAnyType(MediaType contentType) {

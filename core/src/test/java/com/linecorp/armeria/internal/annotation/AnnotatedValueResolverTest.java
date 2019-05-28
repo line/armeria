@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.internal.annotation;
 
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.toArguments;
 import static com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.toRequestObjectResolvers;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,7 +28,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.junit.AfterClass;
@@ -50,6 +48,7 @@ import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.NoAnnotat
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.RequestObjectResolver;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.ResolverContext;
 import com.linecorp.armeria.server.RoutingResult;
+import com.linecorp.armeria.server.RoutingResultBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 import com.linecorp.armeria.server.annotation.Cookies;
@@ -96,17 +95,13 @@ public class AnnotatedValueResolverTest {
         originalHeaders = headers.build();
         request = HttpRequest.of(originalHeaders);
 
-        final RoutingResult routingResult =
-                RoutingResult.builder()
-                             .path(path)
-                             .query(query)
-                             .pathParams(pathParams.stream()
-                                                 .collect(toImmutableMap(Function.identity(),
-                                                                         Function.identity())))
-                             .build();
+        final RoutingResultBuilder builder = RoutingResult.builder()
+                                                         .path(path)
+                                                         .query(query);
+        pathParams.forEach(param -> builder.rawParam(param, param));
 
         context = ServiceRequestContextBuilder.of(request)
-                                              .routingResult(routingResult)
+                                              .routingResult(builder.build())
                                               .build();
 
         resolverContext = new ResolverContext(context, request, null);

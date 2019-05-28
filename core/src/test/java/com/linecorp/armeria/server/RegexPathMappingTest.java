@@ -35,7 +35,7 @@ class RegexPathMappingTest {
     @Test
     void basic() {
         final RegexPathMapping regexPathMapping = new RegexPathMapping(Pattern.compile("foo"));
-        final PathMappingResult result = regexPathMapping.apply(create("/barfoobar"));
+        final RoutingResult result = regexPathMapping.apply(create("/barfoobar")).build();
         assertThat(result.isPresent()).isTrue();
         assertThat(result.path()).isEqualTo("/barfoobar");
         assertThat(result.query()).isNull();
@@ -48,7 +48,8 @@ class RegexPathMappingTest {
                 new RegexPathMapping(Pattern.compile("^/files/(?<fileName>.*)$"));
         assertThat(regexPathMapping.paramNames()).containsExactly("fileName");
 
-        final PathMappingResult result = regexPathMapping.apply(create("/files/images/avatar.jpg", "size=512"));
+        final RoutingResult result = regexPathMapping.apply(create("/files/images/avatar.jpg", "size=512"))
+                                                     .build();
         assertThat(result.isPresent()).isTrue();
         assertThat(result.path()).isEqualTo("/files/images/avatar.jpg");
         assertThat(result.query()).isEqualTo("size=512");
@@ -58,7 +59,7 @@ class RegexPathMappingTest {
     @Test
     void utf8() {
         final RegexPathMapping regexPathMapping = new RegexPathMapping(Pattern.compile("^/(?<foo>.*)$"));
-        final PathMappingResult result = regexPathMapping.apply(create("/%C2%A2"));
+        final RoutingResult result = regexPathMapping.apply(create("/%C2%A2")).build();
         assertThat(result.path()).isEqualTo("/%C2%A2");
         assertThat(result.decodedPath()).isEqualTo("/¢");
         assertThat(result.pathParams()).containsEntry("foo", "¢").hasSize(1);

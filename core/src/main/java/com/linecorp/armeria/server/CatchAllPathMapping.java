@@ -33,8 +33,8 @@ final class CatchAllPathMapping extends AbstractPathMapping {
     private CatchAllPathMapping() {}
 
     @Override
-    protected PathMappingResult doApply(RoutingContext routingCtx) {
-        return PathMappingResult.builder().path(routingCtx.path()).query(routingCtx.query()).build();
+    RoutingResultBuilder doApply(RoutingContext routingCtx) {
+        return RoutingResult.builder().path(routingCtx.path()).query(routingCtx.query());
     }
 
     @Override

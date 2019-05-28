@@ -77,25 +77,21 @@ final class GlobPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    protected PathMappingResult doApply(RoutingContext routingCtx) {
+    RoutingResultBuilder doApply(RoutingContext routingCtx) {
         final Matcher m = pattern.matcher(routingCtx.path());
         if (!m.matches()) {
-            return PathMappingResult.empty();
+            return RoutingResult.immutableBuilder();
         }
 
-        final PathMappingResultBuilder builder = PathMappingResult.builder()
-                                                                  .path(routingCtx.path())
-                                                                  .query(routingCtx.query());
-        if (numParams == 0) {
-            return builder.build();
-        }
-
+        final RoutingResultBuilder builder = RoutingResult.builder()
+                                                          .path(routingCtx.path())
+                                                          .query(routingCtx.query());
         for (int i = 1; i <= numParams; i++) {
             final String value = firstNonNull(m.group(i), "");
             builder.rawParam(int2str(i - 1), value);
         }
 
-        return builder.build();
+        return builder;
     }
 
     @Override

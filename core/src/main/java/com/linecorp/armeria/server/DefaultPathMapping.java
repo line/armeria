@@ -185,23 +185,20 @@ final class DefaultPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    protected PathMappingResult doApply(RoutingContext routingCtx) {
+    RoutingResultBuilder doApply(RoutingContext routingCtx) {
         final Matcher matcher = pattern.matcher(routingCtx.path());
         if (!matcher.matches()) {
-            return PathMappingResult.empty();
+            return RoutingResult.immutableBuilder();
         }
 
-        final PathMappingResultBuilder builder = PathMappingResult.builder()
-                                                                  .path(routingCtx.path())
-                                                                  .query(routingCtx.query());
-        if (paramNameArray.length == 0) {
-            return builder.build();
-        }
+        final RoutingResultBuilder builder = RoutingResult.builder()
+                                                          .path(routingCtx.path())
+                                                          .query(routingCtx.query());
 
         for (int i = 0; i < paramNameArray.length; i++) {
             builder.rawParam(paramNameArray[i], matcher.group(i + 1));
         }
-        return builder.build();
+        return builder;
     }
 
     @Override

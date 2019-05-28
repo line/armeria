@@ -16,15 +16,15 @@
 
 package com.linecorp.armeria.server;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.Map;
 
 import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 
 /**
  * The result returned by {@link Route#apply(RoutingContext)}.
@@ -35,10 +35,10 @@ public final class RoutingResult {
     static final int HIGHEST_SCORE = Integer.MAX_VALUE;
 
     private static final RoutingResult EMPTY =
-            new RoutingResult(PathMappingResult.empty(), LOWEST_SCORE, null);
+            new RoutingResult(null, null, ImmutableMap.of(), LOWEST_SCORE, null);
 
     /**
-     * The {@link RoutingResult} whose {@link #isPresent()} returns {@code false}. It is returned by
+     * The empty {@link RoutingResult} whose {@link #isPresent()} returns {@code false}. It is returned by
      * {@link Route#apply(RoutingContext)} when the {@link RoutingContext} did not match the
      * conditions in the {@link Route}.
      */
@@ -50,18 +50,37 @@ public final class RoutingResult {
      * Returns a new builder.
      */
     public static RoutingResultBuilder builder() {
-        return new RoutingResultBuilder();
+        return new RoutingResultBuilder(false);
     }
 
-    private final PathMappingResult pathMappingResult;
+    /**
+     * Returns the immutable {@link RoutingResultBuilder}.
+     */
+    static RoutingResultBuilder immutableBuilder() {
+        return RoutingResultBuilder.immutable();
+    }
+
+    @Nullable
+    private final String path;
+    @Nullable
+    private final String query;
+
+    private final Map<String, String> pathParams;
+
+    @Nullable
+    private String decodedPath;
 
     private final int score;
     @Nullable
     private final MediaType negotiatedResponseMediaType;
 
-    RoutingResult(PathMappingResult pathMappingResult, int score,
-                  @Nullable MediaType negotiatedResponseMediaType) {
-        this.pathMappingResult = requireNonNull(pathMappingResult, "pathMappingResult");
+    RoutingResult(@Nullable String path, @Nullable String query, Map<String, String> pathParams,
+                  int score, @Nullable MediaType negotiatedResponseMediaType) {
+        assert path != null || query == null && pathParams.isEmpty();
+
+        this.path = path;
+        this.query = query;
+        this.pathParams = ImmutableMap.copyOf(pathParams);
         this.score = score;
         this.negotiatedResponseMediaType = negotiatedResponseMediaType;
     }
@@ -70,7 +89,7 @@ public final class RoutingResult {
      * Returns {@code true} if this result is not {@link #empty()}.
      */
     public boolean isPresent() {
-        return pathMappingResult.isPresent();
+        return path != null;
     }
 
     /**
@@ -79,7 +98,14 @@ public final class RoutingResult {
      * @throws IllegalStateException if there's no match
      */
     public String path() {
-        return pathMappingResult.path();
+        ensurePresence();
+        return path;
+    }
+
+    private void ensurePresence() {
+        if (!isPresent()) {
+            throw new IllegalStateException("routing unavailable");
+        }
     }
 
     /**
@@ -88,7 +114,13 @@ public final class RoutingResult {
      * @throws IllegalStateException if there's no match
      */
     public String decodedPath() {
-        return pathMappingResult.decodedPath();
+        ensurePresence();
+        final String decodedPath = this.decodedPath;
+        if (decodedPath != null) {
+            return decodedPath;
+        }
+
+        return this.decodedPath = ArmeriaHttpUtil.decodePath(path);
     }
 
     /**
@@ -99,7 +131,8 @@ public final class RoutingResult {
      */
     @Nullable
     public String query() {
-        return pathMappingResult.query();
+        ensurePresence();
+        return query;
     }
 
     /**
@@ -108,7 +141,8 @@ public final class RoutingResult {
      * @throws IllegalStateException if there's no match
      */
     public Map<String, String> pathParams() {
-        return pathMappingResult.pathParams();
+        ensurePresence();
+        return pathParams;
     }
 
     /**
@@ -144,12 +178,6 @@ public final class RoutingResult {
         return negotiatedResponseMediaType;
     }
 
-    private void ensurePresence() {
-        if (!pathMappingResult.isPresent()) {
-            throw new IllegalStateException("mapping unavailable");
-        }
-    }
-
     @Override
     public String toString() {
         if (isPresent()) {
@@ -159,8 +187,10 @@ public final class RoutingResult {
             } else if (hasLowestScore()) {
                 score += " (lowest)";
             }
-            return MoreObjects.toStringHelper(this)
-                              .add("pathMappingResult", pathMappingResult)
+            return MoreObjects.toStringHelper(this).omitNullValues()
+                              .add("path", path)
+                              .add("query", query)
+                              .add("pathParams", pathParams)
                               .add("score", score)
                               .add("negotiatedResponseMediaType", negotiatedResponseMediaType)
                               .toString();

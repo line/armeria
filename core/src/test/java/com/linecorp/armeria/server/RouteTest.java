@@ -223,7 +223,6 @@ class RouteTest {
                      .methods(HttpMethod.GET, HttpMethod.POST)
                      .produces(ANY_TYPE)
                      .build();
-
         getResult = route.apply(method(HttpMethod.GET));
         assertThat(getResult.isPresent()).isTrue();
         // When there's no "Accept" header, it has the highest score.
