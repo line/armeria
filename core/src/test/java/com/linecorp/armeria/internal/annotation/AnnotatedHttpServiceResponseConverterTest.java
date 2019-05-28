@@ -264,14 +264,14 @@ public class AnnotatedHttpServiceResponseConverterTest {
                                          ImmutableMap.of("a", "b"));
                 }
 
-                @Get("/expect-custom-trailing-header")
-                @AdditionalTrailer(name = "x-custom-annotated-trailing-header", value = "annotated-value")
+                @Get("/expect-custom-trailers")
+                @AdditionalTrailer(name = "x-custom-annotated-trailers", value = "annotated-value")
                 @ProducesJson
-                public HttpResult<List<String>> expectCustomTrailingHeader() {
+                public HttpResult<List<String>> expectCustomTrailers() {
                     return HttpResult.of(HttpHeaders.of(HttpHeaderNames.of("x-custom-header"), "value"),
                                          ImmutableList.of("a", "b"),
                                          HttpHeaders
-                                                 .of(HttpHeaderNames.of("x-custom-trailing-header"), "value"));
+                                                 .of(HttpHeaderNames.of("x-custom-trailers"), "value"));
                 }
 
                 @Get("/async/expect-custom-header")
@@ -282,10 +282,10 @@ public class AnnotatedHttpServiceResponseConverterTest {
                                          CompletableFuture.completedFuture(ImmutableMap.of("a", "b")));
                 }
 
-                @Get("/async/expect-custom-trailing-header")
-                @AdditionalTrailer(name = "x-custom-annotated-trailing-header", value = "annotated-value")
+                @Get("/async/expect-custom-trailers")
+                @AdditionalTrailer(name = "x-custom-annotated-trailers", value = "annotated-value")
                 @ProducesJson
-                public HttpResult<CompletionStage<List<String>>> asyncExpectCustomTrailingHeader(
+                public HttpResult<CompletionStage<List<String>>> asyncExpectCustomTrailers(
                         ServiceRequestContext ctx) {
                     final CompletableFuture<List<String>> future = new CompletableFuture<>();
                     ctx.eventLoop().schedule(() -> future.complete(ImmutableList.of("a", "b")),
@@ -293,7 +293,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
                     return HttpResult.of(HttpHeaders.of(HttpHeaderNames.of("x-custom-header"), "value"),
                                          future,
                                          HttpHeaders
-                                                 .of(HttpHeaderNames.of("x-custom-trailing-header"), "value"));
+                                                 .of(HttpHeaderNames.of("x-custom-trailers"), "value"));
                 }
 
                 @Get("/async/expect-bad-request")
@@ -612,15 +612,15 @@ public class AnnotatedHttpServiceResponseConverterTest {
                     "annotated-value");
         });
 
-        ImmutableList.of("/expect-custom-trailing-header",
-                         "/async/expect-custom-trailing-header").forEach(path -> {
+        ImmutableList.of("/expect-custom-trailers",
+                         "/async/expect-custom-trailers").forEach(path -> {
             final AggregatedHttpResponse response = aggregated(client.get(path));
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             assertThat(response.headers().get(HttpHeaderNames.of("x-custom-header"))).isEqualTo("value");
             assertThatJson(response.contentUtf8()).isEqualTo(ImmutableList.of("a", "b"));
-            assertThat(response.trailers().get(HttpHeaderNames.of("x-custom-trailing-header")))
+            assertThat(response.trailers().get(HttpHeaderNames.of("x-custom-trailers")))
                     .isEqualTo("value");
-            assertThat(response.trailers().get(HttpHeaderNames.of("x-custom-annotated-trailing-header")))
+            assertThat(response.trailers().get(HttpHeaderNames.of("x-custom-annotated-trailers")))
                     .isEqualTo("annotated-value");
         });
 

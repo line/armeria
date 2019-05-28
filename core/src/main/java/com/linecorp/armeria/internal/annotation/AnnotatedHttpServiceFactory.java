@@ -355,7 +355,7 @@ public final class AnnotatedHttpServiceFactory {
         if (ArmeriaHttpUtil.isContentAlwaysEmpty(defaultHeaders.status()) &&
             !defaultTrailers.isEmpty()) {
             logger.warn("A response with HTTP status code '{}' cannot have a content. " +
-                        "Trailing headers defined at '{}' might be ignored.",
+                        "Trailers defined at '{}' might be ignored.",
                         defaultHeaders.status().code(), methodAlias);
         }
 

@@ -148,7 +148,7 @@ public final class ArmeriaHttpUtil {
     private static final CharSequenceMap HTTP2_TO_HTTP_HEADER_BLACKLIST = new CharSequenceMap();
 
     /**
-     * The set of headers that must not be directly copied when converting trailing headers.
+     * The set of headers that must not be directly copied when converting trailers.
      */
     private static final CharSequenceMap HTTP_TRAILER_BLACKLIST = new CharSequenceMap();
 
@@ -386,7 +386,7 @@ public final class ArmeriaHttpUtil {
         }
         if (!trailers.isEmpty()) {
             throw new IllegalArgumentException(
-                    "A " + status + " response must not have trailing headers: " + trailers);
+                    "A " + status + " response must not have trailers: " + trailers);
         }
 
         return true;
@@ -811,7 +811,7 @@ public final class ArmeriaHttpUtil {
     public static Http2Headers toNettyHttp2(HttpHeaders in, boolean server) {
         final Http2Headers out = new DefaultHttp2Headers(false, in.size());
 
-        // Trailing headers if it does not have :status.
+        // Trailers if it does not have :status.
         if (server && !in.contains(HttpHeaderNames.STATUS)) {
             for (Entry<AsciiString, String> entry : in) {
                 final AsciiString name = entry.getKey();
@@ -849,7 +849,7 @@ public final class ArmeriaHttpUtil {
      * @param outputHeaders The object which will contain the resulting HTTP/1.x headers..
      * @param httpVersion What HTTP/1.x version {@code outputHeaders} should be treated as
      *                    when doing the conversion.
-     * @param isTrailer {@code true} if {@code outputHeaders} should be treated as trailing headers.
+     * @param isTrailer {@code true} if {@code outputHeaders} should be treated as trailers.
      *                  {@code false} otherwise.
      * @param isRequest {@code true} if the {@code outputHeaders} will be used in a request message.
      *                  {@code false} for response message.
@@ -912,7 +912,7 @@ public final class ArmeriaHttpUtil {
      * <ul>
      *   <li>the status of the specified {@code headers} is one of informational headers,
      *   {@link HttpStatus#NO_CONTENT} or {@link HttpStatus#RESET_CONTENT}</li>
-     *   <li>the trailing headers exists</li>
+     *   <li>the trailers exists</li>
      * </ul>
      * The {@link HttpHeaderNames#CONTENT_LENGTH} is added when the state of the specified {@code headers}
      * does not meet the conditions above and {@link HttpHeaderNames#CONTENT_LENGTH} is not present
@@ -945,9 +945,9 @@ public final class ArmeriaHttpUtil {
         }
 
         if (!trailers.isEmpty()) {
-            // Some of the client implementations such as "curl" ignores trailing headers if
-            // the "content-length" header is present. We should not set "content-length" header when trailing
-            // headers exists so that those clients can receive the trailing headers.
+            // Some of the client implementations such as "curl" ignores trailers if
+            // the "content-length" header is present. We should not set "content-length" header when
+            // trailers exists so that those clients can receive the trailers.
             // The response is sent using chunked transfer encoding in HTTP/1 or a DATA frame payload
             // in HTTP/2, so it's no worry.
             if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {

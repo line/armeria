@@ -176,7 +176,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * @param path the path of the request
      * @param mediaType the {@link MediaType} of the request content
      * @param content the content of the request
-     * @param trailers the trailing HTTP headers
+     * @param trailers the HTTP trailers
      */
     static HttpRequest of(HttpMethod method, String path, MediaType mediaType, HttpData content,
                           HttpHeaders trailers) {
@@ -358,7 +358,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
 
     /**
      * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailing headers of the request is received fully.
+     * the trailers of the request is received fully.
      */
     default CompletableFuture<AggregatedHttpRequest> aggregate() {
         final CompletableFuture<AggregatedHttpRequest> future = new CompletableFuture<>();
@@ -370,7 +370,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
 
     /**
      * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailing headers of the request is received fully.
+     * the trailers of the request is received fully.
      */
     default CompletableFuture<AggregatedHttpRequest> aggregate(EventExecutor executor) {
         requireNonNull(executor, "executor");
@@ -383,7 +383,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
 
     /**
      * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailing headers of the request is received fully. {@link AggregatedHttpRequest#content()} will
+     * the trailers of the request is received fully. {@link AggregatedHttpRequest#content()} will
      * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
      * use {@link #aggregate()}.
      */
@@ -398,7 +398,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
 
     /**
      * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailing headers of the request is received fully. {@link AggregatedHttpRequest#content()} will
+     * the trailers of the request is received fully. {@link AggregatedHttpRequest#content()} will
      * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
      * use {@link #aggregate()}.
      */

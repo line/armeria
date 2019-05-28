@@ -158,7 +158,7 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
-     * @param trailers the trailing HTTP headers
+     * @param trailers the HTTP trailers
      *
      * @deprecated Use {@link HttpResponse#of(HttpStatus, MediaType, HttpData, HttpHeaders)}.
      */
@@ -186,7 +186,7 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
             }
         }
 
-        // Add trailing headers if not empty.
+        // Add trailers if not empty.
         if (!trailers.isEmpty()) {
             write(trailers);
         }
@@ -216,7 +216,7 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
             }
         }
 
-        // Add trailing headers if not empty.
+        // Add trailers if not empty.
         if (!trailers.isEmpty()) {
             write(trailers);
         }

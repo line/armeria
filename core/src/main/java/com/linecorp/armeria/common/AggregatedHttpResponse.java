@@ -153,7 +153,7 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response
-     * @param trailers the trailing HTTP headers
+     * @param trailers the HTTP trailers
      */
     static AggregatedHttpResponse of(HttpStatus status, MediaType mediaType, HttpData content,
                                      HttpHeaders trailers) {
@@ -195,7 +195,7 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
      *
      * @param headers the HTTP headers
      * @param content the content of the HTTP response
-     * @param trailers the trailing HTTP headers
+     * @param trailers the HTTP trailers
      */
     static AggregatedHttpResponse of(ResponseHeaders headers, HttpData content, HttpHeaders trailers) {
         requireNonNull(headers, "headers");
@@ -210,7 +210,7 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
      * @param informationals the informational class (1xx) HTTP headers
      * @param headers the HTTP headers
      * @param content the content of the HTTP response
-     * @param trailers the trailing HTTP headers
+     * @param trailers the HTTP trailers
      */
     static AggregatedHttpResponse of(Iterable<ResponseHeaders> informationals, ResponseHeaders headers,
                                      HttpData content, HttpHeaders trailers) {

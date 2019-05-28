@@ -61,7 +61,7 @@ final class DefaultAggregatedHttpResponse extends AbstractAggregatedHttpMessage
               .add("content", content());
 
         if (!trailers().isEmpty()) {
-            helper.add("trailingHandlers", trailers());
+            helper.add("trailers", trailers());
         }
 
         return helper.toString();

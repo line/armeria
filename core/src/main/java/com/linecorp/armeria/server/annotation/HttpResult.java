@@ -53,11 +53,11 @@ public interface HttpResult<T> {
     }
 
     /**
-     * Creates a new {@link HttpResult} with the specified headers, content and trailing headers.
+     * Creates a new {@link HttpResult} with the specified headers, content and trailers.
      *
      * @param headers the HTTP headers
      * @param content the content of the response
-     * @param trailers the trailing HTTP headers
+     * @param trailers the HTTP trailers
      */
     static <T> HttpResult<T> of(HttpHeaders headers, T content, HttpHeaders trailers) {
         return new DefaultHttpResult<>(headers, requireNonNull(content, "content"), trailers);
@@ -83,11 +83,11 @@ public interface HttpResult<T> {
     }
 
     /**
-     * Creates a new {@link HttpResult} with the specified {@link HttpStatus}, content and trailing headers.
+     * Creates a new {@link HttpResult} with the specified {@link HttpStatus}, content and trailers.
      *
      * @param status the HTTP status
      * @param content the content of the response
-     * @param trailers the trailing HTTP headers
+     * @param trailers the HTTP trailers
      */
     static <T> HttpResult<T> of(HttpStatus status, T content, HttpHeaders trailers) {
         return new DefaultHttpResult<>(ResponseHeaders.of(status), requireNonNull(content, "content"),

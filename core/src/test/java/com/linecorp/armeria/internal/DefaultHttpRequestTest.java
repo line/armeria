@@ -124,7 +124,7 @@ public class DefaultHttpRequestTest {
                                   HttpHeaderNames.CONTENT_LENGTH, "3"));
         // Content
         assertThat(aggregated.contentUtf8()).isEqualTo("foo");
-        // Trailing headers
+        // Trailers
         assertThat(aggregated.trailers()).isEqualTo(HttpHeaders.of(HttpHeaderNames.of("a"), "b"));
     }
 }

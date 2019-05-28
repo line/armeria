@@ -137,7 +137,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                                          true, inboundTrafficController, cfg.maxRequestLength());
 
             // Close the request early when it is sure that there will be
-            // neither content nor trailing headers.
+            // neither content nor trailers.
             if (contentEmpty && endOfStream) {
                 req.close();
             }

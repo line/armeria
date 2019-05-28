@@ -107,7 +107,7 @@ public final class ServerSentEvents {
      *
      * @param headers the HTTP headers supposed to send
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
-     * @param trailers the trailing HTTP headers supposed to send
+     * @param trailers the HTTP trailers
      */
     public static HttpResponse fromPublisher(ResponseHeaders headers,
                                              Publisher<? extends ServerSentEvent> contentPublisher,
@@ -148,7 +148,7 @@ public final class ServerSentEvents {
      *
      * @param headers the HTTP headers supposed to send
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
-     * @param trailers the trailing HTTP headers supposed to send
+     * @param trailers the HTTP trailers
      * @param converter the converter which converts published objects into {@link ServerSentEvent}s
      */
     public static <T> HttpResponse fromPublisher(ResponseHeaders headers,
@@ -192,7 +192,7 @@ public final class ServerSentEvents {
      *
      * @param headers the HTTP headers supposed to send
      * @param contentStream the {@link Stream} which publishes the objects supposed to send as contents
-     * @param trailers the trailing HTTP headers supposed to send
+     * @param trailers the HTTP trailers
      * @param executor the executor which iterates the stream
      */
     public static HttpResponse fromStream(ResponseHeaders headers,
@@ -237,7 +237,7 @@ public final class ServerSentEvents {
      *
      * @param headers the HTTP headers supposed to send
      * @param contentStream the {@link Stream} which publishes the objects supposed to send as contents
-     * @param trailers the trailing HTTP headers supposed to send
+     * @param trailers the HTTP trailers
      * @param executor the executor which iterates the stream
      * @param converter the converter which converts published objects into {@link ServerSentEvent}s
      */
@@ -277,7 +277,7 @@ public final class ServerSentEvents {
      *
      * @param headers the HTTP headers supposed to send
      * @param sse the {@link ServerSentEvent} object supposed to send as contents
-     * @param trailers the trailing HTTP headers supposed to send
+     * @param trailers the HTTP trailers
      */
     public static HttpResponse fromEvent(ResponseHeaders headers, ServerSentEvent sse, HttpHeaders trailers) {
         requireNonNull(headers, "headers");

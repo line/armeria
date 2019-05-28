@@ -158,7 +158,7 @@ public interface AggregatedHttpRequest extends AggregatedHttpMessage {
      * @param path the path of the request
      * @param mediaType the {@link MediaType} of the request content
      * @param content the content of the request
-     * @param trailers the trailing HTTP headers
+     * @param trailers the HTTP trailers
      */
     static AggregatedHttpRequest of(HttpMethod method, String path, MediaType mediaType,
                                     HttpData content, HttpHeaders trailers) {
@@ -199,7 +199,7 @@ public interface AggregatedHttpRequest extends AggregatedHttpMessage {
      *
      * @param headers the HTTP request headers
      * @param content the content of the request
-     * @param trailers the trailing HTTP headers
+     * @param trailers the HTTP trailers
      */
     static AggregatedHttpRequest of(RequestHeaders headers, HttpData content, HttpHeaders trailers) {
         requireNonNull(headers, "headers");

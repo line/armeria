@@ -50,7 +50,7 @@ public class ByteArrayResponseConverterFunctionTest {
     private static final ResponseHeaders OCTET_STREAM_HEADERS =
             ResponseHeaders.of(HttpStatus.OK,
                                HttpHeaderNames.CONTENT_TYPE, MediaType.OCTET_STREAM);
-    private static final HttpHeaders DEFAULT_TRAILING_HEADERS = HttpHeaders.of();
+    private static final HttpHeaders DEFAULT_TRAILERS = HttpHeaders.of();
 
     @BeforeClass
     public static void setup() {
@@ -123,13 +123,13 @@ public class ByteArrayResponseConverterFunctionTest {
     }
 
     private static HttpResponse from(Object result) throws Exception {
-        return function.convertResponse(ctx, OCTET_STREAM_HEADERS, result, DEFAULT_TRAILING_HEADERS);
+        return function.convertResponse(ctx, OCTET_STREAM_HEADERS, result, DEFAULT_TRAILERS);
     }
 
     @Test
     public void withoutContentType() throws Exception {
         StepVerifier.create(function.convertResponse(ctx, ResponseHeaders.of(HttpStatus.OK),
-                                                     HttpData.ofUtf8("foo"), DEFAULT_TRAILING_HEADERS))
+                                                     HttpData.ofUtf8("foo"), DEFAULT_TRAILERS))
                     // 'application/octet-stream' should be added.
                     .expectNext(OCTET_STREAM_HEADERS.toBuilder()
                                                     .addInt(HttpHeaderNames.CONTENT_LENGTH, 3)
@@ -139,7 +139,7 @@ public class ByteArrayResponseConverterFunctionTest {
                     .verify();
 
         StepVerifier.create(function.convertResponse(ctx, ResponseHeaders.of(HttpStatus.OK),
-                                                     "foo".getBytes(), DEFAULT_TRAILING_HEADERS))
+                                                     "foo".getBytes(), DEFAULT_TRAILERS))
                     .expectNext(OCTET_STREAM_HEADERS.toBuilder()
                                                     .addInt(HttpHeaderNames.CONTENT_LENGTH, 3)
                                                     .build())

@@ -50,7 +50,7 @@ public class ServerSentEventResponseConverterFunctionTest {
     private static final ResponseHeaders EVENT_STREAM_HEADER =
             ResponseHeaders.of(HttpStatus.OK,
                                HttpHeaderNames.CONTENT_TYPE, MediaType.EVENT_STREAM);
-    private static final HttpHeaders DEFAULT_TRAILING_HEADERS = HttpHeaders.of();
+    private static final HttpHeaders DEFAULT_TRAILERS = HttpHeaders.of();
 
     @Test
     public void dataStringUtf8() throws Exception {
@@ -175,6 +175,6 @@ public class ServerSentEventResponseConverterFunctionTest {
     }
 
     private static HttpResponse doConvert(Object result) throws Exception {
-        return function.convertResponse(ctx, EVENT_STREAM_HEADER, result, DEFAULT_TRAILING_HEADERS);
+        return function.convertResponse(ctx, EVENT_STREAM_HEADER, result, DEFAULT_TRAILERS);
     }
 }

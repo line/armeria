@@ -60,7 +60,7 @@ class DefaultAggregatedHttpResponseTest {
     }
 
     @Test
-    void toHttpResponseWithTrailingHeaders() {
+    void toHttpResponseWithTrailers() {
         final AggregatedHttpResponse aRes = AggregatedHttpResponse.of(
                 HttpStatus.OK, PLAIN_TEXT_UTF_8, HttpData.ofUtf8("bob"),
                 HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
@@ -89,29 +89,29 @@ class DefaultAggregatedHttpResponseTest {
     }
 
     @Test
-    void errorWhenContentOrTrailingHeadersShouldBeEmpty() {
-        contentAndTrailingHeadersShouldBeEmpty(HttpStatus.CONTINUE, HttpData.ofUtf8("bob"),
-                                               HttpHeaders.of());
-        contentAndTrailingHeadersShouldBeEmpty(HttpStatus.NO_CONTENT, HttpData.ofUtf8("bob"),
-                                               HttpHeaders.of());
-        contentAndTrailingHeadersShouldBeEmpty(HttpStatus.RESET_CONTENT, HttpData.ofUtf8("bob"),
-                                               HttpHeaders.of());
-        contentAndTrailingHeadersShouldBeEmpty(HttpStatus.NOT_MODIFIED, HttpData.ofUtf8("bob"),
-                                               HttpHeaders.of());
+    void errorWhenContentOrTrailersExistsShouldBeEmpty() {
+        contentAndTrailersShouldBeEmpty(HttpStatus.CONTINUE, HttpData.ofUtf8("bob"),
+                                        HttpHeaders.of());
+        contentAndTrailersShouldBeEmpty(HttpStatus.NO_CONTENT, HttpData.ofUtf8("bob"),
+                                        HttpHeaders.of());
+        contentAndTrailersShouldBeEmpty(HttpStatus.RESET_CONTENT, HttpData.ofUtf8("bob"),
+                                        HttpHeaders.of());
+        contentAndTrailersShouldBeEmpty(HttpStatus.NOT_MODIFIED, HttpData.ofUtf8("bob"),
+                                        HttpHeaders.of());
 
-        contentAndTrailingHeadersShouldBeEmpty(HttpStatus.CONTINUE, HttpData.EMPTY_DATA,
-                                               HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
-        contentAndTrailingHeadersShouldBeEmpty(HttpStatus.NO_CONTENT, HttpData.EMPTY_DATA,
-                                               HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
-        contentAndTrailingHeadersShouldBeEmpty(HttpStatus.RESET_CONTENT, HttpData.EMPTY_DATA,
-                                               HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
-        contentAndTrailingHeadersShouldBeEmpty(HttpStatus.NOT_MODIFIED, HttpData.EMPTY_DATA,
-                                               HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
+        contentAndTrailersShouldBeEmpty(HttpStatus.CONTINUE, HttpData.EMPTY_DATA,
+                                        HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
+        contentAndTrailersShouldBeEmpty(HttpStatus.NO_CONTENT, HttpData.EMPTY_DATA,
+                                        HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
+        contentAndTrailersShouldBeEmpty(HttpStatus.RESET_CONTENT, HttpData.EMPTY_DATA,
+                                        HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
+        contentAndTrailersShouldBeEmpty(HttpStatus.NOT_MODIFIED, HttpData.EMPTY_DATA,
+                                        HttpHeaders.of(CONTENT_MD5, "9f9d51bc70ef21ca5c14f307980a29d8"));
     }
 
-    private static void contentAndTrailingHeadersShouldBeEmpty(HttpStatus status, HttpData content,
-                                                               HttpHeaders trailingHeaders) {
-        assertThatThrownBy(() -> AggregatedHttpResponse.of(status, PLAIN_TEXT_UTF_8, content, trailingHeaders))
+    private static void contentAndTrailersShouldBeEmpty(HttpStatus status, HttpData content,
+                                                        HttpHeaders trailers) {
+        assertThatThrownBy(() -> AggregatedHttpResponse.of(status, PLAIN_TEXT_UTF_8, content, trailers))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

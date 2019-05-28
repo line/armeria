@@ -177,7 +177,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                             cfg.maxRequestLength());
 
                     // Close the request early when it is sure that there will be
-                    // neither content nor trailing headers.
+                    // neither content nor trailers.
                     if (contentEmpty && !HttpUtil.isTransferEncodingChunked(nettyReq)) {
                         req.close();
                     }

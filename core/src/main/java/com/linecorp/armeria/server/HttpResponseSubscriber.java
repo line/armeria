@@ -61,7 +61,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
     enum State {
         NEEDS_HEADERS,
-        NEEDS_DATA_OR_TRAILING_HEADERS,
+        NEEDS_DATA_OR_TRAILERS,
         DONE,
     }
 
@@ -175,7 +175,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                     // no-content response statuses.
                     endOfStream = true;
                 } else {
-                    state = State.NEEDS_DATA_OR_TRAILING_HEADERS;
+                    state = State.NEEDS_DATA_OR_TRAILERS;
                 }
 
                 final HttpHeaders additionalHeaders = reqCtx.additionalResponseHeaders();
@@ -201,12 +201,12 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
                 break;
             }
-            case NEEDS_DATA_OR_TRAILING_HEADERS: {
+            case NEEDS_DATA_OR_TRAILERS: {
                 if (o instanceof HttpHeaders) {
                     final HttpHeaders trailers = (HttpHeaders) o;
                     if (trailers.contains(HttpHeaderNames.STATUS)) {
                         throw newIllegalStateException(
-                                "published a trailing HttpHeaders with status: " + o +
+                                "published an HTTP trailers with status: " + o +
                                 " (service: " + service() + ')');
                     }
                     final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
@@ -214,7 +214,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                     logBuilder().responseTrailers(addedTrailers);
                     o = addedTrailers;
 
-                    // Trailing headers always end the stream even if not explicitly set.
+                    // Trailers always end the stream even if not explicitly set.
                     endOfStream = true;
                 } else if (endOfStream) { // Last DATA frame
                     final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();

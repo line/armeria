@@ -138,7 +138,7 @@ public final class JsonTextSequences {
      *
      * @param headers the HTTP headers supposed to send
      * @param contentPublisher the {@link Publisher} which publishes the objects supposed to send as contents
-     * @param trailers the trailing HTTP headers supposed to send
+     * @param trailers the HTTP trailers
      * @param mapper the mapper which converts the content object into JSON Text Sequences
      */
     public static HttpResponse fromPublisher(ResponseHeaders headers, Publisher<?> contentPublisher,
@@ -198,7 +198,7 @@ public final class JsonTextSequences {
      *
      * @param headers the HTTP headers supposed to send
      * @param contentStream the {@link Stream} which publishes the objects supposed to send as contents
-     * @param trailers the trailing HTTP headers supposed to send
+     * @param trailers the HTTP trailers
      * @param executor the executor which iterates the stream
      * @param mapper the mapper which converts the content object into JSON Text Sequences
      */
@@ -246,7 +246,7 @@ public final class JsonTextSequences {
      *
      * @param headers the HTTP headers supposed to send
      * @param content the object supposed to send as contents
-     * @param trailers the trailing HTTP headers supposed to send
+     * @param trailers the HTTP trailers
      * @param mapper the mapper which converts the content object into JSON Text Sequences
      */
     public static HttpResponse fromObject(ResponseHeaders headers, @Nullable Object content,
