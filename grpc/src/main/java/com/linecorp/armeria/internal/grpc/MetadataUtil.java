@@ -65,13 +65,12 @@ public final class MetadataUtil {
             final String value;
             if (isBinary(name)) {
                 value = BASE64_ENCODING_OMIT_PADDING.encode(valueBytes);
-            } else {
-                if (!isGrpcAscii(valueBytes)) {
-                    logger.warn("Metadata name=" + name + ", value=" + Arrays.toString(valueBytes) +
-                                " contains invalid ASCII characters, skipping.");
-                    continue;
-                }
+            } else if (isGrpcAscii(valueBytes)) {
                 value = new String(valueBytes, StandardCharsets.US_ASCII);
+            } else {
+                logger.warn("Metadata name=" + name + ", value=" + Arrays.toString(valueBytes) +
+                            " contains invalid ASCII characters, skipping.");
+                continue;
             }
             builder.add(name, value);
         }
