@@ -175,7 +175,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
         if (endpoint == null) {
             throw new IllegalStateException(
                     getClass().getSimpleName() + " must be created with an " + Endpoint.class.getSimpleName() +
-                    " to call this method");
+                    " to call this method.");
         }
     }
 }
