@@ -18,13 +18,14 @@ buildscript {
 apply plugin: 'base'
 apply plugin: 'kr.motd.sphinx'
 
+def aggregatedProjects = projectsWithFlags('java', 'publish') - projectsWithFlags('no_aggregation')
+aggregatedProjects.each { evaluationDependsOn it.path }
+
 sphinx {
     group = 'Documentation'
     description = 'Generates the Sphinx web site.'
     sourceDirectory "${project.projectDir}/src/sphinx"
 }
-
-def aggregatedProjects = projectsWithFlags('java', 'publish') - projectsWithFlags('no_aggregation')
 
 task javadoc(type: Javadoc,
              group: 'Documentation',
@@ -32,7 +33,10 @@ task javadoc(type: Javadoc,
 
     destinationDir = project.file("${project.buildDir}/site/apidocs")
 
-    aggregatedProjects.each { source it.sourceSets.main.java.srcDirs }
+    aggregatedProjects.each {
+        source it.sourceSets.main.java.srcDirs
+        dependsOn it.tasks.compileJava
+    }
     classpath = aggregatedProjects.inject(project.files()) { ConfigurableFileCollection result, project ->
         result.from(project.sourceSets.main.compileClasspath)
         result.from(project.sourceSets.main.runtimeClasspath)
