@@ -184,11 +184,12 @@ final class DefaultPathMapping extends AbstractPathMapping {
         return skeleton;
     }
 
+    @Nullable
     @Override
     RoutingResultBuilder doApply(RoutingContext routingCtx) {
         final Matcher matcher = pattern.matcher(routingCtx.path());
         if (!matcher.matches()) {
-            return RoutingResult.immutableBuilder();
+            return null;
         }
 
         final RoutingResultBuilder builder = RoutingResult.builder()

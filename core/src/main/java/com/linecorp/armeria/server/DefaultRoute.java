@@ -76,7 +76,7 @@ final class DefaultRoute implements Route {
     @Override
     public RoutingResult apply(RoutingContext routingCtx) {
         final RoutingResultBuilder builder = pathMapping.apply(requireNonNull(routingCtx, "routingCtx"));
-        if (builder.isImmutable()) {
+        if (builder == null) {
             return RoutingResult.empty();
         }
 

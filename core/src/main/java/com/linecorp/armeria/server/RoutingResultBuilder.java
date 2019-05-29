@@ -31,10 +31,6 @@ import com.linecorp.armeria.internal.ArmeriaHttpUtil;
  */
 public final class RoutingResultBuilder {
 
-    private static final RoutingResultBuilder immutableBuilder = new RoutingResultBuilder(true);
-
-    private final boolean isImmutable;
-
     @Nullable
     private String path;
 
@@ -49,46 +45,17 @@ public final class RoutingResultBuilder {
     private MediaType negotiatedResponseMediaType;
 
     /**
-     * Returns the immutable {@link RoutingResultBuilder}.
-     */
-    static RoutingResultBuilder immutable() {
-        return immutableBuilder;
-    }
-
-    /**
-     * Creates a new instance.
-     */
-    RoutingResultBuilder(boolean isImmutable) {
-        this.isImmutable = isImmutable;
-    }
-
-    /**
-     * Returns {@code true} if this result is not immutable.
-     */
-    boolean isImmutable() {
-        return isImmutable;
-    }
-
-    /**
      * Sets the mapped path, encoded as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
      */
     public RoutingResultBuilder path(String path) {
-        ensureMutable();
         this.path = requireNonNull(path, "path");
         return this;
-    }
-
-    private void ensureMutable() {
-        if (isImmutable) {
-            throw new IllegalStateException("Cannot set to the immutable builder.");
-        }
     }
 
     /**
      * Sets the specified query.
      */
     public RoutingResultBuilder query(@Nullable String query) {
-        ensureMutable();
         this.query = query;
         return this;
     }
@@ -97,7 +64,6 @@ public final class RoutingResultBuilder {
      * Adds a decoded path parameter.
      */
     public RoutingResultBuilder decodedParam(String name, String value) {
-        ensureMutable();
         pathParams.put(requireNonNull(name, "name"), requireNonNull(value, "value"));
         return this;
     }
@@ -106,7 +72,6 @@ public final class RoutingResultBuilder {
      * Adds an encoded path parameter, which will be decoded in UTF-8 automatically.
      */
     public RoutingResultBuilder rawParam(String name, String value) {
-        ensureMutable();
         pathParams.put(requireNonNull(name, "name"),
                        ArmeriaHttpUtil.decodePath(requireNonNull(value, "value")));
         return this;
@@ -116,7 +81,6 @@ public final class RoutingResultBuilder {
      * Sets the score.
      */
     public RoutingResultBuilder score(int score) {
-        ensureMutable();
         this.score = score;
         return this;
     }
@@ -125,7 +89,6 @@ public final class RoutingResultBuilder {
      * Sets the negotiated producible {@link MediaType}.
      */
     public RoutingResultBuilder negotiatedResponseMediaType(MediaType negotiatedResponseMediaType) {
-        ensureMutable();
         this.negotiatedResponseMediaType = requireNonNull(negotiatedResponseMediaType,
                                                           "negotiatedResponseMediaType");
         return this;
@@ -135,7 +98,7 @@ public final class RoutingResultBuilder {
      * Returns a newly-created {@link RoutingResult}.
      */
     public RoutingResult build() {
-        if (isImmutable || path == null) {
+        if (path == null) {
             return RoutingResult.empty();
         }
 

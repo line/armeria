@@ -25,6 +25,8 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.annotation.Nullable;
+
 import com.google.common.collect.ImmutableSet;
 
 final class GlobPathMapping extends AbstractPathMapping {
@@ -76,11 +78,12 @@ final class GlobPathMapping extends AbstractPathMapping {
         meterTag = GLOB + aGlob;
     }
 
+    @Nullable
     @Override
     RoutingResultBuilder doApply(RoutingContext routingCtx) {
         final Matcher m = pattern.matcher(routingCtx.path());
         if (!m.matches()) {
-            return RoutingResult.immutableBuilder();
+            return null;
         }
 
         final RoutingResultBuilder builder = RoutingResult.builder()

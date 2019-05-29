@@ -18,6 +18,8 @@ package com.linecorp.armeria.server;
 import java.util.Optional;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Tag;
 
@@ -32,8 +34,9 @@ interface PathMapping {
      * @param routingCtx a context to find the {@link Service}.
      *
      * @return a settable {@link RoutingResultBuilder} if the specified {@code path} matches this mapping.
-     *         {@link RoutingResult#immutableBuilder()} if not matches.
+     *         {@code null} otherwise.
      */
+    @Nullable
     RoutingResultBuilder apply(RoutingContext routingCtx);
 
     /**

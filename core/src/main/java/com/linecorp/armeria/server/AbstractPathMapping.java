@@ -22,6 +22,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
 
+import javax.annotation.Nullable;
+
 /**
  * A skeletal {@link PathMapping} implementation. Implement {@link #doApply(RoutingContext)}.
  */
@@ -44,8 +46,9 @@ abstract class AbstractPathMapping implements PathMapping {
      * @param routingCtx a context to find the {@link Service}
      *
      * @return a settable {@link RoutingResultBuilder} if the specified {@code path} matches this mapping.
-     *         {@link RoutingResult#immutableBuilder()} if not matches.
+     *         {@code null} otherwise.
      */
+    @Nullable
     abstract RoutingResultBuilder doApply(RoutingContext routingCtx);
 
     @Override

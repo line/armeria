@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.net.URISyntaxException;
 import java.util.AbstractMap.SimpleEntry;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.MediaType;
@@ -33,15 +32,6 @@ class RoutingResultTest {
         final RoutingResultBuilder builder = RoutingResult.builder();
         final RoutingResult routingResult = builder.build();
         assertThat(routingResult).isSameAs(RoutingResult.empty());
-    }
-
-    @Test
-    void immutableBuilder() {
-        final RoutingResultBuilder builder = RoutingResult.immutableBuilder();
-        assertThat(builder.build()).isSameAs(RoutingResult.empty());
-
-        Assertions.assertThrows(IllegalStateException.class,
-                                () -> builder.path("/foo"));
     }
 
     @Test

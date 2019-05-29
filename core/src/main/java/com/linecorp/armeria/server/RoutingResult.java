@@ -50,14 +50,7 @@ public final class RoutingResult {
      * Returns a new builder.
      */
     public static RoutingResultBuilder builder() {
-        return new RoutingResultBuilder(false);
-    }
-
-    /**
-     * Returns the immutable {@link RoutingResultBuilder}.
-     */
-    static RoutingResultBuilder immutableBuilder() {
-        return RoutingResultBuilder.immutable();
+        return new RoutingResultBuilder();
     }
 
     @Nullable

@@ -24,6 +24,8 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.annotation.Nullable;
+
 import com.google.common.collect.ImmutableSet;
 
 final class RegexPathMapping extends AbstractPathMapping {
@@ -53,11 +55,12 @@ final class RegexPathMapping extends AbstractPathMapping {
         return builder.build();
     }
 
+    @Nullable
     @Override
     protected RoutingResultBuilder doApply(RoutingContext routingCtx) {
         final Matcher matcher = regex.matcher(routingCtx.path());
         if (!matcher.find()) {
-            return RoutingResult.immutableBuilder();
+            return null;
         }
 
         final RoutingResultBuilder builder = RoutingResult.builder()

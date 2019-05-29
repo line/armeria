@@ -23,6 +23,8 @@ import static com.linecorp.armeria.internal.RouteUtil.newLoggerName;
 import java.util.Optional;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
 import com.google.common.collect.ImmutableSet;
 
 final class PrefixPathMapping extends AbstractPathMapping {
@@ -48,11 +50,12 @@ final class PrefixPathMapping extends AbstractPathMapping {
         strVal = PREFIX + prefix + " (stripPrefix: " + stripPrefix + ')';
     }
 
+    @Nullable
     @Override
     RoutingResultBuilder doApply(RoutingContext routingCtx) {
         final String path = routingCtx.path();
         if (!path.startsWith(prefix)) {
-            return RoutingResult.immutableBuilder();
+            return null;
         }
 
         return RoutingResult.builder()

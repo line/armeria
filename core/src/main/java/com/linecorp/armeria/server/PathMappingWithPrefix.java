@@ -23,6 +23,8 @@ import static java.util.Objects.requireNonNull;
 import java.util.Optional;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
 final class PathMappingWithPrefix extends AbstractPathMapping {
 
     private final String pathPrefix;
@@ -40,16 +42,17 @@ final class PathMappingWithPrefix extends AbstractPathMapping {
         meterTag = PREFIX + pathPrefix + ',' + mapping.meterTag();
     }
 
+    @Nullable
     @Override
     RoutingResultBuilder doApply(RoutingContext routingCtx) {
         final String path = routingCtx.path();
         if (!path.startsWith(pathPrefix)) {
-            return RoutingResult.immutableBuilder();
+            return null;
         }
 
         final RoutingResultBuilder builder =
                 mapping.apply(routingCtx.overridePath(path.substring(pathPrefix.length() - 1)));
-        if (!builder.isImmutable()) {
+        if (builder != null) {
             // Replace the path.
             builder.path(path);
         }
