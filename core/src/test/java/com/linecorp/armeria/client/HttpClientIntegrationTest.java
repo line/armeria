@@ -699,7 +699,7 @@ class HttpClientIntegrationTest {
     }
 
     private static void checkGetRequest(String path, HttpClient client) throws Exception {
-        final AggregatedHttpMessage response = client.get(path).aggregate().get();
+        final AggregatedHttpResponse response = client.get(path).aggregate().get();
         assertEquals("success", response.contentUtf8());
     }
 
