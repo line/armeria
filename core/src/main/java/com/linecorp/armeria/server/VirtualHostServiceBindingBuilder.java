@@ -40,7 +40,7 @@ import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
  * ServerBuilder sb = new ServerBuilder();
  * sb.virtualHost("example.com")
  *   .route()                                      // Configure the first service in "example.com".
- *   .get("/foo/bar")
+ *   .post("/foo/bar")
  *   .consumes(JSON, PLAIN_TEXT_UTF_8)
  *   .produces(JSON_UTF_8)
  *   .requestTimeoutMillis(5000)
