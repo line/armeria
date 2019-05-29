@@ -23,8 +23,8 @@ import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.time.temporal.TemporalAccessor;
 
-import org.junit.jupiter.api.extension.AfterEachCallback;
-import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
@@ -35,7 +35,7 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 /**
  * An {@link Extension} that provides a temporary self-signed certificate.
  */
-public class SelfSignedCertificateExtension implements BeforeEachCallback, AfterEachCallback {
+public class SelfSignedCertificateExtension implements BeforeAllCallback, AfterAllCallback {
     private final SelfSignedCertificateRuleDelegate delegate;
 
     /**
@@ -104,11 +104,11 @@ public class SelfSignedCertificateExtension implements BeforeEachCallback, After
      * Generates a {@link SelfSignedCertificate}.
      */
     @Override
-    public void beforeEach(ExtensionContext context) throws Exception {
+    public void beforeAll(ExtensionContext context) throws Exception {
         try {
             delegate.before();
         } catch (Throwable t) {
-            throw new RuntimeException("Failed to set up beforeEachCallback", t);
+            throw new RuntimeException("Failed to set up beforeAllCallback", t);
         }
     }
 
@@ -116,7 +116,7 @@ public class SelfSignedCertificateExtension implements BeforeEachCallback, After
      * Deletes the generated {@link SelfSignedCertificate}.
      */
     @Override
-    public void afterEach(ExtensionContext context) throws Exception {
+    public void afterAll(ExtensionContext context) throws Exception {
         delegate.after();
     }
 
