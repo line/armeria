@@ -27,6 +27,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -67,6 +68,16 @@ class AllOrEachExtensionTest {
         @Override
         protected boolean runForEachTest() {
             return true;
+        }
+    };
+
+    @RegisterExtension
+    @Order(1)
+    static final BeforeAllCallback CHECK_START = new BeforeAllCallback() {
+        @Override
+        public void beforeAll(ExtensionContext context) throws Exception {
+            assertThat(BEFORE_ALL_NUM_INVOCATIONS).hasValue(0);
+            assertThat(BEFORE_EACH_NUM_INVOCATIONS).hasValue(0);
         }
     };
 
