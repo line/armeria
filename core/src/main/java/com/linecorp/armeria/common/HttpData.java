@@ -134,7 +134,7 @@ public interface HttpData extends HttpObject {
             return EMPTY_DATA;
         }
 
-        return new DefaultHttpData(Arrays.copyOfRange(data, offset, length), false);
+        return new DefaultHttpData(Arrays.copyOfRange(data, offset, offset + length), false);
     }
 
     /**
@@ -156,7 +156,7 @@ public interface HttpData extends HttpObject {
      * Creates a new instance from the specified byte array. The array is not copied; any changes made in the
      * array later will be visible to {@link HttpData}.
      *
-     * @deprecated use {@link #wrap(byte[])}.
+     * @deprecated Use {@link #wrap(byte[])}.
      */
     @Deprecated
     static HttpData of(byte[] data) {
@@ -167,7 +167,7 @@ public interface HttpData extends HttpObject {
      * Creates a new instance from the specified byte array, {@code offset} and {@code length}.
      * The array is not copied; any changes made in the array later will be visible to {@link HttpData}.
      *
-     * @deprecated use {@link #wrap(byte[], int, int)}.
+     * @deprecated Use {@link #wrap(byte[], int, int)}.
      */
     @Deprecated
     static HttpData of(byte[] data, int offset, int length) {
@@ -225,7 +225,7 @@ public interface HttpData extends HttpObject {
      * Creates a new instance from the specified {@link ByteBuf} by first copying it's content. The reference
      * count of {@link ByteBuf} will not be changed.
      *
-     * @deprecated use {@link #copyOf(ByteBuf)}.
+     * @deprecated Use {@link #copyOf(ByteBuf)}.
      */
     @Deprecated
     static HttpData of(ByteBuf buf) {
@@ -332,7 +332,7 @@ public interface HttpData extends HttpObject {
     /**
      * Returns {@code 0}.
      *
-     * @deprecated the offset of {@link HttpData} is always {@code 0}.
+     * @deprecated The offset of {@link HttpData} is always {@code 0}.
      */
     @Deprecated
     default int offset() {

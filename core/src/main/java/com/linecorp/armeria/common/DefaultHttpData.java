@@ -45,11 +45,10 @@ public final class DefaultHttpData extends AbstractHttpData {
     }
 
     @Override
-    @SuppressWarnings("ImplicitArrayToString")
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("length", data.length)
-                          .add("array", data.toString()).toString();
+                          .toString();
     }
 
     @Override
