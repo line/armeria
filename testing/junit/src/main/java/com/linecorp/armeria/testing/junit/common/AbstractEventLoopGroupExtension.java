@@ -23,7 +23,7 @@ import com.linecorp.armeria.testing.internal.EventLoopGroupRuleDelegate;
 
 import io.netty.channel.EventLoopGroup;
 
-abstract class AbstractEventLoopGroupExtension extends AllOrEachExtension {
+abstract class AbstractEventLoopGroupExtension extends AbstractAllOrEachExtension {
     private final EventLoopGroupRuleDelegate delegate;
 
     AbstractEventLoopGroupExtension(int numThreads, String threadNamePrefix, boolean useDaemonThreads) {

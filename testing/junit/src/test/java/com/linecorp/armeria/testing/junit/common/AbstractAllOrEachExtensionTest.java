@@ -33,12 +33,12 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 @TestInstance(Lifecycle.PER_CLASS)
 @TestMethodOrder(OrderAnnotation.class)
-class AllOrEachExtensionTest {
+class AbstractAllOrEachExtensionTest {
     private static final AtomicInteger BEFORE_ALL_NUM_INVOCATIONS = new AtomicInteger();
 
     @RegisterExtension
     @Order(Integer.MAX_VALUE)
-    static final AllOrEachExtension BEFORE_ALL_EXTENSION = new AllOrEachExtension() {
+    static final AbstractAllOrEachExtension BEFORE_ALL_EXTENSION = new AbstractAllOrEachExtension() {
         @Override
         protected void before(ExtensionContext context) throws Exception {
             BEFORE_ALL_NUM_INVOCATIONS.incrementAndGet();
@@ -54,7 +54,7 @@ class AllOrEachExtensionTest {
 
     @RegisterExtension
     @Order(Integer.MAX_VALUE)
-    static final AllOrEachExtension BEFORE_EACH_EXTENSION = new AllOrEachExtension() {
+    static final AbstractAllOrEachExtension BEFORE_EACH_EXTENSION = new AbstractAllOrEachExtension() {
         @Override
         protected void before(ExtensionContext context) throws Exception {
             BEFORE_EACH_NUM_INVOCATIONS.incrementAndGet();

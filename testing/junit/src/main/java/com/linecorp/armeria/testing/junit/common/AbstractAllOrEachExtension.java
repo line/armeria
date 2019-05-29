@@ -33,7 +33,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
  * implementations that want to run around each test method instead should override
  * {@link #runForEachTest()}.
  */
-public abstract class AllOrEachExtension
+public abstract class AbstractAllOrEachExtension
         implements BeforeAllCallback, AfterAllCallback, BeforeEachCallback, AfterEachCallback {
 
     /**

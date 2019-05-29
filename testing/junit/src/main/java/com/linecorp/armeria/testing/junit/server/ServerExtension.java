@@ -27,12 +27,12 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.internal.ServerRuleDelegate;
-import com.linecorp.armeria.testing.junit.common.AllOrEachExtension;
+import com.linecorp.armeria.testing.junit.common.AbstractAllOrEachExtension;
 
 /**
  * An {@link Extension} that allows easy set-up and tear-down of a {@link Server}.
  */
-public abstract class ServerExtension extends AllOrEachExtension {
+public abstract class ServerExtension extends AbstractAllOrEachExtension {
     private final ServerRuleDelegate delegate;
 
     /**

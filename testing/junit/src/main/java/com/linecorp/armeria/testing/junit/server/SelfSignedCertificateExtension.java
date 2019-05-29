@@ -27,14 +27,14 @@ import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
 import com.linecorp.armeria.testing.internal.SelfSignedCertificateRuleDelegate;
-import com.linecorp.armeria.testing.junit.common.AllOrEachExtension;
+import com.linecorp.armeria.testing.junit.common.AbstractAllOrEachExtension;
 
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 /**
  * An {@link Extension} that provides a temporary self-signed certificate.
  */
-public class SelfSignedCertificateExtension extends AllOrEachExtension {
+public class SelfSignedCertificateExtension extends AbstractAllOrEachExtension {
     private final SelfSignedCertificateRuleDelegate delegate;
 
     /**
