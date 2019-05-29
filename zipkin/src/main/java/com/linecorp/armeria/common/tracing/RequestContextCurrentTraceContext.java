@@ -249,8 +249,11 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         return RequestContext.mapCurrent(Function.identity(), LogRequestContextWarningOnce.INSTANCE);
     }
 
-    /** Armeria code should always have a request context available, and this won't work without it. */
-    @Nullable private static Attribute<TraceContext> getTraceContextAttributeOrWarnOnce() {
+    /**
+     * Armeria code should always have a request context available, and this won't work without it.
+     */
+    @Nullable
+    private static Attribute<TraceContext> getTraceContextAttributeOrWarnOnce() {
         final RequestContext ctx = getRequestContextOrWarnOnce();
         if (ctx == null) {
             return null;
@@ -273,15 +276,18 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
          * This won't be referenced until {@link #get()} is called. If there's only one classloader, the
          * initializer will only be called once.
          */
-        static class ClassLoaderHack {
-            static void loadMe() {
-            }
+        private static final class ClassLoaderHack {
+            static void loadMe() {}
 
             static {
                 logger.warn("Attempted to propagate trace context, but no request context available. " +
                             "Did you forget to use RequestContext.contextAwareExecutor() or " +
-                            "RequestContext.makeContextAware()?");
+                            "RequestContext.makeContextAware()?", new NoRequestContextException());
             }
+        }
+
+        private static final class NoRequestContextException extends RuntimeException {
+            private static final long serialVersionUID = 2804189311774982052L;
         }
     }
 
@@ -293,7 +299,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
          */
         static boolean maybeSetPong(TraceContext context) {
             if (context.extra().size() == 1) {
-                Object extra = context.extra().get(0);
+                final Object extra = context.extra().get(0);
                 if (extra instanceof PingPongExtra) {
                     ((PingPongExtra) extra).pong = true;
                     return true;
