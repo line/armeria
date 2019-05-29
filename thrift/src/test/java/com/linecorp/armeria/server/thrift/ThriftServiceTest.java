@@ -28,6 +28,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.annotation.Nonnull;
@@ -38,7 +39,11 @@ import org.apache.thrift.transport.TMemoryBuffer;
 import org.apache.thrift.transport.TMemoryInputTransport;
 import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.DisableOnDebug;
+import org.junit.rules.TestRule;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -107,6 +112,9 @@ public class ThriftServiceTest {
 
     @ClassRule
     public static final EventLoopRule eventLoop = new EventLoopRule();
+
+    @Rule
+    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
 
     @Parameters(name = "{0}")
     public static Collection<SerializationFormat> parameters() throws Exception {
@@ -628,7 +636,7 @@ public class ThriftServiceTest {
     }
 
     private void invokeTwice(THttpService service1, THttpService service2) throws Exception {
-        final HttpData content = HttpData.wrap(out.getArray(), 0, out.length());
+        final HttpData content = HttpData.copyOf(out.getArray(), 0, out.length());
         invoke0(service1, content, promise);
         invoke0(service2, content, promise2);
     }
