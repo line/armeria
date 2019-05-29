@@ -35,6 +35,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -49,6 +50,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  */
 final class PropertiesFileWatcherRegistry implements AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(PropertiesFileWatcherRegistry.class);
+    private final RestartableFuture restartableFuture =
+            new RestartableFuture("armeria-file-watcher-%d", PropertiesFileWatcherRunnable::new);
 
     private static class PropertiesFileWatcherContext {
         private final WatchKey key;
@@ -70,12 +73,6 @@ final class PropertiesFileWatcherRegistry implements AutoCloseable {
         }
     }
 
-    @Nullable
-    private CompletableFuture<Void> future;
-    private final ExecutorService executor
-            = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder()
-                                                        .setDaemon(true)
-                                                        .setNameFormat("armeria-file-watcher-%d").build());
     private final Map<PropertiesEndpointGroup, PropertiesFileWatcherContext> ctxRegistry =
             new ConcurrentHashMap<>();
     private final WatchService watchService;
@@ -109,7 +106,7 @@ final class PropertiesFileWatcherRegistry implements AutoCloseable {
             throw new IllegalArgumentException("failed to watch file " + filePath, e);
         }
         ctxRegistry.put(group, new PropertiesFileWatcherContext(key, reloader, dirPath));
-        startFuture();
+        restartableFuture.start();
     }
 
     /**
@@ -126,20 +123,7 @@ final class PropertiesFileWatcherRegistry implements AutoCloseable {
         if (!existsDirWatcher) {
             removedCtx.key.cancel();
         }
-        stopFuture();
-    }
-
-    private void startFuture() {
-        if (!isRunning() && !ctxRegistry.isEmpty()) {
-            future = CompletableFuture.runAsync(new PropertiesFileWatcherRunnable(), executor);
-        }
-    }
-
-    private void stopFuture() {
-        checkState(future != null, "tried to stop null executor");
-        if (isRunning() && ctxRegistry.isEmpty()) {
-            future.cancel(true);
-        }
+        restartableFuture.stop();
     }
 
     /**
@@ -148,7 +132,7 @@ final class PropertiesFileWatcherRegistry implements AutoCloseable {
      */
     @VisibleForTesting
     boolean isRunning() {
-        return future != null && !future.isDone();
+        return restartableFuture.isRunning();
     }
 
     /**
@@ -158,7 +142,7 @@ final class PropertiesFileWatcherRegistry implements AutoCloseable {
     @Override
     public void close() throws Exception {
         ctxRegistry.clear();
-        stopFuture();
+        restartableFuture.stop();
         watchService.close();
     }
 
@@ -212,6 +196,38 @@ final class PropertiesFileWatcherRegistry implements AutoCloseable {
                     logger.warn("unexpected error from listener: {} ", filePath, e);
                 }
             });
+        }
+    }
+
+    private final class RestartableFuture {
+
+        @Nullable
+        private CompletableFuture<Void> future;
+        private final ExecutorService executor;
+        private final Supplier<Runnable> runnableSupplier;
+
+        private RestartableFuture(String namePrefix, Supplier<Runnable> runnableSupplier) {
+            executor = Executors.newSingleThreadExecutor(
+                    new ThreadFactoryBuilder().setDaemon(true)
+                                              .setNameFormat(namePrefix).build());
+            this.runnableSupplier = runnableSupplier;
+        }
+
+        private synchronized void start() {
+            if (!isRunning() && !ctxRegistry.isEmpty()) {
+                future = CompletableFuture.runAsync(runnableSupplier.get(), executor);
+            }
+        }
+
+        private synchronized void stop() {
+            checkState(future != null, "tried to stop null executor");
+            if (isRunning() && ctxRegistry.isEmpty()) {
+                future.cancel(true);
+            }
+        }
+
+        private synchronized boolean isRunning() {
+            return future != null && !future.isDone();
         }
     }
 }

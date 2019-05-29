@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.awaitility.Awaitility;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -38,6 +39,11 @@ public class PropertiesFileWatcherRegistryTest {
     @BeforeClass
     public static void before() {
         Awaitility.setDefaultTimeout(1, TimeUnit.MINUTES);
+    }
+
+    @AfterClass
+    public static void after() {
+        Awaitility.setDefaultTimeout(10, TimeUnit.SECONDS);
     }
 
     @Rule

@@ -29,6 +29,7 @@ import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 import org.awaitility.Awaitility;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -42,7 +43,12 @@ public class PropertiesEndpointGroupTest {
 
     @BeforeClass
     public static void before() {
-        Awaitility.setDefaultTimeout(1, TimeUnit.MINUTES);
+        Awaitility.setDefaultTimeout(1, TimeUnit.SECONDS);
+    }
+
+    @AfterClass
+    public static void after() {
+        Awaitility.setDefaultTimeout(10, TimeUnit.SECONDS);
     }
 
     @Rule
