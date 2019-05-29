@@ -34,7 +34,7 @@ public final class TestUtil {
     }
 
     /**
-     * Executes {@code r}, timing it out if not done by the passing of {@code timeout} has passed. The timeout
+     * Executes {@code r}, timing it out if not done by the passing of {@code timeout}. The timeout
      * is not enabled if in an IDE debug mode.
      */
     public static void withTimeout(Executable r, Duration timeout) {
