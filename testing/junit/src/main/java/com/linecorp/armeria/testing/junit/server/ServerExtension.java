@@ -65,7 +65,7 @@ public abstract class ServerExtension extends AllOrEachExtension {
         try {
             delegate.before();
         } catch (Throwable t) {
-            throw new RuntimeException("Failed to set up beforeAllCallback", t);
+            throw new RuntimeException("Failed to set up before callback", t);
         }
     }
 
