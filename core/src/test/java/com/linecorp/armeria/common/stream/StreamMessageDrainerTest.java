@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.stream.StreamMessageTest.newPooledBuffer;
+import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
@@ -23,35 +25,34 @@ import static org.awaitility.Awaitility.await;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.annotation.Nullable;
-
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.testing.internal.AnticipatedException;
+import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.UnpooledByteBufAllocator;
 
-public class StreamMessageDrainerTest {
+class StreamMessageDrainerTest {
 
     @Test
-    public void defaultStreamMessage() {
+    void defaultStreamMessage() {
         final DefaultStreamMessage<String> streamMessage = streamMessage();
         final List<String> drained = streamMessage.drainAll().join();
         assertThat(drained).containsExactly("foo", "bar", "baz");
     }
 
     @Test
-    public void fixedStreamMessage() {
+    void fixedStreamMessage() {
         final StreamMessage<String> streamMessage = StreamMessage.of("foo", "bar", "baz");
         final List<String> drained = streamMessage.drainAll().join();
         assertThat(drained).containsExactly("foo", "bar", "baz");
     }
 
     @Test
-    public void deferredStreamMessage() {
+    void deferredStreamMessage() {
         final DefaultStreamMessage<String> streamMessage = streamMessage();
         final DeferredStreamMessage<String> deferred = new DeferredStreamMessage<>();
         deferred.delegate(streamMessage);
@@ -60,7 +61,7 @@ public class StreamMessageDrainerTest {
     }
 
     @Test
-    public void publisherBaseStreamMessage() {
+    void publisherBaseStreamMessage() {
         final DefaultStreamMessage<String> streamMessage = streamMessage();
         final PublisherBasedStreamMessage<String> publisherBased =
                 new PublisherBasedStreamMessage<>(streamMessage);
@@ -69,7 +70,7 @@ public class StreamMessageDrainerTest {
     }
 
     @Test
-    public void filteredStreamMessage() {
+    void filteredStreamMessage() {
         final DefaultStreamMessage<String> streamMessage = streamMessage();
         final AtomicInteger counter = new AtomicInteger();
         final FilteredStreamMessage<String, String> filtered =
@@ -103,7 +104,7 @@ public class StreamMessageDrainerTest {
     }
 
     @Test
-    public void filteredStreamMessageError() {
+    void filteredStreamMessageError() {
         final DefaultStreamMessage<ByteBuf> streamMessage = new DefaultStreamMessage<>();
         final ByteBuf buf = newUnpooledBuffer();
         assertThat(buf.refCnt()).isOne();
@@ -116,7 +117,6 @@ public class StreamMessageDrainerTest {
                         return obj;
                     }
 
-                    @Nullable
                     @Override
                     protected Throwable beforeError(Subscriber<? super ByteBuf> subscriber, Throwable cause) {
                         return new AnticipatedException("after");
@@ -126,9 +126,37 @@ public class StreamMessageDrainerTest {
         await().untilAsserted(() -> assertThat(buf.refCnt()).isOne());
         streamMessage.close(new AnticipatedException("before"));
 
-        assertThatThrownBy(() -> filtered.drainAll(true).join())
+        assertThatThrownBy(() -> filtered.drainAll(WITH_POOLED_OBJECTS).join())
                 .hasCauseExactlyInstanceOf(AnticipatedException.class).hasMessageContaining("after");
         await().untilAsserted(() -> assertThat(buf.refCnt()).isZero());
+    }
+
+    @Test
+    void withPooledObjects() {
+        final ByteBufHttpData data = new ByteBufHttpData(newPooledBuffer(), true);
+        final DefaultStreamMessage<ByteBufHttpData> stream = new DefaultStreamMessage<>();
+        stream.write(data);
+        stream.close();
+
+        final List<ByteBufHttpData> httpData = stream.drainAll(WITH_POOLED_OBJECTS).join();
+
+        assertThat(httpData.size()).isOne();
+        assertThat(data.refCnt()).isOne();
+        data.release();
+    }
+
+    @Test
+    void unpooledByDefault() {
+        final ByteBufHttpData data = new ByteBufHttpData(newPooledBuffer(), true);
+        final DefaultStreamMessage<ByteBufHttpData> stream = new DefaultStreamMessage<>();
+        stream.write(data);
+        stream.close();
+
+        final List<ByteBufHttpData> httpData = stream.drainAll().join();
+
+        assertThat(httpData.size()).isOne();
+        assertThat(data.refCnt()).isZero();
+        httpData.get(0).release();
     }
 
     private static DefaultStreamMessage<String> streamMessage() {

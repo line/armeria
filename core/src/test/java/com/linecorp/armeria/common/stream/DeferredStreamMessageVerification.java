@@ -49,9 +49,11 @@ public class DeferredStreamMessageVerification extends StreamMessageVerification
         }
 
         stream.delegate(new StreamMessageWrapper<Long>(createStreamMessage(elements + 1, false)) {
+
             @Override
             public void subscribe(
-                    Subscriber<? super Long> subscriber, EventExecutor executor, boolean withPooledObjects) {
+                    Subscriber<? super Long> subscriber, EventExecutor executor,
+                    SubscriptionOption... options) {
                 super.subscribe(new Subscriber<Long>() {
                     @Override
                     public void onSubscribe(Subscription s) {
@@ -75,7 +77,7 @@ public class DeferredStreamMessageVerification extends StreamMessageVerification
                     public void onComplete() {
                         subscriber.onComplete();
                     }
-                }, executor, withPooledObjects);
+                }, executor, options);
             }
         });
 

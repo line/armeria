@@ -16,9 +16,14 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.stream.StreamMessageTest.newPooledBuffer;
+import static com.linecorp.armeria.common.stream.SubscriptionOption.NOTIFY_CANCELLATION;
+import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static com.linecorp.armeria.common.util.Exceptions.clearTrace;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -28,7 +33,10 @@ import static org.mockito.Mockito.when;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
+
+import javax.annotation.Nullable;
 
 import org.junit.Rule;
 import org.junit.Test;
@@ -70,13 +78,14 @@ public class StreamMessageDuplicatorTest {
         final ArgumentCaptor<StreamMessageProcessor<String>> processorCaptor =
                 ArgumentCaptor.forClass(StreamMessageProcessor.class);
 
-        verify(publisher).subscribe(processorCaptor.capture(), eq(ImmediateEventExecutor.INSTANCE), eq(true));
+        verify(publisher).subscribe(processorCaptor.capture(), eq(ImmediateEventExecutor.INSTANCE),
+                                    eq(WITH_POOLED_OBJECTS), eq(NOTIFY_CANCELLATION));
 
-        verify(publisher).subscribe(any(), eq(ImmediateEventExecutor.INSTANCE), eq(true));
         final Subscriber<String> subscriber1 = subscribeWithMock(duplicator.duplicateStream());
         final Subscriber<String> subscriber2 = subscribeWithMock(duplicator.duplicateStream());
         // Publisher's subscribe() is not invoked when a new subscriber subscribes.
-        verify(publisher).subscribe(any(), eq(ImmediateEventExecutor.INSTANCE), eq(true));
+        verify(publisher).subscribe(any(), eq(ImmediateEventExecutor.INSTANCE),
+                                    eq(WITH_POOLED_OBJECTS), eq(NOTIFY_CANCELLATION));
 
         final StreamMessageProcessor<String> processor = processorCaptor.getValue();
 
@@ -348,6 +357,132 @@ public class StreamMessageDuplicatorTest {
         duplicator.duplicateStream().subscribe(subscriber, ImmediateEventExecutor.INSTANCE);
         assertThatThrownBy(() -> subscriber.completionFuture().get()).hasCauseInstanceOf(
                 IllegalReferenceCountException.class);
+    }
+
+    @Test
+    public void withPooledObjects() {
+        final ByteBuf data = newPooledBuffer();
+        final DefaultStreamMessage<ByteBuf> publisher = new DefaultStreamMessage<>();
+        final ByteBufDuplicator duplicator = new ByteBufDuplicator(publisher);
+        publisher.write(data);
+        publisher.close();
+
+        final AtomicBoolean completed = new AtomicBoolean();
+        duplicator.duplicateStream().subscribe(new Subscriber<ByteBuf>() {
+            @Nullable
+            Subscription subscription;
+
+            @Override
+            public void onSubscribe(Subscription subscription) {
+                // Cancel the subscription when the demand is 0.
+                this.subscription = subscription;
+                subscription.request(1);
+            }
+
+            @Override
+            public void onNext(ByteBuf b) {
+                assertThat(data.refCnt()).isEqualTo(2);
+                subscription.cancel();
+                b.release();
+                completed.set(true);
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                // This is not called because we didn't specify NOTIFY_CANCELLATION when subscribe.
+                fail();
+            }
+
+            @Override
+            public void onComplete() {
+                fail();
+            }
+        }, WITH_POOLED_OBJECTS);
+
+        await().untilAsserted(() -> assertThat(completed).isTrue());
+        duplicator.close();
+        assertThat(data.refCnt()).isZero();
+    }
+
+    @Test
+    public void unpooledByDefault() {
+        final ByteBuf data = newPooledBuffer();
+        final DefaultStreamMessage<ByteBuf> publisher = new DefaultStreamMessage<>();
+        final ByteBufDuplicator duplicator = new ByteBufDuplicator(publisher);
+        publisher.write(data);
+        publisher.close();
+
+        final AtomicBoolean completed = new AtomicBoolean();
+        duplicator.duplicateStream().subscribe(new Subscriber<ByteBuf>() {
+            @Nullable
+            Subscription subscription;
+
+            @Override
+            public void onSubscribe(Subscription subscription) {
+                // Cancel the subscription when the demand is 0.
+                this.subscription = subscription;
+                subscription.request(1);
+            }
+
+            @Override
+            public void onNext(ByteBuf b) {
+                assertThat(data.refCnt()).isOne();
+                subscription.cancel();
+                b.release();
+                completed.set(true);
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                // This is not called because we didn't specify NOTIFY_CANCELLATION when subscribe.
+                fail();
+            }
+
+            @Override
+            public void onComplete() {
+                fail();
+            }
+        });
+
+        await().untilAsserted(() -> assertThat(completed).isTrue());
+        duplicator.close();
+        assertThat(data.refCnt()).isZero();
+    }
+
+    @Test
+    public void notifyCancellation() {
+        final ByteBuf data = newPooledBuffer();
+        final DefaultStreamMessage<ByteBuf> publisher = new DefaultStreamMessage<>();
+        final ByteBufDuplicator duplicator = new ByteBufDuplicator(publisher);
+        publisher.write(data);
+        publisher.close();
+
+        final AtomicBoolean completed = new AtomicBoolean();
+        duplicator.duplicateStream().subscribe(new Subscriber<ByteBuf>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                s.cancel();
+            }
+
+            @Override
+            public void onNext(ByteBuf byteBuf) {
+                fail();
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                assertThat(t).isInstanceOf(CancelledSubscriptionException.class);
+                completed.set(true);
+            }
+
+            @Override
+            public void onComplete() {
+                fail();
+            }
+        }, NOTIFY_CANCELLATION);
+
+        await().untilAsserted(() -> assertThat(completed).isTrue());
+        duplicator.close();
     }
 
     private static ByteBuf newUnpooledBuffer() {

@@ -41,9 +41,10 @@ public abstract class FilteredHttpResponse
      * Creates a new {@link FilteredHttpResponse} that filters objects published by {@code delegate}
      * before passing to a subscriber.
      *
-     * @param withPooledObjects if {@code true}, {@link #filter(Object)} receives the pooled {@link ByteBuf}
-     *                          and {@link ByteBufHolder} as is, without making a copy. If you don't know what
-     *                          this means, use {@link #FilteredHttpResponse(HttpResponse)}.
+     * @param withPooledObjects if {@code true}, {@link FilteredStreamMessage#filter(Object)} receives the
+     *                          pooled {@link ByteBuf} and {@link ByteBufHolder} as is, without making a copy.
+     *                          If you don't know what this means,
+     *                          use {@link #FilteredHttpResponse(HttpResponse)}.
      */
     protected FilteredHttpResponse(HttpResponse delegate, boolean withPooledObjects) {
         super(delegate, withPooledObjects);

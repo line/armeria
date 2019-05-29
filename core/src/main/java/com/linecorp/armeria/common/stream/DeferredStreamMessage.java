@@ -26,6 +26,9 @@ import javax.annotation.Nullable;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
+
 import com.linecorp.armeria.common.util.CompletionActions;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -258,9 +261,17 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             return;
         }
 
+        final Builder<SubscriptionOption> builder = ImmutableList.builder();
+        if (subscription.withPooledObjects()) {
+            builder.add(SubscriptionOption.WITH_POOLED_OBJECTS);
+        }
+        if (subscription.notifyCancellation()) {
+            builder.add(SubscriptionOption.NOTIFY_CANCELLATION);
+        }
+
         delegate.subscribe(new ForwardingSubscriber(),
                            subscription.executor(),
-                           subscription.withPooledObjects());
+                           builder.build().toArray(new SubscriptionOption[0]));
     }
 
     @Override
@@ -270,7 +281,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
         }
 
         final SubscriptionImpl newSubscription = new SubscriptionImpl(
-                this, AbortingSubscriber.get(), ImmediateEventExecutor.INSTANCE, false);
+                this, AbortingSubscriber.get(), ImmediateEventExecutor.INSTANCE, false, false);
         subscriptionUpdater.compareAndSet(this, null, newSubscription);
 
         final StreamMessage<T> delegate = this.delegate;

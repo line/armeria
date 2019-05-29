@@ -27,7 +27,7 @@ import static org.mockito.Mockito.verify;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -35,10 +35,10 @@ import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
-public class DeferredStreamMessageTest {
+class DeferredStreamMessageTest {
 
     @Test
-    public void testInitialState() {
+    void testInitialState() {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
         assertThat(m.isOpen()).isTrue();
         assertThat(m.isEmpty()).isFalse();
@@ -46,7 +46,7 @@ public class DeferredStreamMessageTest {
     }
 
     @Test
-    public void testSetDelegate() {
+    void testSetDelegate() {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
         m.delegate(new DefaultStreamMessage<>());
         assertThatThrownBy(() -> m.delegate(new DefaultStreamMessage<>()))
@@ -55,7 +55,7 @@ public class DeferredStreamMessageTest {
     }
 
     @Test
-    public void testEarlyAbort() {
+    void testEarlyAbort() {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
         m.abort();
         assertAborted(m);
@@ -63,7 +63,7 @@ public class DeferredStreamMessageTest {
     }
 
     @Test
-    public void testEarlyAbortWithSubscriber() {
+    void testEarlyAbortWithSubscriber() {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
         @SuppressWarnings("unchecked")
         final Subscriber<Object> subscriber = mock(Subscriber.class);
@@ -77,7 +77,7 @@ public class DeferredStreamMessageTest {
     }
 
     @Test
-    public void testLateAbort() {
+    void testLateAbort() {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
         final DefaultStreamMessage<Object> d = new DefaultStreamMessage<>();
 
@@ -89,7 +89,7 @@ public class DeferredStreamMessageTest {
     }
 
     @Test
-    public void testLateAbortWithSubscriber() {
+    void testLateAbortWithSubscriber() {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
         final DefaultStreamMessage<Object> d = new DefaultStreamMessage<>();
         @SuppressWarnings("unchecked")
@@ -107,7 +107,7 @@ public class DeferredStreamMessageTest {
     }
 
     @Test
-    public void testEarlySubscription() {
+    void testEarlySubscription() {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
         final DefaultStreamMessage<Object> d = new DefaultStreamMessage<>();
         @SuppressWarnings("unchecked")
@@ -121,7 +121,7 @@ public class DeferredStreamMessageTest {
     }
 
     @Test
-    public void testLateSubscription() {
+    void testLateSubscription() {
         final DeferredStreamMessage<Object> m = new DeferredStreamMessage<>();
         final DefaultStreamMessage<Object> d = new DefaultStreamMessage<>();
 
@@ -152,7 +152,7 @@ public class DeferredStreamMessageTest {
     }
 
     @Test
-    public void testStreaming() {
+    void testStreaming() {
         final DeferredStreamMessage<String> m = new DeferredStreamMessage<>();
         final DefaultStreamMessage<String> d = new DefaultStreamMessage<>();
         m.delegate(d);
@@ -178,7 +178,7 @@ public class DeferredStreamMessageTest {
     }
 
     @Test
-    public void testStreamingError() {
+    void testStreamingError() {
         final DeferredStreamMessage<String> m = new DeferredStreamMessage<>();
         final DefaultStreamMessage<String> d = new DefaultStreamMessage<>();
         m.delegate(d);

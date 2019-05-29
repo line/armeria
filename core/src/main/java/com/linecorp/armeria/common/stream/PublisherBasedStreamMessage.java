@@ -17,6 +17,8 @@
 package com.linecorp.armeria.common.stream;
 
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.abortedOrLate;
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
+import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -83,26 +85,40 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
     @Override
     public final void subscribe(Subscriber<? super T> subscriber) {
-        subscribe(subscriber, defaultSubscriberExecutor(), false);
+        subscribe(subscriber, defaultSubscriberExecutor());
     }
 
     @Override
-    public final void subscribe(Subscriber<? super T> subscriber, boolean withPooledObjects) {
-        subscribe(subscriber, defaultSubscriberExecutor(), withPooledObjects);
+    public void subscribe(Subscriber<? super T> subscriber, boolean withPooledObjects) {
+        if (withPooledObjects) {
+            subscribe(subscriber, WITH_POOLED_OBJECTS);
+        } else {
+            subscribe(subscriber);
+        }
     }
 
     @Override
-    public final void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
-        subscribe(subscriber, executor, false);
+    public void subscribe(Subscriber<? super T> subscriber, SubscriptionOption... options) {
+        subscribe(subscriber, defaultSubscriberExecutor(), options);
     }
 
     @Override
-    public final void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
-                                boolean withPooledObjects) {
+    public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor, boolean withPooledObjects) {
+        if (withPooledObjects) {
+            subscribe(subscriber, executor, WITH_POOLED_OBJECTS);
+        } else {
+            subscribe(subscriber, executor);
+        }
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
+                          SubscriptionOption... options) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
+        requireNonNull(options, "options");
 
-        if (!subscribe0(subscriber, executor)) {
+        if (!subscribe0(subscriber, executor, containsNotifyCancellation(options))) {
             final AbortableSubscriber oldSubscriber = this.subscriber;
             assert oldSubscriber != null;
             failLateSubscriber(executor, subscriber, oldSubscriber.subscriber);
@@ -111,14 +127,15 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
     /**
      * Returns the default {@link EventExecutor} which will be used when a user subscribes using
-     * {@link #subscribe(Subscriber)} or {@link #subscribe(Subscriber, boolean)}.
+     * {@link #subscribe(Subscriber, SubscriptionOption...)}.
      */
     protected EventExecutor defaultSubscriberExecutor() {
         return RequestContext.mapCurrent(RequestContext::eventLoop, () -> CommonPools.workerGroup().next());
     }
 
-    private boolean subscribe0(Subscriber<? super T> subscriber, EventExecutor executor) {
-        final AbortableSubscriber s = new AbortableSubscriber(this, subscriber, executor);
+    private boolean subscribe0(Subscriber<? super T> subscriber, EventExecutor executor,
+                               boolean notifyCancellation) {
+        final AbortableSubscriber s = new AbortableSubscriber(this, subscriber, executor, notifyCancellation);
         if (!subscriberUpdater.compareAndSet(this, null, s)) {
             return false;
         }
@@ -140,25 +157,41 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
     @Override
     public CompletableFuture<List<T>> drainAll() {
-        return drainAll(defaultSubscriberExecutor(), false);
-    }
-
-    @Override
-    public CompletableFuture<List<T>> drainAll(EventExecutor executor) {
-        return drainAll(requireNonNull(executor, "executor"), false);
+        return drainAll(defaultSubscriberExecutor());
     }
 
     @Override
     public CompletableFuture<List<T>> drainAll(boolean withPooledObjects) {
-        return drainAll(defaultSubscriberExecutor(), withPooledObjects);
+        if (withPooledObjects) {
+            return drainAll(defaultSubscriberExecutor(), WITH_POOLED_OBJECTS);
+        } else {
+            return drainAll(defaultSubscriberExecutor());
+        }
+    }
+
+    @Override
+    public CompletableFuture<List<T>> drainAll(SubscriptionOption... options) {
+        return drainAll(defaultSubscriberExecutor(), options);
     }
 
     @Override
     public CompletableFuture<List<T>> drainAll(EventExecutor executor, boolean withPooledObjects) {
-        requireNonNull(executor, "executor");
-        final StreamMessageDrainer<T> drainer = new StreamMessageDrainer<>(withPooledObjects);
+        if (withPooledObjects) {
+            return drainAll(executor, WITH_POOLED_OBJECTS);
+        } else {
+            return drainAll(executor);
+        }
+    }
 
-        if (!subscribe0(drainer, executor)) {
+    @Override
+    public CompletableFuture<List<T>> drainAll(EventExecutor executor, SubscriptionOption... options) {
+        requireNonNull(executor, "executor");
+        requireNonNull(options, "options");
+
+        final boolean notifyCancellation = containsNotifyCancellation(options);
+        final StreamMessageDrainer<T> drainer = new StreamMessageDrainer<>(notifyCancellation);
+
+        if (!subscribe0(drainer, executor, notifyCancellation)) {
             final AbortableSubscriber subscriber = this.subscriber;
             assert subscriber != null;
             return CompletableFutures.exceptionallyCompletedFuture(abortedOrLate(subscriber.subscriber));
@@ -176,7 +209,8 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         }
 
         final AbortableSubscriber abortable = new AbortableSubscriber(this, AbortingSubscriber.get(),
-                                                                      ImmediateEventExecutor.INSTANCE);
+                                                                      ImmediateEventExecutor.INSTANCE,
+                                                                      false);
         if (!subscriberUpdater.compareAndSet(this, null, abortable)) {
             this.subscriber.abort();
             return;
@@ -195,17 +229,19 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     static final class AbortableSubscriber implements Subscriber<Object>, Subscription {
         private final PublisherBasedStreamMessage<?> parent;
         private final EventExecutor executor;
+        private boolean notifyCancellation;
         private Subscriber<Object> subscriber;
         private volatile boolean abortPending;
         @Nullable
         private volatile Subscription subscription;
 
         @SuppressWarnings("unchecked")
-        AbortableSubscriber(PublisherBasedStreamMessage<?> parent,
-                            Subscriber<?> subscriber, EventExecutor executor) {
+        AbortableSubscriber(PublisherBasedStreamMessage<?> parent, Subscriber<?> subscriber,
+                            EventExecutor executor, boolean notifyCancellation) {
             this.parent = parent;
             this.subscriber = (Subscriber<Object>) subscriber;
             this.executor = executor;
+            this.notifyCancellation = notifyCancellation;
         }
 
         @Override
@@ -253,16 +289,17 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
                 this.subscriber = NoopSubscriber.get();
             }
 
+            final Throwable cause = cancel ? CancelledSubscriptionException.get()
+                                           : AbortedStreamException.get();
             try {
-                if (!cancel) {
-                    subscriber.onError(AbortedStreamException.get());
+                if (!cancel || notifyCancellation) {
+                    subscriber.onError(cause);
                 }
             } finally {
                 try {
                     subscription.cancel();
                 } finally {
-                    completionFuture.completeExceptionally(
-                            cancel ? CancelledSubscriptionException.get() : AbortedStreamException.get());
+                    completionFuture.completeExceptionally(cause);
                 }
             }
         }

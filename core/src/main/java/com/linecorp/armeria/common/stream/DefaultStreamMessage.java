@@ -137,7 +137,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         }
 
         final SubscriptionImpl newSubscription = new SubscriptionImpl(
-                this, AbortingSubscriber.get(), ImmediateEventExecutor.INSTANCE, false);
+                this, AbortingSubscriber.get(), ImmediateEventExecutor.INSTANCE, false, false);
         if (subscriptionUpdater.compareAndSet(this, null, newSubscription)) {
             // We don't need to invoke onSubscribe() for AbortingSubscriber because it's just a placeholder.
             invokedOnSubscribe = true;

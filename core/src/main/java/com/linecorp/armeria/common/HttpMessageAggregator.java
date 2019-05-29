@@ -19,7 +19,6 @@ package com.linecorp.armeria.common;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.BiFunction;
 
 import javax.annotation.Nullable;
 
@@ -33,8 +32,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.util.ReferenceCountUtil;
 
-abstract class HttpMessageAggregator<T extends AggregatedHttpMessage>
-        implements Subscriber<HttpObject>, BiFunction<Void, Throwable, Void> {
+abstract class HttpMessageAggregator<T extends AggregatedHttpMessage> implements Subscriber<HttpObject> {
 
     private final CompletableFuture<T> future;
     private final List<HttpData> contentList = new ArrayList<>();
@@ -57,65 +55,13 @@ abstract class HttpMessageAggregator<T extends AggregatedHttpMessage>
         s.request(Long.MAX_VALUE);
     }
 
-    /**
-     * Handled by {@link #apply(Void, Throwable)} instead,
-     * because this method is not invoked on cancellation and timeout.
-     */
     @Override
-    public final void onError(Throwable throwable) {}
-
-    /**
-     * Handled by {@link #apply(Void, Throwable)} instead,
-     * because this method is not invoked on cancellation and timeout.
-     */
-    @Override
-    public final void onComplete() {}
-
-    @Override
-    public final void onNext(HttpObject o) {
-        if (o instanceof HttpHeaders) {
-            onHeaders((HttpHeaders) o);
-        } else {
-            onData((HttpData) o);
-        }
-    }
-
-    protected abstract void onHeaders(HttpHeaders headers);
-
-    protected void onData(HttpData data) {
-        boolean added = false;
-        try {
-            if (future.isDone()) {
-                return;
-            }
-
-            final int dataLength = data.length();
-            if (dataLength > 0) {
-                final int allowedMaxDataLength = Integer.MAX_VALUE - contentLength;
-                if (dataLength > allowedMaxDataLength) {
-                    subscription.cancel();
-                    fail(new IllegalStateException("content length greater than Integer.MAX_VALUE"));
-                    return;
-                }
-
-                contentList.add(data);
-                contentLength += dataLength;
-                added = true;
-            }
-        } finally {
-            if (!added) {
-                ReferenceCountUtil.safeRelease(data);
-            }
-        }
+    public final void onError(Throwable t) {
+        fail(t);
     }
 
     @Override
-    public Void apply(Void unused, Throwable cause) {
-        if (cause != null) {
-            fail(cause);
-            return null;
-        }
-
+    public final void onComplete() {
         final HttpData content;
         if (contentLength == 0) {
             content = HttpData.EMPTY_DATA;
@@ -153,8 +99,44 @@ abstract class HttpMessageAggregator<T extends AggregatedHttpMessage>
         } catch (Throwable e) {
             future.completeExceptionally(e);
         }
+    }
 
-        return null;
+    @Override
+    public final void onNext(HttpObject o) {
+        if (o instanceof HttpHeaders) {
+            onHeaders((HttpHeaders) o);
+        } else {
+            onData((HttpData) o);
+        }
+    }
+
+    protected abstract void onHeaders(HttpHeaders headers);
+
+    protected void onData(HttpData data) {
+        boolean added = false;
+        try {
+            if (future.isDone()) {
+                return;
+            }
+
+            final int dataLength = data.length();
+            if (dataLength > 0) {
+                final int allowedMaxDataLength = Integer.MAX_VALUE - contentLength;
+                if (dataLength > allowedMaxDataLength) {
+                    subscription.cancel();
+                    fail(new IllegalStateException("content length greater than Integer.MAX_VALUE"));
+                    return;
+                }
+
+                contentList.add(data);
+                contentLength += dataLength;
+                added = true;
+            }
+        } finally {
+            if (!added) {
+                ReferenceCountUtil.safeRelease(data);
+            }
+        }
     }
 
     private void fail(Throwable cause) {

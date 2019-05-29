@@ -16,13 +16,16 @@
 
 package com.linecorp.armeria.client.encoding;
 
+import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.zip.GZIPOutputStream;
 
 import org.junit.Test;
@@ -31,6 +34,7 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -106,7 +110,13 @@ public class HttpDecodedResponseTest {
     }
 
     private static ByteBuf responseBuf(HttpResponse decoded, boolean withPooledObjects) {
-        return decoded.drainAll(withPooledObjects).join().stream()
+        final CompletableFuture<List<HttpObject>> future;
+        if (withPooledObjects) {
+            future = decoded.drainAll(WITH_POOLED_OBJECTS);
+        } else {
+            future = decoded.drainAll();
+        }
+        return future.join().stream()
                 .filter(o -> o instanceof ByteBufHttpData)
                 .map(o -> ((ByteBufHttpData) o).content())
                 .findFirst()
