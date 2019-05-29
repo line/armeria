@@ -19,8 +19,6 @@ package com.linecorp.armeria.testing.junit.server;
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
 
-import org.junit.jupiter.api.extension.AfterAllCallback;
-import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
@@ -29,11 +27,12 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.internal.ServerRuleDelegate;
+import com.linecorp.armeria.testing.junit.common.AllOrEachExtension;
 
 /**
  * An {@link Extension} that allows easy set-up and tear-down of a {@link Server}.
  */
-public abstract class ServerExtension implements BeforeAllCallback, AfterAllCallback {
+public abstract class ServerExtension extends AllOrEachExtension {
     private final ServerRuleDelegate delegate;
 
     /**
@@ -62,7 +61,7 @@ public abstract class ServerExtension implements BeforeAllCallback, AfterAllCall
      * Calls {@link #start()} if auto-start is enabled.
      */
     @Override
-    public void beforeAll(ExtensionContext context) throws Exception {
+    public void before(ExtensionContext context) throws Exception {
         try {
             delegate.before();
         } catch (Throwable t) {
@@ -74,7 +73,7 @@ public abstract class ServerExtension implements BeforeAllCallback, AfterAllCall
      * Calls {@link #stop()}, without waiting until the {@link Server} is stopped completely.
      */
     @Override
-    public void afterAll(ExtensionContext context) throws Exception {
+    public void after(ExtensionContext context) throws Exception {
         delegate.after();
     }
 

@@ -23,19 +23,18 @@ import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.time.temporal.TemporalAccessor;
 
-import org.junit.jupiter.api.extension.AfterAllCallback;
-import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
 import com.linecorp.armeria.testing.internal.SelfSignedCertificateRuleDelegate;
+import com.linecorp.armeria.testing.junit.common.AllOrEachExtension;
 
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 /**
  * An {@link Extension} that provides a temporary self-signed certificate.
  */
-public class SelfSignedCertificateExtension implements BeforeAllCallback, AfterAllCallback {
+public class SelfSignedCertificateExtension extends AllOrEachExtension {
     private final SelfSignedCertificateRuleDelegate delegate;
 
     /**
@@ -104,7 +103,7 @@ public class SelfSignedCertificateExtension implements BeforeAllCallback, AfterA
      * Generates a {@link SelfSignedCertificate}.
      */
     @Override
-    public void beforeAll(ExtensionContext context) throws Exception {
+    public void before(ExtensionContext context) throws Exception {
         try {
             delegate.before();
         } catch (Throwable t) {
@@ -116,7 +115,7 @@ public class SelfSignedCertificateExtension implements BeforeAllCallback, AfterA
      * Deletes the generated {@link SelfSignedCertificate}.
      */
     @Override
-    public void afterAll(ExtensionContext context) throws Exception {
+    public void after(ExtensionContext context) throws Exception {
         delegate.after();
     }
 
