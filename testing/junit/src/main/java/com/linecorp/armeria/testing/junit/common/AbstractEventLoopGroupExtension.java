@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.testing.junit.common;
 
-import org.junit.jupiter.api.extension.AfterEachCallback;
-import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
@@ -25,7 +23,7 @@ import com.linecorp.armeria.testing.internal.EventLoopGroupRuleDelegate;
 
 import io.netty.channel.EventLoopGroup;
 
-abstract class AbstractEventLoopGroupExtension implements BeforeEachCallback, AfterEachCallback {
+abstract class AbstractEventLoopGroupExtension extends AbstractAllOrEachExtension {
     private final EventLoopGroupRuleDelegate delegate;
 
     AbstractEventLoopGroupExtension(int numThreads, String threadNamePrefix, boolean useDaemonThreads) {
@@ -37,11 +35,11 @@ abstract class AbstractEventLoopGroupExtension implements BeforeEachCallback, Af
     }
 
     @Override
-    public void beforeEach(ExtensionContext context) throws Exception {
+    public void before(ExtensionContext context) throws Exception {
         try {
             delegate.before();
         } catch (Throwable t) {
-            throw new RuntimeException("Failed to set up beforeEachCallback", t);
+            throw new RuntimeException("Failed to set up before callback", t);
         }
     }
 
@@ -50,7 +48,7 @@ abstract class AbstractEventLoopGroupExtension implements BeforeEachCallback, Af
      * Call {@code rule.get().shutdownGracefully().sync()} if you want to wait for complete termination.
      */
     @Override
-    public void afterEach(ExtensionContext context) throws Exception {
+    public void after(ExtensionContext context) throws Exception {
         delegate.after();
     }
 }
