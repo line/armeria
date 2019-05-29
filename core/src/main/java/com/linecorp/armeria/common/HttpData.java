@@ -153,6 +153,9 @@ public interface HttpData extends HttpObject {
     }
 
     /**
+     * Creates a new instance from the specified byte array. The array is not copied; any changes made in the
+     * array later will be visible to {@link HttpData}.
+     *
      * @deprecated use {@link #wrap(byte[])}.
      */
     @Deprecated
@@ -161,6 +164,9 @@ public interface HttpData extends HttpObject {
     }
 
     /**
+     * Creates a new instance from the specified byte array, {@code offset} and {@code length}.
+     * The array is not copied; any changes made in the array later will be visible to {@link HttpData}.
+     *
      * @deprecated use {@link #wrap(byte[], int, int)}.
      */
     @Deprecated
@@ -216,6 +222,9 @@ public interface HttpData extends HttpObject {
     }
 
     /**
+     * Creates a new instance from the specified {@link ByteBuf} by first copying it's content. The reference
+     * count of {@link ByteBuf} will not be changed.
+     *
      * @deprecated use {@link #copyOf(ByteBuf)}.
      */
     @Deprecated
@@ -321,6 +330,8 @@ public interface HttpData extends HttpObject {
     byte[] array();
 
     /**
+     * Returns {@code 0}.
+     *
      * @deprecated the offset of {@link HttpData} is always {@code 0}.
      */
     @Deprecated
