@@ -86,7 +86,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
 
     /**
      * Creates a new {@link ClientBuilder} that builds the client that connects to the specified
-     * {@link Endpoint} with the {@code Scheme}.
+     * {@link Endpoint} with the {@code scheme}.
      */
     public ClientBuilder(String scheme, Endpoint endpoint) {
         this(Scheme.parse(scheme), requireNonNull(endpoint, "endpoint"));
@@ -114,8 +114,6 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
         this.scheme = scheme;
         this.protocol = protocol;
         this.endpoint = endpoint;
-
-        checkArguments();
     }
 
     /**
@@ -145,7 +143,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
             throw new IllegalStateException("scheme is already given");
         }
 
-        this.format = requireNonNull(format, "serializationFormat");
+        this.format = requireNonNull(format, "format");
         return this;
     }
 
@@ -159,7 +157,6 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
      */
     public <T> T build(Class<T> clientType) {
         requireNonNull(clientType, "clientType");
-        checkArguments();
 
         if (uri != null) {
             return factory.newClient(uri, clientType, buildOptions());
@@ -171,21 +168,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
     }
 
     private Scheme scheme() {
-        return scheme == null ? Scheme.of(format, requireNonNull(protocol)) : scheme;
-    }
-
-    private void checkArguments() {
-        if (uri != null) {
-            return;
-        }
-
-        if (endpoint == null) {
-            throw new IllegalStateException("both uri and endpoint are not given");
-        }
-
-        if (scheme == null && protocol == null) {
-            throw new IllegalStateException("both scheme and protocol are not given");
-        }
+        return scheme == null ? Scheme.of(format, protocol) : scheme;
     }
 
     private void ensureEndpoint() {

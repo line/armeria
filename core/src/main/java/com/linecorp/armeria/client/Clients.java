@@ -72,7 +72,7 @@ public final class Clients {
      * Creates a new client that connects to the specified {@code uri} using the specified
      * {@link ClientFactory}.
      *
-     * @param factory the specified {@link ClientFactory}
+     * @param factory an alternative {@link ClientFactory}
      * @param uri the URI of the server endpoint
      * @param clientType the type of the new client
      * @param options the {@link ClientOptionValue}s
