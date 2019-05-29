@@ -112,10 +112,6 @@ configure(projectsWithFlags('java')) {
             options.compilerArgs += ['--release', '8']
         }
     }
-
-    test {
-        useJUnitPlatform()
-    }
 }
 
 // Configure the Javadoc tasks of all projects.
