@@ -240,6 +240,8 @@ org.junit.jupiter:
     - https://junit.org/junit5/docs/5.4.2/api/
   junit-jupiter-engine:
     version: *JUNIT_JUPITER_VERSION
+  junit-jupiter-params:
+    version: *JUNIT_JUPITER_VERSION
 org.junit.platform:
   junit-platform-commons:
     version: &JUNIT_PLATFORM_VERSION '1.4.2'
