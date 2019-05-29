@@ -330,6 +330,7 @@ When a project has a `java` flag:
   - Publishing to a Maven repository
 
 - Full exception logging is enabled for tests.
+- JUnit platform is enabled for tests if the project depends on `junit-jupiter-engine`.
 - Checkstyle validation is enabled using `checkstyle` plugin if Checkstyle
   configuration file exists at `<project_root>/settings/checkstyle/checkstyle.xml`
 

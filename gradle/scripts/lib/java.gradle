@@ -88,7 +88,14 @@ configure(projectsWithFlags('java')) {
 
     // Enable full exception logging for test failures.
     tasks.withType(Test) {
-        it.testLogging.exceptionFormat = 'full'
+        testLogging.exceptionFormat = 'full'
+    }
+
+    // Use JUnit 5 if it's defined in the dependencies.
+    if (managedVersions.containsKey('org.junit.jupiter:junit-jupiter-engine')) {
+        tasks.withType(Test) {
+            useJUnitPlatform()
+        }
     }
 
     // Enforce checkstyle rules.
