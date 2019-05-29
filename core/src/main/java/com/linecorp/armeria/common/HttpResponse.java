@@ -191,7 +191,9 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
-     * Creates a new HTTP response of the specified {@link HttpStatus}.
+     * Creates a new HTTP response of the specified {@link HttpStatus}. The {@code content} will be wrapped
+     * using {@link HttpData#wrap(byte[])}, so any changes made to {@code content} will be reflected in the
+     * response.
      *
      * @param mediaType the {@link MediaType} of the response content
      * @param content the content of the response

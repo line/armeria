@@ -101,7 +101,8 @@ public interface AggregatedHttpRequest extends AggregatedHttpMessage {
     }
 
     /**
-     * Creates a new HTTP request.
+     * Creates a new HTTP request. The {@code content} will be wrapped using {@link HttpData#wrap(byte[])}, so
+     * any changes made to {@code content} will be reflected in the request.
      *
      * @param method the HTTP method of the request
      * @param path the path of the request

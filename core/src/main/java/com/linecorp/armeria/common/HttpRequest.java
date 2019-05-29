@@ -129,7 +129,8 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     }
 
     /**
-     * Creates a new HTTP request and closes the stream.
+     * Creates a new HTTP request and closes the stream. The {@code content} will be wrapped using
+     * {@link HttpData#wrap(byte[])}, so any changes made to {@code content} will be reflected in the request.
      *
      * @param method the HTTP method of the request
      * @param path the path of the request
