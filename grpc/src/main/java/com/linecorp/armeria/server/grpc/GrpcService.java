@@ -49,6 +49,7 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.grpc.GrpcJsonUtil;
 import com.linecorp.armeria.internal.grpc.GrpcStatus;
+import com.linecorp.armeria.internal.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.PathMapping;
@@ -74,10 +75,6 @@ import io.grpc.protobuf.services.ProtoReflectionService;
  * <p>Unsupported features:
  * <ul>
  *     <li>
- *         {@link Metadata} - use armeria's HttpHeaders and decorators for accessing custom metadata sent from
- *         the client. Any usages of {@link Metadata} in the server will be silently ignored.
- *     </li>
- *     <li>
  *         There are some differences in the HTTP/2 error code returned from an Armeria server vs gRPC server
  *         when dealing with transport errors and deadlines. Generally, the client will see an UNKNOWN status
  *         when the official server may have returned CANCELED.
@@ -90,8 +87,6 @@ public final class GrpcService extends AbstractHttpService
     private static final Logger logger = LoggerFactory.getLogger(GrpcService.class);
 
     static final int NO_MAX_INBOUND_MESSAGE_SIZE = -1;
-
-    private static final Metadata EMPTY_METADATA = new Metadata();
 
     private final HandlerRegistry registry;
     private final Set<PathMapping> pathMappings;
@@ -160,6 +155,7 @@ public final class GrpcService extends AbstractHttpService
                     ArmeriaServerCall.statusToTrailers(
                             ctx,
                             Status.UNIMPLEMENTED.withDescription("Method not found: " + methodName),
+                            new Metadata(),
                             false));
         }
 
@@ -170,7 +166,8 @@ public final class GrpcService extends AbstractHttpService
                 ctx.setRequestTimeout(Duration.ofNanos(timeout));
             } catch (IllegalArgumentException e) {
                 return HttpResponse.of(
-                        ArmeriaServerCall.statusToTrailers(ctx, GrpcStatus.fromThrowable(e), false));
+                        ArmeriaServerCall.statusToTrailers(
+                                ctx, GrpcStatus.fromThrowable(e), new Metadata(), false));
             }
         }
 
@@ -181,7 +178,7 @@ public final class GrpcService extends AbstractHttpService
         final ArmeriaServerCall<?, ?> call = startCall(
                 methodName, method, ctx, req.headers(), res, serializationFormat);
         if (call != null) {
-            ctx.setRequestTimeoutHandler(() -> call.close(Status.DEADLINE_EXCEEDED, EMPTY_METADATA));
+            ctx.setRequestTimeoutHandler(() -> call.close(Status.DEADLINE_EXCEEDED, new Metadata()));
             req.subscribe(call.messageReader(), ctx.eventLoop(), true);
             req.completionFuture().handleAsync(call.messageReader(), ctx.eventLoop());
         }
@@ -212,10 +209,10 @@ public final class GrpcService extends AbstractHttpService
                 advertisedEncodingsHeader);
         final ServerCall.Listener<I> listener;
         try (SafeCloseable ignored = ctx.push()) {
-            listener = methodDef.getServerCallHandler().startCall(call, EMPTY_METADATA);
+            listener = methodDef.getServerCallHandler().startCall(call, MetadataUtil.copyFromHeaders(headers));
         } catch (Throwable t) {
             call.setListener(new EmptyListener<>());
-            call.close(GrpcStatus.fromThrowable(t), EMPTY_METADATA);
+            call.close(GrpcStatus.fromThrowable(t), new Metadata());
             logger.warn(
                     "Exception thrown from streaming request stub method before processing any request data" +
                     " - this is likely a bug in the stub implementation.");

@@ -54,6 +54,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.Int32Value;
 import com.google.protobuf.StringValue;
 
 import com.linecorp.armeria.client.ClientBuilder;
@@ -135,6 +136,14 @@ public class GrpcServiceServerTest {
 
     private static final int MAX_MESSAGE_SIZE = 16 * 1024 * 1024;
 
+    private static final Key<StringValue> STRING_VALUE_KEY =
+            ProtoUtils.keyForProto(StringValue.getDefaultInstance());
+
+    private static final Key<Int32Value> INT_32_VALUE_KEY =
+            ProtoUtils.keyForProto(Int32Value.getDefaultInstance());
+
+    private static final Key<String> CUSTOM_VALUE_KEY = Key.of("custom-header",
+                                                               Metadata.ASCII_STRING_MARSHALLER);
     private static final Key<StringValue> ERROR_METADATA_KEY =
             ProtoUtils.keyForProto(StringValue.getDefaultInstance());
     private static final AsciiString ERROR_METADATA_HEADER = HttpHeaderNames.of(ERROR_METADATA_KEY.name());
@@ -198,7 +207,27 @@ public class GrpcServiceServerTest {
 
         @Override
         public void errorWithMessage(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
-            responseObserver.onError(Status.ABORTED.withDescription("aborted call").asException());
+            Metadata metadata = new Metadata();
+            metadata.put(STRING_VALUE_KEY, StringValue.newBuilder().setValue("custom metadata").build());
+            metadata.put(CUSTOM_VALUE_KEY, "custom value");
+
+            ServiceRequestContext ctx = RequestContext.current();
+            // Metadata takes priority, this trailer will not be written since it has the same name.
+            ctx.addAdditionalResponseTrailer(
+                    STRING_VALUE_KEY.name(),
+                    Base64.getEncoder().encodeToString(
+                            StringValue.newBuilder().setValue("context trailer 1").build().toByteArray()));
+
+            // gRPC wire format allow comma-separated binary headers.
+            ctx.addAdditionalResponseTrailer(
+                    INT_32_VALUE_KEY.name(),
+                    Base64.getEncoder().encodeToString(
+                            Int32Value.newBuilder().setValue(10).build().toByteArray()) +
+                    "," +
+                    Base64.getEncoder().encodeToString(
+                            Int32Value.newBuilder().setValue(20).build().toByteArray()));
+
+            responseObserver.onError(Status.ABORTED.withDescription("aborted call").asException(metadata));
         }
 
         @Override
@@ -542,6 +571,12 @@ public class GrpcServiceServerTest {
                 () -> blockingClient.errorWithMessage(REQUEST_MESSAGE));
         assertThat(t.getStatus().getCode()).isEqualTo(Code.ABORTED);
         assertThat(t.getStatus().getDescription()).isEqualTo("aborted call");
+        assertThat(t.getTrailers().getAll(STRING_VALUE_KEY))
+                .containsExactly(StringValue.newBuilder().setValue("custom metadata").build());
+        assertThat(t.getTrailers().getAll(INT_32_VALUE_KEY))
+                .containsExactly(Int32Value.newBuilder().setValue(10).build(),
+                                 Int32Value.newBuilder().setValue(20).build());
+        assertThat(t.getTrailers().get(CUSTOM_VALUE_KEY)).isEqualTo("custom value");
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
             assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/ErrorWithMessage");

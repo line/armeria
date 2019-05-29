@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.grpc.interop;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -25,34 +26,25 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 
-import com.google.common.collect.ImmutableList;
 import com.squareup.okhttp.ConnectionSpec;
 
-import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
+import com.linecorp.armeria.testing.junit4.server.SelfSignedCertificateRule;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ServerInterceptors;
 import io.grpc.internal.testing.TestUtils;
-import io.grpc.netty.GrpcSslContexts;
 import io.grpc.okhttp.OkHttpChannelBuilder;
 import io.grpc.okhttp.internal.Platform;
 import io.grpc.testing.integration.AbstractInteropTest;
 import io.grpc.testing.integration.TestServiceGrpc;
 import io.grpc.testing.integration.TestServiceImpl;
-import io.netty.handler.ssl.ApplicationProtocolConfig;
-import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
-import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
-import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 /**
  * Interop test based on grpc-interop-testing. Should provide reasonable confidence in Armeria's
@@ -65,15 +57,10 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
         SLF4JBridgeHandler.install();
     }
 
-    private static final ApplicationProtocolConfig ALPN = new ApplicationProtocolConfig(
-            Protocol.ALPN,
-            SelectorFailureBehavior.NO_ADVERTISE,
-            SelectedListenerFailureBehavior.ACCEPT,
-            ImmutableList.of("h2"));
-
     private static final AtomicReference<ServiceRequestContext> ctxCapture = new AtomicReference<>();
 
-    private static SelfSignedCertificate ssc;
+    @ClassRule
+    public static SelfSignedCertificateRule ssc = new SelfSignedCertificateRule("example.com");
 
     @ClassRule
     public static final ServerRule server = new ServerRule() {
@@ -82,18 +69,14 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
 
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            ssc = new SelfSignedCertificate("example.com");
-
-            sb.serverListener(new ServerListenerAdapter() {
-                @Override
-                public void serverStopped(Server server) {
-                    executor.shutdown();
-                    ssc.delete();
+            sb.https(new InetSocketAddress("127.0.0.1", 0));
+            sb.tls(ssc.certificateFile(), ssc.privateKeyFile(), ssl -> {
+                try {
+                    ssl.trustManager(TestUtils.loadCert("ca.pem"));
+                } catch (IOException e) {
+                    Exceptions.throwUnsafely(e);
                 }
             });
-
-            sb.https(new InetSocketAddress("127.0.0.1", 0));
-            sb.tls(newSslContext());
             sb.maxRequestLength(16 * 1024 * 1024);
             sb.serviceUnder("/", new GrpcServiceBuilder()
                     .addService(ServerInterceptors.intercept(
@@ -103,13 +86,6 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
                         ctxCapture.set(ctx);
                         return delegate.serve(ctx, req);
                     }));
-        }
-
-        private SslContext newSslContext() throws Exception {
-            return GrpcSslContexts.forServer(ssc.certificate(), ssc.privateKey())
-                                  .applicationProtocolConfig(ALPN)
-                                  .trustManager(TestUtils.loadCert("ca.pem"))
-                                  .build();
         }
     };
 
@@ -129,7 +105,7 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
                     .connectionSpec(ConnectionSpec.MODERN_TLS)
                     .overrideAuthority("example.com:" + port)
                     .sslSocketFactory(TestUtils.newSslSocketFactoryForCa(
-                            Platform.get().getProvider(), ssc.certificate()))
+                            Platform.get().getProvider(), ssc.certificateFile()))
                     .build();
         } catch (Exception ex) {
             throw new RuntimeException(ex);
@@ -138,21 +114,13 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
 
     @Override
     protected boolean metricsExpected() {
+        // Armeria handles metrics using micrometer and does not support opencensus.
         return false;
     }
 
-    @Ignore
-    @Override
-    public void exchangeMetadataUnaryCall() {
-        // Disable Metadata tests, which armeria does not support.
-    }
-
-    @Ignore
-    @Override
-    public void exchangeMetadataStreamingCall() {
-        // Disable Metadata tests, which armeria does not support.
-    }
-
+    // This base implementation is to check that the client sends the timeout as a request header, not that the
+    // server respects it. We don't care about client behavior in this server test, but it doesn't hurt for us
+    // to go ahead and check the server respected the header.
     @Override
     public void sendsTimeoutHeader() {
         final long configuredTimeoutMinutes = 100;
@@ -166,34 +134,5 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
                 ", transferredTimeoutMinutes=" + transferredTimeoutMinutes,
                 configuredTimeoutMinutes - transferredTimeoutMinutes >= 0 &&
                 configuredTimeoutMinutes - transferredTimeoutMinutes <= 1);
-    }
-
-    @Override
-    @Ignore
-    // TODO(anuraag): Enable after adding support in ServiceRequestContext to define custom timeout handling.
-    public void deadlineExceededServerStreaming() {}
-
-    @Override
-    @Ignore
-    // TODO(anuraag): Enable after adding support in ServiceRequestContext to define custom timeout handling.
-    public void deadlineExceeded() {}
-
-    // FIXME: This doesn't work yet and may require some complicated changes. Armeria should continue to accept
-    // requests after a channel is gracefully closed but doesn't appear to (maybe because it supports both
-    // HTTP1, which has no concept of graceful shutdown, and HTTP2).
-    @Ignore
-    @Override
-    public void gracefulShutdown() {}
-
-    @Ignore
-    @Override
-    public void customMetadata() {
-        // Disable Metadata tests, which armeria does not support.
-    }
-
-    @Ignore
-    @Override
-    public void statusCodeAndMessage() {
-        // TODO(trustin): Unignore once gRPC upgrades to a newer version of Mockito.
     }
 }

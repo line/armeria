@@ -17,6 +17,7 @@ package com.linecorp.armeria.internal.grpc;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Base64;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Random;
@@ -29,6 +30,7 @@ import javax.annotation.concurrent.GuardedBy;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Queues;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.StringValue;
 
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -36,6 +38,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.grpc.testing.Messages;
 import com.linecorp.armeria.grpc.testing.Messages.PayloadType;
 import com.linecorp.armeria.grpc.testing.Messages.ResponseParameters;
@@ -52,8 +55,11 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
 
+import io.grpc.Metadata;
+import io.grpc.Metadata.Key;
 import io.grpc.Status;
 import io.grpc.internal.LogExceptionRunnable;
+import io.grpc.protobuf.ProtoUtils;
 import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
 import io.netty.util.AsciiString;
@@ -61,6 +67,12 @@ import io.netty.util.AsciiString;
 public class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
 
     public static final AsciiString EXTRA_HEADER_NAME = HttpHeaderNames.of("extra-header");
+
+    public static final Key<String> EXTRA_HEADER_KEY = Key.of(EXTRA_HEADER_NAME.toString(),
+                                                              Metadata.ASCII_STRING_MARSHALLER);
+
+    public static final Key<StringValue> STRING_VALUE_KEY =
+            ProtoUtils.keyForProto(StringValue.getDefaultInstance());
 
     private static final String UNCOMPRESSABLE_FILE =
             "/io/grpc/testing/integration/testdata/uncompressable.bin";
@@ -82,6 +94,16 @@ public class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
     @Override
     public void emptyCall(EmptyProtos.Empty empty,
                           StreamObserver<Empty> responseObserver) {
+        ServiceRequestContext ctx = RequestContext.current();
+
+        ctx.addAdditionalResponseTrailer(
+                STRING_VALUE_KEY.name(),
+                Base64.getEncoder().encodeToString(
+                        StringValue.newBuilder().setValue("hello").build().toByteArray()) +
+                ',' +
+                Base64.getEncoder().encodeToString(
+                        StringValue.newBuilder().setValue("world").build().toByteArray()));
+
         responseObserver.onNext(Empty.getDefaultInstance());
         responseObserver.onCompleted();
     }

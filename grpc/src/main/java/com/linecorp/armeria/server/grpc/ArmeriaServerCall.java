@@ -65,6 +65,7 @@ import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.grpc.GrpcMessageMarshaller;
 import com.linecorp.armeria.internal.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.grpc.HttpStreamReader;
+import com.linecorp.armeria.internal.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.grpc.TransportStatusListener;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
@@ -101,8 +102,6 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     // Only most significant bit of a byte is set.
     @VisibleForTesting
     static final byte TRAILERS_FRAME_HEADER = (byte) (1 << 7);
-
-    private static final Metadata EMPTY_METADATA = new Metadata();
 
     private static final Splitter ACCEPT_ENCODING_SPLITTER = Splitter.on(',').trimResults();
 
@@ -185,7 +184,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 // Closed by client, not by server.
                 cancelled = true;
                 try (SafeCloseable ignore = ctx.pushIfAbsent()) {
-                    close(Status.CANCELLED, EMPTY_METADATA);
+                    close(Status.CANCELLED, new Metadata());
                 }
             }
             return null;
@@ -202,15 +201,15 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     }
 
     @Override
-    public void sendHeaders(Metadata unusedGrpcMetadata) {
+    public void sendHeaders(Metadata metadata) {
         if (ctx.eventLoop().inEventLoop()) {
-            doSendHeaders(unusedGrpcMetadata);
+            doSendHeaders(metadata);
         } else {
-            ctx.eventLoop().submit(() -> doSendHeaders(unusedGrpcMetadata));
+            ctx.eventLoop().submit(() -> doSendHeaders(metadata));
         }
     }
 
-    private void doSendHeaders(Metadata unusedGrpcMetadata) {
+    private void doSendHeaders(Metadata metadata) {
         checkState(!sendHeadersCalled, "sendHeaders already called");
         checkState(!closeCalled, "call is closed");
 
@@ -236,6 +235,8 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         if (!advertisedEncodingsHeader.isEmpty()) {
             headers.add(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, advertisedEncodingsHeader);
         }
+
+        MetadataUtil.fillHeaders(metadata, headers);
 
         sendHeadersCalled = true;
         res.write(headers.build());
@@ -271,10 +272,10 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 }
             });
         } catch (RuntimeException e) {
-            close(GrpcStatus.fromThrowable(e), EMPTY_METADATA);
+            close(GrpcStatus.fromThrowable(e), new Metadata());
             throw e;
         } catch (Throwable t) {
-            close(GrpcStatus.fromThrowable(t), EMPTY_METADATA);
+            close(GrpcStatus.fromThrowable(t), new Metadata());
             throw new RuntimeException(t);
         }
     }
@@ -283,7 +284,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         try {
             listener.onReady();
         } catch (Throwable t) {
-            close(GrpcStatus.fromThrowable(t), EMPTY_METADATA);
+            close(GrpcStatus.fromThrowable(t), new Metadata());
         }
     }
 
@@ -293,15 +294,15 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     }
 
     @Override
-    public void close(Status status, Metadata unusedGrpcMetadata) {
+    public void close(Status status, Metadata metadata) {
         if (ctx.eventLoop().inEventLoop()) {
-            doClose(status, unusedGrpcMetadata);
+            doClose(status, metadata);
         } else {
-            ctx.eventLoop().submit(() -> doClose(status, unusedGrpcMetadata));
+            ctx.eventLoop().submit(() -> doClose(status, metadata));
         }
     }
 
-    private void doClose(Status status, Metadata unusedGrpcMetadata) {
+    private void doClose(Status status, Metadata metadata) {
         checkState(!closeCalled, "call already closed");
 
         closeCalled = true;
@@ -311,7 +312,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             return;
         }
 
-        final HttpHeaders trailers = statusToTrailers(status, sendHeadersCalled);
+        final HttpHeaders trailers = statusToTrailers(status, metadata, sendHeadersCalled);
         final HttpObject trailersObj;
         if (sendHeadersCalled && GrpcSerializationFormats.isGrpcWeb(serializationFormat)) {
             // Normal trailers are not supported in grpc-web and must be encoded as a message.
@@ -409,7 +410,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         try (SafeCloseable ignored = ctx.push()) {
             listener.onMessage(request);
         } catch (Throwable t) {
-            close(GrpcStatus.fromThrowable(t), EMPTY_METADATA);
+            close(GrpcStatus.fromThrowable(t), new Metadata());
         }
     }
 
@@ -433,12 +434,14 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         try (SafeCloseable ignored = ctx.push()) {
             listener.onHalfClose();
         } catch (Throwable t) {
-            close(GrpcStatus.fromThrowable(t), EMPTY_METADATA);
+            close(GrpcStatus.fromThrowable(t), new Metadata());
         }
     }
 
     @Override
-    public void transportReportStatus(Status status) {
+    public void transportReportStatus(Status status, Metadata unused) {
+        // A server doesn't see trailers from the client so will never have Metadata here.
+
         if (closeCalled) {
             // We've already called close on the server-side and will close the listener with the server-side
             // status, so we ignore client transport status's at this point (it's usually the RST_STREAM
@@ -500,7 +503,7 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                 // A custom error when dealing with client cancel or transport issues should be
                 // returned. We have already closed the listener, so it will not receive any more
                 // callbacks as designed.
-                close(GrpcStatus.fromThrowable(t), EMPTY_METADATA);
+                close(GrpcStatus.fromThrowable(t), new Metadata());
             }
         }
     }
@@ -512,13 +515,16 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         }
     }
 
-    private HttpHeaders statusToTrailers(Status status, boolean headersSent) {
-        return statusToTrailers(ctx, status, headersSent);
+    private HttpHeaders statusToTrailers(Status status, Metadata metadata, boolean headersSent) {
+        return statusToTrailers(ctx, status, metadata, headersSent);
     }
 
-    static HttpHeaders statusToTrailers(ServiceRequestContext ctx, Status status, boolean headersSent) {
+    static HttpHeaders statusToTrailers(
+            ServiceRequestContext ctx, Status status, Metadata metadata, boolean headersSent) {
         final HttpHeadersBuilder trailers = GrpcTrailersUtil.statusToTrailers(
                 status.getCode().value(), status.getDescription(), headersSent);
+
+        MetadataUtil.fillHeaders(metadata, trailers);
 
         if (ctx.verboseResponses() && status.getCause() != null) {
             final ThrowableProto proto = GrpcStatus.serializeThrowable(status.getCause());

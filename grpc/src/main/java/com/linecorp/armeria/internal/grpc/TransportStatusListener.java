@@ -16,13 +16,17 @@
 
 package com.linecorp.armeria.internal.grpc;
 
+import io.grpc.Metadata;
 import io.grpc.Status;
 
 /**
  * A listener of gRPC {@link Status}s. Any errors occuring within the armeria will be returned to gRPC business
  * logic through this listener, and for clients the final response {@link Status} is also returned.
  */
-@FunctionalInterface
 public interface TransportStatusListener {
-    void transportReportStatus(Status status);
+    default void transportReportStatus(Status status) {
+        transportReportStatus(status, new Metadata());
+    }
+
+    void transportReportStatus(Status status, Metadata metadata);
 }
