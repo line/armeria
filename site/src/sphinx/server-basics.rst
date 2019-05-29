@@ -154,8 +154,8 @@ for a specific service, you can use fluent API:
     ServerBuilder sb = new ServerBuilder();
     sb.route()                                   // Configure the service.
       .post("/foo/bar")                          // Matched when the path is "/foo/bar" and the method is POST.
-      .consumes(JSON)                            // Matched when the "content-type" header is "application/json".
-      .produces(JSON)                            // Matched when the "accept" headers is "application/json".
+      .consumes(MediaType.JSON)                  // Matched when the "content-type" header is "application/json".
+      .produces(MediaType.JSON)                  // Matched when the "accept" headers is "application/json".
       .requestTimeoutMillis(5000)
       .maxRequestLength(8192)
       .verboseResponses(true)
@@ -166,6 +166,8 @@ for a specific service, you can use fluent API:
 Or use a ``Consumer``:
 
 .. code-block:: java
+
+    import com.linecorp.armeria.common.HttpMethod;
 
     ServerBuilder sb = new ServerBuilder();
     sb.withRoute(builder -> builder.path("/baz")         // Matched when the path is "/baz".
