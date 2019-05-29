@@ -149,6 +149,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     @Override
     public void start(Listener<O> responseListener, Metadata metadata) {
         requireNonNull(responseListener, "responseListener");
+        requireNonNull(metadata, "metadata");
         final Compressor compressor;
         if (callOptions.getCompressor() != null) {
             compressor = compressorRegistry.lookupCompressor(callOptions.getCompressor());
