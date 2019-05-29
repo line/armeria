@@ -76,7 +76,7 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
      *                                  in {@link SessionProtocol}
      */
     public HttpClientBuilder(SessionProtocol sessionProtocol, Endpoint endpoint) {
-        validateScheme(requireNonNull(sessionProtocol).uriText());
+        validateScheme(requireNonNull(sessionProtocol, "sessionProtocol").uriText());
 
         uri = null;
         scheme = Scheme.of(SerializationFormat.NONE, sessionProtocol);

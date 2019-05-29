@@ -89,7 +89,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
      * {@link Endpoint} with the {@code scheme}.
      */
     public ClientBuilder(String scheme, Endpoint endpoint) {
-        this(Scheme.parse(scheme), requireNonNull(endpoint, "endpoint"));
+        this(Scheme.parse(requireNonNull(scheme, "scheme")), requireNonNull(endpoint, "endpoint"));
     }
 
     /**
@@ -105,7 +105,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
      * {@link Endpoint} with the {@link SessionProtocol}.
      */
     public ClientBuilder(SessionProtocol protocol, Endpoint endpoint) {
-        this(null, null, requireNonNull(protocol, "sessionProtocol"), requireNonNull(endpoint, "endpoint"));
+        this(null, null, requireNonNull(protocol, "protocol"), requireNonNull(endpoint, "endpoint"));
     }
 
     private ClientBuilder(@Nullable URI uri, @Nullable Scheme scheme, @Nullable SessionProtocol protocol,
@@ -173,7 +173,9 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
 
     private void ensureEndpoint() {
         if (endpoint == null) {
-            throw new IllegalStateException("endpoint is not given");
+            throw new IllegalStateException(
+                    getClass().getSimpleName() + " must be created with an " + Endpoint.class.getSimpleName() +
+                    " to call this method");
         }
     }
 }

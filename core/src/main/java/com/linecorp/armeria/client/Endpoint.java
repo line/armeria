@@ -24,6 +24,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Comparator;
 import java.util.Objects;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
@@ -58,6 +60,13 @@ public final class Endpoint implements Comparable<Endpoint> {
                       .thenComparing(e -> e.port);
 
     private static final int DEFAULT_WEIGHT = 1000;
+
+    /**
+     * Validator for the scheme part of the URI, as defined in
+     * <a href="https://tools.ietf.org/html/rfc3986#section-3.1">the section 3.1 of RFC3986</a>.
+     */
+    private static final Predicate<String> SCHEME_VALIDATOR =
+            scheme -> Pattern.compile("^([a-z][a-z0-9+\\-.]*)").matcher(scheme).matches();
 
     /**
      * Parse the authority part of a URI. The authority part may have one of the following formats:
@@ -448,7 +457,7 @@ public final class Endpoint implements Comparable<Endpoint> {
     public URI toUri(String scheme) {
         requireNonNull(scheme, "scheme");
 
-        return toUri(Scheme.parse(scheme));
+        return toUri(scheme, null);
     }
 
     /**
@@ -459,44 +468,45 @@ public final class Endpoint implements Comparable<Endpoint> {
      *
      * @return the URI
      */
-    public URI toUri(String scheme, String path) {
+    public URI toUri(String scheme, @Nullable String path) {
         requireNonNull(scheme, "scheme");
-        requireNonNull(path, "path");
 
-        return toUri(Scheme.parse(scheme), path);
+        if (!SCHEME_VALIDATOR.test(scheme)) {
+            throw new IllegalArgumentException("scheme: " + scheme + " (expected: a valid scheme)");
+        }
+
+        try {
+            return new URI(scheme, authority(), path, null, null);
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException(e.getMessage(), e);
+        }
     }
 
     /**
-     * Converts this endpoint into a URI using the {@link SessionProtocol} and {@link SerializationFormat}.
+     * Converts this endpoint into a URI using the {@link SessionProtocol}.
      *
      * @param sessionProtocol the {@link SessionProtocol} for {@link URI}.
-     * @param serializationFormat the {@link SerializationFormat} for {@link URI}
      *
      * @return the URI
      */
-    public URI toUri(SessionProtocol sessionProtocol, SerializationFormat serializationFormat) {
-        requireNonNull(serializationFormat, "serializationFormat");
+    public URI toUri(SessionProtocol sessionProtocol) {
         requireNonNull(sessionProtocol, "sessionProtocol");
 
-        return toUri(Scheme.of(serializationFormat, sessionProtocol));
+        return toUri(sessionProtocol, null);
     }
 
     /**
-     * Converts this endpoint into a URI using the {@link SessionProtocol}, {@link SerializationFormat}
-     * and {@code path}.
+     * Converts this endpoint into a URI using the {@link SessionProtocol} and {@code path}.
      *
      * @param sessionProtocol the {@link SessionProtocol} for {@link URI}.
-     * @param serializationFormat the {@link SerializationFormat} for {@link URI}
      * @param path the {@code path} for {@link URI}.
      *
      * @return the URI
      */
-    public URI toUri(SessionProtocol sessionProtocol, SerializationFormat serializationFormat, String path) {
-        requireNonNull(serializationFormat, "serializationFormat");
+    public URI toUri(SessionProtocol sessionProtocol, @Nullable String path) {
         requireNonNull(sessionProtocol, "sessionProtocol");
-        requireNonNull(path, "path");
 
-        return toUri(Scheme.of(serializationFormat, sessionProtocol), path);
+        return toUri(Scheme.of(SerializationFormat.NONE, sessionProtocol), path);
     }
 
     /**
