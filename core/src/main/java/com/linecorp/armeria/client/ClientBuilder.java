@@ -19,6 +19,12 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 
+import javax.annotation.Nullable;
+
+import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
+
 /**
  * Creates a new client that connects to the specified {@link URI} using the builder pattern. Use the factory
  * methods in {@link Clients} if you do not have many options to override. If you are creating an
@@ -49,7 +55,19 @@ import java.net.URI;
  */
 public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuilder> {
 
+    @Nullable
     private final URI uri;
+    @Nullable
+    private final Endpoint endpoint;
+    @Nullable
+    private final Scheme scheme;
+    @Nullable
+    private final SessionProtocol protocol;
+    @Nullable
+    private String path;
+
+    private SerializationFormat format = SerializationFormat.NONE;
+
     private ClientFactory factory = ClientFactory.DEFAULT;
 
     /**
@@ -63,7 +81,39 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
      * Creates a new {@link ClientBuilder} that builds the client that connects to the specified {@link URI}.
      */
     public ClientBuilder(URI uri) {
-        this.uri = requireNonNull(uri, "uri");
+        this(requireNonNull(uri, "uri"), null, null, null);
+    }
+
+    /**
+     * Creates a new {@link ClientBuilder} that builds the client that connects to the specified
+     * {@link Endpoint} with the {@code scheme}.
+     */
+    public ClientBuilder(String scheme, Endpoint endpoint) {
+        this(Scheme.parse(requireNonNull(scheme, "scheme")), requireNonNull(endpoint, "endpoint"));
+    }
+
+    /**
+     * Creates a new {@link ClientBuilder} that builds the client that connects to the specified
+     * {@link Endpoint} with the {@link Scheme}.
+     */
+    public ClientBuilder(Scheme scheme, Endpoint endpoint) {
+        this(null, requireNonNull(scheme, "scheme"), null, requireNonNull(endpoint, "endpoint"));
+    }
+
+    /**
+     * Creates a new {@link ClientBuilder} that builds the client that connects to the specified
+     * {@link Endpoint} with the {@link SessionProtocol}.
+     */
+    public ClientBuilder(SessionProtocol protocol, Endpoint endpoint) {
+        this(null, null, requireNonNull(protocol, "protocol"), requireNonNull(endpoint, "endpoint"));
+    }
+
+    private ClientBuilder(@Nullable URI uri, @Nullable Scheme scheme, @Nullable SessionProtocol protocol,
+                          @Nullable Endpoint endpoint) {
+        this.uri = uri;
+        this.scheme = scheme;
+        this.protocol = protocol;
+        this.endpoint = endpoint;
     }
 
     /**
@@ -71,6 +121,29 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
      */
     public ClientBuilder factory(ClientFactory factory) {
         this.factory = requireNonNull(factory, "factory");
+        return this;
+    }
+
+    /**
+     * Sets the {@code path} of the client.
+     */
+    public ClientBuilder path(String path) {
+        ensureEndpoint();
+
+        this.path = requireNonNull(path, "path");
+        return this;
+    }
+
+    /**
+     * Sets the {@link SerializationFormat} of the client. The default is {@link SerializationFormat#NONE}.
+     */
+    public ClientBuilder serializationFormat(SerializationFormat format) {
+        ensureEndpoint();
+        if (scheme != null) {
+            throw new IllegalStateException("scheme is already given");
+        }
+
+        this.format = requireNonNull(format, "format");
         return this;
     }
 
@@ -84,6 +157,25 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
      */
     public <T> T build(Class<T> clientType) {
         requireNonNull(clientType, "clientType");
-        return factory.newClient(uri, clientType, buildOptions());
+
+        if (uri != null) {
+            return factory.newClient(uri, clientType, buildOptions());
+        } else if (path != null) {
+            return factory.newClient(scheme(), endpoint, path, clientType, buildOptions());
+        } else {
+            return factory.newClient(scheme(), endpoint, clientType, buildOptions());
+        }
+    }
+
+    private Scheme scheme() {
+        return scheme == null ? Scheme.of(format, protocol) : scheme;
+    }
+
+    private void ensureEndpoint() {
+        if (endpoint == null) {
+            throw new IllegalStateException(
+                    getClass().getSimpleName() + " must be created with an " + Endpoint.class.getSimpleName() +
+                    " to call this method.");
+        }
     }
 }

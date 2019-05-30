@@ -23,6 +23,7 @@ import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.JSON
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.TEXT;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -35,12 +36,16 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
@@ -169,5 +174,24 @@ public class ThriftSerializationFormatsTest {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
             }
         }
+    }
+
+    @Test
+    public void givenClients_whenBinary_thenBuildClient() throws Exception {
+        HelloService.Iface client =
+                new ClientBuilder(Scheme.of(BINARY, SessionProtocol.HTTP), newEndpoint(BINARY))
+                        .path("/hello")
+                        .build(HelloService.Iface.class);
+        assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
+
+        client = new ClientBuilder(Scheme.of(TEXT, SessionProtocol.HTTP), newEndpoint(TEXT))
+                .path("/hello")
+                .build(HelloService.Iface.class);
+        assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
+    }
+
+    private static Endpoint newEndpoint(SerializationFormat format) {
+        final URI uri = URI.create(server.uri(format, "/"));
+        return Endpoint.of(uri.getHost()).withDefaultPort(uri.getPort());
     }
 }

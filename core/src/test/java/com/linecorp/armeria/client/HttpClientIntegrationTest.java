@@ -26,6 +26,7 @@ import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
@@ -60,6 +61,9 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -617,5 +621,90 @@ class HttpClientIntegrationTest {
         final AggregatedHttpResponse response = client.get("/oneparam/foo%2Fbar").aggregate().get();
 
         assertEquals("routed", response.contentUtf8());
+    }
+
+    @Test
+    void givenClients_thenBuildClient() throws Exception {
+        final Endpoint endpoint = newEndpoint();
+        final ClientFactory factory = new ClientFactoryBuilder().build();
+
+        HttpClient client = Clients.newClient(factory, SessionProtocol.HTTP, SerializationFormat.NONE,
+                                              endpoint, HttpClient.class);
+        checkGetRequest("/hello/world", client);
+
+        client = Clients.newClient(factory, SessionProtocol.HTTP, SerializationFormat.NONE, endpoint,
+                                   HttpClient.class, ClientOptions.DEFAULT);
+        checkGetRequest("/hello/world", client);
+
+        client = Clients.newClient(SessionProtocol.HTTP, SerializationFormat.NONE, endpoint, HttpClient.class);
+        checkGetRequest("/hello/world", client);
+
+        client = Clients.newClient(SessionProtocol.HTTP, SerializationFormat.NONE, endpoint, HttpClient.class,
+                                   ClientOptions.DEFAULT);
+        checkGetRequest("/hello/world", client);
+    }
+
+    @Test
+    void givenHttpClient_thenBuildClient() throws Exception {
+        final Endpoint endpoint = newEndpoint();
+        final ClientFactory factory = new ClientFactoryBuilder().build();
+
+        HttpClient client = HttpClient.of(factory, SessionProtocol.HTTP, endpoint);
+        checkGetRequest("/hello/world", client);
+
+        client = HttpClient.of(factory, SessionProtocol.HTTP, endpoint, ClientOptions.DEFAULT);
+        checkGetRequest("/hello/world", client);
+
+        client = HttpClient.of(SessionProtocol.HTTP, endpoint);
+        checkGetRequest("/hello/world", client);
+
+        client = HttpClient.of(SessionProtocol.HTTP, endpoint, ClientOptions.DEFAULT);
+        checkGetRequest("/hello/world", client);
+    }
+
+    @Test
+    void givenClientBuilder_thenBuildClient() throws Exception {
+        final Endpoint endpoint = newEndpoint();
+        final ClientFactory factory = new ClientFactoryBuilder().build();
+
+        HttpClient client = new ClientBuilder(SessionProtocol.HTTP, endpoint)
+                .serializationFormat(SerializationFormat.NONE)
+                .factory(factory)
+                .build(HttpClient.class);
+        checkGetRequest("/hello/world", client);
+
+        client = new ClientBuilder(SessionProtocol.HTTP, endpoint)
+                .build(HttpClient.class);
+        checkGetRequest("/hello/world", client);
+
+        client = new ClientBuilder("none+http", endpoint)
+                .path("/hello")
+                .build(HttpClient.class);
+        checkGetRequest("/world", client);
+
+        client = new ClientBuilder(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP), endpoint)
+                .path("/hello")
+                .build(HttpClient.class);
+        checkGetRequest("/world", client);
+
+        client = new ClientBuilder(SessionProtocol.HTTP, endpoint)
+                .serializationFormat(SerializationFormat.NONE)
+                .path("/hello")
+                .build(HttpClient.class);
+        checkGetRequest("/world", client);
+
+        assertThatThrownBy(() -> new ClientBuilder("none+http", endpoint)
+                .serializationFormat(SerializationFormat.NONE)
+                .build(HttpClient.class));
+    }
+
+    private static void checkGetRequest(String path, HttpClient client) throws Exception {
+        final AggregatedHttpResponse response = client.get(path).aggregate().get();
+        assertEquals("success", response.contentUtf8());
+    }
+
+    private static Endpoint newEndpoint() {
+        final URI uri = URI.create(server.httpUri("/"));
+        return Endpoint.of(uri.getHost()).withDefaultPort(uri.getPort());
     }
 }

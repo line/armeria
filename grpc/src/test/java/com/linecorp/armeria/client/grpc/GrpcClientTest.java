@@ -58,6 +58,7 @@ import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.DecoratingClientFunction;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.logging.LoggingClientBuilder;
 import com.linecorp.armeria.common.FilteredHttpResponse;
@@ -204,7 +205,7 @@ public class GrpcClientTest {
                 .decorator(new LoggingClientBuilder().newDecorator())
                 .decorator(requestLogRecorder)
                 .build(TestServiceBlockingStub.class);
-        asyncStub = new ClientBuilder("gproto+" + uri.getScheme() + "://" + uri.getAuthority())
+        asyncStub = new ClientBuilder("gproto+" + uri.getScheme(), Endpoint.of(uri.getHost(), uri.getPort()))
                 .decorator(new LoggingClientBuilder().newDecorator())
                 .decorator(requestLogRecorder)
                 .build(TestServiceStub.class);
