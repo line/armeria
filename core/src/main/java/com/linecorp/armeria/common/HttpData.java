@@ -33,7 +33,6 @@ import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.io.FastByteArrayInputStream;
 
 /**
@@ -74,7 +73,7 @@ public interface HttpData extends HttpObject {
      * @throws ArrayIndexOutOfBoundsException if {@code offset} and {@code length} are out of bounds
      */
     static HttpData wrap(byte[] data, int offset, int length) {
-        requireNonNull(data);
+        requireNonNull(data, "data");
         if (offset < 0 || length < 0 || offset > data.length - length) {
             throw new ArrayIndexOutOfBoundsException(
                     "offset: " + offset + ", length: " + length + ", data.length: " + data.length);
@@ -83,7 +82,11 @@ public interface HttpData extends HttpObject {
             return EMPTY_DATA;
         }
 
-        return new ByteBufHttpData(Unpooled.wrappedBuffer(data, offset, length), false);
+        if (data.length == length) {
+            return wrap(data);
+        }
+
+        return new ByteRangeHttpData(data, offset, length, false);
     }
 
     /**

@@ -636,7 +636,7 @@ public class ThriftServiceTest {
     }
 
     private void invokeTwice(THttpService service1, THttpService service2) throws Exception {
-        final HttpData content = HttpData.copyOf(out.getArray(), 0, out.length());
+        final HttpData content = HttpData.wrap(out.getArray(), 0, out.length());
         invoke0(service1, content, promise);
         invoke0(service2, content, promise2);
     }

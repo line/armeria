@@ -67,6 +67,14 @@ class HttpDataTest {
         }
 
         @Test
+        void wrapRangeFull() {
+            final HttpData data = HttpData.wrap(payload, 0, 4);
+            payload[1] = 5;
+            assertThat(payload).containsExactly(1, 5, 3, 4);
+            assertThat(data.array()).containsExactly(1, 5, 3, 4);
+        }
+
+        @Test
         void copyOf() {
             final HttpData data = HttpData.copyOf(payload);
             payload[1] = 5;
