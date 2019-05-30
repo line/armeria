@@ -96,16 +96,16 @@ final class DefaultServerSentEvent implements ServerSentEvent {
             return true;
         }
 
-        if (!(obj instanceof DefaultServerSentEvent)) {
+        if (!(obj instanceof ServerSentEvent)) {
             return false;
         }
 
-        final DefaultServerSentEvent that = (DefaultServerSentEvent) obj;
-        return Objects.equals(id, that.id) &&
-               Objects.equals(event, that.event) &&
-               Objects.equals(retry, that.retry) &&
-               Objects.equals(comment, that.comment) &&
-               Objects.equals(data, that.data);
+        final ServerSentEvent that = (ServerSentEvent) obj;
+        return Objects.equals(id, that.id()) &&
+               Objects.equals(event, that.event()) &&
+               Objects.equals(retry, that.retry()) &&
+               Objects.equals(comment, that.comment()) &&
+               Objects.equals(data, that.data());
     }
 
     @Override

@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.common;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.base.MoreObjects.ToStringHelper;
+
 final class DefaultAggregatedHttpRequest extends AbstractAggregatedHttpMessage
         implements AggregatedHttpRequest {
 
@@ -50,5 +53,44 @@ final class DefaultAggregatedHttpRequest extends AbstractAggregatedHttpMessage
     @Override
     public String authority() {
         return headers.authority();
+    }
+
+    @Override
+    public int hashCode() {
+        int result = headers().hashCode();
+        result = 31 * result + content().hashCode();
+        result = 31 * result + trailers().hashCode();
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+
+        if (!(obj instanceof AggregatedHttpRequest)) {
+            return false;
+        }
+
+        final AggregatedHttpRequest that = (AggregatedHttpRequest) obj;
+
+        return headers().equals(that.headers()) &&
+               content().equals(that.content()) &&
+               trailers().equals(that.trailers());
+    }
+
+    @Override
+    public String toString() {
+        final ToStringHelper helper = MoreObjects.toStringHelper(this);
+
+        helper.add("headers", headers())
+              .add("content", content());
+
+        if (!trailers().isEmpty()) {
+            helper.add("trailers", trailers());
+        }
+
+        return helper.toString();
     }
 }

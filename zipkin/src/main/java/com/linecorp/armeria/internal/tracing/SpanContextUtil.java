@@ -41,7 +41,7 @@ public final class SpanContextUtil {
     }
 
     static long wallTimeMicros(RequestLog log, long timeNanos) {
-        long relativeTimeNanos = timeNanos - log.requestStartTimeNanos();
+        final long relativeTimeNanos = timeNanos - log.requestStartTimeNanos();
         return log.requestStartTimeMicros() + TimeUnit.NANOSECONDS.toMicros(relativeTimeNanos);
     }
 

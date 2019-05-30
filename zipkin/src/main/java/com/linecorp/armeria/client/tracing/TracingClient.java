@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.tracing;
 
-import static com.linecorp.armeria.client.tracing.TracingClient.checkTracing;
+import static com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext.ensureScopeUsesRequestContext;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -46,6 +46,7 @@ import brave.Span.Kind;
 import brave.Tracer;
 import brave.Tracer.SpanInScope;
 import brave.Tracing;
+import brave.http.HttpTracing;
 import brave.propagation.TraceContext;
 
 /**
@@ -54,35 +55,18 @@ import brave.propagation.TraceContext;
  *
  * <p>This decorator puts trace data into HTTP headers. The specifications of header names and its values
  * correspond to <a href="http://zipkin.io/">Zipkin</a>.
- *
- * @deprecated Use {@link TracingClient}.
  */
-@Deprecated
-public final class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpResponse> {
+public final class TracingClient extends SimpleDecoratingClient<HttpRequest, HttpResponse> {
 
-    private static final Logger logger = LoggerFactory.getLogger(HttpTracingClient.class);
-
-    /**
-     * Creates a new tracing {@link Client} decorator using the specified {@link Tracing} instance.
-     *
-     * @deprecated Use {@link TracingClient#newDecorator(Tracing)}.
-     */
-    @Deprecated
-    public static Function<Client<HttpRequest, HttpResponse>, HttpTracingClient> newDecorator(Tracing tracing) {
-        return newDecorator(tracing, null);
-    }
+    private static final Logger logger = LoggerFactory.getLogger(TracingClient.class);
 
     /**
-     * Creates a new tracing {@link Client} decorator using the specified {@link Tracing} instance
-     * and the remote service name.
-     *
-     * @deprecated Use {@link TracingClient#newDecorator(Tracing, String)}.
+     * Creates a new tracing {@link Client} decorator using the specified {@link HttpTracing} instance.
      */
-    @Deprecated
-    public static Function<Client<HttpRequest, HttpResponse>, HttpTracingClient> newDecorator(
-            Tracing tracing, @Nullable String remoteServiceName) {
-        checkTracing(tracing);
-        return delegate -> new HttpTracingClient(delegate, tracing, remoteServiceName);
+    public static Function<Client<HttpRequest, HttpResponse>, TracingClient> newDecorator(
+            HttpTracing httpTracing) {
+        checkTracing(httpTracing.tracing());
+        return delegate -> new TracingClient(delegate, httpTracing);
     }
 
     private final Tracer tracer;
@@ -93,13 +77,13 @@ public final class HttpTracingClient extends SimpleDecoratingClient<HttpRequest,
     /**
      * Creates a new instance.
      */
-    HttpTracingClient(Client<HttpRequest, HttpResponse> delegate, Tracing tracing,
-                      @Nullable String remoteServiceName) {
+    private TracingClient(Client<HttpRequest, HttpResponse> delegate, HttpTracing httpTracing) {
         super(delegate);
+        final Tracing tracing = httpTracing.tracing();
         tracer = tracing.tracer();
         injector = tracing.propagationFactory().create(AsciiStringKeyFactory.INSTANCE)
                           .injector(RequestHeadersBuilder::set);
-        this.remoteServiceName = remoteServiceName;
+        remoteServiceName = httpTracing.serverName();
     }
 
     @Override
@@ -163,6 +147,16 @@ public final class HttpTracingClient extends SimpleDecoratingClient<HttpRequest,
         }
         if (address != null) {
             span.remoteIpAndPort(address.getHostAddress(), port);
+        }
+    }
+
+    static void checkTracing(Tracing tracing) {
+        try {
+            ensureScopeUsesRequestContext(tracing);
+        } catch (IllegalStateException e) {
+            logger.warn("{} - it is appropriate to ignore this warning if this client is not being used " +
+                        "inside an Armeria server (e.g., this is a normal spring-mvc tomcat server).",
+                        e.getMessage());
         }
     }
 }

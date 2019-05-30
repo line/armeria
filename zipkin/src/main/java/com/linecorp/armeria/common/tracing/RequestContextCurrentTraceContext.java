@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.tracing;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Collections;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -27,9 +29,9 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import com.linecorp.armeria.client.tracing.HttpTracingClient;
+import com.linecorp.armeria.client.tracing.TracingClient;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.server.tracing.HttpTracingService;
+import com.linecorp.armeria.server.tracing.TracingService;
 
 import brave.Tracing;
 import brave.propagation.CurrentTraceContext;
@@ -49,9 +51,9 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
 
     /**
      * Use this singleton when building a {@link brave.Tracing} instance for use with
-     * {@link HttpTracingService} or {@link HttpTracingClient}.
+     * {@link TracingService} or {@link TracingClient}.
      *
-     * <p>If you need to customize the context, use {@link #newBuilder()} instead.
+     * <p>If you need to customize the context, use {@link #builder()} instead.
      *
      * @see brave.Tracing.Builder#currentTraceContext(brave.propagation.CurrentTraceContext)
      */
@@ -60,7 +62,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
     /**
      * Singleton retained for backwards compatibility, but replaced by {@link #DEFAULT}.
      *
-     * @deprecated Please use {@link #DEFAULT} or {@link #newBuilder()} to customize an instance.
+     * @deprecated Please use {@link #DEFAULT} or {@link #builder()} to customize an instance.
      */
     @Deprecated
     public static final CurrentTraceContext INSTANCE = DEFAULT;
@@ -101,9 +103,19 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         public CurrentTraceContext build() {
             return new RequestContextCurrentTraceContext(this);
         }
+    }
 
-        Builder() {
-        }
+    /**
+     * Use this when you need customizations such as log integration via
+     * {@linkplain Builder#addScopeDecorator(ScopeDecorator)}.
+     *
+     * @deprecated Use {@link #builder()}.
+     *
+     * @see brave.Tracing.Builder#currentTraceContext(brave.propagation.CurrentTraceContext)
+     */
+    @Deprecated
+    public static CurrentTraceContext.Builder newBuilder() {
+        return new Builder();
     }
 
     /**
@@ -112,7 +124,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
      *
      * @see brave.Tracing.Builder#currentTraceContext(brave.propagation.CurrentTraceContext)
      */
-    public static CurrentTraceContext.Builder newBuilder() {
+    public static CurrentTraceContext.Builder builder() {
         return new Builder();
     }
 
@@ -122,6 +134,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
      * @throws IllegalStateException if {@code tracing} does not use {@link RequestContextCurrentTraceContext}
      */
     public static void ensureScopeUsesRequestContext(Tracing tracing) {
+        requireNonNull(tracing, "tracing");
         final PingPongExtra extra = new PingPongExtra();
         // trace contexts are not recorded until Tracer.toSpan, so this won't end up as junk data
         final TraceContext dummyContext = TraceContext.newBuilder().traceId(1).spanId(1)
@@ -135,7 +148,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
                     "Tracing.currentTraceContext is not a " + RequestContextCurrentTraceContext.class
                             .getSimpleName() + " scope. " +
                     "Please call Tracing.Builder.currentTraceContext(" + RequestContextCurrentTraceContext.class
-                            .getSimpleName() + ".INSTANCE).");
+                            .getSimpleName() + ".DEFAULT).");
         }
     }
 
@@ -197,14 +210,14 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         }
     }
 
-    private static Scope createScopeForRequestThread(RequestContext ctx, @Nullable TraceContext currentSpan) {
+    private Scope createScopeForRequestThread(RequestContext ctx, @Nullable TraceContext currentSpan) {
         final Attribute<TraceContext> traceContextAttribute = ctx.attr(TRACE_CONTEXT_KEY);
 
         final TraceContext previous = traceContextAttribute.getAndSet(currentSpan);
 
         // Don't remove the outer-most context (client or server request)
         if (previous == null) {
-            return INITIAL_REQUEST_SCOPE;
+            return decorateScope(currentSpan, INITIAL_REQUEST_SCOPE);
         }
 
         // Removes sub-spans (i.e. local spans) from the current context when Brave's scope does.
@@ -222,10 +235,10 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
             }
         }
 
-        return new RequestContextTraceContextScope();
+        return decorateScope(currentSpan, new RequestContextTraceContextScope());
     }
 
-    private static Scope createScopeForNonRequestThread(@Nullable TraceContext currentSpan) {
+    private Scope createScopeForNonRequestThread(@Nullable TraceContext currentSpan) {
         final TraceContext previous = THREAD_LOCAL_CONTEXT.get();
         THREAD_LOCAL_CONTEXT.set(currentSpan);
         class ThreadLocalScope implements Scope {
@@ -240,10 +253,12 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
             }
         }
 
-        return new ThreadLocalScope();
+        return decorateScope(currentSpan, new ThreadLocalScope());
     }
 
-    /** Armeria code should always have a request context available, and this won't work without it. */
+    /**
+     * Armeria code should always have a request context available, and this won't work without it.
+     */
     @Nullable
     private static RequestContext getRequestContextOrWarnOnce() {
         return RequestContext.mapCurrent(Function.identity(), LogRequestContextWarningOnce.INSTANCE);

@@ -25,9 +25,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -42,44 +43,48 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.tracing.HelloService;
 import com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.tracing.SpanCollectingReporter;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 
 import brave.Tracing;
+import brave.propagation.CurrentTraceContext;
+import brave.propagation.CurrentTraceContext.ScopeDecorator;
 import brave.sampler.Sampler;
 import zipkin2.Span;
 import zipkin2.Span.Kind;
 
-public class HttpTracingServiceTest {
+class TracingServiceTest {
 
     private static final String TEST_SERVICE = "test-service";
 
     private static final String TEST_METHOD = "hello";
 
-    @After
+    @AfterEach
     public void tearDown() {
         Tracing.current().close();
     }
 
     @Test
-    public void newDecorator_shouldFailFastWhenRequestContextCurrentTraceContextNotConfigured() {
-        assertThatThrownBy(() -> HttpTracingService.newDecorator(Tracing.newBuilder().build()))
+    void newDecorator_shouldFailFastWhenRequestContextCurrentTraceContextNotConfigured() {
+        assertThatThrownBy(() -> TracingService.newDecorator(Tracing.newBuilder().build()))
                 .isInstanceOf(IllegalStateException.class).hasMessage(
                 "Tracing.currentTraceContext is not a RequestContextCurrentTraceContext scope. " +
-                "Please call Tracing.Builder.currentTraceContext(RequestContextCurrentTraceContext.INSTANCE)."
+                "Please call Tracing.Builder.currentTraceContext(RequestContextCurrentTraceContext.DEFAULT)."
         );
     }
 
     @Test
-    public void newDecorator_shouldWorkWhenRequestContextCurrentTraceContextConfigured() {
-        HttpTracingService.newDecorator(
+    void newDecorator_shouldWorkWhenRequestContextCurrentTraceContextConfigured() {
+        TracingService.newDecorator(
                 Tracing.newBuilder().currentTraceContext(RequestContextCurrentTraceContext.DEFAULT).build());
     }
 
-    @Test(timeout = 20000)
-    public void shouldSubmitSpanWhenRequestIsSampled() throws Exception {
-        final SpanCollectingReporter reporter = testServiceInvocation(1.0f);
+    @Test
+    void shouldSubmitSpanWhenRequestIsSampled() throws Exception {
+        final SpanCollectingReporter reporter = testServiceInvocation(
+                RequestContextCurrentTraceContext.DEFAULT, 1.0f);
 
         // check span name
         final Span span = reporter.spans().take();
@@ -95,45 +100,61 @@ public class HttpTracingServiceTest {
         assertThat(span.annotations()).hasSize(2);
 
         // check tags
-        assertThat(span.tags()).containsEntry("http.host", "foo.com")
-                               .containsEntry("http.method", "POST")
-                               .containsEntry("http.path", "/hello/trustin")
-                               .containsEntry("http.status_code", "200")
-                               .containsEntry("http.url", "http://foo.com/hello/trustin")
-                               .containsEntry("http.protocol", "h2c");
+        assertTags(span);
 
         // check service name
         assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
     }
 
     @Test
-    public void shouldNotSubmitSpanWhenRequestIsNotSampled() throws Exception {
-        final SpanCollectingReporter reporter = testServiceInvocation(0.0f);
+    void shouldNotSubmitSpanWhenRequestIsNotSampled() throws Exception {
+        final SpanCollectingReporter reporter = testServiceInvocation(
+                RequestContextCurrentTraceContext.DEFAULT, 0.0f);
 
         // don't submit any spans
         assertThat(reporter.spans().poll(1, TimeUnit.SECONDS)).isNull();
     }
 
-    private static SpanCollectingReporter testServiceInvocation(float samplingRate) throws Exception {
+    @Test
+    void scopeDecorator() throws Exception {
+        final AtomicInteger scopeDecoratorCallingCounter = new AtomicInteger();
+        final ScopeDecorator scopeDecorator = (currentSpan, scope) -> {
+            scopeDecoratorCallingCounter.getAndIncrement();
+            return scope;
+        };
+        final CurrentTraceContext traceContext =
+                RequestContextCurrentTraceContext.builder()
+                                                 .addScopeDecorator(scopeDecorator)
+                                                 .build();
+
+        final SpanCollectingReporter reporter = testServiceInvocation(traceContext, 1.0f);
+
+        // check span name
+        final Span span = reporter.spans().take();
+
+        // check tags
+        assertTags(span);
+
+        // check service name
+        assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
+        assertThat(scopeDecoratorCallingCounter.get()).isEqualTo(1);
+    }
+
+    private static SpanCollectingReporter testServiceInvocation(CurrentTraceContext traceContext,
+                                                                float samplingRate) throws Exception {
         final SpanCollectingReporter reporter = new SpanCollectingReporter();
 
         final Tracing tracing = Tracing.newBuilder()
                                        .localServiceName(TEST_SERVICE)
                                        .spanReporter(reporter)
+                                       .currentTraceContext(traceContext)
                                        .sampler(Sampler.create(samplingRate))
                                        .build();
-
-        @SuppressWarnings("unchecked")
-        final Service<HttpRequest, HttpResponse> delegate = mock(Service.class);
-
-        final HttpTracingService stub = new HttpTracingService(delegate, tracing);
 
         final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/trustin",
                                                                  HttpHeaderNames.AUTHORITY, "foo.com"));
         final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(req)
-                                                                      .service(stub)
                                                                       .build();
-
         final RpcRequest rpcReq = RpcRequest.of(HelloService.Iface.class, "hello", "trustin");
         final HttpResponse res = HttpResponse.of(HttpStatus.OK);
         final RpcResponse rpcRes = RpcResponse.of("Hello, trustin!");
@@ -141,17 +162,31 @@ public class HttpTracingServiceTest {
         logBuilder.requestContent(rpcReq, req);
         logBuilder.endRequest();
 
-        when(delegate.serve(ctx, req)).thenReturn(res);
+        try (SafeCloseable ignored = ctx.push()) {
+            @SuppressWarnings("unchecked")
+            final Service<HttpRequest, HttpResponse> delegate = mock(Service.class);
+            final TracingService service = TracingService.newDecorator(tracing).apply(delegate);
+            when(delegate.serve(ctx, req)).thenReturn(res);
 
-        // do invoke
-        stub.serve(ctx, req);
+            // do invoke
+            service.serve(ctx, req);
 
-        verify(delegate, times(1)).serve(eq(ctx), eq(req));
+            verify(delegate, times(1)).serve(eq(ctx), eq(req));
+        }
+
         logBuilder.responseHeaders(ResponseHeaders.of(HttpStatus.OK));
         logBuilder.responseFirstBytesTransferred();
         logBuilder.responseContent(rpcRes, res);
         logBuilder.endResponse();
-
         return reporter;
+    }
+
+    private static void assertTags(Span span) {
+        assertThat(span.tags()).containsEntry("http.host", "foo.com")
+                               .containsEntry("http.method", "POST")
+                               .containsEntry("http.path", "/hello/trustin")
+                               .containsEntry("http.status_code", "200")
+                               .containsEntry("http.url", "http://foo.com/hello/trustin")
+                               .containsEntry("http.protocol", "h2c");
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -46,22 +46,15 @@ import brave.propagation.TraceContextOrSamplingFlags;
  *
  * <p>This decorator retrieves trace data from HTTP headers. The specifications of header names and its values
  * correspond to <a href="http://zipkin.io/">Zipkin</a>.
- *
- * @deprecated Use {@link TracingService}.
  */
-@Deprecated
-public class HttpTracingService extends SimpleDecoratingService<HttpRequest, HttpResponse> {
+public final class TracingService extends SimpleDecoratingService<HttpRequest, HttpResponse> {
 
     /**
      * Creates a new tracing {@link Service} decorator using the specified {@link Tracing} instance.
-     *
-     * @deprecated Use {@link TracingService#newDecorator(Tracing)}.
      */
-    @Deprecated
-    public static Function<Service<HttpRequest, HttpResponse>, HttpTracingService>
-    newDecorator(Tracing tracing) {
+    public static Function<Service<HttpRequest, HttpResponse>, TracingService> newDecorator(Tracing tracing) {
         ensureScopeUsesRequestContext(tracing);
-        return service -> new HttpTracingService(service, tracing);
+        return service -> new TracingService(service, tracing);
     }
 
     private final Tracer tracer;
@@ -69,11 +62,8 @@ public class HttpTracingService extends SimpleDecoratingService<HttpRequest, Htt
 
     /**
      * Creates a new instance.
-     *
-     * @deprecated Use {@link TracingService#newDecorator(Tracing)}.
      */
-    @Deprecated
-    public HttpTracingService(Service<HttpRequest, HttpResponse> delegate, Tracing tracing) {
+    private TracingService(Service<HttpRequest, HttpResponse> delegate, Tracing tracing) {
         super(delegate);
         tracer = tracing.tracer();
         extractor = tracing.propagationFactory().create(AsciiStringKeyFactory.INSTANCE)

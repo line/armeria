@@ -53,7 +53,7 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.client.ResponseTimeoutException;
-import com.linecorp.armeria.client.tracing.HttpTracingClient;
+import com.linecorp.armeria.client.tracing.TracingClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
@@ -67,7 +67,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.thrift.THttpService;
-import com.linecorp.armeria.server.tracing.HttpTracingService;
+import com.linecorp.armeria.server.tracing.TracingService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import brave.ScopedSpan;
@@ -188,20 +188,20 @@ public class HttpTracingIntegrationTest {
     @Before
     public void setupClients() {
         fooClient = new ClientBuilder(server.uri(BINARY, "/foo"))
-                .decorator(HttpTracingClient.newDecorator(newTracing("client/foo")))
+                .decorator(TracingClient.newDecorator(newTracing("client/foo")))
                 .build(HelloService.Iface.class);
         zipClient = new ClientBuilder(server.uri(BINARY, "/zip"))
-                .decorator(HttpTracingClient.newDecorator(newTracing("client/zip")))
+                .decorator(TracingClient.newDecorator(newTracing("client/zip")))
                 .build(HelloService.Iface.class);
         fooClientWithoutTracing = Clients.newClient(server.uri(BINARY, "/foo"), HelloService.Iface.class);
         barClient = newClient("/bar");
         quxClient = newClient("/qux");
         poolHttpClient = HttpClient.of(server.uri("/"));
         timeoutClient = new ClientBuilder(server.uri(BINARY, "/timeout"))
-                .decorator(HttpTracingClient.newDecorator(newTracing("client/timeout")))
+                .decorator(TracingClient.newDecorator(newTracing("client/timeout")))
                 .build(HelloService.Iface.class);
         timeoutClientClientTimesOut = new ClientBuilder(server.uri(BINARY, "/timeout"))
-                .decorator(HttpTracingClient.newDecorator(newTracing("client/timeout")))
+                .decorator(TracingClient.newDecorator(newTracing("client/timeout")))
                 .responseTimeout(Duration.ofMillis(10))
                 .build(HelloService.Iface.class);
     }
@@ -216,19 +216,19 @@ public class HttpTracingIntegrationTest {
         assertThat(spanReporter.spans).isEmpty();
     }
 
-    private static HttpTracingService decorate(String name, Service<HttpRequest, HttpResponse> service) {
-        return HttpTracingService.newDecorator(newTracing(name)).apply(service);
+    private static TracingService decorate(String name, Service<HttpRequest, HttpResponse> service) {
+        return TracingService.newDecorator(newTracing(name)).apply(service);
     }
 
     private HelloService.AsyncIface newClient(String path) {
         return new ClientBuilder(server.uri(BINARY, path))
-                .decorator(HttpTracingClient.newDecorator(newTracing("client" + path)))
+                .decorator(TracingClient.newDecorator(newTracing("client" + path)))
                 .build(HelloService.AsyncIface.class);
     }
 
     private static Tracing newTracing(String name) {
         final CurrentTraceContext currentTraceContext =
-                RequestContextCurrentTraceContext.newBuilder()
+                RequestContextCurrentTraceContext.builder()
                                                  .addScopeDecorator(StrictScopeDecorator.create())
                                                  .build();
         return Tracing.newBuilder()

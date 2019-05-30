@@ -3,4 +3,5 @@ dependencies {
 
     // Zipkin
     compile 'io.zipkin.brave:brave'
+    compile 'io.zipkin.brave:brave-instrumentation-http'
 }

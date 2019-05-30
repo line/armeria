@@ -120,11 +120,11 @@ public class DefaultRpcRequest implements RpcRequest {
             return true;
         }
 
-        if (!(obj instanceof DefaultRpcRequest)) {
+        if (!(obj instanceof RpcRequest)) {
             return false;
         }
 
-        final DefaultRpcRequest that = (DefaultRpcRequest) obj;
+        final RpcRequest that = (RpcRequest) obj;
         return method().equals(that.method()) &&
                params().equals(that.params());
     }
