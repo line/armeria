@@ -20,6 +20,7 @@ import static io.netty.util.internal.StringUtil.decodeHexNibble;
 import static java.util.Objects.requireNonNull;
 
 import java.util.BitSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -29,6 +30,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableMap.Builder;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
@@ -49,6 +51,11 @@ public final class PathAndQuery {
     private static final BitSet ALLOWED_PATH_CHARS = new BitSet();
     private static final BitSet ALLOWED_QUERY_CHARS = new BitSet();
 
+    private static final int PERCENT_ENCODING_MARKER = 0xFF;
+
+    private static final Map<Integer, Integer> RAW_CHAR_TO_MARKER;
+    private static final Map<Integer, String> MARKER_TO_PERCENT_ENCODED_CHAR;
+
     static {
         final String allowedPathChars =
                 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~:/?#[]@!$&'()*+,;=";
@@ -61,26 +68,19 @@ public final class PathAndQuery {
         for (int i = 0; i < allowedQueryChars.length(); i++) {
             ALLOWED_QUERY_CHARS.set(allowedQueryChars.charAt(i));
         }
+
+        final Builder<Integer, Integer> rawCharToMarkerMap = new Builder<>();
+        final Builder<Integer, String> markerToPercentEncodedCharMap = new Builder<>();
+        for (final ReservedChar reservedChar : ReservedChar.values()) {
+            rawCharToMarkerMap.put(reservedChar.rawChar, reservedChar.marker);
+            markerToPercentEncodedCharMap.put(reservedChar.marker, reservedChar.percentEncodedChar);
+        }
+        RAW_CHAR_TO_MARKER = rawCharToMarkerMap.build();
+        MARKER_TO_PERCENT_ENCODED_CHAR = markerToPercentEncodedCharMap.build();
     }
 
     private static final Bytes EMPTY_QUERY = new Bytes(0);
     private static final Bytes ROOT_PATH = new Bytes(new byte[] { '/' });
-
-    /**
-     * A special byte which tells {@link #encodeToPercents(Bytes, boolean)} to translate it to
-     * {@code "%26"}.
-     */
-    private static final int ENCODED_AMPERSAND = 0xFD;
-    /**
-     * A special byte which tells {@link #encodeToPercents(Bytes, boolean)} to translate it to
-     * {@code "%3B"}.
-     */
-    private static final int ENCODED_SEMICOLON = 0xFE;
-    /**
-     * A special byte which tells {@link #encodeToPercents(Bytes, boolean)} to translate it to
-     * {@code "%3D"}.
-     */
-    private static final int ENCODED_EQUAL = 0xFF;
 
     @Nullable
     private static final Cache<String, PathAndQuery> CACHE =
@@ -185,9 +185,9 @@ public final class PathAndQuery {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .add("path", path)
-                .add("query", query)
-                .toString();
+                          .add("path", path)
+                          .add("query", query)
+                          .toString();
     }
 
     @Nullable
@@ -241,7 +241,8 @@ public final class PathAndQuery {
 
         final Bytes buf = new Bytes(Math.max(length * 3 / 2, 4));
         boolean wasSlash = false;
-        for (final CodePointIterator i = new CodePointIterator(value, start, end); i.hasNextCodePoint();) {
+        for (final CodePointIterator i = new CodePointIterator(value, start, end);
+             i.hasNextCodePoint();/* noop */) {
             final int pos = i.position();
             final int cp = i.nextCodePoint();
 
@@ -268,23 +269,14 @@ public final class PathAndQuery {
                     }
                 } else {
                     // If query:
-                    if (decoded == '&') {
-                        // Insert a special mark 'ENCODED_AMPERSAND' so we can distinguish '&' and '%26'
-                        // in a query string. We will encode 'ENCODED_AMPERSAND' back into '%26' later.
-                        buf.ensure(1);
-                        buf.add((byte) ENCODED_AMPERSAND);
-                        wasSlash = false;
-                    } else if (decoded == ';') {
-                        // Insert a special mark 'ENCODED_SEMICOLON' so we can distinguish ';' and '%3D'
-                        // in a query string. We will encode 'ENCODED_SEMICOLON' back into '%3D' later.
-                        buf.ensure(1);
-                        buf.add((byte) ENCODED_SEMICOLON);
-                        wasSlash = false;
-                    } else if (decoded == '=') {
-                        // Insert a special mark 'ENCODED_EQUAL' so we can distinguish '=' and '%3D'
-                        // in a query string. We will encode 'ENCODED_EQUAL' back into '%3D' later.
-                        buf.ensure(1);
-                        buf.add((byte) ENCODED_EQUAL);
+                    final Integer marker = RAW_CHAR_TO_MARKER.get(decoded);
+                    if (marker != null) {
+                        // Insert a special mark so we can distinguish a raw character and percent-encoded
+                        // character in a query string, such as '&' and '%26'.
+                        // We will encode this mark back into a percent-encoded character later.
+                        buf.ensure(2);
+                        buf.add((byte) PERCENT_ENCODING_MARKER);
+                        buf.add(marker.byteValue());
                         wasSlash = false;
                     } else if (appendOneByte(buf, decoded, wasSlash, isPath)) {
                         wasSlash = decoded == '/';
@@ -436,29 +428,31 @@ public final class PathAndQuery {
 
         if (!needsEncoding) {
             // Deprecated, but it fits perfect for our use case.
-            //noinspection deprecation
+            // noinspection deprecation
             return new String(value.data, 0, 0, length);
         }
 
         final StringBuilder buf = new StringBuilder(length);
         for (int i = 0; i < length; i++) {
             final int b = value.data[i] & 0xFF;
+
+            if (b == PERCENT_ENCODING_MARKER && (i + 1) < length) {
+                final String percentEncodedChar = MARKER_TO_PERCENT_ENCODED_CHAR.get(value.data[i + 1] & 0xFF);
+                if (percentEncodedChar != null) {
+                    buf.append(percentEncodedChar);
+                    i++;
+                    continue;
+                }
+            }
+
             if (allowedChars.get(b)) {
                 buf.append((char) b);
-            } else if (b == '+' && !isPath) {
-                buf.append("%2B");
             } else if (b == ' ') {
                 if (isPath) {
                     buf.append("%20");
                 } else {
                     buf.append('+');
                 }
-            } else if (b == ENCODED_AMPERSAND) {
-                buf.append("%26");
-            } else if (b == ENCODED_SEMICOLON) {
-                buf.append("%3B");
-            } else if (b == ENCODED_EQUAL) {
-                buf.append("%3D");
             } else {
                 buf.append('%');
                 appendHexNibble(buf, b >>> 4);
@@ -544,6 +538,44 @@ public final class PathAndQuery {
             }
 
             return c1;
+        }
+    }
+
+    /**
+     * Reserved characters which require percent-encoding. These values are only used for constructing
+     * {@link #RAW_CHAR_TO_MARKER} map and {@link #MARKER_TO_PERCENT_ENCODED_CHAR} map.
+     *
+     * @see <a href="https://tools.ietf.org/html/rfc3986#section-2.2">RFC 3986, section 2.2</a>
+     */
+    private enum ReservedChar {
+        GEN_DELIM_01(':', "%3A", 0x01),
+        GEN_DELIM_02('/', "%2F", 0x02),
+        GEN_DELIM_03('?', "%3F", 0x03),
+        GEN_DELIM_04('#', "%23", 0x04),
+        GEN_DELIM_05('[', "%5B", 0x05),
+        GEN_DELIM_06(']', "%5D", 0x06),
+        GEN_DELIM_07('@', "%40", 0x07),
+
+        SUB_DELIM_01('!', "%21", 0x11),
+        SUB_DELIM_02('$', "%24", 0x12),
+        SUB_DELIM_03('&', "%26", 0x13),
+        SUB_DELIM_04('\'', "%27", 0x14),
+        SUB_DELIM_05('(', "%28", 0x15),
+        SUB_DELIM_06(')', "%29", 0x16),
+        SUB_DELIM_07('*', "%2A", 0x17),
+        SUB_DELIM_08('+', "%2B", 0x18),
+        SUB_DELIM_09(',', "%2C", 0x19),
+        SUB_DELIM_10(';', "%3B", 0x1A),
+        SUB_DELIM_11('=', "%3D", 0x1B);
+
+        private final int rawChar;
+        private final String percentEncodedChar;
+        private final int marker;
+
+        ReservedChar(int rawChar, String percentEncodedChar, int marker) {
+            this.rawChar = rawChar;
+            this.percentEncodedChar = percentEncodedChar;
+            this.marker = marker;
         }
     }
 }
