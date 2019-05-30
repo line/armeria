@@ -474,7 +474,7 @@ final class RequestContextExporter {
                 return true;
             }
 
-            if (o == null || getClass() != o.getClass()) {
+            if (!(o instanceof ExportEntry)) {
                 return false;
             }
 

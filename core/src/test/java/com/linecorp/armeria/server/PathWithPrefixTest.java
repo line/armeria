@@ -24,8 +24,13 @@ class PathWithPrefixTest {
 
     @Test
     void prefix() {
-        assertThat(Route.builder().pathWithPrefix("/foo/", "glob:/bar/**").build().prefix())
-                .contains("/foo/");
+        Route route = Route.builder().pathWithPrefix("/foo/", "glob:/bar/**").build();
+        assertThat(route.prefix()).isEmpty();
+        assertThat(route.regex()).contains("^/foo/bar/(.*)$");
+
+        route = Route.builder().pathWithPrefix("/foo/", "glob:bar").build();
+        assertThat(route.prefix()).contains("/foo/");
+        assertThat(route.regex()).contains("^/(?:.+/)?bar$");
     }
 
     @Test
@@ -43,7 +48,7 @@ class PathWithPrefixTest {
     @Test
     void testMetricName() {
         Route route = Route.builder().pathWithPrefix("/foo/", "glob:/bar/**").build();
-        assertThat(route.meterTag()).isEqualTo("prefix:/foo/,glob:/bar/**");
+        assertThat(route.meterTag()).isEqualTo("glob:/foo/bar/**");
 
         route = Route.builder().pathWithPrefix("/foo/", "glob:bar").build();
         assertThat(route.meterTag()).isEqualTo("prefix:/foo/,glob:/**/bar");

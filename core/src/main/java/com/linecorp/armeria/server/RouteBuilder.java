@@ -26,7 +26,6 @@ import static com.linecorp.armeria.internal.RouteUtil.ensureAbsolutePath;
 import static com.linecorp.armeria.server.HttpHeaderUtil.ensureUniqueMediaTypes;
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -34,7 +33,6 @@ import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 
@@ -53,12 +51,12 @@ public class RouteBuilder {
 
     private Set<HttpMethod> methods = ImmutableSet.of();
 
-    private List<MediaType> consumes = ImmutableList.of();
+    private Set<MediaType> consumes = ImmutableSet.of();
 
-    private List<MediaType> produces = ImmutableList.of();
+    private Set<MediaType> produces = ImmutableSet.of();
 
     /**
-     * Sets the specified {@code pathPattern} of the {@link Route}. e.g.
+     * Sets the {@link Route} to match the specified {@code pathPattern}. e.g.
      * <ul>
      *   <li>{@code /login} (no path parameters)</li>
      *   <li>{@code /users/{userId}} (curly-brace style)</li>
@@ -73,42 +71,6 @@ public class RouteBuilder {
      */
     public RouteBuilder path(String pathPattern) {
         return pathMapping(getPathMapping(pathPattern));
-    }
-
-    private static PathMapping getPathMapping(String pathPattern) {
-        requireNonNull(pathPattern, "pathPattern");
-
-        if (pathPattern.startsWith(EXACT)) {
-            return new ExactPathMapping(pathPattern.substring(EXACT.length()));
-        }
-        if (pathPattern.startsWith(PREFIX)) {
-            final String prefix = pathPattern.substring(PREFIX.length());
-            return prefixPathMapping(prefix, true);
-        }
-        if (pathPattern.startsWith(GLOB)) {
-            final String glob = pathPattern.substring(GLOB.length());
-            return globPathMapping(glob);
-        }
-        if (pathPattern.startsWith(REGEX)) {
-            return new RegexPathMapping(Pattern.compile(pathPattern.substring(REGEX.length())));
-        }
-        if (!pathPattern.startsWith("/")) {
-            throw new IllegalArgumentException(
-                    "pathPattern: " + pathPattern + " (not an absolute path or a unknown pattern type)");
-        }
-        if (!pathPattern.contains("{") && !pathPattern.contains(":")) {
-            return new ExactPathMapping(pathPattern);
-        }
-        return new DefaultPathMapping(pathPattern);
-    }
-
-    private static PathMapping prefixPathMapping(String prefix, boolean stripPrefix) {
-        if ("/".equals(prefix)) {
-            // Every path starts with '/'.
-            return CatchAllPathMapping.INSTANCE;
-        }
-
-        return new PrefixPathMapping(prefix, stripPrefix);
     }
 
     private static PathMapping globPathMapping(String glob) {
@@ -126,17 +88,15 @@ public class RouteBuilder {
     }
 
     /**
-     * Sets the specified {@code exactPath} of the {@link Route}. The mapped {@link Service} is found when a
-     * {@linkplain ServiceRequestContext#path() path} equals the specified {@code exactPath}.
+     * Sets the {@link Route} to match the specified exact path.
      */
     public RouteBuilder exact(String exactPath) {
         return pathMapping(new ExactPathMapping(exactPath));
     }
 
     /**
-     * Sets the specified {@code prefix} of the {@link Route}. The mapped {@link Service} is found when a
-     * {@linkplain ServiceRequestContext#path() path} is under the specified {@code prefix}. It also removes
-     * the specified {@code prefix} from the matched path so that
+     * Sets the {@link Route} to match when a {@linkplain ServiceRequestContext#path() path} is under the
+     * specified {@code prefix}. It also removes the specified {@code prefix} from the matched path so that
      * {@linkplain ServiceRequestContext#mappedPath() mappedPath} does not have the specified {@code prefix}.
      * For example, when {@code prefix} is {@code "/foo/"}:
      * <ul>
@@ -151,10 +111,9 @@ public class RouteBuilder {
     }
 
     /**
-     * Sets the specified {@code prefix} of the {@link Route}. The mapped {@link Service} is found when a
-     * {@linkplain ServiceRequestContext#path() path} is under the specified {@code prefix}.
-     * When {@code stripPrefix} is {@code true}, it also removes the specified {@code prefix} from
-     * the matched path so that {@linkplain ServiceRequestContext#path() mappedPath}
+     * Sets the {@link Route} to match when a {@linkplain ServiceRequestContext#path() path} is under the
+     * specified {@code prefix}. When {@code stripPrefix} is {@code true}, it also removes the specified
+     * {@code prefix} from the matched path so that {@linkplain ServiceRequestContext#path() mappedPath}
      * does not have the specified {@code prefix}. For example, when {@code prefix} is {@code "/foo/"}:
      * <ul>
      *   <li>{@code "/foo/"} translates to {@code "/"}</li>
@@ -167,15 +126,14 @@ public class RouteBuilder {
     }
 
     /**
-     * Sets {@code catchAll} so that the {@link Route} matches any path.
+     * Sets the {@link Route} to match any path.
      */
     public RouteBuilder catchAll() {
         return pathMapping(CatchAllPathMapping.INSTANCE);
     }
 
     /**
-     * Sets the specified {@code glob} of the {@link Route}. The mapped {@link Service} is found when a
-     * {@linkplain ServiceRequestContext#path() path} matches the specified {@code glob} expression.
+     * Sets the {@link Route} to match the specified {@code glob}.
      * {@code "*"} in the expression matches a path component non-recursively whereas {@code "**"} matches
      * path components recursively.
      */
@@ -184,8 +142,7 @@ public class RouteBuilder {
     }
 
     /**
-     * Sets the specified {@code regex} of the {@link Route}. The mapped {@link Service} is found when a
-     * {@linkplain ServiceRequestContext#path() path} matches the specified {@code regex}. It also extracts
+     * Sets the {@link Route} to match the specified {@code regex}. It also extracts
      * the values of the named groups to {@linkplain ServiceRequestContext#pathParams() pathParams}:
      * e.g. {@code "^/users/(?<userId>[0-9]+)$"} will extract the second numeric part of the path into
      * the {@code "userId"} path parameter.
@@ -195,8 +152,7 @@ public class RouteBuilder {
     }
 
     /**
-     * Sets the specified {@link Pattern} of the {@link Route}. The mapped {@link Service} is found when a
-     * {@linkplain ServiceRequestContext#path() path} matches the specified {@link Pattern}. It also extracts
+     * Sets the {@link Route} to match the specified {@code regex}. It also extracts
      * the values of the named groups to {@linkplain ServiceRequestContext#pathParams() pathParams}:
      * e.g. {@code "^/users/(?<userId>[0-9]+)$"} will extract the second numeric part of the path into
      * the {@code "userId"} path parameter.
@@ -206,7 +162,7 @@ public class RouteBuilder {
     }
 
     /**
-     * Sets the specified {@code prefix} and {@code pathPattern} of the {@link Route}. The mapped
+     * Sets the {@link Route} to match the specified {@code prefix} and {@code pathPattern}. The mapped
      * {@link Service} is found when a {@linkplain ServiceRequestContext#path() path} is under
      * the specified {@code prefix} and the rest of the path matches the specified {@code pathPattern}.
      *
@@ -246,62 +202,62 @@ public class RouteBuilder {
     }
 
     /**
-     * Sets {@link HttpMethod}s that this {@link Route} supports. If not set, the mapped {@link Service}
-     * accepts any {@link HttpMethod}s.
+     * Sets the {@link Route} to support the specified {@link HttpMethod}s. If not set,
+     * the mapped {@link Service} accepts any {@link HttpMethod}s.
      */
     public RouteBuilder methods(HttpMethod... methods) {
-        methods(ImmutableList.copyOf(requireNonNull(methods, "methods")));
+        methods(ImmutableSet.copyOf(requireNonNull(methods, "methods")));
         return this;
     }
 
     /**
-     * Sets {@link HttpMethod}s that this {@link Route} supports. If not set, the mapped {@link Service}
-     * accepts any {@link HttpMethod}s.
+     * Sets the {@link Route} to support the specified {@link HttpMethod}s. If not set,
+     * the mapped {@link Service} accepts any {@link HttpMethod}s.
      */
     public RouteBuilder methods(Iterable<HttpMethod> methods) {
-        this.methods = ImmutableSet.copyOf(Sets.immutableEnumSet(requireNonNull(methods, "methods")));
+        this.methods = Sets.immutableEnumSet(requireNonNull(methods, "methods"));
         return this;
     }
 
     /**
-     * Sets {@link MediaType}s that this {@link Route} consumes. If not set, the the mapped {@link Service}
-     * accepts {@link HttpRequest}s that have any {@link HttpHeaderNames#CONTENT_TYPE}.
-     * In order to get this work, {@link #methods(Iterable)} should be set.
+     * Sets the {@link Route} to consume the specified {@link MediaType}s. If not set,
+     * the mapped {@link Service} accepts {@link HttpRequest}s that have any
+     * {@link HttpHeaderNames#CONTENT_TYPE}. In order to get this work, {@link #methods(Iterable)} must be set.
      */
     public RouteBuilder consumes(MediaType... consumeTypes) {
-        consumes(ImmutableList.copyOf(requireNonNull(consumeTypes, "consumeTypes")));
+        consumes(ImmutableSet.copyOf(requireNonNull(consumeTypes, "consumeTypes")));
         return this;
     }
 
     /**
-     * Sets {@link MediaType}s that this {@link Route} consumes. If not set, the mapped {@link Service} accepts
-     * {@link HttpRequest}s that have any {@link HttpHeaderNames#CONTENT_TYPE}.
-     * In order to get this work, {@link #methods(Iterable)} should be set.
+     * Sets the {@link Route} to consume the specified {@link MediaType}s. If not set,
+     * the mapped {@link Service} accepts {@link HttpRequest}s that have any
+     * {@link HttpHeaderNames#CONTENT_TYPE}. In order to get this work, {@link #methods(Iterable)} must be set.
      */
     public RouteBuilder consumes(Iterable<MediaType> consumeTypes) {
         ensureUniqueMediaTypes(consumeTypes, "consumeTypes");
-        consumes = ImmutableList.copyOf(consumeTypes);
+        consumes = ImmutableSet.copyOf(consumeTypes);
         return this;
     }
 
     /**
-     * Sets {@link MediaType}s that this {@link Route} produces. If not set, the mapped {@link Service} accepts
-     * {@link HttpRequest}s that have any {@link HttpHeaderNames#ACCEPT}.
-     * In order to get this work, {@link #methods(Iterable)} should be set.
+     * Sets the {@link Route} to produce the specified {@link MediaType}s. If not set,
+     * the mapped {@link Service} accepts {@link HttpRequest}s that have any
+     * {@link HttpHeaderNames#ACCEPT}. In order to get this work, {@link #methods(Iterable)} must be set.
      */
     public RouteBuilder produces(MediaType... produceTypes) {
-        produces(ImmutableList.copyOf(requireNonNull(produceTypes, "produceTypes")));
+        produces(ImmutableSet.copyOf(requireNonNull(produceTypes, "produceTypes")));
         return this;
     }
 
     /**
-     * Sets {@link MediaType}s that this {@link Route} produces. If not set, the mapped {@link Service} accepts
-     * {@link HttpRequest}s that have any {@link HttpHeaderNames#ACCEPT}.
-     * In order to get this work, {@link #methods(Iterable)} should be set.
+     * Sets the {@link Route} to produce the specified {@link MediaType}s. If not set,
+     * the mapped {@link Service} accepts {@link HttpRequest}s that have any
+     * {@link HttpHeaderNames#ACCEPT}. In order to get this work, {@link #methods(Iterable)} must be set.
      */
     public RouteBuilder produces(Iterable<MediaType> produceTypes) {
         ensureUniqueMediaTypes(produceTypes, "produceTypes");
-        produces = ImmutableList.copyOf(produceTypes);
+        produces = ImmutableSet.copyOf(produceTypes);
         return this;
     }
 
@@ -309,9 +265,9 @@ public class RouteBuilder {
      * Returns a newly-created {@link Route} based on the properties of this builder.
      */
     public Route build() {
-        checkState(pathMapping != null, "Should set a path before calling this.");
+        checkState(pathMapping != null, "Must set a path before calling this.");
         if ((!consumes.isEmpty() || !produces.isEmpty()) && methods.isEmpty()) {
-            throw new IllegalStateException("Should set methods if consumes or produces is not empty." +
+            throw new IllegalStateException("Must set methods if consumes or produces is not empty." +
                                             " consumes: " + consumes + ", produces: " + produces);
         }
         return new DefaultRoute(pathMapping, methods, consumes, produces);
@@ -328,7 +284,7 @@ public class RouteBuilder {
             return true;
         }
 
-        if (o == null || getClass() != o.getClass()) {
+        if (!(o instanceof RouteBuilder)) {
             return false;
         }
 
@@ -347,5 +303,41 @@ public class RouteBuilder {
                           .add("consumes", consumes)
                           .add("produces", produces)
                           .toString();
+    }
+
+    private static PathMapping getPathMapping(String pathPattern) {
+        requireNonNull(pathPattern, "pathPattern");
+
+        if (pathPattern.startsWith(EXACT)) {
+            return new ExactPathMapping(pathPattern.substring(EXACT.length()));
+        }
+        if (pathPattern.startsWith(PREFIX)) {
+            final String prefix = pathPattern.substring(PREFIX.length());
+            return prefixPathMapping(prefix, true);
+        }
+        if (pathPattern.startsWith(GLOB)) {
+            final String glob = pathPattern.substring(GLOB.length());
+            return globPathMapping(glob);
+        }
+        if (pathPattern.startsWith(REGEX)) {
+            return new RegexPathMapping(Pattern.compile(pathPattern.substring(REGEX.length())));
+        }
+        if (!pathPattern.startsWith("/")) {
+            throw new IllegalArgumentException(
+                    "pathPattern: " + pathPattern + " (not an absolute path or a unknown pattern type)");
+        }
+        if (!pathPattern.contains("{") && !pathPattern.contains(":")) {
+            return new ExactPathMapping(pathPattern);
+        }
+        return new DefaultPathMapping(pathPattern);
+    }
+
+    private static PathMapping prefixPathMapping(String prefix, boolean stripPrefix) {
+        if ("/".equals(prefix)) {
+            // Every path starts with '/'.
+            return CatchAllPathMapping.INSTANCE;
+        }
+
+        return new PrefixPathMapping(prefix, stripPrefix);
     }
 }

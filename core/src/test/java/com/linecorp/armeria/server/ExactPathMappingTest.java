@@ -24,9 +24,9 @@ import org.junit.jupiter.api.Test;
 class ExactPathMappingTest {
 
     @Test
-    void shouldReturnEmptyOnMismatch() {
-        final RoutingResult result = new ExactPathMapping("/find/me").apply(create("/find/me/not")).build();
-        assertThat(result.isPresent()).isFalse();
+    void shouldReturnNullOnMismatch() {
+        final RoutingResultBuilder builder = new ExactPathMapping("/find/me").apply(create("/find/me/not"));
+        assertThat(builder).isNull();
     }
 
     @Test

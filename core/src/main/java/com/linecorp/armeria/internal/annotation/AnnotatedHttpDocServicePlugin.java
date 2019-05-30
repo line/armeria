@@ -211,9 +211,9 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
         return getNormalizedTriePath(route);
     }
 
-    private static List<MediaType> availableMimeTypes(Route route) {
-        final Builder<MediaType> builder = ImmutableList.builder();
-        final List<MediaType> consumeTypes = route.consumes();
+    private static Set<MediaType> availableMimeTypes(Route route) {
+        final ImmutableSet.Builder<MediaType> builder = ImmutableSet.builder();
+        final Set<MediaType> consumeTypes = route.consumes();
         builder.addAll(consumeTypes);
         if (!consumeTypes.contains(MediaType.JSON_UTF_8)) {
             builder.add(MediaType.JSON_UTF_8);

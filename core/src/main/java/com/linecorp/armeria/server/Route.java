@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -27,7 +26,8 @@ import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Tag;
 
 /**
- * Matches the {@link RoutingContext} and extracts the path parameters from it.
+ * {@link Route} maps from an incoming HTTP request to a {@link Service} based on its path, method,
+ * content type and accepted types.
  */
 public interface Route {
 
@@ -91,6 +91,7 @@ public interface Route {
      * {@link Optional#empty()} otherwise. The trie path does not exist when the {@link Route} is created
      * using a glob or a regex expression.
      *
+     * @see RouteBuilder#path(String)
      * @see RouteBuilder#glob(String)
      * @see RouteBuilder#regex(String)
      */
@@ -98,15 +99,15 @@ public interface Route {
 
     /**
      * Returns the regular expression of this {@link Route} if this is created with the regular expression or
-     * glob pattern. Please note that this regex does not include the {@code pathPrefix} if this is
-     * created with {@link RouteBuilder#pathWithPrefix(String, String)}.
+     * glob pattern, {@link Optional#empty()} otherwise. Please note that this regex does not include the
+     * {@code pathPrefix} if this is created with {@link RouteBuilder#pathWithPrefix(String, String)}.
      * You should call {@link #prefix()} to retrieve that.
      */
     Optional<String> regex();
 
     /**
-     * Returns the complexity of this {@link Route}. It would be increased if this path mapping has
-     * more conditions to check.
+     * Returns the complexity of this {@link Route}. A higher complexity indicates more expensive computation
+     * for route matching, usually due to additional number of checks.
      */
     int complexity();
 
@@ -116,12 +117,12 @@ public interface Route {
     Set<HttpMethod> methods();
 
     /**
-     * Returns the {@link List} of {@link MediaType}s that this {@link Route} consumes.
+     * Returns the {@link Set} of {@link MediaType}s that this {@link Route} consumes.
      */
-    List<MediaType> consumes();
+    Set<MediaType> consumes();
 
     /**
-     * Returns the {@link List} of {@link MediaType}s that this {@link Route} produces.
+     * Returns the {@link Set} of {@link MediaType}s that this {@link Route} produces.
      */
-    List<MediaType> produces();
+    Set<MediaType> produces();
 }

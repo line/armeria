@@ -33,6 +33,7 @@ abstract class AbstractPathMapping implements PathMapping {
      * {@inheritDoc} This method performs sanity checks on the specified {@code path} and calls
      * {@link #doApply(RoutingContext)}.
      */
+    @Nullable
     @Override
     public final RoutingResultBuilder apply(RoutingContext routingCtx) {
         ensureAbsolutePath(requireNonNull(routingCtx, "routingCtx").path(), "path");
@@ -45,7 +46,7 @@ abstract class AbstractPathMapping implements PathMapping {
      *
      * @param routingCtx a context to find the {@link Service}
      *
-     * @return a settable {@link RoutingResultBuilder} if the specified {@code path} matches this mapping.
+     * @return a non-empty {@link RoutingResultBuilder} if the specified {@code path} matches this mapping.
      *         {@code null} otherwise.
      */
     @Nullable

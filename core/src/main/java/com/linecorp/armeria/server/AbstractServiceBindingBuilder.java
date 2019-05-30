@@ -36,7 +36,6 @@ import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -44,7 +43,6 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
@@ -71,8 +69,8 @@ abstract class AbstractServiceBindingBuilder {
 
     private final Map<RouteBuilder, Set<HttpMethod>> routeBuilders = new LinkedHashMap<>();
 
-    private List<MediaType> consumeTypes = ImmutableList.of();
-    private List<MediaType> produceTypes = ImmutableList.of();
+    private Set<MediaType> consumeTypes = ImmutableSet.of();
+    private Set<MediaType> produceTypes = ImmutableSet.of();
 
     @Nullable
     private Long requestTimeoutMillis;
@@ -243,7 +241,7 @@ abstract class AbstractServiceBindingBuilder {
      * will accept all media types.
      */
     public AbstractServiceBindingBuilder consumes(MediaType... consumeTypes) {
-        consumes(ImmutableList.copyOf(requireNonNull(consumeTypes, "consumeTypes")));
+        consumes(ImmutableSet.copyOf(requireNonNull(consumeTypes, "consumeTypes")));
         return this;
     }
 
@@ -253,7 +251,7 @@ abstract class AbstractServiceBindingBuilder {
      */
     public AbstractServiceBindingBuilder consumes(Iterable<MediaType> consumeTypes) {
         ensureUniqueMediaTypes(consumeTypes, "consumeTypes");
-        this.consumeTypes = ImmutableList.copyOf(consumeTypes);
+        this.consumeTypes = ImmutableSet.copyOf(consumeTypes);
         return this;
     }
 
@@ -263,7 +261,7 @@ abstract class AbstractServiceBindingBuilder {
      * for more information.
      */
     public AbstractServiceBindingBuilder produces(MediaType... produceTypes) {
-        produces(ImmutableList.copyOf(requireNonNull(produceTypes, "produceTypes")));
+        produces(ImmutableSet.copyOf(requireNonNull(produceTypes, "produceTypes")));
         return this;
     }
 
@@ -274,7 +272,7 @@ abstract class AbstractServiceBindingBuilder {
      */
     public AbstractServiceBindingBuilder produces(Iterable<MediaType> produceTypes) {
         ensureUniqueMediaTypes(produceTypes, "produceTypes");
-        this.produceTypes = ImmutableList.copyOf(produceTypes);
+        this.produceTypes = ImmutableSet.copyOf(produceTypes);
         return this;
     }
 

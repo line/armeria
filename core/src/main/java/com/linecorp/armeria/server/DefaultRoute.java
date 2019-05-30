@@ -26,8 +26,8 @@ import java.util.Set;
 import java.util.StringJoiner;
 
 import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
@@ -40,8 +40,8 @@ final class DefaultRoute implements Route {
 
     private final PathMapping pathMapping;
     private final Set<HttpMethod> methods;
-    private final List<MediaType> consumes;
-    private final List<MediaType> produces;
+    private final Set<MediaType> consumes;
+    private final Set<MediaType> produces;
 
     private final String loggerName;
     private final String meterTag;
@@ -49,11 +49,11 @@ final class DefaultRoute implements Route {
     private final int complexity;
 
     DefaultRoute(PathMapping pathMapping, Set<HttpMethod> methods,
-                 List<MediaType> consumes, List<MediaType> produces) {
+                 Set<MediaType> consumes, Set<MediaType> produces) {
         this.pathMapping = requireNonNull(pathMapping, "pathMapping");
-        this.methods = ImmutableSet.copyOf(requireNonNull(methods, "methods"));
-        this.consumes = ImmutableList.copyOf(requireNonNull(consumes, "consumes"));
-        this.produces = ImmutableList.copyOf(requireNonNull(produces, "produces"));
+        this.methods = Sets.immutableEnumSet(requireNonNull(methods, "methods"));
+        this.consumes = ImmutableSet.copyOf(requireNonNull(consumes, "consumes"));
+        this.produces = ImmutableSet.copyOf(requireNonNull(produces, "produces"));
 
         loggerName = generateLoggerName(pathMapping.loggerName(), methods, consumes, produces);
 
@@ -200,17 +200,17 @@ final class DefaultRoute implements Route {
     }
 
     @Override
-    public List<MediaType> consumes() {
+    public Set<MediaType> consumes() {
         return consumes;
     }
 
     @Override
-    public List<MediaType> produces() {
+    public Set<MediaType> produces() {
         return produces;
     }
 
     private static String generateLoggerName(String prefix, Set<HttpMethod> methods,
-                                             List<MediaType> consumes, List<MediaType> produces) {
+                                             Set<MediaType> consumes, Set<MediaType> produces) {
         final StringJoiner name = new StringJoiner(".");
         name.add(prefix);
         if (!methods.isEmpty()) {
@@ -236,7 +236,7 @@ final class DefaultRoute implements Route {
     }
 
     private static String generateMeterTag(String parentTag, Set<HttpMethod> methods,
-                                           List<MediaType> consumes, List<MediaType> produces) {
+                                           Set<MediaType> consumes, Set<MediaType> produces) {
 
         final StringJoiner name = new StringJoiner(",");
         name.add(parentTag);
@@ -257,7 +257,7 @@ final class DefaultRoute implements Route {
         return name.toString();
     }
 
-    private static void addMediaTypes(StringJoiner builder, String prefix, List<MediaType> mediaTypes) {
+    private static void addMediaTypes(StringJoiner builder, String prefix, Set<MediaType> mediaTypes) {
         if (!mediaTypes.isEmpty()) {
             final StringBuilder buf = new StringBuilder();
             buf.append(prefix).append(':');
@@ -283,7 +283,7 @@ final class DefaultRoute implements Route {
             return true;
         }
 
-        if (o == null || getClass() != o.getClass()) {
+        if (!(o instanceof DefaultRoute)) {
             return false;
         }
 

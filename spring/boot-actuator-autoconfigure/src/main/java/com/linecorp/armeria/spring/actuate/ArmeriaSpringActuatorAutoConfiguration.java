@@ -17,10 +17,12 @@
 package com.linecorp.armeria.spring.actuate;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.actuate.autoconfigure.endpoint.EndpointAutoConfiguration;
@@ -144,7 +146,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                     .build();
     }
 
-    private static List<MediaType> convertMediaTypes(Iterable<String> mediaTypes) {
-        return Streams.stream(mediaTypes).map(MediaType::parse).collect(toImmutableList());
+    private static Set<MediaType> convertMediaTypes(Iterable<String> mediaTypes) {
+        return Streams.stream(mediaTypes).map(MediaType::parse).collect(toImmutableSet());
     }
 }

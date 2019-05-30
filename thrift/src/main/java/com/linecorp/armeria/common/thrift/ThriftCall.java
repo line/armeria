@@ -63,7 +63,7 @@ public final class ThriftCall extends ThriftMessage {
             return true;
         }
 
-        if (o == null || getClass() != o.getClass()) {
+        if (!(o instanceof ThriftCall)) {
             return false;
         }
 

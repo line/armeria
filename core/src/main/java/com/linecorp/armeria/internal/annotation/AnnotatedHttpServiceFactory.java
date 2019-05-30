@@ -41,6 +41,7 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -62,6 +63,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 
@@ -443,9 +445,9 @@ public final class AnnotatedHttpServiceFactory {
     }
 
     /**
-     * Returns the list of {@link MediaType}s specified by {@link Consumes} annotation.
+     * Returns the set of {@link MediaType}s specified by {@link Consumes} annotation.
      */
-    private static List<MediaType> consumableMediaTypes(Method method, Class<?> clazz) {
+    private static Set<MediaType> consumableMediaTypes(Method method, Class<?> clazz) {
         List<Consumes> consumes = findAll(method, Consumes.class);
         List<ConsumeType> consumeTypes = findAll(method, ConsumeType.class);
 
@@ -459,13 +461,13 @@ public final class AnnotatedHttpServiceFactory {
                               consumeTypes.stream().map(ConsumeType::value))
                       .map(MediaType::parse)
                       .collect(toImmutableList());
-        return ensureUniqueTypes(types, Consumes.class);
+        return listToSet(types, Consumes.class);
     }
 
     /**
      * Returns the list of {@link MediaType}s specified by {@link Produces} annotation.
      */
-    private static List<MediaType> producibleMediaTypes(Method method, Class<?> clazz) {
+    private static Set<MediaType> producibleMediaTypes(Method method, Class<?> clazz) {
         List<Produces> produces = findAll(method, Produces.class);
         List<ProduceType> produceTypes = findAll(method, ProduceType.class);
 
@@ -485,18 +487,22 @@ public final class AnnotatedHttpServiceFactory {
                           }
                       })
                       .collect(toImmutableList());
-        return ensureUniqueTypes(types, Produces.class);
+        return listToSet(types, Produces.class);
     }
 
-    private static List<MediaType> ensureUniqueTypes(List<MediaType> types, Class<?> annotationClass) {
-        final Set<MediaType> set = new HashSet<>();
+    /**
+     * Converts the list of {@link MediaType}s to a set. It raises an {@link IllegalArgumentException} if the
+     * list has duplicate elements.
+     */
+    private static Set<MediaType> listToSet(List<MediaType> types, Class<?> annotationClass) {
+        final Set<MediaType> set = new LinkedHashSet<>();
         for (final MediaType type : types) {
             if (!set.add(type)) {
                 throw new IllegalArgumentException(
                         "Duplicated media type for @" + annotationClass.getSimpleName() + ": " + type);
             }
         }
-        return types;
+        return ImmutableSet.copyOf(set);
     }
 
     /**

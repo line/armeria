@@ -42,9 +42,8 @@ class DefaultPathMappingTest {
     @Test
     void givenNoMatchingPathParam_whenApply_thenReturnsNull() throws Exception {
         final DefaultPathMapping ppe = new DefaultPathMapping("/service/{value}");
-        final RoutingResult result = ppe.apply(create("/service2/hello", "bar=baz")).build();
-
-        assertThat(result.isPresent()).isFalse();
+        final RoutingResultBuilder builder = ppe.apply(create("/service2/hello", "bar=baz"));
+        assertThat(builder).isNull();
     }
 
     @Test

@@ -88,7 +88,7 @@ public final class StructInfo implements NamedTypeInfo {
             return true;
         }
 
-        if (o == null || getClass() != o.getClass()) {
+        if (!(o instanceof StructInfo)) {
             return false;
         }
 

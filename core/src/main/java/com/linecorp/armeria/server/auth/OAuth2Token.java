@@ -45,7 +45,7 @@ public final class OAuth2Token {
         if (this == o) {
             return true;
         }
-        if (o == null || getClass() != o.getClass()) {
+        if (!(o instanceof OAuth2Token)) {
             return false;
         }
         final OAuth2Token that = (OAuth2Token) o;

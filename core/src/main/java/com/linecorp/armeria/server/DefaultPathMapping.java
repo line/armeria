@@ -207,7 +207,7 @@ final class DefaultPathMapping extends AbstractPathMapping {
         if (this == o) {
             return true;
         }
-        if (o == null || getClass() != o.getClass()) {
+        if (!(o instanceof DefaultPathMapping)) {
             return false;
         }
 

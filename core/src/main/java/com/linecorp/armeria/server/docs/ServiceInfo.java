@@ -148,7 +148,7 @@ public final class ServiceInfo {
             return true;
         }
 
-        if (o == null || getClass() != o.getClass()) {
+        if (!(o instanceof ServiceInfo)) {
             return false;
         }
 

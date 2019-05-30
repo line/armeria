@@ -42,7 +42,6 @@ class RouteTest {
         assertThat(route.exactPath()).contains("/foo");
 
         route = Route.builder().path("/foo/{bar}").build();
-        assertThat(route).isInstanceOf(DefaultPathMapping.class);
         assertThat(route.triePath()).contains("/foo/:");
 
         route = Route.builder().path("/bar/:baz").build();
@@ -208,12 +207,10 @@ class RouteTest {
         assertThat(getResult.hasHighestScore()).isTrue();
 
         getResult = route.apply(withAcceptHeader(HttpMethod.GET, "application/json;charset=UTF-8"));
-        assertThat(getResult.isPresent()).isFalse();
+        assertThat(getResult.isPresent()).isTrue();
 
         getResult = route.apply(withAcceptHeader(HttpMethod.GET, "*/*"));
         assertThat(getResult.isPresent()).isTrue();
-        // When the Route has empty producibleTypes, the result has the highest score.
-        assertThat(getResult.hasHighestScore()).isTrue();
         assertThat(getResult.negotiatedResponseMediaType()).isNull();
 
         // ANY_TYPE produceTypes route.

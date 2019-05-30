@@ -123,7 +123,7 @@ public abstract class CacheControl {
             return true;
         }
 
-        if (o == null || getClass() != o.getClass()) {
+        if (!(o instanceof CacheControl)) {
             return false;
         }
 
