@@ -23,6 +23,8 @@ import java.time.Duration;
 
 import org.junit.jupiter.api.function.Executable;
 
+import com.linecorp.armeria.common.util.Exceptions;
+
 public final class TestUtil {
 
     /**
@@ -42,7 +44,7 @@ public final class TestUtil {
             try {
                 r.execute();
             } catch (Throwable t) {
-                throw new Error(t);
+                Exceptions.throwUnsafely(t);
             }
         } else {
             assertTimeoutPreemptively(timeout, r);
