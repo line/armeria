@@ -50,7 +50,7 @@ public class PropertiesFileWatcherRegistryTest {
     public TemporaryFolder folder = new TemporaryFolder();
 
     @Test
-    public void stopFutureCorrectly() throws Exception {
+    public void emptyGroupStopsBackgroundThread() throws Exception {
 
         final File file = folder.newFile("temp-file.properties");
         final PropertiesEndpointGroup group1 = PropertiesEndpointGroup.of(file.toPath(), "");
@@ -74,7 +74,7 @@ public class PropertiesFileWatcherRegistryTest {
     }
 
     @Test
-    public void closeStopsRegistry() throws Exception {
+    public void closeEndpointGroupStopsRegistry() throws Exception {
 
         final File file = folder.newFile("temp-file.properties");
         final PropertiesEndpointGroup group = PropertiesEndpointGroup.of(file.toPath(), "");
@@ -91,7 +91,7 @@ public class PropertiesFileWatcherRegistryTest {
     }
 
     @Test
-    public void runnableWithException() throws Exception {
+    public void runnableWithExceptionContinuesRun() throws Exception {
 
         final File file = folder.newFile("temp-file.properties");
         final PropertiesFileWatcherRegistry propertiesFileWatcherRegistry =

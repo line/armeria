@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -141,7 +141,8 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
     /**
      * Creates a new {@link EndpointGroup} instance that loads the host names (or IP address) and the port
      * numbers of the {@link Endpoint} from the {@code path} of a resource file. The resource file loads
-     * properties whose name starts with {@code endpointKeyPrefix}:
+     * properties whose name starts with {@code endpointKeyPrefix}. The {@code path} is watched for further
+     * updates.
      *
      * <pre>{@code
      * example.hosts.0=example1.com:36462
@@ -163,7 +164,8 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
     /**
      * Creates a new {@link EndpointGroup} instance that loads the host names (or IP address) and the port
      * numbers of the {@link Endpoint} from the {@code path} of a resource file. The resource file loads
-     * properties whose name starts with {@code endpointKeyPrefix}:
+     * properties whose name starts with {@code endpointKeyPrefix}. The {@code path} is watched for
+     * further updates.
      *
      * <pre>{@code
      * example.hosts.0=example1.com:36462

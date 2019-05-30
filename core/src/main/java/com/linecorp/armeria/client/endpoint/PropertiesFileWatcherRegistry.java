@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client.endpoint;
 
-import static com.google.common.base.Preconditions.checkState;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
@@ -24,46 +23,21 @@ import static java.nio.file.StandardWatchEventKinds.OVERFLOW;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.file.ClosedWatchServiceException;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
-import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.function.Supplier;
-
-import javax.annotation.Nullable;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
+import com.linecorp.armeria.client.endpoint.FileWatcherRunnable.FileWatcherContext;
 
 /**
  * Wraps a {@code WatchService} and allows paths to be registered.
  */
 final class PropertiesFileWatcherRegistry implements AutoCloseable {
-    private static final Logger logger = LoggerFactory.getLogger(PropertiesFileWatcherRegistry.class);
-    private final RestartableFuture restartableFuture =
-            new RestartableFuture("armeria-file-watcher-%d", PropertiesFileWatcherRunnable::new);
-
-    private static class PropertiesFileWatcherContext {
-        private final WatchKey key;
-        private final Runnable reloader;
-        private final Path dirPath;
-
-        PropertiesFileWatcherContext(WatchKey key, Runnable reloader, Path dirPath) {
-            this.key = key;
-            this.reloader = reloader;
-            this.dirPath = dirPath;
-        }
-    }
 
     private static Path getRealPath(Path path) {
         try {
@@ -73,9 +47,10 @@ final class PropertiesFileWatcherRegistry implements AutoCloseable {
         }
     }
 
-    private final Map<PropertiesEndpointGroup, PropertiesFileWatcherContext> ctxRegistry =
+    private final Map<PropertiesEndpointGroup, FileWatcherContext> ctxRegistry =
             new ConcurrentHashMap<>();
     private final WatchService watchService;
+    private final RestartableThread restartableThread;
 
     /**
      * Create a registry using the default file system.
@@ -86,6 +61,9 @@ final class PropertiesFileWatcherRegistry implements AutoCloseable {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+        restartableThread =
+                new RestartableThread("armeria-file-watcher",
+                                      () -> new FileWatcherRunnable(watchService, ctxRegistry::values));
     }
 
     /**
@@ -105,8 +83,10 @@ final class PropertiesFileWatcherRegistry implements AutoCloseable {
         } catch (IOException e) {
             throw new IllegalArgumentException("failed to watch file " + filePath, e);
         }
-        ctxRegistry.put(group, new PropertiesFileWatcherContext(key, reloader, dirPath));
-        restartableFuture.start();
+        ctxRegistry.put(group, new FileWatcherContext(key, reloader, dirPath));
+        if (!ctxRegistry.isEmpty()) {
+            restartableThread.start();
+        }
     }
 
     /**
@@ -117,13 +97,15 @@ final class PropertiesFileWatcherRegistry implements AutoCloseable {
         if (!ctxRegistry.containsKey(group)) {
             return;
         }
-        final PropertiesFileWatcherContext removedCtx = ctxRegistry.remove(group);
+        final FileWatcherContext removedCtx = ctxRegistry.remove(group);
         final boolean existsDirWatcher = ctxRegistry.values().stream().anyMatch(
-                value -> value.dirPath.equals(removedCtx.dirPath));
+                value -> value.path().equals(removedCtx.path()));
         if (!existsDirWatcher) {
-            removedCtx.key.cancel();
+            removedCtx.cancel();
         }
-        restartableFuture.stop();
+        if (ctxRegistry.isEmpty()) {
+            restartableThread.stop();
+        }
     }
 
     /**
@@ -132,7 +114,7 @@ final class PropertiesFileWatcherRegistry implements AutoCloseable {
      */
     @VisibleForTesting
     boolean isRunning() {
-        return restartableFuture.isRunning();
+        return restartableThread.isRunning();
     }
 
     /**
@@ -142,92 +124,7 @@ final class PropertiesFileWatcherRegistry implements AutoCloseable {
     @Override
     public void close() throws Exception {
         ctxRegistry.clear();
-        restartableFuture.stop();
+        restartableThread.stop();
         watchService.close();
-    }
-
-    private class PropertiesFileWatcherRunnable implements Runnable {
-        @Override
-        public void run() {
-            try {
-                WatchKey key;
-                while ((key = watchService.take()) != null) {
-                    for (WatchEvent<?> event : key.pollEvents()) {
-                        @SuppressWarnings("unchecked")
-                        final Path watchedPath = ((Path) key.watchable())
-                                .resolve(((WatchEvent<Path>) event).context());
-                        final Path realFilePath;
-                        try {
-                            realFilePath = watchedPath.toRealPath();
-                        } catch (IOException e) {
-                            logger.warn("skipping unable to get real path for {}", watchedPath);
-                            continue;
-                        }
-                        if (event.kind().equals(ENTRY_MODIFY) || event.kind().equals(ENTRY_CREATE)) {
-                            reloadPath(realFilePath);
-                        } else if (event.kind().equals(OVERFLOW)) {
-                            logger.debug("watch event may have been lost: {}", realFilePath);
-                            reloadPath(realFilePath);
-                        } else if (event.kind().equals(ENTRY_DELETE)) {
-                            logger.warn("ignoring deleted file: {}", realFilePath);
-                        }
-                    }
-
-                    final boolean reset = key.reset();
-                    if (!reset) {
-                        logger.warn("aborting reload properties file due to unexpected error");
-                        break;
-                    }
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                logger.warn("unexpected interruption while reloading properties file: ", e);
-            } catch (ClosedWatchServiceException e) {
-                // do nothing
-            }
-        }
-
-        private void reloadPath(Path filePath) {
-            ctxRegistry.values().stream().filter(
-                    ctx -> filePath.startsWith(ctx.dirPath)).forEach(ctx -> {
-                try {
-                    ctx.reloader.run();
-                } catch (Exception e) {
-                    logger.warn("unexpected error from listener: {} ", filePath, e);
-                }
-            });
-        }
-    }
-
-    private final class RestartableFuture {
-
-        @Nullable
-        private CompletableFuture<Void> future;
-        private final ExecutorService executor;
-        private final Supplier<Runnable> runnableSupplier;
-
-        private RestartableFuture(String namePrefix, Supplier<Runnable> runnableSupplier) {
-            executor = Executors.newSingleThreadExecutor(
-                    new ThreadFactoryBuilder().setDaemon(true)
-                                              .setNameFormat(namePrefix).build());
-            this.runnableSupplier = runnableSupplier;
-        }
-
-        private synchronized void start() {
-            if (!isRunning() && !ctxRegistry.isEmpty()) {
-                future = CompletableFuture.runAsync(runnableSupplier.get(), executor);
-            }
-        }
-
-        private synchronized void stop() {
-            checkState(future != null, "tried to stop null executor");
-            if (isRunning() && ctxRegistry.isEmpty()) {
-                future.cancel(true);
-            }
-        }
-
-        private synchronized boolean isRunning() {
-            return future != null && !future.isDone();
-        }
     }
 }
