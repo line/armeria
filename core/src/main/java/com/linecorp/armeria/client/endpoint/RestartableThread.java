@@ -30,7 +30,6 @@ import org.slf4j.LoggerFactory;
  */
 final class RestartableThread {
     private static final Logger logger = LoggerFactory.getLogger(RestartableThread.class);
-    private static final int AWAIT_TERMINATE_MILLIS = 10000;
 
     @Nullable
     private Thread thread;
@@ -50,8 +49,9 @@ final class RestartableThread {
     /**
      * Starts thread with runnable if not running yet.
      */
-    void start() {
+    synchronized void start() {
         if (!isRunning()) {
+            checkState(thread == null, "trying to start thread without cleanup");
             thread = new Thread(runnableSupplier.get(), name);
             thread.setDaemon(true);
             thread.start();
@@ -61,17 +61,23 @@ final class RestartableThread {
     /**
      * Stops the current running thread if available.
      */
-    void stop() {
-        checkState(thread != null, "tried to stop null thread");
+    synchronized void stop() {
         if (isRunning()) {
+            boolean interrupted = false;
+            checkState(thread != null, "tried to stop null thread");
             thread.interrupt();
-            try {
-                thread.join(AWAIT_TERMINATE_MILLIS);
-            } catch (InterruptedException e) {
-                logger.warn("failed to stop thread: " + name);
+            while (thread.isAlive()) {
+                try {
+                    thread.join(1000);
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                }
+            }
+
+            thread = null;
+            if (interrupted) {
                 Thread.currentThread().interrupt();
             }
-            thread = null;
         }
     }
 

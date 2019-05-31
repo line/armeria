@@ -59,7 +59,7 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
                                              String endpointKeyPrefix) {
         final URL resourceUrl = getResourceUrl(
                 requireNonNull(classLoader, "classLoader"),
-                requireNonNull(resourceName, "fileName"));
+                requireNonNull(resourceName, "resourceName"));
         return new PropertiesEndpointGroup(loadEndpoints(
                 resourceUrl,
                 requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),

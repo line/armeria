@@ -35,7 +35,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.linecorp.armeria.client.endpoint.FileWatcherRunnable.FileWatcherContext;
 
 /**
- * Wraps a {@code WatchService} and allows paths to be registered.
+ * Wraps a {@link WatchService} and allows paths to be registered.
  */
 final class PropertiesFileWatcherRegistry implements AutoCloseable {
 
@@ -109,7 +109,7 @@ final class PropertiesFileWatcherRegistry implements AutoCloseable {
     }
 
     /**
-     * Check if future for {@code WatchService} is running.
+     * Returns whether the watching thread is running.
      * @return true if future is running
      */
     @VisibleForTesting
@@ -118,8 +118,8 @@ final class PropertiesFileWatcherRegistry implements AutoCloseable {
     }
 
     /**
-     * Close watch service, future, and clear registry.
-     * @throws Exception may be thrown if {@code WatchService} is already closed
+     * Close the {@link WatchService}, thread, and clear registry.
+     * @throws IOException may be thrown if an I/O error occurs
      */
     @Override
     public void close() throws Exception {

@@ -124,5 +124,7 @@ public class PropertiesFileWatcherRegistryTest {
         await().untilAsserted(() -> assertThat(val.get()).isEqualTo(2));
 
         assertThat(propertiesFileWatcherRegistry.isRunning()).isTrue();
+
+        group.close();
     }
 }

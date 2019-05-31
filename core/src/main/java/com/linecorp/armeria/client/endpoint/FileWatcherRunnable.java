@@ -65,7 +65,7 @@ class FileWatcherRunnable implements Runnable {
                     try {
                         realFilePath = watchedPath.toRealPath();
                     } catch (IOException e) {
-                        logger.warn("skipping -- unable to get real path for {}", watchedPath);
+                        logger.warn("skipping -- unable to get real path for {}", watchedPath, e);
                         continue;
                     }
                     if (event.kind().equals(ENTRY_MODIFY) || event.kind().equals(ENTRY_CREATE)) {
@@ -86,7 +86,7 @@ class FileWatcherRunnable implements Runnable {
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            logger.warn("unexpected interruption while reloading properties file: ", e);
+            logger.debug("unexpected interruption while reloading properties file: ", e);
         } catch (ClosedWatchServiceException e) {
             // do nothing
         }
@@ -127,11 +127,11 @@ class FileWatcherRunnable implements Runnable {
             callback.run();
         }
 
-        public Path path() {
+        Path path() {
             return dirPath;
         }
 
-        public void cancel() {
+        void cancel() {
             key.cancel();
         }
     }
