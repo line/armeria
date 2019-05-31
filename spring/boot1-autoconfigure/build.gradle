@@ -1,3 +1,5 @@
+evaluationDependsOn ':spring:boot-autoconfigure'
+
 dependencies {
     compile(project(':thrift')) {
         ext.optional = true // To let a user choose between thrift and thrift0.9.
@@ -31,7 +33,7 @@ tasks.sourceJar.from "${autoconfigureProjectDir}/src/main/java"
 tasks.sourceJar.from "${autoconfigureProjectDir}/src/main/resources"
 tasks.javadoc.source "${autoconfigureProjectDir}/src/main/java"
 
-tasks.compileTestJava.dependsOn(project(':spring:boot-autoconfigure').tasks.findByName('compileTestThrift'))
+tasks.compileTestJava.dependsOn(project(':spring:boot-autoconfigure').tasks.compileTestThrift)
 
 // Disable checkstyle because it's checked by ':spring:boot-autoconfigure'.
 tasks.checkstyleMain.onlyIf { false }
