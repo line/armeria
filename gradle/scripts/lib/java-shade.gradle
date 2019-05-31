@@ -91,8 +91,8 @@ configure(relocatedProjects) {
                 description: 'Shrinks the shaded JAR by removing unused classes.') {
 
             relocatedProjects.each {
-                dependsOn it.tasks.shadedJar
-                dependsOn it.tasks.shadedTestJar
+                dependsOn it.tasks.shadedJar.path
+                dependsOn it.tasks.shadedTestJar.path
             }
 
             def shadedFile = tasks.shadedJar.archivePath
@@ -172,9 +172,9 @@ configure(relocatedProjects) {
 
         relocatedProjects.each {
             if (it.tasks.findByName('trimShadedJar')) {
-                dependsOn it.tasks.trimShadedJar
+                dependsOn it.tasks.trimShadedJar.path
             } else {
-                dependsOn it.tasks.shadedJar
+                dependsOn it.tasks.shadedJar.path
             }
         }
         dependsOn tasks.shadedTestClasses

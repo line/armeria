@@ -54,11 +54,11 @@ configure(rootProject) {
             // Set dependencies related with report generation and feed execution data.
             projects.each { Project p ->
                 if (p.hasFlags('relocate')) {
-                    reportTask.dependsOn(p.tasks.shadedClasses)
+                    reportTask.dependsOn(p.tasks.shadedClasses.path)
                 }
 
                 p.tasks.withType(Test).each { testTask ->
-                    reportTask.dependsOn(testTask)
+                    reportTask.dependsOn(testTask.path)
                     reportTask.mustRunAfter(testTask)
                     testTask.finalizedBy(reportTask)
 
