@@ -45,7 +45,7 @@ class ZlibStreamDecoder implements StreamDecoder {
         if (obj instanceof ByteBufHolder) {
             decoder.writeInbound(((ByteBufHolder) obj).content());
         } else {
-            final ByteBuf compressed = Unpooled.wrappedBuffer(obj.array(), obj.offset(), obj.length());
+            final ByteBuf compressed = Unpooled.wrappedBuffer(obj.array());
             decoder.writeInbound(compressed);
         }
         return fetchDecoderOutput();

@@ -79,8 +79,7 @@ final class DataBufferFactoryWrapper<T extends DataBufferFactory> {
     DataBuffer toDataBuffer(HttpData httpData) {
         requireNonNull(httpData, "httpData");
         if (!(httpData instanceof ByteBufHttpData)) {
-            return delegate.wrap(
-                    ByteBuffer.wrap(httpData.array(), httpData.offset(), httpData.length()));
+            return delegate.wrap(ByteBuffer.wrap(httpData.array()));
         }
         return converter.apply((ByteBufHttpData) httpData);
     }

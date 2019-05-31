@@ -45,7 +45,7 @@ class Tomcat90OutputBuffer implements OutputBuffer {
         // NB: We make a copy because Tomcat reuses the underlying byte array of 'chunk'.
         final byte[] content = Arrays.copyOfRange(chunk.getBuffer(), start, end);
 
-        data.add(HttpData.of(content));
+        data.add(HttpData.wrap(content));
 
         bytesWritten += length;
         return length;
@@ -62,7 +62,7 @@ class Tomcat90OutputBuffer implements OutputBuffer {
         final byte[] content = new byte[chunk.remaining()];
         chunk.get(content);
 
-        data.add(HttpData.of(content));
+        data.add(HttpData.wrap(content));
 
         bytesWritten += length;
         return length;

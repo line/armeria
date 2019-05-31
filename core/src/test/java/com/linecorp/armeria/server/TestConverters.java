@@ -91,7 +91,7 @@ public final class TestConverters {
                                             @Nullable Object result,
                                             HttpHeaders trailers) throws Exception {
             if (result instanceof byte[]) {
-                return httpResponse(HttpData.of((byte[]) result));
+                return httpResponse(HttpData.wrap((byte[]) result));
             }
             return ResponseConverterFunction.fallthrough();
         }
@@ -104,7 +104,7 @@ public final class TestConverters {
                                             @Nullable Object result,
                                             HttpHeaders trailers) throws Exception {
             if (result instanceof byte[]) {
-                return httpResponse(HttpData.of((byte[]) result));
+                return httpResponse(HttpData.wrap((byte[]) result));
             }
             throw new IllegalArgumentException("Cannot convert " +
                                                (result != null ? result.getClass().getName() : "null"));

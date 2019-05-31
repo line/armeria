@@ -98,7 +98,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
                 @Get("/httpData")
                 public HttpData httpData() {
-                    return HttpData.of("¥".getBytes());
+                    return HttpData.wrap("¥".getBytes());
                 }
 
                 @Get("/jsonNode")
@@ -123,7 +123,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
                 @Get("/httpData")
                 @ProducesOctetStream
                 public Publisher<HttpData> httpData() {
-                    return new ObjectPublisher<>(HttpData.of("¥".getBytes()));
+                    return new ObjectPublisher<>(HttpData.wrap("¥".getBytes()));
                 }
 
                 @Get("/jsonNode")
@@ -196,7 +196,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
                 @Get("/httpData")
                 @Produces("application/octet-stream")
                 public HttpData httpData() {
-                    return HttpData.of("¥".getBytes());
+                    return HttpData.wrap("¥".getBytes());
                 }
 
                 @Get("/jsonNode")

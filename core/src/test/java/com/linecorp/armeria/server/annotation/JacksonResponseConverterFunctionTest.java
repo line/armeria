@@ -72,10 +72,10 @@ public class JacksonResponseConverterFunctionTest {
      * {@link #TEST_STRINGS} as input.
      */
     private static final HttpData[] EXPECTED_CONTENTS = {
-            HttpData.of(new byte[] { RECORD_SEPARATOR, '\"', 'f', 'o', 'o', '\"', LINE_FEED }),
-            HttpData.of(new byte[] { RECORD_SEPARATOR, '\"', 'b', 'a', 'r', '\"', LINE_FEED }),
-            HttpData.of(new byte[] { RECORD_SEPARATOR, '\"', 'b', 'a', 'z', '\"', LINE_FEED }),
-            HttpData.of(new byte[] { RECORD_SEPARATOR, '\"', 'q', 'u', 'x', '\"', LINE_FEED })
+            HttpData.wrap(new byte[] { RECORD_SEPARATOR, '\"', 'f', 'o', 'o', '\"', LINE_FEED }),
+            HttpData.wrap(new byte[] { RECORD_SEPARATOR, '\"', 'b', 'a', 'r', '\"', LINE_FEED }),
+            HttpData.wrap(new byte[] { RECORD_SEPARATOR, '\"', 'b', 'a', 'z', '\"', LINE_FEED }),
+            HttpData.wrap(new byte[] { RECORD_SEPARATOR, '\"', 'q', 'u', 'x', '\"', LINE_FEED })
     };
 
     @BeforeClass
@@ -212,7 +212,7 @@ public class JacksonResponseConverterFunctionTest {
                     .expectNext(JSON_SEQ_HEADERS.toBuilder()
                                                 .setInt(HttpHeaderNames.CONTENT_LENGTH, 7)
                                                 .build())
-                    .expectNext(HttpData.of(
+                    .expectNext(HttpData.wrap(
                             new byte[] { RECORD_SEPARATOR, '\"', 'a', 'b', 'c', '\"', LINE_FEED }))
                     .expectComplete()
                     .verify();
@@ -222,8 +222,7 @@ public class JacksonResponseConverterFunctionTest {
                     .expectNext(JSON_SEQ_HEADERS.toBuilder()
                                                 .setInt(HttpHeaderNames.CONTENT_LENGTH, 5)
                                                 .build())
-                    .expectNext(HttpData.of(
-                            new byte[] { RECORD_SEPARATOR, '1', '2', '3', LINE_FEED }))
+                    .expectNext(HttpData.wrap(new byte[] { RECORD_SEPARATOR, '1', '2', '3', LINE_FEED }))
                     .expectComplete()
                     .verify();
     }

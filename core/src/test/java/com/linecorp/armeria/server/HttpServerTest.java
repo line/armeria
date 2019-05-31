@@ -393,7 +393,7 @@ public class HttpServerTest {
                 String payload = "foobar";
                 return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
                                        new DefaultHttpData(payload.getBytes(StandardCharsets.UTF_8),
-                                                           0, payload.length(), true));
+                                                           true));
             });
 
             sb.service("/additional-trailers-no-eos", (ctx, req) -> {
@@ -401,7 +401,7 @@ public class HttpServerTest {
                 String payload = "foobar";
                 return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
                                        new DefaultHttpData(payload.getBytes(StandardCharsets.UTF_8),
-                                                           0, payload.length(), false));
+                                                           false));
             });
 
             sb.serviceUnder("/not-cached-paths", (ctx, req) -> HttpResponse.of(HttpStatus.OK));

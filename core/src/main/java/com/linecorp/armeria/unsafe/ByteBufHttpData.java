@@ -62,16 +62,11 @@ public class ByteBufHttpData extends AbstractHttpData implements ByteBufHolder {
 
     @Override
     public byte[] array() {
-        if (buf.hasArray()) {
+        if (buf.hasArray() && buf.arrayOffset() == 0 && buf.array().length == length) {
             return buf.array();
         } else {
             return ByteBufUtil.getBytes(buf);
         }
-    }
-
-    @Override
-    public int offset() {
-        return buf.hasArray() ? buf.arrayOffset() : 0;
     }
 
     @Override

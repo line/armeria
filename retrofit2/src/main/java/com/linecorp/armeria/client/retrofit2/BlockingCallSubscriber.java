@@ -51,7 +51,7 @@ final class BlockingCallSubscriber extends AbstractSubscriber {
 
     @Override
     void onHttpData(HttpData data) {
-        responseDataBuffer.write(data.array(), data.offset(), data.length());
+        responseDataBuffer.write(data.array());
     }
 
     @Override

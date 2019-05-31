@@ -101,7 +101,8 @@ public interface AggregatedHttpRequest extends AggregatedHttpMessage {
     }
 
     /**
-     * Creates a new HTTP request.
+     * Creates a new HTTP request. The {@code content} will be wrapped using {@link HttpData#wrap(byte[])}, so
+     * any changes made to {@code content} will be reflected in the request.
      *
      * @param method the HTTP method of the request
      * @param path the path of the request
@@ -113,26 +114,7 @@ public interface AggregatedHttpRequest extends AggregatedHttpMessage {
         requireNonNull(path, "path");
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
-        return of(method, path, mediaType, HttpData.of(content));
-    }
-
-    /**
-     * Creates a new HTTP request.
-     *
-     * @param method the HTTP method of the request
-     * @param path the path of the request
-     * @param mediaType the {@link MediaType} of the request content
-     * @param content the content of the request
-     * @param offset the start offset of {@code content}
-     * @param length the length of {@code content}
-     */
-    static AggregatedHttpRequest of(
-            HttpMethod method, String path, MediaType mediaType, byte[] content, int offset, int length) {
-        requireNonNull(method, "method");
-        requireNonNull(path, "path");
-        requireNonNull(mediaType, "mediaType");
-        requireNonNull(content, "content");
-        return of(method, path, mediaType, HttpData.of(content, offset, length));
+        return of(method, path, mediaType, HttpData.wrap(content));
     }
 
     /**

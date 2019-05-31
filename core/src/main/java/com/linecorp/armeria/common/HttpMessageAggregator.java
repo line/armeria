@@ -132,7 +132,7 @@ abstract class HttpMessageAggregator<T extends AggregatedHttpMessage>
                             byteBufData.release();
                         }
                     } else {
-                        merged.writeBytes(data.array(), data.offset(), data.length());
+                        merged.writeBytes(data.array());
                     }
                 }
                 content = new ByteBufHttpData(merged, true);
@@ -141,10 +141,10 @@ abstract class HttpMessageAggregator<T extends AggregatedHttpMessage>
                 for (int i = 0, offset = 0; i < contentList.size(); i++) {
                     final HttpData data = contentList.set(i, null);
                     final int dataLength = data.length();
-                    System.arraycopy(data.array(), data.offset(), merged, offset, dataLength);
+                    System.arraycopy(data.array(), 0, merged, offset, dataLength);
                     offset += dataLength;
                 }
-                content = HttpData.of(merged);
+                content = HttpData.wrap(merged);
             }
         }
 

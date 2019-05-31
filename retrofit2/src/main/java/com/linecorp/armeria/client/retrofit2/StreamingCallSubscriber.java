@@ -68,7 +68,7 @@ final class StreamingCallSubscriber extends AbstractSubscriber {
             }));
             responseCalled = true;
         }
-        pipeBuffer.write(data.array(), data.offset(), data.length());
+        pipeBuffer.write(data.array(), 0, data.length());
     }
 
     @Override

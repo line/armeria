@@ -62,7 +62,7 @@ public class ByteArrayResponseConverterFunction implements ResponseConverterFunc
                     return HttpResponse.of(headers, (HttpData) result, trailers);
                 }
                 if (result instanceof byte[]) {
-                    return HttpResponse.of(headers, HttpData.of((byte[]) result), trailers);
+                    return HttpResponse.of(headers, HttpData.wrap((byte[]) result), trailers);
                 }
 
                 return ResponseConverterFunction.fallthrough();
@@ -72,7 +72,7 @@ public class ByteArrayResponseConverterFunction implements ResponseConverterFunc
                                    (HttpData) result, trailers);
         } else if (result instanceof byte[]) {
             return HttpResponse.of(headers.toBuilder().contentType(MediaType.OCTET_STREAM).build(),
-                                   HttpData.of((byte[]) result), trailers);
+                                   HttpData.wrap((byte[]) result), trailers);
         }
 
         return ResponseConverterFunction.fallthrough();
@@ -83,7 +83,7 @@ public class ByteArrayResponseConverterFunction implements ResponseConverterFunc
             return (HttpData) value;
         }
         if (value instanceof byte[]) {
-            return HttpData.of((byte[]) value);
+            return HttpData.wrap((byte[]) value);
         }
         if (value == null) {
             return HttpData.EMPTY_DATA;

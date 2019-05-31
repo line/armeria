@@ -116,25 +116,7 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
         requireNonNull(status, "status");
         requireNonNull(mediaType, "mediaType");
         requireNonNull(content, "content");
-        respond(status, mediaType, HttpData.of(content));
-    }
-
-    /**
-     * Writes the HTTP response of the specified {@link HttpStatus} and closes the stream.
-     *
-     * @param mediaType the {@link MediaType} of the response content
-     * @param content the content of the response
-     * @param offset the start offset of {@code content}
-     * @param length the length of {@code content}
-     *
-     * @deprecated Use {@link HttpResponse#of(HttpStatus, MediaType, byte[], int, int)}.
-     */
-    @Deprecated
-    default void respond(HttpStatus status, MediaType mediaType, byte[] content, int offset, int length) {
-        requireNonNull(status, "status");
-        requireNonNull(mediaType, "mediaType");
-        requireNonNull(content, "content");
-        respond(status, mediaType, HttpData.of(content, offset, length));
+        respond(status, mediaType, HttpData.wrap(content));
     }
 
     /**

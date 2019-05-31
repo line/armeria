@@ -28,6 +28,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.annotation.Nonnull;
@@ -38,7 +39,11 @@ import org.apache.thrift.transport.TMemoryBuffer;
 import org.apache.thrift.transport.TMemoryInputTransport;
 import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.DisableOnDebug;
+import org.junit.rules.TestRule;
+import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -107,6 +112,9 @@ public class ThriftServiceTest {
 
     @ClassRule
     public static final EventLoopRule eventLoop = new EventLoopRule();
+
+    @Rule
+    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
 
     @Parameters(name = "{0}")
     public static Collection<SerializationFormat> parameters() throws Exception {
@@ -571,7 +579,7 @@ public class ThriftServiceTest {
         client1.send_removeMiddle(new Name(BAZ, BAR, FOO));
         assertThat(out.length()).isGreaterThan(0);
 
-        final HttpData req1 = HttpData.of(out.getArray(), 0, out.length());
+        final HttpData req1 = HttpData.wrap(out.getArray(), 0, out.length());
 
         out = new TMemoryBuffer(128);
         outProto = ThriftProtocolFactories.get(defaultSerializationFormat).getProtocol(out);
@@ -581,7 +589,7 @@ public class ThriftServiceTest {
         client2.send_sort(Arrays.asList(NAME_C, NAME_B, NAME_A));
         assertThat(out.length()).isGreaterThan(0);
 
-        final HttpData req2 = HttpData.of(out.getArray(), 0, out.length());
+        final HttpData req2 = HttpData.wrap(out.getArray(), 0, out.length());
 
         final THttpService service = THttpService.of(
                 (UberNameService) (names, callback) -> callback.onComplete(
@@ -594,10 +602,10 @@ public class ThriftServiceTest {
         final HttpData res1 = promise.get();
         final HttpData res2 = promise2.get();
 
-        in.reset(res1.array(), res1.offset(), res1.length());
+        in.reset(res1.array());
         assertThat(client1.recv_removeMiddle()).isEqualTo(new Name(BAZ, null, FOO));
 
-        in.reset(res2.array(), res2.offset(), res2.length());
+        in.reset(res2.array());
         assertThat(client2.recv_sort()).containsExactly(NAME_A, NAME_B, NAME_C);
     }
 
@@ -621,14 +629,14 @@ public class ThriftServiceTest {
     }
 
     private void invoke(THttpService service) throws Exception {
-        invoke0(service, HttpData.of(out.getArray(), 0, out.length()), promise);
+        invoke0(service, HttpData.wrap(out.getArray(), 0, out.length()), promise);
 
         final HttpData res = promise.get();
-        in.reset(res.array(), res.offset(), res.length());
+        in.reset(res.array());
     }
 
     private void invokeTwice(THttpService service1, THttpService service2) throws Exception {
-        final HttpData content = HttpData.of(out.getArray(), 0, out.length());
+        final HttpData content = HttpData.wrap(out.getArray(), 0, out.length());
         invoke0(service1, content, promise);
         invoke0(service2, content, promise2);
     }

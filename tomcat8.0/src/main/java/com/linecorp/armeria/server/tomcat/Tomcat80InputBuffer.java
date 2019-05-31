@@ -41,7 +41,7 @@ class Tomcat80InputBuffer implements InputBuffer {
         read = true;
 
         final int readableBytes = content.length();
-        chunk.setBytes(content.array(), content.offset(), readableBytes);
+        chunk.setBytes(content.array(), 0, readableBytes);
 
         return readableBytes;
     }

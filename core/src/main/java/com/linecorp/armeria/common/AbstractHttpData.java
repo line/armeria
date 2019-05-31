@@ -23,8 +23,7 @@ package com.linecorp.armeria.common;
 public abstract class AbstractHttpData implements HttpData {
 
     /**
-     * Gets the {@link byte} value at the given {@code index} relative to the {@link HttpData}'s
-     * {@link #offset()}.
+     * Gets the {@link byte} value at the given {@code index}.
      */
     protected abstract byte getByte(int index);
 

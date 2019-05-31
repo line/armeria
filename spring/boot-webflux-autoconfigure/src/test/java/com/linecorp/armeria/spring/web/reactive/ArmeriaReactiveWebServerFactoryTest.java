@@ -172,7 +172,7 @@ class ArmeriaReactiveWebServerFactoryTest {
                 RequestHeaders.of(HttpMethod.POST, "/hello",
                                   HttpHeaderNames.USER_AGENT, "test-agent/1.0.0",
                                   HttpHeaderNames.ACCEPT_ENCODING, "gzip");
-        return client.execute(requestHeaders, HttpData.of(POST_BODY.getBytes())).aggregate().join();
+        return client.execute(requestHeaders, HttpData.wrap(POST_BODY.getBytes())).aggregate().join();
     }
 
     private static void validateEchoResponse(AggregatedHttpResponse res) {

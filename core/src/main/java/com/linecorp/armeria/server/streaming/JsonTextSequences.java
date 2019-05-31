@@ -314,7 +314,7 @@ public final class JsonTextSequences {
             out.write(RECORD_SEPARATOR);
             mapper.writeValue(out, value);
             out.write(LINE_FEED);
-            return HttpData.of(out.toByteArray());
+            return HttpData.wrap(out.toByteArray());
         } catch (Exception e) {
             return Exceptions.throwUnsafely(e);
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,48 +16,43 @@
 
 package com.linecorp.armeria.common;
 
-import com.google.common.base.MoreObjects;
+import java.util.Arrays;
 
 /**
- * Default {@link HttpData} implementation.
+ * A {@link AbstractHttpData} that contains a slice into a backing array, to allow mutations to the array to
+ * still be reflected here.
  */
-public final class DefaultHttpData extends AbstractHttpData {
+class ByteRangeHttpData extends AbstractHttpData {
 
-    private final byte[] data;
+    private final byte[] array;
+    private final int offset;
+    private final int length;
     private final boolean endOfStream;
 
-    /**
-     * Creates a new instance.
-     */
-    public DefaultHttpData(byte[] data, boolean endOfStream) {
-        this.data = data;
+    ByteRangeHttpData(byte[] array, int offset, int length, boolean endOfStream) {
+        this.array = array;
+        this.offset = offset;
+        this.length = length;
         this.endOfStream = endOfStream;
     }
 
     @Override
+    protected byte getByte(int index) {
+        return array[offset + index];
+    }
+
+    @Override
     public byte[] array() {
-        return data;
+        return Arrays.copyOfRange(array, offset, offset + length);
     }
 
     @Override
     public int length() {
-        return data.length;
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("length", data.length)
-                          .toString();
+        return length;
     }
 
     @Override
     public boolean isEndOfStream() {
         return endOfStream;
-    }
-
-    @Override
-    protected byte getByte(int index) {
-        return data[index];
     }
 }

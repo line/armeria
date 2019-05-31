@@ -80,7 +80,7 @@ public class UnaryGrpcClient {
         final HttpRequest request = HttpRequest.of(
                 RequestHeaders.of(HttpMethod.POST, uri,
                                   HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto"),
-                HttpData.of(payload));
+                HttpData.wrap(payload));
         return httpClient.execute(request).aggregate()
                          .thenApply(msg -> {
                              if (!HttpStatus.OK.equals(msg.status())) {
@@ -120,9 +120,7 @@ public class UnaryGrpcClient {
                                    if (msg.content() instanceof ByteBufHolder) {
                                        buf = ((ByteBufHolder) msg.content()).content();
                                    } else {
-                                       buf = Unpooled.wrappedBuffer(
-                                               msg.content().array(), msg.content().offset(),
-                                               msg.content().length());
+                                       buf = Unpooled.wrappedBuffer(msg.content().array());
                                    }
                                    final HttpData framed;
                                    try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(

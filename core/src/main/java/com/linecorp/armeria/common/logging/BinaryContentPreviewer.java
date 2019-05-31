@@ -90,7 +90,7 @@ abstract class BinaryContentPreviewer implements ContentPreviewer {
             }
             return content.retainedSlice(content.readerIndex(), length);
         } else {
-            return Unpooled.wrappedBuffer(httpData.array(), httpData.offset(), length);
+            return Unpooled.wrappedBuffer(httpData.array());
         }
     }
 

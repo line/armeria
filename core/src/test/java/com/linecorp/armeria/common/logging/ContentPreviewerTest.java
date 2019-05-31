@@ -242,7 +242,7 @@ public class ContentPreviewerTest {
         public void onData(HttpData data) {
             // Invoked when a new content is received.
             assert builder != null;
-            builder.append(ByteBufUtil.hexDump(data.array(), data.offset(), data.length()));
+            builder.append(ByteBufUtil.hexDump(data.array()));
         }
 
         @Override
@@ -375,13 +375,13 @@ public class ContentPreviewerTest {
     public void testCustomPreviewer() throws Exception {
         ContentPreviewer previewer = new HexDumpContentPreviewer();
         previewer.onHeaders(HttpHeaders.of());
-        previewer.onData(HttpData.of(new byte[] {1,2,3,4}));
+        previewer.onData(HttpData.wrap(new byte[] { 1, 2, 3, 4 }));
         assertThat(previewer.produce()).isEqualTo("01020304");
 
         previewer = new HexDumpContentPreviewer();
         previewer.onHeaders(HttpHeaders.of());
-        previewer.onData(HttpData.of(new byte[] {1,2,3}));
-        previewer.onData(HttpData.of(new byte[] {4,5}));
+        previewer.onData(HttpData.wrap(new byte[] { 1, 2, 3 }));
+        previewer.onData(HttpData.wrap(new byte[] { 4, 5 }));
         assertThat(previewer.produce()).isEqualTo("0102030405");
         assertThat(previewer.produce()).isEqualTo("0102030405");
     }

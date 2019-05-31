@@ -206,7 +206,7 @@ final class THttpClientDelegate implements Client<RpcRequest, RpcResponse> {
         if (content instanceof ByteBufHolder) {
             inputTransport = new TByteBufTransport(((ByteBufHolder) content).content());
         } else {
-            inputTransport = new TMemoryInputTransport(content.array(), content.offset(), content.length());
+            inputTransport = new TMemoryInputTransport(content.array());
         }
 
         final TProtocol inputProtocol = protocolFactory.getProtocol(inputTransport);

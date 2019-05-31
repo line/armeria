@@ -62,7 +62,7 @@ public class HttpDecodedResponseTest {
 
     @Test
     public void unpooledPayload_unpooledDrain() {
-        final HttpData payload = HttpData.of(PAYLOAD);
+        final HttpData payload = HttpData.wrap(PAYLOAD);
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
         final HttpResponse decoded = new HttpDecodedResponse(delegate, DECODERS, ByteBufAllocator.DEFAULT);
         final ByteBuf buf = responseBuf(decoded, false);
@@ -85,7 +85,7 @@ public class HttpDecodedResponseTest {
     // Users that request pooled objects still always need to be ok with unpooled ones.
     @Test
     public void unpooledPayload_pooledDrain() {
-        final HttpData payload = HttpData.of(PAYLOAD);
+        final HttpData payload = HttpData.wrap(PAYLOAD);
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
         final HttpResponse decoded = new HttpDecodedResponse(delegate, DECODERS, ByteBufAllocator.DEFAULT);
         final ByteBuf buf = responseBuf(decoded, true);

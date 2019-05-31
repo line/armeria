@@ -487,7 +487,7 @@ public final class THttpService extends AbstractHttpService {
             buf = ((ByteBufHolder) content).content();
         } else {
             buf = ctx.alloc().buffer(content.length());
-            buf.writeBytes(content.array(), content.offset(), content.length());
+            buf.writeBytes(content.array());
         }
 
         final TByteBufTransport inTransport = new TByteBufTransport(buf);

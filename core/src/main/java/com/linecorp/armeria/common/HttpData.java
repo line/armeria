@@ -25,8 +25,11 @@ import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Formatter;
 import java.util.Locale;
+
+import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
@@ -44,7 +47,7 @@ public interface HttpData extends HttpObject {
     /**
      * Empty HTTP/2 data.
      */
-    HttpData EMPTY_DATA = new DefaultHttpData(new byte[0], 0, 0, false);
+    HttpData EMPTY_DATA = new DefaultHttpData(new byte[0], false);
 
     /**
      * Creates a new instance from the specified byte array. The array is not copied; any changes made in the
@@ -52,13 +55,13 @@ public interface HttpData extends HttpObject {
      *
      * @return a new {@link HttpData}. {@link #EMPTY_DATA} if the length of the specified array is 0.
      */
-    static HttpData of(byte[] data) {
+    static HttpData wrap(byte[] data) {
         requireNonNull(data, "data");
         if (data.length == 0) {
             return EMPTY_DATA;
         }
 
-        return new DefaultHttpData(data, 0, data.length, false);
+        return new DefaultHttpData(data, false);
     }
 
     /**
@@ -69,7 +72,62 @@ public interface HttpData extends HttpObject {
      *
      * @throws ArrayIndexOutOfBoundsException if {@code offset} and {@code length} are out of bounds
      */
-    static HttpData of(byte[] data, int offset, int length) {
+    static HttpData wrap(byte[] data, int offset, int length) {
+        requireNonNull(data, "data");
+        if (offset < 0 || length < 0 || offset > data.length - length) {
+            throw new ArrayIndexOutOfBoundsException(
+                    "offset: " + offset + ", length: " + length + ", data.length: " + data.length);
+        }
+        if (length == 0) {
+            return EMPTY_DATA;
+        }
+
+        if (data.length == length) {
+            return wrap(data);
+        }
+
+        return new ByteRangeHttpData(data, offset, length, false);
+    }
+
+    /**
+     * Converts the specified Netty {@link ByteBuf} into an {@link HttpData}. The buffer is not copied; any
+     * changes made to it will be visible to {@link HttpData}. The ownership of the buffer is transferred to the
+     * {@link HttpData}. If you still need to use it after calling this method, make sure to call
+     * {@link ByteBuf#retain()} first.
+     *
+     * @return a new {@link HttpData}. {@link #EMPTY_DATA} if the readable bytes of {@code buf} is 0.
+     */
+    static HttpData wrap(ByteBuf buf) {
+        requireNonNull(buf, "buf");
+        if (!buf.isReadable()) {
+            return EMPTY_DATA;
+        }
+        return new ByteBufHttpData(buf, false);
+    }
+
+    /**
+     * Creates a new instance from the specified byte array by first copying it.
+     *
+     * @return a new {@link HttpData}. {@link #EMPTY_DATA} if the length of the specified array is 0.
+     */
+    static HttpData copyOf(byte[] data) {
+        requireNonNull(data, "data");
+        if (data.length == 0) {
+            return EMPTY_DATA;
+        }
+
+        return new DefaultHttpData(data.clone(), false);
+    }
+
+    /**
+     * Creates a new instance from the specified byte array, {@code offset} and {@code length} by first copying
+     * it.
+     *
+     * @return a new {@link HttpData}. {@link #EMPTY_DATA} if {@code length} is 0.
+     *
+     * @throws ArrayIndexOutOfBoundsException if {@code offset} and {@code length} are out of bounds
+     */
+    static HttpData copyOf(byte[] data, int offset, int length) {
         requireNonNull(data);
         if (offset < 0 || length < 0 || offset > data.length - length) {
             throw new ArrayIndexOutOfBoundsException(
@@ -79,7 +137,44 @@ public interface HttpData extends HttpObject {
             return EMPTY_DATA;
         }
 
-        return new DefaultHttpData(data, offset, length, false);
+        return new DefaultHttpData(Arrays.copyOfRange(data, offset, offset + length), false);
+    }
+
+    /**
+     * Creates a new instance from the specified {@link ByteBuf} by first copying it's content. The reference
+     * count of {@link ByteBuf} will not be changed.
+     *
+     * @return a new {@link HttpData}. {@link #EMPTY_DATA} if the length of the specified array is 0.
+     */
+    static HttpData copyOf(ByteBuf data) {
+        requireNonNull(data, "data");
+        if (!data.isReadable()) {
+            return EMPTY_DATA;
+        }
+
+        return wrap(ByteBufUtil.getBytes(data));
+    }
+
+    /**
+     * Creates a new instance from the specified byte array. The array is not copied; any changes made in the
+     * array later will be visible to {@link HttpData}.
+     *
+     * @deprecated Use {@link #wrap(byte[])}.
+     */
+    @Deprecated
+    static HttpData of(byte[] data) {
+        return wrap(data);
+    }
+
+    /**
+     * Creates a new instance from the specified byte array, {@code offset} and {@code length}.
+     * The array is not copied; any changes made in the array later will be visible to {@link HttpData}.
+     *
+     * @deprecated Use {@link #wrap(byte[], int, int)}.
+     */
+    @Deprecated
+    static HttpData of(byte[] data, int offset, int length) {
+        return wrap(data, offset, length);
     }
 
     /**
@@ -104,7 +199,11 @@ public interface HttpData extends HttpObject {
 
         final CharBuffer cb = CharBuffer.wrap(text);
         final ByteBuffer buf = charset.encode(cb);
-        return of(buf.array(), buf.arrayOffset(), buf.remaining());
+        if (buf.arrayOffset() == 0 && buf.remaining() == buf.array().length) {
+            return wrap(buf.array());
+        } else {
+            return copyOf(buf.array(), buf.arrayOffset(), buf.remaining());
+        }
     }
 
     /**
@@ -122,21 +221,18 @@ public interface HttpData extends HttpObject {
             return EMPTY_DATA;
         }
 
-        return of(text.getBytes(charset));
+        return wrap(text.getBytes(charset));
     }
 
     /**
-     * Converts the specified Netty {@link ByteBuf} into an {@link HttpData}. Unlike {@link #of(byte[])}, this
-     * method makes a copy of the {@link ByteBuf}.
+     * Creates a new instance from the specified {@link ByteBuf} by first copying it's content. The reference
+     * count of {@link ByteBuf} will not be changed.
      *
-     * @return a new {@link HttpData}. {@link #EMPTY_DATA} if the readable bytes of {@code buf} is 0.
+     * @deprecated Use {@link #copyOf(ByteBuf)}.
      */
+    @Deprecated
     static HttpData of(ByteBuf buf) {
-        requireNonNull(buf, "buf");
-        if (!buf.isReadable()) {
-            return EMPTY_DATA;
-        }
-        return of(ByteBufUtil.getBytes(buf));
+        return copyOf(buf);
     }
 
     /**
@@ -158,7 +254,7 @@ public interface HttpData extends HttpObject {
             return EMPTY_DATA;
         }
 
-        return of(String.format(Locale.ENGLISH, format, args).getBytes(charset));
+        return wrap(String.format(Locale.ENGLISH, format, args).getBytes(charset));
     }
 
     /**
@@ -237,9 +333,14 @@ public interface HttpData extends HttpObject {
     byte[] array();
 
     /**
-     * Returns the start offset of the {@link #array()}.
+     * Returns {@code 0}.
+     *
+     * @deprecated The offset of {@link HttpData} is always {@code 0}.
      */
-    int offset();
+    @Deprecated
+    default int offset() {
+        return 0;
+    }
 
     /**
      * Returns the length of this data.
@@ -262,7 +363,7 @@ public interface HttpData extends HttpObject {
      */
     default String toString(Charset charset) {
         requireNonNull(charset, "charset");
-        return new String(array(), offset(), length(), charset);
+        return new String(array(), charset);
     }
 
     /**
@@ -287,7 +388,7 @@ public interface HttpData extends HttpObject {
      * Returns a new {@link InputStream} that is sourced from this data.
      */
     default InputStream toInputStream() {
-        return new FastByteArrayInputStream(array(), offset(), length());
+        return new FastByteArrayInputStream(array());
     }
 
     /**

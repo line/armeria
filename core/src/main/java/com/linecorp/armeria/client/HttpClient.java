@@ -220,7 +220,7 @@ public interface HttpClient extends ClientBuilderParams {
      * Sends an HTTP request with the specified headers and content.
      */
     default HttpResponse execute(RequestHeaders headers, byte[] content) {
-        return execute(AggregatedHttpRequest.of(headers, HttpData.of(content)));
+        return execute(AggregatedHttpRequest.of(headers, HttpData.wrap(content)));
     }
 
     /**

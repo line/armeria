@@ -156,7 +156,7 @@ public class ReactiveWebServerAutoConfigurationTest {
             final AggregatedHttpResponse res2 =
                     client.execute(RequestHeaders.of(HttpMethod.POST, "/route2",
                                                      HttpHeaderNames.CONTENT_TYPE, JSON_UTF_8),
-                                   HttpData.of("{\"a\":1}".getBytes())).aggregate().join();
+                                   HttpData.wrap("{\"a\":1}".getBytes())).aggregate().join();
             assertThatJson(res2.contentUtf8()).isArray()
                                               .ofLength(1)
                                               .thatContains("route");
@@ -172,7 +172,7 @@ public class ReactiveWebServerAutoConfigurationTest {
             assertThat(client.execute(
                     RequestHeaders.of(HttpMethod.POST, "/route2",
                                       HttpHeaderNames.CONTENT_TYPE, PLAIN_TEXT_UTF_8),
-                    HttpData.of("text".getBytes())).aggregate().join().status())
+                    HttpData.wrap("text".getBytes())).aggregate().join().status())
                     .isEqualTo(HttpStatus.NOT_FOUND);
         });
     }

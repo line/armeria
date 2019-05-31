@@ -82,6 +82,6 @@ public class StringResponseConverterFunction implements ResponseConverterFunctio
         } else {
             target = value;
         }
-        return HttpData.of(String.valueOf(target).getBytes(charset));
+        return HttpData.wrap(String.valueOf(target).getBytes(charset));
     }
 }

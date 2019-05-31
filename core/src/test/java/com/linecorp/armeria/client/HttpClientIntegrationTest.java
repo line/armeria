@@ -142,7 +142,7 @@ class HttpClientIntegrationTest {
                 public void onNext(HttpObject httpObject) {
                     if (httpObject instanceof ByteBufHolder) {
                         try {
-                            decorated.write(HttpData.of(((ByteBufHolder) httpObject).content()));
+                            decorated.write(HttpData.copyOf(((ByteBufHolder) httpObject).content()));
                         } finally {
                             ReferenceCountUtil.safeRelease(httpObject);
                         }

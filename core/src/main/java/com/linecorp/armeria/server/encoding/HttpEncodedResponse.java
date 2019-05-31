@@ -126,9 +126,9 @@ class HttpEncodedResponse extends FilteredHttpResponse {
         final HttpData data = (HttpData) obj;
         assert encodedStream != null;
         try {
-            encodingStream.write(data.array(), data.offset(), data.length());
+            encodingStream.write(data.array());
             encodingStream.flush();
-            return HttpData.of(encodedStream.toByteArray());
+            return HttpData.wrap(encodedStream.toByteArray());
         } catch (IOException e) {
             throw new IllegalStateException(
                     "Error encoding HttpData, this should not happen with byte arrays.",
@@ -142,7 +142,7 @@ class HttpEncodedResponse extends FilteredHttpResponse {
     protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
         closeEncoder();
         if (encodedStream != null && encodedStream.size() > 0) {
-            subscriber.onNext(HttpData.of(encodedStream.toByteArray()));
+            subscriber.onNext(HttpData.wrap(encodedStream.toByteArray()));
         }
     }
 

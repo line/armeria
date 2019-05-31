@@ -129,7 +129,8 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     }
 
     /**
-     * Creates a new HTTP request and closes the stream.
+     * Creates a new HTTP request and closes the stream. The {@code content} will be wrapped using
+     * {@link HttpData#wrap(byte[])}, so any changes made to {@code content} will be reflected in the request.
      *
      * @param method the HTTP method of the request
      * @param path the path of the request
@@ -138,23 +139,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      */
     static HttpRequest of(HttpMethod method, String path, MediaType mediaType, byte[] content) {
         requireNonNull(content, "content");
-        return of(method, path, mediaType, HttpData.of(content));
-    }
-
-    /**
-     * Creates a new HTTP request and closes the stream.
-     *
-     * @param method the HTTP method of the request
-     * @param path the path of the request
-     * @param mediaType the {@link MediaType} of the request content
-     * @param content the content of the request
-     * @param offset the start offset of {@code content}
-     * @param length the length of {@code content}
-     */
-    static HttpRequest of(
-            HttpMethod method, String path, MediaType mediaType, byte[] content, int offset, int length) {
-        requireNonNull(content, "content");
-        return of(method, path, mediaType, HttpData.of(content, offset, length));
+        return of(method, path, mediaType, HttpData.wrap(content));
     }
 
     /**
