@@ -32,10 +32,10 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.server.ServiceWithPathMappings;
+import com.linecorp.armeria.server.ServiceWithRoutes;
 import com.linecorp.armeria.server.auth.Authorizer;
 
 /**
@@ -58,7 +58,7 @@ public final class SamlServiceProvider {
 
     private final SamlPortConfigAutoFiller portConfigAutoFiller;
 
-    private final PathMapping metadataPath;
+    private final Route metadataRoute;
 
     private final Map<String, SamlIdentityProviderConfig> idpConfigs;
     @Nullable
@@ -100,7 +100,7 @@ public final class SamlServiceProvider {
         this.encryptionCredential = requireNonNull(encryptionCredential, "encryptionCredential");
         this.signatureAlgorithm = requireNonNull(signatureAlgorithm, "signatureAlgorithm");
         this.portConfigAutoFiller = requireNonNull(portConfigAutoFiller, "portConfigAutoFiller");
-        this.metadataPath = PathMapping.ofExact(requireNonNull(metadataPath, "metadataPath"));
+        metadataRoute = Route.builder().exact(requireNonNull(metadataPath, "metadataPath")).build();
         this.idpConfigs = ImmutableMap.copyOf(requireNonNull(idpConfigs, "idpConfigs"));
         this.defaultIdpConfig = defaultIdpConfig;
         this.idpConfigSelector = requireNonNull(idpConfigSelector, "idpConfigSelector");
@@ -169,10 +169,10 @@ public final class SamlServiceProvider {
     }
 
     /**
-     * A path for returning the metadata of the service provider.
+     * A {@link Route} for returning the metadata of the service provider.
      */
-    PathMapping metadataPath() {
-        return metadataPath;
+    Route metadataRoute() {
+        return metadataRoute;
     }
 
     /**
@@ -250,7 +250,7 @@ public final class SamlServiceProvider {
     /**
      * Creates a {@link Service} which handles SAML messages.
      */
-    public ServiceWithPathMappings<HttpRequest, HttpResponse> newSamlService() {
+    public ServiceWithRoutes<HttpRequest, HttpResponse> newSamlService() {
         return new SamlService(this);
     }
 }

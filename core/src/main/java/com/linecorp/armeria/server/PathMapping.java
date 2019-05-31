@@ -15,23 +15,10 @@
  */
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.PathMappingUtil.EXACT;
-import static com.linecorp.armeria.internal.PathMappingUtil.GLOB;
-import static com.linecorp.armeria.internal.PathMappingUtil.PREFIX;
-import static com.linecorp.armeria.internal.PathMappingUtil.REGEX;
-import static java.util.Objects.requireNonNull;
-
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.regex.Pattern;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
-
-import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.server.docs.DocService;
+import javax.annotation.Nullable;
 
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Tag;
@@ -39,142 +26,18 @@ import io.micrometer.core.instrument.Tag;
 /**
  * Matches the absolute path part of a URI and extracts path parameters from it.
  */
-public interface PathMapping {
-
-    /**
-     * Creates a new {@link PathMapping} that matches the specified {@code pathPattern}. e.g.
-     * <ul>
-     *   <li>{@code /login} (no path parameters)</li>
-     *   <li>{@code /users/{userId}} (curly-brace style)</li>
-     *   <li>{@code /list/:productType/by/:ordering} (colon style)</li>
-     *   <li>{@code exact:/foo/bar} (exact match)</li>
-     *   <li>{@code prefix:/files} (prefix match)</li>
-     *   <li><code>glob:/~&#42;/downloads/**</code> (glob pattern)</li>
-     *   <li>{@code regex:^/files/(?<filePath>.*)$} (regular expression)</li>
-     * </ul>
-     *
-     * @throws IllegalArgumentException if the specified path pattern is invalid
-     */
-    static PathMapping of(String pathPattern) {
-        requireNonNull(pathPattern, "pathPattern");
-
-        if (pathPattern.startsWith(EXACT)) {
-            return ofExact(pathPattern.substring(EXACT.length()));
-        }
-        if (pathPattern.startsWith(PREFIX)) {
-            return ofPrefix(pathPattern.substring(PREFIX.length()));
-        }
-        if (pathPattern.startsWith(GLOB)) {
-            return ofGlob(pathPattern.substring(GLOB.length()));
-        }
-        if (pathPattern.startsWith(REGEX)) {
-            return ofRegex(pathPattern.substring(REGEX.length()));
-        }
-        if (!pathPattern.startsWith("/")) {
-            throw new IllegalArgumentException(
-                    "pathPattern: " + pathPattern + " (not an absolute path or a unknown pattern type)");
-        }
-        if (!pathPattern.contains("{") && !pathPattern.contains(":")) {
-            return ofExact(pathPattern);
-        }
-        return new DefaultPathMapping(pathPattern);
-    }
-
-    /**
-     * Creates a new {@link PathMapping} that matches a {@linkplain ServiceRequestContext#path() path} with
-     * the specified regular expression and extracts the values of the named groups.
-     * e.g. {@code "^/users/(?<userId>[0-9]+)$"} will extract the second numeric part of the path into
-     *      the {@code "userId"} path parameter.
-     */
-    static PathMapping ofRegex(Pattern regex) {
-        return new RegexPathMapping(regex);
-    }
-
-    /**
-     * Creates a new {@link PathMapping} that matches a {@linkplain ServiceRequestContext#path() path} with
-     * the specified regular expression and extracts the values of the named groups.
-     * e.g. {@code "^/users/(?<userId>[0-9]+)$"} will extract the second numeric part of the path into
-     *      the {@code "userId"} path parameter.
-     */
-    static PathMapping ofRegex(String regex) {
-        return ofRegex(Pattern.compile(requireNonNull(regex, "regex")));
-    }
-
-    /**
-     * Creates a new {@link PathMapping} that matches a {@linkplain ServiceRequestContext#path() path} with
-     * the specified glob expression, where {@code "*"} matches a path component non-recursively and
-     * {@code "**"} matches path components recursively.
-     */
-    static PathMapping ofGlob(String glob) {
-        requireNonNull(glob, "glob");
-        if (glob.startsWith("/") && !glob.contains("*")) {
-            // Does not have a pattern matcher.
-            return ofExact(glob);
-        }
-
-        return new GlobPathMapping(glob);
-    }
-
-    /**
-     * Creates a new {@link PathMapping} that matches a {@linkplain ServiceRequestContext#path() path}
-     * under the specified directory prefix. It also removes the specified directory prefix from the matched
-     * path so that {@link ServiceRequestContext#path()} does not have the specified directory prefix.
-     * For example, when {@code pathPrefix} is {@code "/foo/"}:
-     * <ul>
-     *   <li>{@code "/foo/"} translates to {@code "/"}</li>
-     *   <li>{@code "/foo/bar"} translates to  {@code "/bar"}</li>
-     *   <li>{@code "/foo/bar/baz"} translates to {@code "/bar/baz"}</li>
-     * </ul>
-     * This method is a shortcut to {@link #ofPrefix(String, boolean) ofPrefix(pathPrefix, true)}.
-     */
-    static PathMapping ofPrefix(String pathPrefix) {
-        return ofPrefix(pathPrefix, true);
-    }
-
-    /**
-     * Creates a new {@link PathMapping} that matches a {@linkplain ServiceRequestContext#path() path}
-     * under the specified directory prefix. When {@code stripPrefix} is {@code true}, it also removes the
-     * specified directory prefix from the matched path so that {@link ServiceRequestContext#path()}
-     * does not have the specified directory prefix. For example, when {@code pathPrefix} is {@code "/foo/"}:
-     * <ul>
-     *   <li>{@code "/foo/"} translates to {@code "/"}</li>
-     *   <li>{@code "/foo/bar"} translates to  {@code "/bar"}</li>
-     *   <li>{@code "/foo/bar/baz"} translates to {@code "/bar/baz"}</li>
-     * </ul>
-     */
-    static PathMapping ofPrefix(String pathPrefix, boolean stripPrefix) {
-        requireNonNull(pathPrefix, "pathPrefix");
-        if ("/".equals(pathPrefix)) {
-            // Every path starts with '/'.
-            return ofCatchAll();
-        }
-
-        return new PrefixPathMapping(pathPrefix, stripPrefix);
-    }
-
-    /**
-     * Creates a new {@link PathMapping} that performs an exact match.
-     */
-    static PathMapping ofExact(String exactPath) {
-        return new ExactPathMapping(exactPath);
-    }
-
-    /**
-     * Returns a singleton {@link PathMapping} that always matches any path.
-     */
-    static PathMapping ofCatchAll() {
-        return CatchAllPathMapping.INSTANCE;
-    }
+interface PathMapping {
 
     /**
      * Matches the specified {@code path} and extracts the path parameters from it.
      *
-     * @param mappingCtx a context to find the {@link Service}.
+     * @param routingCtx a context to find the {@link Service}.
      *
-     * @return a non-empty {@link PathMappingResult} if the specified {@code path} matches this mapping.
-     *         {@link PathMappingResult#empty()} if not matches.
+     * @return a non-empty {@link RoutingResultBuilder} if the specified {@code path} matches this mapping.
+     *         {@code null} otherwise.
      */
-    PathMappingResult apply(PathMappingContext mappingCtx);
+    @Nullable
+    RoutingResultBuilder apply(RoutingContext routingCtx);
 
     /**
      * Returns the names of the path parameters extracted by this mapping.
@@ -189,100 +52,38 @@ public interface PathMapping {
     String loggerName();
 
     /**
-     * Returns the value of the {@code "pathMapping"} {@link Tag} in a {@link Meter}.
+     * Returns the value of the {@link Tag} in a {@link Meter} of this {@link PathMapping}.
      */
     String meterTag();
 
     /**
-     * Returns the exact path of this path mapping if it is an exact path mapping, or {@link Optional#empty}
-     * otherwise. This can be useful for services which provide logic after scanning the server's mapped
-     * services, e.g. {@link DocService}
+     * Returns the exact path of this {@link PathMapping} if this is an exact path mapping,
+     * {@link Optional#empty()} otherwise.
      */
     Optional<String> exactPath();
 
     /**
-     * Returns the prefix of this path mapping if it is a prefix mapping or a prefix adding path mapping,
-     * {@link Optional#empty} otherwise. This can be useful for services which provide logic after scanning
-     * the server's mapped services, e.g. {@link DocService}
+     * Returns the prefix of this {@link PathMapping} if this is a {@link PrefixPathMapping} or a
+     * {@link PathMappingWithPrefix}, {@link Optional#empty()} otherwise.
      *
      * @return the prefix that ends with '/' if this mapping is a prefix mapping
      */
     Optional<String> prefix();
 
     /**
-     * Returns the path of this path mapping if it is able to be added to a trie.
+     * Returns the trie path of this {@link PathMapping} if this has a trie matching condition,
+     * {@link Optional#empty()} otherwise.
      */
     default Optional<String> triePath() {
         return Optional.empty();
     }
 
     /**
-     * Returns the regular expression of this path mapping if it is created with the regular expression or
-     * glob pattern. Please note that this regex does not include the {@code pathPrefix} if this is
-     * created with prefix adding path mapping. You should call {@link #prefix()} to retrieve that.
+     * Returns the regular expression of this {@link PathMapping} if this is created with the regular
+     * expression or glob pattern. Please note that this regex does not include the {@code pathPrefix} if
+     * this is {@link PathMappingWithPrefix}. You should call {@link #prefix()} to retrieve that.
      */
     default Optional<String> regex() {
         return Optional.empty();
     }
-
-    /**
-     * Returns the complexity of this path mapping. It would be increased if this path mapping has
-     * more conditions to check.
-     */
-    default int complexity() {
-        return 0;
-    }
-
-    /**
-     * Returns the {@link Set} of {@link HttpMethod}s that this {@link PathMapping} supports.
-     */
-    default Set<HttpMethod> supportedMethods() {
-        return ImmutableSet.of();
-    }
-
-    /**
-     * Returns the {@link List} of {@link MediaType}s that this {@link PathMapping} consumes.
-     */
-    default List<MediaType> consumeTypes() {
-        return ImmutableList.of();
-    }
-
-    /**
-     * Returns the {@link List} of {@link MediaType}s that this {@link PathMapping} produces.
-     */
-    default List<MediaType> produceTypes() {
-        return ImmutableList.of();
-    }
-
-    /**
-     * Creates a new {@link PathMapping} that matches a {@linkplain ServiceRequestContext#path() path} using
-     * the specified {@link PathMapping} and checks whether the request is valid using the specified
-     * {@code supportedMethods}, {@code consumeTypes} and {@code produceTypes}.
-     *
-     * @param supportedMethods the set of {@link HttpMethod}s that this {@link PathMapping} supports
-     * @param consumeTypes the list of {@link MediaType}s that this {@link PathMapping} consumes
-     * @param produceTypes the list of {@link MediaType}s that this {@link PathMapping} produces
-     *
-     * @throws IllegalArgumentException if the {@link PathMapping} has conditions beyond the path pattern,
-     *                                  i.e. the {@link PathMapping} created by
-     *                                  {@link #withHttpHeaderInfo(Set, List, List)}
-     */
-    default PathMapping withHttpHeaderInfo(Set<HttpMethod> supportedMethods,
-                                           List<MediaType> consumeTypes, List<MediaType> produceTypes) {
-        if (!hasPathPatternOnly()) {
-            throw new IllegalArgumentException(
-                    "pathMapping: " + getClass().getSimpleName() +
-                    " (expected: the path mapping which has only the path patterns as its condition)");
-        }
-
-        return new HttpHeaderPathMapping(this, supportedMethods, consumeTypes, produceTypes);
-    }
-
-    /**
-     * Returns {@code true} if this {@link PathMapping} has only the path patterns as its condition.
-     * For example, the {@link PathMapping} created by {@link #withHttpHeaderInfo(Set, List, List)} has
-     * more conditions for mapping a path, such as HTTP methods, consumable types and producible types.
-     * In that case, {@code false} must be returned.
-     */
-    boolean hasPathPatternOnly();
 }

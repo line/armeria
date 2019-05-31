@@ -48,8 +48,6 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.MediaTypeSet;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
@@ -81,7 +79,7 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
  * <p>Call {@link #and()} method and return to {@link ServerBuilder}.
  *
  * @see ServerBuilder
- * @see PathMapping
+ * @see Route
  */
 public final class VirtualHostBuilder {
 
@@ -110,7 +108,7 @@ public final class VirtualHostBuilder {
     private Function<VirtualHost, Logger> accessLoggerMapper;
 
     @Nullable
-    private RejectedPathMappingHandler rejectedPathMappingHandler;
+    private RejectedRouteHandler rejectedRouteHandler;
     @Nullable
     private Long requestTimeoutMillis;
     @Nullable
@@ -341,7 +339,7 @@ public final class VirtualHostBuilder {
      */
     public VirtualHostBuilder serviceUnder(String pathPrefix,
                                            Service<HttpRequest, HttpResponse> service) {
-        service(PathMapping.ofPrefix(pathPrefix), service);
+        service(Route.builder().prefix(pathPrefix).build(), service);
         return this;
     }
 
@@ -361,48 +359,48 @@ public final class VirtualHostBuilder {
      */
     public VirtualHostBuilder service(String pathPattern,
                                       Service<HttpRequest, HttpResponse> service) {
-        service(PathMapping.of(pathPattern), service);
+        service(Route.builder().path(pathPattern).build(), service);
         return this;
     }
 
     /**
-     * Binds the specified {@link Service} at the specified {@link PathMapping}.
+     * Binds the specified {@link Service} at the specified {@link Route}.
      */
-    public VirtualHostBuilder service(PathMapping pathMapping,
+    public VirtualHostBuilder service(Route route,
                                       Service<HttpRequest, HttpResponse> service) {
-        serviceConfigBuilders.add(new ServiceConfigBuilder(pathMapping, service));
+        serviceConfigBuilders.add(new ServiceConfigBuilder(route, service));
         return this;
     }
 
     /**
-     * Binds the specified {@link Service} at the specified {@link PathMapping}.
+     * Binds the specified {@link Service} at the specified {@link Route}.
      *
      * @deprecated Use a logging framework integration such as {@code RequestContextExportingAppender} in
      *             {@code armeria-logback}.
      */
     @Deprecated
-    public VirtualHostBuilder service(PathMapping pathMapping,
-                                      Service<HttpRequest, HttpResponse> service, String loggerName) {
-        serviceConfigBuilders.add(new ServiceConfigBuilder(pathMapping, service).loggerName(loggerName));
+    VirtualHostBuilder service(Route route, Service<HttpRequest, HttpResponse> service,
+                               String loggerName) {
+        serviceConfigBuilders.add(new ServiceConfigBuilder(route, service).loggerName(loggerName));
         return this;
     }
 
     /**
-     * Decorates and binds the specified {@link ServiceWithPathMappings} at multiple {@link PathMapping}s
+     * Decorates and binds the specified {@link ServiceWithRoutes} at multiple {@link Route}s
      * of the default {@link VirtualHost}.
      *
-     * @param serviceWithPathMappings the {@link ServiceWithPathMappings}.
+     * @param serviceWithRoutes the {@link ServiceWithRoutes}.
      * @param decorators the decorator functions, which will be applied in the order specified.
      */
     public VirtualHostBuilder service(
-            ServiceWithPathMappings<HttpRequest, HttpResponse> serviceWithPathMappings,
+            ServiceWithRoutes<HttpRequest, HttpResponse> serviceWithRoutes,
             Iterable<Function<? super Service<HttpRequest, HttpResponse>,
                     ? extends Service<HttpRequest, HttpResponse>>> decorators) {
-        requireNonNull(serviceWithPathMappings, "serviceWithPathMappings");
-        requireNonNull(serviceWithPathMappings.pathMappings(), "serviceWithPathMappings.pathMappings()");
+        requireNonNull(serviceWithRoutes, "serviceWithRoutes");
+        requireNonNull(serviceWithRoutes.routes(), "serviceWithRoutes.routes()");
         requireNonNull(decorators, "decorators");
 
-        Service<HttpRequest, HttpResponse> decorated = serviceWithPathMappings;
+        Service<HttpRequest, HttpResponse> decorated = serviceWithRoutes;
         for (Function<? super Service<HttpRequest, HttpResponse>,
                 ? extends Service<HttpRequest, HttpResponse>> d : decorators) {
             checkNotNull(d, "decorators contains null: %s", decorators);
@@ -411,23 +409,23 @@ public final class VirtualHostBuilder {
         }
 
         final Service<HttpRequest, HttpResponse> finalDecorated = decorated;
-        serviceWithPathMappings.pathMappings().forEach(pathMapping -> service(pathMapping, finalDecorated));
+        serviceWithRoutes.routes().forEach(route -> service(route, finalDecorated));
         return this;
     }
 
     /**
-     * Decorates and binds the specified {@link ServiceWithPathMappings} at multiple {@link PathMapping}s
+     * Decorates and binds the specified {@link ServiceWithRoutes} at multiple {@link Route}s
      * of the default {@link VirtualHost}.
      *
-     * @param serviceWithPathMappings the {@link ServiceWithPathMappings}.
+     * @param serviceWithRoutes the {@link ServiceWithRoutes}.
      * @param decorators the decorator functions, which will be applied in the order specified.
      */
     @SafeVarargs
     public final VirtualHostBuilder service(
-            ServiceWithPathMappings<HttpRequest, HttpResponse> serviceWithPathMappings,
+            ServiceWithRoutes<HttpRequest, HttpResponse> serviceWithRoutes,
             Function<? super Service<HttpRequest, HttpResponse>,
                     ? extends Service<HttpRequest, HttpResponse>>... decorators) {
-        return service(serviceWithPathMappings, ImmutableList.copyOf(requireNonNull(decorators, "decorators")));
+        return service(serviceWithRoutes, ImmutableList.copyOf(requireNonNull(decorators, "decorators")));
     }
 
     /**
@@ -551,7 +549,7 @@ public final class VirtualHostBuilder {
             if (s != e.service()) {
                 s = e.service().exceptionHandlingDecorator().apply(s);
             }
-            service(e.pathMapping(), s);
+            service(e.route(), s);
         });
         return this;
     }
@@ -612,12 +610,12 @@ public final class VirtualHostBuilder {
     }
 
     /**
-     * Sets the {@link RejectedPathMappingHandler} which will be invoked when an attempt to bind
-     * a {@link Service} at a certain {@link PathMapping} is rejected. If not set,
-     * {@link ServerBuilder#rejectedPathMappingHandler()} is used.
+     * Sets the {@link RejectedRouteHandler} which will be invoked when an attempt to bind
+     * a {@link Service} at a certain {@link Route} is rejected. If not set,
+     * {@link ServerBuilder#rejectedRouteHandler()} is used.
      */
-    public VirtualHostBuilder rejectedPathMappingHandler(RejectedPathMappingHandler handler) {
-        rejectedPathMappingHandler = requireNonNull(handler, "handler");
+    public VirtualHostBuilder rejectedRouteHandler(RejectedRouteHandler handler) {
+        rejectedRouteHandler = requireNonNull(handler, "handler");
         return this;
     }
 
@@ -757,9 +755,9 @@ public final class VirtualHostBuilder {
         final ContentPreviewerFactory responseContentPreviewerFactory =
                 this.responseContentPreviewerFactory != null ?
                 this.responseContentPreviewerFactory : serverBuilder.responseContentPreviewerFactory();
-        final RejectedPathMappingHandler rejectedPathMappingHandler =
-                this.rejectedPathMappingHandler != null ?
-                this.rejectedPathMappingHandler : serverBuilder.rejectedPathMappingHandler();
+        final RejectedRouteHandler rejectedRouteHandler =
+                this.rejectedRouteHandler != null ?
+                this.rejectedRouteHandler : serverBuilder.rejectedRouteHandler();
 
         final List<ServiceConfig> serviceConfigs = serviceConfigBuilders.stream().map(cfgBuilder -> {
             if (cfgBuilder.requestTimeoutMillis() == null) {
@@ -780,12 +778,6 @@ public final class VirtualHostBuilder {
             return cfgBuilder.build();
         }).collect(toImmutableList());
 
-        // TODO(minwoox) Remove producibleTypes once it's confirmed that nobody uses this.
-        final List<MediaType> producibleTypes = new ArrayList<>();
-
-        // Collect producible media types over this virtual host.
-        serviceConfigs.forEach(s -> producibleTypes.addAll(s.pathMapping().produceTypes()));
-
         if (sslContext == null && tlsSelfSigned) {
             try {
                 final SelfSignedCertificate ssc = new SelfSignedCertificate(defaultHostname);
@@ -800,7 +792,7 @@ public final class VirtualHostBuilder {
 
         final VirtualHost virtualHost =
                 new VirtualHost(defaultHostname, hostnamePattern, sslContext, serviceConfigs,
-                                new MediaTypeSet(producibleTypes), rejectedPathMappingHandler,
+                                rejectedRouteHandler,
                                 accessLoggerMapper, requestTimeout, maxRequest,
                                 verboseResponses, requestContentPreviewerFactory,
                                 responseContentPreviewerFactory);
@@ -817,7 +809,7 @@ public final class VirtualHostBuilder {
                           .add("tlsSelfSigned", tlsSelfSigned)
                           .add("decorator", decorator)
                           .add("accessLoggerMapper", accessLoggerMapper)
-                          .add("rejectedPathMappingHandler", rejectedPathMappingHandler)
+                          .add("rejectedRouteHandler", rejectedRouteHandler)
                           .add("requestTimeoutMillis", requestTimeoutMillis)
                           .add("maxRequestLength", maxRequestLength)
                           .add("verboseResponses", verboseResponses)

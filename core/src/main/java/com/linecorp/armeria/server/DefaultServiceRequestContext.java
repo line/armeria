@@ -69,8 +69,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
     private final Channel ch;
     private final ServiceConfig cfg;
-    private final PathMappingContext pathMappingContext;
-    private final PathMappingResult pathMappingResult;
+    private final RoutingContext routingContext;
+    private final RoutingResult routingResult;
     @Nullable
     private final SSLSession sslSession;
 
@@ -108,8 +108,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      * @param ch the {@link Channel} that handles the invocation
      * @param meterRegistry the {@link MeterRegistry} that collects various stats
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
-     * @param pathMappingContext the parameters which are used when finding a matched {@link PathMapping}
-     * @param pathMappingResult the result of finding a matched {@link PathMapping}
+     * @param routingContext the parameters which are used when finding a matched {@link Route}
+     * @param routingResult the result of finding a matched {@link Route}
      * @param request the request associated with this context
      * @param sslSession the {@link SSLSession} for this invocation if it is over TLS
      * @param proxiedAddresses source and destination addresses retrieved from PROXY protocol header
@@ -117,10 +117,10 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      */
     public DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            PathMappingContext pathMappingContext, PathMappingResult pathMappingResult, HttpRequest request,
+            RoutingContext routingContext, RoutingResult routingResult, HttpRequest request,
             @Nullable SSLSession sslSession, @Nullable ProxiedAddresses proxiedAddresses,
             InetAddress clientAddress) {
-        this(cfg, ch, meterRegistry, sessionProtocol, pathMappingContext, pathMappingResult, request,
+        this(cfg, ch, meterRegistry, sessionProtocol, routingContext, routingResult, request,
              sslSession, proxiedAddresses, clientAddress, false, 0, 0);
     }
 
@@ -131,8 +131,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      * @param ch the {@link Channel} that handles the invocation
      * @param meterRegistry the {@link MeterRegistry} that collects various stats
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
-     * @param pathMappingContext the parameters which are used when finding a matched {@link PathMapping}
-     * @param pathMappingResult the result of finding a matched {@link PathMapping}
+     * @param routingContext the parameters which are used when finding a matched {@link Route}
+     * @param routingResult the result of finding a matched {@link Route}
      * @param request the request associated with this context
      * @param sslSession the {@link SSLSession} for this invocation if it is over TLS
      * @param proxiedAddresses source and destination addresses retrieved from PROXY protocol header
@@ -143,29 +143,29 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      */
     public DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            PathMappingContext pathMappingContext, PathMappingResult pathMappingResult, HttpRequest request,
+            RoutingContext routingContext, RoutingResult routingResult, HttpRequest request,
             @Nullable SSLSession sslSession, @Nullable ProxiedAddresses proxiedAddresses,
             InetAddress clientAddress, long requestStartTimeNanos, long requestStartTimeMicros) {
-        this(cfg, ch, meterRegistry, sessionProtocol, pathMappingContext, pathMappingResult, request,
+        this(cfg, ch, meterRegistry, sessionProtocol, routingContext, routingResult, request,
              sslSession, proxiedAddresses, clientAddress, true, requestStartTimeNanos, requestStartTimeMicros);
     }
 
     private DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            PathMappingContext pathMappingContext, PathMappingResult pathMappingResult, HttpRequest request,
+            RoutingContext routingContext, RoutingResult routingResult, HttpRequest request,
             @Nullable SSLSession sslSession, @Nullable ProxiedAddresses proxiedAddresses,
             InetAddress clientAddress, boolean requestStartTimeSet, long requestStartTimeNanos,
             long requestStartTimeMicros) {
 
         super(meterRegistry, sessionProtocol,
-              requireNonNull(pathMappingContext, "pathMappingContext").method(), pathMappingContext.path(),
-              requireNonNull(pathMappingResult, "pathMappingResult").query(),
+              requireNonNull(routingContext, "routingContext").method(), routingContext.path(),
+              requireNonNull(routingResult, "routingResult").query(),
               request);
 
         this.ch = requireNonNull(ch, "ch");
         this.cfg = requireNonNull(cfg, "cfg");
-        this.pathMappingContext = pathMappingContext;
-        this.pathMappingResult = pathMappingResult;
+        this.routingContext = routingContext;
+        this.routingResult = routingResult;
         this.sslSession = sslSession;
         this.proxiedAddresses = proxiedAddresses;
         this.clientAddress = requireNonNull(clientAddress, "clientAddress");
@@ -193,7 +193,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     private RequestContextAwareLogger newLogger(ServiceConfig cfg) {
         String loggerName = cfg.loggerName().orElse(null);
         if (loggerName == null) {
-            loggerName = cfg.pathMapping().loggerName();
+            loggerName = cfg.route().loggerName();
         }
 
         return new RequestContextAwareLogger(this, LoggerFactory.getLogger(
@@ -239,8 +239,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     @Override
     public ServiceRequestContext newDerivedContext(Request request) {
         final DefaultServiceRequestContext ctx = new DefaultServiceRequestContext(
-                cfg, ch, meterRegistry(), sessionProtocol(), pathMappingContext,
-                pathMappingResult, (HttpRequest) request, sslSession(), proxiedAddresses(), clientAddress);
+                cfg, ch, meterRegistry(), sessionProtocol(), routingContext,
+                routingResult, (HttpRequest) request, sslSession(), proxiedAddresses(), clientAddress);
 
         final HttpHeaders additionalHeaders = additionalResponseHeaders();
         if (!additionalHeaders.isEmpty()) {
@@ -312,18 +312,18 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     }
 
     @Override
-    public PathMapping pathMapping() {
-        return cfg.pathMapping();
+    public Route route() {
+        return cfg.route();
     }
 
     @Override
-    public PathMappingContext pathMappingContext() {
-        return pathMappingContext;
+    public RoutingContext routingContext() {
+        return routingContext;
     }
 
     @Override
     public Map<String, String> pathParams() {
-        return pathMappingResult.pathParams();
+        return routingResult.pathParams();
     }
 
     @Override
@@ -342,18 +342,18 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
     @Override
     public String mappedPath() {
-        return pathMappingResult.path();
+        return routingResult.path();
     }
 
     @Override
     public String decodedMappedPath() {
-        return pathMappingResult.decodedPath();
+        return routingResult.decodedPath();
     }
 
     @Nullable
     @Override
     public MediaType negotiatedResponseMediaType() {
-        return pathMappingResult.negotiatedResponseMediaType();
+        return routingResult.negotiatedResponseMediaType();
     }
 
     @Override

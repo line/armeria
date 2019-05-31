@@ -137,7 +137,7 @@ public interface Service<I extends Request, O extends Response> {
      * Returns whether the given {@code path} and {@code query} should be cached if the service's result is
      * successful. By default, exact path mappings with no input query are cached.
      */
-    default boolean shouldCachePath(String path, @Nullable String query, PathMapping pathMapping) {
-        return pathMapping.exactPath().isPresent() && query == null;
+    default boolean shouldCachePath(String path, @Nullable String query, Route route) {
+        return route.exactPath().isPresent() && query == null;
     }
 }

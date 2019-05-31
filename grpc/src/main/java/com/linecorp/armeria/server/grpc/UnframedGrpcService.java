@@ -43,10 +43,10 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Listener
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.internal.grpc.GrpcStatus;
-import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.ServiceWithPathMappings;
+import com.linecorp.armeria.server.ServiceWithRoutes;
 import com.linecorp.armeria.server.SimpleDecoratingService;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
@@ -74,7 +74,7 @@ import io.netty.buffer.ByteBufHolder;
  * </ul>
  */
 class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpResponse>
-        implements ServiceWithPathMappings<HttpRequest, HttpResponse> {
+        implements ServiceWithRoutes<HttpRequest, HttpResponse> {
 
     private static final char LINE_SEPARATOR = '\n';
 
@@ -284,7 +284,7 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
     }
 
     @Override
-    public Set<PathMapping> pathMappings() {
-        return delegateGrpcService.pathMappings();
+    public Set<Route> routes() {
+        return delegateGrpcService.routes();
     }
 }

@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.server.DefaultPathMappingContext.compareMediaType;
-import static com.linecorp.armeria.server.DefaultPathMappingContext.extractAcceptTypes;
+import static com.linecorp.armeria.server.DefaultRoutingContext.compareMediaType;
+import static com.linecorp.armeria.server.DefaultRoutingContext.extractAcceptTypes;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
@@ -25,7 +25,7 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 
@@ -35,10 +35,10 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 
-public class PathMappingContextTest {
+class RoutingContextTest {
 
     @Test
-    public void testAcceptTypes() {
+    void testAcceptTypes() {
         final HttpHeaders headers = HttpHeaders.of(
                 HttpHeaderNames.ACCEPT,
                 "application/xml;q=0.9, " +
@@ -53,7 +53,7 @@ public class PathMappingContextTest {
     }
 
     @Test
-    public void testCompareMediaTypes() {
+    void testCompareMediaTypes() {
         // Sort by their quality factor.
         assertThat(compareMediaType(MediaType.parse("application/octet-stream;q=0.8"),
                                     MediaType.parse("text/plain;q=0.9")))
@@ -69,53 +69,53 @@ public class PathMappingContextTest {
     }
 
     @Test
-    public void testEquals() {
+    void testEquals() {
         final VirtualHost virtualHost = virtualHost();
 
-        PathMappingContext ctx1;
-        PathMappingContext ctx2;
-        final PathMappingContext ctx3;
+        RoutingContext ctx1;
+        RoutingContext ctx2;
+        final RoutingContext ctx3;
 
-        ctx1 = new DefaultPathMappingContext(virtualHost, "example.com",
-                                             HttpMethod.GET, "/hello", null,
-                                             MediaType.JSON_UTF_8,
-                                             ImmutableList.of(MediaType.JSON_UTF_8, MediaType.XML_UTF_8),
-                                             false);
-        ctx2 = new DefaultPathMappingContext(virtualHost, "example.com",
-                                             HttpMethod.GET, "/hello", null,
-                                             MediaType.JSON_UTF_8,
-                                             ImmutableList.of(MediaType.JSON_UTF_8, MediaType.XML_UTF_8),
-                                             false);
-        ctx3 = new DefaultPathMappingContext(virtualHost, "example.com",
-                                             HttpMethod.GET, "/hello", null,
-                                             MediaType.JSON_UTF_8,
-                                             ImmutableList.of(MediaType.XML_UTF_8, MediaType.JSON_UTF_8),
-                                             false);
+        ctx1 = new DefaultRoutingContext(virtualHost, "example.com",
+                                         HttpMethod.GET, "/hello", null,
+                                         MediaType.JSON_UTF_8,
+                                         ImmutableList.of(MediaType.JSON_UTF_8, MediaType.XML_UTF_8),
+                                         false);
+        ctx2 = new DefaultRoutingContext(virtualHost, "example.com",
+                                         HttpMethod.GET, "/hello", null,
+                                         MediaType.JSON_UTF_8,
+                                         ImmutableList.of(MediaType.JSON_UTF_8, MediaType.XML_UTF_8),
+                                         false);
+        ctx3 = new DefaultRoutingContext(virtualHost, "example.com",
+                                         HttpMethod.GET, "/hello", null,
+                                         MediaType.JSON_UTF_8,
+                                         ImmutableList.of(MediaType.XML_UTF_8, MediaType.JSON_UTF_8),
+                                         false);
 
         assertThat(ctx1.hashCode()).isEqualTo(ctx2.hashCode());
         assertThat(ctx1).isEqualTo(ctx2);
         assertThat(ctx1).isNotEqualTo(ctx3);
 
-        ctx1 = new DefaultPathMappingContext(virtualHost, "example.com",
-                                             HttpMethod.GET, "/hello", "a=1&b=1",
-                                             null, ImmutableList.of(), false);
-        ctx2 = new DefaultPathMappingContext(virtualHost, "example.com",
-                                             HttpMethod.GET, "/hello", "a=1",
-                                             null, ImmutableList.of(), false);
+        ctx1 = new DefaultRoutingContext(virtualHost, "example.com",
+                                         HttpMethod.GET, "/hello", "a=1&b=1",
+                                         null, ImmutableList.of(), false);
+        ctx2 = new DefaultRoutingContext(virtualHost, "example.com",
+                                         HttpMethod.GET, "/hello", "a=1",
+                                         null, ImmutableList.of(), false);
 
         assertThat(ctx1.hashCode()).isEqualTo(ctx2.hashCode());
         assertThat(ctx1).isEqualTo(ctx2);
     }
 
-    static PathMappingContext create(String path) {
+    static RoutingContext create(String path) {
         return create(path, null);
     }
 
-    static PathMappingContext create(String path, @Nullable String query) {
+    static RoutingContext create(String path, @Nullable String query) {
         final String requestPath = query != null ? path + '?' + query : path;
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, requestPath);
-        return DefaultPathMappingContext.of(virtualHost(), "example.com",
-                                            path, query, headers);
+        return DefaultRoutingContext.of(virtualHost(), "example.com",
+                                        path, query, headers, false);
     }
 
     static VirtualHost virtualHost() {

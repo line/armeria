@@ -36,7 +36,7 @@ import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.internal.metric.MicrometerUtil;
 import com.linecorp.armeria.server.AbstractHttpService;
-import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
@@ -62,7 +62,7 @@ public class CompositeServiceTest {
             // Should not hit the following services
             sb.serviceUnder("/foo/", otherService);
             sb.serviceUnder("/bar/", otherService);
-            sb.service(PathMapping.ofGlob("/*"), otherService);
+            sb.service(Route.builder().glob("/*").build(), otherService);
         }
     };
 
@@ -72,7 +72,7 @@ public class CompositeServiceTest {
         assertThat(MicrometerUtil.register(registry,
                                            new MeterIdPrefix("armeria.server.router.compositeServiceCache",
                                                              "hostnamePattern", "*",
-                                                             "pathMapping", "prefix:/qux/"),
+                                                             "route", "prefix:/qux/"),
                                            Object.class, (r, i) -> null)).isNotNull();
     }
 

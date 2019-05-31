@@ -41,12 +41,22 @@ import com.linecorp.armeria.common.RequestHeaders;
 /**
  * Holds the parameters which are required to find a service available to handle the request.
  */
-final class DefaultPathMappingContext implements PathMappingContext {
-    private static final Logger logger = LoggerFactory.getLogger(DefaultPathMappingContext.class);
+final class DefaultRoutingContext implements RoutingContext {
 
-    static final List<MediaType> ANY_TYPE = ImmutableList.of(MediaType.ANY_TYPE);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultRoutingContext.class);
 
     private static final Splitter ACCEPT_SPLITTER = Splitter.on(',').trimResults();
+
+    /**
+     * Returns a new {@link RoutingContext} instance.
+     */
+    static RoutingContext of(VirtualHost virtualHost, String hostname,
+                             String path, @Nullable String query,
+                             RequestHeaders headers, boolean isCorsPreflight) {
+        return new DefaultRoutingContext(virtualHost, hostname, headers.method(), path, query,
+                                         headers.contentType(), extractAcceptTypes(headers),
+                                         isCorsPreflight);
+    }
 
     private final VirtualHost virtualHost;
     private final String hostname;
@@ -62,10 +72,10 @@ final class DefaultPathMappingContext implements PathMappingContext {
     @Nullable
     private Throwable delayedCause;
 
-    DefaultPathMappingContext(VirtualHost virtualHost, String hostname,
-                              HttpMethod method, String path, @Nullable String query,
-                              @Nullable MediaType contentType, List<MediaType> acceptTypes,
-                              boolean isCorsPreflight) {
+    DefaultRoutingContext(VirtualHost virtualHost, String hostname,
+                          HttpMethod method, String path, @Nullable String query,
+                          @Nullable MediaType contentType, List<MediaType> acceptTypes,
+                          boolean isCorsPreflight) {
         this.virtualHost = requireNonNull(virtualHost, "virtualHost");
         this.hostname = requireNonNull(hostname, "hostname");
         this.method = requireNonNull(method, "method");
@@ -142,8 +152,8 @@ final class DefaultPathMappingContext implements PathMappingContext {
 
     @Override
     public boolean equals(Object obj) {
-        return obj instanceof DefaultPathMappingContext &&
-               (this == obj || summary().equals(((DefaultPathMappingContext) obj).summary()));
+        return obj instanceof DefaultRoutingContext &&
+               (this == obj || summary().equals(((DefaultRoutingContext) obj).summary()));
     }
 
     @Override
@@ -151,31 +161,12 @@ final class DefaultPathMappingContext implements PathMappingContext {
         return summary().toString();
     }
 
-    /**
-     * Returns a new {@link PathMappingContext} instance.
-     */
-    static PathMappingContext of(VirtualHost virtualHost, String hostname,
-                                 String path, @Nullable String query, RequestHeaders headers) {
-        return of(virtualHost, hostname, path, query, headers, false);
-    }
-
-    /**
-     * Returns a new {@link PathMappingContext} instance.
-     */
-    static PathMappingContext of(VirtualHost virtualHost, String hostname,
-                                 String path, @Nullable String query,
-                                 RequestHeaders headers, boolean isCorsPreflight) {
-        return new DefaultPathMappingContext(virtualHost, hostname, headers.method(), path, query,
-                                             headers.contentType(), extractAcceptTypes(headers),
-                                             isCorsPreflight);
-    }
-
     @VisibleForTesting
     static List<MediaType> extractAcceptTypes(HttpHeaders headers) {
         final List<String> acceptHeaders = headers.getAll(HttpHeaderNames.ACCEPT);
         if (acceptHeaders.isEmpty()) {
             // No 'Accept' header means accepting everything.
-            return ANY_TYPE;
+            return ImmutableList.of();
         }
 
         final List<MediaType> acceptTypes = new ArrayList<>(4);
@@ -190,11 +181,11 @@ final class DefaultPathMappingContext implements PathMappingContext {
                             }
                         }));
         if (acceptTypes.isEmpty()) {
-            return ANY_TYPE;
+            return ImmutableList.of();
         }
 
         if (acceptTypes.size() > 1) {
-            acceptTypes.sort(DefaultPathMappingContext::compareMediaType);
+            acceptTypes.sort(DefaultRoutingContext::compareMediaType);
         }
         return ImmutableList.copyOf(acceptTypes);
     }
@@ -217,10 +208,10 @@ final class DefaultPathMappingContext implements PathMappingContext {
     }
 
     /**
-     * Returns a summary string of the given {@link PathMappingContext}.
+     * Returns a summary string of the given {@link RoutingContext}.
      */
-    static List<Object> generateSummary(PathMappingContext mappingCtx) {
-        requireNonNull(mappingCtx, "mappingCtx");
+    static List<Object> generateSummary(RoutingContext routingCtx) {
+        requireNonNull(routingCtx, "routingCtx");
 
         // 0 : VirtualHost
         // 1 : HttpMethod
@@ -229,12 +220,12 @@ final class DefaultPathMappingContext implements PathMappingContext {
         // 4 : Accept
         final List<Object> summary = new ArrayList<>(8);
 
-        summary.add(mappingCtx.virtualHost());
-        summary.add(mappingCtx.method());
-        summary.add(mappingCtx.path());
-        summary.add(mappingCtx.contentType());
+        summary.add(routingCtx.virtualHost());
+        summary.add(routingCtx.method());
+        summary.add(routingCtx.path());
+        summary.add(routingCtx.contentType());
 
-        final List<MediaType> acceptTypes = mappingCtx.acceptTypes();
+        final List<MediaType> acceptTypes = routingCtx.acceptTypes();
         if (!acceptTypes.isEmpty()) {
             summary.addAll(acceptTypes);
         }

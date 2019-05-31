@@ -23,7 +23,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -34,7 +33,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.Service;
 
 /**
@@ -133,21 +131,8 @@ public final class CorsServiceBuilder {
      * @param pathPattern the path pattern that this policy is supposed to be applied to
      * @throws IllegalArgumentException if the path pattern is not valid
      */
-    public CorsServiceBuilder pathMapping(String pathPattern) {
-        firstPolicyBuilder.pathMapping(pathPattern);
-        return this;
-    }
-
-    /**
-     * Adds a {@link PathMapping} that this policy is supposed to be applied to.
-     *
-     * @param pathMapping the {@link PathMapping} that this policy is supposed to be applied to
-     * @throws IllegalArgumentException if the {@link PathMapping} has conditions beyond the path pattern,
-     *                                  i.e. the {@link PathMapping} created by
-     *                                  {@link PathMapping#withHttpHeaderInfo(Set, List, List)}
-     */
-    public CorsServiceBuilder pathMapping(PathMapping pathMapping) {
-        firstPolicyBuilder.pathMapping(pathMapping);
+    public CorsServiceBuilder route(String pathPattern) {
+        firstPolicyBuilder.route(pathPattern);
         return this;
     }
 

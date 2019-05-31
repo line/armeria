@@ -191,7 +191,7 @@ public final class MethodInfo {
             return true;
         }
 
-        if (o == null || getClass() != o.getClass()) {
+        if (!(o instanceof MethodInfo)) {
             return false;
         }
 

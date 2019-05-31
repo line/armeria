@@ -19,15 +19,26 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class PathMappingResultTest {
+class RoutedTest {
+    /**
+     * Should not accept an empty {@link RoutingResult} when creating a non-empty {@link Routed}.
+     */
     @Test
-    public void empty() {
-        final PathMappingResult result = PathMappingResult.empty();
+    void shouldNotAcceptEmptyResult() {
+        assertThatThrownBy(() -> Routed.of(Route.builder().catchAll().build(),
+                                           RoutingResult.empty(),
+                                           new Object()))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void empty() {
+        final Routed<?> result = Routed.empty();
         assertThat(result.isPresent()).isFalse();
-        assertThatThrownBy(result::path).isInstanceOf(IllegalStateException.class);
-        assertThatThrownBy(result::query).isInstanceOf(IllegalStateException.class);
-        assertThatThrownBy(result::pathParams).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(result::route).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(result::routingResult).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(result::value).isInstanceOf(IllegalStateException.class);
     }
 }

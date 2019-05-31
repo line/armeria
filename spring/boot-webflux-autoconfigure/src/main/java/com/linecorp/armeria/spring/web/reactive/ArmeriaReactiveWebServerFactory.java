@@ -59,7 +59,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
@@ -202,7 +202,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                                                   @Nullable String serverHeader) {
         final ArmeriaHttpHandlerAdapter handler =
                 new ArmeriaHttpHandlerAdapter(httpHandler, factoryWrapper);
-        return sb.service(PathMapping.ofCatchAll(), (ctx, req) -> {
+        return sb.service(Route.builder().catchAll().build(), (ctx, req) -> {
             final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
             final HttpResponse response = HttpResponse.from(future);
             final Disposable disposable = handler.handle(ctx, req, future, serverHeader).subscribe();

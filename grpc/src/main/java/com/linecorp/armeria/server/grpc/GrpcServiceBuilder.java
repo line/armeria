@@ -24,6 +24,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -40,10 +41,10 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
-import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerConfig;
-import com.linecorp.armeria.server.ServiceWithPathMappings;
+import com.linecorp.armeria.server.ServiceWithRoutes;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
@@ -267,11 +268,12 @@ public final class GrpcServiceBuilder {
 
     /**
      * Constructs a new {@link GrpcService} that can be bound to
-     * {@link ServerBuilder}. It is recommended to bind the service to a server
-     * using {@link ServerBuilder#service(ServiceWithPathMappings)} to mount all
-     * service paths without interfering with other services.
+     * {@link ServerBuilder}. It is recommended to bind the service to a server using
+     * {@linkplain ServerBuilder#service(ServiceWithRoutes, Function[])
+     * ServerBuilder.service(ServiceWithRoutes)} to mount all service paths
+     * without interfering with other services.
      */
-    public ServiceWithPathMappings<HttpRequest, HttpResponse> build() {
+    public ServiceWithRoutes<HttpRequest, HttpResponse> build() {
         final HandlerRegistry handlerRegistry = registryBuilder.build();
 
         final GrpcService grpcService = new GrpcService(
@@ -280,7 +282,7 @@ public final class GrpcServiceBuilder {
                         .methods()
                         .keySet()
                         .stream()
-                        .map(path -> PathMapping.ofExact('/' + path))
+                        .map(path -> Route.builder().exact('/' + path).build())
                         .collect(ImmutableSet.toImmutableSet()),
                 firstNonNull(decompressorRegistry, DecompressorRegistry.getDefaultInstance()),
                 firstNonNull(compressorRegistry, CompressorRegistry.getDefaultInstance()),

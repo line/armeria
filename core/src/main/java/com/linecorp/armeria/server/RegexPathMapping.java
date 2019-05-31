@@ -16,13 +16,15 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.PathMappingUtil.REGEX;
+import static com.linecorp.armeria.internal.RouteUtil.REGEX;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableSet;
 
@@ -53,27 +55,26 @@ final class RegexPathMapping extends AbstractPathMapping {
         return builder.build();
     }
 
+    @Nullable
     @Override
-    protected PathMappingResult doApply(PathMappingContext mappingCtx) {
-        final Matcher matcher = regex.matcher(mappingCtx.path());
+    protected RoutingResultBuilder doApply(RoutingContext routingCtx) {
+        final Matcher matcher = regex.matcher(routingCtx.path());
         if (!matcher.find()) {
-            return PathMappingResult.empty();
+            return null;
         }
 
-        PathMappingResultBuilder builder = null;
+        final RoutingResultBuilder builder = RoutingResult.builder()
+                                                          .path(routingCtx.path())
+                                                          .query(routingCtx.query());
         for (String name : paramNames) {
             final String value = matcher.group(name);
             if (value == null) {
                 continue;
             }
-
-            if (builder == null) {
-                builder = new PathMappingResultBuilder(mappingCtx.path(), mappingCtx.query());
-            }
             builder.rawParam(name, value);
         }
 
-        return builder != null ? builder.build() : PathMappingResult.of(mappingCtx.path(), mappingCtx.query());
+        return builder;
     }
 
     @Override
@@ -110,11 +111,6 @@ final class RegexPathMapping extends AbstractPathMapping {
     @Override
     public Optional<String> regex() {
         return Optional.of(regex.pattern());
-    }
-
-    @Override
-    public boolean hasPathPatternOnly() {
-        return true;
     }
 
     @Override

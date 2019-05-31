@@ -68,8 +68,8 @@ public abstract class DecoratingService<T_I extends Request, T_O extends Respons
     }
 
     @Override
-    public boolean shouldCachePath(String path, @Nullable String query, PathMapping pathMapping) {
-        return delegate.shouldCachePath(path, query, pathMapping);
+    public boolean shouldCachePath(String path, @Nullable String query, Route route) {
+        return delegate.shouldCachePath(path, query, route);
     }
 
     @Override

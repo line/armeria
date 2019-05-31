@@ -64,7 +64,7 @@ public final class ServiceRequestContextBuilder
 
     private Service<HttpRequest, HttpResponse> service = fakeService;
     @Nullable
-    private PathMappingResult pathMappingResult;
+    private RoutingResult routingResult;
     @Nullable
     private ProxiedAddresses proxiedAddresses;
     @Nullable
@@ -84,10 +84,10 @@ public final class ServiceRequestContextBuilder
     }
 
     /**
-     * Sets the {@link PathMappingResult} of the request. If not set, it is auto-generated from the request.
+     * Sets the {@link RoutingResult} of the request. If not set, it is auto-generated from the request.
      */
-    public ServiceRequestContextBuilder pathMappingResult(PathMappingResult pathMappingResult) {
-        this.pathMappingResult = requireNonNull(pathMappingResult, "pathMappingResult");
+    public ServiceRequestContextBuilder routingResult(RoutingResult routingResult) {
+        this.routingResult = requireNonNull(routingResult, "routingResult");
         return this;
     }
 
@@ -116,8 +116,7 @@ public final class ServiceRequestContextBuilder
      * such as {@link ServerConfig#maxRequestLength()}.
      */
     public ServiceRequestContextBuilder serverConfigurator(Consumer<? super ServerBuilder> serverConfigurator) {
-        requireNonNull(serverConfigurator, "serverConfigurator");
-        serverConfigurators.add(serverConfigurator);
+        serverConfigurators.add(requireNonNull(serverConfigurator, "serverConfigurator"));
         return this;
     }
 
@@ -146,33 +145,34 @@ public final class ServiceRequestContextBuilder
         final ServiceConfig serviceCfg = findServiceConfig(server, path(), service);
 
         // Build a fake object related with path mapping.
-        final PathMappingContext pathMappingCtx = DefaultPathMappingContext.of(
+        final RoutingContext routingCtx = DefaultRoutingContext.of(
                 server.config().defaultVirtualHost(),
                 localAddress().getHostString(),
                 path(),
                 query(),
-                ((HttpRequest) request()).headers());
+                ((HttpRequest) request()).headers(),
+                false);
 
-        final PathMappingResult pathMappingResult =
-                this.pathMappingResult != null ? this.pathMappingResult
-                                               : PathMappingResult.of(path(), query());
+        final RoutingResult routingResult =
+                this.routingResult != null ? this.routingResult
+                                           : RoutingResult.builder().path(path()).query(query()).build();
 
         // Build the context with the properties set by a user and the fake objects.
         if (isRequestStartTimeSet()) {
             return new DefaultServiceRequestContext(
-                    serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), pathMappingCtx,
-                    pathMappingResult, request(), sslSession(), proxiedAddresses, clientAddress,
+                    serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), routingCtx,
+                    routingResult, request(), sslSession(), proxiedAddresses, clientAddress,
                     requestStartTimeNanos(), requestStartTimeMicros());
         } else {
             return new DefaultServiceRequestContext(
-                    serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), pathMappingCtx,
-                    pathMappingResult, request(), sslSession(), proxiedAddresses, clientAddress);
+                    serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), routingCtx,
+                    routingResult, request(), sslSession(), proxiedAddresses, clientAddress);
         }
     }
 
     private static ServiceConfig findServiceConfig(Server server, String path, Service<?, ?> service) {
         for (ServiceConfig cfg : server.config().defaultVirtualHost().serviceConfigs()) {
-            final Optional<String> exactPath = cfg.pathMapping().exactPath();
+            final Optional<String> exactPath = cfg.route().exactPath();
             if (!exactPath.isPresent()) {
                 continue;
             }

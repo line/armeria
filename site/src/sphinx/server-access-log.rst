@@ -350,8 +350,9 @@ Alternatively, you can specify your own mapper or logger for a :api:`VirtualHost
     });
     ....
 
-You can also specify your own logger for the specific :api:`VirtualHost`.
-In this case, the mapper or logger you set for a specific :api:`VirtualHost` will override the access logger set via ``ServerBuilder.accessLogger()``.
+You can also specify your own logger for the specific :api:`VirtualHost`. In this case, the mapper or logger
+you set for a specific :api:`VirtualHost` will override the access logger set via
+``ServerBuilder.accessLogger()``.
 
 .. code-block:: java
 

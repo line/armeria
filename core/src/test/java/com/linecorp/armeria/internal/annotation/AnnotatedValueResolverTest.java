@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.internal.annotation;
 
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.toArguments;
 import static com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.toRequestObjectResolvers;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,10 +24,8 @@ import static org.reflections.ReflectionUtils.getAllMethods;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
-import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -50,7 +47,8 @@ import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.NoAnnotatedParameterException;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.RequestObjectResolver;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.ResolverContext;
-import com.linecorp.armeria.server.PathMappingResult;
+import com.linecorp.armeria.server.RoutingResult;
+import com.linecorp.armeria.server.RoutingResultBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 import com.linecorp.armeria.server.annotation.Cookies;
@@ -97,14 +95,13 @@ public class AnnotatedValueResolverTest {
         originalHeaders = headers.build();
         request = HttpRequest.of(originalHeaders);
 
-        final PathMappingResult pathMappingResult = PathMappingResult.of(
-                path, query,
-                pathParams.stream()
-                          .map(v -> new SimpleImmutableEntry<>(v, v))
-                          .collect(toImmutableMap(Entry::getKey, Entry::getValue)));
+        final RoutingResultBuilder builder = RoutingResult.builder()
+                                                         .path(path)
+                                                         .query(query);
+        pathParams.forEach(param -> builder.rawParam(param, param));
 
         context = ServiceRequestContextBuilder.of(request)
-                                              .pathMappingResult(pathMappingResult)
+                                              .routingResult(builder.build())
                                               .build();
 
         resolverContext = new ResolverContext(context, request, null);

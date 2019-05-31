@@ -46,7 +46,7 @@ import com.linecorp.armeria.client.retry.RetryingHttpClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.SslContextUtil;
-import com.linecorp.armeria.server.PathMappingContext;
+import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
@@ -664,7 +664,7 @@ public final class Flags {
     /**
      * Returns the value of the {@code routeCache} parameter. It would be used to create a Caffeine
      * {@link Cache} instance using {@link Caffeine#from(String)} for routing a request. The {@link Cache}
-     * would hold the mappings of {@link PathMappingContext} and the designated {@link ServiceConfig}
+     * would hold the mappings of {@link RoutingContext} and the designated {@link ServiceConfig}
      * for a request to improve server performance.
      *
      * <p>The default value of this flag is {@value DEFAULT_ROUTE_CACHE_SPEC}. Specify the
@@ -715,7 +715,7 @@ public final class Flags {
     /**
      * Returns the value of the {@code compositeServiceCache} parameter. It would be used to create a
      * Caffeine {@link Cache} instance using {@link Caffeine#from(String)} for routing a request.
-     * The {@link Cache} would hold the mappings of {@link PathMappingContext} and the designated
+     * The {@link Cache} would hold the mappings of {@link RoutingContext} and the designated
      * {@link ServiceConfig} for a request to improve server performance.
      *
      * <p>The default value of this flag is {@value DEFAULT_COMPOSITE_SERVICE_CACHE_SPEC}. Specify the

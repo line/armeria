@@ -22,7 +22,7 @@ import java.util.Optional;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.docs.DocService;
 
 /**
@@ -32,9 +32,9 @@ import com.linecorp.armeria.server.docs.DocService;
 final class AnnotatedHttpDocServiceUtil {
 
     @Nullable
-    static String getNormalizedTriePath(PathMapping pathMapping) {
-        requireNonNull(pathMapping, "pathMapping");
-        final Optional<String> triePath = pathMapping.triePath();
+    static String getNormalizedTriePath(Route route) {
+        requireNonNull(route, "route");
+        final Optional<String> triePath = route.triePath();
 
         if (!triePath.isPresent()) {
             return null;
@@ -44,7 +44,7 @@ final class AnnotatedHttpDocServiceUtil {
         int beginIndex = 0;
 
         final StringBuilder sb = new StringBuilder();
-        for (String paramName : pathMapping.paramNames()) {
+        for (String paramName : route.paramNames()) {
             final int colonIndex = path.indexOf(':', beginIndex);
             assert colonIndex != -1;
             sb.append(path, beginIndex, colonIndex);

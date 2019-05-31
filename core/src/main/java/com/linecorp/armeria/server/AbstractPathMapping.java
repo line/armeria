@@ -16,36 +16,41 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.PathMappingUtil.UNKNOWN_LOGGER_NAME;
-import static com.linecorp.armeria.internal.PathMappingUtil.ensureAbsolutePath;
+import static com.linecorp.armeria.internal.RouteUtil.UNKNOWN_LOGGER_NAME;
+import static com.linecorp.armeria.internal.RouteUtil.ensureAbsolutePath;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
 
+import javax.annotation.Nullable;
+
 /**
- * A skeletal {@link PathMapping} implementation. Implement {@link #doApply(PathMappingContext)}.
+ * A skeletal {@link PathMapping} implementation. Implement {@link #doApply(RoutingContext)}.
  */
-public abstract class AbstractPathMapping implements PathMapping {
+abstract class AbstractPathMapping implements PathMapping {
 
     /**
      * {@inheritDoc} This method performs sanity checks on the specified {@code path} and calls
-     * {@link #doApply(PathMappingContext)}.
+     * {@link #doApply(RoutingContext)}.
      */
+    @Nullable
     @Override
-    public final PathMappingResult apply(PathMappingContext mappingCtx) {
-        ensureAbsolutePath(mappingCtx.path(), "path");
-        return doApply(mappingCtx);
+    public final RoutingResultBuilder apply(RoutingContext routingCtx) {
+        ensureAbsolutePath(requireNonNull(routingCtx, "routingCtx").path(), "path");
+        return doApply(routingCtx);
     }
 
     /**
-     * Invoked by {@link #apply(PathMappingContext)} to perform the actual path matching and path parameter
+     * Invoked by {@link #apply(RoutingContext)} to perform the actual path matching and path parameter
      * extraction.
      *
-     * @param mappingCtx a context to find the {@link Service}
+     * @param routingCtx a context to find the {@link Service}
      *
-     * @return a non-empty {@link PathMappingResult} if the specified {@code path} matches this mapping.
-     *         {@link PathMappingResult#empty()} if not matches.
+     * @return a non-empty {@link RoutingResultBuilder} if the specified {@code path} matches this mapping.
+     *         {@code null} otherwise.
      */
-    protected abstract PathMappingResult doApply(PathMappingContext mappingCtx);
+    @Nullable
+    abstract RoutingResultBuilder doApply(RoutingContext routingCtx);
 
     @Override
     public String loggerName() {

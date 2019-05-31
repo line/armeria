@@ -42,7 +42,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 final class RouteCache {
 
     @Nullable
-    private static final Cache<PathMappingContext, ServiceConfig> CACHE =
+    private static final Cache<RoutingContext, ServiceConfig> CACHE =
             Flags.routeCacheSpec().map(RouteCache::<ServiceConfig>buildCache)
                  .orElse(null);
 
@@ -52,7 +52,7 @@ final class RouteCache {
      */
     static Router<ServiceConfig> wrapVirtualHostRouter(Router<ServiceConfig> delegate) {
         return CACHE == null ? delegate
-                             : new CachingRouter<>(delegate, CACHE, ServiceConfig::pathMapping);
+                             : new CachingRouter<>(delegate, CACHE, ServiceConfig::route);
     }
 
     /**
@@ -63,17 +63,17 @@ final class RouteCache {
     Router<CompositeServiceEntry<I, O>> wrapCompositeServiceRouter(
             Router<CompositeServiceEntry<I, O>> delegate) {
 
-        final Cache<PathMappingContext, CompositeServiceEntry<I, O>> cache =
+        final Cache<RoutingContext, CompositeServiceEntry<I, O>> cache =
                 Flags.compositeServiceCacheSpec().map(RouteCache::<CompositeServiceEntry<I, O>>buildCache)
                      .orElse(null);
         if (cache == null) {
             return delegate;
         }
 
-        return new CachingRouter<>(delegate, cache, CompositeServiceEntry::pathMapping);
+        return new CachingRouter<>(delegate, cache, CompositeServiceEntry::route);
     }
 
-    private static <T> Cache<PathMappingContext, T> buildCache(String spec) {
+    private static <T> Cache<RoutingContext, T> buildCache(String spec) {
         return Caffeine.from(spec).recordStats().build();
     }
 
@@ -85,30 +85,30 @@ final class RouteCache {
     private static final class CachingRouter<V> implements Router<V> {
 
         private final Router<V> delegate;
-        private final Cache<PathMappingContext, V> cache;
-        private final Function<V, PathMapping> pathMappingResolver;
+        private final Cache<RoutingContext, V> cache;
+        private final Function<V, Route> routeResolver;
 
-        CachingRouter(Router<V> delegate, Cache<PathMappingContext, V> cache,
-                      Function<V, PathMapping> pathMappingResolver) {
+        CachingRouter(Router<V> delegate, Cache<RoutingContext, V> cache,
+                      Function<V, Route> routeResolver) {
             this.delegate = requireNonNull(delegate, "delegate");
             this.cache = requireNonNull(cache, "cache");
-            this.pathMappingResolver = requireNonNull(pathMappingResolver, "pathMappingResolver");
+            this.routeResolver = requireNonNull(routeResolver, "routeResolver");
         }
 
         @Override
-        public PathMapped<V> find(PathMappingContext mappingCtx) {
-            final V cached = cache.getIfPresent(mappingCtx);
+        public Routed<V> find(RoutingContext routingCtx) {
+            final V cached = cache.getIfPresent(routingCtx);
             if (cached != null) {
-                // PathMappingResult may be different to each other for every requests, so we cannot
+                // RoutingResult may be different to each other for every requests, so we cannot
                 // use it as a cache value.
-                final PathMapping mapping = pathMappingResolver.apply(cached);
-                final PathMappingResult mappingResult = mapping.apply(mappingCtx);
-                return PathMapped.of(mapping, mappingResult, cached);
+                final Route route = routeResolver.apply(cached);
+                final RoutingResult routingResult = route.apply(routingCtx);
+                return Routed.of(route, routingResult, cached);
             }
 
-            final PathMapped<V> result = delegate.find(mappingCtx);
+            final Routed<V> result = delegate.find(routingCtx);
             if (result.isPresent()) {
-                cache.put(mappingCtx, result.value());
+                cache.put(routingCtx, result.value());
             }
             return result;
         }

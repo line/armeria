@@ -48,7 +48,7 @@ import com.linecorp.armeria.internal.metric.CaffeineMetricSupport;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -140,14 +140,14 @@ public final class HttpFileService extends AbstractHttpService {
                     registry,
                     new MeterIdPrefix("armeria.server.file.vfsCache",
                                       "hostnamePattern", cfg.virtualHost().hostnamePattern(),
-                                      "pathMapping", cfg.pathMapping().meterTag(),
+                                      "route", cfg.route().meterTag(),
                                       "vfs", config.vfs().meterTag()),
                     cache);
         }
     }
 
     @Override
-    public boolean shouldCachePath(String path, @Nullable String query, PathMapping pathMapping) {
+    public boolean shouldCachePath(String path, @Nullable String query, Route route) {
         // We assume that if a file cache is enabled, the number of paths is also finite.
         return cache != null;
     }
@@ -334,11 +334,11 @@ public final class HttpFileService extends AbstractHttpService {
         }
 
         @Override
-        public boolean shouldCachePath(String path, @Nullable String query, PathMapping pathMapping) {
+        public boolean shouldCachePath(String path, @Nullable String query, Route route) {
             // No good way of propagating the first vs second decision to the cache decision, so just make a
             // best effort, it should work for most cases.
-            return first.shouldCachePath(path, query, pathMapping) &&
-                   second.shouldCachePath(path, query, pathMapping);
+            return first.shouldCachePath(path, query, route) &&
+                   second.shouldCachePath(path, query, route);
         }
     }
 

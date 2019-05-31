@@ -76,11 +76,6 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     }
 
     @Override
-    public VirtualHostServiceBindingBuilder pathMapping(PathMapping pathMapping) {
-        return (VirtualHostServiceBindingBuilder) super.pathMapping(pathMapping);
-    }
-
-    @Override
     public VirtualHostServiceBindingBuilder methods(HttpMethod... methods) {
         return (VirtualHostServiceBindingBuilder) super.methods(methods);
     }

@@ -175,7 +175,7 @@ public class GrpcMetricsIntegrationTest {
                 "server." + suffix + '#' + type.getTagValueRepresentation(),
                 "method", "armeria.grpc.testing.TestService/" + method,
                 "hostnamePattern", "*",
-                "pathMapping", "exact:/armeria.grpc.testing.TestService/" + method);
+                "route", "exact:/armeria.grpc.testing.TestService/" + method);
         final String meterIdStr = prefix.withTags(keyValues).toString();
         return Optional.ofNullable(MoreMeters.measureAll(registry).get(meterIdStr));
     }

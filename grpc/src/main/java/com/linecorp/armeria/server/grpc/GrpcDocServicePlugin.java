@@ -168,8 +168,9 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
                        });
 
             final String pathPrefix;
-            if (serviceConfig.pathMapping().prefix().isPresent()) {
-                pathPrefix = serviceConfig.pathMapping().prefix().get();
+            final Optional<String> prefix = serviceConfig.route().prefix();
+            if (prefix.isPresent()) {
+                pathPrefix = prefix.get();
             } else {
                 pathPrefix = "/";
             }

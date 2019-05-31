@@ -25,16 +25,16 @@ import static org.mockito.Mockito.mock;
 
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 
-public class VirtualHostServiceBindingBuilderTest {
+class VirtualHostServiceBindingBuilderTest {
 
     @Test
-    public void serviceBindingBuilder() {
+    void serviceBindingBuilder() {
         final ServerBuilder sb = new ServerBuilder();
         final ContentPreviewerFactory requestFactory = mock(ContentPreviewerFactory.class);
         final ContentPreviewerFactory responseFactory = mock(ContentPreviewerFactory.class);
@@ -55,10 +55,10 @@ public class VirtualHostServiceBindingBuilderTest {
         assertThat(serviceConfigs.size()).isOne();
         final ServiceConfig serviceConfig = serviceConfigs.get(0);
 
-        final PathMapping pathMapping = serviceConfig.pathMapping();
-        assertThat(pathMapping.prefix().get()).isEqualTo("/foo/bar/");
-        assertThat(pathMapping.consumeTypes()).containsExactly(JSON, PLAIN_TEXT_UTF_8);
-        assertThat(pathMapping.produceTypes()).containsExactly(JSON_UTF_8,
+        final Route route = serviceConfig.route();
+        assertThat(route.prefix().get()).isEqualTo("/foo/bar/");
+        assertThat(route.consumes()).containsExactly(JSON, PLAIN_TEXT_UTF_8);
+        assertThat(route.produces()).containsExactly(JSON_UTF_8,
                                                                PLAIN_TEXT_UTF_8);
         assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(10);
         assertThat(serviceConfig.maxRequestLength()).isEqualTo(8192);
@@ -68,7 +68,7 @@ public class VirtualHostServiceBindingBuilderTest {
     }
 
     @Test
-    public void withRoute() {
+    void withRoute() {
         final ServerBuilder sb = new ServerBuilder();
 
         sb.virtualHost("example.com").withRoute(builder -> {
@@ -86,10 +86,10 @@ public class VirtualHostServiceBindingBuilderTest {
         assertThat(serviceConfigs.size()).isOne();
         final ServiceConfig serviceConfig = serviceConfigs.get(0);
 
-        final PathMapping pathMapping = serviceConfig.pathMapping();
-        assertThat(pathMapping.prefix().get()).isEqualTo("/foo/bar/");
-        assertThat(pathMapping.consumeTypes()).containsExactly(JSON, PLAIN_TEXT_UTF_8);
-        assertThat(pathMapping.produceTypes()).containsExactly(JSON_UTF_8,
+        final Route route = serviceConfig.route();
+        assertThat(route.prefix().get()).isEqualTo("/foo/bar/");
+        assertThat(route.consumes()).containsExactly(JSON, PLAIN_TEXT_UTF_8);
+        assertThat(route.produces()).containsExactly(JSON_UTF_8,
                                                                PLAIN_TEXT_UTF_8);
         assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(10);
         assertThat(serviceConfig.maxRequestLength()).isEqualTo(8192);

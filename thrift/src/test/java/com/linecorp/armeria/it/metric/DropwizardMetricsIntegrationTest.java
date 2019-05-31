@@ -94,6 +94,8 @@ public class DropwizardMetricsIntegrationTest {
             assertThat(dropwizardRegistry.getMeters()
                                          .get(clientMetricNameWithStatusAndResult("requests", 200, "failure"))
                                          .getCount()).isEqualTo(3L);
+            System.err.println(dropwizardRegistry.getMeters());
+            System.err.println(serverMetricNameWithStatusAndResult("requests", 200, "failure"));
             assertThat(dropwizardRegistry.getMeters()
                                          .get(serverMetricNameWithStatusAndResult("requests", 200, "failure"))
                                          .getCount()).isEqualTo(3L);
@@ -131,31 +133,31 @@ public class DropwizardMetricsIntegrationTest {
                 .isPositive();
     }
 
-    private static String serverMetricName(String property, int status) {
+    private static String serverMetricName(String property, int status, String result) {
         return MetricRegistry.name("armeria", "server", "HelloService", property,
                                    "hostnamePattern:*", "httpStatus:" + status,
-                                   "method:hello", "pathMapping:exact:/helloservice");
+                                   "method:hello", result, "route:exact:/helloservice");
     }
 
     private static String serverMetricNameWithStatus(String property, int status) {
-        return serverMetricName(property, status);
+        return serverMetricName(property, status, "");
     }
 
     private static String serverMetricNameWithStatusAndResult(String property, int status, String result) {
-        return serverMetricName(property, status) + ".result:" + result;
+        return serverMetricName(property, status, "result:" + result);
     }
 
-    private static String clientMetricName(String property, int status) {
+    private static String clientMetricName(String property, int status, String result) {
         return MetricRegistry.name("armeria", "client", "HelloService", property,
-                                   "httpStatus:" + status, "method:hello");
+                                   "httpStatus:" + status, "method:hello", result);
     }
 
     private static String clientMetricNameWithStatus(String prop, int status) {
-        return clientMetricName(prop, status);
+        return clientMetricName(prop, status, "");
     }
 
     private static String clientMetricNameWithStatusAndResult(String prop, int status, String result) {
-        return clientMetricName(prop, status) + ".result:" + result;
+        return clientMetricName(prop, status, "result:" + result);
     }
 
     private static void makeRequest(String name) {

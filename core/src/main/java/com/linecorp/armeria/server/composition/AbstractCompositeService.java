@@ -19,7 +19,6 @@ package com.linecorp.armeria.server.composition;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,11 +33,11 @@ import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.HttpStatusException;
-import com.linecorp.armeria.server.PathMapped;
-import com.linecorp.armeria.server.PathMapping;
-import com.linecorp.armeria.server.PathMappingContext;
+import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.Routed;
 import com.linecorp.armeria.server.Router;
 import com.linecorp.armeria.server.Routers;
+import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceCallbackInvoker;
@@ -80,7 +79,7 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
      */
     @SafeVarargs
     protected AbstractCompositeService(CompositeServiceEntry<I, O>... services) {
-        this(Arrays.asList(requireNonNull(services, "services")));
+        this(ImmutableList.copyOf(requireNonNull(services, "services")));
     }
 
     /**
@@ -102,7 +101,7 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
         final MeterIdPrefix meterIdPrefix =
                 new MeterIdPrefix("armeria.server.router.compositeServiceCache",
                                   "hostnamePattern", cfg.virtualHost().hostnamePattern(),
-                                  "pathMapping", cfg.pathMapping().meterTag());
+                                  "route", cfg.route().meterTag());
 
         router.registerMetrics(registry, meterIdPrefix);
         for (CompositeServiceEntry<I, O> e : services()) {
@@ -127,52 +126,51 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
     }
 
     /**
-     * Finds the {@link Service} whose {@link PathMapping} matches the {@code path}.
+     * Finds the {@link Service} whose {@link Route} matches the {@code path}.
      *
-     * @param mappingCtx a context to find the {@link Service}.
+     * @param routingCtx a context to find the {@link Service}.
      *
-     * @return the {@link Service} wrapped by {@link PathMapped} if there's a match.
-     *         {@link PathMapped#empty()} if there's no match.
+     * @return the {@link Service} wrapped by {@link Routed} if there's a match.
+     *         {@link Routed#empty()} if there's no match.
      */
-    protected PathMapped<Service<I, O>> findService(PathMappingContext mappingCtx) {
+    protected Routed<Service<I, O>> findService(RoutingContext routingCtx) {
         assert router != null;
-        return router.find(mappingCtx);
+        return router.find(routingCtx);
     }
 
     @Override
     public O serve(ServiceRequestContext ctx, I req) throws Exception {
-        final PathMappingContext mappingCtx = ctx.pathMappingContext();
-        final PathMapped<Service<I, O>> mapped = findService(mappingCtx.overridePath(ctx.mappedPath()));
-        if (!mapped.isPresent()) {
+        final RoutingContext routingCtx = ctx.routingContext();
+        final Routed<Service<I, O>> result = findService(routingCtx.overridePath(ctx.mappedPath()));
+        if (!result.isPresent()) {
             throw HttpStatusException.of(HttpStatus.NOT_FOUND);
         }
 
-        final Optional<String> childPrefix = mapped.mapping().prefix();
+        final Optional<String> childPrefix = result.route().prefix();
         if (childPrefix.isPresent()) {
-            final PathMapping newMapping = PathMapping.ofPrefix(ctx.pathMapping().prefix().get() +
-                                                                childPrefix.get().substring(1));
+            final Route newRoute = Route.builder().prefix(ctx.route().prefix().get() +
+                                                          childPrefix.get().substring(1)).build();
 
             final ServiceRequestContext newCtx = new CompositeServiceRequestContext(
-                    ctx, newMapping, mapped.mappingResult().path());
+                    ctx, newRoute, result.routingResult().path());
             try (SafeCloseable ignored = newCtx.push(false)) {
-                return mapped.value().serve(newCtx, req);
+                return result.value().serve(newCtx, req);
             }
         } else {
-            return mapped.value().serve(ctx, req);
+            return result.value().serve(ctx, req);
         }
     }
 
     private static final class CompositeServiceRequestContext extends ServiceRequestContextWrapper {
 
-        private final PathMapping pathMapping;
+        private final Route route;
         private final String mappedPath;
         @Nullable
         private String decodedMappedPath;
 
-        CompositeServiceRequestContext(ServiceRequestContext delegate, PathMapping pathMapping,
-                                       String mappedPath) {
+        CompositeServiceRequestContext(ServiceRequestContext delegate, Route route, String mappedPath) {
             super(delegate);
-            this.pathMapping = pathMapping;
+            this.route = route;
             this.mappedPath = mappedPath;
         }
 
@@ -187,12 +185,12 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
         }
 
         private ServiceRequestContext newDerivedContext(ServiceRequestContext derivedCtx) {
-            return new CompositeServiceRequestContext(derivedCtx, pathMapping, mappedPath);
+            return new CompositeServiceRequestContext(derivedCtx, route, mappedPath);
         }
 
         @Override
-        public PathMapping pathMapping() {
-            return pathMapping;
+        public Route route() {
+            return route;
         }
 
         @Override

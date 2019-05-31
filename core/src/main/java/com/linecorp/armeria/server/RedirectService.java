@@ -211,7 +211,7 @@ public class RedirectService extends AbstractHttpService {
 
         final Matcher m = PATTERN_PARAMS_START.matcher(locationPattern);
         if (m.find()) {
-            paramNames = PathMapping.of(locationPattern.substring(m.start())).paramNames();
+            paramNames = Route.builder().path(locationPattern.substring(m.start())).build().paramNames();
         }
     }
 
@@ -280,7 +280,7 @@ public class RedirectService extends AbstractHttpService {
     @Override
     public void serviceAdded(ServiceConfig cfg) throws Exception {
         if (paramNames != null) {
-            final Set<String> params = cfg.pathMapping().paramNames();
+            final Set<String> params = cfg.route().paramNames();
 
             // Find out if old path and new path are compatible
             for (String param : paramNames) {

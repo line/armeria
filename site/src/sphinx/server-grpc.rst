@@ -93,8 +93,8 @@ a :api:`GrpcServiceBuilder` and add it to the :api:`ServerBuilder`:
 
 .. note::
 
-    We bound the :api:`GrpcService` without specifying any path mappings. It is because :api:`GrpcService`
-    implements :api:`ServiceWithPathMappings`, which dynamically provides path mappings by itself.
+    We bound the :api:`GrpcService` without specifying any path. It is because :api:`GrpcService`
+    implements :api:`ServiceWithPathRoutes`, which dynamically provides :apiplural:`Route` by itself.
 
 .. _server-grpc-decorator:
 
@@ -102,7 +102,7 @@ Decorating a ``GrpcService``
 ----------------------------
 
 Unlike a usual Armeria :api:`Service`, :api:`GrpcService` implements a special interface called
-:api:`ServiceWithPathMappings`. Therefore, it is recommended to decorate a :api:`GrpcService` by specifying
+:api:`ServiceWithRoutes`. Therefore, it is recommended to decorate a :api:`GrpcService` by specifying
 decorator functions as extra parameters rather than using ``Service.decorate()``:
 
 .. code-block:: java
@@ -118,7 +118,7 @@ decorator functions as extra parameters rather than using ``Service.decorate()``
     Server server = sb.build();
     server.start();
 
-See :ref:`server-decorator-service-with-path-mappings` for more information about :api:`ServiceWithPathMappings`.
+See :ref:`server-decorator-service-with-routes` for more information about :api:`ServiceWithRoutes`.
 
 ``gRPC-Web``
 ------------

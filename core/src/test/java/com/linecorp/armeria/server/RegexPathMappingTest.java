@@ -16,27 +16,26 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.server.PathMapping.ofRegex;
-import static com.linecorp.armeria.server.PathMappingContextTest.create;
+import static com.linecorp.armeria.server.RoutingContextTest.create;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Test;
+import java.util.regex.Pattern;
 
-public class RegexPathMappingTest {
+import org.junit.jupiter.api.Test;
+
+class RegexPathMappingTest {
+
     @Test
-    public void testLoggerName() throws Exception {
-        assertThat(ofRegex("foo/bar").loggerName()).isEqualTo("regex.foo_bar");
+    void loggerAndMetricName() throws Exception {
+        final RegexPathMapping regexPathMapping = new RegexPathMapping(Pattern.compile("foo/bar"));
+        assertThat(regexPathMapping.loggerName()).isEqualTo("regex.foo_bar");
+        assertThat(regexPathMapping.meterTag()).isEqualTo("regex:foo/bar");
     }
 
     @Test
-    public void testMetricName() throws Exception {
-        assertThat(ofRegex("foo/bar").meterTag()).isEqualTo("regex:foo/bar");
-    }
-
-    @Test
-    public void basic() {
-        final PathMapping mapping = ofRegex("foo");
-        final PathMappingResult result = mapping.apply(create("/barfoobar"));
+    void basic() {
+        final RegexPathMapping regexPathMapping = new RegexPathMapping(Pattern.compile("foo"));
+        final RoutingResult result = regexPathMapping.apply(create("/barfoobar")).build();
         assertThat(result.isPresent()).isTrue();
         assertThat(result.path()).isEqualTo("/barfoobar");
         assertThat(result.query()).isNull();
@@ -44,11 +43,13 @@ public class RegexPathMappingTest {
     }
 
     @Test
-    public void pathParams() {
-        final PathMapping mapping = ofRegex("^/files/(?<fileName>.*)$");
-        assertThat(mapping.paramNames()).containsExactly("fileName");
+    void pathParams() {
+        final RegexPathMapping regexPathMapping =
+                new RegexPathMapping(Pattern.compile("^/files/(?<fileName>.*)$"));
+        assertThat(regexPathMapping.paramNames()).containsExactly("fileName");
 
-        final PathMappingResult result = mapping.apply(create("/files/images/avatar.jpg", "size=512"));
+        final RoutingResult result = regexPathMapping.apply(create("/files/images/avatar.jpg", "size=512"))
+                                                     .build();
         assertThat(result.isPresent()).isTrue();
         assertThat(result.path()).isEqualTo("/files/images/avatar.jpg");
         assertThat(result.query()).isEqualTo("size=512");
@@ -56,9 +57,9 @@ public class RegexPathMappingTest {
     }
 
     @Test
-    public void utf8() {
-        final PathMapping mapping = ofRegex("^/(?<foo>.*)$");
-        final PathMappingResult result = mapping.apply(create("/%C2%A2"));
+    void utf8() {
+        final RegexPathMapping regexPathMapping = new RegexPathMapping(Pattern.compile("^/(?<foo>.*)$"));
+        final RoutingResult result = regexPathMapping.apply(create("/%C2%A2")).build();
         assertThat(result.path()).isEqualTo("/%C2%A2");
         assertThat(result.decodedPath()).isEqualTo("/¢");
         assertThat(result.pathParams()).containsEntry("foo", "¢").hasSize(1);

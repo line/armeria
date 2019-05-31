@@ -16,12 +16,14 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.PathMappingUtil.EXACT;
-import static com.linecorp.armeria.internal.PathMappingUtil.ensureAbsolutePath;
-import static com.linecorp.armeria.internal.PathMappingUtil.newLoggerName;
+import static com.linecorp.armeria.internal.RouteUtil.EXACT;
+import static com.linecorp.armeria.internal.RouteUtil.ensureAbsolutePath;
+import static com.linecorp.armeria.internal.RouteUtil.newLoggerName;
 
 import java.util.Optional;
 import java.util.Set;
+
+import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableSet;
 
@@ -39,10 +41,13 @@ final class ExactPathMapping extends AbstractPathMapping {
         meterTag = EXACT + exactPath;
     }
 
+    @Nullable
     @Override
-    protected PathMappingResult doApply(PathMappingContext mappingCtx) {
-        return exactPath.equals(mappingCtx.path()) ? PathMappingResult.of(mappingCtx.path(), mappingCtx.query())
-                                                   : PathMappingResult.empty();
+    RoutingResultBuilder doApply(RoutingContext routingCtx) {
+        return exactPath.equals(routingCtx.path()) ? RoutingResult.builder()
+                                                                  .path(routingCtx.path())
+                                                                  .query(routingCtx.query())
+                                                   : null;
     }
 
     @Override
@@ -68,11 +73,6 @@ final class ExactPathMapping extends AbstractPathMapping {
     @Override
     public Optional<String> triePath() {
         return exactPathOpt;
-    }
-
-    @Override
-    public boolean hasPathPatternOnly() {
-        return true;
     }
 
     @Override

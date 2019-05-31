@@ -146,44 +146,44 @@ a certain type from a server:
         }
     }
 
-.. _server-decorator-service-with-path-mappings:
+.. _server-decorator-service-with-routes:
 
-Decorating ``ServiceWithPathMappings``
+Decorating ``ServiceWithRoutes``
 --------------------------------------
 
-:api:`ServiceWithPathMappings` is a special variant of :api:`Service` which allows a user to register multiple
-routes for a single service. It has a method called ``pathMappings()`` which returns a ``Set`` of
-:apiplural:`PathMapping` so that you do not have to specify path mappings when registering your service:
+:api:`ServiceWithRoutes` is a special variant of :api:`Service` which allows a user to register multiple
+routes for a single service. It has a method called ``routes()`` which returns a ``Set`` of
+:apiplural:`Route` so that you do not have to specify path when registering your service:
 
 .. code-block:: java
 
-    import com.linecorp.armeria.server.PathMapping;
-    import com.linecorp.armeria.server.ServiceWithPathMappings;
+    import com.linecorp.armeria.server.Route;
+    import com.linecorp.armeria.server.ServiceWithRoutes;
     import java.util.HashSet;
     import java.util.Set;
 
-    public class MyServiceWithPathMappings implements ServiceWithPathMappings<HttpRequest, HttpResponse> {
+    public class MyServiceWithRoutes implements ServiceWithRoutes<HttpRequest, HttpResponse> {
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) { ... }
 
         @Override
-        public Set<PathMapping> pathMappings() {
-            Set<PathMapping> pathMappings = new HashSet<>();
-            pathMappings.add(PathMapping.of("/services/greet");
-            pathMappings.add(PathMapping.of("/services/hello");
-            return pathMappings;
+        public Set<Route> routes() {
+            Set<Route> routes = new HashSet<>();
+            routes.add(Route.builder().path("/services/greet").build());
+            routes.add(Route.builder().path("/services/hello").build());
+            return routes;
         }
     }
 
     ServerBuilder sb = new ServerBuilder();
-    // No path mapping is specified.
-    sb.service(new MyServiceWithPathMappings());
-    // Override the mappings provided by pathMappings().
-    sb.service("/services/hola", new MyServiceWithPathMappings());
+    // No path is specified.
+    sb.service(new MyServiceWithRoutes());
+    // Override the path provided by routes().
+    sb.service("/services/hola", new MyServiceWithRoutes());
 
-However, decorating a :api:`ServiceWithPathMappings` can lead to a compilation error when you attempt to
-register it without specifying a path mapping explicitly, because a decorated service is not a
-:api:`ServiceWithPathMappings` anymore but just a :api:`Service`:
+However, decorating a :api:`ServiceWithRoutes` can lead to a compilation error when you attempt to
+register it without specifying a path explicitly, because a decorated service is not a
+:api:`ServiceWithRoutes` anymore but just a :api:`Service`:
 
 .. code-block:: java
 
@@ -192,16 +192,16 @@ register it without specifying a path mapping explicitly, because a decorated se
     ServerBuilder sb = new ServerBuilder();
 
     // Works.
-    ServiceWithPathMappings<HttpRequest, HttpResponse> service =
-            new MyServiceWithPathMappings();
+    ServiceWithRoutes<HttpRequest, HttpResponse> service =
+            new MyServiceWithRoutes();
     sb.service(service);
 
-    // Does not work - not a ServiceWithPathMappings anymore due to decoration.
+    // Does not work - not a ServiceWithRoutes anymore due to decoration.
     Service<HttpRequest, HttpResponse> decoratedService =
             service.decorate(LoggingService.newDecorator());
     sb.service(decoratedService); // Compilation error
 
-    // Works if a path mapping is specified explicitly.
+    // Works if a path is specified explicitly.
     sb.service("/services/bonjour", decoratedService);
 
 Therefore, you need to specify the decorators as extra parameters:
@@ -210,11 +210,11 @@ Therefore, you need to specify the decorators as extra parameters:
 
     ServerBuilder sb = new ServerBuilder();
     // Register a service decorated with two decorators at multiple routes.
-    sb.service(new MyServiceWithPathMappings(),
+    sb.service(new MyServiceWithRoutes(),
                MyDecoratedService::new,
                LoggingService.newDecorator())
 
-A good real-world example of :api:`ServiceWithPathMappings` is :api:`GrpcService`.
+A good real-world example of :api:`ServiceWithRoutes` is :api:`GrpcService`.
 See :ref:`server-grpc-decorator` for more information.
 
 See also

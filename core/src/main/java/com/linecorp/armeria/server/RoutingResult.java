@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,9 +13,8 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server;
 
-import static java.util.Objects.requireNonNull;
+package com.linecorp.armeria.server;
 
 import java.util.Map;
 
@@ -28,77 +27,55 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 
 /**
- * The result returned by {@link PathMapping#apply(PathMappingContext)}.
+ * The result returned by {@link Route#apply(RoutingContext)}.
  */
-public final class PathMappingResult {
+public final class RoutingResult {
 
     static final int LOWEST_SCORE = Integer.MIN_VALUE;
     static final int HIGHEST_SCORE = Integer.MAX_VALUE;
 
-    private static final PathMappingResult EMPTY =
-            new PathMappingResult(null, null, ImmutableMap.of(), LOWEST_SCORE);
+    private static final RoutingResult EMPTY =
+            new RoutingResult(null, null, ImmutableMap.of(), LOWEST_SCORE, null);
 
     /**
-     * The {@link PathMappingResult} whose {@link #isPresent()} returns {@code false}. It is returned by
-     * {@link PathMapping#apply(PathMappingContext)} when the specified path did not match.
+     * The empty {@link RoutingResult} whose {@link #isPresent()} returns {@code false}. It is returned by
+     * {@link Route#apply(RoutingContext)} when the {@link RoutingContext} did not match the
+     * conditions in the {@link Route}.
      */
-    public static PathMappingResult empty() {
+    public static RoutingResult empty() {
         return EMPTY;
     }
 
     /**
-     * Creates a new instance with the specified {@code path}, without a query or any path parameters.
+     * Returns a new builder.
      */
-    public static PathMappingResult of(String path) {
-        return of(path, null);
-    }
-
-    /**
-     * Creates a new instance with the specified {@code path} and {@code query}, without any path parameters.
-     */
-    public static PathMappingResult of(String path, @Nullable String query) {
-        return of(path, query, ImmutableMap.of());
-    }
-
-    /**
-     * Creates a new instance with the specified {@code path}, {@code query} and the extracted path parameters.
-     */
-    public static PathMappingResult of(String path, @Nullable String query, Map<String, String> rawPathParams) {
-        return of(path, query, rawPathParams, LOWEST_SCORE);
-    }
-
-    /**
-     * Creates a new instance with the specified {@code path}, {@code query}, the extracted path parameters
-     * and the score.
-     */
-    public static PathMappingResult of(String path, @Nullable String query,
-                                       Map<String, String> rawPathParams, int score) {
-        requireNonNull(path, "path");
-        requireNonNull(rawPathParams, "rawPathParams");
-        return new PathMappingResult(path, query, rawPathParams, score);
+    public static RoutingResultBuilder builder() {
+        return new RoutingResultBuilder();
     }
 
     @Nullable
     private final String path;
     @Nullable
     private final String query;
-    @Nullable
+
     private final Map<String, String> pathParams;
 
-    private int score;
-    @Nullable
-    private MediaType negotiatedResponseMediaType;
     @Nullable
     private String decodedPath;
 
-    PathMappingResult(@Nullable String path, @Nullable String query,
-                      Map<String, String> pathParams, int score) {
+    private final int score;
+    @Nullable
+    private final MediaType negotiatedResponseMediaType;
+
+    RoutingResult(@Nullable String path, @Nullable String query, Map<String, String> pathParams,
+                  int score, @Nullable MediaType negotiatedResponseMediaType) {
         assert path != null || query == null && pathParams.isEmpty();
 
         this.path = path;
         this.query = query;
         this.pathParams = ImmutableMap.copyOf(pathParams);
         this.score = score;
+        this.negotiatedResponseMediaType = negotiatedResponseMediaType;
     }
 
     /**
@@ -109,7 +86,7 @@ public final class PathMappingResult {
     }
 
     /**
-     * Returns the path mapped by the {@link PathMapping}.
+     * Returns the path mapped by the {@link Route}.
      *
      * @throws IllegalStateException if there's no match
      */
@@ -118,8 +95,14 @@ public final class PathMappingResult {
         return path;
     }
 
+    private void ensurePresence() {
+        if (!isPresent()) {
+            throw new IllegalStateException("routing unavailable");
+        }
+    }
+
     /**
-     * Returns the path mapped by the {@link PathMapping}, decoded in UTF-8.
+     * Returns the path mapped by the {@link Route}, decoded in UTF-8.
      *
      * @throws IllegalStateException if there's no match
      */
@@ -134,7 +117,7 @@ public final class PathMappingResult {
     }
 
     /**
-     * Returns the query mapped by the {@link PathMapping}.
+     * Returns the query mapped by the {@link Route}.
      *
      * @return the query string. {@code null} If there is no query part.
      * @throws IllegalStateException if there's no match
@@ -146,7 +129,7 @@ public final class PathMappingResult {
     }
 
     /**
-     * Returns the path parameters extracted by the {@link PathMapping}.
+     * Returns the path parameters extracted by the {@link Route}.
      *
      * @throws IllegalStateException if there's no match
      */
@@ -180,45 +163,12 @@ public final class PathMappingResult {
     }
 
     /**
-     * Sets the new score of this result.
-     */
-    void setScore(int score) {
-        ensurePresence();
-        this.score = score;
-    }
-
-    /**
      * Returns the negotiated producible media type.
      */
     @Nullable
     public MediaType negotiatedResponseMediaType() {
         ensurePresence();
         return negotiatedResponseMediaType;
-    }
-
-    /**
-     * Returns the negotiated producible media type.
-     *
-     * @deprecated Use {@link #negotiatedResponseMediaType()}.
-     */
-    @Deprecated
-    @Nullable
-    public MediaType negotiatedProduceType() {
-        return negotiatedResponseMediaType();
-    }
-
-    /**
-     * Sets the negotiated producible media type.
-     */
-    void setNegotiatedResponseMediaType(MediaType negotiatedResponseMediaType) {
-        ensurePresence();
-        this.negotiatedResponseMediaType = negotiatedResponseMediaType;
-    }
-
-    private void ensurePresence() {
-        if (!isPresent()) {
-            throw new IllegalStateException("mapping unavailable");
-        }
     }
 
     @Override
@@ -230,7 +180,7 @@ public final class PathMappingResult {
             } else if (hasLowestScore()) {
                 score += " (lowest)";
             }
-            return MoreObjects.toStringHelper(this)
+            return MoreObjects.toStringHelper(this).omitNullValues()
                               .add("path", path)
                               .add("query", query)
                               .add("pathParams", pathParams)

@@ -27,6 +27,7 @@ import static com.linecorp.armeria.common.HttpMethod.PATCH;
 import static com.linecorp.armeria.common.HttpMethod.POST;
 import static com.linecorp.armeria.common.HttpMethod.PUT;
 import static com.linecorp.armeria.common.HttpMethod.TRACE;
+import static com.linecorp.armeria.server.HttpHeaderUtil.ensureUniqueMediaTypes;
 import static com.linecorp.armeria.server.ServerConfig.validateMaxRequestLength;
 import static com.linecorp.armeria.server.ServerConfig.validateRequestTimeoutMillis;
 import static java.util.Objects.requireNonNull;
@@ -34,9 +35,7 @@ import static java.util.Objects.requireNonNull;
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -44,7 +43,6 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
@@ -65,14 +63,14 @@ import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 abstract class AbstractServiceBindingBuilder {
 
     @Nullable
-    private PathMapping defaultPathMapping;
+    private RouteBuilder defaultRouteBuilder;
 
     private Set<HttpMethod> methods = HttpMethod.knownMethods();
 
-    private final Map<PathMapping, Set<HttpMethod>> pathMappings = new HashMap<>();
+    private final Map<RouteBuilder, Set<HttpMethod>> routeBuilders = new LinkedHashMap<>();
 
-    private List<MediaType> consumeTypes = ImmutableList.of();
-    private List<MediaType> produceTypes = ImmutableList.of();
+    private Set<MediaType> consumeTypes = ImmutableSet.of();
+    private Set<MediaType> produceTypes = ImmutableSet.of();
 
     @Nullable
     private Long requestTimeoutMillis;
@@ -93,7 +91,7 @@ abstract class AbstractServiceBindingBuilder {
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
     public AbstractServiceBindingBuilder path(String pathPattern) {
-        defaultPathMapping = PathMapping.of(requireNonNull(pathPattern, "pathPattern"));
+        defaultRouteBuilder = Route.builder().path(requireNonNull(pathPattern, "pathPattern"));
         return this;
     }
 
@@ -103,25 +101,7 @@ abstract class AbstractServiceBindingBuilder {
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
     public AbstractServiceBindingBuilder pathUnder(String prefix) {
-        defaultPathMapping = PathMapping.ofPrefix(requireNonNull(prefix, "prefix"));
-        return this;
-    }
-
-    /**
-     * Sets the specified {@link PathMapping} that a {@link Service} will be bound to.
-     *
-     * @throws IllegalArgumentException if the {@link PathMapping} has conditions beyond the path pattern,
-     *                                  i.e. the {@link PathMapping} created by
-     *                                  {@link PathMapping#withHttpHeaderInfo(Set, List, List)}
-     */
-    public AbstractServiceBindingBuilder pathMapping(PathMapping pathMapping) {
-        requireNonNull(pathMapping, "pathMapping");
-        if (!pathMapping.hasPathPatternOnly()) {
-            throw new IllegalArgumentException(
-                    "pathMapping: " + pathMapping.getClass().getSimpleName() +
-                    " (expected: the path mapping which has only the path patterns as its condition)");
-        }
-        defaultPathMapping = pathMapping;
+        defaultRouteBuilder = Route.builder().prefix(requireNonNull(prefix, "prefix"));
         return this;
     }
 
@@ -131,7 +111,6 @@ abstract class AbstractServiceBindingBuilder {
      *
      * @see #path(String)
      * @see #pathUnder(String)
-     * @see #pathMapping(PathMapping)
      */
     public AbstractServiceBindingBuilder methods(HttpMethod... methods) {
         return methods(ImmutableSet.copyOf(requireNonNull(methods, "methods")));
@@ -143,7 +122,6 @@ abstract class AbstractServiceBindingBuilder {
      *
      * @see #path(String)
      * @see #pathUnder(String)
-     * @see #pathMapping(PathMapping)
      */
     public AbstractServiceBindingBuilder methods(Iterable<HttpMethod> methods) {
         requireNonNull(methods, "methods");
@@ -158,23 +136,22 @@ abstract class AbstractServiceBindingBuilder {
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
     public AbstractServiceBindingBuilder get(String pathPattern) {
-        addPathMapping(pathPattern, EnumSet.of(GET));
+        addRouteBuilder(pathPattern, EnumSet.of(GET));
         return this;
     }
 
-    private void addPathMapping(String pathPattern, Set<HttpMethod> methods) {
-        final PathMapping pathMapping = PathMapping.of(requireNonNull(pathPattern, "pathPattern"));
-        addPathMapping(pathMapping, methods);
+    private void addRouteBuilder(String pathPattern, Set<HttpMethod> methods) {
+        addRouteBuilder(Route.builder().path(requireNonNull(pathPattern, "pathPattern")), methods);
     }
 
-    private void addPathMapping(PathMapping pathMapping, Set<HttpMethod> methods) {
-        final Set<HttpMethod> methodSet = pathMappings.computeIfAbsent(
-                pathMapping, key -> EnumSet.noneOf(HttpMethod.class));
+    private void addRouteBuilder(RouteBuilder routeBuilder, Set<HttpMethod> methods) {
+        final Set<HttpMethod> methodSet = routeBuilders.computeIfAbsent(
+                routeBuilder, key -> EnumSet.noneOf(HttpMethod.class));
 
         for (HttpMethod method : methods) {
             if (!methodSet.add(method)) {
                 throw new IllegalArgumentException("duplicate HTTP method: " + method +
-                                                   ", for: " + pathMapping);
+                                                   ", for: " + routeBuilder);
             }
         }
     }
@@ -185,7 +162,7 @@ abstract class AbstractServiceBindingBuilder {
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
     public AbstractServiceBindingBuilder post(String pathPattern) {
-        addPathMapping(pathPattern, EnumSet.of(POST));
+        addRouteBuilder(pathPattern, EnumSet.of(POST));
         return this;
     }
 
@@ -195,7 +172,7 @@ abstract class AbstractServiceBindingBuilder {
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
     public AbstractServiceBindingBuilder put(String pathPattern) {
-        addPathMapping(pathPattern, EnumSet.of(PUT));
+        addRouteBuilder(pathPattern, EnumSet.of(PUT));
         return this;
     }
 
@@ -205,7 +182,7 @@ abstract class AbstractServiceBindingBuilder {
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
     public AbstractServiceBindingBuilder patch(String pathPattern) {
-        addPathMapping(pathPattern, EnumSet.of(PATCH));
+        addRouteBuilder(pathPattern, EnumSet.of(PATCH));
         return this;
     }
 
@@ -215,7 +192,7 @@ abstract class AbstractServiceBindingBuilder {
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
     public AbstractServiceBindingBuilder delete(String pathPattern) {
-        addPathMapping(pathPattern, EnumSet.of(DELETE));
+        addRouteBuilder(pathPattern, EnumSet.of(DELETE));
         return this;
     }
 
@@ -225,7 +202,7 @@ abstract class AbstractServiceBindingBuilder {
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
     public AbstractServiceBindingBuilder options(String pathPattern) {
-        addPathMapping(pathPattern, EnumSet.of(OPTIONS));
+        addRouteBuilder(pathPattern, EnumSet.of(OPTIONS));
         return this;
     }
 
@@ -235,7 +212,7 @@ abstract class AbstractServiceBindingBuilder {
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
     public AbstractServiceBindingBuilder head(String pathPattern) {
-        addPathMapping(pathPattern, EnumSet.of(HEAD));
+        addRouteBuilder(pathPattern, EnumSet.of(HEAD));
         return this;
     }
 
@@ -245,7 +222,7 @@ abstract class AbstractServiceBindingBuilder {
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
     public AbstractServiceBindingBuilder trace(String pathPattern) {
-        addPathMapping(pathPattern, EnumSet.of(TRACE));
+        addRouteBuilder(pathPattern, EnumSet.of(TRACE));
         return this;
     }
 
@@ -255,7 +232,7 @@ abstract class AbstractServiceBindingBuilder {
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
     public AbstractServiceBindingBuilder connect(String pathPattern) {
-        addPathMapping(pathPattern, EnumSet.of(CONNECT));
+        addRouteBuilder(pathPattern, EnumSet.of(CONNECT));
         return this;
     }
 
@@ -264,7 +241,7 @@ abstract class AbstractServiceBindingBuilder {
      * will accept all media types.
      */
     public AbstractServiceBindingBuilder consumes(MediaType... consumeTypes) {
-        consumes(ImmutableList.copyOf(requireNonNull(consumeTypes, "consumeTypes")));
+        consumes(ImmutableSet.copyOf(requireNonNull(consumeTypes, "consumeTypes")));
         return this;
     }
 
@@ -273,20 +250,9 @@ abstract class AbstractServiceBindingBuilder {
      * will accept all media types.
      */
     public AbstractServiceBindingBuilder consumes(Iterable<MediaType> consumeTypes) {
-        ensureUniqueTypes(consumeTypes, "consumeTypes");
-        this.consumeTypes = ImmutableList.copyOf(consumeTypes);
+        ensureUniqueMediaTypes(consumeTypes, "consumeTypes");
+        this.consumeTypes = ImmutableSet.copyOf(consumeTypes);
         return this;
-    }
-
-    private static void ensureUniqueTypes(Iterable<MediaType> types, String typeName) {
-        requireNonNull(types, typeName);
-        final Set<MediaType> set = new HashSet<>();
-        for (final MediaType type : types) {
-            if (!set.add(type)) {
-                throw new IllegalArgumentException(
-                        "duplicated media type in " + typeName + ": " + type);
-            }
-        }
     }
 
     /**
@@ -295,7 +261,7 @@ abstract class AbstractServiceBindingBuilder {
      * for more information.
      */
     public AbstractServiceBindingBuilder produces(MediaType... produceTypes) {
-        this.produceTypes = ImmutableList.copyOf(requireNonNull(produceTypes, "produceTypes"));
+        produces(ImmutableSet.copyOf(requireNonNull(produceTypes, "produceTypes")));
         return this;
     }
 
@@ -305,8 +271,8 @@ abstract class AbstractServiceBindingBuilder {
      * for more information.
      */
     public AbstractServiceBindingBuilder produces(Iterable<MediaType> produceTypes) {
-        ensureUniqueTypes(produceTypes, "produceTypes");
-        this.produceTypes = ImmutableList.copyOf(produceTypes);
+        ensureUniqueMediaTypes(produceTypes, "produceTypes");
+        this.produceTypes = ImmutableSet.copyOf(produceTypes);
         return this;
     }
 
@@ -445,17 +411,21 @@ abstract class AbstractServiceBindingBuilder {
     abstract void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder);
 
     final void build0(Service<HttpRequest, HttpResponse> service) {
-        if (defaultPathMapping != null) {
-            addPathMapping(defaultPathMapping, methods);
+        if (defaultRouteBuilder != null) {
+            addRouteBuilder(defaultRouteBuilder, methods);
         }
-        checkState(!pathMappings.isEmpty(),
+        checkState(!routeBuilders.isEmpty(),
                    "Should set a path that the service is bound to before calling this.");
 
-        for (Entry<PathMapping, Set<HttpMethod>> entry : pathMappings.entrySet()) {
-            final PathMapping pathMapping =
-                    entry.getKey().withHttpHeaderInfo(entry.getValue(), consumeTypes, produceTypes);
+        for (Entry<RouteBuilder, Set<HttpMethod>> entry : routeBuilders.entrySet()) {
+            final Route route = entry.getKey()
+                                     .methods(entry.getValue())
+                                     .consumes(consumeTypes)
+                                     .produces(produceTypes)
+                                     .build();
+
             final ServiceConfigBuilder serviceConfigBuilder =
-                    new ServiceConfigBuilder(pathMapping, decorate(service));
+                    new ServiceConfigBuilder(route, decorate(service));
             if (requestTimeoutMillis != null) {
                 serviceConfigBuilder.requestTimeoutMillis(requestTimeoutMillis);
             }

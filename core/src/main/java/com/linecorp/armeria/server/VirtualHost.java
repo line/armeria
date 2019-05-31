@@ -17,11 +17,10 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.net.IDN;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -32,10 +31,10 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 
 import com.google.common.base.Ascii;
+import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.MediaTypeSet;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
@@ -52,7 +51,7 @@ import io.netty.util.DomainNameMappingBuilder;
  *   <li>the hostname pattern, as defined in
  *       <a href="https://tools.ietf.org/html/rfc2818#section-3.1">the section 3.1 of RFC2818</a></li>
  *   <li>{@link SslContext} if TLS is enabled</li>
- *   <li>the list of available {@link Service}s and their {@link PathMapping}s</li>
+ *   <li>the list of available {@link Service}s and their {@link Route}s</li>
  * </ul>
  *
  * @see VirtualHostBuilder
@@ -74,7 +73,6 @@ public final class VirtualHost {
     private final SslContext sslContext;
     private final List<ServiceConfig> services;
     private final Router<ServiceConfig> router;
-    private final MediaTypeSet producibleMediaTypes;
 
     private final Logger accessLogger;
 
@@ -86,7 +84,7 @@ public final class VirtualHost {
 
     VirtualHost(String defaultHostname, String hostnamePattern,
                 @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
-                MediaTypeSet producibleMediaTypes, RejectedPathMappingHandler rejectionHandler,
+                RejectedRouteHandler rejectionHandler,
                 Function<VirtualHost, Logger> accessLoggerMapper,
                 long requestTimeoutMillis,
                 long maxRequestLength, boolean verboseResponses,
@@ -99,7 +97,6 @@ public final class VirtualHost {
         this.defaultHostname = defaultHostname;
         this.hostnamePattern = hostnamePattern;
         this.sslContext = validateSslContext(sslContext);
-        this.producibleMediaTypes = producibleMediaTypes;
         this.requestTimeoutMillis = requestTimeoutMillis;
         this.maxRequestLength = maxRequestLength;
         this.verboseResponses = verboseResponses;
@@ -107,15 +104,10 @@ public final class VirtualHost {
         this.responseContentPreviewerFactory = responseContentPreviewerFactory;
 
         requireNonNull(serviceConfigs, "serviceConfigs");
+        services = Streams.stream(serviceConfigs)
+                          .map(sc -> sc.withVirtualHost(this))
+                          .collect(toImmutableList());
 
-        final List<ServiceConfig> servicesCopy = new ArrayList<>();
-
-        for (ServiceConfig c : serviceConfigs) {
-            c = c.withVirtualHost(this);
-            servicesCopy.add(c);
-        }
-
-        services = Collections.unmodifiableList(servicesCopy);
         router = Routers.ofVirtualHost(this, services, rejectionHandler);
         accessLogger = accessLoggerMapper.apply(this);
         checkState(accessLogger != null,
@@ -124,7 +116,7 @@ public final class VirtualHost {
 
     VirtualHost withNewSslContext(SslContext sslContext) {
         return new VirtualHost(defaultHostname(), hostnamePattern(), sslContext,
-                               serviceConfigs(), producibleMediaTypes, RejectedPathMappingHandler.DISABLED,
+                               serviceConfigs(), RejectedRouteHandler.DISABLED,
                                host -> accessLogger, requestTimeoutMillis(),
                                maxRequestLength(), verboseResponses(),
                                requestContentPreviewerFactory(), responseContentPreviewerFactory());
@@ -257,16 +249,6 @@ public final class VirtualHost {
     }
 
     /**
-     * Returns {@link MediaTypeSet} that consists of media types producible by this virtual host.
-     *
-     * @deprecated Use {@link ServiceConfig#produceTypes()}.
-     */
-    @Deprecated
-    public MediaTypeSet producibleMediaTypes() {
-        return producibleMediaTypes;
-    }
-
-    /**
      * Returns the {@link Logger} which is used for writing access logs of this virtual host.
      */
     public Logger accessLogger() {
@@ -354,16 +336,15 @@ public final class VirtualHost {
     }
 
     /**
-     * Finds the {@link Service} whose {@link Router} matches the {@link PathMappingContext}.
+     * Finds the {@link Service} whose {@link Router} matches the {@link RoutingContext}.
      *
-     * @param mappingCtx a context to find the {@link Service}.
+     * @param routingCtx a context to find the {@link Service}.
      *
-     * @return the {@link ServiceConfig} wrapped by a {@link PathMapped} if there's a match.
-     *         {@link PathMapped#empty()} if there's no match.
+     * @return the {@link ServiceConfig} wrapped by a {@link Routed} if there's a match.
+     *         {@link Routed#empty()} if there's no match.
      */
-    public PathMapped<ServiceConfig> findServiceConfig(PathMappingContext mappingCtx) {
-        requireNonNull(mappingCtx, "mappingCtx");
-        return router.find(mappingCtx);
+    public Routed<ServiceConfig> findServiceConfig(RoutingContext routingCtx) {
+        return router.find(requireNonNull(routingCtx, "routingCtx"));
     }
 
     VirtualHost decorate(@Nullable Function<Service<HttpRequest, HttpResponse>,
@@ -378,7 +359,7 @@ public final class VirtualHost {
                              .collect(Collectors.toList());
 
         return new VirtualHost(defaultHostname(), hostnamePattern(), sslContext(),
-                               services, producibleMediaTypes, RejectedPathMappingHandler.DISABLED,
+                               services, RejectedRouteHandler.DISABLED,
                                host -> accessLogger, requestTimeoutMillis(),
                                maxRequestLength(), verboseResponses(),
                                requestContentPreviewerFactory(), responseContentPreviewerFactory());

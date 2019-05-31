@@ -35,7 +35,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.internal.PathMappingUtil;
+import com.linecorp.armeria.internal.RouteUtil;
 
 final class FileSystemHttpVfs extends AbstractHttpVfs {
 
@@ -84,7 +84,7 @@ final class FileSystemHttpVfs extends AbstractHttpVfs {
     }
 
     private static String normalizePath(String path) {
-        PathMappingUtil.ensureAbsolutePath(path, "path");
+        RouteUtil.ensureAbsolutePath(path, "path");
         // Replace '/' with the platform dependent file separator if necessary.
         if (FILE_SEPARATOR_IS_NOT_SLASH) {
             path = path.replace(File.separatorChar, '/');

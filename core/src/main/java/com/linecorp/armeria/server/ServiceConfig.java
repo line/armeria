@@ -20,7 +20,6 @@ import static com.linecorp.armeria.server.ServerConfig.validateMaxRequestLength;
 import static com.linecorp.armeria.server.ServerConfig.validateRequestTimeoutMillis;
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -32,12 +31,11 @@ import com.google.common.base.MoreObjects.ToStringHelper;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 
 /**
- * A {@link Service} and its {@link PathMapping} and {@link VirtualHost}.
+ * A {@link Service} configuration.
  *
  * @see ServerConfig#serviceConfigs()
  * @see VirtualHost#serviceConfigs()
@@ -51,7 +49,7 @@ public final class ServiceConfig {
     @Nullable
     private final VirtualHost virtualHost;
 
-    private final PathMapping pathMapping;
+    private final Route route;
     @Nullable
     private final String loggerName;
     private final Service<HttpRequest, HttpResponse> service;
@@ -66,27 +64,27 @@ public final class ServiceConfig {
     /**
      * Creates a new instance.
      */
-    ServiceConfig(PathMapping pathMapping,
+    ServiceConfig(Route route,
                   Service<HttpRequest, HttpResponse> service,
                   @Nullable String loggerName, long requestTimeoutMillis,
                   long maxRequestLength, boolean verboseResponses,
                   ContentPreviewerFactory requestContentPreviewerFactory,
                   ContentPreviewerFactory responseContentPreviewerFactory) {
-        this(null, pathMapping, service, loggerName, requestTimeoutMillis, maxRequestLength,
+        this(null, route, service, loggerName, requestTimeoutMillis, maxRequestLength,
              verboseResponses, requestContentPreviewerFactory, responseContentPreviewerFactory);
     }
 
     /**
      * Creates a new instance.
      */
-    private ServiceConfig(@Nullable VirtualHost virtualHost, PathMapping pathMapping,
+    private ServiceConfig(@Nullable VirtualHost virtualHost, Route route,
                           Service<HttpRequest, HttpResponse> service,
                           @Nullable String loggerName, long requestTimeoutMillis,
                           long maxRequestLength, boolean verboseResponses,
                           ContentPreviewerFactory requestContentPreviewerFactory,
                           ContentPreviewerFactory responseContentPreviewerFactory) {
         this.virtualHost = virtualHost;
-        this.pathMapping = requireNonNull(pathMapping, "pathMapping");
+        this.route = requireNonNull(route, "route");
         this.service = requireNonNull(service, "service");
         this.loggerName = loggerName != null ? validateLoggerName(loggerName, "loggerName") : null;
         this.requestTimeoutMillis = validateRequestTimeoutMillis(requestTimeoutMillis);
@@ -108,7 +106,7 @@ public final class ServiceConfig {
 
     ServiceConfig withVirtualHost(VirtualHost virtualHost) {
         requireNonNull(virtualHost, "virtualHost");
-        return new ServiceConfig(virtualHost, pathMapping, service, loggerName, requestTimeoutMillis,
+        return new ServiceConfig(virtualHost, route, service, loggerName, requestTimeoutMillis,
                                  maxRequestLength, verboseResponses,
                                  requestContentPreviewerFactory, responseContentPreviewerFactory);
     }
@@ -116,7 +114,7 @@ public final class ServiceConfig {
     ServiceConfig withDecoratedService(
             Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator) {
         requireNonNull(decorator, "decorator");
-        return new ServiceConfig(virtualHost, pathMapping, service.decorate(decorator), loggerName,
+        return new ServiceConfig(virtualHost, route, service.decorate(decorator), loggerName,
                                  requestTimeoutMillis, maxRequestLength, verboseResponses,
                                  requestContentPreviewerFactory, responseContentPreviewerFactory);
     }
@@ -139,17 +137,10 @@ public final class ServiceConfig {
     }
 
     /**
-     * Returns the {@link PathMapping} of the {@link #service()}.
+     * Returns the {@link Route} of the {@link #service()}.
      */
-    public PathMapping pathMapping() {
-        return pathMapping;
-    }
-
-    /**
-     * Returns the {@link List} of {@link MediaType}s that this service produces.
-     */
-    public List<MediaType> produceTypes() {
-        return pathMapping.produceTypes();
+    public Route route() {
+        return route;
     }
 
     /**
@@ -217,7 +208,7 @@ public final class ServiceConfig {
         if (virtualHost != null) {
             toStringHelper.add("hostnamePattern", virtualHost.hostnamePattern());
         }
-        return toStringHelper.add("pathMapping", pathMapping)
+        return toStringHelper.add("route", route)
                              .add("loggerName", loggerName)
                              .add("service", service)
                              .add("requestTimeoutMillis", requestTimeoutMillis)

@@ -64,7 +64,7 @@ import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.Aggregati
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.ResolverContext;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
@@ -107,7 +107,7 @@ public class AnnotatedHttpService implements HttpService {
     private final ExceptionHandlerFunction exceptionHandler;
     private final ResponseConverterFunction responseConverter;
 
-    private final PathMapping pathMapping;
+    private final Route route;
     private final ResponseHeaders defaultHttpHeaders;
     private final HttpHeaders defaultHttpTrailers;
 
@@ -117,7 +117,7 @@ public class AnnotatedHttpService implements HttpService {
                          List<AnnotatedValueResolver> resolvers,
                          List<ExceptionHandlerFunction> exceptionHandlers,
                          List<ResponseConverterFunction> responseConverters,
-                         PathMapping pathMapping,
+                         Route route,
                          ResponseHeaders defaultHttpHeaders,
                          HttpHeaders defaultHttpTrailers) {
         this.object = requireNonNull(object, "object");
@@ -129,7 +129,7 @@ public class AnnotatedHttpService implements HttpService {
         responseConverter = responseConverter(
                 method, requireNonNull(responseConverters, "responseConverters"), exceptionHandler);
         aggregationStrategy = AggregationStrategy.from(resolvers);
-        this.pathMapping = requireNonNull(pathMapping, "pathMapping");
+        this.route = requireNonNull(route, "route");
 
         this.defaultHttpHeaders = requireNonNull(defaultHttpHeaders, "defaultHttpHeaders");
         this.defaultHttpTrailers = requireNonNull(defaultHttpTrailers, "defaultHttpTrailers");
@@ -209,8 +209,8 @@ public class AnnotatedHttpService implements HttpService {
         return resolvers;
     }
 
-    PathMapping pathMapping() {
-        return pathMapping;
+    Route route() {
+        return route;
     }
 
     @Override

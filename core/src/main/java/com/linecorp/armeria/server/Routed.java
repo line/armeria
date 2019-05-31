@@ -27,75 +27,73 @@ import com.google.common.base.MoreObjects;
  *
  * @param <T> the type of the mapped value
  */
-public final class PathMapped<T> {
+public final class Routed<T> {
 
-    private static final PathMapped<Object> EMPTY = new PathMapped<>(null, PathMappingResult.empty(), null);
+    private static final Routed<Object> EMPTY = new Routed<>(null, RoutingResult.empty(), null);
 
     /**
-     * Returns a singleton instance of a {@link PathMapped} that represents a non-existent value.
+     * Returns a singleton instance of a {@link Routed} that represents a non-existent value.
      */
     @SuppressWarnings("unchecked")
-    public static <T> PathMapped<T> empty() {
-        return (PathMapped<T>) EMPTY;
+    public static <T> Routed<T> empty() {
+        return (Routed<T>) EMPTY;
     }
 
     /**
-     * Creates a new {@link PathMapped} with the specified {@code mappedPath} and {@code value}.
-     *
-     * @param mappingResult the result of {@link PathMapping#apply(PathMappingContext)}
-     * @param value  the value
+     * Creates a new {@link Routed} with the specified {@link Route}, {@link RoutingResult} and
+     * {@code value}.
      */
-    static <T> PathMapped<T> of(PathMapping mapping, PathMappingResult mappingResult, T value) {
-        requireNonNull(mapping, "mapping");
-        requireNonNull(mappingResult, "mappingResult");
+    static <T> Routed<T> of(Route route, RoutingResult routingResult, T value) {
+        requireNonNull(route, "route");
+        requireNonNull(routingResult, "routingResult");
         requireNonNull(value, "value");
-        if (!mappingResult.isPresent()) {
-            throw new IllegalArgumentException("mappingResult: " + mappingResult + " (must be present)");
+        if (!routingResult.isPresent()) {
+            throw new IllegalArgumentException("routingResult: " + routingResult + " (must be present)");
         }
 
-        return new PathMapped<>(mapping, mappingResult, value);
+        return new Routed<>(route, routingResult, value);
     }
 
     @Nullable
-    private final PathMapping mapping;
-    private final PathMappingResult mappingResult;
+    private final Route route;
+    private final RoutingResult routingResult;
     @Nullable
     private final T value;
 
-    private PathMapped(@Nullable PathMapping mapping, PathMappingResult mappingResult, @Nullable T value) {
-        assert mapping != null && value != null ||
-               mapping == null && value == null;
+    private Routed(@Nullable Route route, RoutingResult routingResult, @Nullable T value) {
+        assert route != null && value != null ||
+               route == null && value == null;
 
-        this.mapping = mapping;
-        this.mappingResult = mappingResult;
+        this.route = route;
+        this.routingResult = routingResult;
         this.value = value;
     }
 
     /**
-     * Returns {@code true} if and only if {@link Router} found a matching value.
+     * Returns {@code true} if {@link Router} found a matching value.
      */
     public boolean isPresent() {
-        return mapping != null;
+        return route != null;
     }
 
     /**
-     * Returns the {@link PathMapping} which matched the path.
+     * Returns the {@link Route} which matched the {@link RoutingContext}.
      *
      * @throws IllegalStateException if there's no match
      */
-    public PathMapping mapping() {
+    public Route route() {
         ensurePresence();
-        return mapping;
+        return route;
     }
 
     /**
-     * Returns the {@link PathMappingResult}.
+     * Returns the {@link RoutingResult}.
      *
      * @throws IllegalStateException if there's no match
      */
-    public PathMappingResult mappingResult() {
+    public RoutingResult routingResult() {
         ensurePresence();
-        return mappingResult;
+        return routingResult;
     }
 
     /**
@@ -110,7 +108,7 @@ public final class PathMapped<T> {
 
     private void ensurePresence() {
         if (!isPresent()) {
-            throw new IllegalStateException("mapping unavailable");
+            throw new IllegalStateException("route unavailable");
         }
     }
 
@@ -118,8 +116,8 @@ public final class PathMapped<T> {
     public String toString() {
         if (isPresent()) {
             return MoreObjects.toStringHelper(this)
-                                  .add("mapping", mapping)
-                                  .add("mappingResult", mappingResult)
+                                  .add("route", route)
+                                  .add("routingResult", routingResult)
                                   .add("value", value)
                                   .toString();
         } else {

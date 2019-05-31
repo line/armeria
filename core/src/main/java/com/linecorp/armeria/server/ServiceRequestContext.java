@@ -104,18 +104,18 @@ public interface ServiceRequestContext extends RequestContext {
     VirtualHost virtualHost();
 
     /**
-     * Returns the {@link PathMapping} associated with the {@link Service} that is handling the current
+     * Returns the {@link Route} associated with the {@link Service} that is handling the current
      * {@link Request}.
      */
-    PathMapping pathMapping();
+    Route route();
 
     /**
-     * Returns the {@link PathMappingContext} used to find the {@link Service}.
+     * Returns the {@link RoutingContext} used to find the {@link Service}.
      */
-    PathMappingContext pathMappingContext();
+    RoutingContext routingContext();
 
     /**
-     * Returns the path parameters mapped by the {@link PathMapping} associated with the {@link Service}
+     * Returns the path parameters mapped by the {@link #route()} associated with the {@link Service}
      * that is handling the current {@link Request}.
      */
     Map<String, String> pathParams();

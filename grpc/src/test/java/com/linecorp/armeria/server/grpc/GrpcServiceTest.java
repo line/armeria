@@ -32,8 +32,8 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
-import com.linecorp.armeria.server.PathMapping;
-import com.linecorp.armeria.server.PathMappingResult;
+import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.RoutingResult;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 
@@ -75,9 +75,11 @@ class GrpcServiceTest {
         final HttpRequest req = HttpRequest.of(
                 RequestHeaders.of(HttpMethod.POST, "/grpc.testing.TestService.UnaryCall",
                                   HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto"));
-        final PathMappingResult pathMappingResult = PathMappingResult.of("grpc.testing.TestService.UnaryCall");
+        final RoutingResult routingResult = RoutingResult.builder()
+                                                         .path("grpc.testing.TestService.UnaryCall")
+                                                         .build();
         final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(req)
-                                                                      .pathMappingResult(pathMappingResult)
+                                                                      .routingResult(routingResult)
                                                                       .build();
         final HttpResponse response = grpcService.doPost(ctx, req);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpResponse.of(
@@ -92,9 +94,11 @@ class GrpcServiceTest {
         final HttpRequest req = HttpRequest.of(
                 RequestHeaders.of(HttpMethod.POST, "/grpc.testing.TestService/FooCall",
                                   HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto"));
-        final PathMappingResult pathMappingResult = PathMappingResult.of("/grpc.testing.TestService/FooCall");
+        final RoutingResult routingResult = RoutingResult.builder()
+                                                         .path("/grpc.testing.TestService/FooCall")
+                                                         .build();
         final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(req)
-                                                                      .pathMappingResult(pathMappingResult)
+                                                                      .routingResult(routingResult)
                                                                       .build();
         final HttpResponse response = grpcService.doPost(ctx, req);
         assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpResponse.of(
@@ -109,16 +113,16 @@ class GrpcServiceTest {
     }
 
     @Test
-    void pathMappings() throws Exception {
-        assertThat(grpcService.pathMappings())
+    public void routes() throws Exception {
+        assertThat(grpcService.routes())
                 .containsExactlyInAnyOrder(
-                        PathMapping.ofExact("/armeria.grpc.testing.TestService/EmptyCall"),
-                        PathMapping.ofExact("/armeria.grpc.testing.TestService/UnaryCall"),
-                        PathMapping.ofExact("/armeria.grpc.testing.TestService/UnaryCall2"),
-                        PathMapping.ofExact("/armeria.grpc.testing.TestService/StreamingOutputCall"),
-                        PathMapping.ofExact("/armeria.grpc.testing.TestService/StreamingInputCall"),
-                        PathMapping.ofExact("/armeria.grpc.testing.TestService/FullDuplexCall"),
-                        PathMapping.ofExact("/armeria.grpc.testing.TestService/HalfDuplexCall"),
-                        PathMapping.ofExact("/armeria.grpc.testing.TestService/UnimplementedCall"));
+                        Route.builder().exact("/armeria.grpc.testing.TestService/EmptyCall").build(),
+                        Route.builder().exact("/armeria.grpc.testing.TestService/UnaryCall").build(),
+                        Route.builder().exact("/armeria.grpc.testing.TestService/UnaryCall2").build(),
+                        Route.builder().exact("/armeria.grpc.testing.TestService/StreamingOutputCall").build(),
+                        Route.builder().exact("/armeria.grpc.testing.TestService/StreamingInputCall").build(),
+                        Route.builder().exact("/armeria.grpc.testing.TestService/FullDuplexCall").build(),
+                        Route.builder().exact("/armeria.grpc.testing.TestService/HalfDuplexCall").build(),
+                        Route.builder().exact("/armeria.grpc.testing.TestService/UnimplementedCall").build());
     }
 }

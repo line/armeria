@@ -19,7 +19,7 @@ import javax.validation.constraints.NotNull;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Service;
 
 /**
@@ -31,7 +31,7 @@ import com.linecorp.armeria.server.Service;
  * >     return new HttpServiceRegistrationBean()
  * >             .setServiceName("okService")
  * >             .setService(new OkService())
- * >             .setPathMapping(PathMapping.ofExact("/ok"))
+ * >             .setRoute(Route.builder().path("/ok").methods(HttpMethod.GET, HttpMethod.POST).build())
  * >             .setDecorators(LoggingService.newDecorator());
  * > }
  * }</pre>
@@ -41,24 +41,24 @@ public class HttpServiceRegistrationBean
         AbstractServiceRegistrationBean<Service<HttpRequest, HttpResponse>, HttpServiceRegistrationBean> {
 
     /**
-     * The pathMapping for the http service. For example, {@code PathMapping.ofPrefix("/foobar")}.
+     * The {@link Route} for the http service.
      */
     @NotNull
-    private PathMapping pathMapping;
+    private Route route;
 
     /**
-     * Returns the {@link PathMapping} that this service map to.
+     * Returns the {@link Route} that this service map to.
      */
     @NotNull
-    public PathMapping getPathMapping() {
-        return pathMapping;
+    public Route getRoute() {
+        return route;
     }
 
     /**
-     * Sets a {@link PathMapping} that this service map to.
+     * Sets a {@link Route} that this service map to.
      */
-    public HttpServiceRegistrationBean setPathMapping(@NotNull PathMapping pathMapping) {
-        this.pathMapping = pathMapping;
+    public HttpServiceRegistrationBean setRoute(@NotNull Route route) {
+        this.route = route;
         return this;
     }
 
@@ -66,6 +66,6 @@ public class HttpServiceRegistrationBean
      * Sets the path pattern of the service.
      */
     public HttpServiceRegistrationBean setPathPattern(@NotNull String pathPattern) {
-        return setPathMapping(PathMapping.of(pathPattern));
+        return setRoute(Route.builder().path(pathPattern).build());
     }
 }

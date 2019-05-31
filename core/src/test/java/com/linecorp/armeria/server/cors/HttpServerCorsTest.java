@@ -27,7 +27,6 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.HttpClient;
@@ -40,7 +39,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.PathMapping;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -223,13 +221,13 @@ public class HttpServerCorsTest {
             }, CorsServiceBuilder.forOrigin("http://example.com")
                                  // Note that configuring mappings for specific paths first because the
                                  // policies will be visited in the configured order.
-                                 .pathMapping(PathMapping.of("glob:/**/actors"))
+                                 .route("glob:/**/actors")
                                  .allowRequestMethods(HttpMethod.GET, HttpMethod.POST)
                                  .andForOrigin("http://example.com")
-                                 .pathMapping(PathMapping.of("/cors8/movies/{title}"))
+                                 .route("/cors8/movies/{title}")
                                  .allowRequestMethods(HttpMethod.POST)
                                  .andForOrigin("http://example.com")
-                                 .pathMapping(PathMapping.of("prefix:/cors8"))
+                                 .route("prefix:/cors8")
                                  .allowRequestMethods(HttpMethod.GET)
                                  .and()
                                  .newDecorator());
@@ -246,10 +244,10 @@ public class HttpServerCorsTest {
             }, CorsServiceBuilder.forOrigin("http://example.com")
                                  // Note that this prefix path mapping is configured first, so all preflight
                                  // requests with a path starting with "/cors9/" will be matched.
-                                 .pathMapping(PathMapping.of("prefix:/cors9"))
+                                 .route("prefix:/cors9")
                                  .allowRequestMethods(HttpMethod.GET)
                                  .andForOrigin("http://example.com")
-                                 .pathMapping(PathMapping.of("/cors9/movies/{title}"))
+                                 .route("/cors9/movies/{title}")
                                  .allowRequestMethods(HttpMethod.POST)
                                  .and()
                                  .newDecorator());
@@ -503,7 +501,7 @@ public class HttpServerCorsTest {
     }
 
     @Test
-    public void testPathMapping() {
+    public void testRoute() {
         final HttpClient client = client();
         AggregatedHttpResponse res;
 
@@ -521,7 +519,7 @@ public class HttpServerCorsTest {
     }
 
     @Test
-    public void testPathMapping_order() {
+    public void testRoute_order() {
         final HttpClient client = client();
         AggregatedHttpResponse res;
 
@@ -539,7 +537,7 @@ public class HttpServerCorsTest {
     }
 
     @Test
-    public void testPathMapping_annotated() {
+    public void testRoute_annotated() {
         final HttpClient client = client();
         AggregatedHttpResponse res;
 
@@ -550,17 +548,5 @@ public class HttpServerCorsTest {
         res = preflightRequest(client, "/cors10/not_configured", "http://example.com", "GET");
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS)).isNull();
-    }
-
-    @Test
-    public void notAllowedPathMapping() {
-        final CorsServiceBuilder builder = CorsServiceBuilder.forAnyOrigin();
-        assertThatThrownBy(() -> {
-            builder.pathMapping(PathMapping.of("/exact").withHttpHeaderInfo(ImmutableSet.of(HttpMethod.GET),
-                                                                            ImmutableList.of(),
-                                                                            ImmutableList.of()));
-        }).isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining(
-                  "(expected: the path mapping which has only the path patterns as its condition)");
     }
 }

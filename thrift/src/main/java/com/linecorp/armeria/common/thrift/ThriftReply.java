@@ -109,7 +109,7 @@ public final class ThriftReply extends ThriftMessage {
             return true;
         }
 
-        if (o == null || getClass() != o.getClass()) {
+        if (!(o instanceof ThriftReply)) {
             return false;
         }
 

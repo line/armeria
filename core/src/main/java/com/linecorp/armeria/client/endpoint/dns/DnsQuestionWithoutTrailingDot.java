@@ -60,7 +60,7 @@ final class DnsQuestionWithoutTrailingDot implements DnsQuestion {
         if (this == o) {
             return true;
         }
-        if (o == null || getClass() != o.getClass()) {
+        if (!(o instanceof DnsQuestionWithoutTrailingDot)) {
             return false;
         }
         final DnsQuestionWithoutTrailingDot that = (DnsQuestionWithoutTrailingDot) o;

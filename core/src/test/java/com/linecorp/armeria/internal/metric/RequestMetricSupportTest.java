@@ -268,19 +268,19 @@ public class RequestMetricSupportTest {
         final Map<String, Double> measurements = measureAll(registry);
         assertThat(measurements)
                 .containsEntry("foo.activeRequests#value{hostnamePattern=*,method=POST," +
-                               "pathMapping=exact:/foo}", 0.0)
+                               "route=exact:/foo}", 0.0)
                 .containsEntry("foo.requests#count{hostnamePattern=*,httpStatus=503,method=POST," +
-                               "pathMapping=exact:/foo,result=success}", 0.0)
+                               "result=success,route=exact:/foo}", 0.0)
                 .containsEntry("foo.requests#count{hostnamePattern=*,httpStatus=503,method=POST," +
-                               "pathMapping=exact:/foo,result=failure}", 1.0)
+                               "result=failure,route=exact:/foo}", 1.0)
                 .containsEntry("foo.timeouts#count{cause=RequestTimeoutException,hostnamePattern=*," +
-                               "httpStatus=503,method=POST,pathMapping=exact:/foo}", 1.0)
+                               "httpStatus=503,method=POST,route=exact:/foo}", 1.0)
                 .containsEntry("foo.responseDuration#count{hostnamePattern=*,httpStatus=503,method=POST," +
-                               "pathMapping=exact:/foo}", 1.0)
+                               "route=exact:/foo}", 1.0)
                 .containsEntry("foo.responseLength#count{hostnamePattern=*,httpStatus=503,method=POST," +
-                               "pathMapping=exact:/foo}", 1.0)
+                               "route=exact:/foo}", 1.0)
                 .containsEntry("foo.totalDuration#count{hostnamePattern=*,httpStatus=503,method=POST," +
-                               "pathMapping=exact:/foo}", 1.0);
+                               "route=exact:/foo}", 1.0);
     }
 
     @Test

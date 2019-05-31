@@ -57,10 +57,10 @@ public class ServiceBindingBuilderTest {
         assertThat(serviceConfigs.size()).isOne();
         final ServiceConfig serviceConfig = serviceConfigs.get(0);
 
-        final PathMapping pathMapping = serviceConfig.pathMapping();
-        assertThat(pathMapping.exactPath().get()).isEqualTo("/foo/bar");
-        assertThat(pathMapping.consumeTypes()).containsExactly(JSON, PLAIN_TEXT_UTF_8);
-        assertThat(pathMapping.produceTypes()).containsExactly(JSON_UTF_8,
+        final Route route = serviceConfig.route();
+        assertThat(route.exactPath().get()).isEqualTo("/foo/bar");
+        assertThat(route.consumes()).containsExactly(JSON, PLAIN_TEXT_UTF_8);
+        assertThat(route.produces()).containsExactly(JSON_UTF_8,
                                                                PLAIN_TEXT_UTF_8);
         assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(10);
         assertThat(serviceConfig.maxRequestLength()).isEqualTo(8192);
@@ -83,10 +83,10 @@ public class ServiceBindingBuilderTest {
         assertThat(serviceConfigs.size()).isOne();
         final ServiceConfig serviceConfig = serviceConfigs.get(0);
 
-        final PathMapping pathMapping = serviceConfig.pathMapping();
-        assertThat(pathMapping.exactPath().get()).isEqualTo("/foo/bar");
-        assertThat(pathMapping.consumeTypes()).containsExactly(JSON, PLAIN_TEXT_UTF_8);
-        assertThat(pathMapping.produceTypes()).containsExactly(JSON_UTF_8,
+        final Route route = serviceConfig.route();
+        assertThat(route.exactPath().get()).isEqualTo("/foo/bar");
+        assertThat(route.consumes()).containsExactly(JSON, PLAIN_TEXT_UTF_8);
+        assertThat(route.produces()).containsExactly(JSON_UTF_8,
                                                                PLAIN_TEXT_UTF_8);
         assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(10);
         assertThat(serviceConfig.maxRequestLength()).isEqualTo(8192);
@@ -110,8 +110,8 @@ public class ServiceBindingBuilderTest {
         final List<ServiceConfig> serviceConfigs = sb.build().serviceConfigs();
         assertThat(serviceConfigs.size()).isOne();
         final ServiceConfig serviceConfig = serviceConfigs.get(0);
-        final PathMapping pathMapping = serviceConfig.pathMapping();
-        assertThat(pathMapping.exactPath().get()).isEqualTo("/foo/bar");
+        final Route route = serviceConfig.route();
+        assertThat(route.exactPath().get()).isEqualTo("/foo/bar");
         assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(10);
         assertThat(serviceConfig.maxRequestLength()).isEqualTo(1024);
         assertThat(serviceConfig.verboseResponses()).isEqualTo(true);
@@ -127,16 +127,16 @@ public class ServiceBindingBuilderTest {
 
         List<ServiceConfig> serviceConfigs = sb.build().serviceConfigs();
         assertThat(serviceConfigs.size()).isOne();
-        assertThat(serviceConfigs.get(0).pathMapping().exactPath().get()).isEqualTo("/foo/bar");
+        assertThat(serviceConfigs.get(0).route().exactPath().get()).isEqualTo("/foo/bar");
 
         sb = new ServerBuilder();
-        sb.route().pathMapping(PathMapping.of("/foo/bar"))
+        sb.route().path("/foo/bar")
           .methods(HttpMethod.GET, HttpMethod.POST)
           .build((ctx, req) -> HttpResponse.of(OK));
 
         serviceConfigs = sb.build().serviceConfigs();
         assertThat(serviceConfigs.size()).isOne();
-        assertThat(serviceConfigs.get(0).pathMapping().exactPath().get()).isEqualTo("/foo/bar");
+        assertThat(serviceConfigs.get(0).route().exactPath().get()).isEqualTo("/foo/bar");
     }
 
     @Test
@@ -149,8 +149,8 @@ public class ServiceBindingBuilderTest {
 
         final List<ServiceConfig> serviceConfigs = sb.build().serviceConfigs();
         assertThat(serviceConfigs.size()).isEqualTo(2);
-        assertThat(serviceConfigs.get(0).pathMapping().exactPath().get()).isEqualTo("/foo/bar");
-        assertThat(serviceConfigs.get(1).pathMapping().exactPath().get()).isEqualTo("/foo/bar/baz");
+        assertThat(serviceConfigs.get(0).route().exactPath().get()).isEqualTo("/foo/bar");
+        assertThat(serviceConfigs.get(1).route().exactPath().get()).isEqualTo("/foo/bar/baz");
     }
 
     @Test(expected = IllegalStateException.class)

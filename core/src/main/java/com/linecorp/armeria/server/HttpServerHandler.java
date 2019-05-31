@@ -301,7 +301,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             handledLastRequest = true;
         }
 
-        RequestHeaders headers = req.headers();
+        final RequestHeaders headers = req.headers();
 
         // Handle 'OPTIONS * HTTP/1.1'.
         final String originalPath = headers.path();
@@ -324,13 +324,13 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final String hostname = hostname(headers);
         final VirtualHost host = config.findVirtualHost(hostname);
 
-        final PathMappingContext mappingCtx =
-                DefaultPathMappingContext.of(host, hostname, pathAndQuery.path(), pathAndQuery.query(),
-                                             headers, isCorsPreflightRequest(req));
+        final RoutingContext routingCtx =
+                DefaultRoutingContext.of(host, hostname, pathAndQuery.path(), pathAndQuery.query(),
+                                         headers, isCorsPreflightRequest(req));
         // Find the service that matches the path.
-        final PathMapped<ServiceConfig> mapped;
+        final Routed<ServiceConfig> routed;
         try {
-            mapped = host.findServiceConfig(mappingCtx);
+            routed = host.findServiceConfig(routingCtx);
         } catch (HttpStatusException cause) {
             // We do not need to handle HttpResponseException here because we do not use it internally.
             respond(ctx, req, pathAndQuery, cause.httpStatus(), null, cause);
@@ -340,15 +340,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             respond(ctx, req, pathAndQuery, HttpStatus.INTERNAL_SERVER_ERROR, null, cause);
             return;
         }
-        if (!mapped.isPresent()) {
+        if (!routed.isPresent()) {
             // No services matched the path.
-            handleNonExistentMapping(ctx, req, host, pathAndQuery, mappingCtx);
+            handleNonExistentMapping(ctx, req, host, pathAndQuery, routingCtx);
             return;
         }
 
         // Decode the request and create a new invocation context from it to perform an invocation.
-        final PathMappingResult mappingResult = mapped.mappingResult();
-        final ServiceConfig serviceCfg = mapped.value();
+        final RoutingResult routingResult = routed.routingResult();
+        final ServiceConfig serviceCfg = routed.value();
         final Service<HttpRequest, HttpResponse> service = serviceCfg.service();
         final Channel channel = ctx.channel();
         final InetAddress remoteAddress = ((InetSocketAddress) channel.remoteAddress()).getAddress();
@@ -363,7 +363,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
                 serviceCfg, channel, serviceCfg.server().meterRegistry(),
-                protocol, mappingCtx, mappingResult, req, getSSLSession(channel),
+                protocol, routingCtx, routingResult, req, getSSLSession(channel),
                 proxiedAddresses, clientAddress);
 
         try (SafeCloseable ignored = reqCtx.push()) {
@@ -400,7 +400,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             }
             unfinishedRequests.put(req, res);
 
-            if (service.shouldCachePath(pathAndQuery.path(), pathAndQuery.query(), mapped.mapping())) {
+            if (service.shouldCachePath(pathAndQuery.path(), pathAndQuery.query(), routed.route())) {
                 reqCtx.log().addListener(log -> {
                     final HttpStatus status = log.responseHeaders().status();
                     if (status.code() >= 200 && status.code() < 400) {
@@ -460,13 +460,13 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     private void handleNonExistentMapping(ChannelHandlerContext ctx, DecodedHttpRequest req,
                                           VirtualHost host, PathAndQuery pathAndQuery,
-                                          PathMappingContext mappingCtx) {
+                                          RoutingContext routingCtx) {
 
-        final String path = mappingCtx.path();
+        final String path = routingCtx.path();
         if (path.charAt(path.length() - 1) != '/') {
             // Handle the case where /path doesn't exist but /path/ exists.
             final String pathWithSlash = path + '/';
-            if (host.findServiceConfig(mappingCtx.overridePath(pathWithSlash)).isPresent()) {
+            if (host.findServiceConfig(routingCtx.overridePath(pathWithSlash)).isPresent()) {
                 final String location;
                 final String originalPath = req.path();
                 if (path.length() == originalPath.length()) {

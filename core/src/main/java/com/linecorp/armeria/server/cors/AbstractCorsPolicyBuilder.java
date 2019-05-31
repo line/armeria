@@ -39,7 +39,7 @@ import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.annotation.AdditionalHeader;
 import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
 import com.linecorp.armeria.server.cors.CorsConfig.ConstantValueSupplier;
@@ -54,7 +54,7 @@ import io.netty.util.AsciiString;
  */
 abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder<B>> {
     private final Set<String> origins;
-    private final List<PathMapping> pathMappings = new ArrayList<>();
+    private final List<Route> routes = new ArrayList<>();
     private boolean credentialsAllowed;
     private boolean nullOriginAllowed;
     private long maxAge;
@@ -85,7 +85,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder<B>>
     }
 
     B setConfig(CorsDecorator corsDecorator) {
-        Arrays.stream(corsDecorator.pathPatterns()).forEach(this::pathMapping);
+        Arrays.stream(corsDecorator.pathPatterns()).forEach(this::route);
 
         if (corsDecorator.credentialsAllowed()) {
             allowCredentials();
@@ -121,27 +121,8 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder<B>>
      * @return {@code this} to support method chaining.
      * @throws IllegalArgumentException if the path pattern is not valid
      */
-    public B pathMapping(String pathPattern) {
-        return pathMapping(PathMapping.of(pathPattern));
-    }
-
-    /**
-     * Adds a {@link PathMapping} that this policy is supposed to be applied to.
-     *
-     * @param pathMapping the {@link PathMapping} that this policy is supposed to be applied to
-     * @return {@code this} to support method chaining.
-     * @throws IllegalArgumentException if the {@link PathMapping} has conditions beyond the path pattern,
-     *                                  i.e. the {@link PathMapping} created by
-     *                                  {@link PathMapping#withHttpHeaderInfo(Set, List, List)}
-     */
-    public B pathMapping(PathMapping pathMapping) {
-        requireNonNull(pathMapping, "pathMapping");
-        if (!pathMapping.hasPathPatternOnly()) {
-            throw new IllegalArgumentException(
-                    "pathMapping: " + pathMapping.getClass().getSimpleName() +
-                    " (expected: the path mapping which has only the path patterns as its condition)");
-        }
-        pathMappings.add(pathMapping);
+    public B route(String pathPattern) {
+        routes.add(Route.builder().path(pathPattern).build());
         return self();
     }
 
@@ -364,14 +345,14 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder<B>>
      * Returns a newly-created {@link CorsPolicy} based on the properties of this builder.
      */
     CorsPolicy build() {
-        return new CorsPolicy(origins, pathMappings, credentialsAllowed, maxAge, nullOriginAllowed,
+        return new CorsPolicy(origins, routes, credentialsAllowed, maxAge, nullOriginAllowed,
                               exposedHeaders, allowedRequestHeaders, allowedRequestMethods,
                               preflightResponseHeadersDisabled, preflightResponseHeaders);
     }
 
     @Override
     public String toString() {
-        return CorsPolicy.toString(this, origins, pathMappings,
+        return CorsPolicy.toString(this, origins, routes,
                                    nullOriginAllowed, credentialsAllowed, maxAge, exposedHeaders,
                                    allowedRequestMethods, allowedRequestHeaders, preflightResponseHeaders);
     }

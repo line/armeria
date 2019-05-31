@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.AbstractHttpService;
-import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
 
@@ -35,7 +35,7 @@ class ArmeriaOkServiceConfiguration {
         return new HttpServiceRegistrationBean()
                 .setServiceName("okService")
                 .setService(new OkService())
-                .setPathMapping(PathMapping.ofExact("/ok"))
+                .setRoute(Route.builder().path("/ok").build())
                 .setDecorators(ImmutableList.of(LoggingService.newDecorator()));
     }
 

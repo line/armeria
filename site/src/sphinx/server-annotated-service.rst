@@ -51,27 +51,27 @@ To handle an HTTP request with a service method, you can annotate your service m
         public HttpResponse hello() { ... }
     }
 
-There are 5 :api:`PathMapping` types provided for describing a path.
+There are 5 different path types that you can define:
 
-- Exact mapping, e.g. ``/hello`` or ``exact:/hello``
+- Exact path, e.g. ``/hello`` or ``exact:/hello``
 
   - a service method will handle the path exactly matched with the specified path.
 
-- Mapping with path prefix, e.g. ``prefix:/hello``
+- Prefix path, e.g. ``prefix:/hello``
 
   - a service method will handle every path which starts with the specified prefix.
 
-- Mapping with path variables, e.g ``/hello/{name}`` or ``/hello/:name``
+- Path containing path variables, e.g ``/hello/{name}`` or ``/hello/:name``
 
   - a service method will handle the path matched with the specified path pattern. A path variable in the
     specified pattern may be mapped to a parameter of the service method.
 
-- Mapping with regular expression, e.g. ``regex:^/hello/(?<name>.*)$``
+- Regular expression path, e.g. ``regex:^/hello/(?<name>.*)$``
 
   - a service method will handle the path matched with the specified regular expression. If a named capturing
     group exists in the regular expression, it may be mapped to a parameter of the service method.
 
-- Mapping with glob pattern, e.g. ``glob:/*/hello/**``
+- Glob pattern path, e.g. ``glob:/*/hello/**``
 
   - a service method will handle the path matched with the specified glob pattern. Each wildcard is mapped to
     an index which starts with ``0``, so it may be mapped to a parameter of the service method.
@@ -85,7 +85,7 @@ Please refer to :ref:`parameter-injection` for more information about :api:`@Par
     public class MyAnnotatedService {
 
         @Get("/hello/{name}")
-        public HttpResponse pathvar(@Param("name") String name) { ... }
+        public HttpResponse pathVar(@Param("name") String name) { ... }
 
         @Get("regex:^/hello/(?<name>.*)$")
         public HttpResponse regex(@Param("name") String name) { ... }

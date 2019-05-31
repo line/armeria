@@ -40,12 +40,12 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.ServiceWithPathMappings;
+import com.linecorp.armeria.server.ServiceWithRoutes;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.QueryStringDecoder;
@@ -54,7 +54,7 @@ import io.netty.handler.codec.http.QueryStringDecoder;
  * A {@link Service} which handles SAML APIs, such as consuming an assertion, retrieving a metadata
  * or handling a logout request from an identity provider.
  */
-final class SamlService implements ServiceWithPathMappings<HttpRequest, HttpResponse> {
+final class SamlService implements ServiceWithRoutes<HttpRequest, HttpResponse> {
 
     private static final HttpData DATA_INCORRECT_PATH =
             HttpData.ofUtf8(HttpResponseStatus.BAD_REQUEST + "\nSAML request with an incorrect path");
@@ -77,7 +77,7 @@ final class SamlService implements ServiceWithPathMappings<HttpRequest, HttpResp
     private Server server;
 
     private final Map<String, SamlServiceFunction> serviceMap;
-    private final Set<PathMapping> pathMappings;
+    private final Set<Route> routes;
 
     SamlService(SamlServiceProvider sp) {
         this.sp = requireNonNull(sp, "sp");
@@ -102,7 +102,7 @@ final class SamlService implements ServiceWithPathMappings<HttpRequest, HttpResp
                                                                 sp.defaultIdpConfig(),
                                                                 sp.requestIdManager(),
                                                                 sp.sloHandler())));
-        final PathMapping metadata = sp.metadataPath();
+        final Route metadata = sp.metadataRoute();
         metadata.exactPath().ifPresent(
                 path -> builder.put(path,
                                     new SamlMetadataServiceFunction(sp.entityId(),
@@ -112,7 +112,10 @@ final class SamlService implements ServiceWithPathMappings<HttpRequest, HttpResp
                                                                     sp.acsConfigs(),
                                                                     sp.sloEndpoints())));
         serviceMap = builder.build();
-        pathMappings = serviceMap.keySet().stream().map(PathMapping::ofExact).collect(toImmutableSet());
+        routes = serviceMap.keySet()
+                           .stream()
+                           .map(path -> Route.builder().exact(path).build())
+                           .collect(toImmutableSet());
     }
 
     @Override
@@ -132,8 +135,8 @@ final class SamlService implements ServiceWithPathMappings<HttpRequest, HttpResp
     }
 
     @Override
-    public Set<PathMapping> pathMappings() {
-        return pathMappings;
+    public Set<Route> routes() {
+        return routes;
     }
 
     @Override

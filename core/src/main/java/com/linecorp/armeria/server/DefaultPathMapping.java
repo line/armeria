@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.PathMappingUtil.newLoggerName;
+import static com.linecorp.armeria.internal.RouteUtil.newLoggerName;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -184,28 +184,22 @@ final class DefaultPathMapping extends AbstractPathMapping {
         return skeleton;
     }
 
+    @Nullable
     @Override
-    public boolean hasPathPatternOnly() {
-        return true;
-    }
-
-    @Override
-    protected PathMappingResult doApply(PathMappingContext mappingCtx) {
-        final Matcher matcher = pattern.matcher(mappingCtx.path());
+    RoutingResultBuilder doApply(RoutingContext routingCtx) {
+        final Matcher matcher = pattern.matcher(routingCtx.path());
         if (!matcher.matches()) {
-            return PathMappingResult.empty();
+            return null;
         }
 
-        if (paramNameArray.length == 0) {
-            return PathMappingResult.of(mappingCtx.path(), mappingCtx.query());
-        }
+        final RoutingResultBuilder builder = RoutingResult.builder()
+                                                          .path(routingCtx.path())
+                                                          .query(routingCtx.query());
 
-        final PathMappingResultBuilder builder =
-                new PathMappingResultBuilder(mappingCtx.path(), mappingCtx.query());
         for (int i = 0; i < paramNameArray.length; i++) {
             builder.rawParam(paramNameArray[i], matcher.group(i + 1));
         }
-        return builder.build();
+        return builder;
     }
 
     @Override
@@ -213,7 +207,7 @@ final class DefaultPathMapping extends AbstractPathMapping {
         if (this == o) {
             return true;
         }
-        if (o == null || getClass() != o.getClass()) {
+        if (!(o instanceof DefaultPathMapping)) {
             return false;
         }
 

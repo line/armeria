@@ -91,7 +91,7 @@ public class MeterIdPrefixFunctionTest {
         assertThat(res.tags()).containsExactly(Tag.of("hostnamePattern", "*"),
                                                Tag.of("httpStatus", "0"),
                                                Tag.of("method", "GET"),
-                                               Tag.of("pathMapping", "exact:/"));
+                                               Tag.of("route", "exact:/"));
 
         // An RPC request.
         ctx = newContext(HttpMethod.POST, "/post", RpcRequest.of(Object.class, "doFoo"));
@@ -100,7 +100,7 @@ public class MeterIdPrefixFunctionTest {
         assertThat(res.tags()).containsExactly(Tag.of("hostnamePattern", "*"),
                                                Tag.of("httpStatus", "0"),
                                                Tag.of("method", "doFoo"),
-                                               Tag.of("pathMapping", "exact:/post"));
+                                               Tag.of("route", "exact:/post"));
 
         // HTTP response status.
         ctx = newContext(HttpMethod.GET, "/get", null);
@@ -111,7 +111,7 @@ public class MeterIdPrefixFunctionTest {
         assertThat(res.tags()).containsExactly(Tag.of("hostnamePattern", "*"),
                                                Tag.of("httpStatus", "200"),
                                                Tag.of("method", "GET"),
-                                               Tag.of("pathMapping", "exact:/get"));
+                                               Tag.of("route", "exact:/get"));
     }
 
     @Test
@@ -128,7 +128,7 @@ public class MeterIdPrefixFunctionTest {
         assertThat(res.name()).isEqualTo("foo");
         assertThat(res.tags()).containsExactly(Tag.of("hostnamePattern", "*"),
                                                Tag.of("method", "GET"),
-                                               Tag.of("pathMapping", "exact:/"));
+                                               Tag.of("route", "exact:/"));
 
         // An RPC request.
         ctx = newContext(HttpMethod.POST, "/post", RpcRequest.of(Object.class, "doFoo"));
@@ -136,7 +136,7 @@ public class MeterIdPrefixFunctionTest {
         assertThat(res.name()).isEqualTo("foo");
         assertThat(res.tags()).containsExactly(Tag.of("hostnamePattern", "*"),
                                                Tag.of("method", "doFoo"),
-                                               Tag.of("pathMapping", "exact:/post"));
+                                               Tag.of("route", "exact:/post"));
 
         // HTTP response status.
         ctx = newContext(HttpMethod.GET, "/get", null);
@@ -146,7 +146,7 @@ public class MeterIdPrefixFunctionTest {
         assertThat(res.name()).isEqualTo("foo");
         assertThat(res.tags()).containsExactly(Tag.of("hostnamePattern", "*"),
                                                Tag.of("method", "GET"),
-                                               Tag.of("pathMapping", "exact:/get"));
+                                               Tag.of("route", "exact:/get"));
     }
 
     private static RequestContext newContext(HttpMethod method, String path, @Nullable Object requestContent) {

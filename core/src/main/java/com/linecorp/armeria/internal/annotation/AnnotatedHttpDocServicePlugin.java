@@ -19,9 +19,9 @@ package com.linecorp.armeria.internal.annotation;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.linecorp.armeria.internal.PathMappingUtil.EXACT;
-import static com.linecorp.armeria.internal.PathMappingUtil.PREFIX;
-import static com.linecorp.armeria.internal.PathMappingUtil.REGEX;
+import static com.linecorp.armeria.internal.RouteUtil.EXACT;
+import static com.linecorp.armeria.internal.RouteUtil.PREFIX;
+import static com.linecorp.armeria.internal.RouteUtil.REGEX;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServiceUtil.getNormalizedTriePath;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.findDescription;
 import static com.linecorp.armeria.server.docs.FieldLocation.HEADER;
@@ -59,7 +59,7 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.annotation.AnnotatedBeanFactoryRegistry.BeanFactoryId;
-import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.annotation.Header;
@@ -154,8 +154,8 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
 
     private static void addMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos,
                                       String hostnamePattern, AnnotatedHttpService service) {
-        final PathMapping pathMapping = service.pathMapping();
-        final EndpointInfo endpoint = endpointInfo(pathMapping, hostnamePattern);
+        final Route route = service.route();
+        final EndpointInfo endpoint = endpointInfo(route, hostnamePattern);
         if (endpoint == null) {
             return;
         }
@@ -165,7 +165,7 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
         final TypeSignature returnTypeSignature = toTypeSignature(method.getGenericReturnType());
         final List<FieldInfo> fieldInfos = fieldInfos(service.annotatedValueResolvers());
         final Class<?> clazz = service.object().getClass();
-        pathMapping.supportedMethods().forEach(
+        route.methods().forEach(
                 httpMethod -> {
                     final MethodInfo methodInfo = new MethodInfo(
                             name, returnTypeSignature, fieldInfos, ImmutableList.of(), // Ignore exceptions.
@@ -176,44 +176,44 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
 
     @Nullable
     @VisibleForTesting
-    static EndpointInfo endpointInfo(PathMapping pathMapping, String hostnamePattern) {
-        final String endpointPathMapping = endpointPathMapping(pathMapping);
+    static EndpointInfo endpointInfo(Route route, String hostnamePattern) {
+        final String endpointPathMapping = endpointPathMapping(route);
         if (isNullOrEmpty(endpointPathMapping)) {
             return null;
         }
 
         final EndpointInfoBuilder builder = new EndpointInfoBuilder(hostnamePattern, endpointPathMapping);
-        if (endpointPathMapping.startsWith(REGEX) && pathMapping.prefix().isPresent()) {
-            // PrefixAddingPathMapping
-            builder.regexPathPrefix(PREFIX + pathMapping.prefix().get());
+        if (endpointPathMapping.startsWith(REGEX) && route.prefix().isPresent()) {
+            // PathMappingWithPrefix
+            builder.regexPathPrefix(PREFIX + route.prefix().get());
         }
 
-        builder.availableMimeTypes(availableMimeTypes(pathMapping));
+        builder.availableMimeTypes(availableMimeTypes(route));
         return builder.build();
     }
 
-    private static String endpointPathMapping(PathMapping pathMapping) {
-        final Optional<String> exactPath = pathMapping.exactPath();
+    private static String endpointPathMapping(Route route) {
+        final Optional<String> exactPath = route.exactPath();
         if (exactPath.isPresent()) {
             return EXACT + exactPath.get();
         }
 
-        final Optional<String> regex = pathMapping.regex();
+        final Optional<String> regex = route.regex();
         if (regex.isPresent()) {
             return REGEX + regex.get();
         }
 
-        final Optional<String> prefix = pathMapping.prefix();
+        final Optional<String> prefix = route.prefix();
         if (prefix.isPresent()) {
             return PREFIX + prefix.get();
         }
 
-        return getNormalizedTriePath(pathMapping);
+        return getNormalizedTriePath(route);
     }
 
-    private static List<MediaType> availableMimeTypes(PathMapping pathMapping) {
-        final Builder<MediaType> builder = ImmutableList.builder();
-        final List<MediaType> consumeTypes = pathMapping.consumeTypes();
+    private static Set<MediaType> availableMimeTypes(Route route) {
+        final ImmutableSet.Builder<MediaType> builder = ImmutableSet.builder();
+        final Set<MediaType> consumeTypes = route.consumes();
         builder.addAll(consumeTypes);
         if (!consumeTypes.contains(MediaType.JSON_UTF_8)) {
             builder.add(MediaType.JSON_UTF_8);

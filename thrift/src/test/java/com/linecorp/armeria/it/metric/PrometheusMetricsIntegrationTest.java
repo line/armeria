@@ -153,15 +153,15 @@ public class PrometheusMetricsIntegrationTest {
         assertThat(content).containsPattern(
                 multilinePattern("server_request_duration_seconds_count",
                                  "{handler=\"Foo\",hostnamePattern=\"*\",httpStatus=\"200\",",
-                                 "method=\"hello\",pathMapping=\"exact:/foo\",} 7.0"));
+                                 "method=\"hello\",route=\"exact:/foo\",} 7.0"));
         assertThat(content).containsPattern(
                 multilinePattern("server_request_length_count",
                                  "{handler=\"Foo\",hostnamePattern=\"*\",httpStatus=\"200\",",
-                                 "method=\"hello\",pathMapping=\"exact:/foo\",} 7.0"));
+                                 "method=\"hello\",route=\"exact:/foo\",} 7.0"));
         assertThat(content).containsPattern(
                 multilinePattern("server_response_length_count",
                                  "{handler=\"Foo\",hostnamePattern=\"*\",httpStatus=\"200\",",
-                                 "method=\"hello\",pathMapping=\"exact:/foo\",} 7.0"));
+                                 "method=\"hello\",route=\"exact:/foo\",} 7.0"));
         // Client entry count check
         assertThat(content).containsPattern(
                 multilinePattern("client_request_duration_seconds_count",
@@ -177,8 +177,8 @@ public class PrometheusMetricsIntegrationTest {
         assertThat(content).containsPattern(
                 multilinePattern("server_requests_total",
                                  "{handler=\"Foo\",hostnamePattern=\"*\",httpStatus=\"200\",",
-                                 "method=\"hello\",pathMapping=\"exact:/foo\",",
-                                 "result=\"failure\",} 3.0"));
+                                 "method=\"hello\",result=\"failure\",",
+                                 "route=\"exact:/foo\",} 3.0"));
         assertThat(content).containsPattern(
                 multilinePattern("client_requests_total",
                                  "{handler=\"Foo\",httpStatus=\"200\",method=\"hello\"," +
@@ -188,8 +188,8 @@ public class PrometheusMetricsIntegrationTest {
         assertThat(content).containsPattern(
                 multilinePattern("server_requests_total",
                                  "{handler=\"Foo\",hostnamePattern=\"*\",httpStatus=\"200\",",
-                                 "method=\"hello\",pathMapping=\"exact:/foo\",",
-                                 "result=\"success\",} 4.0"));
+                                 "method=\"hello\",result=\"success\",",
+                                 "route=\"exact:/foo\",} 4.0"));
         assertThat(content).containsPattern(
                 multilinePattern("client_requests_total",
                                  "{handler=\"Foo\",httpStatus=\"200\",method=\"hello\"," +
@@ -199,7 +199,7 @@ public class PrometheusMetricsIntegrationTest {
         assertThat(content).containsPattern(
                 multilinePattern("server_active_requests",
                                  "{handler=\"Foo\",hostnamePattern=\"*\",",
-                                 "method=\"hello\",pathMapping=\"exact:/foo\",} 0.0"));
+                                 "method=\"hello\",route=\"exact:/foo\",} 0.0"));
         assertThat(content).containsPattern(
                 multilinePattern("client_active_requests",
                                  "{handler=\"Foo\",method=\"hello\",} 0.0"));
@@ -242,15 +242,15 @@ public class PrometheusMetricsIntegrationTest {
         assertThat(content).containsPattern(
                 multilinePattern("server_request_duration_seconds_count",
                                  "{handler=\"Bar\",hostnamePattern=\"*\",httpStatus=\"200\",",
-                                 "method=\"hello\",pathMapping=\"exact:/bar\",} 1.0"));
+                                 "method=\"hello\",route=\"exact:/bar\",} 1.0"));
         assertThat(content).containsPattern(
                 multilinePattern("server_request_length_count",
                                  "{handler=\"Bar\",hostnamePattern=\"*\",httpStatus=\"200\",",
-                                 "method=\"hello\",pathMapping=\"exact:/bar\",} 1.0"));
+                                 "method=\"hello\",route=\"exact:/bar\",} 1.0"));
         assertThat(content).containsPattern(
                 multilinePattern("server_response_length_count",
                                  "{handler=\"Bar\",hostnamePattern=\"*\",httpStatus=\"200\",",
-                                 "method=\"hello\",pathMapping=\"exact:/bar\",} 1.0"));
+                                 "method=\"hello\",route=\"exact:/bar\",} 1.0"));
         // Client entry count check
         assertThat(content).containsPattern(
                 multilinePattern("client_request_duration_seconds_count",
@@ -266,8 +266,8 @@ public class PrometheusMetricsIntegrationTest {
         assertThat(content).containsPattern(
                 multilinePattern("server_requests_total",
                                  "{handler=\"Bar\",hostnamePattern=\"*\",httpStatus=\"200\",",
-                                 "method=\"hello\",pathMapping=\"exact:/bar\",",
-                                 "result=\"success\",} 1.0"));
+                                 "method=\"hello\",result=\"success\",",
+                                 "route=\"exact:/bar\",} 1.0"));
         assertThat(content).containsPattern(
                 multilinePattern("client_requests_total",
                                  "{handler=\"Bar\",httpStatus=\"200\",method=\"hello\"," +
@@ -277,7 +277,7 @@ public class PrometheusMetricsIntegrationTest {
         assertThat(content).containsPattern(
                 multilinePattern("server_active_requests",
                                  "{handler=\"Bar\",hostnamePattern=\"*\",",
-                                 "method=\"hello\",pathMapping=\"exact:/bar\",} 0.0"));
+                                 "method=\"hello\",route=\"exact:/bar\",} 0.0"));
         assertThat(content).containsPattern(
                 multilinePattern("client_active_requests",
                                  "{handler=\"Bar\",method=\"hello\",} 0.0"));
