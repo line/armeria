@@ -115,13 +115,13 @@ configure(relocatedProjects) {
             }
 
             def dependencyJars = new LinkedHashSet<File>()
-            relocatedProjects.each {
+            relocatedProjects.each { p ->
                 // NB: ProGuardTask picks the dependencies added *after* evaluation correctly
                 //     because libraryjar() intentionally keeps the specified dependencies as-is.
                 //     See ProGuardTask.libraryjar() for more information.
-                if (!it.hasFlags('no_aggregation')) {
-                    it.afterEvaluate {
-                        it.configurations.testRuntime.collect().each { File file ->
+                if (!p.hasFlags('no_aggregation')) {
+                    doFirst {
+                        p.configurations.testRuntime.collect().each { File file ->
                             if (!file.path.startsWith("${rootProject.projectDir}")) {
                                 dependencyJars.add(file)
                             }
@@ -164,12 +164,9 @@ configure(relocatedProjects) {
 
 // NB: Configure in a new closure so that all relocated projects have a 'shadedJar' or 'trimShadedJar' task.
 configure(relocatedProjects) {
-    // Add tests for the shaded JAR.
-    task shadedTest(
-            type: Test,
-            group: 'Verification',
-            description: 'Runs the unit tests with the shaded classes.') {
-
+    // Make sure the main classes are ready as well when `shadedTestClasses` is run,
+    // so that the tasks that require `shadedTestClasses` have everything required to run shaded tests.
+    tasks.shadedTestClasses.configure {
         relocatedProjects.each {
             if (it.tasks.findByName('trimShadedJar')) {
                 dependsOn it.tasks.trimShadedJar.path
@@ -177,6 +174,14 @@ configure(relocatedProjects) {
                 dependsOn it.tasks.shadedJar.path
             }
         }
+    }
+
+    // Add tests for the shaded JAR.
+    task shadedTest(
+            type: Test,
+            group: 'Verification',
+            description: 'Runs the unit tests with the shaded classes.') {
+
         dependsOn tasks.shadedTestClasses
 
         // The tests against the shaded artifacts should run after the tests against the unshaded ones.
@@ -195,9 +200,12 @@ configure(relocatedProjects) {
     // so that we get the complete dependency list.
     project.afterEvaluate {
         if (numConfiguredRelocatedProjects.incrementAndGet() == relocatedProjects.size()) {
-            relocatedProjects.each {
-                it.tasks.shadedTest.classpath +=
-                        it.files(createShadedTestRuntimeConfiguration(it).resolve())
+            relocatedProjects.each { p ->
+                def shadedTestRuntime = createShadedTestRuntimeConfiguration(p)
+                def testTask = p.tasks.shadedTest
+                testTask.doFirst {
+                    testTask.classpath += p.files(shadedTestRuntime.resolve())
+                }
             }
         }
     }
