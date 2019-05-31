@@ -178,7 +178,7 @@ public final class PathAndQuery {
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this).omitNullValues()
                           .add("path", path)
                           .add("query", query)
                           .toString();
@@ -351,7 +351,7 @@ public final class PathAndQuery {
             if (isPath) {
                 return false;
             } else if (cp != 0x0A && cp != 0x0D && cp != 0x09) {
-                // .. except 0x0A (LF), (byte) 0x0D (CR) and 0x09 (TAB) because they are used in a form.
+                // .. except 0x0A (LF), 0x0D (CR) and 0x09 (TAB) because they are used in a form.
                 return false;
             }
         }
@@ -538,7 +538,7 @@ public final class PathAndQuery {
 
     /**
      * Reserved characters which require percent-encoding. These values are only used for constructing
-     * {@link #RAW_CHAR_TO_MARKER} map and {@link #MARKER_TO_PERCENT_ENCODED_CHAR} map.
+     * {@link #RAW_CHAR_TO_MARKER} and {@link #MARKER_TO_PERCENT_ENCODED_CHAR} mapping tables.
      *
      * @see <a href="https://tools.ietf.org/html/rfc3986#section-2.2">RFC 3986, section 2.2</a>
      */
