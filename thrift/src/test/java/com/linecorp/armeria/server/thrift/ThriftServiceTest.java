@@ -24,12 +24,11 @@ import static org.junit.Assert.fail;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 import javax.annotation.Nonnull;
 
@@ -37,16 +36,13 @@ import org.apache.thrift.TApplicationException;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TMemoryBuffer;
 import org.apache.thrift.transport.TMemoryInputTransport;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.DisableOnDebug;
-import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
@@ -71,7 +67,7 @@ import com.linecorp.armeria.service.test.thrift.main.Name;
 import com.linecorp.armeria.service.test.thrift.main.NameService;
 import com.linecorp.armeria.service.test.thrift.main.NameSortService;
 import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
-import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
+import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
@@ -99,8 +95,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  * </ul>
  * </p>
  */
-@RunWith(Parameterized.class)
-public class ThriftServiceTest {
+class ThriftServiceTest {
 
     private static final Name NAME_A = new Name("a", "a", "a");
     private static final Name NAME_B = new Name("b", "b", "b");
@@ -110,45 +105,29 @@ public class ThriftServiceTest {
     private static final String BAR = "bar";
     private static final String BAZ = "baz";
 
-    @ClassRule
-    public static final EventLoopRule eventLoop = new EventLoopRule();
+    @RegisterExtension
+    static final EventLoopExtension eventLoop = new EventLoopExtension();
 
-    @Rule
-    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
-
-    @Parameters(name = "{0}")
-    public static Collection<SerializationFormat> parameters() throws Exception {
-        return ThriftSerializationFormats.values();
-    }
-
-    private final SerializationFormat defaultSerializationFormat;
-
-    private TProtocol inProto;
-    private TProtocol outProto;
     private TMemoryInputTransport in;
     private TMemoryBuffer out;
 
     private CompletableFuture<HttpData> promise;
     private CompletableFuture<HttpData> promise2;
 
-    public ThriftServiceTest(SerializationFormat defaultSerializationFormat) {
-        this.defaultSerializationFormat = defaultSerializationFormat;
-    }
-
-    @Before
-    public void before() {
+    @BeforeEach
+    void before() {
         in = new TMemoryInputTransport();
         out = new TMemoryBuffer(128);
-        inProto = ThriftProtocolFactories.get(defaultSerializationFormat).getProtocol(in);
-        outProto = ThriftProtocolFactories.get(defaultSerializationFormat).getProtocol(out);
 
         promise = new CompletableFuture<>();
         promise2 = new CompletableFuture<>();
     }
 
-    @Test
-    public void testSync_HelloService_hello() throws Exception {
-        final HelloService.Client client = new HelloService.Client.Factory().getClient(inProto, outProto);
+    @ParameterizedTest
+    @ArgumentsSource(SerializationFormatProvider.class)
+    void testSync_HelloService_hello(SerializationFormat defaultSerializationFormat) throws Exception {
+        final HelloService.Client client = new HelloService.Client.Factory().getClient(
+                inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
         client.send_hello(FOO);
         assertThat(out.length()).isGreaterThan(0);
 
@@ -160,9 +139,11 @@ public class ThriftServiceTest {
         assertThat(client.recv_hello()).isEqualTo("Hello, foo!");
     }
 
-    @Test
-    public void testAsync_HelloService_hello() throws Exception {
-        final HelloService.Client client = new HelloService.Client.Factory().getClient(inProto, outProto);
+    @ParameterizedTest
+    @ArgumentsSource(SerializationFormatProvider.class)
+    void testAsync_HelloService_hello(SerializationFormat defaultSerializationFormat) throws Exception {
+        final HelloService.Client client = new HelloService.Client.Factory().getClient(
+                inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
         client.send_hello(FOO);
         assertThat(out.length()).isGreaterThan(0);
 
@@ -175,9 +156,12 @@ public class ThriftServiceTest {
         assertThat(client.recv_hello()).isEqualTo("Hello, foo!");
     }
 
-    @Test
-    public void testSync_HelloService_hello_with_null() throws Exception {
-        final HelloService.Client client = new HelloService.Client.Factory().getClient(inProto, outProto);
+    @ParameterizedTest
+    @ArgumentsSource(SerializationFormatProvider.class)
+    void testSync_HelloService_hello_with_null(SerializationFormat defaultSerializationFormat)
+            throws Exception {
+        final HelloService.Client client = new HelloService.Client.Factory().getClient(
+                inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
         client.send_hello(null);
         assertThat(out.length()).isGreaterThan(0);
 
@@ -189,9 +173,12 @@ public class ThriftServiceTest {
         assertThat(client.recv_hello()).isEqualTo("false");
     }
 
-    @Test
-    public void testAsync_HelloService_hello_with_null() throws Exception {
-        final HelloService.Client client = new HelloService.Client.Factory().getClient(inProto, outProto);
+    @ParameterizedTest
+    @ArgumentsSource(SerializationFormatProvider.class)
+    void testAsync_HelloService_hello_with_null(SerializationFormat defaultSerializationFormat)
+            throws Exception {
+        final HelloService.Client client = new HelloService.Client.Factory().getClient(
+                inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
         client.send_hello(null);
         assertThat(out.length()).isGreaterThan(0);
 
@@ -204,9 +191,11 @@ public class ThriftServiceTest {
         assertThat(client.recv_hello()).isEqualTo("false");
     }
 
-    @Test
-    public void testIdentity_HelloService_hello() throws Exception {
-        final HelloService.Client client = new HelloService.Client.Factory().getClient(inProto, outProto);
+    @ParameterizedTest
+    @ArgumentsSource(SerializationFormatProvider.class)
+    void testIdentity_HelloService_hello(SerializationFormat defaultSerializationFormat) throws Exception {
+        final HelloService.Client client = new HelloService.Client.Factory().getClient(
+                inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
         client.send_hello(FOO);
         assertThat(out.length()).isGreaterThan(0);
 
@@ -222,12 +211,14 @@ public class ThriftServiceTest {
         assertThat(promise.get()).isEqualTo(promise2.get());
     }
 
-    @Test
-    public void testSync_OnewayHelloService_hello() throws Exception {
+    @ParameterizedTest
+    @ArgumentsSource(SerializationFormatProvider.class)
+    void testSync_OnewayHelloService_hello(SerializationFormat defaultSerializationFormat) throws Exception {
         final AtomicReference<String> actualName = new AtomicReference<>();
 
         final OnewayHelloService.Client client =
-                new OnewayHelloService.Client.Factory().getClient(inProto, outProto);
+                new OnewayHelloService.Client.Factory().getClient(
+                        inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
         client.send_hello(FOO);
         assertThat(out.length()).isGreaterThan(0);
 
@@ -240,12 +231,14 @@ public class ThriftServiceTest {
         assertThat(actualName.get()).isEqualTo(FOO);
     }
 
-    @Test
-    public void testAsync_OnewayHelloService_hello() throws Exception {
+    @ParameterizedTest
+    @ArgumentsSource(SerializationFormatProvider.class)
+    void testAsync_OnewayHelloService_hello(SerializationFormat defaultSerializationFormat) throws Exception {
         final AtomicReference<String> actualName = new AtomicReference<>();
 
         final OnewayHelloService.Client client =
-                new OnewayHelloService.Client.Factory().getClient(inProto, outProto);
+                new OnewayHelloService.Client.Factory().getClient(
+                        inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
         client.send_hello(FOO);
         assertThat(out.length()).isGreaterThan(0);
 
@@ -260,11 +253,13 @@ public class ThriftServiceTest {
         assertThat(actualName.get()).isEqualTo(FOO);
     }
 
-    @Test
-    public void testSync_DevNullService_consume() throws Exception {
+    @ParameterizedTest
+    @ArgumentsSource(SerializationFormatProvider.class)
+    void testSync_DevNullService_consume(SerializationFormat defaultSerializationFormat) throws Exception {
         final AtomicReference<String> consumed = new AtomicReference<>();
 
-        final DevNullService.Client client = new DevNullService.Client.Factory().getClient(inProto, outProto);
+        final DevNullService.Client client = new DevNullService.Client.Factory().getClient(
+                inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
         client.send_consume(FOO);
         assertThat(out.length()).isGreaterThan(0);
 
@@ -278,11 +273,13 @@ public class ThriftServiceTest {
         client.recv_consume();
     }
 
-    @Test
-    public void testAsync_DevNullService_consume() throws Exception {
+    @ParameterizedTest
+    @ArgumentsSource(SerializationFormatProvider.class)
+    void testAsync_DevNullService_consume(SerializationFormat defaultSerializationFormat) throws Exception {
         final AtomicReference<String> consumed = new AtomicReference<>();
 
-        final DevNullService.Client client = new DevNullService.Client.Factory().getClient(inProto, outProto);
+        final DevNullService.Client client = new DevNullService.Client.Factory().getClient(
+                inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
         client.send_consume("bar");
         assertThat(out.length()).isGreaterThan(0);
 
@@ -298,9 +295,11 @@ public class ThriftServiceTest {
         client.recv_consume();
     }
 
-    @Test
-    public void testIdentity_DevNullService_consume() throws Exception {
-        final DevNullService.Client client = new DevNullService.Client.Factory().getClient(inProto, outProto);
+    @ParameterizedTest
+    @ArgumentsSource(SerializationFormatProvider.class)
+    void testIdentity_DevNullService_consume(SerializationFormat defaultSerializationFormat) throws Exception {
+        final DevNullService.Client client = new DevNullService.Client.Factory().getClient(
+                inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
         client.send_consume(FOO);
         assertThat(out.length()).isGreaterThan(0);
 
@@ -317,9 +316,11 @@ public class ThriftServiceTest {
         assertThat(promise.get()).isEqualTo(promise2.get());
     }
 
-    @Test
-    public void testSync_FileService_create_reply() throws Exception {
-        final FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
+    @ParameterizedTest
+    @ArgumentsSource(SerializationFormatProvider.class)
+    void testSync_FileService_create_reply(SerializationFormat defaultSerializationFormat) throws Exception {
+        final FileService.Client client = new FileService.Client.Factory().getClient(
+                inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
         client.send_create(BAR);
         assertThat(out.length()).isGreaterThan(0);
 
@@ -337,9 +338,11 @@ public class ThriftServiceTest {
         }
     }
 
-    @Test
-    public void testAsync_FileService_create_reply() throws Exception {
-        final FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
+    @ParameterizedTest
+    @ArgumentsSource(SerializationFormatProvider.class)
+    void testAsync_FileService_create_reply(SerializationFormat defaultSerializationFormat) throws Exception {
+        final FileService.Client client = new FileService.Client.Factory().getClient(
+                inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
         client.send_create(BAR);
         assertThat(out.length()).isGreaterThan(0);
 
@@ -357,9 +360,12 @@ public class ThriftServiceTest {
         }
     }
 
-    @Test
-    public void testIdentity_FileService_create_reply() throws Exception {
-        final FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
+    @ParameterizedTest
+    @ArgumentsSource(SerializationFormatProvider.class)
+    void testIdentity_FileService_create_reply(SerializationFormat defaultSerializationFormat)
+            throws Exception {
+        final FileService.Client client = new FileService.Client.Factory().getClient(
+                inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
         client.send_create(BAR);
         assertThat(out.length()).isGreaterThan(0);
 
@@ -376,9 +382,12 @@ public class ThriftServiceTest {
         assertThat(promise.get()).isEqualTo(promise2.get());
     }
 
-    @Test
-    public void testSync_FileService_create_exception() throws Exception {
-        final FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
+    @ParameterizedTest
+    @ArgumentsSource(SerializationFormatProvider.class)
+    void testSync_FileService_create_exception(SerializationFormat defaultSerializationFormat)
+            throws Exception {
+        final FileService.Client client = new FileService.Client.Factory().getClient(
+                inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
         client.send_create(BAZ);
         assertThat(out.length()).isGreaterThan(0);
 
@@ -398,9 +407,12 @@ public class ThriftServiceTest {
         }
     }
 
-    @Test
-    public void testAsync_FileService_create_exception() throws Exception {
-        final FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
+    @ParameterizedTest
+    @ArgumentsSource(SerializationFormatProvider.class)
+    void testAsync_FileService_create_exception(SerializationFormat defaultSerializationFormat)
+            throws Exception {
+        final FileService.Client client = new FileService.Client.Factory().getClient(
+                inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
         client.send_create(BAZ);
         assertThat(out.length()).isGreaterThan(0);
 
@@ -420,9 +432,12 @@ public class ThriftServiceTest {
         }
     }
 
-    @Test
-    public void testIdentity_FileService_create_exception() throws Exception {
-        final FileService.Client client = new FileService.Client.Factory().getClient(inProto, outProto);
+    @ParameterizedTest
+    @ArgumentsSource(SerializationFormatProvider.class)
+    void testIdentity_FileService_create_exception(SerializationFormat defaultSerializationFormat)
+            throws Exception {
+        final FileService.Client client = new FileService.Client.Factory().getClient(
+                inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
         client.send_create(BAZ);
         assertThat(out.length()).isGreaterThan(0);
 
@@ -440,9 +455,11 @@ public class ThriftServiceTest {
         assertThat(promise.get()).isEqualTo(promise2.get());
     }
 
-    @Test
-    public void testSync_NameService_removeMiddle() throws Exception {
-        final NameService.Client client = new NameService.Client.Factory().getClient(inProto, outProto);
+    @ParameterizedTest
+    @ArgumentsSource(SerializationFormatProvider.class)
+    void testSync_NameService_removeMiddle(SerializationFormat defaultSerializationFormat) throws Exception {
+        final NameService.Client client = new NameService.Client.Factory().getClient(
+                inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
         client.send_removeMiddle(new Name(BAZ, BAR, FOO));
         assertThat(out.length()).isGreaterThan(0);
 
@@ -454,9 +471,11 @@ public class ThriftServiceTest {
         assertThat(client.recv_removeMiddle()).isEqualTo(new Name(BAZ, null, FOO));
     }
 
-    @Test
-    public void testAsync_NameService_removeMiddle() throws Exception {
-        final NameService.Client client = new NameService.Client.Factory().getClient(inProto, outProto);
+    @ParameterizedTest
+    @ArgumentsSource(SerializationFormatProvider.class)
+    void testAsync_NameService_removeMiddle(SerializationFormat defaultSerializationFormat) throws Exception {
+        final NameService.Client client = new NameService.Client.Factory().getClient(
+                inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
         client.send_removeMiddle(new Name(BAZ, BAR, FOO));
         assertThat(out.length()).isGreaterThan(0);
 
@@ -470,9 +489,12 @@ public class ThriftServiceTest {
         assertThat(client.recv_removeMiddle()).isEqualTo(new Name(BAZ, null, FOO));
     }
 
-    @Test
-    public void testIdentity_NameService_removeMiddle() throws Exception {
-        final NameService.Client client = new NameService.Client.Factory().getClient(inProto, outProto);
+    @ParameterizedTest
+    @ArgumentsSource(SerializationFormatProvider.class)
+    void testIdentity_NameService_removeMiddle(SerializationFormat defaultSerializationFormat)
+            throws Exception {
+        final NameService.Client client = new NameService.Client.Factory().getClient(
+                inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
         client.send_removeMiddle(new Name(FOO, BAZ, BAR));
         assertThat(out.length()).isGreaterThan(0);
 
@@ -489,9 +511,11 @@ public class ThriftServiceTest {
         assertThat(promise.get()).isEqualTo(promise2.get());
     }
 
-    @Test
-    public void testSync_NameSortService_sort() throws Exception {
-        final NameSortService.Client client = new NameSortService.Client.Factory().getClient(inProto, outProto);
+    @ParameterizedTest
+    @ArgumentsSource(SerializationFormatProvider.class)
+    void testSync_NameSortService_sort(SerializationFormat defaultSerializationFormat) throws Exception {
+        final NameSortService.Client client = new NameSortService.Client.Factory().getClient(
+                inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
         client.send_sort(Arrays.asList(NAME_C, NAME_B, NAME_A));
         assertThat(out.length()).isGreaterThan(0);
 
@@ -506,9 +530,11 @@ public class ThriftServiceTest {
         assertThat(client.recv_sort()).containsExactly(NAME_A, NAME_B, NAME_C);
     }
 
-    @Test
-    public void testAsync_NameSortService_sort() throws Exception {
-        final NameSortService.Client client = new NameSortService.Client.Factory().getClient(inProto, outProto);
+    @ParameterizedTest
+    @ArgumentsSource(SerializationFormatProvider.class)
+    void testAsync_NameSortService_sort(SerializationFormat defaultSerializationFormat) throws Exception {
+        final NameSortService.Client client = new NameSortService.Client.Factory().getClient(
+                inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
         client.send_sort(Arrays.asList(NAME_C, NAME_B, NAME_A));
         assertThat(out.length()).isGreaterThan(0);
 
@@ -523,9 +549,11 @@ public class ThriftServiceTest {
         assertThat(client.recv_sort()).containsExactly(NAME_A, NAME_B, NAME_C);
     }
 
-    @Test
-    public void testIdentity_NameSortService_sort() throws Exception {
-        final NameSortService.Client client = new NameSortService.Client.Factory().getClient(inProto, outProto);
+    @ParameterizedTest
+    @ArgumentsSource(SerializationFormatProvider.class)
+    void testIdentity_NameSortService_sort(SerializationFormat defaultSerializationFormat) throws Exception {
+        final NameSortService.Client client = new NameSortService.Client.Factory().getClient(
+                inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
         client.send_sort(Arrays.asList(NAME_C, NAME_B, NAME_A));
         assertThat(out.length()).isGreaterThan(0);
 
@@ -547,9 +575,11 @@ public class ThriftServiceTest {
         assertThat(promise.get()).isEqualTo(promise2.get());
     }
 
-    @Test
-    public void testBinary() throws Exception {
-        final BinaryService.Client client = new BinaryService.Client.Factory().getClient(inProto, outProto);
+    @ParameterizedTest
+    @ArgumentsSource(SerializationFormatProvider.class)
+    void testBinary(SerializationFormat defaultSerializationFormat) throws Exception {
+        final BinaryService.Client client = new BinaryService.Client.Factory().getClient(
+                inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
         client.send_process(ByteBuffer.wrap(new byte[] { 1, 2 }));
 
         final THttpService service = THttpService.of((BinaryService.Iface) data -> {
@@ -573,19 +603,22 @@ public class ThriftServiceTest {
         assertThat(out).contains((byte) 2, (byte) 3);
     }
 
-    @Test
-    public void testMultipleInheritance() throws Exception {
-        final NameService.Client client1 = new NameService.Client.Factory().getClient(inProto, outProto);
+    @ParameterizedTest
+    @ArgumentsSource(SerializationFormatProvider.class)
+    void testMultipleInheritance(SerializationFormat defaultSerializationFormat) throws Exception {
+        final NameService.Client client1 = new NameService.Client.Factory().getClient(
+                inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
         client1.send_removeMiddle(new Name(BAZ, BAR, FOO));
         assertThat(out.length()).isGreaterThan(0);
 
         final HttpData req1 = HttpData.wrap(out.getArray(), 0, out.length());
 
         out = new TMemoryBuffer(128);
-        outProto = ThriftProtocolFactories.get(defaultSerializationFormat).getProtocol(out);
+        final TProtocol outProto = outProto(defaultSerializationFormat);
 
         final NameSortService.Client client2 =
-                new NameSortService.Client.Factory().getClient(inProto, outProto);
+                new NameSortService.Client.Factory().getClient(
+                        inProto(defaultSerializationFormat), outProto(defaultSerializationFormat));
         client2.send_sort(Arrays.asList(NAME_C, NAME_B, NAME_A));
         assertThat(out.length()).isGreaterThan(0);
 
@@ -609,8 +642,9 @@ public class ThriftServiceTest {
         assertThat(client2.recv_sort()).containsExactly(NAME_A, NAME_B, NAME_C);
     }
 
-    @Test
-    public void testServiceInheritance() {
+    @ParameterizedTest
+    @ArgumentsSource(SerializationFormatProvider.class)
+    void testServiceInheritance(SerializationFormat defaultSerializationFormat) {
         // This should not throw an exception
         THttpService.of((ChildRpcDebugService.Iface)(a1, a2, details) -> new Response("asdf"));
     }
@@ -625,6 +659,21 @@ public class ThriftServiceTest {
         @Override
         default Name removeMiddle(Name name) {
             return new Name(name.first, null, name.last);
+        }
+    }
+
+    private TProtocol inProto(SerializationFormat defaultSerializationFormat) {
+        return ThriftProtocolFactories.get(defaultSerializationFormat).getProtocol(in);
+    }
+
+    private TProtocol outProto(SerializationFormat defaultSerializationFormat) {
+        return ThriftProtocolFactories.get(defaultSerializationFormat).getProtocol(out);
+    }
+
+    private static class SerializationFormatProvider implements ArgumentsProvider {
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
+            return ThriftSerializationFormats.values().stream().map(Arguments::of);
         }
     }
 

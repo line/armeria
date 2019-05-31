@@ -16,20 +16,12 @@
 
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
-import static com.linecorp.armeria.common.SessionProtocol.HTTP;
-import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import java.util.Collection;
-
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
-
-import com.google.common.collect.ImmutableList;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
@@ -40,24 +32,18 @@ import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.healthcheck.HttpHealthCheckService;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
-@RunWith(Parameterized.class)
-public class HttpHealthCheckedEndpointGroupTest {
+class HttpHealthCheckedEndpointGroupTest {
 
     private static final String HEALTH_CHECK_PATH = "/healthcheck";
 
-    @Parameters(name = "{index}: protocol={0}")
-    public static Collection<SessionProtocol> protocols() {
-        return ImmutableList.of(HTTP, HTTPS);
-    }
+    private static class HealthCheckServerExtension extends ServerExtension {
 
-    private static class HealthCheckServerRule extends ServerRule {
-
-        protected HealthCheckServerRule() {
+        HealthCheckServerExtension() {
             super(false); // Disable auto-start.
         }
 
@@ -72,24 +58,19 @@ public class HttpHealthCheckedEndpointGroupTest {
 
     private final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
 
-    @Rule
-    public final ServerRule serverOne = new HealthCheckServerRule();
+    @RegisterExtension
+    static final ServerExtension serverOne = new HealthCheckServerExtension();
 
-    @Rule
-    public final ServerRule serverTwo = new HealthCheckServerRule();
+    @RegisterExtension
+    static final ServerExtension serverTwo = new HealthCheckServerExtension();
 
     private final ClientFactory clientFactory = new ClientFactoryBuilder()
             .sslContextCustomizer(s -> s.trustManager(InsecureTrustManagerFactory.INSTANCE))
             .build();
 
-    private final SessionProtocol protocol;
-
-    public HttpHealthCheckedEndpointGroupTest(SessionProtocol protocol) {
-        this.protocol = protocol;
-    }
-
-    @Test
-    public void endpoints() throws Exception {
+    @ParameterizedTest
+    @EnumSource(value = SessionProtocol.class, names = {"HTTP", "HTTPS"})
+    void endpoints(SessionProtocol protocol) throws Exception {
         serverOne.start();
         serverTwo.start();
 
@@ -134,8 +115,9 @@ public class HttpHealthCheckedEndpointGroupTest {
         });
     }
 
-    @Test
-    public void endpoints_withIpAndNoIp() throws Exception {
+    @ParameterizedTest
+    @EnumSource(value = SessionProtocol.class, names = {"HTTP", "HTTPS"})
+    void endpoints_withIpAndNoIp(SessionProtocol protocol) throws Exception {
         serverOne.start();
         serverTwo.start();
 
@@ -167,8 +149,9 @@ public class HttpHealthCheckedEndpointGroupTest {
         });
     }
 
-    @Test
-    public void endpoints_customPort() throws Exception {
+    @ParameterizedTest
+    @EnumSource(value = SessionProtocol.class, names = {"HTTP", "HTTPS"})
+    void endpoints_customPort(SessionProtocol protocol) throws Exception {
         serverOne.start();
         serverTwo.start();
         final int portOne = serverOne.port(protocol);
@@ -185,8 +168,9 @@ public class HttpHealthCheckedEndpointGroupTest {
                 () -> assertThat(endpointGroup.endpoints()).containsOnly(Endpoint.of("127.0.0.1", portOne)));
     }
 
-    @Test
-    public void endpoints_containsUnhealthyServer() throws Exception {
+    @ParameterizedTest
+    @EnumSource(value = SessionProtocol.class, names = {"HTTP", "HTTPS"})
+    void endpoints_containsUnhealthyServer(SessionProtocol protocol) throws Exception {
         serverOne.start();
 
         final int portOne = serverOne.port(protocol);
@@ -215,8 +199,9 @@ public class HttpHealthCheckedEndpointGroupTest {
         });
     }
 
-    @Test
-    public void endpoints_duplicateEntries() throws Exception {
+    @ParameterizedTest
+    @EnumSource(value = SessionProtocol.class, names = {"HTTP", "HTTPS"})
+    void endpoints_duplicateEntries(SessionProtocol protocol) throws Exception {
         serverOne.start();
 
         final int portOne = serverOne.port(protocol);
@@ -250,8 +235,9 @@ public class HttpHealthCheckedEndpointGroupTest {
      * an IP address, because otherwise the health checker can send the health check request to a wrong host
      * if there are more than one IP addresses assigned to the host name.
      */
-    @Test
-    public void endpoints_customAuthority() throws Exception {
+    @ParameterizedTest
+    @EnumSource(value = SessionProtocol.class, names = {"HTTP", "HTTPS"})
+    void endpoints_customAuthority(SessionProtocol protocol) throws Exception {
         serverOne.start();
 
         // This test case will fail if the health check does not use an IP address

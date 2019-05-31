@@ -21,15 +21,10 @@ import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static com.linecorp.armeria.common.SessionProtocol.PROXY;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.Collection;
-
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
-
-import com.google.common.collect.ImmutableList;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
@@ -40,19 +35,20 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.testing.internal.UniqueProtocolsProvider;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
-@RunWith(Parameterized.class)
-public class PortUnificationServerTest {
+class PortUnificationServerTest {
 
     private static final ClientFactory clientFactory =
             new ClientFactoryBuilder().sslContextCustomizer(
                     b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE)).build();
 
-    @ClassRule
-    public static final ServerRule server = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.port(0, PROXY, HTTP, HTTPS);
@@ -67,28 +63,17 @@ public class PortUnificationServerTest {
         }
     };
 
-    @Parameters(name = "{index}: scheme={0}")
-    public static Collection<String> schemes() {
-        return ImmutableList.of("h1c", "h2c", "h1", "h2");
-    }
-
-    private final String scheme;
-
-    public PortUnificationServerTest(String scheme) {
-        this.scheme = scheme;
-    }
-
     @Test
-    public void httpAndHttpsUsesSamePort() {
+    void httpAndHttpsUsesSamePort() {
         assertThat(server.httpPort()).isEqualTo(server.httpsPort());
     }
 
-    @Test
-    public void test() throws Exception {
-        final HttpClient client = HttpClient.of(clientFactory,
-                                                scheme + "://127.0.0.1:" + server.httpsPort() + '/');
+    @ParameterizedTest
+    @ArgumentsSource(UniqueProtocolsProvider.class)
+    void test(SessionProtocol protocol) throws Exception {
+        final HttpClient client = HttpClient.of(clientFactory, server.uri(protocol, "/"));
         final AggregatedHttpResponse response = client.execute(HttpRequest.of(HttpMethod.GET, "/"))
                                                       .aggregate().join();
-        assertThat(response.contentUtf8()).isEqualToIgnoringCase(scheme);
+        assertThat(response.contentUtf8()).isEqualTo(protocol.name());
     }
 }

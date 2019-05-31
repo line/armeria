@@ -16,28 +16,33 @@
 
 package com.linecorp.armeria.client.thrift;
 
+import static com.linecorp.armeria.testing.internal.TestUtil.withTimeout;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import java.nio.ByteBuffer;
 import java.util.AbstractMap;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import org.apache.thrift.TApplicationException;
 import org.apache.thrift.async.AsyncMethodCallback;
 import org.apache.thrift.protocol.TMessageType;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.linecorp.armeria.client.ClientDecorationBuilder;
 import com.linecorp.armeria.client.ClientFactory;
@@ -59,15 +64,14 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.thrift.THttpService;
@@ -79,22 +83,18 @@ import com.linecorp.armeria.service.test.thrift.main.HeaderService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
 import com.linecorp.armeria.service.test.thrift.main.TimeService;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.util.AsciiString;
 
 @SuppressWarnings("unchecked")
-@RunWith(Parameterized.class)
-public class ThriftOverHttpClientTest {
+class ThriftOverHttpClientTest {
 
     private static final boolean ENABLE_LOGGING_DECORATORS = false;
     private static final boolean ENABLE_CONNECTION_POOL_LOGGING = true;
 
-    private static final Server server;
-
-    private static int httpPort;
-    private static int httpsPort;
     private static ClientFactory clientFactoryWithUseHttp2Preface;
     private static ClientFactory clientFactoryWithoutUseHttp2Preface;
     private static ClientOptions clientOptions;
@@ -184,10 +184,10 @@ public class ThriftOverHttpClientTest {
         }
     }
 
-    static {
-        final ServerBuilder sb = new ServerBuilder();
-
-        try {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
             sb.http(0);
             sb.https(0);
             sb.tlsSelfSigned();
@@ -204,55 +204,11 @@ public class ThriftOverHttpClientTest {
             }
 
             sb.service("/500", (ctx, req) -> HttpResponse.of(500));
-        } catch (Exception e) {
-            throw new Error(e);
         }
-        server = sb.build();
-    }
+    };
 
-    @Parameterized.Parameters(name = "serFmt: {0}, sessProto: {1}, useHttp2Preface: {3}")
-    public static Collection<Object[]> parameters() throws Exception {
-        final List<Object[]> parameters = new ArrayList<>();
-        for (SerializationFormat serializationFormat : ThriftSerializationFormats.values()) {
-            parameters.add(new Object[] { serializationFormat, "http", false, true });
-            parameters.add(new Object[] { serializationFormat, "http", false, false });
-            parameters.add(new Object[] { serializationFormat, "https", true, false });
-            parameters.add(new Object[] { serializationFormat, "h1", true, false }); // HTTP/1 over TLS
-            parameters.add(new Object[] { serializationFormat, "h1c", false, false }); // HTTP/1 cleartext
-            parameters.add(new Object[] { serializationFormat, "h2", true, false }); // HTTP/2 over TLS
-            parameters.add(new Object[] { serializationFormat, "h2c", false, true }); // HTTP/2 cleartext
-            parameters.add(new Object[] { serializationFormat, "h2c", false, false });
-        }
-        return parameters;
-    }
-
-    private final SerializationFormat serializationFormat;
-    private final String httpProtocol;
-    private final boolean useTls;
-    private final boolean useHttp2Preface;
-
-    public ThriftOverHttpClientTest(SerializationFormat serializationFormat, String httpProtocol,
-                                    boolean useTls, boolean useHttp2Preface) {
-
-        assert !(useTls && useHttp2Preface);
-
-        this.serializationFormat = serializationFormat;
-        this.httpProtocol = httpProtocol;
-        this.useTls = useTls;
-        this.useHttp2Preface = useHttp2Preface;
-    }
-
-    @BeforeClass
-    public static void init() throws Exception {
-        server.start().get();
-
-        httpPort = server.activePorts().values().stream()
-                         .filter(ServerPort::hasHttp).findAny().get().localAddress()
-                         .getPort();
-        httpsPort = server.activePorts().values().stream()
-                          .filter(ServerPort::hasHttps).findAny().get().localAddress()
-                          .getPort();
-
+    @BeforeAll
+    static void init() throws Exception {
         final Consumer<SslContextBuilder> sslContextCustomizer =
                 b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE);
 
@@ -287,381 +243,508 @@ public class ThriftOverHttpClientTest {
         clientOptions = ClientOptions.of(ClientOption.DECORATION.newValue(decoBuilder.build()));
     }
 
-    @AfterClass
-    public static void destroy() throws Exception {
+    @AfterAll
+    static void destroy() throws Exception {
         clientFactoryWithUseHttp2Preface.close();
         clientFactoryWithoutUseHttp2Preface.close();
         server.stop();
     }
 
-    @Before
-    public void beforeTest() {
+    @BeforeEach
+    void beforeTest() {
         serverReceivedNames.clear();
 
         recordMessageLogs = false;
         requestLogs.clear();
     }
 
-    private ClientFactory clientFactory() {
-        return useHttp2Preface ? clientFactoryWithUseHttp2Preface
-                               : clientFactoryWithoutUseHttp2Preface;
+    @ParameterizedTest
+    @ArgumentsSource(ParametersProvider.class)
+    void testHelloServiceSync(
+            ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
+            throws Exception {
+        withTimeout(() -> {
+            final HelloService.Iface client = Clients.newClient(clientFactory,
+                                                                uri(Handlers.HELLO, format, protocol),
+                                                                Handlers.HELLO.iface(), clientOptions);
+            assertThat(client.hello("kukuman")).isEqualTo("Hello, kukuman!");
+            assertThat(client.hello(null)).isEqualTo("Hello, null!");
+
+            for (int i = 0; i < 10; i++) {
+                assertThat(client.hello("kukuman" + i)).isEqualTo("Hello, kukuman" + i + '!');
+            }
+        });
     }
 
-    @Test(timeout = 10000)
-    public void testHelloServiceSync() throws Exception {
+    @ParameterizedTest
+    @ArgumentsSource(ParametersProvider.class)
+    void testHelloServiceAsync(
+            ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
+            throws Exception {
+        withTimeout(() -> {
+            final HelloService.AsyncIface client =
+                    Clients.newClient(clientFactory, uri(Handlers.HELLO, format, protocol),
+                                      Handlers.HELLO.asyncIface(),
+                                      clientOptions);
 
-        final HelloService.Iface client = Clients.newClient(clientFactory(), uri(Handlers.HELLO),
-                                                            Handlers.HELLO.iface(), clientOptions);
-        assertThat(client.hello("kukuman")).isEqualTo("Hello, kukuman!");
-        assertThat(client.hello(null)).isEqualTo("Hello, null!");
+            final int testCount = 10;
+            final BlockingQueue<AbstractMap.SimpleEntry<Integer, ?>> resultQueue =
+                    new LinkedBlockingDeque<>(testCount);
+            for (int i = 0; i < testCount; i++) {
+                final int num = i;
+                client.hello("kukuman" + num, new AsyncMethodCallback<String>() {
+                    @Override
+                    public void onComplete(String response) {
+                        assertThat(resultQueue.add(new AbstractMap.SimpleEntry<>(num, response))).isTrue();
+                    }
 
-        for (int i = 0; i < 10; i++) {
-            assertThat(client.hello("kukuman" + i)).isEqualTo("Hello, kukuman" + i + '!');
-        }
+                    @Override
+                    public void onError(Exception exception) {
+                        assertThat(resultQueue.add(new AbstractMap.SimpleEntry<>(num, exception))).isTrue();
+                    }
+                });
+            }
+            for (int i = 0; i < testCount; i++) {
+                final AbstractMap.SimpleEntry<Integer, ?> pair = resultQueue.take();
+                assertThat(pair.getValue()).isEqualTo("Hello, kukuman" + pair.getKey() + '!');
+            }
+        });
     }
 
-    @Test(timeout = 10000)
-    public void testHelloServiceAsync() throws Exception {
-        final HelloService.AsyncIface client =
-                Clients.newClient(clientFactory(), uri(Handlers.HELLO), Handlers.HELLO.asyncIface(),
-                                  clientOptions);
-
-        final int testCount = 10;
-        final BlockingQueue<AbstractMap.SimpleEntry<Integer, ?>> resultQueue =
-                new LinkedBlockingDeque<>(testCount);
-        for (int i = 0; i < testCount; i++) {
-            final int num = i;
-            client.hello("kukuman" + num, new AsyncMethodCallback<String>() {
-                @Override
-                public void onComplete(String response) {
-                    assertThat(resultQueue.add(new AbstractMap.SimpleEntry<>(num, response))).isTrue();
-                }
-
-                @Override
-                public void onError(Exception exception) {
-                    assertThat(resultQueue.add(new AbstractMap.SimpleEntry<>(num, exception))).isTrue();
-                }
-            });
-        }
-        for (int i = 0; i < testCount; i++) {
-            final AbstractMap.SimpleEntry<Integer, ?> pair = resultQueue.take();
-            assertThat(pair.getValue()).isEqualTo("Hello, kukuman" + pair.getKey() + '!');
-        }
+    @ParameterizedTest
+    @ArgumentsSource(ParametersProvider.class)
+    void testOnewayHelloServiceSync(
+            ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
+            throws Exception {
+        withTimeout(() -> {
+            final OnewayHelloService.Iface client =
+                    Clients.newClient(clientFactory, uri(Handlers.ONEWAYHELLO, format, protocol),
+                                      Handlers.ONEWAYHELLO.iface(), clientOptions);
+            client.hello("kukuman");
+            client.hello("kukuman2");
+            assertThat(serverReceivedNames.take()).isEqualTo("kukuman");
+            assertThat(serverReceivedNames.take()).isEqualTo("kukuman2");
+        });
     }
 
-    @Test(timeout = 10000)
-    public void testOnewayHelloServiceSync() throws Exception {
-        final OnewayHelloService.Iface client =
-                Clients.newClient(clientFactory(), uri(Handlers.ONEWAYHELLO),
-                                  Handlers.ONEWAYHELLO.iface(), clientOptions);
-        client.hello("kukuman");
-        client.hello("kukuman2");
-        assertThat(serverReceivedNames.take()).isEqualTo("kukuman");
-        assertThat(serverReceivedNames.take()).isEqualTo("kukuman2");
+    @ParameterizedTest
+    @ArgumentsSource(ParametersProvider.class)
+    void testOnewayHelloServiceAsync(
+            ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
+            throws Exception {
+        withTimeout(() -> {
+            final OnewayHelloService.AsyncIface client =
+                    Clients.newClient(clientFactory, uri(Handlers.ONEWAYHELLO, format, protocol),
+                                      Handlers.ONEWAYHELLO.asyncIface(), clientOptions);
+            final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
+
+            final String[] names = { "kukuman", "kukuman2" };
+            for (String name : names) {
+                client.hello(name, new RequestQueuingCallback(resQueue));
+            }
+
+            for (String ignored : names) {
+                assertThat(resQueue.take()).isEqualTo("null");
+            }
+
+            for (String ignored : names) {
+                assertThat(serverReceivedNames.take()).isIn(names);
+            }
+        });
     }
 
-    @Test(timeout = 10000)
-    public void testOnewayHelloServiceAsync() throws Exception {
-        final OnewayHelloService.AsyncIface client =
-                Clients.newClient(clientFactory(), uri(Handlers.ONEWAYHELLO),
-                                  Handlers.ONEWAYHELLO.asyncIface(), clientOptions);
-        final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
-
-        final String[] names = { "kukuman", "kukuman2" };
-        for (String name : names) {
-            client.hello(name, new RequestQueuingCallback(resQueue));
-        }
-
-        for (String ignored : names) {
-            assertThat(resQueue.take()).isEqualTo("null");
-        }
-
-        for (String ignored : names) {
-            assertThat(serverReceivedNames.take()).isIn(names);
-        }
+    @ParameterizedTest
+    @ArgumentsSource(ParametersProvider.class)
+    void testExceptionThrowingOnewayServiceSync(
+            ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
+            throws Exception {
+        withTimeout(() -> {
+            final OnewayHelloService.Iface client =
+                    Clients.newClient(clientFactory, uri(Handlers.EXCEPTION_ONEWAY, format, protocol),
+                                      Handlers.EXCEPTION_ONEWAY.iface(), clientOptions);
+            client.hello("kukuman");
+            client.hello("kukuman2");
+            assertThat(serverReceivedNames.take()).isEqualTo("kukuman");
+            assertThat(serverReceivedNames.take()).isEqualTo("kukuman2");
+        });
     }
 
-    @Test(timeout = 10000)
-    public void testExceptionThrowingOnewayServiceSync() throws Exception {
-        final OnewayHelloService.Iface client =
-                Clients.newClient(clientFactory(), uri(Handlers.EXCEPTION_ONEWAY),
-                                  Handlers.EXCEPTION_ONEWAY.iface(), clientOptions);
-        client.hello("kukuman");
-        client.hello("kukuman2");
-        assertThat(serverReceivedNames.take()).isEqualTo("kukuman");
-        assertThat(serverReceivedNames.take()).isEqualTo("kukuman2");
+    @ParameterizedTest
+    @ArgumentsSource(ParametersProvider.class)
+    void testExceptionThrowingOnewayServiceAsync(
+            ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
+            throws Exception {
+        withTimeout(() -> {
+            final OnewayHelloService.AsyncIface client =
+                    Clients.newClient(clientFactory, uri(Handlers.EXCEPTION_ONEWAY, format, protocol),
+                                      Handlers.EXCEPTION_ONEWAY.asyncIface(), clientOptions);
+            final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
+
+            final String[] names = { "kukuman", "kukuman2" };
+            for (String name : names) {
+                client.hello(name, new RequestQueuingCallback(resQueue));
+            }
+
+            for (String ignored : names) {
+                assertThat(resQueue.take()).isEqualTo("null");
+            }
+
+            for (String ignored : names) {
+                assertThat(serverReceivedNames.take()).isIn(names);
+            }
+        });
     }
 
-    @Test(timeout = 10000)
-    public void testExceptionThrowingOnewayServiceAsync() throws Exception {
-        final OnewayHelloService.AsyncIface client =
-                Clients.newClient(clientFactory(), uri(Handlers.EXCEPTION_ONEWAY),
-                                  Handlers.EXCEPTION_ONEWAY.asyncIface(), clientOptions);
-        final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
-
-        final String[] names = { "kukuman", "kukuman2" };
-        for (String name : names) {
-            client.hello(name, new RequestQueuingCallback(resQueue));
-        }
-
-        for (String ignored : names) {
-            assertThat(resQueue.take()).isEqualTo("null");
-        }
-
-        for (String ignored : names) {
-            assertThat(serverReceivedNames.take()).isIn(names);
-        }
+    @ParameterizedTest
+    @ArgumentsSource(ParametersProvider.class)
+    void testDevNullServiceSync(
+            ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
+            throws Exception {
+        withTimeout(() -> {
+            final DevNullService.Iface client =
+                    Clients.newClient(clientFactory, uri(Handlers.DEVNULL, format, protocol),
+                                      Handlers.DEVNULL.iface(),
+                                      clientOptions);
+            client.consume("kukuman");
+            client.consume("kukuman2");
+            assertThat(serverReceivedNames.take()).isEqualTo("kukuman");
+            assertThat(serverReceivedNames.take()).isEqualTo("kukuman2");
+        });
     }
 
-    @Test(timeout = 10000)
-    public void testDevNullServiceSync() throws Exception {
-        final DevNullService.Iface client =
-                Clients.newClient(clientFactory(), uri(Handlers.DEVNULL), Handlers.DEVNULL.iface(),
-                                  clientOptions);
-        client.consume("kukuman");
-        client.consume("kukuman2");
-        assertThat(serverReceivedNames.take()).isEqualTo("kukuman");
-        assertThat(serverReceivedNames.take()).isEqualTo("kukuman2");
+    @ParameterizedTest
+    @ArgumentsSource(ParametersProvider.class)
+    void testDevNullServiceAsync(
+            ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
+            throws Exception {
+        withTimeout(() -> {
+            final DevNullService.AsyncIface client =
+                    Clients.newClient(clientFactory, uri(Handlers.DEVNULL, format, protocol),
+                                      Handlers.DEVNULL.asyncIface(), clientOptions);
+            final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
+
+            final String[] names = { "kukuman", "kukuman2" };
+            for (String name : names) {
+                client.consume(name, new RequestQueuingCallback(resQueue));
+            }
+
+            for (String ignored : names) {
+                assertThat(resQueue.take()).isEqualTo("null");
+            }
+
+            for (String ignored : names) {
+                assertThat(serverReceivedNames.take()).isIn(names);
+            }
+        });
     }
 
-    @Test(timeout = 10000)
-    public void testDevNullServiceAsync() throws Exception {
-        final DevNullService.AsyncIface client =
-                Clients.newClient(clientFactory(), uri(Handlers.DEVNULL),
-                                  Handlers.DEVNULL.asyncIface(), clientOptions);
-        final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
+    @ParameterizedTest
+    @ArgumentsSource(ParametersProvider.class)
+    void testBinaryServiceSync(
+            ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
+            throws Exception {
+        withTimeout(() -> {
+            final BinaryService.Iface client = Clients.newClient(clientFactory,
+                                                                 uri(Handlers.BINARY, format, protocol),
+                                                                 Handlers.BINARY.iface(),
+                                                                 clientOptions);
 
-        final String[] names = { "kukuman", "kukuman2" };
-        for (String name : names) {
-            client.consume(name, new RequestQueuingCallback(resQueue));
-        }
-
-        for (String ignored : names) {
-            assertThat(resQueue.take()).isEqualTo("null");
-        }
-
-        for (String ignored : names) {
-            assertThat(serverReceivedNames.take()).isIn(names);
-        }
+            final ByteBuffer result = client.process(ByteBuffer.wrap(new byte[] { 1, 2 }));
+            final List<Byte> out = new ArrayList<>();
+            for (int i = result.position(); i < result.limit(); i++) {
+                out.add(result.get(i));
+            }
+            assertThat(out).containsExactly((byte) 2, (byte) 3);
+        });
     }
 
-    @Test(timeout = 10000)
-    public void testBinaryServiceSync() throws Exception {
-        final BinaryService.Iface client = Clients.newClient(clientFactory(),
-                                                             uri(Handlers.BINARY), Handlers.BINARY.iface(),
-                                                             clientOptions);
+    @ParameterizedTest
+    @ArgumentsSource(ParametersProvider.class)
+    void testTimeServiceSync(
+            ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
+            throws Exception {
+        withTimeout(() -> {
+            final TimeService.Iface client =
+                    Clients.newClient(clientFactory, uri(Handlers.TIME, format, protocol),
+                                      Handlers.TIME.iface(),
+                                      clientOptions);
 
-        final ByteBuffer result = client.process(ByteBuffer.wrap(new byte[] { 1, 2 }));
-        final List<Byte> out = new ArrayList<>();
-        for (int i = result.position(); i < result.limit(); i++) {
-            out.add(result.get(i));
-        }
-        assertThat(out).containsExactly((byte) 2, (byte) 3);
+            final long serverTime = client.getServerTime();
+            assertThat(serverTime).isLessThanOrEqualTo(System.currentTimeMillis());
+        });
     }
 
-    @Test(timeout = 10000)
-    public void testTimeServiceSync() throws Exception {
-        final TimeService.Iface client =
-                Clients.newClient(clientFactory(), uri(Handlers.TIME), Handlers.TIME.iface(),
-                                  clientOptions);
+    @ParameterizedTest
+    @ArgumentsSource(ParametersProvider.class)
+    void testTimeServiceAsync(
+            ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
+            throws Exception {
+        withTimeout(() -> {
+            final TimeService.AsyncIface client =
+                    Clients.newClient(clientFactory, uri(Handlers.TIME, format, protocol),
+                                      Handlers.TIME.asyncIface(),
+                                      clientOptions);
 
-        final long serverTime = client.getServerTime();
-        assertThat(serverTime).isLessThanOrEqualTo(System.currentTimeMillis());
+            final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
+            client.getServerTime(new RequestQueuingCallback(resQueue));
+
+            final Object result = resQueue.take();
+            assertThat(result).isInstanceOf(Long.class);
+            assertThat((Long) result).isLessThanOrEqualTo(System.currentTimeMillis());
+        });
     }
 
-    @Test(timeout = 10000)
-    public void testTimeServiceAsync() throws Exception {
-        final TimeService.AsyncIface client =
-                Clients.newClient(clientFactory(), uri(Handlers.TIME), Handlers.TIME.asyncIface(),
-                                  clientOptions);
+    @ParameterizedTest
+    @ArgumentsSource(ParametersProvider.class)
+    void testFileServiceSync(
+            ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
+            throws Exception {
+        withTimeout(() -> {
+            final FileService.Iface client =
+                    Clients.newClient(clientFactory, uri(Handlers.FILE, format, protocol),
+                                      Handlers.FILE.iface(),
+                                      clientOptions);
 
-        final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
-        client.getServerTime(new RequestQueuingCallback(resQueue));
-
-        final Object result = resQueue.take();
-        assertThat(result).isInstanceOf(Long.class);
-        assertThat((Long) result).isLessThanOrEqualTo(System.currentTimeMillis());
+            assertThatThrownBy(() -> client.create("test")).isInstanceOf(FileServiceException.class);
+        });
     }
 
-    @Test(timeout = 10000, expected = FileServiceException.class)
-    public void testFileServiceSync() throws Exception {
-        final FileService.Iface client =
-                Clients.newClient(clientFactory(), uri(Handlers.FILE), Handlers.FILE.iface(),
-                                  clientOptions);
+    @ParameterizedTest
+    @ArgumentsSource(ParametersProvider.class)
+    void testFileServiceAsync(
+            ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
+            throws Exception {
+        withTimeout(() -> {
+            final FileService.AsyncIface client =
+                    Clients.newClient(clientFactory, uri(Handlers.FILE, format, protocol),
+                                      Handlers.FILE.asyncIface(),
+                                      clientOptions);
 
-        client.create("test");
+            final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
+            client.create("test", new RequestQueuingCallback(resQueue));
+
+            assertThat(resQueue.take()).isInstanceOf(FileServiceException.class);
+        });
     }
 
-    @Test(timeout = 10000)
-    public void testFileServiceAsync() throws Exception {
-        final FileService.AsyncIface client =
-                Clients.newClient(clientFactory(), uri(Handlers.FILE), Handlers.FILE.asyncIface(),
-                                  clientOptions);
+    @ParameterizedTest
+    @ArgumentsSource(ParametersProvider.class)
+    void testDerivedClient(
+            ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
+            throws Exception {
+        withTimeout(() -> {
+            final String AUTHORIZATION = "authorization";
+            final String NO_TOKEN = "";
+            final String TOKEN_A = "token 1234";
+            final String TOKEN_B = "token 5678";
 
-        final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
-        client.create("test", new RequestQueuingCallback(resQueue));
+            final HeaderService.Iface client = Clients.newClient(clientFactory, uri(Handlers.HEADER, format,
+                                                                                    protocol),
+                                                                 Handlers.HEADER.iface(), clientOptions);
 
-        assertThat(resQueue.take()).isInstanceOf(FileServiceException.class);
+            assertThat(client.header(AUTHORIZATION)).isEqualTo(NO_TOKEN);
+
+            final HeaderService.Iface clientA =
+                    Clients.newDerivedClient(client,
+                                             newHttpHeaderOption(HttpHeaderNames.of(AUTHORIZATION), TOKEN_A));
+
+            final HeaderService.Iface clientB =
+                    Clients.newDerivedClient(client,
+                                             newHttpHeaderOption(HttpHeaderNames.of(AUTHORIZATION), TOKEN_B));
+
+            assertThat(clientA.header(AUTHORIZATION)).isEqualTo(TOKEN_A);
+            assertThat(clientB.header(AUTHORIZATION)).isEqualTo(TOKEN_B);
+
+            // Ensure that the parent client's HTTP_HEADERS option did not change:
+            assertThat(client.header(AUTHORIZATION)).isEqualTo(NO_TOKEN);
+        });
     }
 
-    @Test(timeout = 10000)
-    public void testDerivedClient() throws Exception {
-        final String AUTHORIZATION = "authorization";
-        final String NO_TOKEN = "";
-        final String TOKEN_A = "token 1234";
-        final String TOKEN_B = "token 5678";
+    @ParameterizedTest
+    @ArgumentsSource(ParametersProvider.class)
+    void testMessageLogsForCall(
+            ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
+            throws Exception {
+        withTimeout(() -> {
+            final HelloService.Iface client = Clients.newClient(clientFactory,
+                                                                uri(Handlers.HELLO, format, protocol),
+                                                                Handlers.HELLO.iface(), clientOptions);
+            recordMessageLogs = true;
+            client.hello("trustin");
 
-        final HeaderService.Iface client = Clients.newClient(clientFactory(), uri(Handlers.HEADER),
-                                                             Handlers.HEADER.iface(), clientOptions);
+            final RequestLog log = requestLogs.take();
 
-        assertThat(client.header(AUTHORIZATION)).isEqualTo(NO_TOKEN);
+            assertThat(log.requestHeaders()).isInstanceOf(HttpHeaders.class);
+            assertThat(log.requestContent()).isInstanceOf(RpcRequest.class);
+            assertThat(log.rawRequestContent()).isInstanceOf(ThriftCall.class);
 
-        final HeaderService.Iface clientA =
-                Clients.newDerivedClient(client,
-                                         newHttpHeaderOption(HttpHeaderNames.of(AUTHORIZATION), TOKEN_A));
+            final RpcRequest request = (RpcRequest) log.requestContent();
+            assertThat(request.serviceType()).isEqualTo(HelloService.Iface.class);
+            assertThat(request.method()).isEqualTo("hello");
+            assertThat(request.params()).containsExactly("trustin");
 
-        final HeaderService.Iface clientB =
-                Clients.newDerivedClient(client,
-                                         newHttpHeaderOption(HttpHeaderNames.of(AUTHORIZATION), TOKEN_B));
+            final ThriftCall rawRequest = (ThriftCall) log.rawRequestContent();
+            assertThat(rawRequest.header().type).isEqualTo(TMessageType.CALL);
+            assertThat(rawRequest.header().name).isEqualTo("hello");
+            assertThat(rawRequest.args()).isInstanceOf(HelloService.hello_args.class);
+            assertThat(((HelloService.hello_args) rawRequest.args()).getName()).isEqualTo("trustin");
 
-        assertThat(clientA.header(AUTHORIZATION)).isEqualTo(TOKEN_A);
-        assertThat(clientB.header(AUTHORIZATION)).isEqualTo(TOKEN_B);
+            assertThat(log.responseHeaders()).isInstanceOf(HttpHeaders.class);
+            assertThat(log.responseContent()).isInstanceOf(RpcResponse.class);
+            assertThat(log.rawResponseContent()).isInstanceOf(ThriftReply.class);
 
-        // Ensure that the parent client's HTTP_HEADERS option did not change:
-        assertThat(client.header(AUTHORIZATION)).isEqualTo(NO_TOKEN);
+            final RpcResponse response = (RpcResponse) log.responseContent();
+            assertThat(response.get()).isEqualTo("Hello, trustin!");
+
+            final ThriftReply rawResponse = (ThriftReply) log.rawResponseContent();
+            assertThat(rawResponse.header().type).isEqualTo(TMessageType.REPLY);
+            assertThat(rawResponse.header().name).isEqualTo("hello");
+            assertThat(rawResponse.result()).isInstanceOf(HelloService.hello_result.class);
+            assertThat(((HelloService.hello_result) rawResponse.result()).getSuccess())
+                    .isEqualTo("Hello, trustin!");
+        });
     }
 
-    @Test(timeout = 10000)
-    public void testMessageLogsForCall() throws Exception {
-        final HelloService.Iface client = Clients.newClient(clientFactory(), uri(Handlers.HELLO),
-                                                            Handlers.HELLO.iface(), clientOptions);
-        recordMessageLogs = true;
-        client.hello("trustin");
+    @ParameterizedTest
+    @ArgumentsSource(ParametersProvider.class)
+    void testMessageLogsForOneWay(
+            ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
+            throws Exception {
+        withTimeout(() -> {
+            final OnewayHelloService.Iface client = Clients.newClient(clientFactory, uri(Handlers.HELLO, format,
+                                                                                         protocol),
+                                                                      Handlers.ONEWAYHELLO.iface(),
+                                                                      clientOptions);
+            recordMessageLogs = true;
+            client.hello("trustin");
 
-        final RequestLog log = requestLogs.take();
+            final RequestLog log = requestLogs.take();
 
-        assertThat(log.requestHeaders()).isInstanceOf(HttpHeaders.class);
-        assertThat(log.requestContent()).isInstanceOf(RpcRequest.class);
-        assertThat(log.rawRequestContent()).isInstanceOf(ThriftCall.class);
+            assertThat(log.requestHeaders()).isInstanceOf(HttpHeaders.class);
+            assertThat(log.requestContent()).isInstanceOf(RpcRequest.class);
+            assertThat(log.rawRequestContent()).isInstanceOf(ThriftCall.class);
 
-        final RpcRequest request = (RpcRequest) log.requestContent();
-        assertThat(request.serviceType()).isEqualTo(HelloService.Iface.class);
-        assertThat(request.method()).isEqualTo("hello");
-        assertThat(request.params()).containsExactly("trustin");
+            final RpcRequest request = (RpcRequest) log.requestContent();
+            assertThat(request.serviceType()).isEqualTo(OnewayHelloService.Iface.class);
+            assertThat(request.method()).isEqualTo("hello");
+            assertThat(request.params()).containsExactly("trustin");
 
-        final ThriftCall rawRequest = (ThriftCall) log.rawRequestContent();
-        assertThat(rawRequest.header().type).isEqualTo(TMessageType.CALL);
-        assertThat(rawRequest.header().name).isEqualTo("hello");
-        assertThat(rawRequest.args()).isInstanceOf(HelloService.hello_args.class);
-        assertThat(((HelloService.hello_args) rawRequest.args()).getName()).isEqualTo("trustin");
+            final ThriftCall rawRequest = (ThriftCall) log.rawRequestContent();
+            assertThat(rawRequest.header().type).isEqualTo(TMessageType.ONEWAY);
+            assertThat(rawRequest.header().name).isEqualTo("hello");
+            assertThat(rawRequest.args()).isInstanceOf(OnewayHelloService.hello_args.class);
+            assertThat(((OnewayHelloService.hello_args) rawRequest.args()).getName()).isEqualTo("trustin");
 
-        assertThat(log.responseHeaders()).isInstanceOf(HttpHeaders.class);
-        assertThat(log.responseContent()).isInstanceOf(RpcResponse.class);
-        assertThat(log.rawResponseContent()).isInstanceOf(ThriftReply.class);
+            assertThat(log.responseHeaders()).isInstanceOf(HttpHeaders.class);
+            assertThat(log.responseContent()).isInstanceOf(RpcResponse.class);
+            assertThat(log.rawResponseContent()).isNull();
 
-        final RpcResponse response = (RpcResponse) log.responseContent();
-        assertThat(response.get()).isEqualTo("Hello, trustin!");
-
-        final ThriftReply rawResponse = (ThriftReply) log.rawResponseContent();
-        assertThat(rawResponse.header().type).isEqualTo(TMessageType.REPLY);
-        assertThat(rawResponse.header().name).isEqualTo("hello");
-        assertThat(rawResponse.result()).isInstanceOf(HelloService.hello_result.class);
-        assertThat(((HelloService.hello_result) rawResponse.result()).getSuccess())
-                .isEqualTo("Hello, trustin!");
+            final RpcResponse response = (RpcResponse) log.responseContent();
+            assertThat(response.get()).isNull();
+        });
     }
 
-    @Test(timeout = 10000)
-    public void testMessageLogsForOneWay() throws Exception {
-        final OnewayHelloService.Iface client = Clients.newClient(clientFactory(), uri(Handlers.HELLO),
-                                                                  Handlers.ONEWAYHELLO.iface(), clientOptions);
-        recordMessageLogs = true;
-        client.hello("trustin");
+    @ParameterizedTest
+    @ArgumentsSource(ParametersProvider.class)
+    void testMessageLogsForException(
+            ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
+            throws Exception {
+        withTimeout(() -> {
+            final HelloService.Iface client = Clients.newClient(clientFactory, uri(Handlers.EXCEPTION, format,
+                                                                                   protocol),
+                                                                Handlers.EXCEPTION.iface(), clientOptions);
+            recordMessageLogs = true;
 
-        final RequestLog log = requestLogs.take();
+            assertThatThrownBy(() -> client.hello("trustin")).isInstanceOf(TApplicationException.class);
 
-        assertThat(log.requestHeaders()).isInstanceOf(HttpHeaders.class);
-        assertThat(log.requestContent()).isInstanceOf(RpcRequest.class);
-        assertThat(log.rawRequestContent()).isInstanceOf(ThriftCall.class);
+            final RequestLog log = requestLogs.take();
 
-        final RpcRequest request = (RpcRequest) log.requestContent();
-        assertThat(request.serviceType()).isEqualTo(OnewayHelloService.Iface.class);
-        assertThat(request.method()).isEqualTo("hello");
-        assertThat(request.params()).containsExactly("trustin");
+            assertThat(log.requestHeaders()).isInstanceOf(HttpHeaders.class);
+            assertThat(log.requestContent()).isInstanceOf(RpcRequest.class);
+            assertThat(log.rawRequestContent()).isInstanceOf(ThriftCall.class);
 
-        final ThriftCall rawRequest = (ThriftCall) log.rawRequestContent();
-        assertThat(rawRequest.header().type).isEqualTo(TMessageType.ONEWAY);
-        assertThat(rawRequest.header().name).isEqualTo("hello");
-        assertThat(rawRequest.args()).isInstanceOf(OnewayHelloService.hello_args.class);
-        assertThat(((OnewayHelloService.hello_args) rawRequest.args()).getName()).isEqualTo("trustin");
+            final RpcRequest request = (RpcRequest) log.requestContent();
+            assertThat(request.serviceType()).isEqualTo(HelloService.Iface.class);
+            assertThat(request.method()).isEqualTo("hello");
+            assertThat(request.params()).containsExactly("trustin");
 
-        assertThat(log.responseHeaders()).isInstanceOf(HttpHeaders.class);
-        assertThat(log.responseContent()).isInstanceOf(RpcResponse.class);
-        assertThat(log.rawResponseContent()).isNull();
+            final ThriftCall rawRequest = (ThriftCall) log.rawRequestContent();
+            assertThat(rawRequest.header().type).isEqualTo(TMessageType.CALL);
+            assertThat(rawRequest.header().name).isEqualTo("hello");
+            assertThat(rawRequest.args()).isInstanceOf(HelloService.hello_args.class);
+            assertThat(((HelloService.hello_args) rawRequest.args()).getName()).isEqualTo("trustin");
 
-        final RpcResponse response = (RpcResponse) log.responseContent();
-        assertThat(response.get()).isNull();
+            assertThat(log.responseHeaders()).isInstanceOf(HttpHeaders.class);
+            assertThat(log.responseContent()).isInstanceOf(RpcResponse.class);
+            assertThat(log.rawResponseContent()).isInstanceOf(ThriftReply.class);
+
+            final RpcResponse response = (RpcResponse) log.responseContent();
+            assertThat(response.cause()).isNotNull();
+
+            final ThriftReply rawResponse = (ThriftReply) log.rawResponseContent();
+            assertThat(rawResponse.header().type).isEqualTo(TMessageType.EXCEPTION);
+            assertThat(rawResponse.header().name).isEqualTo("hello");
+            assertThat(rawResponse.exception()).isNotNull();
+        });
     }
 
-    @Test(timeout = 10000)
-    public void testMessageLogsForException() throws Exception {
-        final HelloService.Iface client = Clients.newClient(clientFactory(), uri(Handlers.EXCEPTION),
-                                                            Handlers.EXCEPTION.iface(), clientOptions);
-        recordMessageLogs = true;
-
-        assertThatThrownBy(() -> client.hello("trustin")).isInstanceOf(TApplicationException.class);
-
-        final RequestLog log = requestLogs.take();
-
-        assertThat(log.requestHeaders()).isInstanceOf(HttpHeaders.class);
-        assertThat(log.requestContent()).isInstanceOf(RpcRequest.class);
-        assertThat(log.rawRequestContent()).isInstanceOf(ThriftCall.class);
-
-        final RpcRequest request = (RpcRequest) log.requestContent();
-        assertThat(request.serviceType()).isEqualTo(HelloService.Iface.class);
-        assertThat(request.method()).isEqualTo("hello");
-        assertThat(request.params()).containsExactly("trustin");
-
-        final ThriftCall rawRequest = (ThriftCall) log.rawRequestContent();
-        assertThat(rawRequest.header().type).isEqualTo(TMessageType.CALL);
-        assertThat(rawRequest.header().name).isEqualTo("hello");
-        assertThat(rawRequest.args()).isInstanceOf(HelloService.hello_args.class);
-        assertThat(((HelloService.hello_args) rawRequest.args()).getName()).isEqualTo("trustin");
-
-        assertThat(log.responseHeaders()).isInstanceOf(HttpHeaders.class);
-        assertThat(log.responseContent()).isInstanceOf(RpcResponse.class);
-        assertThat(log.rawResponseContent()).isInstanceOf(ThriftReply.class);
-
-        final RpcResponse response = (RpcResponse) log.responseContent();
-        assertThat(response.cause()).isNotNull();
-
-        final ThriftReply rawResponse = (ThriftReply) log.rawResponseContent();
-        assertThat(rawResponse.header().type).isEqualTo(TMessageType.EXCEPTION);
-        assertThat(rawResponse.header().name).isEqualTo("hello");
-        assertThat(rawResponse.exception()).isNotNull();
+    @ParameterizedTest
+    @ArgumentsSource(ParametersProvider.class)
+    void testBadStatus(
+            ClientFactory clientFactory, SerializationFormat format, SessionProtocol protocol)
+            throws Exception {
+        withTimeout(() -> {
+            final HelloService.Iface client = Clients.newClient(clientFactory,
+                                                                server.uri(protocol, format, "/500"),
+                                                                Handlers.HELLO.iface(), clientOptions);
+            assertThatThrownBy(() -> client.hello(""))
+                    .isInstanceOfSatisfying(InvalidResponseHeadersException.class, cause -> {
+                        assertThat(cause.headers().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+                    })
+                    .hasMessageContaining(":status=500");
+        });
     }
 
-    @Test
-    public void testBadStatus() throws Exception {
-        final HelloService.Iface client = Clients.newClient(clientFactory(), uri("/500"),
-                                                            Handlers.HELLO.iface(), clientOptions);
-        assertThatThrownBy(() -> client.hello(""))
-                .isInstanceOfSatisfying(InvalidResponseHeadersException.class, cause -> {
-                    assertThat(cause.headers().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-                })
-                .hasMessageContaining(":status=500");
+    private static String uri(Handlers handler, SerializationFormat format,
+                              SessionProtocol protocol) {
+        return server.uri(protocol, format, handler.path(format));
     }
 
     private static ClientOptionValue<HttpHeaders> newHttpHeaderOption(AsciiString name, String value) {
         return ClientOption.HTTP_HEADERS.newValue(HttpHeaders.of(name, value));
     }
 
-    private String uri(Handlers handler) {
-        return uri(handler.path(serializationFormat));
-    }
-
-    private String uri(String path) {
-        final int port = useTls ? httpsPort : httpPort;
-        return serializationFormat.uriText() + '+' + httpProtocol + "://127.0.0.1:" + port + path;
+    private static class ParametersProvider implements ArgumentsProvider {
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
+            return ThriftSerializationFormats.values().stream()
+                    .flatMap(serializationFormat -> Stream.of(
+                            arguments(clientFactoryWithUseHttp2Preface,
+                                      serializationFormat,
+                                      SessionProtocol.HTTP),
+                            arguments(clientFactoryWithoutUseHttp2Preface,
+                                      serializationFormat,
+                                      SessionProtocol.HTTP),
+                            arguments(clientFactoryWithoutUseHttp2Preface,
+                                      serializationFormat,
+                                      SessionProtocol.HTTPS),
+                            arguments(clientFactoryWithoutUseHttp2Preface,
+                                      serializationFormat,
+                                      SessionProtocol.H1),
+                            arguments(clientFactoryWithoutUseHttp2Preface,
+                                      serializationFormat,
+                                      SessionProtocol.H1C),
+                            arguments(clientFactoryWithoutUseHttp2Preface,
+                                      serializationFormat,
+                                      SessionProtocol.H2),
+                            arguments(clientFactoryWithUseHttp2Preface,
+                                      serializationFormat,
+                                      SessionProtocol.H2C),
+                            arguments(clientFactoryWithoutUseHttp2Preface,
+                                      serializationFormat,
+                                      SessionProtocol.H2C)
+                    ));
+        }
     }
 
     @SuppressWarnings("rawtypes")
