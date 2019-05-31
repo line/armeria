@@ -30,16 +30,21 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Properties;
 
+import javax.annotation.Nullable;
+
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.FileWatcherRegistry.FileWatcherEventKey;
 
 /**
  * A {@link Properties} backed {@link EndpointGroup}. The list of {@link Endpoint}s are loaded from the
  * {@link Properties}.
  */
-public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
-    private static final PropertiesFileWatcherRegistry registry = new PropertiesFileWatcherRegistry();
+public final class PropertiesEndpointGroup extends DynamicEndpointGroup implements FileWatcherEventKey {
+    @VisibleForTesting
+    static FileWatcherRegistry registry = new FileWatcherRegistry();
 
     /**
      * Creates a new {@link EndpointGroup} instance that loads the host names (or IP address) and the port
@@ -234,6 +239,9 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
                       "defaultPort: %s (expected: 1-65535)", defaultPort);
     }
 
+    @Nullable
+    private Path path;
+
     private PropertiesEndpointGroup(List<Endpoint> endpoints) {
         setEndpoints(endpoints);
     }
@@ -243,7 +251,8 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
                 path,
                 requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
                 defaultPort));
-        registry.register(this, path, () ->
+        this.path = path;
+        registry.register(this, () ->
                 setEndpoints(loadEndpoints(path, endpointKeyPrefix, defaultPort)));
     }
 
@@ -252,7 +261,15 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
         try {
             super.close();
         } finally {
-            registry.deregister(this);
+            if (path != null) {
+                registry.deregister(this);
+            }
         }
+    }
+
+    @Override
+    public Path getFilePath() {
+        checkState(path != null, "attempting to watch endpoint group with null path");
+        return path;
     }
 }

@@ -16,9 +16,7 @@
 
 package com.linecorp.armeria.client.endpoint;
 
-import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
-import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
 import static java.nio.file.StandardWatchEventKinds.OVERFLOW;
 
 import java.io.IOException;
@@ -40,14 +38,14 @@ class FileWatcherRunnable implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(FileWatcherRunnable.class);
 
     private final WatchService watchService;
-    private final Supplier<Collection<FileWatcherContext>> ctxSupplier;
+    private final Supplier<Collection<FileWatchEvent>> ctxSupplier;
 
     /**
      * Initializes a runnable which watches files.
      * @param watchService the {@code WatchService} to poll events from
      * @param ctxSupplier supplier which contains the callback invoked for each event
      */
-    FileWatcherRunnable(WatchService watchService, Supplier<Collection<FileWatcherContext>> ctxSupplier) {
+    FileWatcherRunnable(WatchService watchService, Supplier<Collection<FileWatchEvent>> ctxSupplier) {
         this.watchService = watchService;
         this.ctxSupplier = ctxSupplier;
     }
@@ -56,25 +54,33 @@ class FileWatcherRunnable implements Runnable {
     public void run() {
         try {
             WatchKey key;
-            while ((key = watchService.take()) != null) {
+            while (!Thread.currentThread().isInterrupted() && (key = watchService.take()) != null) {
                 for (WatchEvent<?> event : key.pollEvents()) {
-                    @SuppressWarnings("unchecked")
-                    final Path watchedPath = ((Path) key.watchable())
-                            .resolve(((WatchEvent<Path>) event).context());
-                    final Path realFilePath;
-                    try {
-                        realFilePath = watchedPath.toRealPath();
-                    } catch (IOException e) {
-                        logger.warn("skipping -- unable to get real path for {}", watchedPath, e);
-                        continue;
-                    }
-                    if (event.kind().equals(ENTRY_MODIFY) || event.kind().equals(ENTRY_CREATE)) {
+                    if (event.kind().type() == Path.class) {
+                        @SuppressWarnings("unchecked")
+                        final Path watchedPath = ((Path) key.watchable())
+                                .resolve(((WatchEvent<Path>) event).context());
+
+                        if (event.kind().equals(ENTRY_DELETE)) {
+                            logger.warn("ignoring deleted file: {}", watchedPath);
+                            continue;
+                        }
+
+                        final Path realFilePath;
+                        try {
+                            realFilePath = watchedPath.toRealPath();
+                        } catch (IOException e) {
+                            logger.warn("skipping -- unable to get real path for {}", watchedPath, e);
+                            continue;
+                        }
+
                         runCallback(realFilePath);
-                    } else if (event.kind().equals(OVERFLOW)) {
-                        logger.debug("watch event may have been lost: {}", realFilePath);
-                        runCallback(realFilePath);
-                    } else if (event.kind().equals(ENTRY_DELETE)) {
-                        logger.warn("ignoring deleted file: {}", realFilePath);
+                    } else {
+                        if (event.kind().equals(OVERFLOW)) {
+                            logger.debug("watch event may have been lost");
+                        } else {
+                            logger.debug("ignoring unexpected event type: {}", event.kind().name());
+                        }
                     }
                 }
 
@@ -86,7 +92,7 @@ class FileWatcherRunnable implements Runnable {
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            logger.debug("unexpected interruption while reloading properties file: ", e);
+            logger.trace("file watching thread interrupted");
         } catch (ClosedWatchServiceException e) {
             // do nothing
         }
@@ -106,19 +112,19 @@ class FileWatcherRunnable implements Runnable {
     /**
      * Utility class which contains context info for each watched path.
      */
-    static class FileWatcherContext {
-        private final WatchKey key;
+    static class FileWatchEvent {
+        private final WatchKey watchKey;
         private final Runnable callback;
         private final Path dirPath;
 
         /**
          * Initializes the context for each watched path.
-         * @param key the {@code WatchKey} registered for the current path
+         * @param watchKey the {@link WatchKey} registered for the current path
          * @param callback callback to be invoked on a watch event
          * @param dirPath path which is watched
          */
-        FileWatcherContext(WatchKey key, Runnable callback, Path dirPath) {
-            this.key = key;
+        FileWatchEvent(WatchKey watchKey, Runnable callback, Path dirPath) {
+            this.watchKey = watchKey;
             this.callback = callback;
             this.dirPath = dirPath;
         }
@@ -132,7 +138,7 @@ class FileWatcherRunnable implements Runnable {
         }
 
         void cancel() {
-            key.cancel();
+            watchKey.cancel();
         }
     }
 }

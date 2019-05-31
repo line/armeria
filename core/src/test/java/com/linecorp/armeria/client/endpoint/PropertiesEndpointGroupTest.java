@@ -29,6 +29,7 @@ import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
 import org.awaitility.Awaitility;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -49,6 +50,11 @@ public class PropertiesEndpointGroupTest {
     @AfterClass
     public static void after() {
         Awaitility.setDefaultTimeout(10, TimeUnit.SECONDS);
+    }
+
+    @After
+    public void tearDown() {
+        PropertiesEndpointGroup.registry = new FileWatcherRegistry();
     }
 
     @Rule
@@ -261,6 +267,6 @@ public class PropertiesEndpointGroupTest {
         printWriter.close();
 
         await().untilAsserted(() -> assertThat(endpointGroup.endpoints()).hasSize(3));
-        endpointGroup.close();
+        propertiesEndpointGroup.close();
     }
 }

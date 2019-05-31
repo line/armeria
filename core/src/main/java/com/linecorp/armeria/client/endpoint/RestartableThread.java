@@ -22,14 +22,10 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 /**
  * A restartable thread utility class.
  */
 final class RestartableThread {
-    private static final Logger logger = LoggerFactory.getLogger(RestartableThread.class);
 
     @Nullable
     private Thread thread;
@@ -63,8 +59,8 @@ final class RestartableThread {
      */
     synchronized void stop() {
         if (isRunning()) {
-            boolean interrupted = false;
             checkState(thread != null, "tried to stop null thread");
+            boolean interrupted = false;
             thread.interrupt();
             while (thread.isAlive()) {
                 try {
