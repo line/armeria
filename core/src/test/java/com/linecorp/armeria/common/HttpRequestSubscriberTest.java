@@ -89,7 +89,7 @@ public class HttpRequestSubscriberTest {
         }
     }
 
-    static class HttpRequestProvider implements ArgumentsProvider {
+    private static class HttpRequestProvider implements ArgumentsProvider {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
             return Stream.of(
