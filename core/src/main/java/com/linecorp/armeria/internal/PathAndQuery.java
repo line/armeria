@@ -51,7 +51,7 @@ public final class PathAndQuery {
 
     private static final int PERCENT_ENCODING_MARKER = 0xFF;
 
-    private static final int[] RAW_CHAR_TO_MARKER = new int[256];
+    private static final byte[] RAW_CHAR_TO_MARKER = new byte[256];
     private static final String[] MARKER_TO_PERCENT_ENCODED_CHAR = new String[256];
 
     static {
@@ -263,15 +263,14 @@ public final class PathAndQuery {
                     }
                 } else {
                     // If query:
-                    assert decoded < 256;
-                    final int marker = RAW_CHAR_TO_MARKER[decoded];
-                    if (marker > 0) {
+                    final byte marker = RAW_CHAR_TO_MARKER[decoded];
+                    if (marker != 0) {
                         // Insert a special mark so we can distinguish a raw character and percent-encoded
                         // character in a query string, such as '&' and '%26'.
                         // We will encode this mark back into a percent-encoded character later.
                         buf.ensure(2);
                         buf.add((byte) PERCENT_ENCODING_MARKER);
-                        buf.add((byte) marker);
+                        buf.add(marker);
                         wasSlash = false;
                     } else if (appendOneByte(buf, decoded, wasSlash, isPath)) {
                         wasSlash = decoded == '/';
@@ -352,7 +351,7 @@ public final class PathAndQuery {
             if (isPath) {
                 return false;
             } else if (cp != 0x0A && cp != 0x0D && cp != 0x09) {
-                // .. except 0x0A (LF), 0x0D (CR) and 0x09 (TAB) because they are used in a form.
+                // .. except 0x0A (LF), (byte) 0x0D (CR) and 0x09 (TAB) because they are used in a form.
                 return false;
             }
         }
@@ -544,31 +543,31 @@ public final class PathAndQuery {
      * @see <a href="https://tools.ietf.org/html/rfc3986#section-2.2">RFC 3986, section 2.2</a>
      */
     private enum ReservedChar {
-        GEN_DELIM_01(':', "%3A", 0x01),
-        GEN_DELIM_02('/', "%2F", 0x02),
-        GEN_DELIM_03('?', "%3F", 0x03),
-        GEN_DELIM_04('#', "%23", 0x04),
-        GEN_DELIM_05('[', "%5B", 0x05),
-        GEN_DELIM_06(']', "%5D", 0x06),
-        GEN_DELIM_07('@', "%40", 0x07),
+        GEN_DELIM_01(':', "%3A", (byte) 0x01),
+        GEN_DELIM_02('/', "%2F", (byte) 0x02),
+        GEN_DELIM_03('?', "%3F", (byte) 0x03),
+        GEN_DELIM_04('#', "%23", (byte) 0x04),
+        GEN_DELIM_05('[', "%5B", (byte) 0x05),
+        GEN_DELIM_06(']', "%5D", (byte) 0x06),
+        GEN_DELIM_07('@', "%40", (byte) 0x07),
 
-        SUB_DELIM_01('!', "%21", 0x11),
-        SUB_DELIM_02('$', "%24", 0x12),
-        SUB_DELIM_03('&', "%26", 0x13),
-        SUB_DELIM_04('\'', "%27", 0x14),
-        SUB_DELIM_05('(', "%28", 0x15),
-        SUB_DELIM_06(')', "%29", 0x16),
-        SUB_DELIM_07('*', "%2A", 0x17),
-        SUB_DELIM_08('+', "%2B", 0x18),
-        SUB_DELIM_09(',', "%2C", 0x19),
-        SUB_DELIM_10(';', "%3B", 0x1A),
-        SUB_DELIM_11('=', "%3D", 0x1B);
+        SUB_DELIM_01('!', "%21", (byte) 0x11),
+        SUB_DELIM_02('$', "%24", (byte) 0x12),
+        SUB_DELIM_03('&', "%26", (byte) 0x13),
+        SUB_DELIM_04('\'', "%27", (byte) 0x14),
+        SUB_DELIM_05('(', "%28", (byte) 0x15),
+        SUB_DELIM_06(')', "%29", (byte) 0x16),
+        SUB_DELIM_07('*', "%2A", (byte) 0x17),
+        SUB_DELIM_08('+', "%2B", (byte) 0x18),
+        SUB_DELIM_09(',', "%2C", (byte) 0x19),
+        SUB_DELIM_10(';', "%3B", (byte) 0x1A),
+        SUB_DELIM_11('=', "%3D", (byte) 0x1B);
 
         private final int rawChar;
         private final String percentEncodedChar;
-        private final int marker;
+        private final byte marker;
 
-        ReservedChar(int rawChar, String percentEncodedChar, int marker) {
+        ReservedChar(int rawChar, String percentEncodedChar, byte marker) {
             this.rawChar = rawChar;
             this.percentEncodedChar = percentEncodedChar;
             this.marker = marker;
