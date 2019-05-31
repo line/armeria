@@ -20,7 +20,6 @@ import static io.netty.util.internal.StringUtil.decodeHexNibble;
 import static java.util.Objects.requireNonNull;
 
 import java.util.BitSet;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -30,7 +29,6 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableMap.Builder;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
@@ -53,8 +51,8 @@ public final class PathAndQuery {
 
     private static final int PERCENT_ENCODING_MARKER = 0xFF;
 
-    private static final Map<Integer, Integer> RAW_CHAR_TO_MARKER;
-    private static final Map<Integer, String> MARKER_TO_PERCENT_ENCODED_CHAR;
+    private static final int[] RAW_CHAR_TO_MARKER = new int[256];
+    private static final String[] MARKER_TO_PERCENT_ENCODED_CHAR = new String[256];
 
     static {
         final String allowedPathChars =
@@ -69,14 +67,10 @@ public final class PathAndQuery {
             ALLOWED_QUERY_CHARS.set(allowedQueryChars.charAt(i));
         }
 
-        final Builder<Integer, Integer> rawCharToMarkerMap = new Builder<>();
-        final Builder<Integer, String> markerToPercentEncodedCharMap = new Builder<>();
         for (final ReservedChar reservedChar : ReservedChar.values()) {
-            rawCharToMarkerMap.put(reservedChar.rawChar, reservedChar.marker);
-            markerToPercentEncodedCharMap.put(reservedChar.marker, reservedChar.percentEncodedChar);
+            RAW_CHAR_TO_MARKER[reservedChar.rawChar] = reservedChar.marker;
+            MARKER_TO_PERCENT_ENCODED_CHAR[reservedChar.marker] = reservedChar.percentEncodedChar;
         }
-        RAW_CHAR_TO_MARKER = rawCharToMarkerMap.build();
-        MARKER_TO_PERCENT_ENCODED_CHAR = markerToPercentEncodedCharMap.build();
     }
 
     private static final Bytes EMPTY_QUERY = new Bytes(0);
@@ -269,14 +263,15 @@ public final class PathAndQuery {
                     }
                 } else {
                     // If query:
-                    final Integer marker = RAW_CHAR_TO_MARKER.get(decoded);
-                    if (marker != null) {
+                    assert decoded < 256;
+                    final int marker = RAW_CHAR_TO_MARKER[decoded];
+                    if (marker > 0) {
                         // Insert a special mark so we can distinguish a raw character and percent-encoded
                         // character in a query string, such as '&' and '%26'.
                         // We will encode this mark back into a percent-encoded character later.
                         buf.ensure(2);
                         buf.add((byte) PERCENT_ENCODING_MARKER);
-                        buf.add(marker.byteValue());
+                        buf.add((byte) marker);
                         wasSlash = false;
                     } else if (appendOneByte(buf, decoded, wasSlash, isPath)) {
                         wasSlash = decoded == '/';
@@ -437,7 +432,8 @@ public final class PathAndQuery {
             final int b = value.data[i] & 0xFF;
 
             if (b == PERCENT_ENCODING_MARKER && (i + 1) < length) {
-                final String percentEncodedChar = MARKER_TO_PERCENT_ENCODED_CHAR.get(value.data[i + 1] & 0xFF);
+                final int marker = value.data[i + 1] & 0xFF;
+                final String percentEncodedChar = MARKER_TO_PERCENT_ENCODED_CHAR[marker];
                 if (percentEncodedChar != null) {
                     buf.append(percentEncodedChar);
                     i++;
