@@ -31,20 +31,20 @@ You can just use the ``decorator()`` method in :api:`ClientBuilder` to build a :
     import com.linecorp.armeria.common.HttpResponse;
 
     RetryStrategy strategy = RetryStrategy.onServerErrorStatus();
-    HttpClient client = new ClientBuilder(...)
+    HttpClient client = new ClientBuilder("none+http://example.com/hello")
             .decorator(RetryingHttpClient.newDecorator(strategy))
             .build(HttpClient.class);
 
     final AggregatedHttpResponse res = client.execute(...).aggregate().join();
 
-or even simply,
+or even simply using :api:`HttpClientBuilder`,
 
 .. code-block:: java
 
     import com.linecorp.armeria.client.HttpClientBuilder;
 
     RetryStrategy strategy = RetryStrategy.onServerErrorStatus();
-    HttpClient client = new HttpClientBuilder(...)
+    HttpClient client = new HttpClientBuilder("http://example.com/hello")
             .decorator(RetryingHttpClient.newDecorator(strategy))
             .build();
 
