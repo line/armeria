@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.endpoint;
+package com.linecorp.armeria.client.endpoint.properties;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -37,6 +37,8 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 
 public class PropertiesEndpointGroupTest {
 
@@ -53,8 +55,8 @@ public class PropertiesEndpointGroupTest {
     }
 
     @After
-    public void tearDown() {
-        PropertiesEndpointGroup.registry = new FileWatcherRegistry();
+    public void tearDown() throws Exception {
+        PropertiesEndpointGroup.resetRegistry();
     }
 
     @Rule

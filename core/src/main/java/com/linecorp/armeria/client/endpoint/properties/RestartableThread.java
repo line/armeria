@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.endpoint;
+package com.linecorp.armeria.client.endpoint.properties;
 
 import static com.google.common.base.Preconditions.checkState;
 

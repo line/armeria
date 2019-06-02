@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.endpoint;
+package com.linecorp.armeria.client.endpoint.properties;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
@@ -36,15 +36,26 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.endpoint.FileWatcherRegistry.FileWatcherEventKey;
+import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.endpoint.properties.FileWatcherRegistry.FileWatcherEventKey;
 
 /**
  * A {@link Properties} backed {@link EndpointGroup}. The list of {@link Endpoint}s are loaded from the
  * {@link Properties}.
  */
 public final class PropertiesEndpointGroup extends DynamicEndpointGroup implements FileWatcherEventKey {
+    private static FileWatcherRegistry registry = new FileWatcherRegistry();
+
+    /**
+     * Resets registry for {@link PropertiesEndpointGroup}.
+     * @throws Exception when an exception occurs while closing the {@link FileWatcherRegistry}.
+     */
     @VisibleForTesting
-    static FileWatcherRegistry registry = new FileWatcherRegistry();
+    static void resetRegistry() throws Exception {
+        registry.close();
+        registry = new FileWatcherRegistry();
+    }
 
     /**
      * Creates a new {@link EndpointGroup} instance that loads the host names (or IP address) and the port

@@ -1,4 +1,4 @@
-package com.linecorp.armeria.client.endpoint;
+package com.linecorp.armeria.client.endpoint.properties;
 
 /*
  * Copyright 2019 LINE Corporation
