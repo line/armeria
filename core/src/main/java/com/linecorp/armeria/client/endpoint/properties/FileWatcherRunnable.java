@@ -54,7 +54,7 @@ class FileWatcherRunnable implements Runnable {
     public void run() {
         try {
             WatchKey key;
-            while (!Thread.currentThread().isInterrupted() && (key = watchService.take()) != null) {
+            while ((key = watchService.take()) != null) {
                 for (WatchEvent<?> event : key.pollEvents()) {
                     if (event.kind().type() == Path.class) {
                         @SuppressWarnings("unchecked")
@@ -100,7 +100,7 @@ class FileWatcherRunnable implements Runnable {
 
     private void runCallback(Path filePath) {
         ctxSupplier.get().stream().filter(
-                ctx -> filePath.startsWith(ctx.path())).forEach(ctx -> {
+                ctx -> filePath.startsWith(ctx.getDirPath())).forEach(ctx -> {
             try {
                 ctx.runCallback();
             } catch (Exception e) {
@@ -133,7 +133,7 @@ class FileWatcherRunnable implements Runnable {
             callback.run();
         }
 
-        Path path() {
+        Path getDirPath() {
             return dirPath;
         }
 

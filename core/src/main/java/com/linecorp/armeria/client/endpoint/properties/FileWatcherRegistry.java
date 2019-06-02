@@ -48,7 +48,7 @@ final class FileWatcherRegistry implements AutoCloseable {
 
         private final RestartableThread restartableThread;
         private final WatchService watchService;
-        private final Map<FileWatcherEventKey, FileWatchEvent> currWatchEventMap =
+        private final Map<FileWatchRegisterKey, FileWatchEvent> currWatchEventMap =
                 new ConcurrentHashMap<>();
 
         /**
@@ -63,20 +63,21 @@ final class FileWatcherRegistry implements AutoCloseable {
         }
 
         /**
-         * Starts to watch changes for the path corresponding to the {@link FileWatcherEventKey}.
-         * When changes are detected, the {@code reloader} is invoked. If the {@link WatchService}
-         * isn't running yet, this method starts a thread to start watching for the {@link FileSystem}.
-         * @param watcherEventKey key that contains the path to be watched
-         * @param reloader function invoked on file change
+         * Starts to watch changes for the path corresponding to the {@link FileWatchRegisterKey}.
+         * When changes are detected, the {@code callback} is invoked. If the {@link WatchService}
+         * isn't running yet, this method starts a thread to start watching the {@link FileSystem}.
+         * @param watchRegisterKey key that contains the path to be watched
+         * @param callback function invoked on file change
          *
          * @throws IllegalArgumentException if failed to locate file or failed to start watching
          */
-        synchronized void register(FileWatcherEventKey watcherEventKey, Runnable reloader) {
+        void register(FileWatchRegisterKey watchRegisterKey, Runnable callback) {
             final Path dirPath;
             try {
-                dirPath = watcherEventKey.getFilePath().toRealPath().getParent();
+                dirPath = watchRegisterKey.getFilePath().toRealPath().getParent();
             } catch (IOException e) {
-                throw new IllegalArgumentException("failed to locate file " + watcherEventKey.getFilePath(), e);
+                throw new IllegalArgumentException("failed to locate file " +
+                                                   watchRegisterKey.getFilePath(), e);
             }
 
             final WatchKey watchKey;
@@ -87,27 +88,27 @@ final class FileWatcherRegistry implements AutoCloseable {
                                             ENTRY_DELETE,
                                             OVERFLOW);
             } catch (IOException e) {
-                throw new IllegalArgumentException("failed to watch file " + watcherEventKey.getFilePath(), e);
+                throw new IllegalArgumentException("failed to watch file " + watchRegisterKey.getFilePath(), e);
             }
-            currWatchEventMap.put(watcherEventKey, new FileWatchEvent(watchKey, reloader, dirPath));
+            currWatchEventMap.put(watchRegisterKey, new FileWatchEvent(watchKey, callback, dirPath));
             if (!currWatchEventMap.isEmpty()) {
                 restartableThread.start();
             }
         }
 
         /**
-         * Deregisters a {@link FileWatcherEventKey}. On changes to the {@code path} corresponding
-         * to the {@link FileWatcherEventKey}, the {@code reloader} won't be invoked anymore. If
-         * no paths are watched by the {@link WatchService}, then the background thread is stopped.
-         * @param watcherEventKey key for which the {@link WatchService} will stop watching.
+         * Unregisters a {@link FileWatchRegisterKey}. The {@code callback} won't be invoked anymore when the
+         * contents of the file for the {@code filePath} is changed. If no paths are watched by the
+         * {@link WatchService}, then the background thread is stopped.
+         * @param watchRegisterKey key for which the {@link WatchService} will stop watching.
          */
-        synchronized void deregister(FileWatcherEventKey watcherEventKey) {
-            if (!currWatchEventMap.containsKey(watcherEventKey)) {
+        void unregister(FileWatchRegisterKey watchRegisterKey) {
+            if (!currWatchEventMap.containsKey(watchRegisterKey)) {
                 return;
             }
-            final FileWatchEvent fileWatchEvent = currWatchEventMap.remove(watcherEventKey);
+            final FileWatchEvent fileWatchEvent = currWatchEventMap.remove(watchRegisterKey);
             final boolean existsDirWatcher = currWatchEventMap.values().stream().anyMatch(
-                    value -> value.path().equals(fileWatchEvent.path()));
+                    value -> value.getDirPath().equals(fileWatchEvent.getDirPath()));
             if (!existsDirWatcher) {
                 fileWatchEvent.cancel();
             }
@@ -131,45 +132,51 @@ final class FileWatcherRegistry implements AutoCloseable {
         }
     }
 
-    private final Map<FileSystem, FileWatchServiceContext> watchServiceContextMap = new ConcurrentHashMap<>();
+    private final Map<FileSystem, FileWatchServiceContext> fileSystemWatchServiceMap
+            = new ConcurrentHashMap<>();
 
     /**
-     * Registers a {@code watchEventKey} and {@code reloader} to the {@link WatchService}. When the
-     * file of the path of the {@code watchEventKey} is changed, then the {@code reloader} function
+     * Registers a {@code filePath} and {@code callback} to the {@link WatchService}. When the
+     * contents of the registered file is changed, then the {@code callback} function
      * is invoked. If the {@code watchEventKey} is already registered, then nothing happens.
      * This method is thread safe.
-     * @param watchEventKey the key which is registered.
-     * @param reloader function which is invoked when file is changed.
+     * @param filePath path of the file which will be watched for changes.
+     * @param callback function which is invoked when file is changed.
+     *
+     * @return a key which is used to unregister from watching.
      */
-    synchronized void register(FileWatcherEventKey watchEventKey, Runnable reloader) {
-        final FileWatchServiceContext watchServiceContext = watchServiceContextMap.computeIfAbsent(
-                watchEventKey.getFilePath().getFileSystem(), fileSystem -> {
+    synchronized FileWatchRegisterKey register(Path filePath, Runnable callback) {
+        final FileWatchRegisterKey watchRegisterKey = new FileWatchRegisterKey(filePath);
+        final FileWatchServiceContext watchServiceContext = fileSystemWatchServiceMap.computeIfAbsent(
+                filePath.getFileSystem(), fileSystem -> {
                     try {
-                        return new FileWatchServiceContext("file-watcher-" + fileSystem.getClass().getName(),
-                                                           fileSystem.newWatchService());
+                        return new FileWatchServiceContext(
+                                "armeria-file-watcher-" + fileSystem.getClass().getName(),
+                                fileSystem.newWatchService());
                     } catch (IOException e) {
                         throw new IllegalArgumentException(
-                                "invalid filesystem for path: " + watchEventKey.getFilePath());
+                                "invalid filesystem for path: " + watchRegisterKey.getFilePath());
                     }
                 });
-        watchServiceContext.register(watchEventKey, reloader);
+        watchServiceContext.register(watchRegisterKey, callback);
+        return watchRegisterKey;
     }
 
     /**
-     * Stops watching a properties file corresponding to the {@link FileWatcherEventKey}. Nothing
-     * happens if the {@link FileWatcherEventKey} is not registered or already deregistered. This
+     * Stops watching a properties file corresponding to the {@link FileWatchRegisterKey}. Nothing
+     * happens if the {@link FileWatchRegisterKey} is not registered or already unregistered. This
      * method is thread safe.
-     * @param watcherEventKey key that was used to register for watching a file.
+     * @param watchRegisterKey key that was used to register for watching a file.
      */
-    synchronized void deregister(FileWatcherEventKey watcherEventKey) {
-        final FileSystem fileSystem = watcherEventKey.getFilePath().getFileSystem();
-        final FileWatchServiceContext watchServiceContext = watchServiceContextMap.get(fileSystem);
+    synchronized void unregister(FileWatchRegisterKey watchRegisterKey) {
+        final FileSystem fileSystem = watchRegisterKey.getFilePath().getFileSystem();
+        final FileWatchServiceContext watchServiceContext = fileSystemWatchServiceMap.get(fileSystem);
         if (watchServiceContext == null) {
             return;
         }
-        watchServiceContext.deregister(watcherEventKey);
+        watchServiceContext.unregister(watchRegisterKey);
         if (!watchServiceContext.isRunning()) {
-            watchServiceContextMap.remove(fileSystem);
+            fileSystemWatchServiceMap.remove(fileSystem);
         }
     }
 
@@ -179,36 +186,43 @@ final class FileWatcherRegistry implements AutoCloseable {
      */
     @VisibleForTesting
     boolean isRunning() {
-        return watchServiceContextMap.values().stream().anyMatch(FileWatchServiceContext::isRunning);
+        return fileSystemWatchServiceMap.values().stream().anyMatch(FileWatchServiceContext::isRunning);
     }
 
     /**
-     * Close the {@link WatchService}, thread, and clear registry.
+     * Closes the {@link WatchService}, thread, and clear registry.
      * @throws Exception may be thrown if an I/O error occurs
      */
     @Override
-    public void close() throws Exception {
-        watchServiceContextMap.values().forEach(context -> {
+    public synchronized void close() throws Exception {
+        fileSystemWatchServiceMap.values().forEach(context -> {
             try {
                 context.close();
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
         });
-        watchServiceContextMap.clear();
+        fileSystemWatchServiceMap.clear();
     }
 
     /**
-     * Key used to register for file change events. The key must support a @{code getPath} method
-     * which returns the path to be watched.
+     * Key used to register/unregister for file change events.
      */
-    interface FileWatcherEventKey {
+    static final class FileWatchRegisterKey {
+        private final Path filePath;
+
+        private FileWatchRegisterKey(Path filePath) {
+            this.filePath = filePath;
+        }
 
         /**
-         * Returns the file path associated with the current key. The path is used to register and deregister
-         * to the {@link WatchService}. The path must be immutable for each {@link FileWatcherEventKey}.
+         * Returns the file path associated with the current key. The path is used to unregister
+         * from the {@link WatchService}.
+         *
          * @return the path associated with the current key
          */
-        Path getFilePath();
+        Path getFilePath() {
+            return filePath;
+        }
     }
 }

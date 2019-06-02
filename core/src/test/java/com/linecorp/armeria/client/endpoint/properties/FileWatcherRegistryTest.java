@@ -42,7 +42,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import com.linecorp.armeria.client.endpoint.properties.FileWatcherRegistry.FileWatcherEventKey;
+import com.linecorp.armeria.client.endpoint.properties.FileWatcherRegistry.FileWatchRegisterKey;
 
 public class FileWatcherRegistryTest {
 
@@ -57,21 +57,24 @@ public class FileWatcherRegistryTest {
     }
 
     // Not sure if there is a better way to test multi-filesystem other than mocking..
-    private static FileWatcherEventKey createFileWatcherEventKey() throws Exception {
-        final FileWatcherEventKey fileWatcherEventKey = mock(FileWatcherEventKey.class);
+    private static Path createMockedPath() throws Exception {
         final Path path = mock(Path.class);
         final FileSystem fileSystem = mock(FileSystem.class);
         final WatchService watchService = mock(WatchService.class);
         final WatchKey watchKey = mock(WatchKey.class);
-        when(fileWatcherEventKey.getFilePath()).thenReturn(path);
         when(path.toRealPath()).thenReturn(path);
         when(path.getParent()).thenReturn(path);
         when(path.getFileSystem()).thenReturn(fileSystem);
         when(fileSystem.newWatchService()).thenReturn(watchService);
         when(path.register(any(), any())).thenReturn(watchKey);
-        when(watchService.take()).thenReturn(watchKey);
+        when(watchService.take()).then(invocation -> {
+            if (Thread.currentThread().isInterrupted()) {
+                throw new InterruptedException();
+            }
+            return watchKey;
+        });
         when(watchKey.reset()).thenReturn(true);
-        return fileWatcherEventKey;
+        return path;
     }
 
     @After
@@ -86,22 +89,20 @@ public class FileWatcherRegistryTest {
     public void emptyGroupStopsBackgroundThread() throws Exception {
 
         final File file = folder.newFile("temp-file.properties");
-        final PropertiesEndpointGroup group1 = PropertiesEndpointGroup.of(file.toPath(), "");
         final File file2 = folder.newFile("temp-file2.properties");
-        final PropertiesEndpointGroup group2 = PropertiesEndpointGroup.of(file2.toPath(), "");
 
         final FileWatcherRegistry fileWatcherRegistry =
                 new FileWatcherRegistry();
-        fileWatcherRegistry.register(group1, () -> {});
-        fileWatcherRegistry.register(group2, () -> {});
+        final FileWatchRegisterKey key1 = fileWatcherRegistry.register(file.toPath(), () -> {});
+        final FileWatchRegisterKey key2 = fileWatcherRegistry.register(file2.toPath(), () -> {});
 
         assertThat(fileWatcherRegistry.isRunning()).isTrue();
 
-        fileWatcherRegistry.deregister(group1);
+        fileWatcherRegistry.unregister(key1);
 
         assertThat(fileWatcherRegistry.isRunning()).isTrue();
 
-        fileWatcherRegistry.deregister(group2);
+        fileWatcherRegistry.unregister(key2);
 
         assertThat(fileWatcherRegistry.isRunning()).isFalse();
     }
@@ -110,11 +111,9 @@ public class FileWatcherRegistryTest {
     public void closeEndpointGroupStopsRegistry() throws Exception {
 
         final File file = folder.newFile("temp-file.properties");
-        final PropertiesEndpointGroup group = PropertiesEndpointGroup.of(file.toPath(), "");
 
-        final FileWatcherRegistry fileWatcherRegistry =
-                new FileWatcherRegistry();
-        fileWatcherRegistry.register(group, () -> {});
+        final FileWatcherRegistry fileWatcherRegistry = new FileWatcherRegistry();
+        fileWatcherRegistry.register(file.toPath(), () -> {});
 
         assertThat(fileWatcherRegistry.isRunning()).isTrue();
 
@@ -128,11 +127,9 @@ public class FileWatcherRegistryTest {
 
         final File file = folder.newFile("temp-file.properties");
         final FileWatcherRegistry fileWatcherRegistry = new FileWatcherRegistry();
-        final FileWatcherEventKey group = mock(FileWatcherEventKey.class);
-        when(group.getFilePath()).thenReturn(file.toPath());
 
         final AtomicInteger val = new AtomicInteger(0);
-        fileWatcherRegistry.register(group, () -> {
+        final FileWatchRegisterKey key = fileWatcherRegistry.register(file.toPath(), () -> {
             try {
                 final BufferedReader bufferedReader = new BufferedReader(new FileReader(file));
                 val.set(Integer.valueOf(bufferedReader.readLine()));
@@ -158,7 +155,7 @@ public class FileWatcherRegistryTest {
 
         assertThat(fileWatcherRegistry.isRunning()).isTrue();
 
-        fileWatcherRegistry.deregister(group);
+        fileWatcherRegistry.unregister(key);
 
         assertThat(fileWatcherRegistry.isRunning()).isFalse();
 
@@ -170,17 +167,17 @@ public class FileWatcherRegistryTest {
 
         final FileWatcherRegistry fileWatcherRegistry = new FileWatcherRegistry();
 
-        final FileWatcherEventKey fileWatcherEventKey1 = createFileWatcherEventKey();
-        final FileWatcherEventKey fileWatcherEventKey2 = createFileWatcherEventKey();
+        final Path path1 = createMockedPath();
+        final Path path2 = createMockedPath();
 
-        fileWatcherRegistry.register(fileWatcherEventKey1, () -> {});
-        fileWatcherRegistry.register(fileWatcherEventKey2, () -> {});
+        final FileWatchRegisterKey key1 = fileWatcherRegistry.register(path1, () -> {});
+        final FileWatchRegisterKey key2 = fileWatcherRegistry.register(path2, () -> {});
         assertThat(fileWatcherRegistry.isRunning()).isTrue();
 
-        fileWatcherRegistry.deregister(fileWatcherEventKey1);
+        fileWatcherRegistry.unregister(key1);
         assertThat(fileWatcherRegistry.isRunning()).isTrue();
 
-        fileWatcherRegistry.deregister(fileWatcherEventKey2);
+        fileWatcherRegistry.unregister(key2);
         assertThat(fileWatcherRegistry.isRunning()).isFalse();
     }
 }

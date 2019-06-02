@@ -38,13 +38,13 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.client.endpoint.properties.FileWatcherRegistry.FileWatcherEventKey;
+import com.linecorp.armeria.client.endpoint.properties.FileWatcherRegistry.FileWatchRegisterKey;
 
 /**
  * A {@link Properties} backed {@link EndpointGroup}. The list of {@link Endpoint}s are loaded from the
  * {@link Properties}.
  */
-public final class PropertiesEndpointGroup extends DynamicEndpointGroup implements FileWatcherEventKey {
+public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
     private static FileWatcherRegistry registry = new FileWatcherRegistry();
 
     /**
@@ -251,7 +251,7 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup implemen
     }
 
     @Nullable
-    private Path path;
+    private FileWatchRegisterKey watchRegisterKey;
 
     private PropertiesEndpointGroup(List<Endpoint> endpoints) {
         setEndpoints(endpoints);
@@ -262,25 +262,23 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup implemen
                 path,
                 requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
                 defaultPort));
-        this.path = path;
-        registry.register(this, () ->
+        watchRegisterKey = registry.register(path, () ->
                 setEndpoints(loadEndpoints(path, endpointKeyPrefix, defaultPort)));
     }
 
+    /**
+     * Unregisters the current {@link PropertiesEndpointGroup} from the {@link FileWatcherRegistry}.
+     * Invoking this method will attempt to release any unused resources used to continuously
+     * watch properties files.
+     */
     @Override
     public void close() {
         try {
             super.close();
         } finally {
-            if (path != null) {
-                registry.deregister(this);
+            if (watchRegisterKey != null) {
+                registry.unregister(watchRegisterKey);
             }
         }
-    }
-
-    @Override
-    public Path getFilePath() {
-        checkState(path != null, "attempting to watch endpoint group with null path");
-        return path;
     }
 }
