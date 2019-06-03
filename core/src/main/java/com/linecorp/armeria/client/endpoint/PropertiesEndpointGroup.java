@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.endpoint.properties;
+package com.linecorp.armeria.client.endpoint;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
@@ -36,9 +36,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
-import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.client.endpoint.properties.FileWatcherRegistry.FileWatchRegisterKey;
+import com.linecorp.armeria.client.endpoint.FileWatcherRegistry.FileWatchRegisterKey;
 
 /**
  * A {@link Properties} backed {@link EndpointGroup}. The list of {@link Endpoint}s are loaded from the

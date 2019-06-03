@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.endpoint.properties;
+package com.linecorp.armeria.client.endpoint;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -42,7 +42,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import com.linecorp.armeria.client.endpoint.properties.FileWatcherRegistry.FileWatchRegisterKey;
+import com.linecorp.armeria.client.endpoint.FileWatcherRegistry.FileWatchRegisterKey;
 
 public class FileWatcherRegistryTest {
 

@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.endpoint.properties;
+package com.linecorp.armeria.client.endpoint;
 
 import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
 import static java.nio.file.StandardWatchEventKinds.OVERFLOW;

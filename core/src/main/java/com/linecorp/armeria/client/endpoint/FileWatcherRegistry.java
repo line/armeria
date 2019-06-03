@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.endpoint.properties;
+package com.linecorp.armeria.client.endpoint;
 
 import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import com.linecorp.armeria.client.endpoint.properties.FileWatcherRunnable.FileWatchEvent;
+import com.linecorp.armeria.client.endpoint.FileWatcherRunnable.FileWatchEvent;
 
 /**
  * Wraps a {@link WatchService} and allows paths to be registered.
