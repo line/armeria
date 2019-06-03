@@ -25,7 +25,7 @@ import org.junit.jupiter.params.provider.ArgumentsProvider;
 import com.linecorp.armeria.common.SessionProtocol;
 
 /**
- * A {@link ArgumentsProvider} that provides all the unique {@link SessionProtocol} Armeria supports, which is
+ * An {@link ArgumentsProvider} that provides all the unique {@link SessionProtocol} Armeria supports, which is
  * a common test parameter.
  */
 public class UniqueProtocolsProvider implements ArgumentsProvider {
