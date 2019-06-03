@@ -20,21 +20,27 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.junit.Assert.fail;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
+import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
@@ -42,33 +48,26 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.UnpooledHeapByteBuf;
 
-@SuppressWarnings("unchecked")  // Allow using the same tests for writers and non-writers
-public abstract class AbstractStreamMessageTest {
+class StreamMessageTest {
 
-    static final List<Integer> TEN_INTEGERS = IntStream.range(0, 10).boxed().collect(toImmutableList());
+    private static final List<Integer> TEN_INTEGERS = IntStream.range(0, 10).boxed().collect(toImmutableList());
 
-    @ClassRule
-    public static final EventLoopRule eventLoop = new EventLoopRule();
-
-    abstract <T> StreamMessage<T> newStream(List<T> inputs);
-
-    List<Integer> streamValues() {
-        return TEN_INTEGERS;
-    }
+    @RegisterExtension
+    static final EventLoopExtension eventLoop = new EventLoopExtension();
 
     private List<Integer> result;
     private volatile boolean completed;
     private volatile Throwable error;
 
-    @Before
-    public void reset() {
+    @BeforeEach
+    void reset() {
         result = new ArrayList<>();
         completed = false;
     }
 
-    @Test
-    public void full_writeFirst() throws Exception {
-        final StreamMessage<Integer> stream = newStream(streamValues());
+    @ParameterizedTest
+    @ArgumentsSource(StreamProvider.class)
+    void full_writeFirst(StreamMessage<Integer> stream, List<Integer> values) {
         writeTenIntegers(stream);
         stream.subscribe(new ResultCollectingSubscriber() {
             @Override
@@ -76,12 +75,12 @@ public abstract class AbstractStreamMessageTest {
                 s.request(Long.MAX_VALUE);
             }
         });
-        assertSuccess();
+        assertSuccess(values);
     }
 
-    @Test
-    public void full_writeAfter() throws Exception {
-        final StreamMessage<Integer> stream = newStream(streamValues());
+    @ParameterizedTest
+    @ArgumentsSource(StreamProvider.class)
+    void full_writeAfter(StreamMessage<Integer> stream, List<Integer> values) {
         stream.subscribe(new ResultCollectingSubscriber() {
             @Override
             public void onSubscribe(Subscription s) {
@@ -89,15 +88,15 @@ public abstract class AbstractStreamMessageTest {
             }
         });
         writeTenIntegers(stream);
-        assertSuccess();
+        assertSuccess(values);
     }
 
     // Verifies that re-entrancy into onNext, e.g. calling onNext -> request -> onNext, is not allowed, as per
     // reactive streams spec 3.03. If it were allowed, the order of processing would be incorrect and the test
     // would fail.
-    @Test
-    public void flowControlled_writeThenDemandThenProcess() throws Exception {
-        final StreamMessage<Integer> stream = newStream(streamValues());
+    @ParameterizedTest
+    @ArgumentsSource(StreamProvider.class)
+    void flowControlled_writeThenDemandThenProcess(StreamMessage<Integer> stream, List<Integer> values) {
         writeTenIntegers(stream);
         stream.subscribe(new ResultCollectingSubscriber() {
             private Subscription subscription;
@@ -114,12 +113,13 @@ public abstract class AbstractStreamMessageTest {
                 super.onNext(value);
             }
         });
-        assertSuccess();
+        assertSuccess(values);
     }
 
-    @Test
-    public void flowControlled_writeThenDemandThenProcess_eventLoop() throws Exception {
-        final StreamMessage<Integer> stream = newStream(streamValues());
+    @ParameterizedTest
+    @ArgumentsSource(StreamProvider.class)
+    void flowControlled_writeThenDemandThenProcess_eventLoop(StreamMessage<Integer> stream,
+                                                             List<Integer> values) {
         writeTenIntegers(stream);
         eventLoop.get().submit(
                 () ->
@@ -138,12 +138,12 @@ public abstract class AbstractStreamMessageTest {
                                 super.onNext(value);
                             }
                         }, eventLoop.get())).syncUninterruptibly();
-        assertSuccess();
+        assertSuccess(values);
     }
 
-    @Test
-    public void flowControlled_writeThenProcessThenDemand() throws Exception {
-        final StreamMessage<Integer> stream = newStream(streamValues());
+    @ParameterizedTest
+    @ArgumentsSource(StreamProvider.class)
+    void flowControlled_writeThenProcessThenDemand(StreamMessage<Integer> stream, List<Integer> values) {
         writeTenIntegers(stream);
         stream.subscribe(new ResultCollectingSubscriber() {
             private Subscription subscription;
@@ -160,14 +160,12 @@ public abstract class AbstractStreamMessageTest {
                 subscription.request(1);
             }
         });
-        assertSuccess();
+        assertSuccess(values);
     }
 
-    @Test
-    public void releaseOnConsumption_ByteBuf() throws Exception {
-        final ByteBuf buf = newPooledBuffer();
-        final StreamMessage<ByteBuf> stream = newStream(ImmutableList.of(buf));
-
+    @ParameterizedTest
+    @ArgumentsSource(ByteBufStreamProvider.class)
+    public void releaseOnConsumption_ByteBuf(ByteBuf buf, StreamMessage<ByteBuf> stream) {
         if (stream instanceof StreamWriter) {
             ((StreamWriter<ByteBuf>) stream).write(buf);
             ((StreamWriter<?>) stream).close();
@@ -201,11 +199,9 @@ public abstract class AbstractStreamMessageTest {
         await().untilAsserted(() -> assertThat(completed).isTrue());
     }
 
-    @Test
-    public void releaseOnConsumption_HttpData() throws Exception {
-        final ByteBufHttpData data = new ByteBufHttpData(newPooledBuffer(), false);
-        final StreamMessage<ByteBufHolder> stream = newStream(ImmutableList.of(data));
-
+    @ParameterizedTest
+    @ArgumentsSource(ByteBufHolderStreamProvider.class)
+    void releaseOnConsumption_HttpData(ByteBufHolder data, StreamMessage<ByteBufHolder> stream) {
         if (stream instanceof StreamWriter) {
             ((StreamWriter<ByteBufHolder>) stream).write(data);
             ((StreamWriter<?>) stream).close();
@@ -240,10 +236,9 @@ public abstract class AbstractStreamMessageTest {
         await().untilAsserted(() -> assertThat(completed).isTrue());
     }
 
-    @Test
-    public void releaseWithZeroDemand() {
-        final ByteBufHttpData data = new ByteBufHttpData(newPooledBuffer(), true);
-        final StreamMessage<Object> stream = newStream(ImmutableList.of(data));
+    @ParameterizedTest
+    @ArgumentsSource(ByteBufHolderStreamProvider.class)
+    void releaseWithZeroDemand(ByteBufHolder data, StreamMessage<ByteBufHolder> stream) {
         if (stream instanceof StreamWriter) {
             ((StreamWriter<Object>) stream).write(data);
         }
@@ -274,10 +269,9 @@ public abstract class AbstractStreamMessageTest {
         await().untilAsserted(() -> assertThat(data.refCnt()).isZero());
     }
 
-    @Test
-    public void releaseWithZeroDemandAndClosedStream() {
-        final ByteBufHttpData data = new ByteBufHttpData(newPooledBuffer(), true);
-        final StreamMessage<Object> stream = newStream(ImmutableList.of(data));
+    @ParameterizedTest
+    @ArgumentsSource(ByteBufHolderStreamProvider.class)
+    void releaseWithZeroDemandAndClosedStream(ByteBufHolder data, StreamMessage<ByteBufHolder> stream) {
         if (stream instanceof StreamWriter) {
             ((StreamWriter<Object>) stream).write(data);
             ((StreamWriter<Object>) stream).close();
@@ -310,10 +304,48 @@ public abstract class AbstractStreamMessageTest {
         await().untilAsserted(() -> assertThat(data.refCnt()).isZero());
     }
 
-    private void assertSuccess() {
+    private static class StreamProvider implements ArgumentsProvider {
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
+            return Stream.of(
+                    arguments(new DefaultStreamMessage<>(), TEN_INTEGERS),
+                    arguments(StreamMessage.of(), ImmutableList.of()),
+                    arguments(StreamMessage.of(0), ImmutableList.of(0)),
+                    arguments(StreamMessage.of(0, 1), ImmutableList.of(0, 1)),
+                    arguments(StreamMessage.of(TEN_INTEGERS.toArray(new Integer[0])), TEN_INTEGERS));
+        }
+    }
+
+    private static class ByteBufStreamProvider implements ArgumentsProvider {
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
+            final ByteBuf defaultData = newPooledBuffer();
+            final DefaultStreamMessage<ByteBufHolder> defaultStream = new DefaultStreamMessage<>();
+
+            final ByteBuf fixedData = newPooledBuffer();
+            final StreamMessage<ByteBuf> fixedStream = StreamMessage.of(fixedData);
+
+            return Stream.of(arguments(defaultData, defaultStream), arguments(fixedData, fixedStream));
+        }
+    }
+
+    private static class ByteBufHolderStreamProvider implements ArgumentsProvider {
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
+            final ByteBufHttpData defaultData = new ByteBufHttpData(newPooledBuffer(), true);
+            final DefaultStreamMessage<ByteBufHolder> defaultStream = new DefaultStreamMessage<>();
+
+            final ByteBufHttpData fixedData = new ByteBufHttpData(newPooledBuffer(), true);
+            final StreamMessage<ByteBufHolder> fixedStream = StreamMessage.of(fixedData);
+
+            return Stream.of(arguments(defaultData, defaultStream), arguments(fixedData, fixedStream));
+        }
+    }
+
+    private void assertSuccess(List<Integer> values) {
         await().untilAsserted(() -> assertThat(completed).isTrue());
         assertThat(error).isNull();
-        assertThat(result).containsExactlyElementsOf(streamValues());
+        assertThat(result).containsExactlyElementsOf(values);
     }
 
     private abstract class ResultCollectingSubscriber implements Subscriber<Integer> {
@@ -341,7 +373,7 @@ public abstract class AbstractStreamMessageTest {
     private void writeTenIntegers(StreamMessage<Integer> stream) {
         if (stream instanceof StreamWriter) {
             final StreamWriter<Integer> writer = (StreamWriter<Integer>) stream;
-            streamValues().forEach(writer::write);
+            TEN_INTEGERS.forEach(writer::write);
             writer.close();
         }
     }

@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.grpc;
 
 import static com.linecorp.armeria.internal.grpc.GrpcTestUtil.REQUEST_MESSAGE;
 import static com.linecorp.armeria.internal.grpc.GrpcTestUtil.RESPONSE_MESSAGE;
+import static com.linecorp.armeria.testing.internal.TestUtil.withTimeout;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
@@ -27,30 +28,26 @@ import static org.awaitility.Awaitility.await;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.Collection;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.DisableOnDebug;
-import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 import com.google.protobuf.ByteString;
@@ -101,7 +98,7 @@ import com.linecorp.armeria.internal.grpc.StreamRecorder;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import io.grpc.Codec;
 import io.grpc.DecompressorRegistry;
@@ -131,8 +128,7 @@ import io.netty.util.AsciiString;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
-@RunWith(Parameterized.class)
-public class GrpcServiceServerTest {
+class GrpcServiceServerTest {
 
     private static final int MAX_MESSAGE_SIZE = 16 * 1024 * 1024;
 
@@ -150,18 +146,13 @@ public class GrpcServiceServerTest {
 
     private static AsciiString LARGE_PAYLOAD;
 
-    @Parameters(name = "{index}: useBlockingExecutor={0}")
-    public static Collection<Boolean> parameters() {
-        return ImmutableList.of(false, true);
-    }
-
-    @BeforeClass
-    public static void createLargePayload() {
+    @BeforeAll
+    static void createLargePayload() {
         LARGE_PAYLOAD = AsciiString.of(Strings.repeat("a", MAX_MESSAGE_SIZE + 1));
     }
 
-    @AfterClass
-    public static void destroyLargePayload() {
+    @AfterAll
+    static void destroyLargePayload() {
         // Dereference to reduce the memory pressure on the VM.
         LARGE_PAYLOAD = null;
     }
@@ -374,8 +365,8 @@ public class GrpcServiceServerTest {
 
     private static final BlockingQueue<RequestLog> requestLogQueue = new LinkedTransferQueue<>();
 
-    @ClassRule
-    public static ServerRule server = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
@@ -413,8 +404,8 @@ public class GrpcServiceServerTest {
         }
     };
 
-    @ClassRule
-    public static ServerRule serverWithBlockingExecutor = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension serverWithBlockingExecutor = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
@@ -436,8 +427,8 @@ public class GrpcServiceServerTest {
         }
     };
 
-    @ClassRule
-    public static ServerRule serverWithNoMaxMessageSize = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension serverWithNoMaxMessageSize = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
@@ -454,8 +445,8 @@ public class GrpcServiceServerTest {
         }
     };
 
-    @ClassRule
-    public static ServerRule serverWithLongMaxRequestLimit = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension serverWithLongMaxRequestLimit = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
@@ -472,23 +463,11 @@ public class GrpcServiceServerTest {
         }
     };
 
-    @Rule
-    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
-
     private static ManagedChannel channel;
     private static ManagedChannel blockingChannel;
 
-    private final boolean useBlockingExecutor;
-
-    public GrpcServiceServerTest(boolean useBlockingExecutor) {
-        this.useBlockingExecutor = useBlockingExecutor;
-    }
-
-    private UnitTestServiceBlockingStub blockingClient;
-    private UnitTestServiceStub streamingClient;
-
-    @BeforeClass
-    public static void setUpChannel() {
+    @BeforeAll
+    static void setUpChannel() {
         channel = ManagedChannelBuilder.forAddress("127.0.0.1", server.httpPort())
                                        .usePlaintext()
                                        .build();
@@ -497,194 +476,223 @@ public class GrpcServiceServerTest {
                                                .build();
     }
 
-    @AfterClass
-    public static void tearDownChannel() {
+    @AfterAll
+    static void tearDownChannel() {
         channel.shutdownNow();
         blockingChannel.shutdownNow();
     }
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         COMPLETED.set(false);
         CLIENT_CLOSED.set(false);
-        blockingClient = UnitTestServiceGrpc.newBlockingStub(useBlockingExecutor ? blockingChannel : channel);
-        streamingClient = UnitTestServiceGrpc.newStub(useBlockingExecutor ? blockingChannel : channel);
 
         PathAndQuery.clearCachedPaths();
     }
 
-    @After
-    public void tearDown() {
+    @AfterEach
+    void tearDown() {
         // Make sure all RequestLogs are consumed by the test.
         assertThat(requestLogQueue).isEmpty();
     }
 
-    @Test
-    public void unary_normal() throws Exception {
-        assertThat(blockingClient.staticUnaryCall(REQUEST_MESSAGE)).isEqualTo(RESPONSE_MESSAGE);
+    @ParameterizedTest
+    @ArgumentsSource(BlockingClientProvider.class)
+    void unary_normal(UnitTestServiceBlockingStub blockingClient) throws Exception {
+        withTimeout(() -> {
+            assertThat(blockingClient.staticUnaryCall(REQUEST_MESSAGE)).isEqualTo(RESPONSE_MESSAGE);
 
-        // Confirm gRPC paths are cached despite using serviceUnder
-        await().untilAsserted(() -> assertThat(PathAndQuery.cachedPaths())
-                .contains("/armeria.grpc.testing.UnitTestService/StaticUnaryCall"));
+            // Confirm gRPC paths are cached despite using serviceUnder
+            await().untilAsserted(() -> assertThat(PathAndQuery.cachedPaths())
+                    .contains("/armeria.grpc.testing.UnitTestService/StaticUnaryCall"));
 
-        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StaticUnaryCall");
-            assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
-            assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
+            checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+                assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StaticUnaryCall");
+                assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
+                assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
+            });
         });
     }
 
-    @Test
-    public void streamedOutput_normal() throws Exception {
-        final StreamRecorder<SimpleResponse> recorder = StreamRecorder.create();
-        streamingClient.staticStreamedOutputCall(REQUEST_MESSAGE, recorder);
-        recorder.awaitCompletion();
-        assertThat(recorder.getValues()).containsExactly(RESPONSE_MESSAGE, RESPONSE_MESSAGE);
+    @ParameterizedTest
+    @ArgumentsSource(StreamingClientProvider.class)
+    void streamedOutput_normal(UnitTestServiceStub streamingClient) throws Exception {
+        withTimeout(() -> {
+            final StreamRecorder<SimpleResponse> recorder = StreamRecorder.create();
+            streamingClient.staticStreamedOutputCall(REQUEST_MESSAGE, recorder);
+            recorder.awaitCompletion();
+            assertThat(recorder.getValues()).containsExactly(RESPONSE_MESSAGE, RESPONSE_MESSAGE);
 
-        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo(
-                    "armeria.grpc.testing.UnitTestService/StaticStreamedOutputCall");
-            assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
-            assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
+            checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+                assertThat(rpcReq.method()).isEqualTo(
+                        "armeria.grpc.testing.UnitTestService/StaticStreamedOutputCall");
+                assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
+                assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
+            });
         });
     }
 
-    @Test
-    public void error_noMessage() throws Exception {
-        final StatusRuntimeException t = (StatusRuntimeException) catchThrowable(
-                () -> blockingClient.errorNoMessage(REQUEST_MESSAGE));
-        assertThat(t.getStatus().getCode()).isEqualTo(Code.ABORTED);
-        assertThat(t.getStatus().getDescription()).isNull();
+    @ParameterizedTest
+    @ArgumentsSource(BlockingClientProvider.class)
+    void error_noMessage(UnitTestServiceBlockingStub blockingClient) throws Exception {
+        withTimeout(() -> {
+            final StatusRuntimeException t = (StatusRuntimeException) catchThrowable(
+                    () -> blockingClient.errorNoMessage(REQUEST_MESSAGE));
+            assertThat(t.getStatus().getCode()).isEqualTo(Code.ABORTED);
+            assertThat(t.getStatus().getDescription()).isNull();
 
-        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/ErrorNoMessage");
-            assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
-            assertThat(grpcStatus).isNotNull();
-            assertThat(grpcStatus.getCode()).isEqualTo(Code.ABORTED);
-            assertThat(grpcStatus.getDescription()).isNull();
+            checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+                assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/ErrorNoMessage");
+                assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
+                assertThat(grpcStatus).isNotNull();
+                assertThat(grpcStatus.getCode()).isEqualTo(Code.ABORTED);
+                assertThat(grpcStatus.getDescription()).isNull();
+            });
         });
     }
 
-    @Test
-    public void error_withMessage() throws Exception {
-        final StatusRuntimeException t = (StatusRuntimeException) catchThrowable(
-                () -> blockingClient.errorWithMessage(REQUEST_MESSAGE));
-        assertThat(t.getStatus().getCode()).isEqualTo(Code.ABORTED);
-        assertThat(t.getStatus().getDescription()).isEqualTo("aborted call");
-        assertThat(t.getTrailers().getAll(STRING_VALUE_KEY))
-                .containsExactly(StringValue.newBuilder().setValue("custom metadata").build());
-        assertThat(t.getTrailers().getAll(INT_32_VALUE_KEY))
-                .containsExactly(Int32Value.newBuilder().setValue(10).build(),
-                                 Int32Value.newBuilder().setValue(20).build());
-        assertThat(t.getTrailers().get(CUSTOM_VALUE_KEY)).isEqualTo("custom value");
+    @ParameterizedTest
+    @ArgumentsSource(BlockingClientProvider.class)
+    void error_withMessage(UnitTestServiceBlockingStub blockingClient) throws Exception {
+        withTimeout(() -> {
+            final StatusRuntimeException t = (StatusRuntimeException) catchThrowable(
+                    () -> blockingClient.errorWithMessage(REQUEST_MESSAGE));
+            assertThat(t.getStatus().getCode()).isEqualTo(Code.ABORTED);
+            assertThat(t.getStatus().getDescription()).isEqualTo("aborted call");
+            assertThat(t.getTrailers().getAll(STRING_VALUE_KEY))
+                    .containsExactly(StringValue.newBuilder().setValue("custom metadata").build());
+            assertThat(t.getTrailers().getAll(INT_32_VALUE_KEY))
+                    .containsExactly(Int32Value.newBuilder().setValue(10).build(),
+                                     Int32Value.newBuilder().setValue(20).build());
+            assertThat(t.getTrailers().get(CUSTOM_VALUE_KEY)).isEqualTo("custom value");
 
-        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/ErrorWithMessage");
-            assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
-            assertThat(grpcStatus).isNotNull();
-            assertThat(grpcStatus.getCode()).isEqualTo(Code.ABORTED);
-            assertThat(grpcStatus.getDescription()).isEqualTo("aborted call");
+            checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+                assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/ErrorWithMessage");
+                assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
+                assertThat(grpcStatus).isNotNull();
+                assertThat(grpcStatus.getCode()).isEqualTo(Code.ABORTED);
+                assertThat(grpcStatus.getDescription()).isEqualTo("aborted call");
+            });
         });
     }
 
-    @Test
-    public void error_thrown_unary() throws Exception {
-        final StatusRuntimeException t = (StatusRuntimeException) catchThrowable(
-                () -> blockingClient.unaryThrowsError(REQUEST_MESSAGE));
-        assertThat(t.getStatus().getCode()).isEqualTo(Code.ABORTED);
-        assertThat(t.getStatus().getDescription()).isEqualTo("call aborted");
+    @ParameterizedTest
+    @ArgumentsSource(BlockingClientProvider.class)
+    void error_thrown_unary(UnitTestServiceBlockingStub blockingClient) throws Exception {
+        withTimeout(() -> {
+            final StatusRuntimeException t = (StatusRuntimeException) catchThrowable(
+                    () -> blockingClient.unaryThrowsError(REQUEST_MESSAGE));
+            assertThat(t.getStatus().getCode()).isEqualTo(Code.ABORTED);
+            assertThat(t.getStatus().getDescription()).isEqualTo("call aborted");
 
-        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/UnaryThrowsError");
-            assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
-            assertThat(grpcStatus).isNotNull();
-            assertThat(grpcStatus.getCode()).isEqualTo(Code.ABORTED);
-            assertThat(grpcStatus.getDescription()).isEqualTo("call aborted");
+            checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+                assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/UnaryThrowsError");
+                assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
+                assertThat(grpcStatus).isNotNull();
+                assertThat(grpcStatus.getCode()).isEqualTo(Code.ABORTED);
+                assertThat(grpcStatus.getDescription()).isEqualTo("call aborted");
+            });
         });
     }
 
-    @Test
-    public void error_thrown_streamMessage() throws Exception {
-        final StreamRecorder<SimpleResponse> response = StreamRecorder.create();
-        final StreamObserver<SimpleRequest> request = streamingClient.streamThrowsError(response);
-        request.onNext(REQUEST_MESSAGE);
-        response.awaitCompletion();
-        final StatusRuntimeException t = (StatusRuntimeException) response.getError();
-        assertThat(t.getStatus().getCode()).isEqualTo(Code.ABORTED);
-        assertThat(t.getStatus().getDescription()).isEqualTo("bad streaming message");
+    @ParameterizedTest
+    @ArgumentsSource(StreamingClientProvider.class)
+    void error_thrown_streamMessage(UnitTestServiceStub streamingClient) throws Exception {
+        withTimeout(() -> {
+            final StreamRecorder<SimpleResponse> response = StreamRecorder.create();
+            final StreamObserver<SimpleRequest> request = streamingClient.streamThrowsError(response);
+            request.onNext(REQUEST_MESSAGE);
+            response.awaitCompletion();
+            final StatusRuntimeException t = (StatusRuntimeException) response.getError();
+            assertThat(t.getStatus().getCode()).isEqualTo(Code.ABORTED);
+            assertThat(t.getStatus().getDescription()).isEqualTo("bad streaming message");
 
-        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StreamThrowsError");
-            assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
-            assertThat(grpcStatus).isNotNull();
-            assertThat(grpcStatus.getCode()).isEqualTo(Code.ABORTED);
-            assertThat(grpcStatus.getDescription()).isEqualTo("bad streaming message");
+            checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+                assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StreamThrowsError");
+                assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
+                assertThat(grpcStatus).isNotNull();
+                assertThat(grpcStatus.getCode()).isEqualTo(Code.ABORTED);
+                assertThat(grpcStatus.getDescription()).isEqualTo("bad streaming message");
+            });
         });
     }
 
-    @Test
-    public void error_thrown_streamStub() throws Exception {
-        final StreamRecorder<SimpleResponse> response = StreamRecorder.create();
-        streamingClient.streamThrowsErrorInStub(response);
-        response.awaitCompletion();
-        final StatusRuntimeException t = (StatusRuntimeException) response.getError();
-        assertThat(t.getStatus().getCode()).isEqualTo(Code.ABORTED);
-        assertThat(t.getStatus().getDescription()).isEqualTo("bad streaming stub");
+    @ParameterizedTest
+    @ArgumentsSource(StreamingClientProvider.class)
+    void error_thrown_streamStub(UnitTestServiceStub streamingClient) throws Exception {
+        withTimeout(() -> {
+            final StreamRecorder<SimpleResponse> response = StreamRecorder.create();
+            streamingClient.streamThrowsErrorInStub(response);
+            response.awaitCompletion();
+            final StatusRuntimeException t = (StatusRuntimeException) response.getError();
+            assertThat(t.getStatus().getCode()).isEqualTo(Code.ABORTED);
+            assertThat(t.getStatus().getDescription()).isEqualTo("bad streaming stub");
 
-        checkRequestLogStatus(grpcStatus -> {
-            assertThat(grpcStatus.getCode()).isEqualTo(Code.ABORTED);
-            assertThat(grpcStatus.getDescription()).isEqualTo("bad streaming stub");
+            checkRequestLogStatus(grpcStatus -> {
+                assertThat(grpcStatus.getCode()).isEqualTo(Code.ABORTED);
+                assertThat(grpcStatus.getDescription()).isEqualTo("bad streaming stub");
+            });
         });
     }
 
-    @Test
-    public void requestContextSet() throws Exception {
-        final StreamRecorder<SimpleResponse> response = StreamRecorder.create();
-        final StreamObserver<SimpleRequest> request = streamingClient.checkRequestContext(response);
-        request.onNext(REQUEST_MESSAGE);
-        request.onNext(REQUEST_MESSAGE);
-        request.onNext(REQUEST_MESSAGE);
-        request.onCompleted();
-        response.awaitCompletion();
-        final SimpleResponse expectedResponse =
-                SimpleResponse.newBuilder()
-                              .setPayload(Payload.newBuilder()
-                                                 .setBody(ByteString.copyFromUtf8("3")))
-                              .build();
-        assertThat(response.getValues()).containsExactly(expectedResponse);
+    @ParameterizedTest
+    @ArgumentsSource(StreamingClientProvider.class)
+    void requestContextSet(UnitTestServiceStub streamingClient) throws Exception {
+        withTimeout(() -> {
+            final StreamRecorder<SimpleResponse> response = StreamRecorder.create();
+            final StreamObserver<SimpleRequest> request = streamingClient.checkRequestContext(response);
+            request.onNext(REQUEST_MESSAGE);
+            request.onNext(REQUEST_MESSAGE);
+            request.onNext(REQUEST_MESSAGE);
+            request.onCompleted();
+            response.awaitCompletion();
+            final SimpleResponse expectedResponse =
+                    SimpleResponse.newBuilder()
+                                  .setPayload(Payload.newBuilder()
+                                                     .setBody(ByteString.copyFromUtf8("3")))
+                                  .build();
+            assertThat(response.getValues()).containsExactly(expectedResponse);
 
-        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/CheckRequestContext");
-            assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
-            assertThat(rpcRes.get()).isEqualTo(expectedResponse);
+            checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+                assertThat(rpcReq.method()).isEqualTo(
+                        "armeria.grpc.testing.UnitTestService/CheckRequestContext");
+                assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
+                assertThat(rpcRes.get()).isEqualTo(expectedResponse);
+            });
         });
     }
 
-    @Test
-    public void tooLargeRequest_uncompressed() throws Exception {
-        final SimpleRequest request = newLargeRequest();
-        final StatusRuntimeException t =
-                (StatusRuntimeException) catchThrowable(
-                        () -> blockingClient.staticUnaryCall(request));
+    @ParameterizedTest
+    @ArgumentsSource(BlockingClientProvider.class)
+    void tooLargeRequest_uncompressed(UnitTestServiceBlockingStub blockingClient) throws Exception {
+        withTimeout(() -> {
+            final SimpleRequest request = newLargeRequest();
+            final StatusRuntimeException t =
+                    (StatusRuntimeException) catchThrowable(
+                            () -> blockingClient.staticUnaryCall(request));
 
-        assertThat(t.getStatus().getCode()).isEqualTo(Code.CANCELLED);
+            assertThat(t.getStatus().getCode()).isEqualTo(Code.CANCELLED);
 
-        checkRequestLogStatus(grpcStatus -> {
-            assertThat(grpcStatus.getCode()).isEqualTo(Code.RESOURCE_EXHAUSTED);
+            checkRequestLogStatus(grpcStatus -> {
+                assertThat(grpcStatus.getCode()).isEqualTo(Code.RESOURCE_EXHAUSTED);
+            });
         });
     }
 
-    @Test
-    public void tooLargeRequest_compressed() throws Exception {
-        final SimpleRequest request = newLargeRequest();
-        final StatusRuntimeException t =
-                (StatusRuntimeException) catchThrowable(
-                        () -> blockingClient.withCompression("gzip").staticUnaryCall(request));
+    @ParameterizedTest
+    @ArgumentsSource(BlockingClientProvider.class)
+    void tooLargeRequest_compressed(UnitTestServiceBlockingStub blockingClient) throws Exception {
+        withTimeout(() -> {
+            final SimpleRequest request = newLargeRequest();
+            final StatusRuntimeException t =
+                    (StatusRuntimeException) catchThrowable(
+                            () -> blockingClient.withCompression("gzip").staticUnaryCall(request));
 
-        assertThat(t.getStatus().getCode()).isEqualTo(Code.CANCELLED);
+            assertThat(t.getStatus().getCode()).isEqualTo(Code.CANCELLED);
 
-        checkRequestLogStatus(grpcStatus -> {
-            assertThat(grpcStatus.getCode()).isEqualTo(Code.RESOURCE_EXHAUSTED);
+            checkRequestLogStatus(grpcStatus -> {
+                assertThat(grpcStatus.getCode()).isEqualTo(Code.RESOURCE_EXHAUSTED);
+            });
         });
     }
 
@@ -696,48 +704,54 @@ public class GrpcServiceServerTest {
     }
 
     @Test
-    public void uncompressedClient_compressedEndpoint() throws Exception {
-        final ManagedChannel nonDecompressingChannel =
-                ManagedChannelBuilder.forAddress("127.0.0.1", server.httpPort())
-                                     .decompressorRegistry(
-                                             DecompressorRegistry.emptyInstance()
-                                                                 .with(Codec.Identity.NONE, false))
-                                     .usePlaintext()
-                                     .build();
-        final UnitTestServiceBlockingStub client = UnitTestServiceGrpc.newBlockingStub(nonDecompressingChannel);
-        assertThat(client.staticUnaryCallSetsMessageCompression(REQUEST_MESSAGE))
-                .isEqualTo(RESPONSE_MESSAGE);
-        nonDecompressingChannel.shutdownNow();
+    void uncompressedClient_compressedEndpoint() throws Exception {
+        withTimeout(() -> {
+            final ManagedChannel nonDecompressingChannel =
+                    ManagedChannelBuilder.forAddress("127.0.0.1", server.httpPort())
+                                         .decompressorRegistry(
+                                                 DecompressorRegistry.emptyInstance()
+                                                                     .with(Codec.Identity.NONE, false))
+                                         .usePlaintext()
+                                         .build();
+            final UnitTestServiceBlockingStub client = UnitTestServiceGrpc.newBlockingStub(
+                    nonDecompressingChannel);
+            assertThat(client.staticUnaryCallSetsMessageCompression(REQUEST_MESSAGE))
+                    .isEqualTo(RESPONSE_MESSAGE);
+            nonDecompressingChannel.shutdownNow();
 
-        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo(
-                    "armeria.grpc.testing.UnitTestService/StaticUnaryCallSetsMessageCompression");
-            assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
-            assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
+            checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+                assertThat(rpcReq.method()).isEqualTo(
+                        "armeria.grpc.testing.UnitTestService/StaticUnaryCallSetsMessageCompression");
+                assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
+                assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
+            });
+        });
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(BlockingClientProvider.class)
+    void compressedClient_compressedEndpoint(UnitTestServiceBlockingStub blockingClient) throws Exception {
+        withTimeout(() -> {
+            assertThat(blockingClient.staticUnaryCallSetsMessageCompression(REQUEST_MESSAGE))
+                    .isEqualTo(RESPONSE_MESSAGE);
+
+            checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+                assertThat(rpcReq.method()).isEqualTo(
+                        "armeria.grpc.testing.UnitTestService/StaticUnaryCallSetsMessageCompression");
+                assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
+                assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
+            });
         });
     }
 
     @Test
-    public void compressedClient_compressedEndpoint() throws Exception {
-        assertThat(blockingClient.staticUnaryCallSetsMessageCompression(REQUEST_MESSAGE))
-                .isEqualTo(RESPONSE_MESSAGE);
-
-        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo(
-                    "armeria.grpc.testing.UnitTestService/StaticUnaryCallSetsMessageCompression");
-            assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
-            assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
-        });
+    void clientSocketClosedBeforeHalfCloseHttp2() throws Exception {
+        withTimeout(() -> clientSocketClosedBeforeHalfClose("h2c"));
     }
 
     @Test
-    public void clientSocketClosedBeforeHalfCloseHttp2() throws Exception {
-        clientSocketClosedBeforeHalfClose("h2c");
-    }
-
-    @Test
-    public void clientSocketClosedBeforeHalfCloseHttp1() throws Exception {
-        clientSocketClosedBeforeHalfClose("h1c");
+    void clientSocketClosedBeforeHalfCloseHttp1() throws Exception {
+        withTimeout(() -> clientSocketClosedBeforeHalfClose("h1c"));
     }
 
     private static void clientSocketClosedBeforeHalfClose(String protocol) throws Exception {
@@ -777,13 +791,13 @@ public class GrpcServiceServerTest {
     }
 
     @Test
-    public void clientSocketClosedAfterHalfCloseBeforeCloseCancelsHttp2() throws Exception {
-        clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol.H2C);
+    void clientSocketClosedAfterHalfCloseBeforeCloseCancelsHttp2() throws Exception {
+        withTimeout(() -> clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol.H2C));
     }
 
     @Test
-    public void clientSocketClosedAfterHalfCloseBeforeCloseCancelsHttp1() throws Exception {
-        clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol.H1C);
+    void clientSocketClosedAfterHalfCloseBeforeCloseCancelsHttp1() throws Exception {
+        withTimeout(() -> clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol.H1C));
     }
 
     private static void clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol protocol)
@@ -828,300 +842,357 @@ public class GrpcServiceServerTest {
     }
 
     @Test
-    public void unframed() throws Exception {
-        final HttpClient client = HttpClient.of(server.httpUri("/"));
-        final AggregatedHttpResponse response = client.execute(
-                RequestHeaders.of(HttpMethod.POST,
-                                  UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
-                                  HttpHeaderNames.CONTENT_TYPE, "application/protobuf"),
-                REQUEST_MESSAGE.toByteArray()).aggregate().get();
-        final SimpleResponse message = SimpleResponse.parseFrom(response.content().array());
-        assertThat(message).isEqualTo(RESPONSE_MESSAGE);
-        assertThat(response.headers().getInt(HttpHeaderNames.CONTENT_LENGTH))
-                .isEqualTo(response.content().length());
+    void unframed() throws Exception {
+        withTimeout(() -> {
+            final HttpClient client = HttpClient.of(server.httpUri("/"));
+            final AggregatedHttpResponse response = client.execute(
+                    RequestHeaders.of(HttpMethod.POST,
+                                      UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
+                                      HttpHeaderNames.CONTENT_TYPE, "application/protobuf"),
+                    REQUEST_MESSAGE.toByteArray()).aggregate().get();
+            final SimpleResponse message = SimpleResponse.parseFrom(response.content().array());
+            assertThat(message).isEqualTo(RESPONSE_MESSAGE);
+            assertThat(response.headers().getInt(HttpHeaderNames.CONTENT_LENGTH))
+                    .isEqualTo(response.content().length());
 
-        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StaticUnaryCall");
-            assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
-            assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
+            checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+                assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StaticUnaryCall");
+                assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
+                assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
+            });
         });
     }
 
     @Test
-    public void unframed_acceptEncoding() throws Exception {
-        final HttpClient client = HttpClient.of(server.httpUri("/"));
-        final AggregatedHttpResponse response = client.execute(
-                RequestHeaders.of(HttpMethod.POST,
-                                  UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
-                                  HttpHeaderNames.CONTENT_TYPE, "application/protobuf",
-                                  GrpcHeaderNames.GRPC_ACCEPT_ENCODING, "gzip,none"),
-                REQUEST_MESSAGE.toByteArray()).aggregate().get();
-        final SimpleResponse message = SimpleResponse.parseFrom(response.content().array());
-        assertThat(message).isEqualTo(RESPONSE_MESSAGE);
-        assertThat(response.headers().getInt(HttpHeaderNames.CONTENT_LENGTH))
-                .isEqualTo(response.content().length());
+    void unframed_acceptEncoding() throws Exception {
+        withTimeout(() -> {
+            final HttpClient client = HttpClient.of(server.httpUri("/"));
+            final AggregatedHttpResponse response = client.execute(
+                    RequestHeaders.of(HttpMethod.POST,
+                                      UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
+                                      HttpHeaderNames.CONTENT_TYPE, "application/protobuf",
+                                      GrpcHeaderNames.GRPC_ACCEPT_ENCODING, "gzip,none"),
+                    REQUEST_MESSAGE.toByteArray()).aggregate().get();
+            final SimpleResponse message = SimpleResponse.parseFrom(response.content().array());
+            assertThat(message).isEqualTo(RESPONSE_MESSAGE);
+            assertThat(response.headers().getInt(HttpHeaderNames.CONTENT_LENGTH))
+                    .isEqualTo(response.content().length());
 
-        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StaticUnaryCall");
-            assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
-            assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
+            checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+                assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StaticUnaryCall");
+                assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
+                assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
+            });
         });
     }
 
     @Test
-    public void unframed_streamingApi() throws Exception {
-        final HttpClient client = HttpClient.of(server.httpUri("/"));
-        final AggregatedHttpResponse response = client.execute(
-                RequestHeaders.of(HttpMethod.POST,
-                                  UnitTestServiceGrpc.getStaticStreamedOutputCallMethod().getFullMethodName(),
-                                  HttpHeaderNames.CONTENT_TYPE, "application/protobuf"),
-                StreamingOutputCallRequest.getDefaultInstance().toByteArray()).aggregate().get();
-        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertNoRpcContent();
-    }
-
-    @Test
-    public void unframed_noContentType() throws Exception {
-        final HttpClient client = HttpClient.of(server.httpUri("/"));
-        final AggregatedHttpResponse response = client.execute(
-                RequestHeaders.of(HttpMethod.POST,
-                                  UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName()),
-                REQUEST_MESSAGE.toByteArray()).aggregate().get();
-        assertThat(response.status()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
-        assertNoRpcContent();
-    }
-
-    @Test
-    public void unframed_grpcEncoding() throws Exception {
-        final HttpClient client = HttpClient.of(server.httpUri("/"));
-        final AggregatedHttpResponse response = client.execute(
-                RequestHeaders.of(HttpMethod.POST,
-                                  UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
-                                  HttpHeaderNames.CONTENT_TYPE, "application/protobuf",
-                                  GrpcHeaderNames.GRPC_ENCODING, "gzip"),
-                REQUEST_MESSAGE.toByteArray()).aggregate().get();
-        assertThat(response.status()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
-        assertNoRpcContent();
-    }
-
-    @Test
-    public void unframed_serviceError() throws Exception {
-        final HttpClient client = HttpClient.of(server.httpUri("/"));
-        final SimpleRequest request =
-                SimpleRequest.newBuilder()
-                             .setResponseStatus(
-                                     EchoStatus.newBuilder()
-                                               .setCode(Status.DEADLINE_EXCEEDED.getCode().value()))
-                             .build();
-        final AggregatedHttpResponse response = client.execute(
-                RequestHeaders.of(HttpMethod.POST,
-                                  UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
-                                  HttpHeaderNames.CONTENT_TYPE, "application/protobuf"),
-                request.toByteArray()).aggregate().get();
-        assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-
-        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StaticUnaryCall");
-            assertThat(rpcReq.params()).containsExactly(request);
-            assertThat(grpcStatus).isNotNull();
-            assertThat(grpcStatus.getCode()).isEqualTo(Code.UNKNOWN);
+    void unframed_streamingApi() throws Exception {
+        withTimeout(() -> {
+            final HttpClient client = HttpClient.of(server.httpUri("/"));
+            final AggregatedHttpResponse response = client.execute(
+                    RequestHeaders.of(HttpMethod.POST,
+                                      UnitTestServiceGrpc.getStaticStreamedOutputCallMethod()
+                                                         .getFullMethodName(),
+                                      HttpHeaderNames.CONTENT_TYPE, "application/protobuf"),
+                    StreamingOutputCallRequest.getDefaultInstance().toByteArray()).aggregate().get();
+            assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+            assertNoRpcContent();
         });
     }
 
     @Test
-    public void grpcWeb() throws Exception {
-        final HttpClient client = HttpClient.of(server.httpUri("/"));
-        final AggregatedHttpResponse response = client.execute(
-                RequestHeaders.of(HttpMethod.POST,
-                                  UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
-                                  HttpHeaderNames.CONTENT_TYPE, "application/grpc-web"),
-                GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf())).aggregate().get();
-        final byte[] serializedStatusHeader = "grpc-status: 0\r\n".getBytes(StandardCharsets.US_ASCII);
-        final byte[] serializedTrailers = Bytes.concat(
-                new byte[] { ArmeriaServerCall.TRAILERS_FRAME_HEADER },
-                Ints.toByteArray(serializedStatusHeader.length),
-                serializedStatusHeader);
-        assertThat(response.content().array()).containsExactly(
-                Bytes.concat(
-                        GrpcTestUtil.uncompressedFrame(
-                                GrpcTestUtil.protoByteBuf(RESPONSE_MESSAGE)),
-                        serializedTrailers));
-
-        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StaticUnaryCall");
-            assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
-            assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
+    void unframed_noContentType() throws Exception {
+        withTimeout(() -> {
+            final HttpClient client = HttpClient.of(server.httpUri("/"));
+            final AggregatedHttpResponse response = client.execute(
+                    RequestHeaders.of(HttpMethod.POST,
+                                      UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName()),
+                    REQUEST_MESSAGE.toByteArray()).aggregate().get();
+            assertThat(response.status()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+            assertNoRpcContent();
         });
     }
 
     @Test
-    public void grpcWeb_error() throws Exception {
-        final HttpClient client = HttpClient.of(server.httpUri("/"));
-        final AggregatedHttpResponse response = client.execute(
-                RequestHeaders.of(HttpMethod.POST,
-                                  UnitTestServiceGrpc.getErrorWithMessageMethod().getFullMethodName(),
-                                  HttpHeaderNames.CONTENT_TYPE, "application/grpc-web"),
-                GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf())).aggregate().get();
-        assertThat(response.headers()).contains(entry(GrpcHeaderNames.GRPC_STATUS, "10"),
-                                                entry(GrpcHeaderNames.GRPC_MESSAGE, "aborted call"));
-        requestLogQueue.take();
-    }
-
-    @Test
-    public void json() throws Exception {
-        final AtomicReference<HttpHeaders> requestHeaders = new AtomicReference<>();
-        final AtomicReference<byte[]> payload = new AtomicReference<>();
-        final UnitTestServiceBlockingStub jsonStub =
-                new ClientBuilder(server.httpUri(GrpcSerializationFormats.JSON, "/"))
-                        .decorator(client -> new SimpleDecoratingClient<HttpRequest, HttpResponse>(client) {
-                            @Override
-                            public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
-                                    throws Exception {
-                                requestHeaders.set(req.headers());
-                                return new FilteredHttpResponse(delegate().execute(ctx, req)) {
-                                    @Override
-                                    protected HttpObject filter(HttpObject obj) {
-                                        if (obj instanceof HttpData) {
-                                            payload.set(((HttpData) obj).array());
-                                        }
-                                        return obj;
-                                    }
-                                };
-                            }
-                        })
-                        .build(UnitTestServiceBlockingStub.class);
-        final SimpleResponse response = jsonStub.staticUnaryCall(REQUEST_MESSAGE);
-        assertThat(response).isEqualTo(RESPONSE_MESSAGE);
-        assertThat(requestHeaders.get().get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo("application/grpc+json");
-
-        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
-            assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StaticUnaryCall");
-            assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
-            assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
+    void unframed_grpcEncoding() throws Exception {
+        withTimeout(() -> {
+            final HttpClient client = HttpClient.of(server.httpUri("/"));
+            final AggregatedHttpResponse response = client.execute(
+                    RequestHeaders.of(HttpMethod.POST,
+                                      UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
+                                      HttpHeaderNames.CONTENT_TYPE, "application/protobuf",
+                                      GrpcHeaderNames.GRPC_ENCODING, "gzip"),
+                    REQUEST_MESSAGE.toByteArray()).aggregate().get();
+            assertThat(response.status()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+            assertNoRpcContent();
         });
-
-        byte[] deframed = Arrays.copyOfRange(payload.get(), 5, payload.get().length);
-        assertThat(new String(deframed, StandardCharsets.UTF_8)).contains("oauthScope");
     }
 
     @Test
-    public void json_preservingFieldNames() throws Exception {
-        final AtomicReference<HttpHeaders> requestHeaders = new AtomicReference<>();
-        final AtomicReference<byte[]> payload = new AtomicReference<>();
-        final UnitTestServiceBlockingStub jsonStub =
-                new ClientBuilder(server.httpUri(GrpcSerializationFormats.JSON, "/json-preserving/"))
-                        .option(GrpcClientOptions.JSON_MARSHALLER_CUSTOMIZER.newValue(
-                                marshaller -> marshaller.preservingProtoFieldNames(true)))
-                        .decorator(client -> new SimpleDecoratingClient<HttpRequest, HttpResponse>(client) {
-                            @Override
-                            public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
-                                    throws Exception {
-                                requestHeaders.set(req.headers());
-                                return new FilteredHttpResponse(delegate().execute(ctx, req)) {
-                                    @Override
-                                    protected HttpObject filter(HttpObject obj) {
-                                        if (obj instanceof HttpData) {
-                                            payload.set(((HttpData) obj).array());
-                                        }
-                                        return obj;
-                                    }
-                                };
-                            }
-                        })
-                        .build(UnitTestServiceBlockingStub.class);
-        final SimpleResponse response = jsonStub.staticUnaryCall(REQUEST_MESSAGE);
-        assertThat(response).isEqualTo(RESPONSE_MESSAGE);
-        assertThat(requestHeaders.get().get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo("application/grpc+json");
+    void unframed_serviceError() throws Exception {
+        withTimeout(() -> {
+            final HttpClient client = HttpClient.of(server.httpUri("/"));
+            final SimpleRequest request =
+                    SimpleRequest.newBuilder()
+                                 .setResponseStatus(
+                                         EchoStatus.newBuilder()
+                                                   .setCode(Status.DEADLINE_EXCEEDED.getCode().value()))
+                                 .build();
+            final AggregatedHttpResponse response = client.execute(
+                    RequestHeaders.of(HttpMethod.POST,
+                                      UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
+                                      HttpHeaderNames.CONTENT_TYPE, "application/protobuf"),
+                    request.toByteArray()).aggregate().get();
+            assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 
-        byte[] deframed = Arrays.copyOfRange(payload.get(), 5, payload.get().length);
-        assertThat(new String(deframed, StandardCharsets.UTF_8)).contains("oauth_scope");
+            checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+                assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StaticUnaryCall");
+                assertThat(rpcReq.params()).containsExactly(request);
+                assertThat(grpcStatus).isNotNull();
+                assertThat(grpcStatus.getCode()).isEqualTo(Code.UNKNOWN);
+            });
+        });
     }
 
     @Test
-    public void noMaxMessageSize() throws Exception {
-        final ManagedChannel channel =
-                ManagedChannelBuilder.forAddress("127.0.0.1", serverWithNoMaxMessageSize.httpPort())
-                                     .usePlaintext()
-                                     .build();
+    void grpcWeb() throws Exception {
+        withTimeout(() -> {
+            final HttpClient client = HttpClient.of(server.httpUri("/"));
+            final AggregatedHttpResponse response = client.execute(
+                    RequestHeaders.of(HttpMethod.POST,
+                                      UnitTestServiceGrpc.getStaticUnaryCallMethod().getFullMethodName(),
+                                      HttpHeaderNames.CONTENT_TYPE, "application/grpc-web"),
+                    GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf())).aggregate().get();
+            final byte[] serializedStatusHeader = "grpc-status: 0\r\n".getBytes(StandardCharsets.US_ASCII);
+            final byte[] serializedTrailers = Bytes.concat(
+                    new byte[] { ArmeriaServerCall.TRAILERS_FRAME_HEADER },
+                    Ints.toByteArray(serializedStatusHeader.length),
+                    serializedStatusHeader);
+            assertThat(response.content().array()).containsExactly(
+                    Bytes.concat(
+                            GrpcTestUtil.uncompressedFrame(
+                                    GrpcTestUtil.protoByteBuf(RESPONSE_MESSAGE)),
+                            serializedTrailers));
 
-        try {
-            final UnitTestServiceBlockingStub stub = UnitTestServiceGrpc.newBlockingStub(channel);
-            assertThat(stub.staticUnaryCall(REQUEST_MESSAGE)).isEqualTo(RESPONSE_MESSAGE);
-        } finally {
-            channel.shutdownNow();
+            checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+                assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StaticUnaryCall");
+                assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
+                assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
+            });
+        });
+    }
+
+    @Test
+    void grpcWeb_error() throws Exception {
+        withTimeout(() -> {
+            final HttpClient client = HttpClient.of(server.httpUri("/"));
+            final AggregatedHttpResponse response = client.execute(
+                    RequestHeaders.of(HttpMethod.POST,
+                                      UnitTestServiceGrpc.getErrorWithMessageMethod().getFullMethodName(),
+                                      HttpHeaderNames.CONTENT_TYPE, "application/grpc-web"),
+                    GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf())).aggregate().get();
+            assertThat(response.headers()).contains(entry(GrpcHeaderNames.GRPC_STATUS, "10"),
+                                                    entry(GrpcHeaderNames.GRPC_MESSAGE, "aborted call"));
             requestLogQueue.take();
+        });
+    }
+
+    @Test
+    void json() throws Exception {
+        withTimeout(() -> {
+            final AtomicReference<HttpHeaders> requestHeaders = new AtomicReference<>();
+            final AtomicReference<byte[]> payload = new AtomicReference<>();
+            final UnitTestServiceBlockingStub jsonStub =
+                    new ClientBuilder(server.httpUri(GrpcSerializationFormats.JSON, "/"))
+                            .decorator(client -> new SimpleDecoratingClient<HttpRequest, HttpResponse>(client) {
+                                @Override
+                                public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
+                                        throws Exception {
+                                    requestHeaders.set(req.headers());
+                                    return new FilteredHttpResponse(delegate().execute(ctx, req)) {
+                                        @Override
+                                        protected HttpObject filter(HttpObject obj) {
+                                            if (obj instanceof HttpData) {
+                                                payload.set(((HttpData) obj).array());
+                                            }
+                                            return obj;
+                                        }
+                                    };
+                                }
+                            })
+                            .build(UnitTestServiceBlockingStub.class);
+            final SimpleResponse response = jsonStub.staticUnaryCall(REQUEST_MESSAGE);
+            assertThat(response).isEqualTo(RESPONSE_MESSAGE);
+            assertThat(requestHeaders.get().get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo(
+                    "application/grpc+json");
+
+            checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+                assertThat(rpcReq.method()).isEqualTo("armeria.grpc.testing.UnitTestService/StaticUnaryCall");
+                assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
+                assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
+            });
+
+            byte[] deframed = Arrays.copyOfRange(payload.get(), 5, payload.get().length);
+            assertThat(new String(deframed, StandardCharsets.UTF_8)).contains("oauthScope");
+        });
+    }
+
+    @Test
+    void json_preservingFieldNames() throws Exception {
+        withTimeout(() -> {
+            final AtomicReference<HttpHeaders> requestHeaders = new AtomicReference<>();
+            final AtomicReference<byte[]> payload = new AtomicReference<>();
+            final UnitTestServiceBlockingStub jsonStub =
+                    new ClientBuilder(server.httpUri(GrpcSerializationFormats.JSON, "/json-preserving/"))
+                            .option(GrpcClientOptions.JSON_MARSHALLER_CUSTOMIZER.newValue(
+                                    marshaller -> marshaller.preservingProtoFieldNames(true)))
+                            .decorator(client -> new SimpleDecoratingClient<HttpRequest, HttpResponse>(client) {
+                                @Override
+                                public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
+                                        throws Exception {
+                                    requestHeaders.set(req.headers());
+                                    return new FilteredHttpResponse(delegate().execute(ctx, req)) {
+                                        @Override
+                                        protected HttpObject filter(HttpObject obj) {
+                                            if (obj instanceof HttpData) {
+                                                payload.set(((HttpData) obj).array());
+                                            }
+                                            return obj;
+                                        }
+                                    };
+                                }
+                            })
+                            .build(UnitTestServiceBlockingStub.class);
+            final SimpleResponse response = jsonStub.staticUnaryCall(REQUEST_MESSAGE);
+            assertThat(response).isEqualTo(RESPONSE_MESSAGE);
+            assertThat(requestHeaders.get().get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo(
+                    "application/grpc+json");
+
+            byte[] deframed = Arrays.copyOfRange(payload.get(), 5, payload.get().length);
+            assertThat(new String(deframed, StandardCharsets.UTF_8)).contains("oauth_scope");
+        });
+    }
+
+    @Test
+    void noMaxMessageSize() throws Exception {
+        withTimeout(() -> {
+            final ManagedChannel channel =
+                    ManagedChannelBuilder.forAddress("127.0.0.1", serverWithNoMaxMessageSize.httpPort())
+                                         .usePlaintext()
+                                         .build();
+
+            try {
+                final UnitTestServiceBlockingStub stub = UnitTestServiceGrpc.newBlockingStub(channel);
+                assertThat(stub.staticUnaryCall(REQUEST_MESSAGE)).isEqualTo(RESPONSE_MESSAGE);
+            } finally {
+                channel.shutdownNow();
+                requestLogQueue.take();
+            }
+        });
+    }
+
+    @Test
+    void longMaxRequestLimit() throws Exception {
+        withTimeout(() -> {
+            final ManagedChannel channel =
+                    ManagedChannelBuilder.forAddress("127.0.0.1", serverWithLongMaxRequestLimit.httpPort())
+                                         .usePlaintext()
+                                         .build();
+            try {
+                final UnitTestServiceBlockingStub stub = UnitTestServiceGrpc.newBlockingStub(channel);
+                assertThat(stub.staticUnaryCall(REQUEST_MESSAGE)).isEqualTo(RESPONSE_MESSAGE);
+            } finally {
+                channel.shutdownNow();
+                requestLogQueue.take();
+            }
+        });
+    }
+
+    @Test
+    void reflectionService() throws Exception {
+        withTimeout(() -> {
+            final ServerReflectionStub stub = ServerReflectionGrpc.newStub(channel);
+
+            final AtomicReference<ServerReflectionResponse> response = new AtomicReference<>();
+
+            final StreamObserver<ServerReflectionRequest> request = stub.serverReflectionInfo(
+                    new StreamObserver<ServerReflectionResponse>() {
+                        @Override
+                        public void onNext(ServerReflectionResponse value) {
+                            response.set(value);
+                        }
+
+                        @Override
+                        public void onError(Throwable t) {}
+
+                        @Override
+                        public void onCompleted() {}
+                    });
+            request.onNext(ServerReflectionRequest.newBuilder()
+                                                  .setListServices("")
+                                                  .build());
+            request.onCompleted();
+
+            await().untilAsserted(
+                    () -> {
+                        assertThat(response).doesNotHaveValue(null);
+                        // Instead of making this test depend on every other one, just check that there is at
+                        // least two services returned corresponding to UnitTestService and
+                        // ProtoReflectionService.
+                        assertThat(response.get().getListServicesResponse().getServiceList())
+                                .hasSizeGreaterThanOrEqualTo(2);
+                    });
+        });
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(BlockingClientProvider.class)
+    void replaceException(UnitTestServiceBlockingStub blockingClient) throws Exception {
+        withTimeout(() -> {
+            assertThatThrownBy(() -> blockingClient.errorReplaceException(SimpleRequest.getDefaultInstance()))
+                    .isInstanceOf(StatusRuntimeException.class)
+                    .hasMessage("UNKNOWN: Error was replaced");
+
+            requestLogQueue.take();
+        });
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(BlockingClientProvider.class)
+    void errorAdditionalMetadata(UnitTestServiceBlockingStub blockingClient) throws Exception {
+        withTimeout(() -> {
+            final Throwable t = catchThrowable(
+                    () -> blockingClient.errorAdditionalMetadata(SimpleRequest.getDefaultInstance()));
+            assertThat(t).isInstanceOfSatisfying(StatusRuntimeException.class, error -> {
+                assertThat(error).hasMessage("UNKNOWN");
+                assertThat(error.getTrailers().keys()).contains(ERROR_METADATA_HEADER.toString());
+                assertThat(error.getTrailers().get(ERROR_METADATA_KEY).getValue()).isEqualTo(
+                        "an error occurred");
+            });
+
+            requestLogQueue.take();
+        });
+    }
+
+    private static class BlockingClientProvider implements ArgumentsProvider {
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
+            return Stream.of(
+                    UnitTestServiceGrpc.newBlockingStub(channel),
+                    UnitTestServiceGrpc.newBlockingStub(blockingChannel))
+                         .map(Arguments::of);
         }
     }
 
-    @Test
-    public void longMaxRequestLimit() throws Exception {
-        final ManagedChannel channel =
-                ManagedChannelBuilder.forAddress("127.0.0.1", serverWithLongMaxRequestLimit.httpPort())
-                                     .usePlaintext()
-                                     .build();
-        try {
-            final UnitTestServiceBlockingStub stub = UnitTestServiceGrpc.newBlockingStub(channel);
-            assertThat(stub.staticUnaryCall(REQUEST_MESSAGE)).isEqualTo(RESPONSE_MESSAGE);
-        } finally {
-            channel.shutdownNow();
-            requestLogQueue.take();
+    private static class StreamingClientProvider implements ArgumentsProvider {
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
+            return Stream.of(
+                    UnitTestServiceGrpc.newStub(channel),
+                    UnitTestServiceGrpc.newStub(blockingChannel))
+                         .map(Arguments::of);
         }
-    }
-
-    @Test
-    public void reflectionService() throws Exception {
-        final ServerReflectionStub stub = ServerReflectionGrpc.newStub(channel);
-
-        final AtomicReference<ServerReflectionResponse> response = new AtomicReference<>();
-
-        final StreamObserver<ServerReflectionRequest> request = stub.serverReflectionInfo(
-                new StreamObserver<ServerReflectionResponse>() {
-                    @Override
-                    public void onNext(ServerReflectionResponse value) {
-                        response.set(value);
-                    }
-
-                    @Override
-                    public void onError(Throwable t) {}
-
-                    @Override
-                    public void onCompleted() {}
-                });
-        request.onNext(ServerReflectionRequest.newBuilder()
-                                              .setListServices("")
-                                              .build());
-        request.onCompleted();
-
-        await().untilAsserted(
-                () -> {
-                    assertThat(response).doesNotHaveValue(null);
-                    // Instead of making this test depend on every other one, just check that there is at least
-                    // two services returned corresponding to UnitTestService and ProtoReflectionService.
-                    assertThat(response.get().getListServicesResponse().getServiceList())
-                            .hasSizeGreaterThanOrEqualTo(2);
-                });
-    }
-
-    @Test
-    public void replaceException() throws Exception {
-        assertThatThrownBy(() -> blockingClient.errorReplaceException(SimpleRequest.getDefaultInstance()))
-                .isInstanceOf(StatusRuntimeException.class)
-                .hasMessage("UNKNOWN: Error was replaced");
-
-        requestLogQueue.take();
-    }
-
-    @Test
-    public void errorAdditionalMetadata() throws Exception {
-        final Throwable t = catchThrowable(
-                () -> blockingClient.errorAdditionalMetadata(SimpleRequest.getDefaultInstance()));
-        assertThat(t).isInstanceOfSatisfying(StatusRuntimeException.class, error -> {
-            assertThat(error).hasMessage("UNKNOWN");
-            assertThat(error.getTrailers().keys()).contains(ERROR_METADATA_HEADER.toString());
-            assertThat(error.getTrailers().get(ERROR_METADATA_KEY).getValue()).isEqualTo("an error occurred");
-        });
-
-        requestLogQueue.take();
     }
 
     private static void checkRequestLog(RequestLogChecker checker) throws Exception {

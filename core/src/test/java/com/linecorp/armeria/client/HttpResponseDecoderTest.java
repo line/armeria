@@ -15,27 +15,20 @@
  */
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.common.SessionProtocol.H1C;
-import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.channels.Channel;
-import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
 import com.linecorp.armeria.client.retry.Backoff;
@@ -47,41 +40,31 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-@RunWith(Parameterized.class)
-public class HttpResponseDecoderTest {
+class HttpResponseDecoderTest {
     private static final Logger logger = LoggerFactory.getLogger(HttpResponseDecoderTest.class);
 
-    @ClassRule
-    public static ServerRule rule = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
-        protected void configure(ServerBuilder sb) throws Exception {
+        protected void configure(ServerBuilder sb) {
             sb.service("/", (ctx, req) -> HttpResponse.of("Hello, Armeria!"));
         }
     };
-
-    @Parameters(name = "{index}: protocol={0}")
-    public static Collection<SessionProtocol> protocols() {
-        return ImmutableList.of(H1C, H2C);
-    }
-
-    private final SessionProtocol protocol;
-
-    public HttpResponseDecoderTest(SessionProtocol protocol) {
-        this.protocol = protocol;
-    }
 
     /**
      * This test would be passed because the {@code cancelAction} method of the {@link HttpResponseWrapper} is
      * invoked in the event loop of the {@link Channel}.
      */
-    @Test
-    public void confirmResponseStartAndEndInTheSameThread() throws InterruptedException {
+    @ParameterizedTest
+    @EnumSource(value = SessionProtocol.class, names = {"H1C", "H2C"})
+    void confirmResponseStartAndEndInTheSameThread(SessionProtocol protocol)
+            throws InterruptedException {
         final AtomicBoolean failed = new AtomicBoolean();
         final RetryStrategy strategy =
                 (ctx, cause) -> CompletableFuture.completedFuture(Backoff.withoutDelay());
-        final HttpClient client = new HttpClientBuilder(protocol.uriText() + "://127.0.0.1:" + rule.httpPort())
+        final HttpClient client = new HttpClientBuilder(server.uri(protocol, "/"))
                 // This increases the execution duration of 'endResponse0' of the DefaultRequestLog,
                 // which means that we have more chance to reproduce the bug if two threads are racing
                 // for notifying RESPONSE_END to listeners.

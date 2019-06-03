@@ -17,20 +17,18 @@ package com.linecorp.armeria.spring.web.reactive;
 
 import static com.linecorp.armeria.common.MediaType.JSON_UTF_8;
 import static com.linecorp.armeria.common.MediaType.PLAIN_TEXT_UTF_8;
+import static com.linecorp.armeria.testing.internal.TestUtil.withTimeout;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.DisableOnDebug;
-import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
@@ -40,7 +38,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.reactive.function.BodyInserters;
@@ -49,8 +46,6 @@ import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.RouterFunctions;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
-
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
@@ -70,10 +65,9 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-@RunWith(SpringJUnit4ClassRunner.class)
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test_reactive")
-public class ReactiveWebServerAutoConfigurationTest {
+class ReactiveWebServerAutoConfigurationTest {
 
     @SpringBootApplication
     @Configuration
@@ -124,30 +118,23 @@ public class ReactiveWebServerAutoConfigurationTest {
                     .addressResolverGroupFactory(eventLoopGroup -> MockAddressResolverGroup.localhost())
                     .build();
 
-    // "@RunWith(SpringJUnit4ClassRunner.class)" is specified, so use the following stream instead of
-    // specifying "@RunWith(Parameterized.class)".
-    private static final List<String> protocols = Stream.of(SessionProtocol.H1, SessionProtocol.H2)
-                                                        .map(SessionProtocol::uriText)
-                                                        .collect(ImmutableList.toImmutableList());
-
-    @Rule
-    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
-
     @LocalServerPort
     int port;
 
-    @Test
-    public void shouldGetHelloFromRestController() throws Exception {
-        protocols.forEach(scheme -> {
+    @ParameterizedTest
+    @ArgumentsSource(SchemesProvider.class)
+    void shouldGetHelloFromRestController(String scheme) throws Exception {
+        withTimeout(() -> {
             final HttpClient client = HttpClient.of(clientFactory, scheme + "://example.com:" + port);
             final AggregatedHttpResponse response = client.get("/hello").aggregate().join();
             assertThat(response.contentUtf8()).isEqualTo("hello");
         });
     }
 
-    @Test
-    public void shouldGetHelloFromRouter() throws Exception {
-        protocols.forEach(scheme -> {
+    @ParameterizedTest
+    @ArgumentsSource(SchemesProvider.class)
+    void shouldGetHelloFromRouter(String scheme) throws Exception {
+        withTimeout(() -> {
             final HttpClient client = HttpClient.of(clientFactory, scheme + "://example.com:" + port);
 
             final AggregatedHttpResponse res = client.get("/route").aggregate().join();
@@ -163,9 +150,10 @@ public class ReactiveWebServerAutoConfigurationTest {
         });
     }
 
-    @Test
-    public void shouldGetNotFound() {
-        protocols.forEach(scheme -> {
+    @ParameterizedTest
+    @ArgumentsSource(SchemesProvider.class)
+    void shouldGetNotFound(String scheme) {
+        withTimeout(() -> {
             final HttpClient client = HttpClient.of(clientFactory, scheme + "://example.com:" + port);
             assertThat(client.get("/route2").aggregate().join().status()).isEqualTo(HttpStatus.NOT_FOUND);
 
@@ -175,5 +163,14 @@ public class ReactiveWebServerAutoConfigurationTest {
                     HttpData.wrap("text".getBytes())).aggregate().join().status())
                     .isEqualTo(HttpStatus.NOT_FOUND);
         });
+    }
+
+    private static class SchemesProvider implements ArgumentsProvider {
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
+            return Stream.of(SessionProtocol.H1, SessionProtocol.H2)
+                         .map(SessionProtocol::uriText)
+                         .map(Arguments::of);
+        }
     }
 }

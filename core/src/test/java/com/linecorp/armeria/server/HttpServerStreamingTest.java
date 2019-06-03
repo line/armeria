@@ -19,30 +19,30 @@ import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
+import static com.linecorp.armeria.testing.internal.TestUtil.withTimeout;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
-import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
@@ -60,19 +60,17 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.InboundTrafficController;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.util.concurrent.GlobalEventExecutor;
 
-@RunWith(Parameterized.class)
-public class HttpServerStreamingTest {
+class HttpServerStreamingTest {
     private static final Logger logger = LoggerFactory.getLogger(HttpServerStreamingTest.class);
 
     private static final EventLoopGroup workerGroup = EventLoopGroups.newEventLoopGroup(1);
@@ -88,15 +86,10 @@ public class HttpServerStreamingTest {
     private static final int STREAMING_CONTENT_CHUNK_LENGTH =
             (int) Math.min(Integer.MAX_VALUE, STREAMING_CONTENT_LENGTH / 8);
 
-    @Parameters(name = "{index}: {0}")
-    public static Collection<SessionProtocol> parameters() {
-        return ImmutableList.of(H1C, H1, H2C, H2);
-    }
-
     private static volatile long serverMaxRequestLength;
 
-    @ClassRule
-    public static final ServerRule server = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
 
@@ -138,69 +131,73 @@ public class HttpServerStreamingTest {
         }
     };
 
-    private final SessionProtocol protocol;
-    private HttpClient client;
-
-    public HttpServerStreamingTest(SessionProtocol protocol) {
-        this.protocol = protocol;
-    }
-
-    @AfterClass
-    public static void destroy() {
+    @AfterAll
+    static void destroy() {
         CompletableFuture.runAsync(clientFactory::close);
     }
 
-    @Before
-    public void resetOptions() {
+    @BeforeEach
+    void resetOptions() {
         serverMaxRequestLength = 0;
     }
 
-    @Test(timeout = 10000)
-    public void testTooLargeContent() throws Exception {
-        final int maxContentLength = 65536;
-        serverMaxRequestLength = maxContentLength;
+    @ParameterizedTest
+    @ArgumentsSource(ClientProvider.class)
+    void testTooLargeContent(HttpClient client) throws Exception {
+        withTimeout(() -> {
+            final int maxContentLength = 65536;
+            serverMaxRequestLength = maxContentLength;
 
-        final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.POST, "/count");
-        final CompletableFuture<AggregatedHttpResponse> f = client().execute(req).aggregate();
+            final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.POST, "/count");
+            final CompletableFuture<AggregatedHttpResponse> f = client.execute(req).aggregate();
 
-        stream(req, maxContentLength + 1, 1024);
+            stream(req, maxContentLength + 1, 1024);
 
-        final AggregatedHttpResponse res = f.get();
+            final AggregatedHttpResponse res = f.get();
 
-        assertThat(res.status()).isEqualTo(HttpStatus.REQUEST_ENTITY_TOO_LARGE);
-        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(res.contentUtf8()).isEqualTo("413 Request Entity Too Large");
+            assertThat(res.status()).isEqualTo(HttpStatus.REQUEST_ENTITY_TOO_LARGE);
+            assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+            assertThat(res.contentUtf8()).isEqualTo("413 Request Entity Too Large");
+        }, Duration.ofSeconds(10));
     }
 
-    @Test(timeout = 10000)
-    public void testTooLargeContentToNonExistentService() throws Exception {
-        final int maxContentLength = 65536;
-        serverMaxRequestLength = maxContentLength;
+    @ParameterizedTest
+    @ArgumentsSource(ClientProvider.class)
+    void testTooLargeContentToNonExistentService(HttpClient client) throws Exception {
+        withTimeout(() -> {
+            final int maxContentLength = 65536;
+            serverMaxRequestLength = maxContentLength;
 
-        final byte[] content = new byte[maxContentLength + 1];
-        final AggregatedHttpResponse res = client().post("/non-existent", content).aggregate().get();
-        assertThat(res.status()).isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(res.contentUtf8()).isEqualTo("404 Not Found");
+            final byte[] content = new byte[maxContentLength + 1];
+            final AggregatedHttpResponse res = client.post("/non-existent", content).aggregate().get();
+            assertThat(res.status()).isEqualTo(HttpStatus.NOT_FOUND);
+            assertThat(res.contentUtf8()).isEqualTo("404 Not Found");
+        }, Duration.ofSeconds(10));
     }
 
-    @Test(timeout = 60000)
-    public void testStreamingRequest() throws Exception {
-        runStreamingRequestTest("/count");
+    @ParameterizedTest
+    @ArgumentsSource(ClientProvider.class)
+    void testStreamingRequest(HttpClient client) throws Exception {
+        withTimeout(() -> runStreamingRequestTest(client, "/count"), Duration.ofSeconds(60));
     }
 
-    @Test(timeout = 120000)
-    public void testStreamingRequestWithSlowService() throws Exception {
-        final int oldNumDeferredReads = InboundTrafficController.numDeferredReads();
-        runStreamingRequestTest("/slow_count");
-        // The connection's inbound traffic must be suspended due to overwhelming traffic from client.
-        // If the number of deferred reads did not increase and the testStreaming() above did not fail,
-        // it probably means the client failed to produce enough amount of traffic.
-        assertThat(InboundTrafficController.numDeferredReads()).isGreaterThan(oldNumDeferredReads);
+    @ParameterizedTest
+    @ArgumentsSource(ClientProvider.class)
+    void testStreamingRequestWithSlowService(HttpClient client) throws Exception {
+        withTimeout(() -> {
+            final int oldNumDeferredReads = InboundTrafficController.numDeferredReads();
+            runStreamingRequestTest(client, "/slow_count");
+            // The connection's inbound traffic must be suspended due to overwhelming traffic from client.
+            // If the number of deferred reads did not increase and the testStreaming() above did not fail,
+            // it probably means the client failed to produce enough amount of traffic.
+            assertThat(InboundTrafficController.numDeferredReads()).isGreaterThan(oldNumDeferredReads);
+        }, Duration.ofSeconds(120));
     }
 
-    private void runStreamingRequestTest(String path) throws InterruptedException, ExecutionException {
+    private void runStreamingRequestTest(HttpClient client, String path)
+            throws InterruptedException, ExecutionException {
         final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.POST, path);
-        final CompletableFuture<AggregatedHttpResponse> f = client().execute(req).aggregate();
+        final CompletableFuture<AggregatedHttpResponse> f = client.execute(req).aggregate();
 
         // Stream a large of the max memory.
         // This test will fail if the implementation keep the whole content in memory.
@@ -221,23 +218,28 @@ public class HttpServerStreamingTest {
         }
     }
 
-    @Test(timeout = 60000)
-    public void testStreamingResponse() throws Exception {
-        runStreamingResponseTest(false);
+    @ParameterizedTest
+    @ArgumentsSource(ClientProvider.class)
+    void testStreamingResponse(HttpClient client) throws Exception {
+        withTimeout(() -> runStreamingResponseTest(client, false), Duration.ofSeconds(60));
     }
 
-    @Test(timeout = 120000)
-    public void testStreamingResponseWithSlowClient() throws Exception {
-        final int oldNumDeferredReads = InboundTrafficController.numDeferredReads();
-        runStreamingResponseTest(true);
-        // The connection's inbound traffic must be suspended due to overwhelming traffic from client.
-        // If the number of deferred reads did not increase and the testStreaming() above did not fail,
-        // it probably means the client failed to produce enough amount of traffic.
-        assertThat(InboundTrafficController.numDeferredReads()).isGreaterThan(oldNumDeferredReads);
+    @ParameterizedTest
+    @ArgumentsSource(ClientProvider.class)
+    void testStreamingResponseWithSlowClient(HttpClient client) throws Exception {
+        withTimeout(() -> {
+            final int oldNumDeferredReads = InboundTrafficController.numDeferredReads();
+            runStreamingResponseTest(client, true);
+            // The connection's inbound traffic must be suspended due to overwhelming traffic from client.
+            // If the number of deferred reads did not increase and the testStreaming() above did not fail,
+            // it probably means the client failed to produce enough amount of traffic.
+            assertThat(InboundTrafficController.numDeferredReads()).isGreaterThan(oldNumDeferredReads);
+        }, Duration.ofSeconds(120));
     }
 
-    private void runStreamingResponseTest(boolean slowClient) throws InterruptedException, ExecutionException {
-        final HttpResponse res = client().get("/zeroes/" + STREAMING_CONTENT_LENGTH);
+    private void runStreamingResponseTest(HttpClient client, boolean slowClient)
+            throws InterruptedException, ExecutionException {
+        final HttpResponse res = client.get("/zeroes/" + STREAMING_CONTENT_LENGTH);
         final AtomicReference<HttpStatus> status = new AtomicReference<>();
 
         final StreamConsumer consumer = new StreamConsumer(GlobalEventExecutor.INSTANCE, slowClient) {
@@ -287,20 +289,23 @@ public class HttpServerStreamingTest {
               });
     }
 
-    private HttpClient client() {
-        if (client != null) {
-            return client;
+    private static class ClientProvider implements ArgumentsProvider {
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
+            return Stream.of(H1C, H2C, H1, H2)
+                    .map(protocol -> {
+                        final HttpClientBuilder builder = new HttpClientBuilder(
+                                protocol.uriText() + "://127.0.0.1:" +
+                                (protocol.isTls() ? server.httpsPort() : server.httpPort()));
+
+                        builder.factory(clientFactory);
+                        builder.responseTimeoutMillis(0);
+                        builder.maxResponseLength(0);
+
+                        return builder.build();
+                    })
+                    .map(Arguments::of);
         }
-
-        final HttpClientBuilder builder = new HttpClientBuilder(
-                protocol.uriText() + "://127.0.0.1:" +
-                (protocol.isTls() ? server.httpsPort() : server.httpPort()));
-
-        builder.factory(clientFactory);
-        builder.responseTimeoutMillis(0);
-        builder.maxResponseLength(0);
-
-        return client = builder.build();
     }
 
     private static class CountingService extends AbstractHttpService {

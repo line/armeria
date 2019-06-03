@@ -17,20 +17,19 @@ package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
-
-import com.google.common.collect.ImmutableList;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.FixedHttpRequest.EmptyFixedHttpRequest;
@@ -39,15 +38,14 @@ import com.linecorp.armeria.common.FixedHttpRequest.RegularFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
 import com.linecorp.armeria.common.stream.RegularFixedStreamMessage;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-@RunWith(Parameterized.class)
 public class HttpRequestSubscriberTest {
 
     private static final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/delayed_ok");
 
-    @ClassRule
-    public static ServerRule rule = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension rule = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
@@ -67,39 +65,14 @@ public class HttpRequestSubscriberTest {
 
     static HttpClient client;
 
-    @BeforeClass
-    public static void beforeClass() {
+    @BeforeAll
+    static void beforeClass() {
         client = HttpClient.of(rule.httpUri("/"));
     }
 
-    @Parameters(name = "{index}: request={0}")
-    public static Collection<HttpRequest> parameters() {
-        return ImmutableList.of(
-                new EmptyFixedHttpRequest(headers),
-                new OneElementFixedHttpRequest(
-                        headers, HttpData.ofUtf8("body")),
-                new TwoElementFixedHttpRequest(
-                        headers, HttpData.ofUtf8("body1"), HttpData.ofUtf8("body2")),
-                new RegularFixedHttpRequest(
-                        headers, HttpData.ofUtf8("body1"), HttpData.ofUtf8("body2"), HttpData.ofUtf8("body3")),
-                new PublisherBasedHttpRequest(
-                        headers,
-                        new HttpDataPublisher(new HttpData[] {
-                                HttpData.ofUtf8("body1"),
-                                HttpData.ofUtf8("body2"),
-                                HttpData.ofUtf8("body3")
-                        }))
-        );
-    }
-
-    private final HttpRequest request;
-
-    public HttpRequestSubscriberTest(HttpRequest request) {
-        this.request = request;
-    }
-
-    @Test
-    public void shouldCompleteFutureWithoutCause() throws Exception {
+    @ParameterizedTest
+    @ArgumentsSource(HttpRequestProvider.class)
+    void shouldCompleteFutureWithoutCause(HttpRequest request) throws Exception {
         final AggregatedHttpResponse response = client.execute(request).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
 
@@ -113,6 +86,29 @@ public class HttpRequestSubscriberTest {
     private static final class HttpDataPublisher extends RegularFixedStreamMessage<HttpData> {
         private HttpDataPublisher(HttpData[] objs) {
             super(objs);
+        }
+    }
+
+    private static class HttpRequestProvider implements ArgumentsProvider {
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
+            return Stream.of(
+                    new EmptyFixedHttpRequest(headers),
+                    new OneElementFixedHttpRequest(
+                            headers, HttpData.ofUtf8("body")),
+                    new TwoElementFixedHttpRequest(
+                            headers, HttpData.ofUtf8("body1"), HttpData.ofUtf8("body2")),
+                    new RegularFixedHttpRequest(
+                            headers, HttpData.ofUtf8("body1"), HttpData.ofUtf8("body2"),
+                            HttpData.ofUtf8("body3")),
+                    new PublisherBasedHttpRequest(
+                            headers,
+                            new HttpDataPublisher(new HttpData[] {
+                                    HttpData.ofUtf8("body1"),
+                                    HttpData.ofUtf8("body2"),
+                                    HttpData.ofUtf8("body3")
+                            }))
+            ).map(Arguments::of);
         }
     }
 }

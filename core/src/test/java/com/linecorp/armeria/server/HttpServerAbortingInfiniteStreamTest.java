@@ -16,27 +16,22 @@
 package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
-import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import java.util.Collection;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.annotation.Nullable;
 
 import org.awaitility.core.ConditionTimeoutException;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpData;
@@ -50,31 +45,22 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-@RunWith(Parameterized.class)
-public class HttpServerAbortingInfiniteStreamTest {
+class HttpServerAbortingInfiniteStreamTest {
     private static final Logger logger = LoggerFactory.getLogger(HttpServerAbortingInfiniteStreamTest.class);
 
-    @Parameters(name = "{index}: protocol={0}")
-    public static Collection<SessionProtocol> protocols() {
-        return ImmutableList.of(H1C, H2C);
-    }
+    private static final AtomicReference<SessionProtocol> expectedProtocol = new AtomicReference<>();
 
-    private final SessionProtocol protocol;
-    private final AtomicBoolean isCompleted = new AtomicBoolean();
+    private static final AtomicBoolean isCompleted = new AtomicBoolean();
 
-    public HttpServerAbortingInfiniteStreamTest(SessionProtocol protocol) {
-        this.protocol = protocol;
-    }
-
-    @Rule
-    public final ServerRule server = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/infinity", (ctx, req) -> {
                 // Ensure that the protocol is expected one.
-                assertThat(ctx.sessionProtocol()).isEqualTo(protocol);
+                assertThat(ctx.sessionProtocol()).isEqualTo(expectedProtocol.get());
 
                 final HttpResponseWriter writer = HttpResponse.streaming();
                 writer.write(ResponseHeaders.of(HttpStatus.OK));
@@ -90,7 +76,7 @@ public class HttpServerAbortingInfiniteStreamTest {
                 writer.completionFuture().whenComplete((unused, cause) -> {
                     // We are not expecting that this stream is successfully finished.
                     if (cause != null) {
-                        if (protocol == H1C) {
+                        if (ctx.sessionProtocol() == H1C) {
                             assertThat(cause).isInstanceOf(CancelledSubscriptionException.class);
                         } else {
                             assertThat(cause).isInstanceOf(AbortedStreamException.class);
@@ -105,8 +91,11 @@ public class HttpServerAbortingInfiniteStreamTest {
         }
     };
 
-    @Test
-    public void shouldCancelInfiniteStreamImmediately() {
+    @ParameterizedTest
+    @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C"})
+    void shouldCancelInfiniteStreamImmediately(SessionProtocol protocol) {
+        expectedProtocol.set(protocol);
+
         final HttpClient client = HttpClient.of(server.uri(protocol, "/"));
         final HttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/infinity"));
 

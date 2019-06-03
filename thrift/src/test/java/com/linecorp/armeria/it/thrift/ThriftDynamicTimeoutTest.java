@@ -16,19 +16,20 @@
 package com.linecorp.armeria.it.thrift;
 
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
+import static com.linecorp.armeria.testing.internal.TestUtil.withTimeout;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.google.common.base.Stopwatch;
 
@@ -46,14 +47,13 @@ import com.linecorp.armeria.server.SimpleDecoratingService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.server.thrift.ThriftCallService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 /**
  * Tests if Armeria decorators can alter the request/response timeout specified in Thrift call parameters
  * and disable the request/response timeout dynamically.
  */
-@RunWith(Parameterized.class)
-public class ThriftDynamicTimeoutTest {
+class ThriftDynamicTimeoutTest {
 
     private static final SleepService.AsyncIface sleepService = (delay, resultHandler) ->
             RequestContext.current().eventLoop().schedule(
@@ -63,19 +63,8 @@ public class ThriftDynamicTimeoutTest {
             RequestContext.current().eventLoop().execute(
                     () -> resultHandler.onComplete(delay));
 
-    /**
-     * Runs the tests with:
-     * - the client with dynamic timeout enabled and
-     * - the client that disables timeout dynamically.
-     */
-    @Parameters
-    public static Collection<Function<Client<RpcRequest, RpcResponse>,
-                                      Client<RpcRequest, RpcResponse>>> parameters() {
-        return Arrays.asList(DynamicTimeoutClient::new, TimeoutDisablingClient::new);
-    }
-
-    @ClassRule
-    public static final ServerRule server = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             // Used for testing if changing the timeout dynamically works.
@@ -90,16 +79,11 @@ public class ThriftDynamicTimeoutTest {
         }
     };
 
-    private final Function<Client<RpcRequest, RpcResponse>,
-            Client<RpcRequest, RpcResponse>> clientDecorator;
-
-    public ThriftDynamicTimeoutTest(Function<Client<RpcRequest, RpcResponse>,
-            Client<RpcRequest, RpcResponse>> clientDecorator) {
-        this.clientDecorator = clientDecorator;
-    }
-
-    @Test
-    public void testDynamicTimeout() throws Exception {
+    @ParameterizedTest
+    @ArgumentsSource(ClientDecoratorProvider.class)
+    void testDynamicTimeout(Function<
+            Client<RpcRequest, RpcResponse>,
+            Client<RpcRequest, RpcResponse>> clientDecorator) throws Exception {
         final SleepService.Iface client = new ClientBuilder(server.uri(BINARY, "/sleep"))
                 .rpcDecorator(clientDecorator)
                 .responseTimeout(Duration.ofSeconds(1)).build(SleepService.Iface.class);
@@ -110,14 +94,38 @@ public class ThriftDynamicTimeoutTest {
         assertThat(sw.elapsed(TimeUnit.MILLISECONDS)).isGreaterThanOrEqualTo(delay);
     }
 
-    @Test(timeout = 10000)
-    public void testDisabledTimeout() throws Exception {
-        final SleepService.Iface client = new ClientBuilder(server.uri(BINARY, "/fakeSleep"))
-                .rpcDecorator(clientDecorator)
-                .responseTimeout(Duration.ofSeconds(1)).build(SleepService.Iface.class);
+    @ParameterizedTest
+    @ArgumentsSource(ClientDecoratorProvider.class)
+    void testDisabledTimeout(Function<
+            Client<RpcRequest, RpcResponse>,
+            Client<RpcRequest, RpcResponse>> clientDecorator) throws Exception {
+        withTimeout(() -> {
+            final SleepService.Iface client = new ClientBuilder(server.uri(BINARY, "/fakeSleep"))
+                    .rpcDecorator(clientDecorator)
+                    .responseTimeout(Duration.ofSeconds(1)).build(SleepService.Iface.class);
 
-        // This call should take very short amount of time because the fakeSleep service does not sleep.
-        client.sleep(30000);
+            final long delay = 30000;
+            final Stopwatch sw = Stopwatch.createStarted();
+            // This call should take very short amount of time because the fakeSleep service does not sleep.
+            client.sleep(delay);
+            assertThat(sw.elapsed(TimeUnit.MILLISECONDS)).isLessThan(delay);
+        });
+    }
+
+    /**
+     * Runs the tests with:
+     * - the client with dynamic timeout enabled and
+     * - the client that disables timeout dynamically.
+     */
+    private static final class ClientDecoratorProvider implements ArgumentsProvider {
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
+            Function<Client<RpcRequest, RpcResponse>,
+                    Client<RpcRequest, RpcResponse>> newDynamicTimeoutClient = DynamicTimeoutClient::new;
+            Function<Client<RpcRequest, RpcResponse>,
+                    Client<RpcRequest, RpcResponse>> newTimeoutDisablingClient = TimeoutDisablingClient::new;
+            return Stream.of(newDynamicTimeoutClient, newTimeoutDisablingClient).map(Arguments::of);
+        }
     }
 
     private static final class DynamicTimeoutService extends SimpleDecoratingService<RpcRequest, RpcResponse> {
