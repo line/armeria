@@ -19,17 +19,18 @@ package com.linecorp.armeria.client.endpoint;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
 import static java.nio.file.StandardWatchEventKinds.OVERFLOW;
 
-import java.io.IOException;
 import java.nio.file.ClosedWatchServiceException;
 import java.nio.file.Path;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
-import java.util.Collection;
-import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.MoreObjects;
+
+import com.linecorp.armeria.client.endpoint.FileWatcherRegistry.FileWatchServiceContext;
 
 /**
  * Initializes a runnable which watches files.
@@ -38,16 +39,16 @@ class FileWatcherRunnable implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(FileWatcherRunnable.class);
 
     private final WatchService watchService;
-    private final Supplier<Collection<FileWatchEvent>> ctxSupplier;
+    private final FileWatchServiceContext fileWatchServiceContext;
 
     /**
      * Initializes a runnable which watches files.
      * @param watchService the {@code WatchService} to poll events from
-     * @param ctxSupplier supplier which contains the callback invoked for each event
+     * @param fileWatchServiceContext context which contains target files
      */
-    FileWatcherRunnable(WatchService watchService, Supplier<Collection<FileWatchEvent>> ctxSupplier) {
+    FileWatcherRunnable(WatchService watchService, FileWatchServiceContext fileWatchServiceContext) {
         this.watchService = watchService;
-        this.ctxSupplier = ctxSupplier;
+        this.fileWatchServiceContext = fileWatchServiceContext;
     }
 
     @Override
@@ -55,56 +56,43 @@ class FileWatcherRunnable implements Runnable {
         try {
             WatchKey key;
             while ((key = watchService.take()) != null) {
+                final Path dirPath = (Path) key.watchable();
                 for (WatchEvent<?> event : key.pollEvents()) {
                     if (event.kind().type() == Path.class) {
                         @SuppressWarnings("unchecked")
-                        final Path watchedPath = ((Path) key.watchable())
-                                .resolve(((WatchEvent<Path>) event).context());
-
+                        final Path filePath = dirPath.resolve(((WatchEvent<Path>) event).context());
                         if (event.kind().equals(ENTRY_DELETE)) {
-                            logger.warn("ignoring deleted file: {}", watchedPath);
+                            logger.warn("Ignoring deleted file: {}", filePath);
                             continue;
                         }
-
-                        final Path realFilePath;
-                        try {
-                            realFilePath = watchedPath.toRealPath();
-                        } catch (IOException e) {
-                            logger.warn("skipping -- unable to get real path for {}", watchedPath, e);
-                            continue;
-                        }
-
-                        runCallback(realFilePath);
+                        runCallback(filePath);
+                    } else if (event.kind().equals(OVERFLOW)) {
+                        logger.debug("Watch events may have been lost");
+                        runCallback(dirPath);
                     } else {
-                        if (event.kind().equals(OVERFLOW)) {
-                            logger.debug("watch event may have been lost");
-                        } else {
-                            logger.debug("ignoring unexpected event type: {}", event.kind().name());
-                        }
+                        logger.debug("Ignoring unexpected event type: {}", event.kind().name());
                     }
                 }
-
                 final boolean reset = key.reset();
                 if (!reset) {
-                    logger.warn("aborting file watch due to unexpected error");
-                    break;
+                    logger.info("Path will no longer be watched: " + key.watchable());
                 }
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            logger.trace("file watching thread interrupted");
+            logger.trace("File watching thread interrupted");
         } catch (ClosedWatchServiceException e) {
             // do nothing
         }
     }
 
-    private void runCallback(Path filePath) {
-        ctxSupplier.get().stream().filter(
-                ctx -> filePath.startsWith(ctx.getDirPath())).forEach(ctx -> {
+    private void runCallback(Path path) {
+        fileWatchServiceContext.watchEvents().stream().filter(
+                ctx -> path.startsWith(ctx.dirPath())).forEach(ctx -> {
             try {
                 ctx.runCallback();
             } catch (Exception e) {
-                logger.warn("unexpected error from listener: {} ", filePath, e);
+                logger.warn("Unexpected error from listener: {} ", path, e);
             }
         });
     }
@@ -133,12 +121,21 @@ class FileWatcherRunnable implements Runnable {
             callback.run();
         }
 
-        Path getDirPath() {
+        Path dirPath() {
             return dirPath;
         }
 
         void cancel() {
             watchKey.cancel();
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                              .add("dirPath", dirPath)
+                              .add("watchable", watchKey.watchable())
+                              .add("isValid", watchKey.isValid())
+                              .toString();
         }
     }
 }

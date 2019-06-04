@@ -27,10 +27,12 @@ import java.nio.file.FileSystem;
 import java.nio.file.Path;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
+import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.endpoint.FileWatcherRunnable.FileWatchEvent;
 
@@ -44,7 +46,7 @@ final class FileWatcherRegistry implements AutoCloseable {
      * a {@link WatchService} and a {@link Thread} which continuously watches for changes
      * in registered file paths.
      */
-    private static class FileWatchServiceContext {
+    static class FileWatchServiceContext {
 
         private final RestartableThread restartableThread;
         private final WatchService watchService;
@@ -58,7 +60,7 @@ final class FileWatcherRegistry implements AutoCloseable {
          */
         FileWatchServiceContext(String name, WatchService watchService) {
             restartableThread = new RestartableThread(name, () ->
-                    new FileWatcherRunnable(watchService, currWatchEventMap::values));
+                    new FileWatcherRunnable(watchService, this));
             this.watchService = watchService;
         }
 
@@ -74,10 +76,10 @@ final class FileWatcherRegistry implements AutoCloseable {
         void register(FileWatchRegisterKey watchRegisterKey, Runnable callback) {
             final Path dirPath;
             try {
-                dirPath = watchRegisterKey.getFilePath().toRealPath().getParent();
+                dirPath = watchRegisterKey.filePath().toRealPath().getParent();
             } catch (IOException e) {
                 throw new IllegalArgumentException("failed to locate file " +
-                                                   watchRegisterKey.getFilePath(), e);
+                                                   watchRegisterKey.filePath(), e);
             }
 
             final WatchKey watchKey;
@@ -88,7 +90,7 @@ final class FileWatcherRegistry implements AutoCloseable {
                                             ENTRY_DELETE,
                                             OVERFLOW);
             } catch (IOException e) {
-                throw new IllegalArgumentException("failed to watch file " + watchRegisterKey.getFilePath(), e);
+                throw new IllegalArgumentException("failed to watch file " + watchRegisterKey.filePath(), e);
             }
             currWatchEventMap.put(watchRegisterKey, new FileWatchEvent(watchKey, callback, dirPath));
             if (!currWatchEventMap.isEmpty()) {
@@ -108,7 +110,7 @@ final class FileWatcherRegistry implements AutoCloseable {
             }
             final FileWatchEvent fileWatchEvent = currWatchEventMap.remove(watchRegisterKey);
             final boolean existsDirWatcher = currWatchEventMap.values().stream().anyMatch(
-                    value -> value.getDirPath().equals(fileWatchEvent.getDirPath()));
+                    value -> value.dirPath().equals(fileWatchEvent.dirPath()));
             if (!existsDirWatcher) {
                 fileWatchEvent.cancel();
             }
@@ -123,6 +125,10 @@ final class FileWatcherRegistry implements AutoCloseable {
          */
         boolean isRunning() {
             return restartableThread.isRunning();
+        }
+
+        Collection<FileWatchEvent> watchEvents() {
+            return currWatchEventMap.values();
         }
 
         void close() throws IOException {
@@ -155,7 +161,7 @@ final class FileWatcherRegistry implements AutoCloseable {
                                 fileSystem.newWatchService());
                     } catch (IOException e) {
                         throw new IllegalArgumentException(
-                                "invalid filesystem for path: " + watchRegisterKey.getFilePath());
+                                "invalid filesystem for path: " + watchRegisterKey.filePath());
                     }
                 });
         watchServiceContext.register(watchRegisterKey, callback);
@@ -169,7 +175,7 @@ final class FileWatcherRegistry implements AutoCloseable {
      * @param watchRegisterKey key that was used to register for watching a file.
      */
     synchronized void unregister(FileWatchRegisterKey watchRegisterKey) {
-        final FileSystem fileSystem = watchRegisterKey.getFilePath().getFileSystem();
+        final FileSystem fileSystem = watchRegisterKey.filePath().getFileSystem();
         final FileWatchServiceContext watchServiceContext = fileSystemWatchServiceMap.get(fileSystem);
         if (watchServiceContext == null) {
             return;
@@ -221,8 +227,13 @@ final class FileWatcherRegistry implements AutoCloseable {
          *
          * @return the path associated with the current key
          */
-        Path getFilePath() {
+        Path filePath() {
             return filePath;
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this).add("filePath", filePath).toString();
         }
     }
 }

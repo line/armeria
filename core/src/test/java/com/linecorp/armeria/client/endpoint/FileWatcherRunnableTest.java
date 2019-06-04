@@ -19,18 +19,27 @@ package com.linecorp.armeria.client.endpoint;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.nio.file.WatchService;
-import java.util.ArrayList;
 
 import org.junit.Test;
+
+import com.linecorp.armeria.client.endpoint.FileWatcherRegistry.FileWatchServiceContext;
 
 public class FileWatcherRunnableTest {
 
     @Test
     public void testPropertyFileWatcherRunnableExitsOnInterrupt() throws InterruptedException {
         final WatchService watchService = mock(WatchService.class);
-        final FileWatcherRunnable fileWatcherRunnable = new FileWatcherRunnable(watchService, ArrayList::new);
+        final FileWatcherRunnable fileWatcherRunnable = new FileWatcherRunnable(watchService, mock(
+                FileWatchServiceContext.class));
+        when(watchService.take()).then(invocation -> {
+            while (!Thread.currentThread().isInterrupted()) {
+                // do nothing
+            }
+            return null;
+        });
         final Thread thread = new Thread(fileWatcherRunnable);
         thread.start();
         thread.interrupt();
