@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.endpoint;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
@@ -74,23 +75,15 @@ final class FileWatcherRegistry implements AutoCloseable {
          * @throws IllegalArgumentException if failed to locate file or failed to start watching
          */
         void register(FileWatchRegisterKey watchRegisterKey, Runnable callback) {
-            final Path dirPath;
-            try {
-                dirPath = watchRegisterKey.filePath().toRealPath().getParent();
-            } catch (IOException e) {
-                throw new IllegalArgumentException("failed to locate file " +
-                                                   watchRegisterKey.filePath(), e);
-            }
+            final Path dirPath = watchRegisterKey.filePath().getParent();
+            checkArgument(dirPath != null, "no parent directory for input path: %s",
+                          watchRegisterKey.filePath());
 
             final WatchKey watchKey;
             try {
-                watchKey = dirPath.register(watchService,
-                                            ENTRY_CREATE,
-                                            ENTRY_MODIFY,
-                                            ENTRY_DELETE,
-                                            OVERFLOW);
+                watchKey = dirPath.register(watchService, ENTRY_CREATE, ENTRY_MODIFY, ENTRY_DELETE, OVERFLOW);
             } catch (IOException e) {
-                throw new IllegalArgumentException("failed to watch file " + watchRegisterKey.filePath(), e);
+                throw new IllegalArgumentException("failed to watch a file " + watchRegisterKey.filePath(), e);
             }
             currWatchEventMap.put(watchRegisterKey, new FileWatchEvent(watchKey, callback, dirPath));
             if (!currWatchEventMap.isEmpty()) {
@@ -212,7 +205,9 @@ final class FileWatcherRegistry implements AutoCloseable {
     }
 
     /**
-     * Key used to register/unregister for file change events.
+     * A key representing the registration to watch file events for a {@code filePath}. The
+     * key is later used to unregister the watch. Key comparison is done via identity
+     * comparison to allow duplicate path registration.
      */
     static final class FileWatchRegisterKey {
         private final Path filePath;

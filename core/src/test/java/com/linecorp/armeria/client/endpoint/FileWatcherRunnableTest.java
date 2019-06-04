@@ -36,7 +36,7 @@ public class FileWatcherRunnableTest {
                 FileWatchServiceContext.class));
         when(watchService.take()).then(invocation -> {
             while (!Thread.currentThread().isInterrupted()) {
-                // do nothing
+                Thread.yield();
             }
             return null;
         });

@@ -32,7 +32,7 @@ public class RestartableThreadTest {
         final RestartableThread restartableThread =
                 new RestartableThread(testName.getMethodName(), () -> () -> {
                     while (!Thread.currentThread().isInterrupted()) {
-                        // do nothing
+                        Thread.yield();
                     }
                 });
 
