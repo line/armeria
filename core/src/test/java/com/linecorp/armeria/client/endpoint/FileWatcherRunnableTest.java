@@ -25,7 +25,7 @@ import java.nio.file.WatchService;
 
 import org.junit.Test;
 
-import com.linecorp.armeria.client.endpoint.FileWatcherRegistry.FileWatchServiceContext;
+import com.linecorp.armeria.client.endpoint.FileWatcherRegistry.FileSystemWatchContext;
 
 public class FileWatcherRunnableTest {
 
@@ -33,7 +33,7 @@ public class FileWatcherRunnableTest {
     public void testPropertyFileWatcherRunnableExitsOnInterrupt() throws InterruptedException {
         final WatchService watchService = mock(WatchService.class);
         final FileWatcherRunnable fileWatcherRunnable = new FileWatcherRunnable(watchService, mock(
-                FileWatchServiceContext.class));
+                FileSystemWatchContext.class));
         when(watchService.take()).then(invocation -> {
             while (!Thread.currentThread().isInterrupted()) {
                 Thread.yield();

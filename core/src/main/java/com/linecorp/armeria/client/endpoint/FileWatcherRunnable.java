@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.client.endpoint.FileWatcherRegistry.FileWatchServiceContext;
+import com.linecorp.armeria.client.endpoint.FileWatcherRegistry.FileSystemWatchContext;
 
 /**
  * Initializes a runnable which watches files.
@@ -39,16 +39,16 @@ class FileWatcherRunnable implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(FileWatcherRunnable.class);
 
     private final WatchService watchService;
-    private final FileWatchServiceContext fileWatchServiceContext;
+    private final FileSystemWatchContext fileSystemWatchContext;
 
     /**
      * Initializes a runnable which watches files.
      * @param watchService the {@code WatchService} to poll events from
-     * @param fileWatchServiceContext context which contains target files
+     * @param fileSystemWatchContext context which contains target files
      */
-    FileWatcherRunnable(WatchService watchService, FileWatchServiceContext fileWatchServiceContext) {
+    FileWatcherRunnable(WatchService watchService, FileSystemWatchContext fileSystemWatchContext) {
         this.watchService = watchService;
-        this.fileWatchServiceContext = fileWatchServiceContext;
+        this.fileSystemWatchContext = fileSystemWatchContext;
     }
 
     @Override
@@ -87,7 +87,7 @@ class FileWatcherRunnable implements Runnable {
     }
 
     private void runCallback(Path path) {
-        fileWatchServiceContext.watchEvents().stream().filter(
+        fileSystemWatchContext.watchEvents().stream().filter(
                 ctx -> path.startsWith(ctx.dirPath())).forEach(ctx -> {
             try {
                 ctx.runCallback();

@@ -47,7 +47,7 @@ final class FileWatcherRegistry implements AutoCloseable {
      * a {@link WatchService} and a {@link Thread} which continuously watches for changes
      * in registered file paths.
      */
-    static class FileWatchServiceContext {
+    static class FileSystemWatchContext {
 
         private final RestartableThread restartableThread;
         private final WatchService watchService;
@@ -55,11 +55,11 @@ final class FileWatcherRegistry implements AutoCloseable {
                 new ConcurrentHashMap<>();
 
         /**
-         * Creates a new {@link FileWatchServiceContext}.
+         * Creates a new {@link FileSystemWatchContext}.
          * @param name the name of the thread used to watch for changes
          * @param watchService the {@link WatchService} used to monitor for changes
          */
-        FileWatchServiceContext(String name, WatchService watchService) {
+        FileSystemWatchContext(String name, WatchService watchService) {
             restartableThread = new RestartableThread(name, () ->
                     new FileWatcherRunnable(watchService, this));
             this.watchService = watchService;
@@ -131,7 +131,7 @@ final class FileWatcherRegistry implements AutoCloseable {
         }
     }
 
-    private final Map<FileSystem, FileWatchServiceContext> fileSystemWatchServiceMap
+    private final Map<FileSystem, FileSystemWatchContext> fileSystemWatchServiceMap
             = new ConcurrentHashMap<>();
 
     /**
@@ -146,10 +146,10 @@ final class FileWatcherRegistry implements AutoCloseable {
      */
     synchronized FileWatchRegisterKey register(Path filePath, Runnable callback) {
         final FileWatchRegisterKey watchRegisterKey = new FileWatchRegisterKey(filePath);
-        final FileWatchServiceContext watchServiceContext = fileSystemWatchServiceMap.computeIfAbsent(
+        final FileSystemWatchContext watchServiceContext = fileSystemWatchServiceMap.computeIfAbsent(
                 filePath.getFileSystem(), fileSystem -> {
                     try {
-                        return new FileWatchServiceContext(
+                        return new FileSystemWatchContext(
                                 "armeria-file-watcher-" + fileSystem.getClass().getName(),
                                 fileSystem.newWatchService());
                     } catch (IOException e) {
@@ -169,7 +169,7 @@ final class FileWatcherRegistry implements AutoCloseable {
      */
     synchronized void unregister(FileWatchRegisterKey watchRegisterKey) {
         final FileSystem fileSystem = watchRegisterKey.filePath().getFileSystem();
-        final FileWatchServiceContext watchServiceContext = fileSystemWatchServiceMap.get(fileSystem);
+        final FileSystemWatchContext watchServiceContext = fileSystemWatchServiceMap.get(fileSystem);
         if (watchServiceContext == null) {
             return;
         }
@@ -185,7 +185,7 @@ final class FileWatcherRegistry implements AutoCloseable {
      */
     @VisibleForTesting
     boolean isRunning() {
-        return fileSystemWatchServiceMap.values().stream().anyMatch(FileWatchServiceContext::isRunning);
+        return fileSystemWatchServiceMap.values().stream().anyMatch(FileSystemWatchContext::isRunning);
     }
 
     /**
