@@ -42,10 +42,13 @@ async function historyFallback(ctx: any, next: any) {
 }
 
 const proxyPort = process.env.PROXY_PORT || '8080';
+const proxyDocPrefix = process.env.PROXY_DOC_PREFIX || '/docs';
 
 const proxier = proxy('/', {
   target: `http://127.0.0.1:${proxyPort}`,
   changeOrigin: true,
+  logs: process.env.WEBPACK_SERVE,
+  rewrite: (path: string) => `${proxyDocPrefix}${path}`,
 });
 
 async function proxyToApi(ctx: any, next: any) {
