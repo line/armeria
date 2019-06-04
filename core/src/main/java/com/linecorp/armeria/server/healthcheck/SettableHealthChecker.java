@@ -16,16 +16,20 @@
 
 package com.linecorp.armeria.server.healthcheck;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.server.Server;
 
 /**
- * A simple {@link HealthChecker} whose state can be set by a caller. This can be used in case server health
- * should have additional conditions besides the state of the {@link Server}. e.g. it should depend on the
- * health of a backend.
+ * A simple {@link ListenableHealthChecker} whose state can be set by a caller. This can be used in case server
+ * health should have additional conditions besides the state of the {@link Server}. e.g. it should depend on
+ * the health of a backend.
  */
-public final class SettableHealthChecker implements HealthChecker {
+public final class SettableHealthChecker extends AbstractListenable<HealthChecker>
+        implements ListenableHealthChecker {
 
-    private volatile boolean isHealthy;
+    private final AtomicBoolean isHealthy;
 
     /**
      * Constructs a new {@link SettableHealthChecker} which starts out in a healthy state and can be changed
@@ -40,24 +44,27 @@ public final class SettableHealthChecker implements HealthChecker {
      * changed using {@link #setHealthy(boolean)}.
      */
     public SettableHealthChecker(boolean isHealthy) {
-        this.isHealthy = isHealthy;
+        this.isHealthy = new AtomicBoolean(isHealthy);
     }
 
     @Override
     public boolean isHealthy() {
-        return isHealthy;
+        return isHealthy.get();
     }
 
     /**
      * Sets if the {@link Server} is healthy or not.
      */
     public SettableHealthChecker setHealthy(boolean isHealthy) {
-        this.isHealthy = isHealthy;
+        final boolean oldValue = this.isHealthy.getAndSet(isHealthy);
+        if (oldValue != isHealthy) {
+            notifyListeners(this);
+        }
         return this;
     }
 
     @Override
     public String toString() {
-        return "SettableHealthChecker: " + (isHealthy ? "healthy" : "not healthy");
+        return "SettableHealthChecker: " + (isHealthy.get() ? "healthy" : "not healthy");
     }
 }
