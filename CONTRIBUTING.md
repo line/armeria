@@ -23,7 +23,7 @@ We expect contributors to follow [our code of conduct](https://github.com/line/a
 
 You can import Armeria into your IDE ([IntelliJ IDEA](https://www.jetbrains.com/idea/) or [Eclipse](https://www.eclipse.org/)) as a Gradle project.
 
-- IntelliJ IDEA - See [Importing Project from Gradle Model](https://www.jetbrains.com/help/idea/2016.3/importing-project-from-gradle-model.html)
+- IntelliJ IDEA - See [Importing Project from Gradle Model](https://www.jetbrains.com/help/idea/gradle.html#gradle_import_project_start)
 - Eclipse - Use [Buildship Gradle Integration](https://marketplace.eclipse.org/content/buildship-gradle-integration)
 
 After importing the project, import the IDE settings as well.
@@ -31,7 +31,7 @@ After importing the project, import the IDE settings as well.
 #### IntelliJ IDEA
 
 - [`settings.jar`](https://raw.githubusercontent.com/line/armeria/master/settings/intellij_idea/settings.jar) -
-  See [Importing settings from a JAR archive](https://www.jetbrains.com/help/idea/2016.3/exporting-and-importing-settings.html#d2016665e55).
+  See [Importing settings from a JAR archive](https://www.jetbrains.com/help/idea/sharing-your-ide-settings.html#23c8afba).
 - Make sure to use 'LINE OSS' code style and inspection profile.
   - Go to `Preferences` > `Editors` > `Code Style` and set `Scheme` option to `LINE OSS`.
   - Go to `Preferences` > `Editors` > `Inspections` and set `Profile` option to `LINE OSS`.
