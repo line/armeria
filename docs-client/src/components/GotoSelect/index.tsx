@@ -1,0 +1,328 @@
+/*
+ * Copyright 2019 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+import MenuItem from '@material-ui/core/MenuItem';
+import NoSsr from '@material-ui/core/NoSsr';
+import Paper from '@material-ui/core/Paper';
+import {
+  createStyles,
+  Theme,
+  withStyles,
+  WithStyles,
+} from '@material-ui/core/styles';
+import { emphasize } from '@material-ui/core/styles/colorManipulator';
+import TextField, { BaseTextFieldProps } from '@material-ui/core/TextField';
+import Typography from '@material-ui/core/Typography';
+import React, { CSSProperties, HTMLAttributes } from 'react';
+import Select from 'react-select';
+import { ValueContainerProps } from 'react-select/lib/components/containers';
+import { ControlProps } from 'react-select/lib/components/Control';
+import { MenuProps, NoticeProps } from 'react-select/lib/components/Menu';
+import { OptionProps } from 'react-select/lib/components/Option';
+import { PlaceholderProps } from 'react-select/lib/components/Placeholder';
+import { SingleValueProps } from 'react-select/lib/components/SingleValue';
+import { ValueType } from 'react-select/lib/types';
+import { Specification } from '../../lib/specification';
+
+interface OptionType {
+  label: string;
+  value: string;
+}
+
+interface GroupType {
+  label: string;
+  options: OptionType[];
+}
+
+const styles = (theme: Theme) =>
+  createStyles({
+    root: {
+      position: 'relative',
+      margin: `${theme.spacing.unit}px`,
+      marginLeft: `${theme.spacing.unit * 3}px`,
+      minWidth: 300,
+      width: 800,
+      backgroundColor: theme.palette.primary.light,
+      borderRadius: `${theme.spacing.unit * 2}px`,
+    },
+    input: {
+      display: 'flex',
+      padding: 0,
+      marginLeft: `${theme.spacing.unit}px`,
+    },
+    valueContainer: {
+      display: 'flex',
+      flexWrap: 'wrap',
+      flex: 1,
+      alignItems: 'center',
+    },
+    chip: {
+      margin: `${theme.spacing.unit / 2}px ${theme.spacing.unit / 4}px`,
+    },
+    chipFocused: {
+      backgroundColor: emphasize(
+        theme.palette.type === 'light'
+          ? theme.palette.grey[300]
+          : theme.palette.grey[700],
+        0.08,
+      ),
+    },
+    noOptionsMessage: {
+      padding: `${theme.spacing.unit}px ${theme.spacing.unit * 2}px`,
+    },
+    singleValue: {
+      position: 'relative',
+      fontSize: 16,
+    },
+    placeholder: {
+      position: 'absolute',
+      marginLeft: `${theme.spacing.unit}px`,
+      left: 2,
+    },
+    paper: {
+      position: 'absolute',
+      zIndex: 1,
+      marginTop: theme.spacing.unit,
+      left: 0,
+      right: 0,
+      // width: '125%',
+      flex: 1,
+    },
+    divider: {
+      height: theme.spacing.unit * 2,
+    },
+  });
+
+function NoOptionsMessage(props: NoticeProps<OptionType>) {
+  return (
+    <Typography
+      color="textSecondary"
+      className={props.selectProps.classes.noOptionsMessage}
+      {...props.innerProps}
+    >
+      No Results
+    </Typography>
+  );
+}
+
+type InputComponentProps = Pick<BaseTextFieldProps, 'inputRef'> &
+  HTMLAttributes<HTMLDivElement>;
+
+function inputComponent({ inputRef, ...props }: InputComponentProps) {
+  return <div ref={inputRef} {...props} />;
+}
+
+function Control(props: ControlProps<OptionType>) {
+  const {
+    children,
+    innerProps,
+    innerRef,
+    selectProps: { classes, TextFieldProps },
+  } = props;
+
+  return (
+    <TextField
+      fullWidth
+      InputProps={{
+        inputComponent,
+        inputProps: {
+          children,
+          className: classes.input,
+          ref: innerRef,
+          ...innerProps,
+        },
+        disableUnderline: true,
+      }}
+      {...TextFieldProps}
+    />
+  );
+}
+
+function Option(props: OptionProps<OptionType>) {
+  return (
+    <MenuItem
+      buttonRef={props.innerRef}
+      selected={props.isFocused}
+      component="div"
+      style={{
+        fontWeight: props.isSelected ? 500 : 400,
+        width: 800,
+      }}
+      {...props.innerProps}
+    >
+      {props.children}
+    </MenuItem>
+  );
+}
+
+function Placeholder(props: PlaceholderProps<OptionType>) {
+  return (
+    <Typography
+      color="textSecondary"
+      className={props.selectProps.classes.placeholder}
+      {...props.innerProps}
+    >
+      Go to ...
+    </Typography>
+  );
+}
+
+function SingleValue(props: SingleValueProps<OptionType>) {
+  return (
+    <Typography
+      className={props.selectProps.classes.singleValue}
+      noWrap={true}
+      {...props.innerProps}
+    >
+      {props.children}
+    </Typography>
+  );
+}
+
+function ValueContainer(props: ValueContainerProps<OptionType>) {
+  return (
+    <div className={props.selectProps.classes.valueContainer}>
+      {props.children}
+    </div>
+  );
+}
+
+function Menu(props: MenuProps<OptionType>) {
+  return (
+    <Paper
+      square
+      className={props.selectProps.classes.paper}
+      {...props.innerProps}
+    >
+      {props.children}
+    </Paper>
+  );
+}
+
+const components = {
+  Control,
+  Menu,
+  NoOptionsMessage,
+  Option,
+  Placeholder,
+  SingleValue,
+  ValueContainer,
+};
+
+function makeSuggestions(specification: Specification): GroupType[] {
+  const suggestions: GroupType[] = [];
+
+  if (specification.getServices().length > 0) {
+    suggestions.push({
+      label: 'Services',
+      options: specification.getServices().flatMap((service) =>
+        service.methods.map((method) => {
+          return {
+            label: `${service.name}#${method.name}|${method.httpMethod}`,
+            value: `/methods/${service.name}/${method.name}/${
+              method.httpMethod
+            }`,
+          };
+        }),
+      ),
+    });
+  }
+
+  if (specification.getEnums().length > 0) {
+    suggestions.push({
+      label: 'Enums',
+      options: specification.getEnums().map((enm) => {
+        return {
+          label: `${enm.name}`,
+          value: `/enums/${enm.name}/`,
+        };
+      }),
+    });
+  }
+
+  if (specification.getStructs().length > 0) {
+    suggestions.push({
+      label: 'Structs',
+      options: specification.getStructs().map((struct) => {
+        return {
+          label: `${struct.name}`,
+          value: `/structs/${struct.name}/`,
+        };
+      }),
+    });
+  }
+
+  if (specification.getExceptions().length > 0) {
+    suggestions.push({
+      label: 'Exceptions',
+      options: specification.getExceptions().map((exception) => {
+        return {
+          label: `${exception.name}`,
+          value: `/structs/${exception.name}/`,
+        };
+      }),
+    });
+  }
+
+  return suggestions;
+}
+
+interface GotoSelectProps extends WithStyles<typeof styles, true> {
+  specification: Specification;
+  navigateTo: (url: string) => void;
+}
+
+class GotoSelect extends React.Component<GotoSelectProps> {
+  public render() {
+    const { classes, theme, specification, navigateTo } = this.props;
+
+    const selectStyles = {
+      input: (base: CSSProperties) => ({
+        ...base,
+        color: theme.palette.text.secondary,
+        '& input': {
+          font: 'inherit',
+        },
+      }),
+    };
+
+    function handleSelection(option: ValueType<OptionType>) {
+      if (option) {
+        navigateTo((option as OptionType).value);
+      }
+    }
+
+    return (
+      <div className={classes.root}>
+        <NoSsr>
+          <Select
+            autoFocus={true}
+            classes={classes}
+            styles={selectStyles}
+            inputId="go-to-select"
+            // placeholder="Go to ..."
+            options={makeSuggestions(specification)}
+            components={components}
+            // value={this.state.single}
+            onChange={handleSelection}
+          />
+        </NoSsr>
+      </div>
+    );
+  }
+}
+
+export default withStyles(styles, { withTheme: true })(GotoSelect);
