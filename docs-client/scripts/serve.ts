@@ -47,7 +47,7 @@ const proxyDocPrefix = process.env.PROXY_DOC_PREFIX || '/docs';
 const proxier = proxy('/', {
   target: `http://127.0.0.1:${proxyPort}`,
   changeOrigin: true,
-  logs: process.env.WEBPACK_SERVE,
+  logs: !!process.env.WEBPACK_SERVE,
   rewrite: (path: string) => `${proxyDocPrefix}${path}`,
 });
 
