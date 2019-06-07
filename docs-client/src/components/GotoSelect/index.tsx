@@ -255,9 +255,7 @@ function makeSuggestions(
           .map((method) => {
             return {
               label: `${service.name}#${method.name}|${method.httpMethod}`,
-              value: `/methods/${service.name}/${method.name}/${
-                method.httpMethod
-              }`,
+              value: `/methods/${service.name}/${method.name}/${method.httpMethod}`,
             };
           })
           .filter(predicateWithLimit);
