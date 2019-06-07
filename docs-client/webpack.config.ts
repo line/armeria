@@ -47,6 +47,7 @@ const config: Configuration = {
                   {
                     modules: false,
                     useBuiltIns: 'entry',
+                    corejs: 3,
                     targets: { browsers: ['last 2 versions'] },
                   },
                 ],
