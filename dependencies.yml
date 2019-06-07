@@ -383,7 +383,8 @@ org.jsoup:
   jsoup: { version: '1.12.1' }
 
 org.mockito:
-  mockito-core: { version: '2.27.0' }
+  mockito-core: { version: &MOCKITO_VERSION '2.27.0' }
+  mockito-junit-jupiter: { version: *MOCKITO_VERSION }
 
 org.mortbay.jetty.alpn:
   jetty-alpn-agent: { version: '2.0.9' }
