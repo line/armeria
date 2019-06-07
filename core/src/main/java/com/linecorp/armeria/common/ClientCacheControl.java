@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.common;
 
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.parseCacheControl;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.parseCacheControlSeconds;
@@ -26,8 +26,6 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-
-import com.linecorp.armeria.common.CacheControl;
 
 /**
  * Directives for HTTP caching mechanisms in requests.

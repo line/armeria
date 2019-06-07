@@ -13,13 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class ServerCacheControlTest {
 

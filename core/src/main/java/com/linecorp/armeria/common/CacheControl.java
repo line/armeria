@@ -15,9 +15,6 @@
  */
 package com.linecorp.armeria.common;
 
-import com.linecorp.armeria.client.ClientCacheControl;
-import com.linecorp.armeria.server.ServerCacheControl;
-
 /**
  * Directives for HTTP caching mechanisms in requests or responses. Use {@link ServerCacheControl} for
  * response-side and {@link ClientCacheControl} for request-side.
