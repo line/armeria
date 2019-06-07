@@ -27,7 +27,10 @@ import { emphasize } from '@material-ui/core/styles/colorManipulator';
 import TextField, { BaseTextFieldProps } from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import React, { CSSProperties, HTMLAttributes } from 'react';
-import Select from 'react-select';
+// Ignore importing of `react-select/async` because react-select@3.0.4 is not fully compatible with TypeScript
+// see https://github.com/JedWatson/react-select/issues/3592
+// @ts-ignore
+import Async from 'react-select/async';
 import { ValueContainerProps } from 'react-select/lib/components/containers';
 import { ControlProps } from 'react-select/lib/components/Control';
 import { MenuProps, NoticeProps } from 'react-select/lib/components/Menu';
@@ -221,58 +224,89 @@ const components = {
   ValueContainer,
 };
 
-function makeSuggestions(specification: Specification): GroupType[] {
+/**
+ * Convert doc specification into suggestion model.
+ *
+ * @param specification DocService Specification which is delivered from Armeria server.
+ * @param limit Limit of suggestion model to avoid slow rendering & memory issue.
+ * @param predicate Predicate to filter suggestion model from user typing input.
+ */
+function makeSuggestions(
+  specification: Specification,
+  limit: number,
+  predicate: (n: string) => boolean,
+): GroupType[] {
   const suggestions: GroupType[] = [];
+  let remain = limit;
 
-  if (specification.getServices().length > 0) {
+  function predicateWithLimit(option: OptionType) {
+    if (predicate(option.label) && remain > 0) {
+      remain -= 1;
+      return true;
+    }
+    return false;
+  }
+
+  if (specification.getServices().length > 0 && remain > 0) {
     suggestions.push({
       label: 'Services',
-      options: specification.getServices().flatMap((service) =>
-        service.methods.map((method) => {
-          return {
-            label: `${service.name}#${method.name}|${method.httpMethod}`,
-            value: `/methods/${service.name}/${method.name}/${
-              method.httpMethod
-            }`,
-          };
-        }),
-      ),
+      options: specification.getServices().flatMap((service) => {
+        return service.methods
+          .map((method) => {
+            return {
+              label: `${service.name}#${method.name}|${method.httpMethod}`,
+              value: `/methods/${service.name}/${method.name}/${
+                method.httpMethod
+              }`,
+            };
+          })
+          .filter(predicateWithLimit);
+      }),
     });
   }
 
-  if (specification.getEnums().length > 0) {
+  if (specification.getEnums().length > 0 && remain > 0) {
     suggestions.push({
       label: 'Enums',
-      options: specification.getEnums().map((enm) => {
-        return {
-          label: `${enm.name}`,
-          value: `/enums/${enm.name}/`,
-        };
-      }),
+      options: specification
+        .getEnums()
+        .map((enm) => {
+          return {
+            label: `${enm.name}`,
+            value: `/enums/${enm.name}/`,
+          };
+        })
+        .filter(predicateWithLimit),
     });
   }
 
-  if (specification.getStructs().length > 0) {
+  if (specification.getStructs().length > 0 && remain > 0) {
     suggestions.push({
       label: 'Structs',
-      options: specification.getStructs().map((struct) => {
-        return {
-          label: `${struct.name}`,
-          value: `/structs/${struct.name}/`,
-        };
-      }),
+      options: specification
+        .getStructs()
+        .map((struct) => {
+          return {
+            label: `${struct.name}`,
+            value: `/structs/${struct.name}/`,
+          };
+        })
+        .filter(predicateWithLimit),
     });
   }
 
-  if (specification.getExceptions().length > 0) {
+  if (specification.getExceptions().length > 0 && remain > 0) {
     suggestions.push({
       label: 'Exceptions',
-      options: specification.getExceptions().map((exception) => {
-        return {
-          label: `${exception.name}`,
-          value: `/structs/${exception.name}/`,
-        };
-      }),
+      options: specification
+        .getExceptions()
+        .map((exception) => {
+          return {
+            label: `${exception.name}`,
+            value: `/structs/${exception.name}/`,
+          };
+        })
+        .filter(predicateWithLimit),
     });
   }
 
@@ -283,6 +317,9 @@ interface GotoSelectProps extends WithStyles<typeof styles, true> {
   specification: Specification;
   navigateTo: (url: string) => void;
 }
+
+const DEFAULT_SUGGESTION_SIZE = 100;
+const FILTERED_SUGGESTION_SIZE = 20;
 
 class GotoSelect extends React.Component<GotoSelectProps> {
   public render() {
@@ -298,21 +335,37 @@ class GotoSelect extends React.Component<GotoSelectProps> {
       }),
     };
 
-    function handleSelection(option: ValueType<OptionType>) {
+    function handleSelection(option: ValueType<OptionType>): void {
       if (option) {
         navigateTo((option as OptionType).value);
       }
     }
 
+    function filterSuggestion(
+      inputValue: string,
+      callback: (n: GroupType[]) => void,
+    ): void {
+      callback(
+        makeSuggestions(specification, FILTERED_SUGGESTION_SIZE, (suggestion) =>
+          suggestion.toLowerCase().includes(inputValue.toLowerCase()),
+        ),
+      );
+    }
+
     return (
       <div className={classes.root}>
         <NoSsr>
-          <Select
+          <Async
             autoFocus={true}
             classes={classes}
             styles={selectStyles}
             inputId="go-to-select"
-            options={makeSuggestions(specification)}
+            defaultOptions={makeSuggestions(
+              specification,
+              DEFAULT_SUGGESTION_SIZE,
+              () => true,
+            )}
+            loadOptions={filterSuggestion}
             components={components}
             onChange={handleSelection}
           />
