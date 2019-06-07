@@ -47,7 +47,10 @@ const config: Configuration = {
                   {
                     modules: false,
                     useBuiltIns: 'entry',
-                    targets: { browsers: ['last 2 versions'] },
+                    corejs: 3,
+                    targets: {
+                      browsers: ['>1%', 'not ie 11', 'not op_mini all'],
+                    },
                   },
                 ],
                 '@babel/react',

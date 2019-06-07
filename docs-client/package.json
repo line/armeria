@@ -9,9 +9,9 @@
     "start": "cross-env TS_NODE_PROJECT=\"tsconfig-webpack.json\" ts-node ./scripts/serve"
   },
   "dependencies": {
-    "@babel/polyfill": "^7.0.0",
     "@material-ui/core": "^3.3.2",
     "@material-ui/icons": "^3.0.1",
+    "core-js": "^3.0.0",
     "immutability-helper": "^2.9.0",
     "jsonminify": "^0.4.1",
     "react": "^16.6.0",

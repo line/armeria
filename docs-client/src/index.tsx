@@ -14,7 +14,8 @@
  * under the License.
  */
 
-import '@babel/polyfill';
+import 'core-js/stable';
+import 'regenerator-runtime/runtime';
 import 'typeface-roboto';
 import 'typeface-roboto-mono';
 

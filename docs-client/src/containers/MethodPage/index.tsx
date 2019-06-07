@@ -166,9 +166,7 @@ function isExactPathMapping(method: Method): boolean {
   const endpoints = method.endpoints;
   if (endpoints.length !== 1) {
     throw new Error(`
-    Endpoints size should be 1 to determine prefix or regex. size: ${
-      endpoints.length
-    }`);
+    Endpoints size should be 1 to determine prefix or regex. size: ${endpoints.length}`);
   }
   const endpoint = endpoints[0];
   return endpoint.pathMapping.startsWith('exact:');

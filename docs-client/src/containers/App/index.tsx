@@ -187,15 +187,11 @@ function AppDrawer({
                   {service.methods.map((method) => (
                     <ListItem
                       dense
-                      key={`${service.name}/${method.name}/${
-                        method.httpMethod
-                      }`}
+                      key={`${service.name}/${method.name}/${method.httpMethod}`}
                       button
                       onClick={() =>
                         navigateTo(
-                          `/methods/${service.name}/${method.name}/${
-                            method.httpMethod
-                          }`,
+                          `/methods/${service.name}/${method.name}/${method.httpMethod}`,
                         )
                       }
                     >
