@@ -136,15 +136,16 @@ public final class DropwizardMeterRegistries {
             }
         };
 
-        configureRegistry(meterRegistry);
-        return meterRegistry;
+        return configureRegistry(meterRegistry);
     }
 
     /**
      * Configures the {@link DropwizardMeterRegistry} with Armeria's defaults. Useful when using a different
      * implementation of {@link DropwizardMeterRegistry}, e.g., a {@code JmxMeterRegistry}.
+     *
+     * @return the specified {@link DropwizardMeterRegistry}
      */
-    public static void configureRegistry(DropwizardMeterRegistry meterRegistry) {
+    public static <T extends DropwizardMeterRegistry> T configureRegistry(T meterRegistry) {
         requireNonNull(meterRegistry, "meterRegistry");
         meterRegistry.config().meterFilter(new MeterFilter() {
             @Override
@@ -160,6 +161,7 @@ public final class DropwizardMeterRegistries {
         });
         meterRegistry.config().namingConvention(MoreNamingConventions.dropwizard());
         meterRegistry.config().pauseDetector(new NoPauseDetector());
+        return meterRegistry;
     }
 
     private DropwizardMeterRegistries() {}
