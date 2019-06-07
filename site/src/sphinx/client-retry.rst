@@ -18,7 +18,7 @@ So, let's find out what we can do with :api:`RetryingClient`.
 ``RetryingClient``
 ------------------
 
-You can just use the ``decorator()`` method in :api:`HttpClientBuilder` to build a :api:`RetryingHttpClient`:
+You can just use the ``decorator()`` method in :api:`ClientBuilder` or :api:`HttpClientBuilder` to build a :api:`RetryingHttpClient`. For example:
 
 .. code-block:: java
 
