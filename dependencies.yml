@@ -13,9 +13,9 @@ ch.qos.logback:
 
 com.auth0:
   java-jwt:
-    version: '3.8.0'
+    version: '3.8.1'
     javadocs:
-    - https://static.javadoc.io/com.auth0/java-jwt/3.8.0/
+    - https://static.javadoc.io/com.auth0/java-jwt/3.8.1/
 
 com.fasterxml.jackson.core:
   jackson-annotations:
@@ -34,6 +34,8 @@ com.fasterxml.jackson.core:
 com.github.ben-manes.caffeine:
   caffeine:
     version: '2.7.0'
+    exclusions:
+    - com.google.errorprone:error_prone_annotations
     javadocs:
     - https://static.javadoc.io/com.github.ben-manes.caffeine/caffeine/2.7.0/
     relocations:
@@ -44,7 +46,7 @@ com.github.jengelman.gradle.plugins:
   shadow: { version: '5.0.0' }
 
 com.google.api:
-  gax-grpc: { version: '1.44.0' }
+  gax-grpc: { version: '1.45.0' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
@@ -87,7 +89,10 @@ com.google.j2objc:
 com.google.protobuf:
   protoc: { version: '3.7.1' }
   protobuf-java: { version: &PROTOBUF_VERSION '3.7.1' }
-  protobuf-java-util: { version: *PROTOBUF_VERSION }
+  protobuf-java-util:
+    version: *PROTOBUF_VERSION
+    exclusions:
+    - com.google.errorprone:error_prone_annotations
   protobuf-gradle-plugin: { version: '0.8.8' }
 
 com.moowork.gradle:
@@ -105,7 +110,7 @@ com.spotify:
 
 com.squareup.retrofit2:
   retrofit:
-    version: &RETROFIT2_VERSION '2.5.0'
+    version: &RETROFIT2_VERSION '2.6.0'
     javadocs:
     - https://square.github.io/retrofit/2.x/retrofit/
   converter-jackson: { version: *RETROFIT2_VERSION }
@@ -123,7 +128,7 @@ io.dropwizard.metrics:
 # Ensure to update the Protobuf version in this file when updating gRPC.
 io.grpc:
   grpc-core:
-    version: &GRPC_VERSION '1.20.0'
+    version: &GRPC_VERSION '1.21.0'
     javadocs:
     - https://grpc.io/grpc-java/javadoc/
     - https://developers.google.com/protocol-buffers/docs/reference/java/
@@ -135,7 +140,9 @@ io.grpc:
   grpc-interop-testing:
     version: *GRPC_VERSION
     exclusions:
+    - com.google.errorprone:error_prone_annotations
     - com.google.guava:guava-jdk5
+    - com.google.j2objc:j2objc-annotations
     - io.netty:netty-codec-http
     - io.netty:netty-codec-http2
     - io.netty:netty-codec-socks
@@ -201,7 +208,7 @@ io.prometheus:
 
 io.reactivex.rxjava2:
   rxjava:
-    version: '2.2.8'
+    version: '2.2.9'
     javadocs:
     - http://reactivex.io/RxJava/2.x/javadoc/
 
@@ -264,7 +271,7 @@ me.champeau.gradle:
   jmh-gradle-plugin: { version: '0.4.8' }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION '2.6.1' }
+  json-unit: { version: &JSON_UNIT_VERSION '2.7.0' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 net.sf.proguard:
@@ -321,9 +328,9 @@ org.apache.tomcat.embed:
 
 org.apache.zookeeper:
   zookeeper:
-    version: '3.4.14'
+    version: '3.5.5'
     exclusions:
-    - jline:jline
+    - io.netty:netty-all
     - log4j:log4j
     - org.slf4j:slf4j-log4j12
 
@@ -335,7 +342,7 @@ org.awaitility:
 
 org.bouncycastle:
   bcprov-jdk15on:
-    version: '1.61'
+    version: '1.62'
     relocations:
     - from: org.bouncycastle
       to: com.linecorp.armeria.internal.shaded.bouncycastle
@@ -383,7 +390,7 @@ org.jsoup:
   jsoup: { version: '1.12.1' }
 
 org.mockito:
-  mockito-core: { version: &MOCKITO_VERSION '2.27.0' }
+  mockito-core: { version: &MOCKITO_VERSION '2.28.2' }
   mockito-junit-jupiter: { version: *MOCKITO_VERSION }
 
 org.mortbay.jetty.alpn:
