@@ -22,7 +22,7 @@ import org.junit.Test;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.server.ServerCacheControl;
+import com.linecorp.armeria.common.ServerCacheControl;
 
 public class HttpFileTest {
 

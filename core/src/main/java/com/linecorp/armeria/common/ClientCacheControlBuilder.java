@@ -13,14 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.common;
 
 import java.time.Duration;
 
 import javax.annotation.Nullable;
-
-import com.linecorp.armeria.common.CacheControlBuilder;
-import com.linecorp.armeria.server.ServerCacheControlBuilder;
 
 /**
  * Creates a new {@link ClientCacheControl} using the builder pattern.

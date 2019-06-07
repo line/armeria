@@ -21,11 +21,6 @@ import java.time.Duration;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.client.ClientCacheControl;
-import com.linecorp.armeria.client.ClientCacheControlBuilder;
-import com.linecorp.armeria.server.ServerCacheControl;
-import com.linecorp.armeria.server.ServerCacheControlBuilder;
-
 /**
  * A skeletal builder implementation of {@link CacheControl}. Use {@link ServerCacheControlBuilder} for
  * building {@link ServerCacheControl} and {@link ClientCacheControlBuilder} for building

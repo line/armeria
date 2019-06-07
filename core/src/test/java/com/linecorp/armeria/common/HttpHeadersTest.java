@@ -36,8 +36,6 @@ import java.util.TimeZone;
 
 import org.junit.Test;
 
-import com.linecorp.armeria.server.ServerCacheControl;
-
 public class HttpHeadersTest {
 
     @Test

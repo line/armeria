@@ -50,7 +50,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerCacheControl;
+import com.linecorp.armeria.common.ServerCacheControl;
 import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.Service;
