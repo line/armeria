@@ -264,11 +264,6 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
                 setEndpoints(loadEndpoints(path, endpointKeyPrefix, defaultPort)));
     }
 
-    /**
-     * Unregisters the current {@link PropertiesEndpointGroup} from the {@link FileWatcherRegistry}.
-     * Invoking this method will attempt to release any unused resources used to continuously
-     * watch properties files.
-     */
     @Override
     public void close() {
         try {
