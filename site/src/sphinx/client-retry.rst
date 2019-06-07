@@ -18,33 +18,18 @@ So, let's find out what we can do with :api:`RetryingClient`.
 ``RetryingClient``
 ------------------
 
-You can just use the ``decorator()`` method in :api:`ClientBuilder` to build a :api:`RetryingHttpClient`:
+You can just use the ``decorator()`` method in :api:`ClientBuilder` or :api:`HttpClientBuilder` to build a :api:`RetryingHttpClient`. For example:
 
 .. code-block:: java
 
-    import com.linecorp.armeria.client.ClientBuilder;
     import com.linecorp.armeria.client.HttpClient;
+    import com.linecorp.armeria.client.HttpClientBuilder;
     import com.linecorp.armeria.client.retry.RetryingHttpClient;
     import com.linecorp.armeria.client.retry.RetryStrategy;
     import com.linecorp.armeria.common.AggregatedHttpResponse;
-    import com.linecorp.armeria.common.HttpRequest;
-    import com.linecorp.armeria.common.HttpResponse;
 
     RetryStrategy strategy = RetryStrategy.onServerErrorStatus();
-    HttpClient client = new ClientBuilder(...)
-            .decorator(RetryingHttpClient.newDecorator(strategy))
-            .build(HttpClient.class);
-
-    final AggregatedHttpResponse res = client.execute(...).aggregate().join();
-
-or even simply,
-
-.. code-block:: java
-
-    import com.linecorp.armeria.client.HttpClientBuilder;
-
-    RetryStrategy strategy = RetryStrategy.onServerErrorStatus();
-    HttpClient client = new HttpClientBuilder(...)
+    HttpClient client = new HttpClientBuilder("http://example.com/hello")
             .decorator(RetryingHttpClient.newDecorator(strategy))
             .build();
 
