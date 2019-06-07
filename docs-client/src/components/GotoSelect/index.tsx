@@ -98,7 +98,6 @@ const styles = (theme: Theme) =>
       marginTop: theme.spacing.unit,
       left: 0,
       right: 0,
-      // width: '125%',
       flex: 1,
     },
     divider: {
@@ -313,10 +312,8 @@ class GotoSelect extends React.Component<GotoSelectProps> {
             classes={classes}
             styles={selectStyles}
             inputId="go-to-select"
-            // placeholder="Go to ..."
             options={makeSuggestions(specification)}
             components={components}
-            // value={this.state.single}
             onChange={handleSelection}
           />
         </NoSsr>
