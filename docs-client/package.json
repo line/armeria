@@ -20,6 +20,7 @@
     "react-helmet": "^5.2.0",
     "react-hot-loader": "^4.3.12",
     "react-router-dom": "^4.3.1",
+    "react-select": "^3.0.4",
     "react-syntax-highlighter": "^9.0.1",
     "typeface-roboto": "^0.0.54",
     "typeface-roboto-mono": "^0.0.54"
@@ -37,6 +38,7 @@
     "@types/react-helmet": "^5.0.7",
     "@types/react-hot-loader": "^4.1.0",
     "@types/react-router-dom": "^4.3.1",
+    "@types/react-select": "^2.0.19",
     "@types/react-syntax-highlighter": "^0.0.8",
     "@types/webpack": "^4.4.17",
     "@types/webpack-serve": "^2.0.0",

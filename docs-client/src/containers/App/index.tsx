@@ -51,6 +51,8 @@ import {
   SpecificationData,
 } from '../../lib/specification';
 
+import GotoSelect from '../../components/GotoSelect';
+
 const styles = (theme: Theme) =>
   createStyles({
     root: {
@@ -370,6 +372,11 @@ class App extends React.PureComponent<Props, State> {
             >
               Armeria documentation service
             </Typography>
+            <div style={{ flex: 1 }} />
+            <GotoSelect
+              specification={specification}
+              navigateTo={this.navigateTo}
+            />
           </Toolbar>
         </AppBar>
         <Hidden smDown>
