@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -23,27 +23,42 @@ import static java.util.Objects.requireNonNull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Properties;
 
+import javax.annotation.Nullable;
+
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.FileWatcherRegistry.FileWatchRegisterKey;
 
 /**
  * A {@link Properties} backed {@link EndpointGroup}. The list of {@link Endpoint}s are loaded from the
  * {@link Properties}.
  */
-public final class PropertiesEndpointGroup implements EndpointGroup {
+public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
+    private static FileWatcherRegistry registry = new FileWatcherRegistry();
 
-    // TODO(ide) Reload the endpoint list if the file is updated.
+    /**
+     * Resets the registry for {@link PropertiesEndpointGroup}.
+     * @throws Exception when an exception occurs while closing the {@link FileWatcherRegistry}.
+     */
+    @VisibleForTesting
+    static void resetRegistry() throws Exception {
+        registry.close();
+        registry = new FileWatcherRegistry();
+    }
 
     /**
      * Creates a new {@link EndpointGroup} instance that loads the host names (or IP address) and the port
-     * numbers of the {@link Endpoint} from the {@code resourceName} resource file. The resource file must
-     * contain at least one property whose name starts with {@code endpointKeyPrefix}:
+     * numbers of the {@link Endpoint} from the {@code resourceName} resource file. The resource file loads
+     * properties whose name starts with {@code endpointKeyPrefix}:
      *
      * <pre>{@code
      * example.hosts.0=example1.com:36462
@@ -53,22 +68,22 @@ public final class PropertiesEndpointGroup implements EndpointGroup {
      *
      * @param resourceName the name of the resource where the list of {@link Endpoint}s is loaded from
      * @param endpointKeyPrefix the property name prefix
-     *
-     * @throws IllegalArgumentException if failed to load any hosts from the specified resource file
      */
     public static PropertiesEndpointGroup of(ClassLoader classLoader, String resourceName,
                                              String endpointKeyPrefix) {
-        return new PropertiesEndpointGroup(loadEndpoints(
+        final URL resourceUrl = getResourceUrl(
                 requireNonNull(classLoader, "classLoader"),
-                requireNonNull(resourceName, "resourceName"),
+                requireNonNull(resourceName, "resourceName"));
+        return new PropertiesEndpointGroup(loadEndpoints(
+                resourceUrl,
                 requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
                 0));
     }
 
     /**
      * Creates a new {@link EndpointGroup} instance that loads the host names (or IP address) and the port
-     * numbers of the {@link Endpoint} from the {@code resourceName} resource file. The resource file must
-     * contain at least one property whose name starts with {@code endpointKeyPrefix}:
+     * numbers of the {@link Endpoint} from the {@code resourceName} resource file. The resource file loads
+     * properties whose name starts with {@code endpointKeyPrefix}:
      *
      * <pre>{@code
      * example.hosts.0=example1.com:36462
@@ -79,23 +94,23 @@ public final class PropertiesEndpointGroup implements EndpointGroup {
      * @param resourceName the name of the resource where the list of {@link Endpoint}s is loaded from
      * @param endpointKeyPrefix the property name prefix
      * @param defaultPort the default port number to use
-     *
-     * @throws IllegalArgumentException if failed to load any hosts from the specified resource file
      */
     public static PropertiesEndpointGroup of(ClassLoader classLoader, String resourceName,
                                              String endpointKeyPrefix, int defaultPort) {
         validateDefaultPort(defaultPort);
-        return new PropertiesEndpointGroup(loadEndpoints(
+        final URL resourceUrl = getResourceUrl(
                 requireNonNull(classLoader, "classLoader"),
-                requireNonNull(resourceName, "resourceName"),
+                requireNonNull(resourceName, "resourceName"));
+        return new PropertiesEndpointGroup(loadEndpoints(
+                resourceUrl,
                 requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
                 defaultPort));
     }
 
     /**
      * Creates a new {@link EndpointGroup} instance that loads the host names (or IP address) and the port
-     * numbers of the {@link Endpoint} from the {@link Properties}. The {@link Properties} must contain at
-     * least one property whose name starts with {@code endpointKeyPrefix}:
+     * numbers of the {@link Endpoint} from the {@link Properties}. The {@link Properties} is filtered
+     * to properties whose name starts with {@code endpointKeyPrefix}:
      *
      * <pre>{@code
      * example.hosts.0=example1.com:36462
@@ -105,8 +120,6 @@ public final class PropertiesEndpointGroup implements EndpointGroup {
      *
      * @param properties the {@link Properties} where the list of {@link Endpoint}s is loaded from
      * @param endpointKeyPrefix the property name prefix
-     *
-     * @throws IllegalArgumentException if failed to load any hosts from the specified {@link Properties}
      */
     public static PropertiesEndpointGroup of(Properties properties, String endpointKeyPrefix) {
         return new PropertiesEndpointGroup(loadEndpoints(
@@ -117,8 +130,8 @@ public final class PropertiesEndpointGroup implements EndpointGroup {
 
     /**
      * Creates a new {@link EndpointGroup} instance that loads the host names (or IP address) and the port
-     * numbers of the {@link Endpoint} from the {@link Properties}. The {@link Properties} must contain at
-     * least one property whose name starts with {@code endpointKeyPrefix}:
+     * numbers of the {@link Endpoint} from the {@link Properties}. The {@link Properties} is filtered
+     * to properties whose name starts with {@code endpointKeyPrefix}:
      *
      * <pre>{@code
      * example.hosts.0=example1.com:36462
@@ -129,8 +142,6 @@ public final class PropertiesEndpointGroup implements EndpointGroup {
      * @param properties the {@link Properties} where the list of {@link Endpoint}s is loaded from
      * @param endpointKeyPrefix the property name prefix
      * @param defaultPort the default port number to use
-     *
-     * @throws IllegalArgumentException if failed to load any hosts from the specified {@link Properties}
      */
     public static PropertiesEndpointGroup of(Properties properties, String endpointKeyPrefix,
                                              int defaultPort) {
@@ -141,24 +152,81 @@ public final class PropertiesEndpointGroup implements EndpointGroup {
                 defaultPort));
     }
 
-    private static List<Endpoint> loadEndpoints(ClassLoader classLoader, String resourceName,
-                                                String endpointKeyPrefix, int defaultPort) {
+    /**
+     * Creates a new {@link EndpointGroup} instance that loads the host names (or IP address) and the port
+     * numbers of the {@link Endpoint} from the {@code path} of a resource file. The resource file loads
+     * properties whose name starts with {@code endpointKeyPrefix}. The {@code path} is watched for further
+     * updates.
+     *
+     * <pre>{@code
+     * example.hosts.0=example1.com:36462
+     * example.hosts.1=example2.com:36462
+     * example.hosts.2=example3.com:36462
+     * }</pre>
+     *
+     * @param path the path of the file where list of {@link Endpoint}s is loaded from
+     * @param endpointKeyPrefix the property name prefix
+     * @param defaultPort the default port number to use
+     */
+    public static PropertiesEndpointGroup of(Path path, String endpointKeyPrefix, int defaultPort) {
+        validateDefaultPort(defaultPort);
+        return new PropertiesEndpointGroup(requireNonNull(path, "path"),
+                                           requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
+                                           defaultPort);
+    }
+
+    /**
+     * Creates a new {@link EndpointGroup} instance that loads the host names (or IP address) and the port
+     * numbers of the {@link Endpoint} from the {@code path} of a resource file. The resource file loads
+     * properties whose name starts with {@code endpointKeyPrefix}. The {@code path} is watched for
+     * further updates.
+     *
+     * <pre>{@code
+     * example.hosts.0=example1.com:36462
+     * example.hosts.1=example2.com:36462
+     * example.hosts.2=example3.com:36462
+     * }</pre>
+     *
+     * @param path the path of the file where list of {@link Endpoint}s is loaded from
+     * @param endpointKeyPrefix the property name prefix
+     */
+    public static PropertiesEndpointGroup of(Path path, String endpointKeyPrefix) {
+        return new PropertiesEndpointGroup(requireNonNull(path, "path"),
+                                           requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
+                                           0);
+    }
+
+    private static URL getResourceUrl(ClassLoader classLoader, String resourceName) {
         final URL resourceUrl = classLoader.getResource(resourceName);
         checkArgument(resourceUrl != null, "resource not found: %s", resourceName);
-        if (!endpointKeyPrefix.endsWith(".")) {
-            endpointKeyPrefix += ".";
-        }
+        return resourceUrl;
+    }
+
+    private static List<Endpoint> loadEndpoints(URL resourceUrl, String endpointKeyPrefix, int defaultPort) {
         try (InputStream in = resourceUrl.openStream()) {
             final Properties props = new Properties();
             props.load(in);
             return loadEndpoints(props, endpointKeyPrefix, defaultPort);
         } catch (IOException e) {
-            throw new IllegalArgumentException("failed to load: " + resourceName, e);
+            throw new IllegalArgumentException("failed to load: " + resourceUrl.getFile(), e);
+        }
+    }
+
+    private static List<Endpoint> loadEndpoints(Path path, String endpointKeyPrefix, int defaultPort) {
+        try (InputStream in = Files.newInputStream(path)) {
+            final Properties props = new Properties();
+            props.load(in);
+            return loadEndpoints(props, endpointKeyPrefix, defaultPort);
+        } catch (IOException e) {
+            throw new IllegalArgumentException("failed to load: " + path, e);
         }
     }
 
     private static List<Endpoint> loadEndpoints(Properties properties, String endpointKeyPrefix,
                                                 int defaultPort) {
+        if (!endpointKeyPrefix.endsWith(".")) {
+            endpointKeyPrefix += ".";
+        }
         final List<Endpoint> newEndpoints = new ArrayList<>();
         for (Entry<Object, Object> e : properties.entrySet()) {
             final String key = (String) e.getKey();
@@ -172,7 +240,6 @@ public final class PropertiesEndpointGroup implements EndpointGroup {
                 newEndpoints.add(defaultPort == 0 ? endpoint : endpoint.withDefaultPort(defaultPort));
             }
         }
-        checkArgument(!newEndpoints.isEmpty(), "properties contains no hosts: %s", properties);
         return ImmutableList.copyOf(newEndpoints);
     }
 
@@ -181,14 +248,30 @@ public final class PropertiesEndpointGroup implements EndpointGroup {
                       "defaultPort: %s (expected: 1-65535)", defaultPort);
     }
 
-    private final List<Endpoint> endpoints;
+    @Nullable
+    private FileWatchRegisterKey watchRegisterKey;
 
     private PropertiesEndpointGroup(List<Endpoint> endpoints) {
-        this.endpoints = endpoints;
+        setEndpoints(endpoints);
+    }
+
+    private PropertiesEndpointGroup(Path path, String endpointKeyPrefix, int defaultPort) {
+        setEndpoints(loadEndpoints(
+                path,
+                requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
+                defaultPort));
+        watchRegisterKey = registry.register(path, () ->
+                setEndpoints(loadEndpoints(path, endpointKeyPrefix, defaultPort)));
     }
 
     @Override
-    public List<Endpoint> endpoints() {
-        return endpoints;
+    public void close() {
+        try {
+            super.close();
+        } finally {
+            if (watchRegisterKey != null) {
+                registry.unregister(watchRegisterKey);
+            }
+        }
     }
 }
