@@ -16,13 +16,17 @@
 
 import { docServiceDebug, providers } from '../header-provider';
 
-import { Method } from '../specification';
+import { Endpoint, Method } from '../specification';
 
 export default abstract class Transport {
+  public abstract supportsMimeType(mimeType: string): boolean;
+
+  public abstract getDebugMimeType(): string;
+
   public async send(
     method: Method,
-    bodyJson: string,
     headers: { [name: string]: string },
+    bodyJson?: string,
     endpointPath?: string,
     queries?: string,
   ): Promise<string> {
@@ -44,15 +48,33 @@ export default abstract class Transport {
       ...filledHeaders,
       ...headers,
     };
-    return this.doSend(method, bodyJson, filledHeaders, endpointPath, queries);
+    return this.doSend(method, filledHeaders, bodyJson, endpointPath, queries);
   }
 
-  public abstract supportsMimeType(mimeType: string): boolean;
+  public findDebugMimeTypeEndpoint(method: Method): Endpoint {
+    const endpoint = method.endpoints.find((ep) =>
+      ep.availableMimeTypes.includes(this.getDebugMimeType()),
+    );
+    if (!endpoint) {
+      throw new Error(
+        `Endpoint does not support debug transport. MimeType: ${this.getDebugMimeType()}`,
+      );
+    }
+    return endpoint;
+  }
+
+  public getCurlBody(
+    _endpoint: Endpoint,
+    _method: Method,
+    body: string,
+  ): string {
+    return body;
+  }
 
   protected abstract doSend(
     method: Method,
-    bodyJson: string,
     headers: { [name: string]: string },
+    bodyJson?: string,
     endpointPath?: string,
     queries?: string,
   ): Promise<string>;

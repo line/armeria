@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static java.util.Objects.requireNonNull;
+
 import org.reactivestreams.Subscriber;
 
 import io.netty.util.ReferenceCountUtil;
@@ -33,7 +35,17 @@ public class RegularFixedStreamMessage<T> extends FixedStreamMessage<T> {
 
     private boolean inOnNext;
 
+    /**
+     * Creates a new instance with the specified elements.
+     */
     protected RegularFixedStreamMessage(T[] objs) {
+        requireNonNull(objs, "objs");
+        for (int i = 0; i < objs.length; i++) {
+            if (objs[i] == null) {
+                throw new NullPointerException("objs[" + i + "] is null");
+            }
+        }
+
         this.objs = objs.clone();
     }
 

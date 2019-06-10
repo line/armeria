@@ -20,41 +20,44 @@ import static com.linecorp.armeria.client.limit.ConcurrencyLimitingHttpClient.ne
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.concurrent.TimeUnit;
 
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.mockito.Mock;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextBuilder;
 import com.linecorp.armeria.client.ResponseTimeoutException;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
-import com.linecorp.armeria.testing.common.EventLoopRule;
+import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
 
-public class ConcurrencyLimitingHttpClientTest {
+class ConcurrencyLimitingHttpClientTest {
 
-    @ClassRule
-    public static final EventLoopRule eventLoop = new EventLoopRule();
+    @RegisterExtension
+    static final EventLoopExtension eventLoop = new EventLoopExtension();
+
+    @Mock
+    private Client<HttpRequest, HttpResponse> delegate;
 
     /**
      * Tests the request pattern  that does not exceed maxConcurrency.
      */
     @Test
-    public void testOrdinaryRequest() throws Exception {
+    void testOrdinaryRequest() throws Exception {
+        final HttpRequest req = newReq();
         final ClientRequestContext ctx = newContext();
-        final HttpRequest req = mock(HttpRequest.class);
         final HttpResponseWriter actualRes = HttpResponse.streaming();
 
-        @SuppressWarnings("unchecked")
-        final Client<HttpRequest, HttpResponse> delegate = mock(Client.class);
         when(delegate.execute(ctx, req)).thenReturn(actualRes);
 
         final ConcurrencyLimitingHttpClient client =
@@ -75,16 +78,14 @@ public class ConcurrencyLimitingHttpClientTest {
      * Tests the request pattern that exceeds maxConcurrency.
      */
     @Test
-    public void testLimitedRequest() throws Exception {
+    void testLimitedRequest() throws Exception {
         final ClientRequestContext ctx1 = newContext();
         final ClientRequestContext ctx2 = newContext();
-        final HttpRequest req1 = mock(HttpRequest.class);
-        final HttpRequest req2 = mock(HttpRequest.class);
+        final HttpRequest req1 = newReq();
+        final HttpRequest req2 = newReq();
         final HttpResponseWriter actualRes1 = HttpResponse.streaming();
         final HttpResponseWriter actualRes2 = HttpResponse.streaming();
 
-        @SuppressWarnings("unchecked")
-        final Client<HttpRequest, HttpResponse> delegate = mock(Client.class);
         when(delegate.execute(ctx1, req1)).thenReturn(actualRes1);
         when(delegate.execute(ctx2, req2)).thenReturn(actualRes2);
 
@@ -118,18 +119,15 @@ public class ConcurrencyLimitingHttpClientTest {
      * Tests if the request is not delegated but closed when the timeout is reached before delegation.
      */
     @Test
-    public void testTimeout() throws Exception {
+    void testTimeout() throws Exception {
         final ClientRequestContext ctx1 = newContext();
         final ClientRequestContext ctx2 = newContext();
-        final HttpRequest req1 = mock(HttpRequest.class);
-        final HttpRequest req2 = mock(HttpRequest.class);
+        final HttpRequest req1 = newReq();
+        final HttpRequest req2 = newReq();
         final HttpResponseWriter actualRes1 = HttpResponse.streaming();
         final HttpResponseWriter actualRes2 = HttpResponse.streaming();
 
-        @SuppressWarnings("unchecked")
-        final Client<HttpRequest, HttpResponse> delegate = mock(Client.class);
         when(delegate.execute(ctx1, req1)).thenReturn(actualRes1);
-        when(delegate.execute(ctx2, req2)).thenReturn(actualRes2);
 
         final ConcurrencyLimitingHttpClient client =
                 newDecorator(1, 500, TimeUnit.MILLISECONDS).apply(delegate);
@@ -159,12 +157,10 @@ public class ConcurrencyLimitingHttpClientTest {
      * Tests the case where a delegate raises an exception rather than returning a response.
      */
     @Test
-    public void testFaultyDelegate() throws Exception {
+    void testFaultyDelegate() throws Exception {
         final ClientRequestContext ctx = newContext();
-        final HttpRequest req = mock(HttpRequest.class);
+        final HttpRequest req = newReq();
 
-        @SuppressWarnings("unchecked")
-        final Client<HttpRequest, HttpResponse> delegate = mock(Client.class);
         when(delegate.execute(ctx, req)).thenThrow(Exception.class);
 
         final ConcurrencyLimitingHttpClient client = newDecorator(1).apply(delegate);
@@ -181,13 +177,11 @@ public class ConcurrencyLimitingHttpClientTest {
     }
 
     @Test
-    public void testUnlimitedRequest() throws Exception {
+    void testUnlimitedRequest() throws Exception {
         final ClientRequestContext ctx = newContext();
-        final HttpRequest req = mock(HttpRequest.class);
+        final HttpRequest req = newReq();
         final HttpResponseWriter actualRes = HttpResponse.streaming();
 
-        @SuppressWarnings("unchecked")
-        final Client<HttpRequest, HttpResponse> delegate = mock(Client.class);
         when(delegate.execute(ctx, req)).thenReturn(actualRes);
 
         final ConcurrencyLimitingHttpClient client =
@@ -205,12 +199,10 @@ public class ConcurrencyLimitingHttpClientTest {
     }
 
     @Test
-    public void testUnlimitedRequestWithFaultyDelegate() throws Exception {
+    void testUnlimitedRequestWithFaultyDelegate() throws Exception {
         final ClientRequestContext ctx = newContext();
-        final HttpRequest req = mock(HttpRequest.class);
+        final HttpRequest req = newReq();
 
-        @SuppressWarnings("unchecked")
-        final Client<HttpRequest, HttpResponse> delegate = mock(Client.class);
         when(delegate.execute(ctx, req)).thenThrow(Exception.class);
 
         final ConcurrencyLimitingHttpClient client = newDecorator(0).apply(delegate);
@@ -224,9 +216,9 @@ public class ConcurrencyLimitingHttpClientTest {
     }
 
     private static ClientRequestContext newContext() {
-        final ClientRequestContext ctx = mock(ClientRequestContext.class);
-        when(ctx.eventLoop()).thenReturn(eventLoop.get());
-        return ctx;
+        return ClientRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/"))
+                                          .eventLoop(eventLoop.get())
+                                          .build();
     }
 
     /**
@@ -242,5 +234,9 @@ public class ConcurrencyLimitingHttpClientTest {
 
     private static void waitForEventLoop() {
         eventLoop.get().submit(() -> { /* no-op */ }).syncUninterruptibly();
+    }
+
+    private static HttpRequest newReq() {
+        return HttpRequest.of(HttpMethod.GET, "/dummy");
     }
 }

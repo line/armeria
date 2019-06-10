@@ -107,24 +107,25 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     @Override
-    void subscribe(SubscriptionImpl subscription) {
-        final Subscriber<Object> subscriber = subscription.subscriber();
-        final Executor executor = subscription.executor();
-
+    SubscriptionImpl subscribe(SubscriptionImpl subscription) {
         if (!subscriptionUpdater.compareAndSet(this, null, subscription)) {
-            failLateSubscriber(this.subscription, subscriber);
-            return;
+            final SubscriptionImpl oldSubscription = this.subscription;
+            assert oldSubscription != null;
+            return oldSubscription;
         }
 
+        final Subscriber<Object> subscriber = subscription.subscriber();
         if (subscription.needsDirectInvocation()) {
             invokedOnSubscribe = true;
             subscriber.onSubscribe(subscription);
         } else {
-            executor.execute(() -> {
+            subscription.executor().execute(() -> {
                 invokedOnSubscribe = true;
                 subscriber.onSubscribe(subscription);
             });
         }
+
+        return subscription;
     }
 
     @Override

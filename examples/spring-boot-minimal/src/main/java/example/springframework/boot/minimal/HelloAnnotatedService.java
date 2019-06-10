@@ -20,6 +20,11 @@ import com.linecorp.armeria.server.annotation.Param;
 @ExceptionHandler(ValidationExceptionHandler.class)
 public class HelloAnnotatedService {
 
+    @Get("/")
+    public String defaultHello() {
+        return "Hello, world! Try sending a GET request to /hello/armeria";
+    }
+
     /**
      * An example in order to show how to use validation framework in an annotated HTTP service.
      */

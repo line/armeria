@@ -33,12 +33,12 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.netty.util.AttributeMap;
 
@@ -136,7 +136,7 @@ public class HttpClientMaxConcurrentStreamTest {
         };
 
         // Send (2 * MAX_CONCURRENT_STREAMS) requests to create 2 connections, never more and never less.
-        final List<CompletableFuture<AggregatedHttpMessage>> receivedResponses = new ArrayList<>();
+        final List<CompletableFuture<AggregatedHttpResponse>> receivedResponses = new ArrayList<>();
         final int NUM_CONNECTIONS = 2;
         for (int j = 0; j < NUM_CONNECTIONS; j++) {
             final int expectedOpens = j + 1;

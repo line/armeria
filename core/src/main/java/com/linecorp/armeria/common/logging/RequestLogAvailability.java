@@ -27,7 +27,7 @@ public enum RequestLogAvailability {
      *   <li>{@link RequestLog#requestStartTimeMillis()}</li>
      *   <li>{@link RequestLog#channel()}</li>
      *   <li>{@link RequestLog#sessionProtocol()}</li>
-     *   <li>{@link RequestLog#host()}</li>
+     *   <li>{@link RequestLog#authority()}</li>
      * </ul>
      */
     REQUEST_START(1, 1),
@@ -45,9 +45,9 @@ public enum RequestLogAvailability {
 
     /**
      * {@link RequestLog#requestHeaders()} is available, as well as all the properties mentioned in
-     * {@link #REQUEST_START} and {@link #REQUEST_FIRST_BYTES_TRANSFERRED}.
+     * {@link #REQUEST_START}.
      */
-    REQUEST_HEADERS(1 | 4 | 8, 8),
+    REQUEST_HEADERS(1 | 8, 8),
     /**
      * {@link RequestLog#requestContent()} is available, as well as all the properties mentioned in
      * {@link #REQUEST_START}.
@@ -56,10 +56,9 @@ public enum RequestLogAvailability {
     /**
      * {@link RequestLog#requestLength()}, {@link RequestLog#requestCause()} and
      * {@link RequestLog#requestDurationNanos()} are available, as well as all the properties mentioned in
-     * {@link #REQUEST_START}, {@link #SCHEME}, {@link #REQUEST_FIRST_BYTES_TRANSFERRED}
-     * {@link #REQUEST_HEADERS} and {@link #REQUEST_CONTENT}.
+     * {@link #REQUEST_START}, {@link #SCHEME}, {@link #REQUEST_HEADERS} and {@link #REQUEST_CONTENT}.
      */
-    REQUEST_END(1 | 2 | 4 | 8 | 16 | 32, 1 | 2 | 4 | 8 | 16 | 32),
+    REQUEST_END(1 | 2 | 8 | 16 | 32, 1 | 2 | 8 | 16 | 32),
 
     // Response availability
     /**
@@ -75,9 +74,9 @@ public enum RequestLogAvailability {
 
     /**
      * {@link RequestLog#responseHeaders()} is available, as well as all the properties mentioned in
-     * {@link #RESPONSE_START} and {@link #RESPONSE_FIRST_BYTES_TRANSFERRED}.
+     * {@link #RESPONSE_START}.
      */
-    RESPONSE_HEADERS((1 | 2 | 4) << 16, 4 << 16),
+    RESPONSE_HEADERS((1 | 4) << 16, 4 << 16),
     /**
      * {@link RequestLog#responseContent()} is available, as well as all the properties mentioned in
      * {@link #RESPONSE_START}.
@@ -86,17 +85,18 @@ public enum RequestLogAvailability {
     /**
      * {@link RequestLog#responseLength()}, {@link RequestLog#responseCause()},
      * {@link RequestLog#responseDurationNanos()} and {@link RequestLog#totalDurationNanos()} are available,
-     * as well as all the properties mentioned in {@link #RESPONSE_START},
-     * {@link #RESPONSE_FIRST_BYTES_TRANSFERRED}, {@link #RESPONSE_HEADERS} and
+     * as well as all the properties mentioned in {@link #RESPONSE_START}, {@link #RESPONSE_HEADERS} and
      * {@link #RESPONSE_CONTENT}.
      */
-    RESPONSE_END((1 | 2 | 4 | 8 | 16) << 16, (1 | 2 | 4 | 8 | 16) << 16),
+    RESPONSE_END((1 | 4 | 8 | 16) << 16, (1 | 4 | 8 | 16) << 16),
 
     // Everything
     /**
      * All the properties mentioned in {@link #REQUEST_END} and {@link #RESPONSE_END} are available.
+     * Note that {@link #REQUEST_FIRST_BYTES_TRANSFERRED} and {@link #RESPONSE_FIRST_BYTES_TRANSFERRED}
+     * may not be fulfilled if network transfer did not occur.
      */
-    COMPLETE(1 | 2 | 4 | 8 | 16 | 32 | (1 | 2 | 4 | 8 | 16) << 16, /* unused */ 0);
+    COMPLETE(1 | 2 | 8 | 16 | 32 | (1 | 4 | 8 | 16) << 16, /* unused */ 0);
 
     private final int getterFlags;
     private final int setterFlags;

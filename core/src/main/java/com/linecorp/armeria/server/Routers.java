@@ -58,21 +58,21 @@ public final class Routers {
      * cache mechanism to improve its performance.
      */
     public static Router<ServiceConfig> ofVirtualHost(VirtualHost virtualHost, Iterable<ServiceConfig> configs,
-                                                      RejectedPathMappingHandler rejectionHandler) {
+                                                      RejectedRouteHandler rejectionHandler) {
         requireNonNull(virtualHost, "virtualHost");
         requireNonNull(configs, "configs");
         requireNonNull(rejectionHandler, "rejectionHandler");
 
-        final BiConsumer<PathMapping, PathMapping> rejectionConsumer = (mapping, existingMapping) -> {
+        final BiConsumer<Route, Route> rejectionConsumer = (route, existingRoute) -> {
             try {
-                rejectionHandler.handleDuplicatePathMapping(virtualHost, mapping, existingMapping);
+                rejectionHandler.handleDuplicateRoute(virtualHost, route, existingRoute);
             } catch (Exception e) {
                 logger.warn("Unexpected exception from a {}:",
-                            RejectedPathMappingHandler.class.getSimpleName(), e);
+                            RejectedRouteHandler.class.getSimpleName(), e);
             }
         };
 
-        return wrapVirtualHostRouter(defaultRouter(configs, ServiceConfig::pathMapping, rejectionConsumer));
+        return wrapVirtualHostRouter(defaultRouter(configs, ServiceConfig::route, rejectionConsumer));
     }
 
     /**
@@ -83,7 +83,7 @@ public final class Routers {
         requireNonNull(entries, "entries");
 
         final Router<CompositeServiceEntry<I, O>> delegate = wrapCompositeServiceRouter(defaultRouter(
-                entries, CompositeServiceEntry::pathMapping,
+                entries, CompositeServiceEntry::route,
                 (mapping, existingMapping) -> {
                     final String a = mapping.toString();
                     final String b = existingMapping.toString();
@@ -98,9 +98,9 @@ public final class Routers {
                 }));
 
         return new CompositeRouter<>(delegate, result ->
-                result.isPresent() ? PathMapped.of(result.mapping(), result.mappingResult(),
-                                                   result.value().service())
-                                   : PathMapped.empty());
+                result.isPresent() ? Routed.of(result.route(), result.routingResult(),
+                                               result.value().service())
+                                   : Routed.empty());
     }
 
     /**
@@ -110,9 +110,9 @@ public final class Routers {
      * transformed to a {@link Router}.
      */
     private static <V> Router<V> defaultRouter(Iterable<V> values,
-                                               Function<V, PathMapping> pathMappingResolver,
-                                               BiConsumer<PathMapping, PathMapping> rejectionHandler) {
-        return new CompositeRouter<>(routers(values, pathMappingResolver, rejectionHandler),
+                                               Function<V, Route> routeResolver,
+                                               BiConsumer<Route, Route> rejectionHandler) {
+        return new CompositeRouter<>(routers(values, routeResolver, rejectionHandler),
                                      Function.identity());
     }
 
@@ -120,9 +120,9 @@ public final class Routers {
      * Returns a list of {@link Router}s.
      */
     @VisibleForTesting
-    static <V> List<Router<V>> routers(Iterable<V> values, Function<V, PathMapping> pathMappingResolver,
-                                       BiConsumer<PathMapping, PathMapping> rejectionHandler) {
-        rejectDuplicateMapping(values, pathMappingResolver, rejectionHandler);
+    static <V> List<Router<V>> routers(Iterable<V> values, Function<V, Route> routeResolver,
+                                       BiConsumer<Route, Route> rejectionHandler) {
+        rejectDuplicateMapping(values, routeResolver, rejectionHandler);
 
         final ImmutableList.Builder<Router<V>> builder = ImmutableList.builder();
         final List<V> group = new ArrayList<>();
@@ -130,79 +130,78 @@ public final class Routers {
         boolean addingTrie = true;
 
         for (V value : values) {
-            final PathMapping mapping = pathMappingResolver.apply(value);
-            final boolean triePathPresent = mapping.triePath().isPresent();
+            final Route route = routeResolver.apply(value);
+            final boolean triePathPresent = route.triePath().isPresent();
             if (addingTrie && triePathPresent || !addingTrie && !triePathPresent) {
-                // We are adding the same type of PathMapping to 'group'.
+                // We are adding the same type of Route to 'group'.
                 group.add(value);
                 continue;
             }
 
             // Changed the router type.
             if (!group.isEmpty()) {
-                builder.add(router(addingTrie, group, pathMappingResolver));
+                builder.add(router(addingTrie, group, routeResolver));
             }
             addingTrie = !addingTrie;
             group.add(value);
         }
         if (!group.isEmpty()) {
-            builder.add(router(addingTrie, group, pathMappingResolver));
+            builder.add(router(addingTrie, group, routeResolver));
         }
         return builder.build();
     }
 
     private static <V> void rejectDuplicateMapping(
-            Iterable<V> values, Function<V, PathMapping> pathMappingResolver,
-            BiConsumer<PathMapping, PathMapping> rejectionHandler) {
+            Iterable<V> values, Function<V, Route> routeResolver,
+            BiConsumer<Route, Route> rejectionHandler) {
 
-        final Map<String, List<PathMapping>> triePath2mappings = new HashMap<>();
+        final Map<String, List<Route>> triePath2Routes = new HashMap<>();
         for (V v : values) {
-            final PathMapping mapping = pathMappingResolver.apply(v);
-            final Optional<String> triePathOpt = mapping.triePath();
+            final Route route = routeResolver.apply(v);
+            final Optional<String> triePathOpt = route.triePath();
             if (!triePathOpt.isPresent()) {
                 continue;
             }
             final String triePath = triePathOpt.get();
-            final List<PathMapping> existingMappings =
-                    triePath2mappings.computeIfAbsent(triePath, unused -> new ArrayList<>());
-            for (PathMapping existingMapping : existingMappings) {
-                if (mapping.complexity() != existingMapping.complexity()) {
+            final List<Route> existingRoutes =
+                    triePath2Routes.computeIfAbsent(triePath, unused -> new ArrayList<>());
+            for (Route existingRoute : existingRoutes) {
+                if (route.complexity() != existingRoute.complexity()) {
                     continue;
                 }
 
-                if (mapping.getClass() != existingMapping.getClass()) {
+                if (route.getClass() != existingRoute.getClass()) {
                     continue;
                 }
 
-                if (mapping.complexity() == 0) {
-                    // If it's not an HttpHeaderPathMapping, it's duplicate so we should reject it.
-                    rejectionHandler.accept(mapping, existingMapping);
+                if (route.complexity() == 0) {
+                    rejectionHandler.accept(route, existingRoute);
                     return;
                 }
 
-                if (mapping.supportedMethods().stream().noneMatch(
-                        method -> existingMapping.supportedMethods().contains(method))) {
+                if (route.methods().stream().noneMatch(
+                        method -> existingRoute.methods().contains(method))) {
                     // No overlap in supported methods.
                     continue;
                 }
-                if (!mapping.consumeTypes().isEmpty() &&
-                    mapping.consumeTypes().stream().noneMatch(
-                            mediaType -> existingMapping.consumeTypes().contains(mediaType))) {
+                if (!route.consumes().isEmpty() &&
+                    route.consumes().stream().noneMatch(
+                            mediaType -> existingRoute.consumes().contains(mediaType))) {
                     // No overlap in consume types.
                     continue;
                 }
-                if (!mapping.produceTypes().isEmpty() &&
-                    mapping.produceTypes().stream().noneMatch(
-                            mediaType -> existingMapping.produceTypes().contains(mediaType))) {
+                if (!route.produces().isEmpty() &&
+                    route.produces().stream().noneMatch(
+                            mediaType -> existingRoute.produces().contains(mediaType))) {
                     // No overlap in produce types.
                     continue;
                 }
 
-                rejectionHandler.accept(mapping, existingMapping);
+                rejectionHandler.accept(route, existingRoute);
                 return;
             }
 
-            existingMappings.add(mapping);
+            existingRoutes.add(route);
         }
     }
 
@@ -210,9 +209,9 @@ public final class Routers {
      * Returns a {@link Router} implementation which is using one of {@link RoutingTrie} and {@link List}.
      */
     private static <V> Router<V> router(boolean isTrie, List<V> values,
-                                        Function<V, PathMapping> pathMappingResolver) {
+                                        Function<V, Route> routeResolver) {
         final Comparator<V> valueComparator =
-                Comparator.comparingInt(e -> -1 * pathMappingResolver.apply(e).complexity());
+                Comparator.comparingInt(e -> -1 * routeResolver.apply(e).complexity());
 
         final Router<V> router;
         if (isTrie) {
@@ -220,19 +219,19 @@ public final class Routers {
             // Set a comparator to sort services by the number of conditions to be checked in a descending
             // order.
             builder.comparator(valueComparator);
-            values.forEach(v -> builder.add(pathMappingResolver.apply(v).triePath().get(), v));
-            router = new TrieRouter<>(builder.build(), pathMappingResolver);
+            values.forEach(v -> builder.add(routeResolver.apply(v).triePath().get(), v));
+            router = new TrieRouter<>(builder.build(), routeResolver);
         } else {
             values.sort(valueComparator);
-            router = new SequentialRouter<>(values, pathMappingResolver);
+            router = new SequentialRouter<>(values, routeResolver);
         }
 
         if (logger.isDebugEnabled()) {
             logger.debug("Router created for {} service(s): {}",
                          values.size(), router.getClass().getSimpleName());
             values.forEach(c -> {
-                final PathMapping mapping = pathMappingResolver.apply(c);
-                logger.debug("meterTag: {}, complexity: {}", mapping.meterTag(), mapping.complexity());
+                final Route route = routeResolver.apply(c);
+                logger.debug("meterTag: {}, complexity: {}", route.meterTag(), route.complexity());
             });
         }
         values.clear();
@@ -242,14 +241,14 @@ public final class Routers {
     /**
      * Finds the most suitable service from the given {@link ServiceConfig} list.
      */
-    private static <V> PathMapped<V> findsBest(PathMappingContext mappingCtx, @Nullable List<V> values,
-                                               Function<V, PathMapping> pathMappingResolver) {
-        PathMapped<V> result = PathMapped.empty();
+    private static <V> Routed<V> findBest(RoutingContext routingCtx, @Nullable List<V> values,
+                                          Function<V, Route> routeResolver) {
+        Routed<V> result = Routed.empty();
         if (values != null) {
             for (V value : values) {
-                final PathMapping mapping = pathMappingResolver.apply(value);
-                final PathMappingResult mappingResult = mapping.apply(mappingCtx);
-                if (mappingResult.isPresent()) {
+                final Route route = routeResolver.apply(value);
+                final RoutingResult routingResult = route.apply(routingCtx);
+                if (routingResult.isPresent()) {
                     //
                     // The services are sorted as follows:
                     //
@@ -266,30 +265,30 @@ public final class Routers {
                     //
 
                     // Found the best matching.
-                    if (mappingResult.hasHighestScore()) {
-                        result = PathMapped.of(mapping, mappingResult, value);
+                    if (routingResult.hasHighestScore()) {
+                        result = Routed.of(route, routingResult, value);
                         break;
                     }
 
-                    // This means that the 'mappingResult' is produced by one of 3), 4) and 5).
+                    // This means that the 'routingResult' is produced by one of 3), 4) and 5).
                     // So we have no more chance to find a better matching from now.
-                    if (mappingResult.hasLowestScore()) {
+                    if (routingResult.hasLowestScore()) {
                         if (!result.isPresent()) {
-                            result = PathMapped.of(mapping, mappingResult, value);
+                            result = Routed.of(route, routingResult, value);
                         }
                         break;
                     }
 
                     // We have still a chance to find a better matching.
                     if (result.isPresent()) {
-                        if (mappingResult.score() > result.mappingResult().score()) {
+                        if (routingResult.score() > result.routingResult().score()) {
                             // Replace the candidate with the new one only if the score is better.
                             // If the score is same, we respect the order of service registration.
-                            result = PathMapped.of(mapping, mappingResult, value);
+                            result = Routed.of(route, routingResult, value);
                         }
                     } else {
                         // Keep the result as a candidate.
-                        result = PathMapped.of(mapping, mappingResult, value);
+                        result = Routed.of(route, routingResult, value);
                     }
                 }
             }
@@ -300,16 +299,16 @@ public final class Routers {
     private static final class TrieRouter<V> implements Router<V> {
 
         private final RoutingTrie<V> trie;
-        private final Function<V, PathMapping> pathMappingResolver;
+        private final Function<V, Route> routeResolver;
 
-        TrieRouter(RoutingTrie<V> trie, Function<V, PathMapping> pathMappingResolver) {
+        TrieRouter(RoutingTrie<V> trie, Function<V, Route> routeResolver) {
             this.trie = requireNonNull(trie, "trie");
-            this.pathMappingResolver = requireNonNull(pathMappingResolver, "pathMappingResolver");
+            this.routeResolver = requireNonNull(routeResolver, "routeResolver");
         }
 
         @Override
-        public PathMapped<V> find(PathMappingContext mappingCtx) {
-            return findsBest(mappingCtx, trie.find(mappingCtx.path()), pathMappingResolver);
+        public Routed<V> find(RoutingContext routingCtx) {
+            return findBest(routingCtx, trie.find(routingCtx.path()), routeResolver);
         }
 
         @Override
@@ -321,16 +320,16 @@ public final class Routers {
     private static final class SequentialRouter<V> implements Router<V> {
 
         private final List<V> values;
-        private final Function<V, PathMapping> pathMappingResolver;
+        private final Function<V, Route> routeResolver;
 
-        SequentialRouter(List<V> values, Function<V, PathMapping> pathMappingResolver) {
+        SequentialRouter(List<V> values, Function<V, Route> routeResolver) {
             this.values = ImmutableList.copyOf(requireNonNull(values, "values"));
-            this.pathMappingResolver = requireNonNull(pathMappingResolver, "pathMappingResolver");
+            this.routeResolver = requireNonNull(routeResolver, "routeResolver");
         }
 
         @Override
-        public PathMapped<V> find(PathMappingContext mappingCtx) {
-            return findsBest(mappingCtx, values, pathMappingResolver);
+        public Routed<V> find(RoutingContext routingCtx) {
+            return findBest(routingCtx, values, routeResolver);
         }
 
         @Override

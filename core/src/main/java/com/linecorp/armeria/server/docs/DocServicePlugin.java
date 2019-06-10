@@ -31,6 +31,11 @@ import com.linecorp.armeria.server.ServiceConfig;
  */
 public interface DocServicePlugin {
 
+    /**
+     * Returns the name of this plugin.
+     */
+    String name();
+
     // Methods related with generating a ServiceSpecification.
 
     /**
@@ -44,8 +49,10 @@ public interface DocServicePlugin {
      *
      * @param serviceConfigs the {@link ServiceConfig}s of the {@link Service}s that are instances of the
      *                       {@link #supportedServiceTypes()}
+     * @param filter the {@link DocServiceFilter} that checks whether a method will be included while
+     *               building {@link DocService}
      */
-    ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs);
+    ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs, DocServiceFilter filter);
 
     // Methods related with extracting documentation strings.
     // TODO(trustin): Define the docstring format.

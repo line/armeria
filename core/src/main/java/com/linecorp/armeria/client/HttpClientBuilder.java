@@ -20,8 +20,11 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 
+import javax.annotation.Nullable;
+
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 
@@ -32,7 +35,14 @@ import com.linecorp.armeria.common.SessionProtocol;
  */
 public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpClientBuilder> {
 
+    @Nullable
     private final URI uri;
+    @Nullable
+    private final Endpoint endpoint;
+    @Nullable
+    private final Scheme scheme;
+    @Nullable
+    private String path;
     private ClientFactory factory = ClientFactory.DEFAULT;
 
     /**
@@ -53,7 +63,24 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
      */
     public HttpClientBuilder(URI uri) {
         validateScheme(requireNonNull(uri, "uri").getScheme());
+
         this.uri = URI.create(SerializationFormat.NONE + "+" + uri);
+        scheme = null;
+        endpoint = null;
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields
+     *                                  in {@link SessionProtocol}
+     */
+    public HttpClientBuilder(SessionProtocol sessionProtocol, Endpoint endpoint) {
+        validateScheme(requireNonNull(sessionProtocol, "sessionProtocol").uriText());
+
+        uri = null;
+        scheme = Scheme.of(SerializationFormat.NONE, sessionProtocol);
+        this.endpoint = requireNonNull(endpoint, "endpoint");
     }
 
     private static void validateScheme(String scheme) {
@@ -75,6 +102,14 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
     }
 
     /**
+     * Sets the {@code path} of the client.
+     */
+    public HttpClientBuilder path(String path) {
+        this.path = requireNonNull(path, "path");
+        return this;
+    }
+
+    /**
      * Returns a newly-created HTTP client based on the properties of this builder.
      *
      * @throws IllegalArgumentException if the scheme of the {@code uri} specified in
@@ -82,6 +117,12 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
      *                                  is not an HTTP scheme
      */
     public HttpClient build() {
-        return factory.newClient(uri, HttpClient.class, buildOptions());
+        if (uri != null) {
+            return factory.newClient(uri, HttpClient.class, buildOptions());
+        } else if (path != null) {
+            return factory.newClient(scheme, endpoint, path, HttpClient.class, buildOptions());
+        } else {
+            return factory.newClient(scheme, endpoint, HttpClient.class, buildOptions());
+        }
     }
 }

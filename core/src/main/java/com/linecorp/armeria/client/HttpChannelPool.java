@@ -157,7 +157,7 @@ final class HttpChannelPool implements AutoCloseable {
      * Attempts to acquire a {@link Channel} which is matched by the specified condition immediately.
      *
      * @return {@code null} is there's no match left in the pool and thus a new connection has to be
-     *         requested via {@link #acquireLater(SessionProtocol, PoolKey)}.
+     *         requested via {@link #acquireLater(SessionProtocol, PoolKey, ClientConnectionTimingsBuilder)}.
      */
     @Nullable
     PooledChannel acquireNow(SessionProtocol desiredProtocol, PoolKey key) {
@@ -234,10 +234,11 @@ final class HttpChannelPool implements AutoCloseable {
      * Acquires a new {@link Channel} which is matched by the specified condition by making a connection
      * attempt or waiting for the current connection attempt in progress.
      */
-    CompletableFuture<PooledChannel> acquireLater(SessionProtocol desiredProtocol, PoolKey key) {
+    CompletableFuture<PooledChannel> acquireLater(SessionProtocol desiredProtocol, PoolKey key,
+                                                  ClientConnectionTimingsBuilder timingsBuilder) {
         final CompletableFuture<PooledChannel> promise = new CompletableFuture<>();
-        if (!usePendingAcquisition(desiredProtocol, key, promise)) {
-            connect(desiredProtocol, key, promise);
+        if (!usePendingAcquisition(desiredProtocol, key, promise, timingsBuilder)) {
+            connect(desiredProtocol, key, promise, timingsBuilder);
         }
         return promise;
     }
@@ -248,7 +249,8 @@ final class HttpChannelPool implements AutoCloseable {
      * @return {@code true} if succeeded to reuse the pending connection.
      */
     private boolean usePendingAcquisition(SessionProtocol desiredProtocol, PoolKey key,
-                                          CompletableFuture<PooledChannel> promise) {
+                                          CompletableFuture<PooledChannel> promise,
+                                          ClientConnectionTimingsBuilder timingsBuilder) {
 
         if (desiredProtocol == SessionProtocol.H1 || desiredProtocol == SessionProtocol.H1C) {
             // Can't use HTTP/1 connections because they will not be available in the pool until
@@ -263,7 +265,10 @@ final class HttpChannelPool implements AutoCloseable {
             return false;
         }
 
+        timingsBuilder.pendingAcquisitionStart();
         pendingAcquisition.handle((pch, cause) -> {
+            timingsBuilder.pendingAcquisitionEnd();
+
             if (cause == null) {
                 final SessionProtocol actualProtocol = pch.protocol();
                 if (actualProtocol.isMultiplex()) {
@@ -277,12 +282,12 @@ final class HttpChannelPool implements AutoCloseable {
                     if (ch != null) {
                         promise.complete(ch);
                     } else {
-                        connect(actualProtocol, key, promise);
+                        connect(actualProtocol, key, promise, timingsBuilder);
                     }
                 }
             } else {
                 // The pending connection attempt has failed.
-                connect(desiredProtocol, key, promise);
+                connect(desiredProtocol, key, promise, timingsBuilder);
             }
             return null;
         });
@@ -290,16 +295,17 @@ final class HttpChannelPool implements AutoCloseable {
         return true;
     }
 
-    private void connect(SessionProtocol desiredProtocol, PoolKey key,
-                         CompletableFuture<PooledChannel> promise) {
+    private void connect(SessionProtocol desiredProtocol, PoolKey key, CompletableFuture<PooledChannel> promise,
+                         ClientConnectionTimingsBuilder timingsBuilder) {
 
         setPendingAcquisition(desiredProtocol, key, promise);
+        timingsBuilder.socketConnectStart();
 
         final InetSocketAddress remoteAddress;
         try {
             remoteAddress = toRemoteAddress(key);
         } catch (UnknownHostException e) {
-            notifyConnect(desiredProtocol, key, eventLoop.newFailedFuture(e), promise);
+            notifyConnect(desiredProtocol, key, eventLoop.newFailedFuture(e), promise, timingsBuilder);
             return;
         }
 
@@ -309,7 +315,7 @@ final class HttpChannelPool implements AutoCloseable {
                           eventLoop.newFailedFuture(
                                   new SessionProtocolNegotiationException(
                                           desiredProtocol, "previously failed negotiation")),
-                          promise);
+                          promise, timingsBuilder);
             return;
         }
 
@@ -318,10 +324,10 @@ final class HttpChannelPool implements AutoCloseable {
         connect(remoteAddress, desiredProtocol, sessionPromise);
 
         if (sessionPromise.isDone()) {
-            notifyConnect(desiredProtocol, key, sessionPromise, promise);
+            notifyConnect(desiredProtocol, key, sessionPromise, promise, timingsBuilder);
         } else {
             sessionPromise.addListener((Future<Channel> future) -> {
-                notifyConnect(desiredProtocol, key, future, promise);
+                notifyConnect(desiredProtocol, key, future, promise, timingsBuilder);
             });
         }
     }
@@ -329,7 +335,8 @@ final class HttpChannelPool implements AutoCloseable {
     /**
      * A low-level operation that triggers a new connection attempt. Used only by:
      * <ul>
-     *   <li>{@link #connect(SessionProtocol, PoolKey, CompletableFuture)} - The pool has been exhausted.</li>
+     *   <li>{@link #connect(SessionProtocol, PoolKey, CompletableFuture, ClientConnectionTimingsBuilder)} -
+     *       The pool has been exhausted.</li>
      *   <li>{@link HttpSessionHandler} - HTTP/2 upgrade has failed.</li>
      * </ul>
      */
@@ -371,11 +378,13 @@ final class HttpChannelPool implements AutoCloseable {
         ch.pipeline().addLast(new HttpSessionHandler(this, ch, sessionPromise, timeoutFuture));
     }
 
-    private void notifyConnect(SessionProtocol desiredProtocol, PoolKey key,
-                               Future<Channel> future, CompletableFuture<PooledChannel> promise) {
+    private void notifyConnect(SessionProtocol desiredProtocol, PoolKey key, Future<Channel> future,
+                               CompletableFuture<PooledChannel> promise,
+                               ClientConnectionTimingsBuilder timingsBuilder) {
         assert future.isDone();
         removePendingAcquisition(desiredProtocol, key);
 
+        timingsBuilder.socketConnectEnd();
         try {
             if (future.isSuccess()) {
                 final Channel channel = future.getNow();

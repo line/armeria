@@ -55,7 +55,7 @@ public final class BasicToken {
         if (this == o) {
             return true;
         }
-        if (o == null || getClass() != o.getClass()) {
+        if (!(o instanceof BasicToken)) {
             return false;
         }
         final BasicToken that = (BasicToken) o;

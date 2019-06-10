@@ -21,8 +21,8 @@ import static java.util.Objects.requireNonNull;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -117,9 +117,13 @@ final class RequestContextExporterBuilder {
     void export(String mdcKey) {
         requireNonNull(mdcKey, "mdcKey");
 
-        final Optional<BuiltInProperty> opt = BuiltInProperty.findByMdcKey(mdcKey);
-        if (opt.isPresent()) {
-            builtIns.add(opt.get());
+        final List<BuiltInProperty> builtInPropertyList = BuiltInProperty.findByMdcKeyPattern(mdcKey);
+        if (!builtInPropertyList.isEmpty()) {
+            builtIns.addAll(builtInPropertyList);
+            return;
+        }
+
+        if (mdcKey.contains(BuiltInProperty.WILDCARD_STR)) {
             return;
         }
 

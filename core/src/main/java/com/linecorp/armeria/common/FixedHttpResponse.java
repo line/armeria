@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import com.linecorp.armeria.common.stream.OneElementFixedStreamMessage;
 import com.linecorp.armeria.common.stream.RegularFixedStreamMessage;
 import com.linecorp.armeria.common.stream.TwoElementFixedStreamMessage;
@@ -28,15 +30,15 @@ final class FixedHttpResponse {
 
     static final class OneElementFixedHttpResponse
             extends OneElementFixedStreamMessage<HttpObject> implements HttpResponse {
-        OneElementFixedHttpResponse(HttpObject obj) {
-            super(obj);
+        OneElementFixedHttpResponse(ResponseHeaders headers) {
+            super(headers);
         }
     }
 
     static final class TwoElementFixedHttpResponse
             extends TwoElementFixedStreamMessage<HttpObject> implements HttpResponse {
-        TwoElementFixedHttpResponse(HttpObject obj1, HttpObject obj2) {
-            super(obj1, obj2);
+        TwoElementFixedHttpResponse(ResponseHeaders headers, HttpObject obj) {
+            super(headers, obj);
         }
     }
 
@@ -44,6 +46,9 @@ final class FixedHttpResponse {
             extends RegularFixedStreamMessage<HttpObject> implements HttpResponse {
         RegularFixedHttpResponse(HttpObject... objs) {
             super(objs);
+            checkArgument(objs.length > 0, "There must be at least one ResponseHeaders.");
+            checkArgument(objs[0] instanceof ResponseHeaders,
+                          "The first HttpObject must be a ResponseHeaders: " + objs[0]);
         }
     }
 

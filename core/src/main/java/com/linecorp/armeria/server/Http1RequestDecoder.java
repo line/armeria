@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ProtocolViolationException;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.InboundTrafficController;
@@ -66,8 +67,18 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
     private static final Logger logger = LoggerFactory.getLogger(Http1RequestDecoder.class);
 
     private static final Http2Settings DEFAULT_HTTP2_SETTINGS = new Http2Settings();
-    private static final com.linecorp.armeria.common.HttpHeaders CONTINUE_RESPONSE =
-            com.linecorp.armeria.common.HttpHeaders.of(HttpStatus.CONTINUE);
+    private static final ResponseHeaders CONTINUE_RESPONSE = ResponseHeaders.of(HttpStatus.CONTINUE);
+
+    private static final HttpData DATA_DECODER_FAILURE =
+            HttpData.ofUtf8(HttpResponseStatus.BAD_REQUEST + "\nDecoder failure");
+    private static final HttpData DATA_UNSUPPORTED_METHOD =
+            HttpData.ofUtf8(HttpResponseStatus.METHOD_NOT_ALLOWED + "\nUnsupported method");
+    private static final HttpData DATA_INVALID_CONTENT_LENGTH =
+            HttpData.ofUtf8(HttpResponseStatus.BAD_REQUEST + "\nInvalid content length");
+    private static final HttpData DATA_INVALID_REQUEST_PATH =
+            HttpData.ofUtf8(HttpResponseStatus.BAD_REQUEST + "\nInvalid request path");
+    private static final HttpData DATA_INVALID_DECODER_STATE =
+            HttpData.ofUtf8(HttpResponseStatus.BAD_REQUEST + "\nInvalid decoder state");
 
     private final ServerConfig cfg;
     private final AsciiString scheme;
@@ -116,7 +127,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                 if (msg instanceof HttpRequest) {
                     final HttpRequest nettyReq = (HttpRequest) msg;
                     if (!nettyReq.decoderResult().isSuccess()) {
-                        fail(id, HttpResponseStatus.BAD_REQUEST);
+                        fail(id, HttpResponseStatus.BAD_REQUEST, DATA_DECODER_FAILURE);
                         return;
                     }
 
@@ -124,7 +135,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
                     // Validate the method.
                     if (!HttpMethod.isSupported(nettyReq.method().name())) {
-                        fail(id, HttpResponseStatus.METHOD_NOT_ALLOWED);
+                        fail(id, HttpResponseStatus.METHOD_NOT_ALLOWED, DATA_UNSUPPORTED_METHOD);
                         return;
                     }
 
@@ -136,11 +147,11 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         try {
                             contentLength = Long.parseLong(contentLengthStr);
                         } catch (NumberFormatException ignored) {
-                            fail(id, HttpResponseStatus.BAD_REQUEST);
+                            fail(id, HttpResponseStatus.BAD_REQUEST, DATA_INVALID_CONTENT_LENGTH);
                             return;
                         }
                         if (contentLength < 0) {
-                            fail(id, HttpResponseStatus.BAD_REQUEST);
+                            fail(id, HttpResponseStatus.BAD_REQUEST, DATA_INVALID_CONTENT_LENGTH);
                             return;
                         }
 
@@ -151,7 +162,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
                     if (!handle100Continue(id, nettyReq, nettyHeaders)) {
                         ctx.pipeline().fireUserEventTriggered(HttpExpectationFailedEvent.INSTANCE);
-                        fail(id, HttpResponseStatus.EXPECTATION_FAILED);
+                        fail(id, HttpResponseStatus.EXPECTATION_FAILED, null);
                         return;
                     }
 
@@ -160,20 +171,20 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     this.req = req = new DecodedHttpRequest(
                             ctx.channel().eventLoop(),
                             id, 1,
-                            ArmeriaHttpUtil.toArmeria(nettyReq),
+                            ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg),
                             HttpUtil.isKeepAlive(nettyReq),
                             inboundTrafficController,
-                            cfg.defaultMaxRequestLength());
+                            cfg.maxRequestLength());
 
                     // Close the request early when it is sure that there will be
-                    // neither content nor trailing headers.
+                    // neither content nor trailers.
                     if (contentEmpty && !HttpUtil.isTransferEncodingChunked(nettyReq)) {
                         req.close();
                     }
 
                     ctx.fireChannelRead(req);
                 } else {
-                    fail(id, HttpResponseStatus.BAD_REQUEST);
+                    fail(id, HttpResponseStatus.BAD_REQUEST, DATA_INVALID_DECODER_STATE);
                     return;
                 }
             }
@@ -182,7 +193,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                 final HttpContent content = (HttpContent) msg;
                 final DecoderResult decoderResult = content.decoderResult();
                 if (!decoderResult.isSuccess()) {
-                    fail(id, HttpResponseStatus.BAD_REQUEST);
+                    fail(id, HttpResponseStatus.BAD_REQUEST, DATA_DECODER_FAILURE);
                     req.close(new ProtocolViolationException(decoderResult.cause()));
                     return;
                 }
@@ -193,7 +204,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     req.increaseTransferredBytes(dataLength);
                     final long maxContentLength = req.maxRequestLength();
                     if (maxContentLength > 0 && req.transferredBytes() > maxContentLength) {
-                        fail(id, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE);
+                        fail(id, HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, null);
                         req.close(ContentTooLargeException.get());
                         return;
                     }
@@ -214,12 +225,12 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                 }
             }
         } catch (URISyntaxException e) {
-            fail(id, HttpResponseStatus.BAD_REQUEST);
+            fail(id, HttpResponseStatus.BAD_REQUEST, DATA_INVALID_REQUEST_PATH);
             if (req != null) {
                 req.close(e);
             }
         } catch (Throwable t) {
-            fail(id, HttpResponseStatus.INTERNAL_SERVER_ERROR);
+            fail(id, HttpResponseStatus.INTERNAL_SERVER_ERROR, null);
             if (req != null) {
                 req.close(t);
             } else {
@@ -255,16 +266,18 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         return true;
     }
 
-    private void fail(int id, HttpResponseStatus status) {
+    private void fail(int id, HttpResponseStatus status, @Nullable HttpData content) {
         discarding = true;
         req = null;
 
-        final HttpData data = HttpData.ofUtf8(status.toString());
-        final com.linecorp.armeria.common.HttpHeaders headers =
-                com.linecorp.armeria.common.HttpHeaders.of(status.code());
-        headers.set(HttpHeaderNames.CONNECTION, "close");
-        headers.setObject(HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
-        headers.setInt(HttpHeaderNames.CONTENT_LENGTH, data.length());
+        final HttpData data = content != null ? content : HttpData.ofUtf8(status.toString());
+        final ResponseHeaders headers =
+                ResponseHeaders.builder()
+                               .status(status.code())
+                               .set(HttpHeaderNames.CONNECTION, "close")
+                               .setObject(HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8)
+                               .setInt(HttpHeaderNames.CONTENT_LENGTH, data.length())
+                               .build();
         writer.writeHeaders(id, 1, headers, false);
         writer.writeData(id, 1, data, true).addListener(ChannelFutureListener.CLOSE);
     }

@@ -23,17 +23,17 @@ import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import io.micrometer.core.instrument.MeterRegistry;
 
 /**
- * Finds a mapping that matches a given {@link PathMappingContext}.
+ * Finds a mapping that matches a given {@link RoutingContext}.
  */
 public interface Router<V> {
 
     /**
-     * Finds the value of mapping that matches the specified {@link PathMappingContext}.
+     * Finds the value of mapping that matches the specified {@link RoutingContext}.
      *
-     * @return a {@link PathMapped} that wraps the matching value if there's a match.
-     *         {@link PathMapped#empty()} if there's no match.
+     * @return a {@link Routed} that wraps the matching value if there's a match.
+     *         {@link Routed#empty()} if there's no match.
      */
-    PathMapped<V> find(PathMappingContext mappingCtx);
+    Routed<V> find(RoutingContext routingCtx);
 
     /**
      * Registers the stats of this {@link Router} to the specified {@link MeterRegistry}.

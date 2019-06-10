@@ -34,11 +34,11 @@ import org.slf4j.LoggerFactory;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
@@ -77,7 +77,7 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
     }
 
     @Override
-    protected final HttpResponse doRead(HttpHeaders headers, long length,
+    protected final HttpResponse doRead(ResponseHeaders headers, long length,
                                         Executor fileReadExecutor, ByteBufAllocator alloc) throws IOException {
         final T in = newStream();
         if (in == null) {
@@ -221,14 +221,14 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
                     }
 
                     final HttpFileBuilder builder =
-                            HttpFileBuilder.of(array != null ? HttpData.of(array)
+                            HttpFileBuilder.of(array != null ? HttpData.wrap(array)
                                                              : new ByteBufHttpData(buf, true),
                                                attrs.lastModifiedMillis())
                                            .date(isDateEnabled())
                                            .lastModified(isLastModifiedEnabled());
 
                     if (contentType() != null) {
-                        builder.setHeader(HttpHeaderNames.CONTENT_TYPE, contentType());
+                        builder.contentType(contentType());
                     }
 
                     final String etag = generateEntityTag(attrs);

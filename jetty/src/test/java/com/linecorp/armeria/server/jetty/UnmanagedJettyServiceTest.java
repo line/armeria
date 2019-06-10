@@ -23,7 +23,7 @@ import org.junit.ClassRule;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.internal.webapp.WebAppContainerTest;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 public class UnmanagedJettyServiceTest extends WebAppContainerTest {
 

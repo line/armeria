@@ -105,15 +105,23 @@ public final class ArmeriaRetrofitBuilder {
      * @see Builder#baseUrl(String)
      */
     public ArmeriaRetrofitBuilder baseUrl(String baseUrl) {
+        return baseUrl(URI.create(requireNonNull(baseUrl, "baseUrl")));
+    }
+
+    /**
+     * Sets the API base URL.
+     *
+     * @see Builder#baseUrl(String)
+     */
+    public ArmeriaRetrofitBuilder baseUrl(URI baseUrl) {
         requireNonNull(baseUrl, "baseUrl");
-        final URI uri = URI.create(baseUrl);
-        checkArgument(SessionProtocol.find(uri.getScheme()).isPresent(),
+        checkArgument(SessionProtocol.find(baseUrl.getScheme()).isPresent(),
                       "baseUrl must have an HTTP scheme: %s", baseUrl);
-        final String path = uri.getPath();
+        final String path = baseUrl.getPath();
         if (!path.isEmpty() && !SLASH.equals(path.substring(path.length() - 1))) {
             throw new IllegalArgumentException("baseUrl must end with /: " + baseUrl);
         }
-        this.baseUrl = baseUrl;
+        this.baseUrl = baseUrl.toString();
         return this;
     }
 

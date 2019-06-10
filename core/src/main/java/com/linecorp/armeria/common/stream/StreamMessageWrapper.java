@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import org.reactivestreams.Subscriber;
@@ -82,6 +83,35 @@ public class StreamMessageWrapper<T> implements StreamMessage<T> {
     @Override
     public void subscribe(Subscriber<? super T> s, EventExecutor executor, boolean withPooledObjects) {
         delegate().subscribe(s, executor, withPooledObjects);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public CompletableFuture<List<T>> drainAll() {
+        final CompletableFuture<? extends List<? extends T>> future = delegate().drainAll();
+        return (CompletableFuture<List<T>>) future;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public CompletableFuture<List<T>> drainAll(EventExecutor executor) {
+        final CompletableFuture<? extends List<? extends T>> future = delegate().drainAll(executor);
+        return (CompletableFuture<List<T>>) future;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public CompletableFuture<List<T>> drainAll(boolean withPooledObjects) {
+        final CompletableFuture<? extends List<? extends T>> future = delegate().drainAll(withPooledObjects);
+        return (CompletableFuture<List<T>>) future;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public CompletableFuture<List<T>> drainAll(EventExecutor executor, boolean withPooledObjects) {
+        final CompletableFuture<? extends List<? extends T>> future =
+                delegate().drainAll(executor, withPooledObjects);
+        return (CompletableFuture<List<T>>) future;
     }
 
     @Override

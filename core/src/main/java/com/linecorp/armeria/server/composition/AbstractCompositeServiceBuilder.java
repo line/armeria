@@ -24,7 +24,7 @@ import java.util.List;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Service;
 
 /**
@@ -92,7 +92,7 @@ public abstract class AbstractCompositeServiceBuilder<T extends AbstractComposit
 
     /**
      * Returns the list of the {@link CompositeServiceEntry}s added via {@link #service(String, Service)},
-     * {@link #serviceUnder(String, Service)}, {@link #service(PathMapping, Service)} and
+     * {@link #serviceUnder(String, Service)}, {@link #service(Route, Service)} and
      * {@link #service(CompositeServiceEntry)}.
      */
     protected final List<CompositeServiceEntry<I, O>> services() {
@@ -135,18 +135,17 @@ public abstract class AbstractCompositeServiceBuilder<T extends AbstractComposit
     }
 
     /**
-     * Binds the specified {@link Service} at the specified {@link PathMapping}.
+     * Binds the specified {@link Service} at the specified {@link Route}.
      */
-    protected T service(PathMapping pathMapping, Service<I, O> service) {
-        return service(CompositeServiceEntry.of(pathMapping, service));
+    protected T service(Route route, Service<I, O> service) {
+        return service(CompositeServiceEntry.of(route, service));
     }
 
     /**
      * Binds the specified {@link CompositeServiceEntry}.
      */
     protected T service(CompositeServiceEntry<I, O> entry) {
-        requireNonNull(entry, "entry");
-        services.add(entry);
+        services.add(requireNonNull(entry, "entry"));
         return self();
     }
 

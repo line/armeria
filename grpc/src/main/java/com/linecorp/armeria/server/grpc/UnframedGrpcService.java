@@ -16,14 +16,15 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
-import com.google.common.collect.ImmutableMap;
-
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -31,18 +32,21 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer;
-import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;
-import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.Listener;
-import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
-import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.ByteBufOrStream;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Listener;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
+import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.internal.grpc.GrpcStatus;
-import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.ServiceWithPathMappings;
+import com.linecorp.armeria.server.ServiceWithRoutes;
 import com.linecorp.armeria.server.SimpleDecoratingService;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
@@ -70,7 +74,7 @@ import io.netty.buffer.ByteBufHolder;
  * </ul>
  */
 class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpResponse>
-        implements ServiceWithPathMappings<HttpRequest, HttpResponse> {
+        implements ServiceWithRoutes<HttpRequest, HttpResponse> {
 
     private static final char LINE_SEPARATOR = '\n';
 
@@ -87,16 +91,16 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
                         .orElseThrow(
                                 () -> new IllegalArgumentException("Decorated service must be a GrpcService."));
         methodsByName = delegateGrpcService.services()
-                                   .stream()
-                                   .flatMap(service -> service.getMethods().stream())
-                                   .map(ServerMethodDefinition::getMethodDescriptor)
-                                   .collect(ImmutableMap.toImmutableMap(MethodDescriptor::getFullMethodName,
-                                                                        Function.identity()));
+                                           .stream()
+                                           .flatMap(service -> service.getMethods().stream())
+                                           .map(ServerMethodDefinition::getMethodDescriptor)
+                                           .collect(toImmutableMap(MethodDescriptor::getFullMethodName,
+                                                                   Function.identity()));
     }
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final HttpHeaders clientHeaders = req.headers();
+        final RequestHeaders clientHeaders = req.headers();
         final MediaType contentType = clientHeaders.contentType();
         if (contentType == null) {
             // All gRPC requests, whether framed or non-framed, must have content-type. If it's not sent, let
@@ -124,7 +128,7 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
                                    "Only unary methods can be used with non-framed requests.");
         }
 
-        final HttpHeaders grpcHeaders = HttpHeaders.copyOf(clientHeaders);
+        final RequestHeadersBuilder grpcHeaders = clientHeaders.toBuilder();
 
         final MediaType framedContentType;
         if (contentType.is(MediaType.PROTOBUF)) {
@@ -156,7 +160,7 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
             if (t != null) {
                 responseFuture.completeExceptionally(t);
             } else {
-                frameAndServe(ctx, grpcHeaders, clientRequest, responseFuture);
+                frameAndServe(ctx, grpcHeaders.build(), clientRequest, responseFuture);
             }
             return null;
         });
@@ -165,8 +169,8 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
 
     private void frameAndServe(
             ServiceRequestContext ctx,
-            HttpHeaders grpcHeaders,
-            AggregatedHttpMessage clientRequest,
+            RequestHeaders grpcHeaders,
+            AggregatedHttpRequest clientRequest,
             CompletableFuture<HttpResponse> res) {
         final HttpRequest grpcRequest;
         try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
@@ -177,7 +181,7 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
                 message = ((ByteBufHolder) content).content();
             } else {
                 message = ctx.alloc().buffer(content.length());
-                message.writeBytes(content.array(), content.offset(), content.length());
+                message.writeBytes(content.array());
             }
             final HttpData frame;
             boolean success = false;
@@ -214,10 +218,10 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
 
     private static void deframeAndRespond(
             ServiceRequestContext ctx,
-            AggregatedHttpMessage grpcResponse,
+            AggregatedHttpResponse grpcResponse,
             CompletableFuture<HttpResponse> res) {
-        final HttpHeaders trailers = !grpcResponse.trailingHeaders().isEmpty() ?
-                                     grpcResponse.trailingHeaders() : grpcResponse.headers();
+        final HttpHeaders trailers = !grpcResponse.trailers().isEmpty() ?
+                                     grpcResponse.trailers() : grpcResponse.headers();
         final String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
         final Status grpcStatus = Status.fromCodeValue(Integer.parseInt(grpcStatusCode));
 
@@ -242,8 +246,8 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
             return;
         }
 
-        final MediaType grpcMediaType = grpcResponse.headers().contentType();
-        final HttpHeaders unframedHeaders = HttpHeaders.copyOf(grpcResponse.headers());
+        final MediaType grpcMediaType = grpcResponse.contentType();
+        final ResponseHeadersBuilder unframedHeaders = grpcResponse.headers().toBuilder();
         if (grpcMediaType != null) {
             if (grpcMediaType.is(GrpcSerializationFormats.PROTO.mediaType())) {
                 unframedHeaders.contentType(MediaType.PROTOBUF);
@@ -256,15 +260,20 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
                 new Listener() {
                     @Override
                     public void messageRead(ByteBufOrStream message) {
-                        // We know there is only one message in total, so don't bother with checking endOfStream
-                        // We also know that we don't support compression, so this is always a ByteBuffer.
+                        // We know that we don't support compression, so this is always a ByteBuffer.
                         final HttpData unframedContent = new ByteBufHttpData(message.buf(), true);
                         unframedHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, unframedContent.length());
-                        res.complete(HttpResponse.of(unframedHeaders, unframedContent));
+                        res.complete(HttpResponse.of(unframedHeaders.build(), unframedContent));
                     }
 
                     @Override
-                    public void endOfStream() {}
+                    public void endOfStream() {
+                        if (!res.isDone()) {
+                            // If 'ResponseObserver.onCompleted()' is called without calling 'onNext()',
+                            // this callback would be invoked but 'messageRead' callback wouldn't.
+                            res.complete(HttpResponse.of(unframedHeaders.build()));
+                        }
+                    }
                 },
                 // Max outbound message size is handled by the GrpcService, so we don't need to set it here.
                 Integer.MAX_VALUE,
@@ -275,7 +284,7 @@ class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpRespo
     }
 
     @Override
-    public Set<PathMapping> pathMappings() {
-        return delegateGrpcService.pathMappings();
+    public Set<Route> routes() {
+        return delegateGrpcService.routes();
     }
 }

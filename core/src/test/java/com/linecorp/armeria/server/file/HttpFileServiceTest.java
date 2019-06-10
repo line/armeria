@@ -17,21 +17,19 @@ package com.linecorp.armeria.server.file;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Collection;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import java.util.zip.GZIPInputStream;
 
 import javax.annotation.Nullable;
@@ -43,62 +41,51 @@ import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 
-import com.google.common.collect.ImmutableSet;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Resources;
 
 import com.linecorp.armeria.internal.PathAndQuery;
-import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import io.netty.handler.codec.DateFormatter;
 
-@RunWith(Parameterized.class)
-public class HttpFileServiceTest {
+class HttpFileServiceTest {
 
     private static final ZoneId UTC = ZoneId.of("UTC");
     private static final Pattern ETAG_PATTERN = Pattern.compile("^\"[^\"]+\"$");
 
     private static final String baseResourceDir =
             HttpFileServiceTest.class.getPackage().getName().replace('.', '/') + '/';
-    private static final File tmpDir;
 
-    private static final Server server;
-    private static int httpPort;
+    @TempDir
+    static Path tmpDir;
 
-    @Parameters(name = "{index}: cached={0}")
-    public static Collection<Boolean> parameters() {
-        return ImmutableSet.of(true, false);
-    }
-
-    static {
-        try {
-            tmpDir = Files.createTempDirectory("armeria-test.").toFile();
-        } catch (Exception e) {
-            throw new Error(e);
-        }
-
-        final ServerBuilder sb = new ServerBuilder();
-
-        try {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
             sb.serviceUnder(
                     "/cached/fs/",
-                    HttpFileService.forFileSystem(tmpDir.toPath()));
+                    HttpFileServiceBuilder.forFileSystem(tmpDir)
+                                          .autoIndex(true)
+                                          .build());
 
             sb.serviceUnder(
                     "/uncached/fs/",
-                    HttpFileServiceBuilder.forFileSystem(tmpDir.toPath())
+                    HttpFileServiceBuilder.forFileSystem(tmpDir)
                                           .maxCacheEntries(0)
+                                          .autoIndex(true)
                                           .build());
 
             sb.serviceUnder(
@@ -136,139 +123,174 @@ public class HttpFileServiceTest {
                                                                         .build()));
 
             sb.decorator(LoggingService.newDecorator());
-        } catch (Exception e) {
-            throw new Error(e);
         }
-        server = sb.build();
-    }
+    };
 
-    @BeforeClass
-    public static void init() throws Exception {
-        server.start().get();
-
-        httpPort = server.activePorts().values().stream()
-                         .filter(ServerPort::hasHttp).findAny().get().localAddress().getPort();
-    }
-
-    @AfterClass
-    public static void destroy() throws Exception {
-        server.stop();
-
-        // Delete the temporary files created for testing against the real file system.
-        Files.walkFileTree(tmpDir.toPath(), new SimpleFileVisitor<Path>() {
-            @Override
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                Files.delete(file);
-                return FileVisitResult.CONTINUE;
-            }
-
-            @Override
-            public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                Files.delete(dir);
-                return FileVisitResult.CONTINUE;
-            }
-        });
-    }
-
-    private final boolean cached;
-
-    public HttpFileServiceTest(boolean cached) {
-        this.cached = cached;
-    }
-
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         PathAndQuery.clearCachedPaths();
     }
 
-    @Test
-    public void testClassPathGet() throws Exception {
+    @ParameterizedTest
+    @ArgumentsSource(BaseUriProvider.class)
+    void testClassPathGet(String baseUri) throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             final String lastModified;
             final String etag;
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/foo.txt")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(baseUri + "/foo.txt"))) {
                 assert200Ok(res, "text/plain", "foo");
                 lastModified = header(res, HttpHeaders.LAST_MODIFIED);
                 etag = header(res, HttpHeaders.ETAG);
             }
 
-            assert304NotModified(hc, "/foo.txt", etag, lastModified);
+            assert304NotModified(hc, baseUri, "/foo.txt", etag, lastModified);
 
             // Confirm file service paths are cached when cache is enabled.
-            if (cached) {
+            if (baseUri.contains("/cached/")) {
                 assertThat(PathAndQuery.cachedPaths()).contains("/cached/foo.txt");
             }
         }
     }
 
-    @Test
-    public void testClassPathGetUtf8() throws Exception {
+    @ParameterizedTest
+    @ArgumentsSource(BaseUriProvider.class)
+    void testClassPathGetUtf8(String baseUri) throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/%C2%A2.txt")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(baseUri + "/%C2%A2.txt"))) {
                 assert200Ok(res, "text/plain", "¢");
             }
         }
     }
 
-    @Test
-    public void testClassPathGetFromModule() throws Exception {
+    @ParameterizedTest
+    @ArgumentsSource(BaseUriProvider.class)
+    void testClassPathGetFromModule(String baseUri) throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             // Read a class from a JDK module (java.base).
             try (CloseableHttpResponse res =
-                         hc.execute(new HttpGet(newUri("/classes/java/lang/Object.class")))) {
+                         hc.execute(new HttpGet(baseUri + "/classes/java/lang/Object.class"))) {
                 assert200Ok(res, null, content -> assertThat(content).isNotEmpty());
             }
         }
     }
 
-    @Test
-    public void testClassPathGetFromJar() throws Exception {
+    @ParameterizedTest
+    @ArgumentsSource(BaseUriProvider.class)
+    void testClassPathGetFromJar(String baseUri) throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             // Read a class from a third-party library JAR.
             try (CloseableHttpResponse res =
-                         hc.execute(new HttpGet(newUri("/classes/io/netty/util/NetUtil.class")))) {
+                         hc.execute(new HttpGet(baseUri + "/classes/io/netty/util/NetUtil.class"))) {
                 assert200Ok(res, null, content -> assertThat(content).isNotEmpty());
             }
         }
     }
 
-    @Test
-    public void testClassPathOrElseGet() throws Exception {
+    @ParameterizedTest
+    @ArgumentsSource(BaseUriProvider.class)
+    void testClassPathOrElseGet(String baseUri) throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal();
-             CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/bar.txt")))) {
+             CloseableHttpResponse res = hc.execute(new HttpGet(baseUri + "/bar.txt"))) {
             assert200Ok(res, "text/plain", "bar");
         }
     }
 
-    @Test
-    public void testIndexHtml() throws Exception {
+    @ParameterizedTest
+    @ArgumentsSource(BaseUriProvider.class)
+    void testIndexHtml(String baseUri) throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/")))) {
+            try (CloseableHttpResponse res = hc.execute(new HttpGet(baseUri + "/"))) {
                 assert200Ok(res, "text/html", "<html><body></body></html>");
             }
         }
     }
 
-    @Test
-    public void testUnknownMediaType() throws Exception {
-        try (CloseableHttpClient hc = HttpClients.createMinimal();
-             CloseableHttpResponse res = hc.execute(new HttpGet(newUri("/bar.unknown")))) {
-            assert200Ok(res, null, "Unknown Media Type");
-            final String lastModified = header(res, HttpHeaders.LAST_MODIFIED);
-            final String etag = header(res, HttpHeaders.ETAG);
-            assert304NotModified(hc, "/bar.unknown", etag, lastModified);
+    @ParameterizedTest
+    @ArgumentsSource(BaseUriProvider.class)
+    void testAutoIndex(String baseUri) throws Exception {
+        final Path rootDir = tmpDir.resolve("auto_index");
+        final Path childFile = rootDir.resolve("child_file");
+        final Path childDir = rootDir.resolve("child_dir");
+        final Path grandchildFile = childDir.resolve("grandchild_file");
+        final Path emptyChildDir = rootDir.resolve("empty_child_dir");
+        final Path childDirWithCustomIndex = rootDir.resolve("child_dir_with_custom_index");
+        final Path customIndexFile = childDirWithCustomIndex.resolve("index.html");
+
+        Files.createDirectories(childDir);
+        Files.createDirectories(emptyChildDir);
+        Files.createDirectories(childDirWithCustomIndex);
+
+        Files.write(childFile, "child_file".getBytes(StandardCharsets.UTF_8));
+        Files.write(grandchildFile, "grandchild_file".getBytes(StandardCharsets.UTF_8));
+        Files.write(customIndexFile, "custom_index_file".getBytes(StandardCharsets.UTF_8));
+
+        String basePath = new URI(baseUri).getPath();
+
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            // Ensure auto-redirect works as expected.
+            HttpUriRequest req = new HttpGet(baseUri + "/fs/auto_index");
+            try (CloseableHttpResponse res = hc.execute(req)) {
+                assertStatusLine(res, "HTTP/1.1 307 Temporary Redirect");
+                assertThat(header(res, "location")).isEqualTo(basePath + "/fs/auto_index/");
+            }
+
+            // Ensure directory listing works as expected.
+            req = new HttpGet(baseUri + "/fs/auto_index/");
+            try (CloseableHttpResponse res = hc.execute(req)) {
+                assertStatusLine(res, "HTTP/1.1 200 OK");
+                final String content = contentString(res);
+                assertThat(content)
+                        .contains("Directory listing: " + basePath + "/fs/auto_index/")
+                        .contains("4 file(s) total")
+                        .contains("<a href=\"../\">../</a>")
+                        .contains("<a href=\"child_dir/\">child_dir/</a>")
+                        .contains("<a href=\"child_file\">child_file</a>")
+                        .contains("<a href=\"child_dir_with_custom_index/\">child_dir_with_custom_index/</a>")
+                        .contains("<a href=\"empty_child_dir/\">empty_child_dir/</a>");
+            }
+
+            // Ensure directory listing on an empty directory works as expected.
+            req = new HttpGet(baseUri + "/fs/auto_index/empty_child_dir/");
+            try (CloseableHttpResponse res = hc.execute(req)) {
+                assertStatusLine(res, "HTTP/1.1 200 OK");
+                final String content = contentString(res);
+                assertThat(content)
+                        .contains("Directory listing: " + basePath + "/fs/auto_index/empty_child_dir/")
+                        .contains("0 file(s) total")
+                        .contains("<a href=\"../\">../</a>");
+            }
+
+            // Ensure custom index.html takes precedence over auto-generated directory listing.
+            req = new HttpGet(baseUri + "/fs/auto_index/child_dir_with_custom_index/");
+            try (CloseableHttpResponse res = hc.execute(req)) {
+                assertStatusLine(res, "HTTP/1.1 200 OK");
+                assertThat(contentString(res)).isEqualTo("custom_index_file");
+            }
         }
     }
 
-    @Test
-    public void testGetPreCompressedSupportsNone() throws Exception {
+    @ParameterizedTest
+    @ArgumentsSource(BaseUriProvider.class)
+    void testUnknownMediaType(String baseUri) throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal();
+             CloseableHttpResponse res = hc.execute(new HttpGet(baseUri + "/bar.unknown"))) {
+            assert200Ok(res, null, "Unknown Media Type");
+            final String lastModified = header(res, HttpHeaders.LAST_MODIFIED);
+            final String etag = header(res, HttpHeaders.ETAG);
+            assert304NotModified(hc, baseUri, "/bar.unknown", etag, lastModified);
+        }
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(BaseUriProvider.class)
+    void testGetPreCompressedSupportsNone(String baseUri) throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpGet request = new HttpGet(newUri("/compressed/foo.txt"));
+            final HttpGet request = new HttpGet(baseUri + "/compressed/foo.txt");
             try (CloseableHttpResponse res = hc.execute(request)) {
                 assertThat(res.getFirstHeader("Content-Encoding")).isNull();
                 assertThat(headerOrNull(res, "Content-Type")).isEqualTo(
                         "text/plain; charset=utf-8");
-                final byte[] content = ByteStreams.toByteArray(res.getEntity().getContent());
+                final byte[] content = content(res);
                 assertThat(new String(content, StandardCharsets.UTF_8)).isEqualTo("foo");
 
                 // Confirm path not cached when cache disabled.
@@ -278,10 +300,11 @@ public class HttpFileServiceTest {
         }
     }
 
-    @Test
-    public void testGetPreCompressedSupportsGzip() throws Exception {
+    @ParameterizedTest
+    @ArgumentsSource(BaseUriProvider.class)
+    void testGetPreCompressedSupportsGzip(String baseUri) throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpGet request = new HttpGet(newUri("/compressed/foo.txt"));
+            final HttpGet request = new HttpGet(baseUri + "/compressed/foo.txt");
             request.setHeader("Accept-Encoding", "gzip");
             try (CloseableHttpResponse res = hc.execute(request)) {
                 assertThat(headerOrNull(res, "Content-Encoding")).isEqualTo("gzip");
@@ -296,10 +319,11 @@ public class HttpFileServiceTest {
         }
     }
 
-    @Test
-    public void testGetPreCompressedSupportsBrotli() throws Exception {
+    @ParameterizedTest
+    @ArgumentsSource(BaseUriProvider.class)
+    void testGetPreCompressedSupportsBrotli(String baseUri) throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpGet request = new HttpGet(newUri("/compressed/foo.txt"));
+            final HttpGet request = new HttpGet(baseUri + "/compressed/foo.txt");
             request.setHeader("Accept-Encoding", "br");
             try (CloseableHttpResponse res = hc.execute(request)) {
                 assertThat(headerOrNull(res, "Content-Encoding")).isEqualTo("br");
@@ -307,17 +331,18 @@ public class HttpFileServiceTest {
                         "text/plain; charset=utf-8");
                 // Test would be more readable and fun by decompressing like the gzip one, but since JDK doesn't
                 // support brotli yet, just compare the compressed content to avoid adding a complex dependency.
-                final byte[] content = ByteStreams.toByteArray(res.getEntity().getContent());
+                final byte[] content = content(res);
                 assertThat(content).containsExactly(
                         Resources.toByteArray(Resources.getResource(baseResourceDir + "foo/foo.txt.br")));
             }
         }
     }
 
-    @Test
-    public void testGetPreCompressedSupportsBothPrefersBrotli() throws Exception {
+    @ParameterizedTest
+    @ArgumentsSource(BaseUriProvider.class)
+    void testGetPreCompressedSupportsBothPrefersBrotli(String baseUri) throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpGet request = new HttpGet(newUri("/compressed/foo.txt"));
+            final HttpGet request = new HttpGet(baseUri + "/compressed/foo.txt");
             request.setHeader("Accept-Encoding", "gzip, br");
             try (CloseableHttpResponse res = hc.execute(request)) {
                 assertThat(headerOrNull(res, "Content-Encoding")).isEqualTo("br");
@@ -325,41 +350,42 @@ public class HttpFileServiceTest {
                         "text/plain; charset=utf-8");
                 // Test would be more readable and fun by decompressing like the gzip one, but since JDK doesn't
                 // support brotli yet, just compare the compressed content to avoid adding a complex dependency.
-                final byte[] content = ByteStreams.toByteArray(res.getEntity().getContent());
+                final byte[] content = content(res);
                 assertThat(content).containsExactly(
                         Resources.toByteArray(Resources.getResource(baseResourceDir + "foo/foo.txt.br")));
             }
         }
     }
 
-    @Test
-    public void testFileSystemGet() throws Exception {
-        final File barFile = new File(tmpDir, "bar.html");
+    @ParameterizedTest
+    @ArgumentsSource(BaseUriProvider.class)
+    void testFileSystemGet(String baseUri) throws Exception {
+        final Path barFile = tmpDir.resolve("bar.html");
         final String expectedContentA = "<html/>";
         final String expectedContentB = "<html><body/></html>";
-        Files.write(barFile.toPath(), expectedContentA.getBytes(StandardCharsets.UTF_8));
+        Files.write(barFile, expectedContentA.getBytes(StandardCharsets.UTF_8));
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             final String lastModified;
             final String etag;
-            HttpUriRequest req = new HttpGet(newUri("/fs/bar.html"));
+            HttpUriRequest req = new HttpGet(baseUri + "/fs/bar.html");
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assert200Ok(res, "text/html", expectedContentA);
                 lastModified = header(res, HttpHeaders.LAST_MODIFIED);
                 etag = header(res, HttpHeaders.ETAG);
             }
 
-            assert304NotModified(hc, "/fs/bar.html", etag, lastModified);
+            assert304NotModified(hc, baseUri, "/fs/bar.html", etag, lastModified);
 
             // Test if the 'If-Modified-Since' header works as expected after the file is modified.
-            req = new HttpGet(newUri("/fs/bar.html"));
+            req = new HttpGet(baseUri + "/fs/bar.html");
             final Instant now = Instant.now();
             req.setHeader(HttpHeaders.IF_MODIFIED_SINCE,
                           DateTimeFormatter.RFC_1123_DATE_TIME.format(ZonedDateTime.ofInstant(now, UTC)));
 
             // HTTP-date has no sub-second precision; just add a few seconds to the time.
-            Files.write(barFile.toPath(), expectedContentB.getBytes(StandardCharsets.UTF_8));
-            assertThat(barFile.setLastModified(now.toEpochMilli() + 5000)).isTrue();
+            Files.write(barFile, expectedContentB.getBytes(StandardCharsets.UTF_8));
+            Files.setLastModifiedTime(barFile, FileTime.fromMillis(now.toEpochMilli() + 5000));
 
             final String newLastModified;
             final String newETag;
@@ -374,7 +400,7 @@ public class HttpFileServiceTest {
             }
 
             // Test if the 'If-None-Match' header works as expected after the file is modified.
-            req = new HttpGet(newUri("/fs/bar.html"));
+            req = new HttpGet(baseUri + "/fs/bar.html");
             req.setHeader(HttpHeaders.IF_NONE_MATCH, etag);
 
             try (CloseableHttpResponse res = hc.execute(req)) {
@@ -386,10 +412,10 @@ public class HttpFileServiceTest {
             }
 
             // Test if the cache detects the file removal correctly.
-            final boolean deleted = barFile.delete();
+            final boolean deleted = Files.deleteIfExists(barFile);
             assertThat(deleted).isTrue();
 
-            req = new HttpGet(newUri("/fs/bar.html"));
+            req = new HttpGet(baseUri + "/fs/bar.html");
             req.setHeader(HttpHeaders.IF_MODIFIED_SINCE, currentHttpDate());
             req.setHeader(HttpHeaders.CONNECTION, "close");
 
@@ -399,24 +425,25 @@ public class HttpFileServiceTest {
         }
     }
 
-    @Test
-    public void testFileSystemGet_modifiedFile() throws Exception {
-        final File barFile = new File(tmpDir, "modifiedFile.html");
+    @ParameterizedTest
+    @ArgumentsSource(BaseUriProvider.class)
+    void testFileSystemGet_modifiedFile(String baseUri) throws Exception {
+        final Path barFile = tmpDir.resolve("modifiedFile.html");
         final String expectedContentA = "<html/>";
         final String expectedContentB = "<html><body/></html>";
-        Files.write(barFile.toPath(), expectedContentA.getBytes(StandardCharsets.UTF_8));
-        final long barFileLastModified = barFile.lastModified();
+        Files.write(barFile, expectedContentA.getBytes(StandardCharsets.UTF_8));
+        final long barFileLastModified = Files.getLastModifiedTime(barFile).toMillis();
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpUriRequest req = new HttpGet(newUri("/fs/modifiedFile.html"));
+            final HttpUriRequest req = new HttpGet(baseUri + "/fs/modifiedFile.html");
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assert200Ok(res, "text/html", expectedContentA);
             }
 
             // Modify the file cached by the service. Update last modification time explicitly
             // so that it differs from the old value.
-            Files.write(barFile.toPath(), expectedContentB.getBytes(StandardCharsets.UTF_8));
-            assertThat(barFile.setLastModified(barFileLastModified + 5000)).isTrue();
+            Files.write(barFile, expectedContentB.getBytes(StandardCharsets.UTF_8));
+            Files.setLastModifiedTime(barFile, FileTime.fromMillis(barFileLastModified + 5000));
 
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assert200Ok(res, "text/html", expectedContentB);
@@ -424,33 +451,35 @@ public class HttpFileServiceTest {
         }
     }
 
-    @Test
-    public void testFileSystemGet_newFile() throws Exception {
-        final File barFile = new File(tmpDir, "newFile.html");
+    @ParameterizedTest
+    @ArgumentsSource(BaseUriProvider.class)
+    void testFileSystemGet_newFile(String baseUri) throws Exception {
+        final Path barFile = tmpDir.resolve("newFile.html");
         final String expectedContentA = "<html/>";
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpUriRequest req = new HttpGet(newUri("/fs/newFile.html"));
+            final HttpUriRequest req = new HttpGet(baseUri + "/fs/newFile.html");
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assert404NotFound(res);
             }
-            Files.write(barFile.toPath(), expectedContentA.getBytes(StandardCharsets.UTF_8));
+            Files.write(barFile, expectedContentA.getBytes(StandardCharsets.UTF_8));
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assert200Ok(res, "text/html", expectedContentA);
             }
         } finally {
-            barFile.delete();
+            Files.delete(barFile);
         }
     }
 
-    @Test
-    public void testFileSystemGetUtf8() throws Exception {
-        final File barFile = new File(tmpDir, "¢.txt");
+    @ParameterizedTest
+    @ArgumentsSource(BaseUriProvider.class)
+    void testFileSystemGetUtf8(String baseUri) throws Exception {
+        final Path barFile = tmpDir.resolve("¢.txt");
         final String expectedContentA = "¢";
-        Files.write(barFile.toPath(), expectedContentA.getBytes(StandardCharsets.UTF_8));
+        Files.write(barFile, expectedContentA.getBytes(StandardCharsets.UTF_8));
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpUriRequest req = new HttpGet(newUri("/fs/%C2%A2.txt"));
+            final HttpUriRequest req = new HttpGet(baseUri + "/fs/%C2%A2.txt");
             try (CloseableHttpResponse res = hc.execute(req)) {
                 assert200Ok(res, "text/plain", expectedContentA);
             }
@@ -494,9 +523,9 @@ public class HttpFileServiceTest {
         contentAssertions.accept(EntityUtils.toString(res.getEntity()).trim());
     }
 
-    private void assert304NotModified(CloseableHttpClient hc, String path,
+    private void assert304NotModified(CloseableHttpClient hc, String baseUri, String path,
                                       String expectedETag, String expectedLastModified) throws IOException {
-        final String uri = newUri(path);
+        final String uri = baseUri + path;
 
         // Test if the 'If-None-Match' header works as expected. (a single etag)
         final HttpUriRequest req1 = new HttpGet(uri);
@@ -583,11 +612,22 @@ public class HttpFileServiceTest {
         return res.getFirstHeader(name).getValue();
     }
 
+    private static byte[] content(CloseableHttpResponse res) throws IOException {
+        return ByteStreams.toByteArray(res.getEntity().getContent());
+    }
+
+    private static String contentString(CloseableHttpResponse res) throws IOException {
+        return new String(ByteStreams.toByteArray(res.getEntity().getContent()), StandardCharsets.UTF_8);
+    }
+
     private static String currentHttpDate() {
         return DateTimeFormatter.RFC_1123_DATE_TIME.format(ZonedDateTime.now(UTC));
     }
 
-    private String newUri(String path) {
-        return "http://127.0.0.1:" + httpPort + '/' + (cached ? "cached" : "uncached") + path;
+    private static class BaseUriProvider implements ArgumentsProvider {
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
+            return Stream.of(server.httpUri("/cached"), server.httpUri("/uncached")).map(Arguments::of);
+        }
     }
 }

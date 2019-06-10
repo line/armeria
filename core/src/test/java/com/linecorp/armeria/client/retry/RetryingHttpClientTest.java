@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.retry;
 
+import static com.linecorp.armeria.client.retry.RetryingClient.ARMERIA_RETRY_COUNT;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
@@ -47,10 +48,9 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.client.ResponseTimeoutException;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
@@ -58,12 +58,13 @@ import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 public class RetryingHttpClientTest {
 
@@ -98,7 +99,11 @@ public class RetryingHttpClientTest {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
-                    if (reqCount.getAndIncrement() < 2) {
+                    final int retryCount = reqCount.getAndIncrement();
+                    if (retryCount != 0) {
+                        assertThat(retryCount).isEqualTo(req.headers().getInt(ARMERIA_RETRY_COUNT));
+                    }
+                    if (retryCount < 2) {
                         return HttpResponse.of("Need to retry");
                     } else {
                         return HttpResponse.of("Succeeded after retry");
@@ -142,8 +147,8 @@ public class RetryingHttpClientTest {
                         throws Exception {
                     if (reqCount.getAndIncrement() < 1) {
                         return HttpResponse.of(
-                                HttpHeaders.of(HttpStatus.SERVICE_UNAVAILABLE)
-                                           .setInt(HttpHeaderNames.RETRY_AFTER, 1 /* second */));
+                                ResponseHeaders.of(HttpStatus.SERVICE_UNAVAILABLE,
+                                                   HttpHeaderNames.RETRY_AFTER, "1" /* second */));
                     } else {
                         return HttpResponse.of("Succeeded after retry");
                     }
@@ -158,10 +163,11 @@ public class RetryingHttpClientTest {
                         throws Exception {
                     if (reqCount.getAndIncrement() < 1) {
                         return HttpResponse.of(
-                                HttpHeaders.of(HttpStatus.SERVICE_UNAVAILABLE)
-                                           .setTimeMillis(HttpHeaderNames.RETRY_AFTER,
-                                                          Duration.ofSeconds(3).toMillis() +
-                                                          System.currentTimeMillis()));
+                                ResponseHeaders.builder(HttpStatus.SERVICE_UNAVAILABLE)
+                                               .setTimeMillis(HttpHeaderNames.RETRY_AFTER,
+                                                              Duration.ofSeconds(3).toMillis() +
+                                                              System.currentTimeMillis())
+                                               .build());
                     } else {
                         return HttpResponse.of(
                                 HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Succeeded after retry");
@@ -175,10 +181,11 @@ public class RetryingHttpClientTest {
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
                     return HttpResponse.of(
-                            HttpHeaders.of(HttpStatus.SERVICE_UNAVAILABLE)
-                                       .setTimeMillis(HttpHeaderNames.RETRY_AFTER,
-                                                      Duration.ofDays(365).toMillis() +
-                                                      System.currentTimeMillis()));
+                            ResponseHeaders.builder(HttpStatus.SERVICE_UNAVAILABLE)
+                                           .setTimeMillis(HttpHeaderNames.RETRY_AFTER,
+                                                          Duration.ofDays(365).toMillis() +
+                                                          System.currentTimeMillis())
+                                           .build());
                 }
             });
 
@@ -213,12 +220,12 @@ public class RetryingHttpClientTest {
                 @Override
                 protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
-                    return HttpResponse.from(req.aggregate().handle((message, thrown) -> {
+                    return HttpResponse.from(req.aggregate().handle((aggregatedRequest, thrown) -> {
                         if (reqPostCount.getAndIncrement() < 1) {
                             return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
                         } else {
                             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8,
-                                                   message.content().toStringUtf8());
+                                                   aggregatedRequest.contentUtf8());
                         }
                     }));
                 }
@@ -267,22 +274,22 @@ public class RetryingHttpClientTest {
                                    .newDecorator())
                 .build();
 
-        final AggregatedHttpMessage res = client.get("/retry-content").aggregate().join();
-        assertThat(res.content().toStringUtf8()).isEqualTo("Succeeded after retry");
+        final AggregatedHttpResponse res = client.get("/retry-content").aggregate().join();
+        assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
     }
 
     @Test
     public void retryWhenStatusMatched() {
         final HttpClient client = client(RetryStrategy.onServerErrorStatus());
-        final AggregatedHttpMessage res = client.get("/503-then-success").aggregate().join();
-        assertThat(res.content().toStringUtf8()).isEqualTo("Succeeded after retry");
+        final AggregatedHttpResponse res = client.get("/503-then-success").aggregate().join();
+        assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
     }
 
     @Test
     public void disableResponseTimeout() {
         final HttpClient client = client(RetryStrategy.onServerErrorStatus(), 0, 0, 100);
-        final AggregatedHttpMessage res = client.get("/503-then-success").aggregate().join();
-        assertThat(res.content().toStringUtf8()).isEqualTo("Succeeded after retry");
+        final AggregatedHttpResponse res = client.get("/503-then-success").aggregate().join();
+        assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
         // response timeout did not happen.
     }
 
@@ -291,8 +298,8 @@ public class RetryingHttpClientTest {
         final HttpClient client = client(RetryStrategy.onServerErrorStatus());
         final Stopwatch sw = Stopwatch.createStarted();
 
-        final AggregatedHttpMessage res = client.get("/retry-after-1-second").aggregate().join();
-        assertThat(res.content().toStringUtf8()).isEqualTo("Succeeded after retry");
+        final AggregatedHttpResponse res = client.get("/retry-after-1-second").aggregate().join();
+        assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
         assertThat(sw.elapsed(TimeUnit.MILLISECONDS)).isGreaterThanOrEqualTo(
                 (long) (TimeUnit.SECONDS.toMillis(1) * 0.9));
     }
@@ -302,8 +309,8 @@ public class RetryingHttpClientTest {
         final HttpClient client = client(RetryStrategy.onServerErrorStatus());
 
         final Stopwatch sw = Stopwatch.createStarted();
-        final AggregatedHttpMessage res = client.get("/retry-after-with-http-date").aggregate().join();
-        assertThat(res.content().toStringUtf8()).isEqualTo("Succeeded after retry");
+        final AggregatedHttpResponse res = client.get("/retry-after-with-http-date").aggregate().join();
+        assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
 
         // Since ZonedDateTime doesn't express exact time,
         // just check out whether it is retried after delayed some time.
@@ -313,15 +320,15 @@ public class RetryingHttpClientTest {
     @Test
     public void propagateLastResponseWhenNextRetryIsAfterTimeout() {
         final HttpClient client = client(RetryStrategy.onServerErrorStatus(Backoff.fixed(10000000)));
-        final AggregatedHttpMessage res = client.get("/service-unavailable").aggregate().join();
-        assertThat(res.headers().status()).isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
+        final AggregatedHttpResponse res = client.get("/service-unavailable").aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
     }
 
     @Test
     public void propagateLastResponseWhenExceedMaxAttempts() {
         final HttpClient client = client(RetryStrategy.onServerErrorStatus(Backoff.fixed(1)), 0, 0, 3);
-        final AggregatedHttpMessage res = client.get("/service-unavailable").aggregate().join();
-        assertThat(res.headers().status()).isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
+        final AggregatedHttpResponse res = client.get("/service-unavailable").aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
     }
 
     @Test
@@ -330,7 +337,7 @@ public class RetryingHttpClientTest {
 
         // The response will be the last response whose headers contains HttpHeaderNames.RETRY_AFTER
         // because next retry is after timeout
-        final HttpHeaders headers = client.get("retry-after-one-year").aggregate().join().headers();
+        final ResponseHeaders headers = client.get("retry-after-one-year").aggregate().join().headers();
         assertThat(headers.status()).isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(headers.get(HttpHeaderNames.RETRY_AFTER)).isNotNull();
     }
@@ -347,8 +354,8 @@ public class RetryingHttpClientTest {
                 };
 
         final HttpClient client = client(strategy, 0, 500, 100);
-        final AggregatedHttpMessage res = client.get("/1sleep-then-success").aggregate().join();
-        assertThat(res.content().toStringUtf8()).isEqualTo("Succeeded after retry");
+        final AggregatedHttpResponse res = client.get("/1sleep-then-success").aggregate().join();
+        assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
     }
 
     @Test
@@ -356,13 +363,13 @@ public class RetryingHttpClientTest {
         final HttpClient client = client(RetryStrategy.onStatus(statusBasedBackoff()));
 
         final Stopwatch sw = Stopwatch.createStarted();
-        AggregatedHttpMessage res = client.get("/503-then-success").aggregate().join();
-        assertThat(res.content().toStringUtf8()).isEqualTo("Succeeded after retry");
+        AggregatedHttpResponse res = client.get("/503-then-success").aggregate().join();
+        assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
         assertThat(sw.elapsed(TimeUnit.MILLISECONDS)).isBetween((long) (10 * 0.9), (long) (1000 * 1.1));
 
         sw.reset().start();
         res = client.get("/500-then-success").aggregate().join();
-        assertThat(res.content().toStringUtf8()).isEqualTo("Succeeded after retry");
+        assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
         assertThat(sw.elapsed(TimeUnit.MILLISECONDS)).isGreaterThanOrEqualTo((long) (1000 * 0.9));
     }
 
@@ -388,8 +395,8 @@ public class RetryingHttpClientTest {
     @Test
     public void retryWithRequestBody() {
         final HttpClient client = client(RetryStrategy.onServerErrorStatus(Backoff.fixed(10)));
-        final AggregatedHttpMessage res = client.post("/post-ping-pong", "bar").aggregate().join();
-        assertThat(res.content().toStringUtf8()).isEqualTo("bar");
+        final AggregatedHttpResponse res = client.post("/post-ping-pong", "bar").aggregate().join();
+        assertThat(res.contentUtf8()).isEqualTo("bar");
     }
 
     @Test
@@ -399,7 +406,7 @@ public class RetryingHttpClientTest {
 
         final HttpClient client = new HttpClientBuilder(server.uri("/"))
                 .factory(factory)
-                .defaultResponseTimeoutMillis(10000)
+                .responseTimeoutMillis(10000)
                 .decorator(new RetryingHttpClientBuilder(
                         // Retry after 8000 which is slightly less than responseTimeoutMillis(10000).
                         RetryStrategy.onServerErrorStatus(Backoff.fixed(8000))).newDecorator())
@@ -488,7 +495,7 @@ public class RetryingHttpClientTest {
     private HttpClient client(RetryStrategy strategy, long responseTimeoutMillis,
                               long responseTimeoutForEach, int maxTotalAttempts) {
         return new HttpClientBuilder(server.uri("/"))
-                .factory(clientFactory).defaultResponseTimeoutMillis(responseTimeoutMillis)
+                .factory(clientFactory).responseTimeoutMillis(responseTimeoutMillis)
                 .decorator(new RetryingHttpClientBuilder(strategy)
                                    .responseTimeoutMillisForEachAttempt(responseTimeoutForEach)
                                    .useRetryAfter(true)
@@ -507,10 +514,10 @@ public class RetryingHttpClientTest {
 
         @Override
         public CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx, HttpResponse response) {
-            final CompletableFuture<AggregatedHttpMessage> future = response.aggregate();
-            return future.handle((message, unused) -> {
-                if (message != null &&
-                    message.content().toStringUtf8().equalsIgnoreCase(retryContent)) {
+            final CompletableFuture<AggregatedHttpResponse> future = response.aggregate();
+            return future.handle((aggregatedResponse, unused) -> {
+                if (aggregatedResponse != null &&
+                    aggregatedResponse.contentUtf8().equalsIgnoreCase(retryContent)) {
                     return backoffOnContent;
                 }
                 return null;

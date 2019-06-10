@@ -20,7 +20,7 @@ import java.util.concurrent.CompletionStage;
 import org.opensaml.messaging.context.MessageContext;
 import org.opensaml.saml.saml2.core.LogoutRequest;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -34,20 +34,19 @@ public interface SamlSingleLogoutHandler {
      * containing in the {@link LogoutRequest}.
      *
      * @param ctx the {@link ServiceRequestContext} of {@code req}
-     * @param req the {@link AggregatedHttpMessage} being handled
+     * @param req the {@link AggregatedHttpRequest} being handled
      * @param message the {@link MessageContext} of the {@link LogoutRequest} received from the identity
-     *                provider.
      */
-    CompletionStage<Void> logoutSucceeded(ServiceRequestContext ctx, AggregatedHttpMessage req,
+    CompletionStage<Void> logoutSucceeded(ServiceRequestContext ctx, AggregatedHttpRequest req,
                                           MessageContext<LogoutRequest> message);
 
     /**
      * Invoked when the single logout request is failed.
      *
      * @param ctx the {@link ServiceRequestContext} of {@code req}
-     * @param req the {@link AggregatedHttpMessage} being handled
+     * @param req the {@link AggregatedHttpRequest} being handled
      * @param cause the reason of the failure
      */
-    CompletionStage<Void> logoutFailed(ServiceRequestContext ctx, AggregatedHttpMessage req,
+    CompletionStage<Void> logoutFailed(ServiceRequestContext ctx, AggregatedHttpRequest req,
                                        Throwable cause);
 }

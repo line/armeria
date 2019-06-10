@@ -17,11 +17,10 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.net.IDN;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -32,10 +31,12 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 
 import com.google.common.base.Ascii;
+import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.MediaTypeSet;
+import com.linecorp.armeria.common.logging.ContentPreviewer;
+import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -50,7 +51,7 @@ import io.netty.util.DomainNameMappingBuilder;
  *   <li>the hostname pattern, as defined in
  *       <a href="https://tools.ietf.org/html/rfc2818#section-3.1">the section 3.1 of RFC2818</a></li>
  *   <li>{@link SslContext} if TLS is enabled</li>
- *   <li>the list of available {@link Service}s and their {@link PathMapping}s</li>
+ *   <li>the list of available {@link Service}s and their {@link Route}s</li>
  * </ul>
  *
  * @see VirtualHostBuilder
@@ -61,7 +62,7 @@ public final class VirtualHost {
             "^(?:[-_a-zA-Z0-9]|[-_a-zA-Z0-9][-_.a-zA-Z0-9]*[-_a-zA-Z0-9])$");
 
     /**
-     * Initialized later by {@link ServerConfig} via {@link #setServerConfig(ServerConfig)}.
+     * Initialized later via {@link #setServerConfig(ServerConfig)}.
      */
     @Nullable
     private ServerConfig serverConfig;
@@ -72,49 +73,23 @@ public final class VirtualHost {
     private final SslContext sslContext;
     private final List<ServiceConfig> services;
     private final Router<ServiceConfig> router;
-    private final MediaTypeSet producibleMediaTypes;
 
-    /**
-     * If {@code accessLogger} is {@code null}, it is initialized later
-     * by {@link ServerBuilder} via {@link #accessLogger(Logger)}.
-     */
-    @Nullable
-    private Logger accessLogger;
+    private final Logger accessLogger;
 
-    @Nullable
-    private String strVal;
-
-    /**
-     * Use this constructor when you are sure that the {@link ServiceConfig}s have no duplicate
-     * {@link PathMapping}s or it's OK to have them. This is useful when you create a new {@link VirtualHost}
-     * from an existing {@link VirtualHost}, because its {@link ServiceConfig}s were validated already.
-     */
-    VirtualHost(String defaultHostname, String hostnamePattern,
-                @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
-                MediaTypeSet producibleMediaTypes) {
-        this(defaultHostname, hostnamePattern, sslContext, serviceConfigs, producibleMediaTypes,
-             (virtualHost, mapping, existingMapping) -> {}, null);
-    }
+    private final long requestTimeoutMillis;
+    private final long maxRequestLength;
+    private final boolean verboseResponses;
+    private final ContentPreviewerFactory requestContentPreviewerFactory;
+    private final ContentPreviewerFactory responseContentPreviewerFactory;
 
     VirtualHost(String defaultHostname, String hostnamePattern,
                 @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
-                MediaTypeSet producibleMediaTypes, Function<VirtualHost, Logger> accessLoggerMapper) {
-        this(defaultHostname, hostnamePattern, sslContext, serviceConfigs, producibleMediaTypes,
-             (virtualHost, mapping, existingMapping) -> {}, accessLoggerMapper);
-    }
-
-    VirtualHost(String defaultHostname, String hostnamePattern,
-                @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
-                MediaTypeSet producibleMediaTypes, RejectedPathMappingHandler rejectionHandler) {
-        this(defaultHostname, hostnamePattern, sslContext, serviceConfigs, producibleMediaTypes,
-             rejectionHandler, null);
-    }
-
-    VirtualHost(String defaultHostname, String hostnamePattern,
-                @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
-                MediaTypeSet producibleMediaTypes, RejectedPathMappingHandler rejectionHandler,
-                Function<VirtualHost, Logger> accessLoggerMapper) {
-
+                RejectedRouteHandler rejectionHandler,
+                Function<VirtualHost, Logger> accessLoggerMapper,
+                long requestTimeoutMillis,
+                long maxRequestLength, boolean verboseResponses,
+                ContentPreviewerFactory requestContentPreviewerFactory,
+                ContentPreviewerFactory responseContentPreviewerFactory) {
         defaultHostname = normalizeDefaultHostname(defaultHostname);
         hostnamePattern = normalizeHostnamePattern(hostnamePattern);
         ensureHostnamePatternMatchesDefaultHostname(hostnamePattern, defaultHostname);
@@ -122,24 +97,29 @@ public final class VirtualHost {
         this.defaultHostname = defaultHostname;
         this.hostnamePattern = hostnamePattern;
         this.sslContext = validateSslContext(sslContext);
-        this.producibleMediaTypes = producibleMediaTypes;
+        this.requestTimeoutMillis = requestTimeoutMillis;
+        this.maxRequestLength = maxRequestLength;
+        this.verboseResponses = verboseResponses;
+        this.requestContentPreviewerFactory = requestContentPreviewerFactory;
+        this.responseContentPreviewerFactory = responseContentPreviewerFactory;
 
         requireNonNull(serviceConfigs, "serviceConfigs");
+        services = Streams.stream(serviceConfigs)
+                          .map(sc -> sc.withVirtualHost(this))
+                          .collect(toImmutableList());
 
-        final List<ServiceConfig> servicesCopy = new ArrayList<>();
-
-        for (ServiceConfig c : serviceConfigs) {
-            c = c.build(this);
-            servicesCopy.add(c);
-        }
-
-        services = Collections.unmodifiableList(servicesCopy);
         router = Routers.ofVirtualHost(this, services, rejectionHandler);
-        if (accessLoggerMapper != null) {
-            accessLogger = accessLoggerMapper.apply(this);
-            checkState(accessLogger != null,
-                       "accessLoggerMapper.apply() has returned null for virtual host: %s.", hostnamePattern);
-        }
+        accessLogger = accessLoggerMapper.apply(this);
+        checkState(accessLogger != null,
+                   "accessLoggerMapper.apply() has returned null for virtual host: %s.", hostnamePattern);
+    }
+
+    VirtualHost withNewSslContext(SslContext sslContext) {
+        return new VirtualHost(defaultHostname(), hostnamePattern(), sslContext,
+                               serviceConfigs(), RejectedRouteHandler.DISABLED,
+                               host -> accessLogger, requestTimeoutMillis(),
+                               maxRequestLength(), verboseResponses(),
+                               requestContentPreviewerFactory(), responseContentPreviewerFactory());
     }
 
     /**
@@ -239,26 +219,6 @@ public final class VirtualHost {
     }
 
     /**
-     * Sets the {@link Logger} which is used for writing access logs of this virtual host.
-     */
-    void accessLogger(Logger logger) {
-        accessLogger = requireNonNull(logger, "logger");
-    }
-
-    /**
-     * Returns the {@link Logger} which is used for writing access logs of this virtual host.
-     */
-    public Logger accessLogger() {
-        checkState(accessLogger != null, "accessLogger not initialized yet.");
-        return accessLogger;
-    }
-
-    @Nullable
-    Logger accessLoggerOrNull() {
-        return accessLogger;
-    }
-
-    /**
      * Returns the default hostname of this virtual host.
      */
     public String defaultHostname() {
@@ -289,76 +249,160 @@ public final class VirtualHost {
     }
 
     /**
-     * Returns {@link MediaTypeSet} that consists of media types producible by this virtual host.
+     * Returns the {@link Logger} which is used for writing access logs of this virtual host.
      */
-    public MediaTypeSet producibleMediaTypes() {
-        return producibleMediaTypes;
+    public Logger accessLogger() {
+        return accessLogger;
     }
 
     /**
-     * Finds the {@link Service} whose {@link Router} matches the {@link PathMappingContext}.
+     * Returns the timeout of a request.
      *
-     * @param mappingCtx a context to find the {@link Service}.
+     * @deprecated Use {@link #requestTimeoutMillis()}.
      *
-     * @return the {@link ServiceConfig} wrapped by a {@link PathMapped} if there's a match.
-     *         {@link PathMapped#empty()} if there's no match.
+     * @see ServiceConfig#requestTimeoutMillis()
+     * @see ServerConfig#requestTimeoutMillis()
      */
-    public PathMapped<ServiceConfig> findServiceConfig(PathMappingContext mappingCtx) {
-        requireNonNull(mappingCtx, "mappingCtx");
-        return router.find(mappingCtx);
+    @Deprecated
+    public long defaultRequestTimeoutMillis() {
+        return requestTimeoutMillis;
     }
 
-    private Router<ServiceConfig> router() {
-        return router;
+    /**
+     * Returns the timeout of a request.
+     *
+     * @see ServiceConfig#requestTimeoutMillis()
+     * @see ServerConfig#requestTimeoutMillis()
+     */
+    public long requestTimeoutMillis() {
+        return requestTimeoutMillis;
+    }
+
+    /**
+     * Returns the maximum allowed length of the content decoded at the session layer.
+     * e.g. the content length of an HTTP request.
+     *
+     * @deprecated Use {@link #maxRequestLength()}.
+     *
+     * @see ServiceConfig#maxRequestLength()
+     * @see ServerConfig#maxRequestLength()
+     */
+    @Deprecated
+    public long defaultMaxRequestLength() {
+        return maxRequestLength;
+    }
+
+    /**
+     * Returns the maximum allowed length of the content decoded at the session layer.
+     * e.g. the content length of an HTTP request.
+     *
+     * @see ServiceConfig#maxRequestLength()
+     * @see ServerConfig#maxRequestLength()
+     */
+    public long maxRequestLength() {
+        return maxRequestLength;
+    }
+
+    /**
+     * Returns whether the verbose response mode is enabled. When enabled, the server responses will contain
+     * the exception type and its full stack trace, which may be useful for debugging while potentially
+     * insecure. When disabled, the server responses will not expose such server-side details to the client.
+     *
+     * @see ServiceConfig#verboseResponses()
+     * @see ServerConfig#verboseResponses()
+     */
+    public boolean verboseResponses() {
+        return verboseResponses;
+    }
+
+    /**
+     * Returns the {@link ContentPreviewerFactory} used for creating a new {@link ContentPreviewer}
+     * which produces the request content preview of this virtual host.
+     *
+     * @see ServiceConfig#requestContentPreviewerFactory()
+     */
+    public ContentPreviewerFactory requestContentPreviewerFactory() {
+        return requestContentPreviewerFactory;
+    }
+
+    /**
+     * Returns the {@link ContentPreviewerFactory} used for creating a new {@link ContentPreviewer}
+     * which produces the response content preview of this virtual host.
+     *
+     * @see ServiceConfig#responseContentPreviewerFactory()
+     */
+    public ContentPreviewerFactory responseContentPreviewerFactory() {
+        return responseContentPreviewerFactory;
+    }
+
+    /**
+     * Finds the {@link Service} whose {@link Router} matches the {@link RoutingContext}.
+     *
+     * @param routingCtx a context to find the {@link Service}.
+     *
+     * @return the {@link ServiceConfig} wrapped by a {@link Routed} if there's a match.
+     *         {@link Routed#empty()} if there's no match.
+     */
+    public Routed<ServiceConfig> findServiceConfig(RoutingContext routingCtx) {
+        return router.find(requireNonNull(routingCtx, "routingCtx"));
     }
 
     VirtualHost decorate(@Nullable Function<Service<HttpRequest, HttpResponse>,
-                                            Service<HttpRequest, HttpResponse>> decorator) {
+            Service<HttpRequest, HttpResponse>> decorator) {
         if (decorator == null) {
             return this;
         }
 
         final List<ServiceConfig> services =
-                this.services.stream().map(cfg -> {
-                    final PathMapping pathMapping = cfg.pathMapping();
-                    final Service<HttpRequest, HttpResponse> service = decorator.apply(cfg.service());
-                    final String loggerName = cfg.loggerName().orElse(null);
-                    return new ServiceConfig(pathMapping, service, loggerName);
-                }).collect(Collectors.toList());
+                this.services.stream()
+                             .map(cfg -> cfg.withDecoratedService(decorator))
+                             .collect(Collectors.toList());
 
         return new VirtualHost(defaultHostname(), hostnamePattern(), sslContext(),
-                               services, producibleMediaTypes());
+                               services, RejectedRouteHandler.DISABLED,
+                               host -> accessLogger, requestTimeoutMillis(),
+                               maxRequestLength(), verboseResponses(),
+                               requestContentPreviewerFactory(), responseContentPreviewerFactory());
     }
 
     @Override
     public String toString() {
-        String strVal = this.strVal;
-        if (strVal == null) {
-            this.strVal = strVal = toString(
-                    getClass(), defaultHostname(), hostnamePattern(), sslContext(), serviceConfigs());
-        }
-
-        return strVal;
+        return toString(true);
     }
 
-    static String toString(@Nullable Class<?> type, String defaultHostname, String hostnamePattern,
-                           @Nullable SslContext sslContext, List<?> services) {
-
+    private String toString(boolean withTypeName) {
         final StringBuilder buf = new StringBuilder();
-        if (type != null) {
-            buf.append(type.getSimpleName());
+        if (withTypeName) {
+            buf.append(getClass().getSimpleName());
         }
 
         buf.append('(');
-        buf.append(defaultHostname);
+        buf.append(defaultHostname());
         buf.append('/');
-        buf.append(hostnamePattern);
+        buf.append(hostnamePattern());
         buf.append(", ssl: ");
-        buf.append(sslContext != null);
+        buf.append(sslContext() != null);
         buf.append(", services: ");
         buf.append(services);
+        buf.append(", router: ");
+        buf.append(router);
+        buf.append(", accessLogger: ");
+        buf.append(accessLogger());
+        buf.append(", requestTimeoutMillis: ");
+        buf.append(requestTimeoutMillis());
+        buf.append(", maxRequestLength: ");
+        buf.append(maxRequestLength());
+        buf.append(", verboseResponses: ");
+        buf.append(verboseResponses());
+        buf.append(", requestContentPreviewerFactory: ");
+        buf.append(requestContentPreviewerFactory());
+        buf.append(", responseContentPreviewerFactory: ");
+        buf.append(responseContentPreviewerFactory());
         buf.append(')');
-
         return buf.toString();
+    }
+
+    String toStringWithoutTypeName() {
+        return toString(false);
     }
 }

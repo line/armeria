@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.server.saml;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -28,13 +28,13 @@ interface SamlServiceFunction {
     /**
      * Invoked by the {@link SamlService} when a SAML message is received.
      *
-     * @param ctx the {@link ServiceRequestContext} of {@code req}
-     * @param msg the {@link AggregatedHttpMessage} being handled
+     * @param ctx the {@link ServiceRequestContext}
+     * @param req the {@link AggregatedHttpRequest} being handled
      * @param defaultHostname the hostname which is specified by a user via the {@link SamlServiceProvider},
      *                        or the virtual hostname of the server if a user did not specify his or her
      *                        hostname
      * @param portConfig the port number and its {@link SessionProtocol} which the server is bound to
      */
-    HttpResponse serve(ServiceRequestContext ctx, AggregatedHttpMessage msg,
+    HttpResponse serve(ServiceRequestContext ctx, AggregatedHttpRequest req,
                        String defaultHostname, SamlPortConfig portConfig);
 }

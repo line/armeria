@@ -31,7 +31,6 @@ import org.junit.Test;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -45,7 +44,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 /**
  * Tests if Armeria decorators can alter the request/response timeout specified in Thrift call parameters.
@@ -55,7 +54,7 @@ public class ThriftHttpHeaderTest {
     private static final String SECRET = "QWxhZGRpbjpPcGVuU2VzYW1l";
 
     private static final HelloService.AsyncIface helloService = (name, resultHandler) -> {
-        final ServiceRequestContext ctx = (ServiceRequestContext) RequestContext.current();
+        final ServiceRequestContext ctx = RequestContext.current();
         final HttpRequest httpReq = ctx.request();
         final HttpHeaders headers = httpReq.headers();
         if (headers.contains(AUTHORIZATION, SECRET)) {
@@ -70,8 +69,7 @@ public class ThriftHttpHeaderTest {
             resultHandler.onError(new Exception(errorMessage));
         }
 
-        final HttpHeaders responseHeaders = new DefaultHttpHeaders().set(HttpHeaderNames.of("foo"), "bar");
-        ctx.setAdditionalResponseHeaders(responseHeaders);
+        ctx.setAdditionalResponseHeader(HttpHeaderNames.of("foo"), "bar");
     };
 
     @ClassRule
@@ -104,7 +102,7 @@ public class ThriftHttpHeaderTest {
             // Should fail with the first half of the secret.
             assertAuthorizationFailure(client, secretA);
             try (SafeCloseable ignored2 = Clients.withHttpHeaders(
-                    h -> h.set(AUTHORIZATION, h.get(AUTHORIZATION) + secretB))) {
+                    h -> h.toBuilder().set(AUTHORIZATION, h.get(AUTHORIZATION) + secretB).build())) {
                 // Should pass if both manipulators worked.
                 assertThat(client.hello("foobar")).isEqualTo("Hello, foobar!");
             }
@@ -175,6 +173,7 @@ public class ThriftHttpHeaderTest {
         } else {
             expectedMessage = "not authorized due to missing credential";
         }
+
         assertThatThrownBy(() -> client.hello("foo"))
                 .isInstanceOf(TException.class)
                 .hasMessageContaining(expectedMessage);

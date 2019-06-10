@@ -21,7 +21,8 @@ import com.linecorp.armeria.common.Response;
 
 /**
  * A functional interface that enables building a {@link SimpleDecoratingClient} with
- * {@link ClientBuilder#decorator(Class, Class, DecoratingClientFunction)}.
+ * {@link ClientBuilder#decorator(DecoratingClientFunction)} and
+ * {@link ClientBuilder#rpcDecorator(DecoratingClientFunction)}.
  *
  * @param <I> the {@link Request} type
  * @param <O> the {@link Response} type

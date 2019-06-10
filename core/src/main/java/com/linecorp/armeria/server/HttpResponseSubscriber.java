@@ -27,17 +27,20 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.DefaultHttpHeaders;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
@@ -51,14 +54,14 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
     private static final Logger logger = LoggerFactory.getLogger(HttpResponseSubscriber.class);
 
-    private static final AggregatedHttpMessage INTERNAL_SERVER_ERROR_MESSAGE =
-            AggregatedHttpMessage.of(HttpStatus.INTERNAL_SERVER_ERROR);
-    private static final AggregatedHttpMessage SERVICE_UNAVAILABLE_MESSAGE =
-            AggregatedHttpMessage.of(HttpStatus.SERVICE_UNAVAILABLE);
+    private static final AggregatedHttpResponse INTERNAL_SERVER_ERROR_MESSAGE =
+            AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
+    private static final AggregatedHttpResponse SERVICE_UNAVAILABLE_MESSAGE =
+            AggregatedHttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
 
     enum State {
         NEEDS_HEADERS,
-        NEEDS_DATA_OR_TRAILING_HEADERS,
+        NEEDS_DATA_OR_TRAILERS,
         DONE,
     }
 
@@ -154,62 +157,64 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         switch (state) {
             case NEEDS_HEADERS: {
                 logBuilder().startResponse();
-                if (!(o instanceof HttpHeaders)) {
+                if (!(o instanceof ResponseHeaders)) {
                     throw newIllegalStateException(
-                            "published an HttpData without a preceding Http2Headers: " + o +
+                            "published an HttpData without a preceding ResponseHeaders: " + o +
                             " (service: " + service() + ')');
                 }
 
-                final HttpHeaders headers = (HttpHeaders) o;
+                ResponseHeaders headers = (ResponseHeaders) o;
                 final HttpStatus status = headers.status();
-                if (status == null) {
-                    throw newIllegalStateException("published an HttpHeaders without status: " + o +
-                                                   " (service: " + service() + ')');
-                }
-
                 if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
                     // Needs non-informational headers.
                     break;
                 }
 
-                final HttpHeaders additionalHeaders = reqCtx.additionalResponseHeaders();
-                o = fillAdditionalHeaders(headers, additionalHeaders);
-
-                logBuilder().responseHeaders(headers);
-
-                if (req.method() == HttpMethod.HEAD) {
-                    // HEAD responses always close the stream with the initial headers, even if not explicitly
-                    // set.
+                if (req.method() == HttpMethod.HEAD || ArmeriaHttpUtil.isContentAlwaysEmpty(status)) {
+                    // We're done with the response if it is a response to a HEAD request or one of the
+                    // no-content response statuses.
                     endOfStream = true;
-                    break;
+                } else {
+                    state = State.NEEDS_DATA_OR_TRAILERS;
                 }
 
-                final int statusCode = status.code();
-                switch (statusCode) {
-                    case 204:
-                    case 205:
-                    case 304:
-                        // These responses are not allowed to have content so we always close the stream even if
-                        // not explicitly set.
-                        endOfStream = true;
-                        break;
-                    default:
-                        state = State.NEEDS_DATA_OR_TRAILING_HEADERS;
+                final HttpHeaders additionalHeaders = reqCtx.additionalResponseHeaders();
+                final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
+
+                final ResponseHeadersBuilder newHeaders = fillAdditionalHeaders(headers, additionalHeaders);
+
+                if (endOfStream && !additionalTrailers.isEmpty()) {
+                    newHeaders.setIfAbsent(additionalTrailers);
                 }
+
+                if (newHeaders.contains(HttpHeaderNames.CONTENT_LENGTH) &&
+                    !additionalTrailers.isEmpty()) {
+                    // We don't apply chunked encoding when the content-length header is set, which would
+                    // prevent the trailers from being sent so we go ahead and remove content-length to force
+                    // chunked encoding.
+                    newHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
+                }
+
+                headers = newHeaders.build();
+                logBuilder().responseHeaders(headers);
+                o = headers;
+
                 break;
             }
-            case NEEDS_DATA_OR_TRAILING_HEADERS: {
+            case NEEDS_DATA_OR_TRAILERS: {
                 if (o instanceof HttpHeaders) {
-                    final HttpHeaders trailingHeaders = (HttpHeaders) o;
-                    if (trailingHeaders.status() != null) {
+                    final HttpHeaders trailers = (HttpHeaders) o;
+                    if (trailers.contains(HttpHeaderNames.STATUS)) {
                         throw newIllegalStateException(
-                                "published a trailing HttpHeaders with status: " + o +
+                                "published an HTTP trailers with status: " + o +
                                 " (service: " + service() + ')');
                     }
                     final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
-                    o = fillAdditionalHeaders(trailingHeaders, additionalTrailers);
+                    final HttpHeaders addedTrailers = fillAdditionalTrailers(trailers, additionalTrailers);
+                    logBuilder().responseTrailers(addedTrailers);
+                    o = addedTrailers;
 
-                    // Trailing headers always end the stream even if not explicitly set.
+                    // Trailers always end the stream even if not explicitly set.
                     endOfStream = true;
                 } else if (endOfStream) { // Last DATA frame
                     final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
@@ -222,6 +227,9 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                 break;
             }
             case DONE:
+                // Cancel the subscription if any message comes here after the state has been changed to DONE.
+                assert subscription != null;
+                subscription.cancel();
                 ReferenceCountUtil.safeRelease(o);
                 return;
         }
@@ -236,19 +244,19 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
             // If timeout occurs, respond with 503 Service Unavailable.
             ((HttpResponseException) cause).httpResponse()
                                            .aggregate(ctx.executor())
-                                           .handleAsync((message, throwable) -> {
+                                           .handleAsync((res, throwable) -> {
                                                if (throwable != null) {
                                                    failAndRespond(throwable,
                                                                   INTERNAL_SERVER_ERROR_MESSAGE,
                                                                   Http2Error.CANCEL);
                                                } else {
-                                                   failAndRespond(cause, message, Http2Error.CANCEL);
+                                                   failAndRespond(cause, res, Http2Error.CANCEL);
                                                }
                                                return null;
                                            }, ctx.executor());
         } else if (cause instanceof HttpStatusException) {
             failAndRespond(cause,
-                           AggregatedHttpMessage.of(((HttpStatusException) cause).httpStatus()),
+                           AggregatedHttpResponse.of(((HttpStatusException) cause).httpStatus()),
                            Http2Error.CANCEL);
         } else if (cause instanceof AbortedStreamException) {
             // One of the two cases:
@@ -296,8 +304,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         if (o instanceof HttpData) {
             final HttpData data = (HttpData) o;
             wroteEmptyData = data.isEmpty();
+            logBuilder().increaseResponseLength(data);
             future = responseEncoder.writeData(req.id(), req.streamId(), data, endOfStream);
-            logBuilder().increaseResponseLength(data.length());
         } else if (o instanceof HttpHeaders) {
             wroteEmptyData = false;
             future = responseEncoder.writeHeaders(req.id(), req.streamId(), (HttpHeaders) o, endOfStream);
@@ -325,18 +333,14 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
             // - every message has been sent successfully.
             // - any write operation is failed with a cause.
             if (isSuccess) {
-                if (!loggedResponseHeadersFirstBytesTransferred) {
-                    logBuilder().responseFirstBytesTransferred();
-                    loggedResponseHeadersFirstBytesTransferred = true;
-                }
+                maybeLogFirstResponseBytesTransferred();
 
                 if (endOfStream && tryComplete()) {
                     logBuilder().endResponse();
                     reqCtx.log().addListener(accessLogWriter::log, RequestLogAvailability.COMPLETE);
                 }
-                if (state != State.DONE) {
-                    subscription.request(1);
-                }
+
+                subscription.request(1);
                 return;
             }
 
@@ -359,12 +363,12 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         return oldState;
     }
 
-    private void failAndRespond(Throwable cause, AggregatedHttpMessage message, Http2Error error) {
-        final HttpHeaders headers = message.headers();
-        final HttpData content = message.content();
+    private void failAndRespond(Throwable cause, AggregatedHttpResponse res, Http2Error error) {
+        final ResponseHeaders headers = res.headers();
+        final HttpData content = res.content();
 
         logBuilder().responseHeaders(headers);
-        logBuilder().increaseResponseLength(content.length());
+        logBuilder().increaseResponseLength(content);
 
         final State oldState = setDone();
         subscription.cancel();
@@ -374,13 +378,17 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
         final ChannelFuture future;
         if (wroteNothing(oldState)) {
+            final ChannelFuture headersWriteFuture;
             // Did not write anything yet; we can send an error response instead of resetting the stream.
             if (content.isEmpty()) {
-                future = responseEncoder.writeHeaders(id, streamId, headers, true);
+                headersWriteFuture = responseEncoder.writeHeaders(id, streamId, headers, true);
+                future = headersWriteFuture;
             } else {
-                responseEncoder.writeHeaders(id, streamId, headers, false);
+                headersWriteFuture = responseEncoder.writeHeaders(id, streamId, headers, false);
                 future = responseEncoder.writeData(id, streamId, content, true);
             }
+
+            headersWriteFuture.addListener((ChannelFuture unused) -> maybeLogFirstResponseBytesTransferred());
         } else {
             // Wrote something already; we have to reset/cancel the stream.
             future = responseEncoder.writeReset(id, streamId, error);
@@ -420,21 +428,32 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         return true;
     }
 
+    private void maybeLogFirstResponseBytesTransferred() {
+        if (!loggedResponseHeadersFirstBytesTransferred) {
+            logBuilder().responseFirstBytesTransferred();
+            loggedResponseHeadersFirstBytesTransferred = true;
+        }
+    }
+
     private static boolean wroteNothing(State state) {
         return state == State.NEEDS_HEADERS;
     }
 
-    private static HttpHeaders fillAdditionalHeaders(HttpHeaders headers, HttpHeaders additionalHeaders) {
-        if (!additionalHeaders.isEmpty()) {
-            if (headers.isImmutable()) {
-                // All headers are already validated.
-                final HttpHeaders temp = headers;
-                headers = new DefaultHttpHeaders(false, temp.size() + additionalHeaders.size());
-                headers.set(temp);
-            }
-            headers.setAllIfAbsent(additionalHeaders);
+    private static ResponseHeadersBuilder fillAdditionalHeaders(ResponseHeaders headers,
+                                                                HttpHeaders additionalHeaders) {
+        if (additionalHeaders.isEmpty()) {
+            return headers.toBuilder();
         }
-        return headers;
+
+        return headers.toBuilder().setIfAbsent(additionalHeaders);
+    }
+
+    private static HttpHeaders fillAdditionalTrailers(HttpHeaders trailers, HttpHeaders additionalTrailers) {
+        if (additionalTrailers.isEmpty()) {
+            return trailers;
+        }
+
+        return trailers.toBuilder().setIfAbsent(additionalTrailers).build();
     }
 
     private boolean cancelTimeout() {

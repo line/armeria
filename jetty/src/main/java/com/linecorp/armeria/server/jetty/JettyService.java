@@ -48,7 +48,7 @@ import org.eclipse.jetty.util.thread.Scheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -57,6 +57,9 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerListenerAdapter;
@@ -239,7 +242,7 @@ public final class JettyService implements HttpService {
         req.aggregate().handle((aReq, cause) -> {
             if (cause != null) {
                 logger.warn("{} Failed to aggregate a request:", ctx, cause);
-                res.close(HttpHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
+                res.close(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
                 return null;
             }
 
@@ -298,7 +301,7 @@ public final class JettyService implements HttpService {
     }
 
     private static void fillRequest(
-            ServiceRequestContext ctx, AggregatedHttpMessage aReq, Request jReq) {
+            ServiceRequestContext ctx, AggregatedHttpRequest aReq, Request jReq) {
 
         jReq.setDispatcherType(DispatcherType.REQUEST);
         jReq.setAsyncSupported(false, "armeria");
@@ -307,16 +310,15 @@ public final class JettyService implements HttpService {
 
         final HttpData content = aReq.content();
         if (!content.isEmpty()) {
-            jReq.getHttpInput().addContent(new Content(ByteBuffer.wrap(
-                    content.array(), content.offset(), content.length())));
+            jReq.getHttpInput().addContent(new Content(ByteBuffer.wrap(content.array())));
         }
         jReq.getHttpInput().eof();
     }
 
-    private static MetaData.Request toRequestMetadata(ServiceRequestContext ctx, AggregatedHttpMessage aReq) {
+    private static MetaData.Request toRequestMetadata(ServiceRequestContext ctx, AggregatedHttpRequest aReq) {
         // Construct the HttpURI
         final StringBuilder uriBuf = new StringBuilder();
-        final HttpHeaders aHeaders = aReq.headers();
+        final RequestHeaders aHeaders = aReq.headers();
 
         uriBuf.append(ctx.sessionProtocol().isTls() ? "https" : "http");
         uriBuf.append("://");
@@ -335,24 +337,25 @@ public final class JettyService implements HttpService {
             }
         });
 
-        return new MetaData.Request(
-                aHeaders.method().name(), uri, HttpVersion.HTTP_1_1, jHeaders, aReq.content().length());
+        return new MetaData.Request(aHeaders.get(HttpHeaderNames.METHOD), uri,
+                                    HttpVersion.HTTP_1_1, jHeaders, aReq.content().length());
     }
 
-    private static HttpHeaders toResponseHeaders(ArmeriaHttpTransport transport) {
+    private static ResponseHeaders toResponseHeaders(ArmeriaHttpTransport transport) {
         final MetaData.Response info = transport.info;
         if (info == null) {
             throw new IllegalStateException("response metadata unavailable");
         }
 
-        final HttpHeaders headers = HttpHeaders.of(HttpStatus.valueOf(info.getStatus()));
+        final ResponseHeadersBuilder headers = ResponseHeaders.builder();
+        headers.status(info.getStatus());
         info.getFields().forEach(e -> headers.add(HttpHeaderNames.of(e.getName()), e.getValue()));
 
         if (transport.method != HttpMethod.HEAD) {
             headers.setLong(HttpHeaderNames.CONTENT_LENGTH, transport.contentLength);
         }
 
-        return headers;
+        return headers.build();
     }
 
     private static final class ArmeriaHttpTransport implements HttpTransport {
@@ -385,12 +388,12 @@ public final class JettyService implements HttpService {
 
             if (content.hasArray()) {
                 final int from = content.arrayOffset() + content.position();
-                out.add(HttpData.of(Arrays.copyOfRange(content.array(), from, from + length)));
+                out.add(HttpData.wrap(Arrays.copyOfRange(content.array(), from, from + length)));
                 content.position(content.position() + length);
             } else {
                 final byte[] data = new byte[length];
                 content.get(data);
-                out.add(HttpData.of(data));
+                out.add(HttpData.wrap(data));
             }
 
             contentLength += length;

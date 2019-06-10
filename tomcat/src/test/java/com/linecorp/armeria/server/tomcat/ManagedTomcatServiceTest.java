@@ -34,7 +34,7 @@ import org.junit.Test;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.internal.webapp.WebAppContainerTest;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.util.concurrent.Future;

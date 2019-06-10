@@ -26,14 +26,12 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
-import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.DefaultAttributeMap;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.Channel;
-import io.netty.handler.ssl.SslHandler;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
@@ -51,7 +49,7 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     private String decodedPath;
     @Nullable
     private final String query;
-    private final Request request;
+    private volatile Request request;
 
     // Callbacks
     @Nullable
@@ -77,6 +75,31 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
         this.path = requireNonNull(path, "path");
         this.query = query;
         this.request = requireNonNull(request, "request");
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T extends Request> T request() {
+        return (T) request;
+    }
+
+    @Override
+    public final boolean updateRequest(Request req) {
+        requireNonNull(req, "req");
+        final Request oldReq = request;
+        if (oldReq instanceof HttpRequest) {
+            if (!(req instanceof HttpRequest)) {
+                return false;
+            }
+        } else {
+            assert oldReq instanceof RpcRequest;
+            if (!(req instanceof RpcRequest)) {
+                return false;
+            }
+        }
+
+        request = req;
+        return true;
     }
 
     @Override
@@ -107,18 +130,6 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
         return ch != null ? (A) ch.localAddress() : null;
     }
 
-    @Nullable
-    @Override
-    public SSLSession sslSession() {
-        final Channel ch = channel();
-        if (ch == null) {
-            return null;
-        }
-
-        final SslHandler sslHandler = ch.pipeline().get(SslHandler.class);
-        return sslHandler != null ? sslHandler.engine().getSession() : null;
-    }
-
     @Override
     public final HttpMethod method() {
         return method;
@@ -142,12 +153,6 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     @Override
     public final String query() {
         return query;
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public final <T extends Request> T request() {
-        return (T) request;
     }
 
     @Override

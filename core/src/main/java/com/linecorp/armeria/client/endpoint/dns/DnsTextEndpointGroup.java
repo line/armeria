@@ -31,7 +31,6 @@ import com.linecorp.armeria.common.CommonPools;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.EventLoop;
-import io.netty.handler.codec.dns.DefaultDnsQuestion;
 import io.netty.handler.codec.dns.DnsRawRecord;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
@@ -62,7 +61,7 @@ public final class DnsTextEndpointGroup extends DnsEndpointGroup {
                          DnsServerAddressStreamProvider serverAddressStreamProvider,
                          Backoff backoff, String hostname, Function<byte[], Endpoint> mapping) {
         super(eventLoop, minTtl, maxTtl, serverAddressStreamProvider, backoff,
-              ImmutableList.of(new DefaultDnsQuestion(hostname, DnsRecordType.TXT)),
+              ImmutableList.of(new DnsQuestionWithoutTrailingDot(hostname, DnsRecordType.TXT)),
               unused -> {});
         this.mapping = mapping;
         start();

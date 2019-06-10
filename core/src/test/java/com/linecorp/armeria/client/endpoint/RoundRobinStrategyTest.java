@@ -20,14 +20,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 
 public class RoundRobinStrategyTest {
     private static final EndpointGroup ENDPOINT_GROUP =
@@ -38,11 +36,7 @@ public class RoundRobinStrategyTest {
 
     private final RoundRobinStrategy strategy = new RoundRobinStrategy();
 
-    @Rule
-    public MockitoRule mocks = MockitoJUnit.rule();
-
-    @Mock
-    private ClientRequestContext ctx;
+    private final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
 
     @Before
     public void setup() {

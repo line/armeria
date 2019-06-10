@@ -31,6 +31,7 @@
 package com.linecorp.armeria.common;
 
 import java.time.Instant;
+import java.time.temporal.TemporalAccessor;
 import java.util.Calendar;
 import java.util.Date;
 
@@ -44,8 +45,8 @@ import io.netty.handler.codec.ValueConverter;
  */
 final class StringValueConverter implements ValueConverter<String> {
 
-    // Forked from Netty at f755e584638e20a4ae62466dd4b7a14954650348 (CharSequenceConverter) and
-    // 942b993f2b9781ff2126ff92a6be5b975dfc72ed (DefaultHttpHeaders.HeaderValueConverter)
+    // Forked from Netty 4.1.34 at 1611acf4cee4481b89a2cf024ccf821de2dbf13c (CharSequenceValueConverter) and
+    // 4c64c98f348131e0792ba4a92ce3d0003237d56a (DefaultHttpHeaders.HeaderValueConverter)
 
     static final StringValueConverter INSTANCE = new StringValueConverter();
 
@@ -59,16 +60,32 @@ final class StringValueConverter implements ValueConverter<String> {
             return null;
         }
 
+        // Try the types that appears more often first.
+        if (value instanceof CharSequence ||
+            value instanceof Number ||
+            value instanceof MediaType) {
+            return value.toString();
+        }
+
+        if (value instanceof Instant) {
+            return DateFormatter.format(new Date(((Instant) value).toEpochMilli()));
+        }
+
+        if (value instanceof TemporalAccessor) {
+            return DateFormatter.format(new Date(Instant.from((TemporalAccessor) value).toEpochMilli()));
+        }
+
+        if (value instanceof CacheControl) {
+            return ((CacheControl) value).asHeaderValue();
+        }
+
+        // Obsolete types.
         if (value instanceof Date) {
             return DateFormatter.format((Date) value);
         }
 
         if (value instanceof Calendar) {
             return DateFormatter.format(((Calendar) value).getTime());
-        }
-
-        if (value instanceof Instant) {
-            return DateFormatter.format(new Date(((Instant) value).toEpochMilli()));
         }
 
         return value.toString();
@@ -116,7 +133,10 @@ final class StringValueConverter implements ValueConverter<String> {
 
     @Override
     public byte convertToByte(String value) {
-        return (byte) value.charAt(0);
+        if (!value.isEmpty()) {
+            return (byte) value.charAt(0);
+        }
+        return Byte.parseByte(value);
     }
 
     @Override

@@ -1,3 +1,5 @@
+evaluationDependsOn ':spring:boot-autoconfigure'
+
 dependencies {
     compile(project(':thrift')) {
         ext.optional = true // To let a user choose between thrift and thrift0.9.
@@ -9,10 +11,11 @@ dependencies {
     compile 'io.dropwizard.metrics:metrics-json'
     compile 'javax.inject:javax.inject'
     compileOnly 'javax.validation:validation-api'
-    compile 'org.springframework.boot:spring-boot-starter:1.5.19.RELEASE'
-    compileOnly 'org.springframework.boot:spring-boot-configuration-processor:1.5.19.RELEASE'
+    compile 'org.springframework.boot:spring-boot-starter:1.5.21.RELEASE'
+    compileOnly 'org.springframework.boot:spring-boot-configuration-processor:1.5.21.RELEASE'
 
-    testCompile 'org.springframework.boot:spring-boot-starter-test:1.5.19.RELEASE'
+    testCompile project(':grpc')
+    testCompile 'org.springframework.boot:spring-boot-starter-test:1.5.21.RELEASE'
 }
 
 // Use the sources from ':spring:boot-autoconfigure'.
@@ -22,13 +25,15 @@ dependencies {
 def autoconfigureProjectDir = "${rootProject.projectDir}/spring/boot-autoconfigure"
 tasks.compileJava.source "${autoconfigureProjectDir}/src/main/java"
 tasks.processResources.from "${autoconfigureProjectDir}/src/main/resources"
-tasks.compileTestJava.source "${autoconfigureProjectDir}/src/test/java", "${autoconfigureProjectDir}/gen-src/test/java"
+tasks.compileTestJava.source "${autoconfigureProjectDir}/src/test/java",
+        "${autoconfigureProjectDir}/gen-src/test/grpc",
+        "${autoconfigureProjectDir}/gen-src/test/java"
 tasks.processTestResources.from "${autoconfigureProjectDir}/src/test/resources"
 tasks.sourceJar.from "${autoconfigureProjectDir}/src/main/java"
 tasks.sourceJar.from "${autoconfigureProjectDir}/src/main/resources"
 tasks.javadoc.source "${autoconfigureProjectDir}/src/main/java"
 
-tasks.compileTestJava.dependsOn(project(':spring:boot-autoconfigure').tasks.findByName('compileTestThrift'))
+tasks.compileTestJava.dependsOn(project(':spring:boot-autoconfigure').tasks.compileTestThrift)
 
 // Disable checkstyle because it's checked by ':spring:boot-autoconfigure'.
 tasks.checkstyleMain.onlyIf { false }

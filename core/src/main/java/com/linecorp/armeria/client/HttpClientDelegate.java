@@ -26,6 +26,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.HttpChannelPool.PoolKey;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -62,9 +63,11 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         final EventLoop eventLoop = ctx.eventLoop();
         final DecodedHttpResponse res = new DecodedHttpResponse(eventLoop);
 
+        final ClientConnectionTimingsBuilder timingsBuilder = new ClientConnectionTimingsBuilder();
+
         if (endpoint.hasIpAddr()) {
             // IP address has been resolved already.
-            acquireConnectionAndExecute(ctx, endpoint, endpoint.ipAddr(), req, res);
+            acquireConnectionAndExecute(ctx, endpoint, endpoint.ipAddr(), req, res, timingsBuilder);
         } else {
             // IP address has not been resolved yet.
             final Future<InetSocketAddress> resolveFuture =
@@ -72,11 +75,11 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
                                         .resolve(InetSocketAddress.createUnresolved(endpoint.host(),
                                                                                     endpoint.port()));
             if (resolveFuture.isDone()) {
-                finishResolve(ctx, endpoint, resolveFuture, req, res);
+                finishResolve(ctx, endpoint, resolveFuture, req, res, timingsBuilder);
             } else {
                 resolveFuture.addListener(
                         (FutureListener<InetSocketAddress>) future ->
-                                finishResolve(ctx, endpoint, future, req, res));
+                                finishResolve(ctx, endpoint, future, req, res, timingsBuilder));
             }
         }
 
@@ -85,11 +88,13 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
 
     private void finishResolve(ClientRequestContext ctx, Endpoint endpoint,
                                Future<InetSocketAddress> resolveFuture, HttpRequest req,
-                               DecodedHttpResponse res) {
+                               DecodedHttpResponse res, ClientConnectionTimingsBuilder timingsBuilder) {
+        timingsBuilder.dnsResolutionEnd();
         if (resolveFuture.isSuccess()) {
             final String ipAddr = resolveFuture.getNow().getAddress().getHostAddress();
-            acquireConnectionAndExecute(ctx, endpoint, ipAddr, req, res);
+            acquireConnectionAndExecute(ctx, endpoint, ipAddr, req, res, timingsBuilder);
         } else {
+            timingsBuilder.build().setTo(ctx);
             final Throwable cause = resolveFuture.cause();
             handleEarlyRequestException(ctx, req, cause);
             res.close(cause);
@@ -97,10 +102,12 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
     }
 
     private void acquireConnectionAndExecute(ClientRequestContext ctx, Endpoint endpoint, String ipAddr,
-                                             HttpRequest req, DecodedHttpResponse res) {
+                                             HttpRequest req, DecodedHttpResponse res,
+                                             ClientConnectionTimingsBuilder timingsBuilder) {
         final EventLoop eventLoop = ctx.eventLoop();
         if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> acquireConnectionAndExecute(ctx, endpoint, ipAddr, req, res));
+            eventLoop.execute(() -> acquireConnectionAndExecute(ctx, endpoint, ipAddr,
+                                                                req, res, timingsBuilder));
             return;
         }
 
@@ -114,7 +121,9 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         if (pooledChannel != null) {
             doExecute(pooledChannel, ctx, req, res);
         } else {
-            pool.acquireLater(protocol, key).handle((newPooledChannel, cause) -> {
+            pool.acquireLater(protocol, key, timingsBuilder).handle((newPooledChannel, cause) -> {
+                timingsBuilder.build().setTo(ctx);
+
                 if (cause == null) {
                     doExecute(newPooledChannel, ctx, req, res);
                 } else {
@@ -128,7 +137,7 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
 
     @VisibleForTesting
     static String extractHost(ClientRequestContext ctx, HttpRequest req, Endpoint endpoint) {
-        String host = extractHost(ctx.additionalRequestHeaders().authority());
+        String host = extractHost(ctx.additionalRequestHeaders().get(HttpHeaderNames.AUTHORITY));
         if (host != null) {
             return host;
         }

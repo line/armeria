@@ -134,6 +134,12 @@ service UnitTestService {
     // A streaming RPC where the client half-closes but cancels without explicitly closing the stream
     // before receiving the full response (e.g. socket disconnect).
     rpc StreamClientCancelsBeforeResponseClosedCancels(SimpleRequest) returns (stream SimpleResponse);
+
+    // A call that has an error in business logic replaced by an interceptor.
+    rpc ErrorReplaceException(SimpleRequest) returns (SimpleResponse);
+
+    // A call that has an error with extra metadata attached to it.
+    rpc ErrorAdditionalMetadata(SimpleRequest) returns(SimpleResponse);
 }
 
 // A simple service NOT implemented at servers so clients can test for

@@ -81,7 +81,7 @@ You can use the ``decorator()`` method in :api:`ClientBuilder` to build a :api:`
     import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerHttpClientBuilder;
     import com.linecorp.armeria.client.HttpClientBuilder;
     import com.linecorp.armeria.client.HttpClient;
-    import com.linecorp.armeria.common.AggregatedHttpMessage;
+    import com.linecorp.armeria.common.AggregatedHttpResponse;
     import com.linecorp.armeria.common.HttpRequest;
     import com.linecorp.armeria.common.HttpResponse;
 
@@ -90,7 +90,7 @@ You can use the ``decorator()`` method in :api:`ClientBuilder` to build a :api:`
             .decorator(new CircuitBreakerHttpClientBuilder(strategy).newDecorator())
             .build();
 
-    final AggregatedHttpMessage res = client.execute(...).aggregate().join(); // Send requests on and on.
+    final AggregatedHttpResponse res = client.execute(...).aggregate().join(); // Send requests on and on.
 
 Now, the :api:`Client` can track the number of success or failure events depending on the :apiplural:`Response`.
 The :api:`CircuitBreaker` will enter ``OPEN``, when the number of failures divided by the total number of
@@ -177,7 +177,7 @@ you should implement :api:`CircuitBreakerStrategyWithContent` and specify it whe
                             return false;
                         }
 
-                        final String content = res.content().toStringUtf8();
+                        final String content = res.contentUtf8();
                         if ("Success".equals(content)) {
                             return true;
                         } else if ("Failure".equals(content)) {
@@ -194,7 +194,7 @@ you should implement :api:`CircuitBreakerStrategyWithContent` and specify it whe
             .decorator(new CircuitBreakerHttpClientBuilder(myStrategy).newDecorator()) // Specify the strategy
             .build();
 
-    final AggregatedHttpMessage res = client.execute(...).aggregate().join();
+    final AggregatedHttpResponse res = client.execute(...).aggregate().join();
 
 Grouping ``CircuitBreaker``\s
 -----------------------------
@@ -280,7 +280,7 @@ If you use :api:`CircuitBreakerBuilder`, you can configure the parameters which 
 
   - The threshold that changes :api:`CircuitBreaker`'s state to ``OPEN`` when the number of failed
     :apiplural:`Request` divided by the number of total :apiplural:`Request` exceeds it.
-    The default value is ``0.2``.
+    The default value is ``0.5``.
 
 - ``minimumRequestThreshold``:
 

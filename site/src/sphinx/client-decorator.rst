@@ -66,3 +66,4 @@ See also
 --------
 
 - :ref:`server-decorator`
+- :ref:`advanced-custom-attribute`

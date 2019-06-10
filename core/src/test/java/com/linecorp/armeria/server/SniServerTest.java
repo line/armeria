@@ -30,33 +30,38 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.InMemoryDnsResolver;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.apache.http.util.EntityUtils;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.testing.server.SelfSignedCertificateRule;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.SelfSignedCertificateExtension;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import io.netty.util.NetUtil;
 
-public class SniServerTest {
+class SniServerTest {
 
-    @ClassRule
-    public static final SelfSignedCertificateRule sscA = new SelfSignedCertificateRule("a.com");
+    @RegisterExtension
+    @Order(10)
+    static final SelfSignedCertificateExtension sscA = new SelfSignedCertificateExtension("a.com");
 
-    @ClassRule
-    public static final SelfSignedCertificateRule sscB = new SelfSignedCertificateRule("b.com");
+    @RegisterExtension
+    @Order(10)
+    static final SelfSignedCertificateExtension sscB = new SelfSignedCertificateExtension("b.com");
 
-    @ClassRule
-    public static final SelfSignedCertificateRule sscC = new SelfSignedCertificateRule("c.com");
+    @RegisterExtension
+    @Order(10)
+    static final SelfSignedCertificateExtension sscC = new SelfSignedCertificateExtension("c.com");
 
     private static InMemoryDnsResolver dnsResolver;
 
-    @ClassRule
-    public static final ServerRule server = new ServerRule() {
+    @RegisterExtension
+    @Order(20)
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             dnsResolver = new InMemoryDnsResolver();
@@ -66,26 +71,22 @@ public class SniServerTest {
             dnsResolver.add("mismatch.com", NetUtil.LOCALHOST4);
             dnsResolver.add("127.0.0.1", NetUtil.LOCALHOST4);
 
-            final VirtualHostBuilder a = new VirtualHostBuilder("a.com");
-            final VirtualHostBuilder b = new VirtualHostBuilder("b.com");
-            final VirtualHostBuilder c = new VirtualHostBuilder("c.com");
-
-            a.service("/", new SniTestService("a.com"));
-            b.service("/", new SniTestService("b.com"));
-            c.service("/", new SniTestService("c.com"));
-
-            a.tls(sscA.certificateFile(), sscA.privateKeyFile());
-            b.tls(sscB.certificateFile(), sscB.privateKeyFile());
-            c.tls(sscC.certificateFile(), sscC.privateKeyFile());
-
-            sb.virtualHost(a.build());
-            sb.virtualHost(b.build());
-            sb.defaultVirtualHost(c.build());
+            sb.virtualHost("a.com")
+              .service("/", new SniTestService("a.com"))
+              .tls(sscA.certificateFile(), sscA.privateKeyFile())
+              .and()
+              .virtualHost("b.com")
+              .service("/", new SniTestService("b.com"))
+              .tls(sscB.certificateFile(), sscB.privateKeyFile());
+            sb.defaultVirtualHost()
+              .defaultHostname("c.com")
+              .service("/", new SniTestService("c.com"))
+              .tls(sscC.certificateFile(), sscC.privateKeyFile());
         }
     };
 
     @Test
-    public void testSniMatch() throws Exception {
+    void testSniMatch() throws Exception {
         try (CloseableHttpClient hc = newHttpClient()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet("https://a.com:" + server.httpsPort()))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo(
@@ -107,9 +108,10 @@ public class SniServerTest {
     }
 
     @Test
-    public void testSniMismatch() throws Exception {
+    void testSniMismatch() throws Exception {
         try (CloseableHttpClient hc = newHttpClient()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet("https://mismatch.com:" + server.httpsPort()))) {
+            try (CloseableHttpResponse res = hc.execute(
+                    new HttpGet("https://mismatch.com:" + server.httpsPort()))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("c.com: CN=c.com");
             }
@@ -121,7 +123,7 @@ public class SniServerTest {
         }
     }
 
-    public CloseableHttpClient newHttpClient() throws Exception {
+    CloseableHttpClient newHttpClient() throws Exception {
         final SSLContext sslCtx =
                 new SSLContextBuilder().loadTrustMaterial(null, (chain, authType) -> true).build();
 

@@ -25,14 +25,15 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import com.google.common.base.Strings;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext;
@@ -56,6 +57,8 @@ import brave.propagation.TraceContext;
  */
 public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpResponse> {
 
+    private static final Logger logger = LoggerFactory.getLogger(HttpTracingClient.class);
+
     /**
      * Creates a new tracing {@link Client} decorator using the specified {@link Tracing} instance.
      */
@@ -70,12 +73,18 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
     public static Function<Client<HttpRequest, HttpResponse>, HttpTracingClient> newDecorator(
             Tracing tracing,
             @Nullable String remoteServiceName) {
-        ensureScopeUsesRequestContext(tracing);
+        try {
+            ensureScopeUsesRequestContext(tracing);
+        } catch (IllegalStateException e) {
+            logger.warn("{} - it is appropriate to ignore this warning if this client is not being used " +
+                        "inside an Armeria server (e.g., this is a normal spring-mvc tomcat server).",
+                        e.getMessage());
+        }
         return delegate -> new HttpTracingClient(delegate, tracing, remoteServiceName);
     }
 
     private final Tracer tracer;
-    private final TraceContext.Injector<HttpHeaders> injector;
+    private final TraceContext.Injector<RequestHeadersBuilder> injector;
     @Nullable
     private final String remoteServiceName;
 
@@ -87,14 +96,20 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
         super(delegate);
         tracer = tracing.tracer();
         injector = tracing.propagationFactory().create(AsciiStringKeyFactory.INSTANCE)
-                          .injector(HttpHeaders::set);
+                          .injector(RequestHeadersBuilder::set);
         this.remoteServiceName = remoteServiceName;
     }
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final Span span = tracer.nextSpan();
-        injector.inject(span.context(), req.headers());
+
+        // Inject the headers.
+        final RequestHeadersBuilder newHeaders = req.headers().toBuilder();
+        injector.inject(span.context(), newHeaders);
+        req = HttpRequest.of(req, newHeaders.build());
+        ctx.updateRequest(req);
+
         // For no-op spans, we only need to inject into headers and don't set any other attributes.
         if (span.isNoop()) {
             return delegate().execute(ctx, req);
@@ -110,7 +125,12 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
 
         ctx.log().addListener(log -> {
             SpanTags.logWireSend(span, log.requestFirstBytesTransferredTimeNanos(), log);
-            SpanTags.logWireReceive(span, log.responseFirstBytesTransferredTimeNanos(), log);
+
+            // If the client timed-out the request, we will have never received any response data at all.
+            if (log.isAvailable(RequestLogAvailability.RESPONSE_FIRST_BYTES_TRANSFERRED)) {
+                SpanTags.logWireReceive(span, log.responseFirstBytesTransferredTimeNanos(), log);
+            }
+
             finishSpan(span, log);
         }, RequestLogAvailability.COMPLETE);
 
@@ -125,7 +145,6 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
     }
 
     private void setRemoteEndpoint(Span span, RequestLog log) {
-
         final SocketAddress remoteAddress = log.context().remoteAddress();
         final InetAddress address;
         final int port;
@@ -137,22 +156,7 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
             address = null;
             port = 0;
         }
-
-        final String remoteServiceName;
-        if (this.remoteServiceName != null) {
-            remoteServiceName = this.remoteServiceName;
-        } else {
-            final String authority = log.requestHeaders().authority();
-            if (!"?".equals(authority)) {
-                remoteServiceName = authority;
-            } else if (address != null) {
-                remoteServiceName = String.valueOf(remoteAddress);
-            } else {
-                remoteServiceName = null;
-            }
-        }
-
-        if (!Strings.isNullOrEmpty(remoteServiceName)) {
+        if (remoteServiceName != null) {
             span.remoteServiceName(remoteServiceName);
         }
         if (address != null) {

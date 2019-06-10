@@ -2,29 +2,29 @@ rootProject.name = 'armeria'
 
 apply from: "${rootDir}/gradle/scripts/settings-flags.gradle"
 
-// TODO(trustin): Remove this once ProGuard 6.1 is out.
-// Do not trim for Java 11+ because ProGuard does not support Java 11 yet.
-// See: https://sourceforge.net/p/proguard/feature-requests/188/
-def trimFlag = JavaVersion.current() <= JavaVersion.VERSION_1_10 ? 'trim' : 'notrim'
-
 // Published BOM projects
 includeWithFlags ':bom',                       'bom'
 
 // Published Java projects
-includeWithFlags ':core',                               'java', 'publish', 'shade', trimFlag
+includeWithFlags ':core',                               'java', 'publish', 'shade', 'trim'
 includeWithFlags ':rxjava',                             'java', 'publish', 'relocate'
 includeWithFlags ':grpc',                               'java', 'publish', 'relocate'
+includeWithFlags ':grpc-protocol',                      'java', 'publish', 'relocate'
 includeWithFlags ':jetty',                              'java', 'publish', 'relocate'
 includeWithFlags ':kafka',                              'java', 'publish', 'relocate'
 includeWithFlags ':logback',                            'java', 'publish', 'relocate'
 includeWithFlags ':retrofit2',                          'java', 'publish', 'relocate'
+includeWithFlags ':spring:boot-actuator-autoconfigure', 'java', 'publish', 'relocate'
+includeWithFlags ':spring:boot-actuator-starter',       'java', 'publish', 'relocate'
 includeWithFlags ':spring:boot-autoconfigure',          'java', 'publish', 'relocate'
 includeWithFlags ':spring:boot-starter',                'java', 'publish', 'relocate'
 includeWithFlags ':spring:boot-webflux-autoconfigure',  'java', 'publish', 'relocate'
 includeWithFlags ':spring:boot-webflux-starter',        'java', 'publish', 'relocate'
 includeWithFlags ':spring:boot1-autoconfigure',         'java', 'publish', 'relocate'
 includeWithFlags ':spring:boot1-starter',               'java', 'publish', 'relocate'
-includeWithFlags ':testing',                            'java', 'publish', 'relocate'
+includeWithFlags ':testing:common',                     'java', 'publish', 'relocate'
+includeWithFlags ':testing:junit',                      'java', 'publish', 'relocate'
+includeWithFlags ':testing:junit4',                     'java', 'publish', 'relocate'
 includeWithFlags ':thrift',                             'java', 'publish', 'relocate'
 includeWithFlags ':thrift0.9',                          'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat',                             'java', 'publish', 'relocate'
@@ -40,6 +40,7 @@ includeWithFlags ':it:server',                'java', 'relocate'
 includeWithFlags ':it:spring:boot-tomcat',    'java', 'relocate'
 includeWithFlags ':it:spring:boot-tomcat8.5', 'java', 'relocate'
 includeWithFlags ':testing-internal',         'java', 'relocate'
+includeWithFlags ':thrift0.11',               'java', 'relocate'
 
 // Unpublished non-Java projects
 includeWithFlags ':docs-client'
@@ -48,8 +49,12 @@ includeWithFlags ':docs-client'
 includeWithFlags ':site'
 
 // Examples
-includeWithFlags ':examples:annotated-http-service',        'java'
-includeWithFlags ':examples:saml-service-provider',         'java'
-includeWithFlags ':examples:spring-boot-minimal',           'java'
-includeWithFlags ':examples:spring-boot-tomcat',            'java'
-includeWithFlags ':examples:spring-boot-webflux',           'java'
+includeWithFlags ':examples:annotated-http-service', 'java'
+includeWithFlags ':examples:grpc-service',           'java'
+includeWithFlags ':examples:proxy-server',           'java'
+includeWithFlags ':examples:saml-service-provider',  'java'
+includeWithFlags ':examples:server-sent-events',     'java'
+includeWithFlags ':examples:spring-boot-minimal',    'java'
+includeWithFlags ':examples:spring-boot-tomcat',     'java'
+includeWithFlags ':examples:spring-boot-webflux',    'java'
+includeWithFlags ':examples:static-files',           'java'

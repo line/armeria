@@ -25,8 +25,8 @@ configure(projectsWithFlags('java')) {
             if (srcDirs == null) {
                 def defaultSrcDir = "${projectDir}/src/${scope}/thrift"
                 if (!project.file(defaultSrcDir).isDirectory()) {
-                    // Remove the compile*Thrift task which turned out to be unnecessary.
-                    project.tasks.remove(task)
+                    // Disable the compile*Thrift task which turned out to be unnecessary.
+                    task.enabled = false
                     return
                 }
                 srcDirs = [defaultSrcDir]
@@ -54,7 +54,7 @@ configure(projectsWithFlags('java')) {
                     } else {
                         actualThriftPath =
                                 "${libDir}/thrift" +
-                                "/${project.findProperty('thriftVersion')?: '0.11'}" +
+                                "/${project.findProperty('thriftVersion')?: '0.12'}" +
                                 "/thrift.${rootProject.osdetector.classifier}"
                     }
 

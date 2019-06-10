@@ -32,12 +32,17 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.EnumSet;
+import java.util.Set;
+
+import com.google.common.collect.ImmutableSet;
+
 /**
  * HTTP request method.
  */
 public enum HttpMethod {
 
-    // Forked from Netty at 93b144b7b4872ea623a378c75b92d33bea28ab51
+    // Forked from Netty 4.1.34 at ff7484864b1785103cbc62845ff3a392c93822b7
 
     /**
      * The OPTIONS method which represents a request for information about the communication options
@@ -103,6 +108,14 @@ public enum HttpMethod {
      */
     UNKNOWN;
 
+    private static final Set<HttpMethod> knownMethods;
+
+    static {
+        final Set<HttpMethod> allMethods = EnumSet.allOf(HttpMethod.class);
+        allMethods.remove(UNKNOWN);
+        knownMethods = ImmutableSet.copyOf(allMethods);
+    }
+
     /**
      * Returns whether the specified {@link String} is one of the supported method names.
      *
@@ -124,5 +137,12 @@ public enum HttpMethod {
         }
 
         return false;
+    }
+
+    /**
+     * Returns all {@link HttpMethod}s except {@link #UNKNOWN}.
+     */
+    public static Set<HttpMethod> knownMethods() {
+        return knownMethods;
     }
 }

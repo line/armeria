@@ -27,29 +27,48 @@ import java.util.concurrent.CompletionStage;
 
 import javax.annotation.Nullable;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.ServiceWithPathMappings;
+import com.linecorp.armeria.server.ServiceWithRoutes;
 
+import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.QueryStringDecoder;
 
 /**
  * A {@link Service} which handles SAML APIs, such as consuming an assertion, retrieving a metadata
  * or handling a logout request from an identity provider.
  */
-final class SamlService implements ServiceWithPathMappings<HttpRequest, HttpResponse> {
+final class SamlService implements ServiceWithRoutes<HttpRequest, HttpResponse> {
+
+    private static final HttpData DATA_INCORRECT_PATH =
+            HttpData.ofUtf8(HttpResponseStatus.BAD_REQUEST + "\nSAML request with an incorrect path");
+
+    private static final HttpData DATA_AGGREGATION_FAILURE =
+            HttpData.ofUtf8(HttpResponseStatus.BAD_REQUEST + "\nSAML request aggregation failure");
+
+    private static final HttpData DATA_NOT_TLS =
+            HttpData.ofUtf8(HttpResponseStatus.BAD_REQUEST + "\nSAML request not from a TLS connection");
+
+    private static final HttpData DATA_NOT_CLEARTEXT =
+            HttpData.ofUtf8(HttpResponseStatus.BAD_REQUEST + "\nSAML request not from a cleartext connection");
+
+    private static final Logger logger = LoggerFactory.getLogger(SamlService.class);
 
     private final SamlServiceProvider sp;
     private final SamlPortConfigAutoFiller portConfigHolder;
@@ -58,7 +77,7 @@ final class SamlService implements ServiceWithPathMappings<HttpRequest, HttpResp
     private Server server;
 
     private final Map<String, SamlServiceFunction> serviceMap;
-    private final Set<PathMapping> pathMappings;
+    private final Set<Route> routes;
 
     SamlService(SamlServiceProvider sp) {
         this.sp = requireNonNull(sp, "sp");
@@ -83,7 +102,7 @@ final class SamlService implements ServiceWithPathMappings<HttpRequest, HttpResp
                                                                 sp.defaultIdpConfig(),
                                                                 sp.requestIdManager(),
                                                                 sp.sloHandler())));
-        final PathMapping metadata = sp.metadataPath();
+        final Route metadata = sp.metadataRoute();
         metadata.exactPath().ifPresent(
                 path -> builder.put(path,
                                     new SamlMetadataServiceFunction(sp.entityId(),
@@ -93,7 +112,10 @@ final class SamlService implements ServiceWithPathMappings<HttpRequest, HttpResp
                                                                     sp.acsConfigs(),
                                                                     sp.sloEndpoints())));
         serviceMap = builder.build();
-        pathMappings = serviceMap.keySet().stream().map(PathMapping::ofExact).collect(toImmutableSet());
+        routes = serviceMap.keySet()
+                           .stream()
+                           .map(path -> Route.builder().exact(path).build())
+                           .collect(toImmutableSet());
     }
 
     @Override
@@ -113,36 +135,49 @@ final class SamlService implements ServiceWithPathMappings<HttpRequest, HttpResp
     }
 
     @Override
-    public Set<PathMapping> pathMappings() {
-        return pathMappings;
+    public Set<Route> routes() {
+        return routes;
     }
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final SamlServiceFunction func = serviceMap.get(req.path());
         if (func == null) {
-            return HttpResponse.of(HttpStatus.BAD_REQUEST);
+            return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
+                                   DATA_INCORRECT_PATH);
         }
 
-        final CompletionStage<AggregatedHttpMessage> f;
+        final CompletionStage<AggregatedHttpRequest> f;
         if (portConfigHolder.isDone()) {
             f = req.aggregate();
         } else {
             f = portConfigHolder.future().thenCompose(unused -> req.aggregate());
         }
-        return HttpResponse.from(f.handle((msg, cause) -> {
+        return HttpResponse.from(f.handle((aggregatedReq, cause) -> {
             if (cause != null) {
-                return HttpResponse.of(HttpStatus.BAD_REQUEST);
+                logger.warn("{} Failed to aggregate a SAML request.", ctx, cause);
+                return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
+                                       DATA_AGGREGATION_FAILURE);
             }
+
             final SamlPortConfig portConfig = portConfigHolder.config().get();
-            if (portConfig.scheme().isTls() != ctx.sessionProtocol().isTls()) {
-                return HttpResponse.of(HttpStatus.BAD_REQUEST);
+            final boolean isTls = ctx.sessionProtocol().isTls();
+            if (portConfig.scheme().isTls() != isTls) {
+                if (isTls) {
+                    logger.warn("{} Received a SAML request via a TLS connection.", ctx);
+                    return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
+                                           DATA_NOT_CLEARTEXT);
+                } else {
+                    logger.warn("{} Received a SAML request via a cleartext connection.", ctx);
+                    return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
+                                           DATA_NOT_TLS);
+                }
             }
 
             // Use user-specified hostname if it exists.
             // If there's no hostname set by a user, the default virtual hostname will be used.
             final String defaultHostname = firstNonNull(sp.hostname(), ctx.virtualHost().defaultHostname());
-            return func.serve(ctx, msg, defaultHostname, portConfig);
+            return func.serve(ctx, aggregatedReq, defaultHostname, portConfig);
         }));
     }
 
@@ -153,19 +188,18 @@ final class SamlService implements ServiceWithPathMappings<HttpRequest, HttpResp
         private final Map<String, List<String>> parameters;
 
         /**
-         * Creates a {@link SamlParameters} instance with the specified {@link AggregatedHttpMessage}.
+         * Creates a {@link SamlParameters} instance with the specified {@link AggregatedHttpRequest}.
          */
-        SamlParameters(AggregatedHttpMessage msg) {
-            requireNonNull(msg, "msg");
-            final MediaType contentType = msg.headers().contentType();
+        SamlParameters(AggregatedHttpRequest req) {
+            requireNonNull(req, "req");
+            final MediaType contentType = req.contentType();
 
             final QueryStringDecoder decoder;
             if (contentType != null && contentType.belongsTo(MediaType.FORM_DATA)) {
-                final String query = msg.content().toString(
-                        contentType.charset().orElse(StandardCharsets.UTF_8));
+                final String query = req.content(contentType.charset().orElse(StandardCharsets.UTF_8));
                 decoder = new QueryStringDecoder(query, false);
             } else {
-                final String path = msg.path();
+                final String path = req.path();
                 assert path != null : "path";
                 decoder = new QueryStringDecoder(path, true);
             }
@@ -176,12 +210,12 @@ final class SamlService implements ServiceWithPathMappings<HttpRequest, HttpResp
         /**
          * Returns the first value of the parameter with the specified {@code name}.
          *
-         * @throws SamlException if a parameter with the specified {@code name} does not exist
+         * @throws InvalidSamlRequestException if a parameter with the specified {@code name} does not exist
          */
         String getFirstValue(String name) {
             final String value = getFirstValueOrNull(name);
             if (value == null) {
-                throw new SamlException("failed to get the value of a parameter: " + name);
+                throw new InvalidSamlRequestException("failed to get the value of a parameter: " + name);
             }
             return value;
         }

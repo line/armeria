@@ -34,8 +34,6 @@ import javax.net.ssl.SSLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Iterables;
-
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.ChannelUtil;
@@ -137,7 +135,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     private void configurePipeline(ChannelPipeline p, Set<SessionProtocol> protocols,
                                    @Nullable ProxiedAddresses proxiedAddresses) {
         if (protocols.size() == 1) {
-            switch (Iterables.getFirst(protocols, null)) {
+            switch (protocols.iterator().next()) {
                 case HTTP:
                     configureHttp(p, proxiedAddresses);
                     break;
@@ -177,7 +175,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         p.addLast(new Http2OrHttpHandler(proxiedAddresses));
     }
 
-    private Http2ConnectionHandler newHttp2ConnectionHandler(ChannelPipeline pipeline) {
+    private Http2ConnectionHandler newHttp2ConnectionHandler(ChannelPipeline pipeline, AsciiString scheme) {
 
         final Http2Connection conn = new DefaultHttp2Connection(true);
         final Http2FrameReader reader = new DefaultHttp2FrameReader(true);
@@ -187,7 +185,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         final Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(conn, encoder, reader);
 
         return new Http2ServerConnectionHandler(
-                decoder, encoder, http2Settings(), pipeline.channel(), config, gracefulShutdownSupport);
+                decoder, encoder, http2Settings(), pipeline.channel(),
+                config, gracefulShutdownSupport, scheme.toString());
     }
 
     private Http2Settings http2Settings() {
@@ -376,7 +375,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
         private void addHttp2Handlers(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
-            p.addLast(newHttp2ConnectionHandler(p));
+            p.addLast(newHttp2ConnectionHandler(p, SCHEME_HTTPS));
             configureIdleTimeoutHandler(p);
             p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, null,
                                             SessionProtocol.H2, proxiedAddresses));
@@ -398,7 +397,9 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
         @Override
         protected void handshakeFailure(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            logger.warn("{} TLS handshake failed:", ctx.channel(), cause);
+            if (!Exceptions.isExpected(cause)) {
+                logger.warn("{} TLS handshake failed:", ctx.channel(), cause);
+            }
             ctx.close();
 
             // On handshake failure, ApplicationProtocolNegotiationHandler will remove itself,
@@ -475,7 +476,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                         }
 
                         return new Http2ServerUpgradeCodec(
-                                newHttp2ConnectionHandler(p));
+                                newHttp2ConnectionHandler(p, SCHEME_HTTP));
                     },
                     UPGRADE_REQUEST_MAX_LENGTH));
 
@@ -485,7 +486,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         private void configureHttp2(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
             assert name != null;
-            addAfter(p, name, newHttp2ConnectionHandler(p));
+            addAfter(p, name, newHttp2ConnectionHandler(p, SCHEME_HTTP));
         }
 
         private String addAfter(ChannelPipeline p, String baseName, ChannelHandler handler) {

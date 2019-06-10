@@ -111,6 +111,13 @@ public abstract class HttpFileBuilder extends AbstractHttpFileBuilder<HttpFileBu
     public static HttpFileBuilder ofResource(ClassLoader classLoader, String path) {
         requireNonNull(classLoader, "classLoader");
         requireNonNull(path, "path");
+
+        // Strip the leading slash.
+        if (path.startsWith("/")) {
+            path = path.substring(1);
+        }
+
+        // Retrieve the resource URL.
         final URL url = classLoader.getResource(path);
         if (url == null || url.getPath().endsWith("/")) {
             // Non-existent resource.
@@ -152,7 +159,7 @@ public abstract class HttpFileBuilder extends AbstractHttpFileBuilder<HttpFileBu
         @Override
         public HttpFile build() {
             return new FileSystemHttpFile(path, isContentTypeAutoDetectionEnabled(), clock(), isDateEnabled(),
-                                          isLastModifiedEnabled(), entityTagFunction(), headers());
+                                          isLastModifiedEnabled(), entityTagFunction(), buildHeaders());
         }
     }
 
@@ -167,7 +174,7 @@ public abstract class HttpFileBuilder extends AbstractHttpFileBuilder<HttpFileBu
         @Override
         public HttpFile build() {
             return new ClassPathHttpFile(url, isContentTypeAutoDetectionEnabled(), clock(), isDateEnabled(),
-                                         isLastModifiedEnabled(), entityTagFunction(), headers());
+                                         isLastModifiedEnabled(), entityTagFunction(), buildHeaders());
         }
     }
 
@@ -192,7 +199,7 @@ public abstract class HttpFileBuilder extends AbstractHttpFileBuilder<HttpFileBu
         public AggregatedHttpFile build() {
             return new HttpDataFile(content, clock(), lastModifiedMillis,
                                     isDateEnabled(), isLastModifiedEnabled(),
-                                    entityTagFunction(), headers());
+                                    entityTagFunction(), buildHeaders());
         }
     }
 }

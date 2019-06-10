@@ -22,6 +22,8 @@ import java.net.URI;
 import java.util.Optional;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.Scheme;
 
 /**
@@ -32,6 +34,7 @@ public abstract class AbstractClientFactory implements ClientFactory {
     @Override
     public final <T> T newClient(String uri, Class<T> clientType, ClientOptionValue<?>... options) {
         requireNonNull(uri, "uri");
+        requireNonNull(clientType, "clientType");
         requireNonNull(options, "options");
         return newClient(URI.create(uri), clientType, ClientOptions.of(options));
     }
@@ -39,13 +42,46 @@ public abstract class AbstractClientFactory implements ClientFactory {
     @Override
     public final <T> T newClient(String uri, Class<T> clientType, ClientOptions options) {
         requireNonNull(uri, "uri");
+        requireNonNull(clientType, "clientType");
+        requireNonNull(options, "options");
         return newClient(URI.create(uri), clientType, options);
     }
 
     @Override
     public final <T> T newClient(URI uri, Class<T> clientType, ClientOptionValue<?>... options) {
+        requireNonNull(uri, "uri");
+        requireNonNull(clientType, "clientType");
         requireNonNull(options, "options");
         return newClient(uri, clientType, ClientOptions.of(options));
+    }
+
+    @Override
+    public final <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType,
+                                 ClientOptionValue<?>... options) {
+        requireNonNull(scheme, "scheme");
+        requireNonNull(endpoint, "endpoint");
+        requireNonNull(clientType, "clientType");
+        requireNonNull(options, "options");
+        return newClient(scheme, endpoint, clientType, ClientOptions.of(options));
+    }
+
+    @Override
+    public final <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType, ClientOptions options) {
+        requireNonNull(scheme, "scheme");
+        requireNonNull(endpoint, "endpoint");
+        requireNonNull(clientType, "clientType");
+        requireNonNull(options, "options");
+        return newClient(scheme, endpoint, null, clientType, options);
+    }
+
+    @Override
+    public final <T> T newClient(Scheme scheme, Endpoint endpoint, @Nullable String path, Class<T> clientType,
+                                 ClientOptionValue<?>... options) {
+        requireNonNull(scheme, "scheme");
+        requireNonNull(endpoint, "endpoint");
+        requireNonNull(clientType, "clientType");
+        requireNonNull(options, "options");
+        return newClient(scheme, endpoint, path, clientType, ClientOptions.of(options));
     }
 
     /**
@@ -82,6 +118,26 @@ public abstract class AbstractClientFactory implements ClientFactory {
         }
 
         return parsedScheme;
+    }
+
+    /**
+     * Makes sure the specified {@link Scheme} is supported by this {@link ClientFactory}.
+     *
+     * @param scheme the {@link Scheme} of the server endpoint
+     * @return the {@link Scheme}
+     *
+     * @throws IllegalArgumentException if the {@link Scheme} is not supported by this {@link ClientFactory}
+     */
+    protected final Scheme validateScheme(Scheme scheme) {
+        requireNonNull(scheme, "scheme");
+
+        final Set<Scheme> supportedSchemes = supportedSchemes();
+        if (!supportedSchemes.contains(scheme)) {
+            throw new IllegalArgumentException(
+                    "Unsupported scheme: " + scheme + " (expected: " + supportedSchemes + ')');
+        }
+
+        return scheme;
     }
 
     /**

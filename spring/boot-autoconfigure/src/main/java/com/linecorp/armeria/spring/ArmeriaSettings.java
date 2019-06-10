@@ -39,8 +39,21 @@ import com.linecorp.armeria.server.metric.MetricCollectingService;
  *     - ip: 127.0.0.1
  *       port: 8081
  *       protocol:HTTP
+ *     - port: 8443
+ *       protocol: HTTPS
+ *   ssl:
+ *     key-alias: "host.name.com"
+ *     key-store: "keystore.jks"
+ *     key-store-password: "changeme"
+ *     trust-store: "truststore.jks"
+ *     trust-store-password: "changeme"
+ *   compression:
+ *     enabled: true
+ *     mime-types: text/*, application/json
+ *     excluded-user-agents: some-user-agent, another-user-agent
+ *     min-response-size: 1KB
  * }</pre>
- * TODO(ide) Adds SSL and virtualhost settings
+ * TODO(ide) Adds virtualhost settings
  */
 @ConfigurationProperties(prefix = "armeria")
 @Validated
@@ -143,6 +156,93 @@ public class ArmeriaSettings {
     }
 
     /**
+     * Configurations for the HTTP content encoding.
+     */
+    public static class Compression {
+        /**
+         * Specifies whether the HTTP content encoding is enabled.
+         */
+        private boolean enabled;
+
+        /**
+         * The MIME Types of an HTTP response which are applicable for the HTTP content encoding.
+         */
+        private String[] mimeTypes = {
+                "text/html", "text/xml", "text/plain", "text/css", "text/javascript",
+                "application/javascript", "application/json", "application/xml"
+        };
+
+        /**
+         * The {@code "user-agent"} header values which are not applicable for the HTTP content encoding.
+         */
+        @Nullable
+        private String[] excludedUserAgents;
+
+        /**
+         * The minimum bytes for encoding the content of an HTTP response.
+         */
+        private String minResponseSize = "2048";
+
+        /**
+         * Returns {@code true} if the HTTP content encoding is enabled.
+         */
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        /**
+         * Sets whether the HTTP content encoding is enabled.
+         */
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        /**
+         * Returns the MIME Types of an HTTP response which are applicable for the HTTP content encoding.
+         */
+        public String[] getMimeTypes() {
+            return mimeTypes;
+        }
+
+        /**
+         * Sets the MIME Types of an HTTP response which are applicable for the HTTP content encoding.
+         */
+        public void setMimeTypes(String[] mimeTypes) {
+            this.mimeTypes = mimeTypes;
+        }
+
+        /**
+         * Returns the {@code "user-agent"} header values which are not applicable for the HTTP content
+         * encoding.
+         */
+        @Nullable
+        public String[] getExcludedUserAgents() {
+            return excludedUserAgents;
+        }
+
+        /**
+         * Sets the {@code "user-agent"} header values which are not applicable for the HTTP content encoding.
+         */
+        public void setExcludedUserAgents(String[] excludedUserAgents) {
+            this.excludedUserAgents = excludedUserAgents;
+        }
+
+        /**
+         * Returns the minimum bytes for encoding the content of an HTTP response.
+         */
+        public String getMinResponseSize() {
+            return minResponseSize;
+        }
+
+        /**
+         * Sets the minimum bytes for encoding the content of an HTTP response.
+         */
+        public void setMinResponseSize(String minResponseSize) {
+            this.minResponseSize = minResponseSize;
+        }
+    }
+
+    /**
      * The ports to listen on for requests. If not specified, will listen on
      * port 8080 for HTTP (not SSL).
      */
@@ -194,6 +294,18 @@ public class ArmeriaSettings {
      * The default is {@code true}.
      */
     private boolean enableMetrics = true;
+
+    /**
+     * SSL configuration that the {@link Server} uses.
+     */
+    @Nullable
+    private Ssl ssl;
+
+    /**
+     * Compression configuration that the {@link Server} uses.
+     */
+    @Nullable
+    private Compression compression;
 
     public List<Port> getPorts() {
         return ports;
@@ -252,5 +364,35 @@ public class ArmeriaSettings {
 
     public void setEnableMetrics(boolean enableMetrics) {
         this.enableMetrics = enableMetrics;
+    }
+
+    /**
+     * Returns the {@link Ssl} configuration that the {@link Server} uses.
+     */
+    @Nullable
+    public Ssl getSsl() {
+        return ssl;
+    }
+
+    /**
+     * Sets the {@link Ssl} configuration that the {@link Server} uses.
+     */
+    public void setSsl(Ssl ssl) {
+        this.ssl = ssl;
+    }
+
+    /**
+     * Returns the HTTP content encoding configuration that the {@link Server} uses.
+     */
+    @Nullable
+    public Compression getCompression() {
+        return compression;
+    }
+
+    /**
+     * Sets the HTTP content encoding configuration that the {@link Server} uses.
+     */
+    public void setCompression(Compression compression) {
+        this.compression = compression;
     }
 }

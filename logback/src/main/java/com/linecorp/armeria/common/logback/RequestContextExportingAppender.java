@@ -51,7 +51,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
  * A <a href="https://logback.qos.ch/">Logback</a> {@link Appender} that exports the properties of the current
  * {@link RequestContext} to {@link MDC}.
  *
- * <p>Read '<a href="https://line.github.io/armeria/server-basics.html">Logging contextual information</a>'
+ * <p>Read '<a href="https://line.github.io/armeria/advanced-logging.html">Logging contextual information</a>'
  * for more information.
  */
 public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<ILoggingEvent>

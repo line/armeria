@@ -15,8 +15,7 @@
  */
 package com.linecorp.armeria.server.annotation;
 
-import static com.linecorp.armeria.internal.annotation.ResponseConversionUtil.aggregateFrom;
-import static com.linecorp.armeria.internal.annotation.ResponseConversionUtil.toMutableHeaders;
+import static com.linecorp.armeria.internal.ResponseConversionUtil.aggregateFrom;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -30,6 +29,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -40,9 +40,9 @@ public class StringResponseConverterFunction implements ResponseConverterFunctio
 
     @Override
     public HttpResponse convertResponse(ServiceRequestContext ctx,
-                                        HttpHeaders headers,
+                                        ResponseHeaders headers,
                                         @Nullable Object result,
-                                        HttpHeaders trailingHeaders) throws Exception {
+                                        HttpHeaders trailers) throws Exception {
         final MediaType mediaType = headers.contentType();
         if (mediaType != null) {
             // @Produces("text/plain") or @ProducesText is specified.
@@ -52,19 +52,18 @@ public class StringResponseConverterFunction implements ResponseConverterFunctio
 
                 // To avoid sending an unfinished text to the client, always aggregate the published strings.
                 if (result instanceof Publisher) {
-                    return aggregateFrom((Publisher<?>) result, headers, trailingHeaders,
-                                         o -> toHttpData(o, charset));
+                    return aggregateFrom((Publisher<?>) result, headers, trailers, o -> toHttpData(o, charset));
                 }
                 if (result instanceof Stream) {
-                    return aggregateFrom((Stream<?>) result, headers, trailingHeaders,
+                    return aggregateFrom((Stream<?>) result, headers, trailers,
                                          o -> toHttpData(o, charset), ctx.blockingTaskExecutor());
                 }
-                return HttpResponse.of(headers, toHttpData(result, charset), trailingHeaders);
+                return HttpResponse.of(headers, toHttpData(result, charset), trailers);
             }
         } else if (result instanceof CharSequence) {
-            return HttpResponse.of(toMutableHeaders(headers).contentType(MediaType.PLAIN_TEXT_UTF_8),
+            return HttpResponse.of(headers.toBuilder().contentType(MediaType.PLAIN_TEXT_UTF_8).build(),
                                    HttpData.ofUtf8(((CharSequence) result).toString()),
-                                   trailingHeaders);
+                                   trailers);
         }
 
         return ResponseConverterFunction.fallthrough();
@@ -83,6 +82,6 @@ public class StringResponseConverterFunction implements ResponseConverterFunctio
         } else {
             target = value;
         }
-        return HttpData.of(String.valueOf(target).getBytes(charset));
+        return HttpData.wrap(String.valueOf(target).getBytes(charset));
     }
 }

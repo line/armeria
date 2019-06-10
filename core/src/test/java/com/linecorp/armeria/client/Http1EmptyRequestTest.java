@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.testing.internal.TestUtil.withTimeout;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.BufferedReader;
@@ -22,19 +23,10 @@ import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.util.Collection;
-import java.util.concurrent.TimeUnit;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.DisableOnDebug;
-import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
-
-import com.google.common.collect.ImmutableList;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.EnumSource.Mode;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -43,52 +35,48 @@ import com.linecorp.armeria.common.HttpRequest;
  * Makes sure an empty HTTP/1 request is sent with or without the {@code content-length} header
  * for all HTTP methods.
  */
-@RunWith(Parameterized.class)
-public class Http1EmptyRequestTest {
+class Http1EmptyRequestTest {
 
-    @Parameters(name = "{index}: method={0}, hasContentLength={1}")
-    public static Collection<Object[]> parameters() {
-        return ImmutableList.of(new Object[] { HttpMethod.OPTIONS, false },
-                                new Object[] { HttpMethod.GET, false },
-                                new Object[] { HttpMethod.HEAD, false },
-                                new Object[] { HttpMethod.POST, true },
-                                new Object[] { HttpMethod.PUT, true },
-                                new Object[] { HttpMethod.PATCH, true },
-                                new Object[] { HttpMethod.DELETE, false },
-                                new Object[] { HttpMethod.TRACE, false },
-                                new Object[] { HttpMethod.CONNECT, false });
-    }
+    @ParameterizedTest
+    @EnumSource(value = HttpMethod.class, mode = Mode.EXCLUDE, names = "UNKNOWN")
+    void emptyRequest(HttpMethod method) throws Exception {
+        withTimeout(() -> {
+            try (ServerSocket ss = new ServerSocket(0);) {
+                final int port = ss.getLocalPort();
 
-    @Rule
-    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
+                final HttpClient client = HttpClient.of("h1c://127.0.0.1:" + port);
+                client.execute(HttpRequest.of(method, "/")).aggregate();
 
-    private final HttpMethod method;
-    private final boolean hasContentLength;
-
-    public Http1EmptyRequestTest(HttpMethod method, boolean hasContentLength) {
-        this.method = method;
-        this.hasContentLength = hasContentLength;
-    }
-
-    @Test
-    public void emptyRequest() throws Exception {
-        try (ServerSocket ss = new ServerSocket(0);) {
-            final int port = ss.getLocalPort();
-
-            final HttpClient client = HttpClient.of("h1c://127.0.0.1:" + port);
-            client.execute(HttpRequest.of(method, "/")).aggregate();
-
-            try (Socket s = ss.accept()) {
-                final BufferedReader in = new BufferedReader(
-                        new InputStreamReader(s.getInputStream(), StandardCharsets.US_ASCII));
-                assertThat(in.readLine()).isEqualTo(method.name() + " / HTTP/1.1");
-                assertThat(in.readLine()).startsWith("host: 127.0.0.1:");
-                assertThat(in.readLine()).startsWith("user-agent: armeria/");
-                if (hasContentLength) {
-                    assertThat(in.readLine()).isEqualTo("content-length: 0");
+                try (Socket s = ss.accept()) {
+                    final BufferedReader in = new BufferedReader(
+                            new InputStreamReader(s.getInputStream(), StandardCharsets.US_ASCII));
+                    assertThat(in.readLine()).isEqualTo(method.name() + " / HTTP/1.1");
+                    assertThat(in.readLine()).startsWith("host: 127.0.0.1:");
+                    assertThat(in.readLine()).startsWith("user-agent: armeria/");
+                    if (hasContent(method)) {
+                        assertThat(in.readLine()).isEqualTo("content-length: 0");
+                    }
+                    assertThat(in.readLine()).isEmpty();
                 }
-                assertThat(in.readLine()).isEmpty();
             }
+        });
+    }
+
+    private static boolean hasContent(HttpMethod method) {
+        switch (method) {
+            case OPTIONS:
+            case GET:
+            case HEAD:
+            case DELETE:
+            case TRACE:
+            case CONNECT:
+                return false;
+            case POST:
+            case PUT:
+            case PATCH:
+                return true;
+            default:
+                return false;
         }
     }
 }

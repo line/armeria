@@ -15,9 +15,13 @@
  */
 package com.linecorp.armeria.common.logback;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Map.Entry;
+import java.util.regex.Pattern;
 
 import javax.net.ssl.SSLSession;
 
@@ -149,6 +153,9 @@ public enum BuiltInProperty {
 
     private static final Map<String, BuiltInProperty> mdcKeyToEnum;
 
+    static final String WILDCARD_STR = "*";
+    static final String WILDCARD_REGEX = '\\' + WILDCARD_STR;
+
     static {
         final ImmutableMap.Builder<String, BuiltInProperty> builder = ImmutableMap.builder();
         for (BuiltInProperty k : BuiltInProperty.values()) {
@@ -157,8 +164,13 @@ public enum BuiltInProperty {
         mdcKeyToEnum = builder.build();
     }
 
-    static Optional<BuiltInProperty> findByMdcKey(String mdcKey) {
-        return Optional.ofNullable(mdcKeyToEnum.get(mdcKey));
+    static List<BuiltInProperty> findByMdcKeyPattern(String mdcKeyPattern) {
+        final Pattern pattern = Pattern.compile(
+                ("\\Q" + mdcKeyPattern + "\\E").replaceAll(WILDCARD_REGEX, "\\\\E.*\\\\Q"));
+        return mdcKeyToEnum.entrySet().stream()
+                           .filter(e -> pattern.matcher(e.getKey()).matches())
+                           .map(Entry::getValue)
+                           .collect(toImmutableList());
     }
 
     final String mdcKey;

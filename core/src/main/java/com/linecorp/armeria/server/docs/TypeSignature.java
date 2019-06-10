@@ -271,28 +271,28 @@ public final class TypeSignature {
     }
 
     /**
-     * Returns if this type signature represents a base type.
+     * Returns {@code true} if this type signature represents a base type.
      */
     public boolean isBase() {
         return !isUnresolved() && !isNamed() && !isContainer();
     }
 
     /**
-     * Returns if this type signature represents a container type.
+     * Returns {@code true} if this type signature represents a container type.
      */
     public boolean isContainer() {
         return !typeParameters.isEmpty();
     }
 
     /**
-     * Returns if this type signature represents a named type.
+     * Returns {@code true} if this type signature represents a named type.
      */
     public boolean isNamed() {
         return namedTypeDescriptor != null;
     }
 
     /**
-     * Returns if this type signature represents an unresolved type.
+     * Returns {@code true} if this type signature represents an unresolved type.
      */
     public boolean isUnresolved() {
         return name.startsWith("?");
@@ -303,7 +303,7 @@ public final class TypeSignature {
         if (this == o) {
             return true;
         }
-        if (o == null || getClass() != o.getClass()) {
+        if (!(o instanceof TypeSignature)) {
             return false;
         }
 

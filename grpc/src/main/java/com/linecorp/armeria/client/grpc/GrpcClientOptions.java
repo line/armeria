@@ -16,6 +16,10 @@
 
 package com.linecorp.armeria.client.grpc;
 
+import java.util.function.Consumer;
+
+import org.curioswitch.common.protobuf.json.MessageMarshaller;
+
 import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.client.ClientOption;
@@ -63,6 +67,15 @@ public final class GrpcClientOptions {
      */
     public static final ClientOption<Boolean> UNSAFE_WRAP_RESPONSE_BUFFERS =
             ClientOption.valueOf("UNSAFE_WRAP_RESPONSE_BUFFERS");
+
+    /**
+     * Sets a {@link Consumer} that can customize the JSON marshaller used when handling JSON payloads in the
+     * service. This is commonly used to switch from the default of using lowerCamelCase for field names to
+     * using the field name from the proto definition, by setting
+     * {@link MessageMarshaller.Builder#preservingProtoFieldNames(boolean)}.
+     */
+    public static final ClientOption<Consumer<MessageMarshaller.Builder>> JSON_MARSHALLER_CUSTOMIZER =
+            ClientOption.valueOf("JSON_MARSHALLER_CUSTOMIZER");
 
     private GrpcClientOptions() {}
 }

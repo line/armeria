@@ -25,21 +25,18 @@ export default class AnnotatedHttpTransport extends Transport {
     return mimeType === ANNOTATED_HTTP_MIME_TYPE;
   }
 
+  public getDebugMimeType(): string {
+    return ANNOTATED_HTTP_MIME_TYPE;
+  }
+
   protected async doSend(
     method: Method,
-    bodyJson: string,
     headers: { [name: string]: string },
+    bodyJson?: string,
     endpointPath?: string,
     queries?: string,
   ): Promise<string> {
-    const endpoint = method.endpoints.find((ep) =>
-      ep.availableMimeTypes.includes(ANNOTATED_HTTP_MIME_TYPE),
-    );
-    if (!endpoint) {
-      throw new Error(
-        'Endpoint does not support annotated HTTP debug transport',
-      );
-    }
+    const endpoint = this.findDebugMimeTypeEndpoint(method);
 
     const hdrs = new Headers();
     hdrs.set('content-type', ANNOTATED_HTTP_MIME_TYPE);
@@ -60,14 +57,10 @@ export default class AnnotatedHttpTransport extends Transport {
         }
       }
     }
-    const sendBody =
-      method.httpMethod === 'GET' || method.httpMethod === 'HEAD'
-        ? null
-        : bodyJson;
     const httpResponse = await fetch(encodeURI(newPath), {
       headers: hdrs,
       method: method.httpMethod,
-      body: sendBody,
+      body: bodyJson,
     });
     const response = await httpResponse.text();
     return response.length > 0 ? response : '&lt;zero-length response&gt;';

@@ -21,9 +21,10 @@ import java.util.Optional;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
 
 /**
- * An interface which helps a user specify an {@link HttpStatus} and {@link HttpHeaders} for a response
+ * An interface which helps a user specify an {@link HttpStatus} or {@link ResponseHeaders} for a response
  * produced by an annotated HTTP service method. The HTTP content can be specified as {@code content} as well,
  * and it would be converted into response body by a {@link ResponseConverterFunction}.
  *
@@ -52,16 +53,14 @@ public interface HttpResult<T> {
     }
 
     /**
-     * Creates a new {@link HttpResult} with the specified headers, content and trailing headers.
+     * Creates a new {@link HttpResult} with the specified headers, content and trailers.
      *
      * @param headers the HTTP headers
      * @param content the content of the response
-     * @param trailingHeaders the trailing HTTP headers
+     * @param trailers the HTTP trailers
      */
-    static <T> HttpResult<T> of(HttpHeaders headers, T content, HttpHeaders trailingHeaders) {
-        return new DefaultHttpResult<>(headers,
-                                       requireNonNull(content, "content"),
-                                       trailingHeaders);
+    static <T> HttpResult<T> of(HttpHeaders headers, T content, HttpHeaders trailers) {
+        return new DefaultHttpResult<>(headers, requireNonNull(content, "content"), trailers);
     }
 
     /**
@@ -70,7 +69,7 @@ public interface HttpResult<T> {
      * @param status the HTTP status
      */
     static <T> HttpResult<T> of(HttpStatus status) {
-        return new DefaultHttpResult<>(HttpHeaders.of(status));
+        return new DefaultHttpResult<>(ResponseHeaders.of(status));
     }
 
     /**
@@ -80,20 +79,19 @@ public interface HttpResult<T> {
      * @param content the content of the response
      */
     static <T> HttpResult<T> of(HttpStatus status, T content) {
-        return new DefaultHttpResult<>(HttpHeaders.of(status), requireNonNull(content, "content"));
+        return new DefaultHttpResult<>(ResponseHeaders.of(status), requireNonNull(content, "content"));
     }
 
     /**
-     * Creates a new {@link HttpResult} with the specified {@link HttpStatus}, content and trailing headers.
+     * Creates a new {@link HttpResult} with the specified {@link HttpStatus}, content and trailers.
      *
      * @param status the HTTP status
      * @param content the content of the response
-     * @param trailingHeaders the trailing HTTP headers
+     * @param trailers the HTTP trailers
      */
-    static <T> HttpResult<T> of(HttpStatus status, T content, HttpHeaders trailingHeaders) {
-        return new DefaultHttpResult<>(HttpHeaders.of(status),
-                                       requireNonNull(content, "content"),
-                                       trailingHeaders);
+    static <T> HttpResult<T> of(HttpStatus status, T content, HttpHeaders trailers) {
+        return new DefaultHttpResult<>(ResponseHeaders.of(status), requireNonNull(content, "content"),
+                                       trailers);
     }
 
     /**
@@ -102,12 +100,14 @@ public interface HttpResult<T> {
      * @param content the content of the response
      */
     static <T> HttpResult<T> of(T content) {
-        return new DefaultHttpResult<>(HttpHeaders.of(HttpStatus.OK),
+        return new DefaultHttpResult<>(ResponseHeaders.of(HttpStatus.OK),
                                        requireNonNull(content, "content"));
     }
 
     /**
-     * Returns {@link HttpHeaders} of a response.
+     * Returns the response {@link HttpHeaders} which may not contain the {@code ":status"} header.
+     * If the {@code ":status"} header does not exist, {@link HttpStatus#OK} or the status code specified in
+     * the {@link StatusCode} annotation will be used.
      */
     HttpHeaders headers();
 
@@ -119,9 +119,19 @@ public interface HttpResult<T> {
     }
 
     /**
-     * Returns trailing {@link HttpHeaders} of a response.
+     * Returns the HTTP trailers of a response.
+     *
+     * @deprecated Use {@link #trailers()}.
      */
+    @Deprecated
     default HttpHeaders trailingHeaders() {
-        return HttpHeaders.EMPTY_HEADERS;
+        return trailers();
+    }
+
+    /**
+     * Returns the HTTP trailers of a response.
+     */
+    default HttpHeaders trailers() {
+        return HttpHeaders.of();
     }
 }

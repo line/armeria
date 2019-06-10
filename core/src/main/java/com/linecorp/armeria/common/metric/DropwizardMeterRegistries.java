@@ -44,7 +44,7 @@ public final class DropwizardMeterRegistries {
     @VisibleForTesting
     static final HierarchicalNameMapper DEFAULT_NAME_MAPPER = (id, convention) -> {
         final String name = id.getConventionName(convention);
-        if (!id.getTags().iterator().hasNext()) {
+        if (!id.getTagsAsIterable().iterator().hasNext()) {
             return name;
         }
 
@@ -129,23 +129,6 @@ public final class DropwizardMeterRegistries {
                 requireNonNull(registry, "registry"),
                 requireNonNull(nameMapper, "nameMapper"),
                 requireNonNull(clock, "clock")) {
-            {
-                // Do not add percentile or histogram value gauges to prevent Micrometer from creating
-                // too many gauges. Dropwizard has its own distribution statistic calculation mechanism
-                // although not perfect.
-                config().meterFilter(new MeterFilter() {
-                    @Override
-                    public MeterFilterReply accept(Meter.Id id) {
-                        if (id.getName().endsWith(".percentile") && id.getTag("phi") != null) {
-                            return MeterFilterReply.DENY;
-                        }
-                        if (id.getName().endsWith(".histogram") && id.getTag("le") != null) {
-                            return MeterFilterReply.DENY;
-                        }
-                        return MeterFilterReply.NEUTRAL;
-                    }
-                });
-            }
 
             @Override
             protected Double nullGaugeValue() {
@@ -153,6 +136,29 @@ public final class DropwizardMeterRegistries {
             }
         };
 
+        return configureRegistry(meterRegistry);
+    }
+
+    /**
+     * Configures the {@link DropwizardMeterRegistry} with Armeria's defaults. Useful when using a different
+     * implementation of {@link DropwizardMeterRegistry}, e.g., a {@code JmxMeterRegistry}.
+     *
+     * @return the specified {@link DropwizardMeterRegistry}
+     */
+    public static <T extends DropwizardMeterRegistry> T configureRegistry(T meterRegistry) {
+        requireNonNull(meterRegistry, "meterRegistry");
+        meterRegistry.config().meterFilter(new MeterFilter() {
+            @Override
+            public MeterFilterReply accept(Meter.Id id) {
+                if (id.getName().endsWith(".percentile") && id.getTag("phi") != null) {
+                    return MeterFilterReply.DENY;
+                }
+                if (id.getName().endsWith(".histogram") && id.getTag("le") != null) {
+                    return MeterFilterReply.DENY;
+                }
+                return MeterFilterReply.NEUTRAL;
+            }
+        });
         meterRegistry.config().namingConvention(MoreNamingConventions.dropwizard());
         meterRegistry.config().pauseDetector(new NoPauseDetector());
         return meterRegistry;

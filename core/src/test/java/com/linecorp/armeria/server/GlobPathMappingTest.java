@@ -16,17 +16,17 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.server.PathMapping.ofGlob;
-import static com.linecorp.armeria.server.PathMappingContextTest.create;
+import static com.linecorp.armeria.server.RoutingContextTest.create;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-public class GlobPathMappingTest {
+class GlobPathMappingTest {
 
     @Test
-    public void testSingleAsterisk() {
+    void testSingleAsterisk() {
         pass("*", "/foo", "/foo/bar", "/foo/bar/baz");
         fail("*", "/foo/", "/foo/bar/", "/foo/bar/baz/");
 
@@ -50,7 +50,7 @@ public class GlobPathMappingTest {
     }
 
     @Test
-    public void testDoubleAsterisk() {
+    void testDoubleAsterisk() {
         pass("**/baz", "/baz", "/foo/baz", "/foo/bar/baz");
         fail("**/baz", "/baz/", "/baz/bar");
 
@@ -67,7 +67,7 @@ public class GlobPathMappingTest {
     }
 
     @Test
-    public void testRelativePattern() {
+    void testRelativePattern() {
         pass("baz", "/baz", "/bar/baz", "/foo/bar/baz");
         fail("baz", "/baz/", "/bar/baz/", "/foo/bar/baz/", "/foo/bar/baz/quo");
 
@@ -75,88 +75,88 @@ public class GlobPathMappingTest {
         fail("bar/baz", "/bar/baz/", "/foo/bar/baz/", "/foo/bar/baz/quo");
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testPathValidation() {
-        compile("**").apply(create("not/an/absolute/path"));
+    @Test
+    void testPathValidation() {
+        final Route route = glob("**");
+        assertThrows(IllegalArgumentException.class,
+                     () -> route.apply(create("not/an/absolute/path")));
     }
 
     @Test
-    public void testLoggerName() throws Exception {
-        assertThat(ofGlob("/foo/bar/**").loggerName()).isEqualTo("foo.bar.__");
-        assertThat(ofGlob("foo").loggerName()).isEqualTo("__.foo");
+    void testLoggerName() throws Exception {
+        assertThat(glob("/foo/bar/**").loggerName()).isEqualTo("foo.bar.__");
+        assertThat(glob("foo").loggerName()).isEqualTo("__.foo");
     }
 
     @Test
-    public void testMetricName() throws Exception {
-        assertThat(ofGlob("/foo/bar/**").meterTag()).isEqualTo("glob:/foo/bar/**");
-        assertThat(ofGlob("foo").meterTag()).isEqualTo("glob:/**/foo");
+    void testMetricName() throws Exception {
+        assertThat(glob("/foo/bar/**").meterTag()).isEqualTo("glob:/foo/bar/**");
+        assertThat(glob("foo").meterTag()).isEqualTo("glob:/**/foo");
     }
 
     @Test
-    public void params() throws Exception {
-        PathMapping m;
-
-        m = ofGlob("baz");
-        assertThat(m.paramNames()).isEmpty();
+    void params() throws Exception {
+        Route route = glob("baz");
+        assertThat(route.paramNames()).isEmpty();
         // Should not create a param for 'bar'
-        assertThat(m.apply(create("/bar/baz")).pathParams()).isEmpty();
+        assertThat(route.apply(create("/bar/baz")).pathParams()).isEmpty();
 
-        m = ofGlob("/bar/baz/*");
-        assertThat(m.paramNames()).containsExactly("0");
-        assertThat(m.apply(create("/bar/baz/qux")).pathParams())
+        route = glob("/bar/baz/*");
+        assertThat(route.paramNames()).containsExactly("0");
+        assertThat(route.apply(create("/bar/baz/qux")).pathParams())
                 .containsEntry("0", "qux")
                 .hasSize(1);
 
-        m = ofGlob("/foo/**");
-        assertThat(m.paramNames()).containsExactly("0");
-        assertThat(m.apply(create("/foo/bar/baz")).pathParams())
+        route = glob("/foo/**");
+        assertThat(route.paramNames()).containsExactly("0");
+        assertThat(route.apply(create("/foo/bar/baz")).pathParams())
                 .containsEntry("0", "bar/baz")
                 .hasSize(1);
-        assertThat(m.apply(create("/foo/")).pathParams())
+        assertThat(route.apply(create("/foo/")).pathParams())
                 .containsEntry("0", "")
                 .hasSize(1);
 
-        m = ofGlob("/**/*.js");
-        assertThat(m.paramNames()).containsExactlyInAnyOrder("0", "1");
-        assertThat(m.apply(create("/lib/jquery.min.js")).pathParams())
+        route = glob("/**/*.js");
+        assertThat(route.paramNames()).containsExactlyInAnyOrder("0", "1");
+        assertThat(route.apply(create("/lib/jquery.min.js")).pathParams())
                 .containsEntry("0", "lib")
                 .containsEntry("1", "jquery.min")
                 .hasSize(2);
 
-        assertThat(m.apply(create("/lodash.js")).pathParams())
+        assertThat(route.apply(create("/lodash.js")).pathParams())
                 .containsEntry("0", "")
                 .containsEntry("1", "lodash")
                 .hasSize(2);
     }
 
     @Test
-    public void utf8() throws Exception {
-        final PathMapping m = ofGlob("/foo/*");
-        final PathMappingResult res = m.apply(create("/foo/%C2%A2"));
+    void utf8() throws Exception {
+        final Route route = glob("/foo/*");
+        final RoutingResult res = route.apply(create("/foo/%C2%A2"));
         assertThat(res.path()).isEqualTo("/foo/%C2%A2");
         assertThat(res.decodedPath()).isEqualTo("/foo/¢");
         assertThat(res.pathParams()).containsEntry("0", "¢").hasSize(1);
     }
 
     private static void pass(String glob, String... paths) {
-        final GlobPathMapping pattern = compile(glob);
-        for (String p: paths) {
-            if (!pattern.apply(create(p)).isPresent()) {
-                Assert.fail('\'' + p + "' does not match '" + glob + "' or '" + pattern.regex() + "'.");
+        final Route route = glob(glob);
+        for (String p : paths) {
+            if (!route.apply(create(p)).isPresent()) {
+                Assertions.fail('\'' + p + "' does not match '" + glob + "' or '" + route.regex() + "'.");
             }
         }
     }
 
     private static void fail(String glob, String... paths) {
-        final GlobPathMapping pattern = compile(glob);
-        for (String p: paths) {
-            if (pattern.apply(create(p)).isPresent()) {
-                Assert.fail('\'' + p + "' matches '" + glob + "' or '" + pattern.regex() + "'.");
+        final Route route = glob(glob);
+        for (String p : paths) {
+            if (route.apply(create(p)).isPresent()) {
+                Assertions.fail('\'' + p + "' matches '" + glob + "' or '" + route.regex() + "'.");
             }
         }
     }
 
-    private static GlobPathMapping compile(String glob) {
-        return (GlobPathMapping) ofGlob(glob);
+    private static Route glob(String glob) {
+        return Route.builder().glob(glob).build();
     }
 }

@@ -137,9 +137,11 @@ public final class Exceptions {
      *   <li>{@link Http2Exception} - 'Stream closed'</li>
      *   <li>{@link SSLException} - 'SSLEngine closed already'</li>
      * </ul>
+     *
+     * @see Flags#verboseSocketExceptions()
      */
     public static boolean isExpected(Throwable cause) {
-        if (Flags.verboseExceptions()) {
+        if (Flags.verboseSocketExceptions()) {
             return false;
         }
 

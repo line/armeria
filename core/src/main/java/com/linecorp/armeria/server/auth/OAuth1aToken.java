@@ -189,7 +189,7 @@ public final class OAuth1aToken {
         if (this == o) {
             return true;
         }
-        if (o == null || getClass() != o.getClass()) {
+        if (!(o instanceof OAuth1aToken)) {
             return false;
         }
         final OAuth1aToken that = (OAuth1aToken) o;

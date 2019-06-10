@@ -14,7 +14,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.Server;
 
@@ -42,22 +42,22 @@ public class HelloIntegrationTest {
 
     @Test
     public void index() {
-        final AggregatedHttpMessage res = client.get("/").aggregate().join();
+        final AggregatedHttpResponse res = client.get("/").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.content().toStringUtf8()).isEqualTo("index");
+        assertThat(res.contentUtf8()).isEqualTo("index");
     }
 
     @Test
     public void hello() throws Exception {
-        final AggregatedHttpMessage res = client.get("/hello").aggregate().join();
+        final AggregatedHttpResponse res = client.get("/hello").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.content().toStringUtf8()).isEqualTo("Hello, World");
+        assertThat(res.contentUtf8()).isEqualTo("Hello, World");
     }
 
     @Test
     public void healthCheck() throws Exception {
-        final AggregatedHttpMessage res = client.get("/internal/healthcheck").aggregate().join();
+        final AggregatedHttpResponse res = client.get("/internal/healthcheck").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.content().toStringUtf8()).isEqualTo("ok");
+        assertThat(res.contentUtf8()).isEqualTo("ok");
     }
 }

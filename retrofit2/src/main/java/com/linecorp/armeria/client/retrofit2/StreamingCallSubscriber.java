@@ -29,6 +29,8 @@ import okio.Okio;
 
 final class StreamingCallSubscriber extends AbstractSubscriber {
 
+    private static final Buffer emptyBuffer = new Buffer();
+
     private final PipeBuffer pipeBuffer = new PipeBuffer();
     private boolean responseCalled;
 
@@ -66,7 +68,7 @@ final class StreamingCallSubscriber extends AbstractSubscriber {
             }));
             responseCalled = true;
         }
-        pipeBuffer.write(data.array(), data.offset(), data.length());
+        pipeBuffer.write(data.array(), 0, data.length());
     }
 
     @Override
@@ -77,6 +79,10 @@ final class StreamingCallSubscriber extends AbstractSubscriber {
 
     @Override
     void onComplete0() {
+        if (!responseCalled) {
+            safeOnResponse(emptyBuffer);
+            responseCalled = true;
+        }
         pipeBuffer.close(null);
     }
 }

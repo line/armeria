@@ -18,7 +18,6 @@ package com.linecorp.armeria.client;
 
 import static org.junit.Assert.assertEquals;
 
-import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
 import java.util.concurrent.CompletableFuture;
 
@@ -26,21 +25,20 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.VirtualHostBuilder;
 import com.linecorp.armeria.testing.internal.MockAddressResolverGroup;
 
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -56,27 +54,24 @@ public class HttpClientSniTest {
     private static final SelfSignedCertificate sscB;
 
     static {
-        final ServerBuilder sb = new ServerBuilder();
-
         try {
+            final ServerBuilder sb = new ServerBuilder();
             sscA = new SelfSignedCertificate("a.com");
             sscB = new SelfSignedCertificate("b.com");
 
-            final VirtualHostBuilder a = new VirtualHostBuilder("a.com");
-            final VirtualHostBuilder b = new VirtualHostBuilder("b.com");
+            sb.virtualHost("a.com")
+              .service("/", new SniTestService("a.com"))
+              .tls(sscA.certificate(), sscA.privateKey())
+              .and()
+              .defaultVirtualHost()
+              .defaultHostname("b.com")
+              .service("/", new SniTestService("b.com"))
+              .tls(sscB.certificate(), sscB.privateKey());
 
-            a.service("/", new SniTestService("a.com"));
-            b.service("/", new SniTestService("b.com"));
-
-            a.tls(sscA.certificate(), sscA.privateKey());
-            b.tls(sscB.certificate(), sscB.privateKey());
-
-            sb.virtualHost(a.build());
-            sb.defaultVirtualHost(b.build());
+            server = sb.build();
         } catch (Exception e) {
             throw new Error(e);
         }
-        server = sb.build();
     }
 
     @BeforeClass
@@ -124,31 +119,31 @@ public class HttpClientSniTest {
     private static String get(String fqdn) throws Exception {
         final HttpClient client = HttpClient.of(clientFactory, "https://" + fqdn + ':' + httpsPort);
 
-        final AggregatedHttpMessage response = client.get("/").aggregate().get();
+        final AggregatedHttpResponse response = client.get("/").aggregate().get();
 
-        assertEquals(HttpStatus.OK, response.headers().status());
-        return response.content().toString(StandardCharsets.UTF_8);
+        assertEquals(HttpStatus.OK, response.status());
+        return response.contentUtf8();
     }
 
     @Test
     public void testCustomAuthority() throws Exception {
         final HttpClient client = HttpClient.of(clientFactory, "https://127.0.0.1:" + httpsPort);
-        final AggregatedHttpMessage response =
-                client.execute(HttpHeaders.of(HttpMethod.GET, "/")
-                                          .set(HttpHeaderNames.AUTHORITY, "a.com:" + httpsPort))
+        final AggregatedHttpResponse response =
+                client.execute(RequestHeaders.of(HttpMethod.GET, "/",
+                                                 HttpHeaderNames.AUTHORITY, "a.com:" + httpsPort))
                       .aggregate().get();
 
-        assertEquals(HttpStatus.OK, response.headers().status());
-        assertEquals("a.com: CN=a.com", response.content().toStringUtf8());
+        assertEquals(HttpStatus.OK, response.status());
+        assertEquals("a.com: CN=a.com", response.contentUtf8());
     }
 
     @Test
     public void testCustomAuthorityWithAdditionalHeaders() throws Exception {
         final HttpClient client = HttpClient.of(clientFactory, "https://127.0.0.1:" + httpsPort);
         try (SafeCloseable unused = Clients.withHttpHeader(HttpHeaderNames.AUTHORITY, "a.com:" + httpsPort)) {
-            final AggregatedHttpMessage response = client.get("/").aggregate().get();
-            assertEquals(HttpStatus.OK, response.headers().status());
-            assertEquals("a.com: CN=a.com", response.content().toStringUtf8());
+            final AggregatedHttpResponse response = client.get("/").aggregate().get();
+            assertEquals(HttpStatus.OK, response.status());
+            assertEquals("a.com: CN=a.com", response.contentUtf8());
         }
     }
 

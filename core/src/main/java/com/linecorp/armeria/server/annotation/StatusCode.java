@@ -27,7 +27,7 @@ import java.lang.annotation.Target;
  * {@code @StatusCode(204)} would be applied. Otherwise, {@code @StatusCode(200)} would be applied.
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
+@Target({ ElementType.METHOD, ElementType.ANNOTATION_TYPE })
 public @interface StatusCode {
     /**
      * A default HTTP status code of a response produced by an annotated HTTP service.

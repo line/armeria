@@ -42,7 +42,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Ascii;
 
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -50,6 +49,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.ChannelUtil;
 import com.linecorp.armeria.internal.Http1ClientCodec;
 import com.linecorp.armeria.internal.ReadSuppressingHandler;
+import com.linecorp.armeria.internal.SslContextUtil;
 import com.linecorp.armeria.internal.TrafficLoggingHandler;
 
 import io.netty.buffer.ByteBuf;
@@ -87,17 +87,13 @@ import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2FrameReader;
 import io.netty.handler.codec.http2.Http2FrameWriter;
-import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.flush.FlushConsolidationHandler;
-import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
-import io.netty.handler.ssl.SslProvider;
-import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 
@@ -138,31 +134,9 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         }
 
         if (sessionProtocol.isTls()) {
-            try {
-                final SslContextBuilder builder = SslContextBuilder.forClient();
-
-                builder.sslProvider(
-                        Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK);
-                clientFactory.sslContextCustomizer().accept(builder);
-
-                if (httpPreference == HttpPreference.HTTP2_REQUIRED ||
-                    httpPreference == HttpPreference.HTTP2_PREFERRED) {
-
-                    builder.ciphers(Http2SecurityUtil.CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
-                           .applicationProtocolConfig(new ApplicationProtocolConfig(
-                                   ApplicationProtocolConfig.Protocol.ALPN,
-                                   // NO_ADVERTISE is currently the only mode supported by both OpenSsl and
-                                   // JDK providers.
-                                   ApplicationProtocolConfig.SelectorFailureBehavior.NO_ADVERTISE,
-                                   // ACCEPT is currently the only mode supported by both OpenSsl and JDK
-                                   // providers.
-                                   ApplicationProtocolConfig.SelectedListenerFailureBehavior.ACCEPT,
-                                   ApplicationProtocolNames.HTTP_2));
-                }
-                sslCtx = builder.build();
-            } catch (SSLException e) {
-                throw new IllegalStateException("failed to create an SslContext", e);
-            }
+            sslCtx = SslContextUtil.createSslContext(SslContextBuilder::forClient,
+                                                     httpPreference == HttpPreference.HTTP1_REQUIRED,
+                                                     clientFactory.sslContextCustomizer());
         } else {
             sslCtx = null;
         }

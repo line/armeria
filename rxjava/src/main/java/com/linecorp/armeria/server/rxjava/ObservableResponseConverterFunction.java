@@ -23,6 +23,7 @@ import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -62,28 +63,27 @@ public class ObservableResponseConverterFunction implements ResponseConverterFun
 
     @Override
     public HttpResponse convertResponse(ServiceRequestContext ctx,
-                                        HttpHeaders headers,
+                                        ResponseHeaders headers,
                                         @Nullable Object result,
-                                        HttpHeaders trailingHeaders) throws Exception {
+                                        HttpHeaders trailers) throws Exception {
         if (result instanceof Observable) {
             return responseConverter.convertResponse(
-                    ctx, headers, ((Observable<?>) result).toFlowable(BackpressureStrategy.BUFFER),
-                    trailingHeaders);
+                    ctx, headers, ((Observable<?>) result).toFlowable(BackpressureStrategy.BUFFER), trailers);
         }
 
         if (result instanceof Maybe) {
             final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
             final Disposable disposable = ((Maybe<?>) result).subscribe(
-                    o -> future.complete(onSuccess(ctx, headers, o, trailingHeaders)),
+                    o -> future.complete(onSuccess(ctx, headers, o, trailers)),
                     cause -> future.complete(onError(ctx, cause)),
-                    () -> future.complete(onSuccess(ctx, headers, null, trailingHeaders)));
+                    () -> future.complete(onSuccess(ctx, headers, null, trailers)));
             return respond(future, disposable);
         }
 
         if (result instanceof Single) {
             final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
             final Disposable disposable = ((Single<?>) result).subscribe(
-                    o -> future.complete(onSuccess(ctx, headers, o, trailingHeaders)),
+                    o -> future.complete(onSuccess(ctx, headers, o, trailers)),
                     cause -> future.complete(onError(ctx, cause)));
             return respond(future, disposable);
         }
@@ -91,7 +91,7 @@ public class ObservableResponseConverterFunction implements ResponseConverterFun
         if (result instanceof Completable) {
             final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
             final Disposable disposable = ((Completable) result).subscribe(
-                    () -> future.complete(onSuccess(ctx, headers, null, trailingHeaders)),
+                    () -> future.complete(onSuccess(ctx, headers, null, trailers)),
                     cause -> future.complete(onError(ctx, cause)));
             return respond(future, disposable);
         }
@@ -100,11 +100,11 @@ public class ObservableResponseConverterFunction implements ResponseConverterFun
     }
 
     private HttpResponse onSuccess(ServiceRequestContext ctx,
-                                   HttpHeaders headers,
+                                   ResponseHeaders headers,
                                    @Nullable Object result,
-                                   HttpHeaders trailingHeaders) {
+                                   HttpHeaders trailers) {
         try {
-            return responseConverter.convertResponse(ctx, headers, result, trailingHeaders);
+            return responseConverter.convertResponse(ctx, headers, result, trailers);
         } catch (Exception e) {
             return onError(ctx, e);
         }

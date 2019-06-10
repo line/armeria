@@ -29,14 +29,14 @@ import org.reactivestreams.Subscription;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import okhttp3.ResponseBody;
 import retrofit2.converter.jackson.JacksonConverterFactory;
@@ -67,9 +67,9 @@ public class ArmeriaCallFactoryLargeStreamTest {
                         public void request(long n) {
                             for (int i = 0; i < n; i++) {
                                 if (count == 0) {
-                                    s.onNext(HttpHeaders.of(HttpStatus.OK));
+                                    s.onNext(ResponseHeaders.of(HttpStatus.OK));
                                 } else {
-                                    s.onNext(HttpData.of(new byte[1024]));
+                                    s.onNext(HttpData.wrap(new byte[1024]));
                                 }
                             }
                             count += n;
@@ -85,7 +85,7 @@ public class ArmeriaCallFactoryLargeStreamTest {
                     }));
                 }
             });
-            sb.defaultRequestTimeout(Duration.of(30, ChronoUnit.SECONDS));
+            sb.requestTimeout(Duration.of(30, ChronoUnit.SECONDS));
         }
     };
 
@@ -95,8 +95,8 @@ public class ArmeriaCallFactoryLargeStreamTest {
                 .baseUrl(server.uri("/"))
                 .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
                 .withClientOptions((s, clientOptionsBuilder) -> {
-                    clientOptionsBuilder.defaultMaxResponseLength(Long.MAX_VALUE);
-                    clientOptionsBuilder.defaultResponseTimeout(Duration.of(30, ChronoUnit.SECONDS));
+                    clientOptionsBuilder.maxResponseLength(Long.MAX_VALUE);
+                    clientOptionsBuilder.responseTimeout(Duration.of(30, ChronoUnit.SECONDS));
                     return clientOptionsBuilder;
                 })
                 .build()

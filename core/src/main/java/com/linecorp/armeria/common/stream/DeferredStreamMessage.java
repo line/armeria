@@ -18,7 +18,6 @@ package com.linecorp.armeria.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -229,24 +228,25 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     }
 
     @Override
-    void subscribe(SubscriptionImpl subscription) {
-        final Subscriber<Object> subscriber = subscription.subscriber();
-        final Executor executor = subscription.executor();
-
+    SubscriptionImpl subscribe(SubscriptionImpl subscription) {
         if (!subscriptionUpdater.compareAndSet(this, null, subscription)) {
-            failLateSubscriber(this.subscription, subscriber);
-            return;
+            final SubscriptionImpl oldSubscription = this.subscription;
+            assert oldSubscription != null;
+            return oldSubscription;
         }
 
+        final Subscriber<Object> subscriber = subscription.subscriber();
         if (subscription.needsDirectInvocation()) {
             subscriber.onSubscribe(subscription);
             safeOnSubscribeToDelegate();
         } else {
-            executor.execute(() -> {
+            subscription.executor().execute(() -> {
                 subscriber.onSubscribe(subscription);
                 safeOnSubscribeToDelegate();
             });
         }
+
+        return subscription;
     }
 
     private void safeOnSubscribeToDelegate() {

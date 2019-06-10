@@ -32,7 +32,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.common.HttpMethod;
@@ -41,24 +40,24 @@ import com.linecorp.armeria.common.MediaType;
 public class RouterTest {
     private static final Logger logger = LoggerFactory.getLogger(RouterTest.class);
 
-    private static final BiConsumer<PathMapping, PathMapping> REJECT = (a, b) -> {
-        throw new IllegalStateException("duplicate path mapping: " + a + "vs. " + b);
+    private static final BiConsumer<Route, Route> REJECT = (a, b) -> {
+        throw new IllegalStateException("duplicate route: " + a + "vs. " + b);
     };
 
     @Test
     public void testRouters() {
-        final List<PathMapping> mappings = Lists.newArrayList(
-                PathMapping.of("exact:/a"),         // router 1
-                PathMapping.of("/b/{var}"),
-                PathMapping.of("prefix:/c"),
-                PathMapping.of("regex:/d([^/]+)"),  // router 2
-                PathMapping.of("glob:/e/**/z"),
-                PathMapping.of("exact:/f"),         // router 3
-                PathMapping.of("/g/{var}"),
-                PathMapping.of("glob:/h/**/z"),     // router 4
-                PathMapping.of("prefix:/i")         // router 5
+        final List<Route> routes = Lists.newArrayList(
+                Route.builder().path("exact:/a").build(),         // router 1
+                Route.builder().path("/b/{var}").build(),
+                Route.builder().path("prefix:/c").build(),
+                Route.builder().path("regex:/d([^/]+)").build(),  // router 2
+                Route.builder().path("glob:/e/**/z").build(),
+                Route.builder().path("exact:/f").build(),         // router 3
+                Route.builder().path("/g/{var}").build(),
+                Route.builder().path("glob:/h/**/z").build(),     // router 4
+                Route.builder().path("prefix:/i").build()         // router 5
         );
-        final List<Router<PathMapping>> routers = Routers.routers(mappings, Function.identity(), REJECT);
+        final List<Router<Route>> routers = Routers.routers(routes, Function.identity(), REJECT);
         assertThat(routers.size()).isEqualTo(5);
 
         // Map of a path string and a router index
@@ -74,23 +73,26 @@ public class RouterTest {
                 Maps.immutableEntry("/i/1/2/3", 4)
         );
 
-        final PathMappingContext mappingCtx = mock(PathMappingContext.class);
+        final RoutingContext routingCtx = mock(RoutingContext.class);
         args.forEach(entry -> {
             logger.debug("Entry: path {} router {}", entry.getKey(), entry.getValue());
             for (int i = 0; i < 5; i++) {
-                when(mappingCtx.path()).thenReturn(entry.getKey());
-                final PathMapped<PathMapping> result = routers.get(i).find(mappingCtx);
+                when(routingCtx.path()).thenReturn(entry.getKey());
+                final Routed<Route> result = routers.get(i).find(routingCtx);
                 assertThat(result.isPresent()).isEqualTo(i == entry.getValue());
             }
         });
     }
 
     @Test
-    public void duplicateMappings() {
+    public void duplicateRoutes() {
         // Simple cases
-        testDuplicateMappings(PathMapping.of("exact:/a"), PathMapping.of("exact:/a"));
-        testDuplicateMappings(PathMapping.of("exact:/a"), PathMapping.of("/a"));
-        testDuplicateMappings(PathMapping.of("prefix:/"), PathMapping.ofCatchAll());
+        testDuplicateRoutes(Route.builder().path("exact:/a").build(),
+                            Route.builder().path("exact:/a").build());
+        testDuplicateRoutes(Route.builder().path("exact:/a").build(),
+                            Route.builder().path("/a").build());
+        testDuplicateRoutes(Route.builder().path("prefix:/").build(),
+                            Route.builder().catchAll().build());
     }
 
     /**
@@ -99,84 +101,83 @@ public class RouterTest {
     @Test
     public void duplicateMappingsWithRegex() {
         // Ensure that 3 routers are created first really.
-        assertThat(Routers.routers(ImmutableList.of(PathMapping.of("/foo/:bar"),
-                                                    PathMapping.ofRegex("not-trie-compatible"),
-                                                    PathMapping.of("/bar/:baz")),
+        assertThat(Routers.routers(ImmutableList.of(Route.builder().path("/foo/:bar").build(),
+                                                    Route.builder().regex("not-trie-compatible").build(),
+                                                    Route.builder().path("/bar/:baz").build()),
                                    Function.identity(), REJECT)).hasSize(3);
 
-        testDuplicateMappings(PathMapping.of("/foo/:bar"),
-                              PathMapping.ofRegex("not-trie-compatible"),
-                              PathMapping.of("/foo/:qux"));
+        testDuplicateRoutes(Route.builder().path("/foo/:bar").build(),
+                            Route.builder().regex("not-trie-compatible").build(),
+                            Route.builder().path("/foo/:qux").build());
     }
 
     @Test
-    public void duplicateMappingsWithHeaders() {
+    public void duplicatePathWithHeaders() {
         // Not a duplicate if complexity is different.
-        testNonDuplicateMappings(PathMapping.of("/foo"),
-                                 new HttpHeaderPathMapping(PathMapping.of("/foo"),
-                                                           ImmutableSet.of(HttpMethod.GET),
-                                                           ImmutableList.of(), ImmutableList.of()));
+        testNonDuplicateRoutes(Route.builder().path("/foo").build(),
+                               Route.builder().path("/foo").methods(HttpMethod.GET).build());
 
         // Duplicate if supported methods overlap.
-        testNonDuplicateMappings(new HttpHeaderPathMapping(PathMapping.of("/foo"),
-                                                           ImmutableSet.of(HttpMethod.GET),
-                                                           ImmutableList.of(), ImmutableList.of()),
-                                 new HttpHeaderPathMapping(PathMapping.of("/foo"),
-                                                           ImmutableSet.of(HttpMethod.POST),
-                                                           ImmutableList.of(), ImmutableList.of()));
-        testDuplicateMappings(new HttpHeaderPathMapping(PathMapping.of("/foo"),
-                                                        ImmutableSet.of(HttpMethod.GET),
-                                                        ImmutableList.of(), ImmutableList.of()),
-                              new HttpHeaderPathMapping(PathMapping.of("/foo"),
-                                                        ImmutableSet.of(HttpMethod.GET, HttpMethod.POST),
-                                                        ImmutableList.of(), ImmutableList.of()));
+        testDuplicateRoutes(Route.builder().path("/foo").methods(HttpMethod.GET).build(),
+                            Route.builder().path("/foo").methods(HttpMethod.GET, HttpMethod.POST).build());
+
+        testNonDuplicateRoutes(Route.builder().path("/foo").methods(HttpMethod.GET).build(),
+                               Route.builder().path("/foo").methods(HttpMethod.POST).build());
 
         // Duplicate if consume types overlap.
-        testNonDuplicateMappings(new HttpHeaderPathMapping(PathMapping.of("/foo"),
-                                                           ImmutableSet.of(HttpMethod.POST),
-                                                           ImmutableList.of(MediaType.PLAIN_TEXT_UTF_8),
-                                                           ImmutableList.of()),
-                                 new HttpHeaderPathMapping(PathMapping.of("/foo"),
-                                                           ImmutableSet.of(HttpMethod.POST),
-                                                           ImmutableList.of(MediaType.JSON_UTF_8),
-                                                           ImmutableList.of()));
-        testDuplicateMappings(new HttpHeaderPathMapping(PathMapping.of("/foo"),
-                                                        ImmutableSet.of(HttpMethod.POST),
-                                                        ImmutableList.of(MediaType.PLAIN_TEXT_UTF_8,
-                                                                         MediaType.JSON_UTF_8),
-                                                        ImmutableList.of()),
-                              new HttpHeaderPathMapping(PathMapping.of("/foo"),
-                                                        ImmutableSet.of(HttpMethod.POST),
-                                                        ImmutableList.of(MediaType.JSON_UTF_8),
-                                                        ImmutableList.of()));
+        testDuplicateRoutes(Route.builder()
+                                 .path("/foo")
+                                 .methods(HttpMethod.POST)
+                                 .consumes(MediaType.PLAIN_TEXT_UTF_8, MediaType.JSON_UTF_8)
+                                 .build(),
+                            Route.builder()
+                                 .path("/foo")
+                                 .methods(HttpMethod.POST)
+                                 .consumes(MediaType.JSON_UTF_8)
+                                 .build());
+
+        testNonDuplicateRoutes(Route.builder()
+                                    .path("/foo")
+                                    .methods(HttpMethod.POST)
+                                    .consumes(MediaType.PLAIN_TEXT_UTF_8)
+                                    .build(),
+                               Route.builder()
+                                    .path("/foo")
+                                    .methods(HttpMethod.POST)
+                                    .consumes(MediaType.JSON_UTF_8)
+                                    .build());
 
         // Duplicate if produce types overlap.
-        testNonDuplicateMappings(new HttpHeaderPathMapping(PathMapping.of("/foo"),
-                                                           ImmutableSet.of(HttpMethod.POST),
-                                                           ImmutableList.of(),
-                                                           ImmutableList.of(MediaType.PLAIN_TEXT_UTF_8)),
-                                 new HttpHeaderPathMapping(PathMapping.of("/foo"),
-                                                           ImmutableSet.of(HttpMethod.POST),
-                                                           ImmutableList.of(),
-                                                           ImmutableList.of(MediaType.JSON_UTF_8)));
-        testDuplicateMappings(new HttpHeaderPathMapping(PathMapping.of("/foo"),
-                                                        ImmutableSet.of(HttpMethod.POST),
-                                                        ImmutableList.of(),
-                                                        ImmutableList.of(MediaType.PLAIN_TEXT_UTF_8,
-                                                                         MediaType.JSON_UTF_8)),
-                              new HttpHeaderPathMapping(PathMapping.of("/foo"),
-                                                        ImmutableSet.of(HttpMethod.POST),
-                                                        ImmutableList.of(),
-                                                        ImmutableList.of(MediaType.PLAIN_TEXT_UTF_8)));
+        testDuplicateRoutes(Route.builder()
+                                 .path("/foo")
+                                 .methods(HttpMethod.POST)
+                                 .produces(MediaType.PLAIN_TEXT_UTF_8, MediaType.JSON_UTF_8)
+                                 .build(),
+                            Route.builder()
+                                 .path("/foo")
+                                 .methods(HttpMethod.POST)
+                                 .produces(MediaType.PLAIN_TEXT_UTF_8)
+                                 .build());
+
+        testNonDuplicateRoutes(Route.builder()
+                                    .path("/foo")
+                                    .methods(HttpMethod.POST)
+                                    .produces(MediaType.PLAIN_TEXT_UTF_8)
+                                    .build(),
+                               Route.builder()
+                                    .path("/foo")
+                                    .methods(HttpMethod.POST)
+                                    .produces(MediaType.JSON_UTF_8)
+                                    .build());
     }
 
-    private static void testDuplicateMappings(PathMapping... mappings) {
-        assertThatThrownBy(() -> Routers.routers(ImmutableList.copyOf(mappings), Function.identity(), REJECT))
+    private static void testDuplicateRoutes(Route... routes) {
+        assertThatThrownBy(() -> Routers.routers(ImmutableList.copyOf(routes), Function.identity(), REJECT))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageStartingWith("duplicate path mapping:");
+                .hasMessageStartingWith("duplicate route:");
     }
 
-    private static void testNonDuplicateMappings(PathMapping... mappings) {
-        Routers.routers(ImmutableList.copyOf(mappings), Function.identity(), REJECT);
+    private static void testNonDuplicateRoutes(Route... routes) {
+        Routers.routers(ImmutableList.copyOf(routes), Function.identity(), REJECT);
     }
 }

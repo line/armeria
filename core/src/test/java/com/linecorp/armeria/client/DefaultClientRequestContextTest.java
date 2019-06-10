@@ -21,8 +21,8 @@ import static org.mockito.Mockito.mock;
 
 import org.junit.Test;
 
-import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -78,13 +78,11 @@ public class DefaultClientRequestContextTest {
     }
 
     private static void setAdditionalHeaders(ClientRequestContext originalCtx) {
-        final DefaultHttpHeaders headers1 = new DefaultHttpHeaders();
-        headers1.set(HttpHeaderNames.of("my-header#1"), "value#1");
+        final HttpHeaders headers1 = HttpHeaders.of(HttpHeaderNames.of("my-header#1"), "value#1");
         originalCtx.setAdditionalRequestHeaders(headers1);
         originalCtx.setAdditionalRequestHeader(HttpHeaderNames.of("my-header#2"), "value#2");
 
-        final DefaultHttpHeaders headers2 = new DefaultHttpHeaders();
-        headers2.set(HttpHeaderNames.of("my-header#3"), "value#3");
+        final HttpHeaders headers2 = HttpHeaders.of(HttpHeaderNames.of("my-header#3"), "value#3");
         originalCtx.addAdditionalRequestHeaders(headers2);
         originalCtx.addAdditionalRequestHeader(HttpHeaderNames.of("my-header#4"), "value#4");
         // Remove the first one.

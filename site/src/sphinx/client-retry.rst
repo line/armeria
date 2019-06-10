@@ -18,37 +18,22 @@ So, let's find out what we can do with :api:`RetryingClient`.
 ``RetryingClient``
 ------------------
 
-You can just use the ``decorator()`` method in :api:`ClientBuilder` to build a :api:`RetryingHttpClient`:
+You can just use the ``decorator()`` method in :api:`ClientBuilder` or :api:`HttpClientBuilder` to build a :api:`RetryingHttpClient`. For example:
 
 .. code-block:: java
 
-    import com.linecorp.armeria.client.ClientBuilder;
     import com.linecorp.armeria.client.HttpClient;
+    import com.linecorp.armeria.client.HttpClientBuilder;
     import com.linecorp.armeria.client.retry.RetryingHttpClient;
     import com.linecorp.armeria.client.retry.RetryStrategy;
-    import com.linecorp.armeria.common.AggregatedHttpMessage;
-    import com.linecorp.armeria.common.HttpRequest;
-    import com.linecorp.armeria.common.HttpResponse;
+    import com.linecorp.armeria.common.AggregatedHttpResponse;
 
     RetryStrategy strategy = RetryStrategy.onServerErrorStatus();
-    HttpClient client = new ClientBuilder(...)
-            .decorator(RetryingHttpClient.newDecorator(strategy))
-            .build(HttpClient.class);
-
-    final AggregatedHttpMessage res = client.execute(...).aggregate().join();
-
-or even simply,
-
-.. code-block:: java
-
-    import com.linecorp.armeria.client.HttpClientBuilder;
-
-    RetryStrategy strategy = RetryStrategy.onServerErrorStatus();
-    HttpClient client = new HttpClientBuilder(...)
+    HttpClient client = new HttpClientBuilder("http://example.com/hello")
             .decorator(RetryingHttpClient.newDecorator(strategy))
             .build();
 
-    final AggregatedHttpMessage res = client.execute(...).aggregate().join();
+    final AggregatedHttpResponse res = client.execute(...).aggregate().join();
 
 That's it. The client will keep attempting until it succeeds or the number of attempts exceeds the maximum
 number of total attempts. You can configure the ``maxTotalAttempts`` when making the decorator using
@@ -75,11 +60,13 @@ You can customize the ``strategy`` by implementing :api:`RetryStrategy`.
         final Backoff backoff = Backoff.ofDefault();
 
         @Override
-        public CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx, @Nullable Throwable cause) {
+        public CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx,
+                                                    @Nullable Throwable cause) {
             if (cause != null) {
                 if (cause instanceof ResponseTimeoutException ||
                     cause instanceof UnprocessedRequestException) {
-                    // The response timed out or the request has not been handled by the server.
+                    // The response timed out or the request has not been handled
+                    // by the server.
                     return CompletableFuture.completedFuture(backoff);
                 }
             }
@@ -88,7 +75,8 @@ You can customize the ``strategy`` by implementing :api:`RetryStrategy`.
                 return CompletableFuture.completedFuture(backoff);
             }
 
-            return CompletableFuture.completedFuture(null); // Return null to stop retrying.
+            // Return null to stop retrying.
+            return CompletableFuture.completedFuture(null);
         }
     };
 
@@ -123,11 +111,13 @@ You can return a different :api:`Backoff` according to the response status.
         final Backoff backoffOnConflict = Backoff.fixed(100);
 
         @Override
-        public CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx, @Nullable Throwable cause) {
+        public CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx,
+                                                    @Nullable Throwable cause) {
             if (cause != null) {
                 if (cause instanceof ResponseTimeoutException ||
                     cause instanceof UnprocessedRequestException) {
-                    // The response timed out or the request has not been handled by the server.
+                    // The response timed out or the request has not been handled
+                    // by the server.
                     return CompletableFuture.completedFuture(backoffOnServerErrorOrTimeout);
                 }
             }
@@ -139,7 +129,8 @@ You can return a different :api:`Backoff` according to the response status.
                 return CompletableFuture.completedFuture(backoffOnConflict);
             }
 
-            return CompletableFuture.completedFuture(null); // Return null to stop retrying.
+            // Return null to stop retrying.
+            return CompletableFuture.completedFuture(null);
         }
     };
 
@@ -152,31 +143,62 @@ using :api:`RetryingHttpClientBuilder`:
     import com.linecorp.armeria.client.retry.RetryingHttpClientBuilder;
     import com.linecorp.armeria.client.retry.RetryStrategyWithContent;
 
-    final RetryStrategyWithContent<HttpResponse> strategy = new RetryStrategyWithContent<HttpResponse>() {
-        final Backoff backoff = Backoff.ofDefault();
+    final RetryStrategyWithContent<HttpResponse> strategy =
+        new RetryStrategyWithContent<HttpResponse>() {
 
-        @Override
-        public CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx, HttpResponse response) {
-            return response.aggregate().handle((result, thrown) -> {
-                if (thrown != null) {
-                    if (thrown instanceof ResponseTimeoutException ||
-                        thrown instanceof UnprocessedRequestException) {
-                        // The response timed out or the request has not been handled by the server.
+            final Backoff backoff = Backoff.ofDefault();
+
+            @Override
+            public CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx,
+                                                        HttpResponse response) {
+                return response.aggregate().handle((result, thrown) -> {
+                    if (thrown != null) {
+                        if (thrown instanceof ResponseTimeoutException ||
+                            thrown instanceof UnprocessedRequestException) {
+                            // The response timed out or the request has not been handled
+                            // by the server.
+                            return backoff;
+                        }
+                    } else if ("Should I retry?".equals(result.contentUtf8())) {
                         return backoff;
                     }
-                } else if ("Should I retry?".equals(result.content().toStringUtf8())) {
-                    return backoff;
-                }
-                return null; // Return null to stop retrying.
-            });
-        }
-    };
+                    return null; // Return null to stop retrying.
+                });
+            }
+        };
 
+    // Create an HttpClient with a custom strategy.
     final HttpClient client = new HttpClientBuilder(...)
-            .decorator(new RetryingHttpClientBuilder(strategy).newDecorator()) // Specify the strategy.
+            .decorator(new RetryingHttpClientBuilder(strategy).newDecorator())
             .build();
 
-    final AggregatedHttpMessage res = client.execute(...).aggregate().join();
+    final AggregatedHttpResponse res = client.execute(...).aggregate().join();
+
+.. tip::
+
+    You might find the ``peel()`` method in :api:`Exceptions` useful when the exception you are trying to
+    handle is wrapped by exceptions like ``CompletionException`` and ``ExecutionException``:
+
+    .. code-block:: java
+
+        import com.linecorp.armeria.common.Exceptions;
+
+        @Override
+        public CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx,
+                                                    @Nullable Throwable cause) {
+            if (cause != null) {
+                if (cause instanceof ResponseTimeoutException ||
+                    cause instanceof UnprocessedRequestException) {
+                    // The response timed out or the request has not been handled
+                    // by the server.
+                    return CompletableFuture.completedFuture(backoff);
+                }
+
+                Throwable peeled = Exceptions.peel(cause);
+                if (peeled instanceof MyException) { ... }
+            }
+            ...
+        }
 
 ``Backoff``
 -----------
@@ -192,8 +214,10 @@ Armeria provides ``Backoff.ofDefault()`` that you might use by default. It is ex
 
 .. code-block:: java
 
-    Backoff.exponential(minDelayMillis /* 200 */, maxDelayMillis /* 10000 */, multiplier /* 2.0 */)
-           .withJitter(jitterRate /* 0.2 */);
+    Backoff.exponential(200   /* minDelayMillis */,
+                        10000 /* maxDelayMillis */,
+                        2.0   /* multiplier     */)
+           .withJitter(0.2 /* jitterRate */);
 
 The delay starts from ``minDelayMillis`` until it reaches ``maxDelayMillis`` multiplying by multiplier every
 retry. Please note that the ``.withJitter()`` will add jitter value to the calculated delay.
@@ -231,8 +255,7 @@ when the time of whole retry session has passed the time previously configured u
 
 .. code-block:: java
 
-    ClientBuilder.defaultResponseTimeoutMillis(millis);
-
+    ClientBuilder.responseTimeoutMillis(millis);
     // or..
     ClientRequestContext.setResponseTimeoutMillis(millis);
 
@@ -242,7 +265,8 @@ You can configure it when you create the decorator:
 
 .. code-block:: java
 
-    RetryingHttpClient.newDecorator(strategy, maxTotalAttempts, responseTimeoutMillisForEachAttempt);
+    RetryingHttpClient.newDecorator(strategy, maxTotalAttempts,
+                                    responseTimeoutMillisForEachAttempt);
 
 You can retry on this :api:`ResponseTimeoutException`.
 
@@ -310,12 +334,18 @@ This will produce following logs when there are three attempts:
 
 .. code-block:: java
 
-    LoggingClient - Request: {startTime=..., length=..., duration=..., scheme=..., host=..., headers=[...]
-    LoggingClient - Response: {startTime=..., length=..., duration=..., headers=[:status=500, ...]
-    LoggingClient - Request: {startTime=..., length=..., duration=..., scheme=..., host=..., headers=[...]
-    LoggingClient - Response: {startTime=..., length=..., duration=..., headers=[:status=500, ...]
-    LoggingClient - Request: {startTime=..., length=..., duration=..., scheme=..., host=..., headers=[...]
-    LoggingClient - Response: {startTime=..., length=..., duration=..., headers=[:status=200, ...]
+    Request: {startTime=..., length=..., duration=..., scheme=..., host=..., headers=[...]
+    Response: {startTime=..., length=..., duration=..., headers=[:status=500, ...]
+    Request: {startTime=..., ..., headers=[..., armeria-retry-count=1, ...]
+    Response: {startTime=..., length=..., duration=..., headers=[:status=500, ...]
+    Request: {startTime=..., ..., headers=[..., armeria-retry-count=2, ...]
+    Response: {startTime=..., length=..., duration=..., headers=[:status=200, ...]
+
+.. note::
+
+    Did you notice that the ``armeria-retry-count`` header is inserted from the second request?
+    :api:`RetryingClient` inserts it to indicate the retry count of a request.
+    The server might use this value to reject excessive retries, etc.
 
 If you want to log the first request and the last response, no matter if it's successful or not,
 do the reverse:
@@ -331,12 +361,13 @@ do the reverse:
             .decorator(LoggingClient.newDecorator())
             .build();
 
-This will produce only single request and response log pair regardless how many attempts are made:
+This will produce single request and response log pair and the total number of attempts only, regardless
+how many attempts are made:
 
 .. code-block:: java
 
-    LoggingClient - Request: {startTime=..., length=..., duration=..., scheme=..., host=..., headers=[...]
-    LoggingClient - Response: {startTime=..., length=..., duration=..., headers=[:status=200, ...]
+    Request: {startTime=..., length=..., duration=..., scheme=..., host=..., headers=[...]
+    Response: {startTime=..., length=..., headers=[:status=200, ...]}, {totalAttempts=3}
 
 .. note::
 
@@ -360,7 +391,7 @@ You might want to use :ref:`client-circuit-breaker` with :api:`RetryingHttpClien
             .decorator(new RetryingHttpClientBuilder(myRetryStrategy).newDecorator())
             .build();
 
-    final AggregatedHttpMessage res = client.execute(...).aggregate().join();
+    final AggregatedHttpResponse res = client.execute(...).aggregate().join();
 
 This decorates :api:`CircuitBreakerHttpClient` with :api:`RetryingHttpClient` so that the :api:`CircuitBreaker`
 judges every request and retried request as successful or failed. If the failure rate exceeds a certain
@@ -376,7 +407,8 @@ a retry unnecessarily when the circuit is open, e.g.
         final Backoff backoff = Backoff.ofDefault();
 
         @Override
-        public CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx, @Nullable Throwable cause) {
+        public CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx,
+                                                    @Nullable Throwable cause) {
             if (cause != null) {
                 if (cause instanceof FailFastException) {
                     // The circuit is already open so returns null to stop retrying.
@@ -385,7 +417,8 @@ a retry unnecessarily when the circuit is open, e.g.
 
                 if (cause instanceof ResponseTimeoutException ||
                     cause instanceof UnprocessedRequestException) {
-                    // The response timed out or the request has not been handled by the server.
+                    // The response timed out or the request has not been handled
+                    // by the server.
                     return CompletableFuture.completedFuture(backoff);
                 }
             }

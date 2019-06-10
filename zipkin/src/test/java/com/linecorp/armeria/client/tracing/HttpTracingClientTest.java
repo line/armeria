@@ -16,10 +16,10 @@
 
 package com.linecorp.armeria.client.tracing;
 
-import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -32,29 +32,25 @@ import javax.annotation.Nullable;
 import org.junit.After;
 import org.junit.Test;
 
-import com.google.common.collect.ImmutableMap;
-
 import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.DefaultClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextBuilder;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.tracing.HelloService;
 import com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.tracing.SpanCollectingReporter;
 
 import brave.Tracing;
 import brave.sampler.Sampler;
-import io.netty.channel.Channel;
-import io.netty.channel.DefaultEventLoop;
 import zipkin2.Span;
 import zipkin2.Span.Kind;
 
@@ -70,12 +66,8 @@ public class HttpTracingClientTest {
     }
 
     @Test
-    public void newDecorator_shouldFailFastWhenRequestContextCurrentTraceContextNotConfigured() {
-        assertThatThrownBy(() -> HttpTracingClient.newDecorator(Tracing.newBuilder().build()))
-                .isInstanceOf(IllegalStateException.class).hasMessage(
-                "Tracing.currentTraceContext is not a RequestContextCurrentTraceContext scope. " +
-                "Please call Tracing.Builder.currentTraceContext(RequestContextCurrentTraceContext.INSTANCE)."
-        );
+    public void newDecorator_shouldWorkWhenRequestContextCurrentTraceContextNotConfigured() {
+        HttpTracingClient.newDecorator(Tracing.newBuilder().build());
     }
 
     @Test
@@ -109,18 +101,18 @@ public class HttpTracingClientTest {
         assertThat(span.annotations()).hasSize(2);
 
         // check tags
-        assertThat(span.tags()).containsAllEntriesOf(ImmutableMap.of(
-                "http.host", "foo.com",
-                "http.method", "POST",
-                "http.path", "/hello/armeria",
-                "http.status_code", "200",
-                "http.url", "none+h2c://foo.com/hello/armeria"));
+        assertThat(span.tags()).containsEntry("http.host", "foo.com")
+                               .containsEntry("http.method", "POST")
+                               .containsEntry("http.path", "/hello/armeria")
+                               .containsEntry("http.status_code", "200")
+                               .containsEntry("http.url", "http://foo.com/hello/armeria")
+                               .containsEntry("http.protocol", "h2c");
 
         // check service name
         assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
 
         // check remote service name
-        assertThat(span.remoteServiceName()).isEqualTo("foo.com");
+        assertThat(span.remoteServiceName()).isEqualTo(null);
     }
 
     @Test(timeout = 20000)
@@ -138,12 +130,12 @@ public class HttpTracingClientTest {
         final Span span = reporter.spans().take();
 
         // check tags
-        assertThat(span.tags()).containsAllEntriesOf(ImmutableMap.of(
-                "http.host", "foo.com",
-                "http.method", "POST",
-                "http.path", "/hello/armeria",
-                "http.status_code", "200",
-                "http.url", "none+h2c://foo.com/hello/armeria"));
+        assertThat(span.tags()).containsEntry("http.host", "foo.com")
+                               .containsEntry("http.method", "POST")
+                               .containsEntry("http.path", "/hello/armeria")
+                               .containsEntry("http.status_code", "200")
+                               .containsEntry("http.url", "http://foo.com/hello/armeria")
+                               .containsEntry("http.protocol", "h2c");
 
         // check service name
         assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
@@ -169,17 +161,16 @@ public class HttpTracingClientTest {
             throws Exception {
 
         // prepare parameters
-        final HttpRequest req = HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/hello/armeria")
-                                                          .authority("foo.com"));
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/armeria",
+                                                                 HttpHeaderNames.AUTHORITY, "foo.com"));
         final RpcRequest rpcReq = RpcRequest.of(HelloService.Iface.class, "hello", "Armeria");
         final HttpResponse res = HttpResponse.of(HttpStatus.OK);
         final RpcResponse rpcRes = RpcResponse.of("Hello, Armeria!");
-        final ClientRequestContext ctx = new DefaultClientRequestContext(
-                new DefaultEventLoop(), NoopMeterRegistry.get(), H2C, Endpoint.of("localhost", 8080),
-                HttpMethod.POST, "/hello/armeria", null, null, ClientOptions.DEFAULT, req);
+        final ClientRequestContext ctx =
+                ClientRequestContextBuilder.of(req)
+                                           .endpoint(Endpoint.of("localhost", 8080))
+                                           .build();
 
-        ctx.logBuilder().startRequest(mock(Channel.class), H2C);
-        ctx.logBuilder().requestHeaders(req.headers());
         ctx.logBuilder().requestFirstBytesTransferred();
         ctx.logBuilder().requestContent(rpcReq, req);
         ctx.logBuilder().endRequest();
@@ -195,9 +186,14 @@ public class HttpTracingClientTest {
 
         assertThat(actualRes).isEqualTo(res);
 
-        verify(delegate, times(1)).execute(ctx, req);
+        verify(delegate, times(1)).execute(same(ctx), argThat(arg -> {
+            final RequestHeaders headers = arg.headers();
+            return headers.contains(HttpHeaderNames.of("x-b3-traceid")) &&
+                   headers.contains(HttpHeaderNames.of("x-b3-spanid")) &&
+                   headers.contains(HttpHeaderNames.of("x-b3-sampled"));
+        }));
 
-        ctx.logBuilder().responseHeaders(HttpHeaders.of(HttpStatus.OK));
+        ctx.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.OK));
         ctx.logBuilder().responseFirstBytesTransferred();
         ctx.logBuilder().responseContent(rpcRes, res);
         ctx.logBuilder().endResponse();

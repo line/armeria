@@ -32,16 +32,15 @@ a decorating service. It enables you to write a decorating service with a single
 
     ServerBuilder sb = new ServerBuilder();
     HttpService service = ...;
-    sb.serviceUnder("/web",
-                    service.decorate((delegate, ctx, req) -> {
-                        if (!authenticate(req)) {
-                            // Authentication failed; fail the request.
-                            return HttpResponse.of(HttpStatus.UNAUTHORIZED);
-                        }
+    sb.serviceUnder("/web", service.decorate((delegate, ctx, req) -> {
+        if (!authenticate(req)) {
+            // Authentication failed; fail the request.
+            return HttpResponse.of(HttpStatus.UNAUTHORIZED);
+        }
 
-                        // Authenticated; pass the request to the actual service.
-                        return delegate.serve(ctx, req);
-                    });
+        // Authenticated; pass the request to the actual service.
+        return delegate.serve(ctx, req);
+    });
 
 Extending ``SimpleDecoratingService``
 -------------------------------------
@@ -50,6 +49,12 @@ If your decorator is expected to be reusable, it is recommended to define a new 
 :api:`SimpleDecoratingService` :
 
 .. code-block:: java
+
+    import com.linecorp.armeria.common.HttpRequest;
+    import com.linecorp.armeria.common.HttpResponse;
+    import com.linecorp.armeria.server.Service;
+    import com.linecorp.armeria.server.ServiceRequestContext;
+    import com.linecorp.armeria.server.SimpleDecoratingService;
 
     public class AuthService extends SimpleDecoratingService<HttpRequest, HttpResponse> {
         public AuthService(Service<HttpRequest, HttpResponse> delegate) {
@@ -82,6 +87,9 @@ So far, we only demonstrated the case where a decorating service does not transf
 response. You can do that as well, of course, using :api:`DecoratingService`:
 
 .. code-block:: java
+
+    import com.linecorp.armeria.common.RpcRequest;
+    import com.linecorp.armeria.common.RpcResponse;
 
     // Transforms a Service<RpcRequest, RpcResponse> into Service<HttpRequest, HttpResponse>.
     public class MyRpcService extends DecoratingService<RpcRequest, RpcResponse,
@@ -126,6 +134,9 @@ a certain type from a server:
 
 .. code-block:: java
 
+    import com.linecorp.armeria.server.ServerConfig;
+    import java.util.List;
+
     Server server = ...;
     ServerConfig serverConfig = server.config();
     List<ServiceConfig> serviceConfigs = serverConfig.serviceConfigs();
@@ -135,7 +146,79 @@ a certain type from a server:
         }
     }
 
+.. _server-decorator-service-with-routes:
+
+Decorating ``ServiceWithRoutes``
+--------------------------------------
+
+:api:`ServiceWithRoutes` is a special variant of :api:`Service` which allows a user to register multiple
+routes for a single service. It has a method called ``routes()`` which returns a ``Set`` of
+:apiplural:`Route` so that you do not have to specify path when registering your service:
+
+.. code-block:: java
+
+    import com.linecorp.armeria.server.Route;
+    import com.linecorp.armeria.server.ServiceWithRoutes;
+    import java.util.HashSet;
+    import java.util.Set;
+
+    public class MyServiceWithRoutes implements ServiceWithRoutes<HttpRequest, HttpResponse> {
+        @Override
+        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) { ... }
+
+        @Override
+        public Set<Route> routes() {
+            Set<Route> routes = new HashSet<>();
+            routes.add(Route.builder().path("/services/greet").build());
+            routes.add(Route.builder().path("/services/hello").build());
+            return routes;
+        }
+    }
+
+    ServerBuilder sb = new ServerBuilder();
+    // No path is specified.
+    sb.service(new MyServiceWithRoutes());
+    // Override the path provided by routes().
+    sb.service("/services/hola", new MyServiceWithRoutes());
+
+However, decorating a :api:`ServiceWithRoutes` can lead to a compilation error when you attempt to
+register it without specifying a path explicitly, because a decorated service is not a
+:api:`ServiceWithRoutes` anymore but just a :api:`Service`:
+
+.. code-block:: java
+
+    import com.linecorp.armeria.server.logging.LoggingService;
+
+    ServerBuilder sb = new ServerBuilder();
+
+    // Works.
+    ServiceWithRoutes<HttpRequest, HttpResponse> service =
+            new MyServiceWithRoutes();
+    sb.service(service);
+
+    // Does not work - not a ServiceWithRoutes anymore due to decoration.
+    Service<HttpRequest, HttpResponse> decoratedService =
+            service.decorate(LoggingService.newDecorator());
+    sb.service(decoratedService); // Compilation error
+
+    // Works if a path is specified explicitly.
+    sb.service("/services/bonjour", decoratedService);
+
+Therefore, you need to specify the decorators as extra parameters:
+
+.. code-block:: java
+
+    ServerBuilder sb = new ServerBuilder();
+    // Register a service decorated with two decorators at multiple routes.
+    sb.service(new MyServiceWithRoutes(),
+               MyDecoratedService::new,
+               LoggingService.newDecorator())
+
+A good real-world example of :api:`ServiceWithRoutes` is :api:`GrpcService`.
+See :ref:`server-grpc-decorator` for more information.
+
 See also
 --------
 
 - :ref:`client-decorator`
+- :ref:`advanced-custom-attribute`

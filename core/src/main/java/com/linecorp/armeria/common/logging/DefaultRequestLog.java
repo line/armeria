@@ -31,8 +31,6 @@ import static com.linecorp.armeria.common.logging.RequestLogAvailability.RESPONS
 import static com.linecorp.armeria.common.logging.RequestLogAvailability.SCHEME;
 import static java.util.Objects.requireNonNull;
 
-import java.time.Clock;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -42,21 +40,29 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.SSLSession;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.ClientConnectionTimings;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TextFormatter;
 
 import io.netty.channel.Channel;
-import io.netty.util.internal.PlatformDependent;
+import io.netty.util.Attribute;
+import io.netty.util.AttributeKey;
 
 /**
  * Default {@link RequestLog} implementation.
@@ -71,13 +77,17 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private static final int FLAGS_RESPONSE_END_WITHOUT_CONTENT =
             RESPONSE_END.setterFlags() & ~RESPONSE_CONTENT.setterFlags();
 
-    private static final int STRING_BUILDER_CAPACITY = 512;
+    @VisibleForTesting
+    static final int REQUEST_STRING_BUILDER_CAPACITY = 190;
 
-    private static final HttpHeaders DUMMY_REQUEST_HEADERS_HTTP =
-            HttpHeaders.of().scheme("http").authority("?").method(HttpMethod.UNKNOWN).path("?").asImmutable();
-    private static final HttpHeaders DUMMY_REQUEST_HEADERS_HTTPS =
-            HttpHeaders.of().scheme("https").authority("?").method(HttpMethod.UNKNOWN).path("?").asImmutable();
-    private static final HttpHeaders DUMMY_RESPONSE_HEADERS = HttpHeaders.of(HttpStatus.UNKNOWN).asImmutable();
+    @VisibleForTesting
+    static final int RESPONSE_STRING_BUILDER_CAPACITY = 203;
+
+    private static final RequestHeaders DUMMY_REQUEST_HEADERS_HTTP =
+            RequestHeaders.builder(HttpMethod.UNKNOWN, "?").scheme("http").authority("?").build();
+    private static final RequestHeaders DUMMY_REQUEST_HEADERS_HTTPS =
+            RequestHeaders.builder(HttpMethod.UNKNOWN, "?").scheme("https").authority("?").build();
+    private static final ResponseHeaders DUMMY_RESPONSE_HEADERS = ResponseHeaders.of(HttpStatus.UNKNOWN);
 
     private final RequestContext ctx;
 
@@ -99,6 +109,10 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private long requestFirstBytesTransferredTimeNanos;
     private long requestEndTimeNanos;
     private long requestLength;
+    private ContentPreviewer requestContentPreviewer = ContentPreviewer.disabled();
+    private final ContentPreviewerFactory requestContentPreviewerFactory;
+    @Nullable
+    private String requestContentPreview;
     @Nullable
     private Throwable requestCause;
 
@@ -107,19 +121,27 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private long responseFirstBytesTransferredTimeNanos;
     private long responseEndTimeNanos;
     private long responseLength;
+    private ContentPreviewer responseContentPreviewer = ContentPreviewer.disabled();
+    private final ContentPreviewerFactory responseContentPreviewerFactory;
+    @Nullable
+    private String responseContentPreview;
     @Nullable
     private Throwable responseCause;
 
     @Nullable
     private Channel channel;
     @Nullable
+    private SSLSession sslSession;
+    @Nullable
     private SessionProtocol sessionProtocol;
     private SerializationFormat serializationFormat = SerializationFormat.NONE;
-    @Nullable
-    private String host;
 
-    private HttpHeaders requestHeaders = DUMMY_REQUEST_HEADERS_HTTP;
-    private HttpHeaders responseHeaders = DUMMY_RESPONSE_HEADERS;
+    private RequestHeaders requestHeaders = DUMMY_REQUEST_HEADERS_HTTP;
+    private HttpHeaders requestTrailers = HttpHeaders.of();
+
+    private ResponseHeaders responseHeaders = DUMMY_RESPONSE_HEADERS;
+    private HttpHeaders responseTrailers = HttpHeaders.of();
+
     @Nullable
     private Object requestContent;
     @Nullable
@@ -140,7 +162,34 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
      * Creates a new instance.
      */
     public DefaultRequestLog(RequestContext ctx) {
+        this(ctx, ContentPreviewerFactory.disabled(), ContentPreviewerFactory.disabled());
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public DefaultRequestLog(RequestContext ctx, ContentPreviewerFactory requestContentPreviewerFactory,
+                             ContentPreviewerFactory responseContentPreviewerFactory) {
         this.ctx = requireNonNull(ctx, "ctx");
+        this.requestContentPreviewerFactory = requireNonNull(requestContentPreviewerFactory,
+                                                             "requestContentPreviewerFactory");
+        this.responseContentPreviewerFactory = requireNonNull(responseContentPreviewerFactory,
+                                                              "responseContentPreviewerFactory");
+    }
+
+    @Override
+    public <T> Attribute<T> attr(AttributeKey<T> key) {
+        return ctx.attr(key);
+    }
+
+    @Override
+    public <T> boolean hasAttr(AttributeKey<T> key) {
+        return ctx.hasAttr(key);
+    }
+
+    @Override
+    public Iterator<Attribute<?>> attrs() {
+        return ctx.attrs();
     }
 
     @Override
@@ -157,21 +206,25 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     private void propagateRequestSideLog(RequestLog child) {
         child.addListener(log -> {
-            startRequest0(log.requestStartTimeNanos(), log.requestStartTimeMicros(), log.channel(),
-                          log.sessionProtocol(), true);
-        }, REQUEST_START);
+                              final ClientConnectionTimings timings = ClientConnectionTimings.get(log);
+                              if (timings != null) {
+                                  timings.setTo(this);
+                              }
+                              startRequest0(log.channel(), log.sessionProtocol(), null,
+                                            log.requestStartTimeNanos(), log.requestStartTimeMicros(), true);
+                          },
+                          REQUEST_START);
         child.addListener(log -> serializationFormat(log.serializationFormat()), SCHEME);
-        child.addListener(log -> requestFirstBytesTransferred(
-                log.requestFirstBytesTransferredTimeNanos()), REQUEST_FIRST_BYTES_TRANSFERRED);
+        child.addListener(log -> requestFirstBytesTransferred(log.requestFirstBytesTransferredTimeNanos()),
+                          REQUEST_FIRST_BYTES_TRANSFERRED);
         child.addListener(log -> requestHeaders(log.requestHeaders()), REQUEST_HEADERS);
         child.addListener(log -> requestContent(log.requestContent(), log.rawRequestContent()),
                           REQUEST_CONTENT);
         child.addListener(log -> {
-            if (log.requestCause() != null) {
-                endRequest0(log.requestEndTimeNanos(), log.requestCause());
-            } else {
-                endRequest0(log.requestEndTimeNanos(), null);
-            }
+            requestLength(log.requestLength());
+            requestContentPreview(log.requestContentPreview());
+            requestTrailers(log.requestTrailers());
+            endRequest0(log.requestCause(), log.requestEndTimeNanos());
         }, REQUEST_END);
     }
 
@@ -203,7 +256,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         if (lastChild.isAvailable(RESPONSE_END)) {
-            endResponseFrom(lastChild);
+            propagateResponseEndData(lastChild);
         }
 
         lastChild.addListener(log -> startResponse0(
@@ -213,15 +266,14 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         lastChild.addListener(log -> responseHeaders(log.responseHeaders()), RESPONSE_HEADERS);
         lastChild.addListener(log -> responseContent(
                 log.responseContent(), log.rawResponseContent()), RESPONSE_CONTENT);
-        lastChild.addListener(this::endResponseFrom, RESPONSE_END);
+        lastChild.addListener(this::propagateResponseEndData, RESPONSE_END);
     }
 
-    private void endResponseFrom(RequestLog log) {
-        if (log.responseCause() != null) {
-            endResponse0(log.responseEndTimeNanos(), log.responseCause());
-        } else {
-            endResponse0(log.responseEndTimeNanos(), null);
-        }
+    private void propagateResponseEndData(RequestLog log) {
+        responseLength(log.responseLength());
+        responseContentPreview(log.responseContentPreview());
+        responseTrailers(log.responseTrailers());
+        endResponse0(log.responseCause(), log.responseEndTimeNanos());
     }
 
     @Override
@@ -325,19 +377,32 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public void startRequest(Channel channel, SessionProtocol sessionProtocol) {
+    public void startRequest(Channel channel, SessionProtocol sessionProtocol,
+                             @Nullable SSLSession sslSession) {
         requireNonNull(channel, "channel");
         requireNonNull(sessionProtocol, "sessionProtocol");
-        startRequest0(channel, sessionProtocol, true);
+        startRequest0(channel, sessionProtocol, sslSession, true);
     }
 
-    private void startRequest0(Channel channel, SessionProtocol sessionProtocol, boolean updateAvailability) {
-        startRequest0(System.nanoTime(), currentTimeMicros(), channel, sessionProtocol, updateAvailability);
+    @Override
+    public void startRequest(Channel channel, SessionProtocol sessionProtocol, @Nullable SSLSession sslSession,
+                             long requestStartTimeNanos, long requestStartTimeMicros) {
+        requireNonNull(channel, "channel");
+        requireNonNull(sessionProtocol, "sessionProtocol");
+        startRequest0(channel, sessionProtocol, sslSession,
+                      requestStartTimeNanos, requestStartTimeMicros, true);
     }
 
-    private void startRequest0(long requestStartTimeNanos, long requestStartTimeMicros,
-                               @Nullable Channel channel, SessionProtocol sessionProtocol,
-                               boolean updateAvailability) {
+    private void startRequest0(Channel channel, SessionProtocol sessionProtocol,
+                               @Nullable SSLSession sslSession, boolean updateAvailability) {
+        startRequest0(channel, sessionProtocol, sslSession,
+                      System.nanoTime(), SystemInfo.currentTimeMicros(),
+                      updateAvailability);
+    }
+
+    private void startRequest0(@Nullable Channel channel, SessionProtocol sessionProtocol,
+                               @Nullable SSLSession sslSession, long requestStartTimeNanos,
+                               long requestStartTimeMicros, boolean updateAvailability) {
         if (isAvailabilityAlreadyUpdated(REQUEST_START)) {
             return;
         }
@@ -345,6 +410,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         this.requestStartTimeNanos = requestStartTimeNanos;
         this.requestStartTimeMicros = requestStartTimeMicros;
         this.channel = channel;
+        this.sslSession = sslSession;
         this.sessionProtocol = sessionProtocol;
         if (sessionProtocol.isTls()) {
             // Switch to the dummy headers with ':scheme=https' if the connection is TLS.
@@ -406,6 +472,12 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public SSLSession sslSession() {
+        ensureAvailability(REQUEST_START);
+        return sslSession;
+    }
+
+    @Override
     public SessionProtocol sessionProtocol() {
         ensureAvailability(REQUEST_START);
         return sessionProtocol;
@@ -452,17 +524,25 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         this.requestLength = requestLength;
     }
 
-    private void requestFirstBytesTransferred(long timestamp) {
+    @Override
+    public void requestFirstBytesTransferred() {
         if (isAvailabilityAlreadyUpdated(REQUEST_FIRST_BYTES_TRANSFERRED)) {
             return;
         }
-        requestFirstBytesTransferredTimeNanos = timestamp;
-        updateAvailability(REQUEST_FIRST_BYTES_TRANSFERRED);
+        requestFirstBytesTransferred0(System.nanoTime());
     }
 
     @Override
-    public void requestFirstBytesTransferred() {
-        requestFirstBytesTransferred(System.nanoTime());
+    public void requestFirstBytesTransferred(long requestFirstBytesTransferredTimeNanos) {
+        if (isAvailabilityAlreadyUpdated(REQUEST_FIRST_BYTES_TRANSFERRED)) {
+            return;
+        }
+        requestFirstBytesTransferred0(requestFirstBytesTransferredTimeNanos);
+    }
+
+    private void requestFirstBytesTransferred0(long requestFirstBytesTransferredTimeNanos) {
+        this.requestFirstBytesTransferredTimeNanos = requestFirstBytesTransferredTimeNanos;
+        updateAvailability(REQUEST_FIRST_BYTES_TRANSFERRED);
     }
 
     @Override
@@ -479,18 +559,29 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public HttpHeaders requestHeaders() {
+    public void increaseRequestLength(HttpData data) {
+        increaseRequestLength(data.length());
+        if (requestContentPreviewer.isDone()) {
+            return;
+        }
+        requestContentPreviewer.onData(data);
+    }
+
+    @Override
+    public RequestHeaders requestHeaders() {
         ensureAvailability(REQUEST_HEADERS);
         return requestHeaders;
     }
 
     @Override
-    public void requestHeaders(HttpHeaders requestHeaders) {
+    public void requestHeaders(RequestHeaders requestHeaders) {
         if (isAvailabilityAlreadyUpdated(REQUEST_HEADERS)) {
             return;
         }
 
         this.requestHeaders = requireNonNull(requestHeaders, "requestHeaders");
+        requestContentPreviewer = requestContentPreviewerFactory.get(ctx, this.requestHeaders);
+        requestContentPreviewer.onHeaders(requestHeaders);
         updateAvailability(REQUEST_HEADERS);
     }
 
@@ -509,6 +600,20 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         this.requestContent = requestContent;
         this.rawRequestContent = rawRequestContent;
         updateAvailability(REQUEST_CONTENT);
+    }
+
+    @Override
+    public String requestContentPreview() {
+        ensureAvailability(REQUEST_END);
+        return requestContentPreview;
+    }
+
+    @Override
+    public void requestContentPreview(@Nullable String requestContentPreview) {
+        if (isAvailabilityAlreadyUpdated(REQUEST_END)) {
+            return;
+        }
+        this.requestContentPreview = requestContentPreview;
     }
 
     @Override
@@ -531,6 +636,25 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public HttpHeaders requestTrailers() {
+        ensureAvailability(REQUEST_END);
+        return requestTrailers;
+    }
+
+    @Override
+    public void requestTrailers(HttpHeaders requestTrailers) {
+        if (isAvailabilityAlreadyUpdated(REQUEST_END)) {
+            return;
+        }
+        requireNonNull(requestTrailers, "requestTrailers");
+        if (requestTrailers.isEmpty()) {
+            return;
+        }
+
+        this.requestTrailers = requestTrailers;
+    }
+
+    @Override
     public void endRequest() {
         endRequest0(null);
     }
@@ -540,21 +664,34 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         endRequest0(requireNonNull(requestCause, "requestCause"));
     }
 
-    private void endRequest0(@Nullable Throwable requestCause) {
-        endRequest0(System.nanoTime(), requestCause);
+    @Override
+    public void endRequest(long requestEndTimeNanos) {
+        endRequest0(null, requestEndTimeNanos);
     }
 
-    private void endRequest0(long requestEndTimeNanos, @Nullable Throwable requestCause) {
+    @Override
+    public void endRequest(Throwable requestCause, long requestEndTimeNanos) {
+        endRequest0(requireNonNull(requestCause, "requestCause"), requestEndTimeNanos);
+    }
+
+    private void endRequest0(@Nullable Throwable requestCause) {
+        endRequest0(requestCause, System.nanoTime());
+    }
+
+    private void endRequest0(@Nullable Throwable requestCause, long requestEndTimeNanos) {
         final int flags = requestCause == null && requestContentDeferred ? FLAGS_REQUEST_END_WITHOUT_CONTENT
                                                                          : REQUEST_END.setterFlags();
         if (isAvailable(flags)) {
             return;
         }
 
+        if (requestContentPreview == null) {
+            requestContentPreview(requestContentPreviewer.produce());
+        }
         // if the request is not started yet, call startRequest() with requestEndTimeNanos so that
         // totalRequestDuration will be 0
-        startRequest0(requestEndTimeNanos, currentTimeMicros(), null,
-                      context().sessionProtocol(), false);
+        startRequest0(null, context().sessionProtocol(), null,
+                      requestEndTimeNanos, SystemInfo.currentTimeMicros(), false);
 
         this.requestEndTimeNanos = requestEndTimeNanos;
         this.requestCause = requestCause;
@@ -566,8 +703,13 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         startResponse0(true);
     }
 
+    @Override
+    public void startResponse(long responseStartTimeNanos, long responseStartTimeMicros) {
+        startResponse0(responseStartTimeNanos, responseStartTimeMicros, true);
+    }
+
     private void startResponse0(boolean updateAvailability) {
-        startResponse0(System.nanoTime(), currentTimeMicros(), updateAvailability);
+        startResponse0(System.nanoTime(), SystemInfo.currentTimeMicros(), updateAvailability);
     }
 
     private void startResponse0(long responseStartTimeNanos, long responseStartTimeMicros,
@@ -643,17 +785,25 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         this.responseLength = responseLength;
     }
 
-    private void responseFirstBytesTransferred(long timestamp) {
+    @Override
+    public void responseFirstBytesTransferred() {
         if (isAvailabilityAlreadyUpdated(RESPONSE_FIRST_BYTES_TRANSFERRED)) {
             return;
         }
-        responseFirstBytesTransferredTimeNanos = timestamp;
-        updateAvailability(RESPONSE_FIRST_BYTES_TRANSFERRED);
+        responseFirstBytesTransferred0(System.nanoTime());
     }
 
     @Override
-    public void responseFirstBytesTransferred() {
-        responseFirstBytesTransferred(System.nanoTime());
+    public void responseFirstBytesTransferred(long responseFirstBytesTransferredTimeNanos) {
+        if (isAvailabilityAlreadyUpdated(RESPONSE_FIRST_BYTES_TRANSFERRED)) {
+            return;
+        }
+        responseFirstBytesTransferred0(responseFirstBytesTransferredTimeNanos);
+    }
+
+    private void responseFirstBytesTransferred0(long responseFirstBytesTransferredTimeNanos) {
+        this.responseFirstBytesTransferredTimeNanos = responseFirstBytesTransferredTimeNanos;
+        updateAvailability(RESPONSE_FIRST_BYTES_TRANSFERRED);
     }
 
     @Override
@@ -670,18 +820,29 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public HttpHeaders responseHeaders() {
+    public void increaseResponseLength(HttpData data) {
+        increaseResponseLength(data.length());
+        if (responseContentPreviewer.isDone()) {
+            return;
+        }
+        responseContentPreviewer.onData(data);
+    }
+
+    @Override
+    public ResponseHeaders responseHeaders() {
         ensureAvailability(RESPONSE_HEADERS);
         return responseHeaders;
     }
 
     @Override
-    public void responseHeaders(HttpHeaders responseHeaders) {
+    public void responseHeaders(ResponseHeaders responseHeaders) {
         if (isAvailabilityAlreadyUpdated(RESPONSE_HEADERS)) {
             return;
         }
 
         this.responseHeaders = requireNonNull(responseHeaders, "responseHeaders");
+        responseContentPreviewer = responseContentPreviewerFactory.get(ctx, this.responseHeaders);
+        responseContentPreviewer.onHeaders(responseHeaders);
         updateAvailability(RESPONSE_HEADERS);
     }
 
@@ -713,6 +874,20 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public String responseContentPreview() {
+        ensureAvailability(RESPONSE_END);
+        return responseContentPreview;
+    }
+
+    @Override
+    public void responseContentPreview(@Nullable String responseContentPreview) {
+        if (isAvailabilityAlreadyUpdated(RESPONSE_END)) {
+            return;
+        }
+        this.responseContentPreview = responseContentPreview;
+    }
+
+    @Override
     public Object rawResponseContent() {
         ensureAvailability(RESPONSE_CONTENT);
         return rawResponseContent;
@@ -732,6 +907,25 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public HttpHeaders responseTrailers() {
+        ensureAvailability(RESPONSE_END);
+        return responseTrailers;
+    }
+
+    @Override
+    public void responseTrailers(HttpHeaders responseTrailers) {
+        if (isAvailabilityAlreadyUpdated(RESPONSE_END)) {
+            return;
+        }
+        requireNonNull(responseTrailers, "responseTrailers");
+        if (responseTrailers.isEmpty()) {
+            return;
+        }
+
+        this.responseTrailers = responseTrailers;
+    }
+
+    @Override
     public void endResponse() {
         endResponse0(responseContent instanceof RpcResponse ? ((RpcResponse) responseContent).cause() : null);
     }
@@ -741,20 +935,33 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         endResponse0(requireNonNull(responseCause, "responseCause"));
     }
 
-    private void endResponse0(@Nullable Throwable responseCause) {
-        endResponse0(System.nanoTime(), responseCause);
+    @Override
+    public void endResponse(long responseEndTimeNanos) {
+        endResponse0(null, responseEndTimeNanos);
     }
 
-    private void endResponse0(long responseEndTimeNanos, @Nullable Throwable responseCause) {
+    @Override
+    public void endResponse(Throwable responseCause, long responseEndTimeNanos) {
+        endResponse0(requireNonNull(responseCause, "responseCause"), responseEndTimeNanos);
+    }
+
+    private void endResponse0(@Nullable Throwable responseCause) {
+        endResponse0(responseCause, System.nanoTime());
+    }
+
+    private void endResponse0(@Nullable Throwable responseCause, long responseEndTimeNanos) {
         final int flags = responseCause == null && responseContentDeferred ? FLAGS_RESPONSE_END_WITHOUT_CONTENT
                                                                            : RESPONSE_END.setterFlags();
         if (isAvailable(flags)) {
             return;
         }
 
+        if (responseContentPreview == null) {
+            responseContentPreview(responseContentPreviewer.produce());
+        }
         // if the response is not started yet, call startResponse() with responseEndTimeNanos so that
         // totalResponseDuration will be 0
-        startResponse0(responseEndTimeNanos, currentTimeMicros(), false);
+        startResponse0(responseEndTimeNanos, SystemInfo.currentTimeMicros(), false);
 
         this.responseEndTimeNanos = responseEndTimeNanos;
         if (this.responseCause == null) {
@@ -843,17 +1050,18 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
            .append(", res=") // 6 chars
            .append(res)
            .append('}');     // 1 char
-        if (children != null && children.size() > 1) {
-            buf.append(", {totalAttempts=");
-            buf.append(children.size());
-            buf.append("}[");
-            for (int i = 0; i < children.size(); i++) {
+        final int numChildren = children != null ? children.size() : 0;
+        if (numChildren > 0) {
+            buf.append(", {");
+            for (int i = 0; i < numChildren; i++) {
+                buf.append('[');
                 buf.append(children.get(i));
-                if (i != children.size() - 1) {
+                buf.append(']');
+                if (i != numChildren - 1) {
                     buf.append(", ");
                 }
             }
-            buf.append(']');
+            buf.append('}');
         }
         return buf.toString();
     }
@@ -864,49 +1072,104 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public String toStringRequestOnly(Function<HttpHeaders, HttpHeaders> headersSanitizer,
-                                      Function<Object, Object> contentSanitizer) {
+    public String toStringRequestOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
+                                      Function<Object, ?> contentSanitizer) {
+        return toStringRequestOnly(headersSanitizer, contentSanitizer, headersSanitizer);
+    }
+
+    @Override
+    public String toStringRequestOnly(Function<? super RequestHeaders, ? extends HttpHeaders> headersSanitizer,
+                                      Function<Object, ?> contentSanitizer,
+                                      Function<? super HttpHeaders, ? extends HttpHeaders> trailersSanitizer) {
+        requireNonNull(headersSanitizer, "headersSanitizer");
+        requireNonNull(contentSanitizer, "contentSanitizer");
+        requireNonNull(trailersSanitizer, "trailersSanitizer");
+
         final int flags = this.flags & 0xFFFF; // Only interested in the bits related with request.
         if (requestStrFlags == flags) {
             return requestStr;
         }
 
-        final StringBuilder buf = new StringBuilder(STRING_BUILDER_CAPACITY);
-        buf.append('{');
-        if (isAvailable(flags, REQUEST_START)) {
-            buf.append("startTime=");
-            TextFormatter.appendEpoch(buf, requestStartTimeMillis());
+        if (!isAvailable(flags, REQUEST_START)) {
+            requestStr = "{}";
+            requestStrFlags = flags;
+            return requestStr;
+        }
 
-            if (isAvailable(flags, REQUEST_END)) {
-                buf.append(", length=");
-                TextFormatter.appendSize(buf, requestLength);
-                buf.append(", duration=");
-                TextFormatter.appendElapsed(buf, requestDurationNanos());
-                if (requestCause != null) {
-                    buf.append(", cause=").append(requestCause);
-                }
-            }
+        int additionalCapacity = 0;
 
-            buf.append(", scheme=");
-            if (isAvailable(flags, SCHEME)) {
-                buf.append(scheme().uriText());
-            } else {
-                buf.append(SerializationFormat.UNKNOWN.uriText())
-                   .append('+')
-                   .append(sessionProtocol.uriText());
-            }
+        final String requestCauseString;
+        if (isAvailable(flags, REQUEST_END) && requestCause != null) {
+            requestCauseString = String.valueOf(requestCause);
+            additionalCapacity += requestCauseString.length();
+        } else {
+            requestCauseString = null;
+        }
 
-            buf.append(", host=").append(host);
+        final String sanitizedHeaders;
+        if (isAvailable(flags, REQUEST_HEADERS)) {
+            sanitizedHeaders = String.valueOf(headersSanitizer.apply(requestHeaders));
+            additionalCapacity += sanitizedHeaders.length();
+        } else {
+            sanitizedHeaders = null;
+        }
 
-            if (isAvailable(flags, REQUEST_HEADERS)) {
-                buf.append(", headers=").append(headersSanitizer.apply(requestHeaders));
-            }
-
-            if (isAvailable(flags, REQUEST_CONTENT) && requestContent != null) {
-                buf.append(", content=").append(contentSanitizer.apply(requestContent));
+        final String sanitizedContent;
+        if (isAvailable(flags, REQUEST_CONTENT) && requestContent != null) {
+            sanitizedContent = String.valueOf(contentSanitizer.apply(requestContent));
+            additionalCapacity += sanitizedContent.length();
+        } else {
+            sanitizedContent = null;
+            if (isAvailable(flags, REQUEST_END) && requestContentPreview != null) {
+                additionalCapacity += requestContentPreview.length();
             }
         }
-        buf.append('}');
+
+        final String sanitizedTrailers;
+        if (!requestTrailers.isEmpty()) {
+            sanitizedTrailers = String.valueOf(trailersSanitizer.apply(requestTrailers));
+            additionalCapacity += sanitizedTrailers.length();
+        } else {
+            sanitizedTrailers = null;
+        }
+
+        final StringBuilder buf = new StringBuilder(REQUEST_STRING_BUILDER_CAPACITY + additionalCapacity);
+        buf.append("{startTime=");                                            // 11
+        TextFormatter.appendEpochMicros(buf, requestStartTimeMicros());       // 45
+
+        if (isAvailable(flags, REQUEST_END)) {
+            buf.append(", length=");                                          // 9
+            TextFormatter.appendSize(buf, requestLength);                     // 20 (When it's under 10GiB)
+            buf.append(", duration=");                                        // 11
+            TextFormatter.appendElapsed(buf, requestDurationNanos());         // 22 (When it's under 30 minutes)
+            if (requestCauseString != null) {
+                buf.append(", cause=").append(requestCauseString);            // 8
+            }
+        }
+
+        buf.append(", scheme=");                                              // 9
+        if (isAvailable(flags, SCHEME)) {
+            buf.append(scheme().uriText());                                   // 16 (ex. gproto-web+https)
+        } else {
+            buf.append(SerializationFormat.UNKNOWN.uriText())
+               .append('+')
+               .append(sessionProtocol.uriText());
+        }
+
+        if (isAvailable(flags, REQUEST_HEADERS)) {
+            buf.append(", headers=").append(sanitizedHeaders);                // 10
+        }
+
+        if (sanitizedContent != null) {                                       // 17
+            buf.append(", content=").append(sanitizedContent);
+        } else if (isAvailable(flags, REQUEST_END) && requestContentPreview != null) {
+            buf.append(", contentPreview=").append(requestContentPreview);
+        }
+
+        if (sanitizedTrailers != null) {
+            buf.append(", trailers=").append(sanitizedTrailers);              // 11
+        }
+        buf.append('}');                                                      // 1
 
         requestStr = buf.toString();
         requestStrFlags = flags;
@@ -920,43 +1183,113 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public String toStringResponseOnly(Function<HttpHeaders, HttpHeaders> headersSanitizer,
-                                       Function<Object, Object> contentSanitizer) {
+    public String toStringResponseOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
+                                       Function<Object, ?> contentSanitizer) {
+        return toStringResponseOnly(headersSanitizer, contentSanitizer, headersSanitizer);
+    }
+
+    @Override
+    public String toStringResponseOnly(
+            Function<? super ResponseHeaders, ? extends HttpHeaders> headersSanitizer,
+            Function<Object, ?> contentSanitizer,
+            Function<? super HttpHeaders, ? extends HttpHeaders> trailersSanitizer) {
+
+        requireNonNull(headersSanitizer, "headersSanitizer");
+        requireNonNull(contentSanitizer, "contentSanitizer");
+        requireNonNull(trailersSanitizer, "trailersSanitizer");
 
         final int flags = this.flags & 0xFFFF0000; // Only interested in the bits related with response.
         if (responseStrFlags == flags) {
             return responseStr;
         }
 
-        final StringBuilder buf = new StringBuilder(STRING_BUILDER_CAPACITY);
-        buf.append('{');
-        if (isAvailable(flags, RESPONSE_START)) {
-            buf.append("startTime=");
-            TextFormatter.appendEpoch(buf, responseStartTimeMillis());
+        if (!isAvailable(flags, RESPONSE_START)) {
+            responseStr = "{}";
+            responseStrFlags = flags;
+            return responseStr;
+        }
 
-            if (isAvailable(flags, RESPONSE_END)) {
-                buf.append(", length=");
-                TextFormatter.appendSize(buf, responseLength);
-                buf.append(", duration=");
-                TextFormatter.appendElapsed(buf, responseDurationNanos());
-                if (isAvailable(flags, REQUEST_START)) {
-                    buf.append(", totalDuration=");
-                    TextFormatter.appendElapsed(buf, totalDurationNanos());
-                }
-                if (responseCause != null) {
-                    buf.append(", cause=").append(responseCause);
-                }
-            }
+        int additionalCapacity = 0;
 
-            if (isAvailable(flags, RESPONSE_HEADERS)) {
-                buf.append(", headers=").append(headersSanitizer.apply(responseHeaders));
-            }
+        final String responseCauseString;
+        if (isAvailable(flags, RESPONSE_END) && responseCause != null) {
+            responseCauseString = String.valueOf(responseCause);
+            additionalCapacity += responseCauseString.length();
+        } else {
+            responseCauseString = null;
+        }
 
-            if (isAvailable(flags, RESPONSE_CONTENT) && responseContent != null) {
-                buf.append(", content=").append(contentSanitizer.apply(responseContent));
+        final String sanitizedHeaders;
+        if (isAvailable(flags, RESPONSE_HEADERS)) {
+            sanitizedHeaders = String.valueOf(headersSanitizer.apply(responseHeaders));
+            additionalCapacity += sanitizedHeaders.length();
+        } else {
+            sanitizedHeaders = null;
+        }
+
+        final String sanitizedContent;
+        if (isAvailable(flags, RESPONSE_CONTENT) && responseContent != null) {
+            sanitizedContent = String.valueOf(contentSanitizer.apply(responseContent));
+            additionalCapacity += sanitizedContent.length();
+        } else {
+            sanitizedContent = null;
+            if (isAvailable(flags, RESPONSE_END) && responseContentPreview != null) {
+                additionalCapacity += responseContentPreview.length();
             }
         }
-        buf.append('}');
+
+        final String sanitizedTrailers;
+        if (!responseTrailers.isEmpty()) {
+            sanitizedTrailers = String.valueOf(trailersSanitizer.apply(responseTrailers));
+            additionalCapacity += sanitizedTrailers.length();
+        } else {
+            sanitizedTrailers = null;
+        }
+
+        final int numChildren = children != null ? children.size() : 0;
+        if (numChildren > 1) {
+            additionalCapacity += 21;
+        }
+
+        final StringBuilder buf = new StringBuilder(RESPONSE_STRING_BUILDER_CAPACITY + additionalCapacity);
+        buf.append("{startTime=");                                            // 11
+        TextFormatter.appendEpochMicros(buf, responseStartTimeMicros());      // 45
+
+        if (isAvailable(flags, RESPONSE_END)) {
+            buf.append(", length=");                                          // 9
+            TextFormatter.appendSize(buf, responseLength);                    // 20 (When it's under 10GiB)
+            buf.append(", duration=");                                        // 11
+            TextFormatter.appendElapsed(buf, responseDurationNanos());        // 22 (When it's under 30 minutes)
+            if (isAvailable(flags, REQUEST_START)) {
+                buf.append(", totalDuration=");                               // 16
+                TextFormatter.appendElapsed(buf, totalDurationNanos());       // 22 (When it's under 30 minutes)
+            }
+            if (responseCauseString != null) {
+                buf.append(", cause=").append(responseCauseString);           // 8
+            }
+        }
+
+        if (sanitizedHeaders != null) {
+            buf.append(", headers=").append(sanitizedHeaders);                // 10
+        }
+
+        if (sanitizedContent != null) {                                       // 17
+            buf.append(", content=").append(contentSanitizer.apply(responseContent));
+        } else if (isAvailable(flags, RESPONSE_END) && responseContentPreview != null) {
+            buf.append(", contentPreview=").append(responseContentPreview);
+        }
+
+        if (sanitizedTrailers != null) {
+            buf.append(", trailers=").append(sanitizedTrailers);              // 11
+        }
+        buf.append('}');                                                      // 1
+
+        if (numChildren > 1) {
+            // Append only when there were retries which the numChildren is greater than 1.
+            buf.append(", {totalAttempts=");
+            buf.append(numChildren);
+            buf.append('}');
+        }
 
         responseStr = buf.toString();
         responseStrFlags = flags;
@@ -971,17 +1304,6 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         ListenerEntry(RequestLogListener listener, int interestedFlags) {
             this.listener = listener;
             this.interestedFlags = interestedFlags;
-        }
-    }
-
-    private static long currentTimeMicros() {
-        if (PlatformDependent.javaVersion() == 8) {
-            return TimeUnit.MILLISECONDS.toMicros(System.currentTimeMillis());
-        } else {
-            // Java 9+ support higher precision wall time.
-            Instant now = Clock.systemUTC().instant();
-            return TimeUnit.SECONDS.toMicros(now.getEpochSecond()) + TimeUnit.NANOSECONDS.toMicros(
-                    now.getNano());
         }
     }
 }

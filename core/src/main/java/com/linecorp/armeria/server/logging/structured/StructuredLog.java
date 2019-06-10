@@ -102,7 +102,7 @@ public abstract class StructuredLog {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("timestamp", TextFormatter.epoch(timestampMillis))
+                          .add("timestamp", TextFormatter.epochMillis(timestampMillis))
                           .add("responseTime", TextFormatter.elapsed(responseTimeNanos))
                           .add("requestSize", TextFormatter.size(requestSize))
                           .add("responseSize", TextFormatter.size(responseSize))

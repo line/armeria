@@ -24,6 +24,8 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -34,8 +36,8 @@ import javax.net.ssl.SSLSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.DefaultHttpHeaders;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
@@ -50,8 +52,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
-import io.netty.handler.codec.Headers;
-import io.netty.util.AsciiString;
 import io.netty.util.Attribute;
 
 /**
@@ -69,8 +69,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
     private final Channel ch;
     private final ServiceConfig cfg;
-    private final PathMappingContext pathMappingContext;
-    private final PathMappingResult pathMappingResult;
+    private final RoutingContext routingContext;
+    private final RoutingResult routingResult;
     @Nullable
     private final SSLSession sslSession;
 
@@ -108,8 +108,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      * @param ch the {@link Channel} that handles the invocation
      * @param meterRegistry the {@link MeterRegistry} that collects various stats
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
-     * @param pathMappingContext the parameters which is used when finding a matched {@link PathMapping}
-     * @param pathMappingResult the result of finding a matched {@link PathMapping}
+     * @param routingContext the parameters which are used when finding a matched {@link Route}
+     * @param routingResult the result of finding a matched {@link Route}
      * @param request the request associated with this context
      * @param sslSession the {@link SSLSession} for this invocation if it is over TLS
      * @param proxiedAddresses source and destination addresses retrieved from PROXY protocol header
@@ -117,40 +117,93 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      */
     public DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            PathMappingContext pathMappingContext, PathMappingResult pathMappingResult, Request request,
+            RoutingContext routingContext, RoutingResult routingResult, HttpRequest request,
             @Nullable SSLSession sslSession, @Nullable ProxiedAddresses proxiedAddresses,
             InetAddress clientAddress) {
+        this(cfg, ch, meterRegistry, sessionProtocol, routingContext, routingResult, request,
+             sslSession, proxiedAddresses, clientAddress, false, 0, 0);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param cfg the {@link ServiceConfig}
+     * @param ch the {@link Channel} that handles the invocation
+     * @param meterRegistry the {@link MeterRegistry} that collects various stats
+     * @param sessionProtocol the {@link SessionProtocol} of the invocation
+     * @param routingContext the parameters which are used when finding a matched {@link Route}
+     * @param routingResult the result of finding a matched {@link Route}
+     * @param request the request associated with this context
+     * @param sslSession the {@link SSLSession} for this invocation if it is over TLS
+     * @param proxiedAddresses source and destination addresses retrieved from PROXY protocol header
+     * @param clientAddress the address of a client who initiated the request
+     * @param requestStartTimeNanos {@link System#nanoTime()} value when the request started.
+     * @param requestStartTimeMicros the number of microseconds since the epoch,
+     *                               e.g. {@code System.currentTimeMillis() * 1000}.
+     */
+    public DefaultServiceRequestContext(
+            ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
+            RoutingContext routingContext, RoutingResult routingResult, HttpRequest request,
+            @Nullable SSLSession sslSession, @Nullable ProxiedAddresses proxiedAddresses,
+            InetAddress clientAddress, long requestStartTimeNanos, long requestStartTimeMicros) {
+        this(cfg, ch, meterRegistry, sessionProtocol, routingContext, routingResult, request,
+             sslSession, proxiedAddresses, clientAddress, true, requestStartTimeNanos, requestStartTimeMicros);
+    }
+
+    private DefaultServiceRequestContext(
+            ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
+            RoutingContext routingContext, RoutingResult routingResult, HttpRequest request,
+            @Nullable SSLSession sslSession, @Nullable ProxiedAddresses proxiedAddresses,
+            InetAddress clientAddress, boolean requestStartTimeSet, long requestStartTimeNanos,
+            long requestStartTimeMicros) {
 
         super(meterRegistry, sessionProtocol,
-              requireNonNull(pathMappingContext, "pathMappingContext").method(), pathMappingContext.path(),
-              requireNonNull(pathMappingResult, "pathMappingResult").query(),
+              requireNonNull(routingContext, "routingContext").method(), routingContext.path(),
+              requireNonNull(routingResult, "routingResult").query(),
               request);
 
         this.ch = requireNonNull(ch, "ch");
         this.cfg = requireNonNull(cfg, "cfg");
-        this.pathMappingContext = pathMappingContext;
-        this.pathMappingResult = pathMappingResult;
+        this.routingContext = routingContext;
+        this.routingResult = routingResult;
         this.sslSession = sslSession;
         this.proxiedAddresses = proxiedAddresses;
         this.clientAddress = requireNonNull(clientAddress, "clientAddress");
 
-        log = new DefaultRequestLog(this);
-        log.startRequest(ch, sessionProtocol);
+        log = new DefaultRequestLog(this, cfg.requestContentPreviewerFactory(),
+                                    cfg.responseContentPreviewerFactory());
+        if (requestStartTimeSet) {
+            log.startRequest(ch, sessionProtocol, sslSession, requestStartTimeNanos, requestStartTimeMicros);
+        } else {
+            log.startRequest(ch, sessionProtocol, sslSession);
+        }
+        log.requestHeaders(request.headers());
+
+        // For the server, request headers are processed well before ServiceRequestContext is created. It means
+        // there is some delay between the actual channel read and this logging, but it's the best we can do for
+        // now.
+        log.requestFirstBytesTransferred();
+
         logger = newLogger(cfg);
 
-        final ServerConfig serverCfg = cfg.server().config();
-        requestTimeoutMillis = serverCfg.defaultRequestTimeoutMillis();
-        maxRequestLength = serverCfg.defaultMaxRequestLength();
+        requestTimeoutMillis = cfg.requestTimeoutMillis();
+        maxRequestLength = cfg.maxRequestLength();
     }
 
     private RequestContextAwareLogger newLogger(ServiceConfig cfg) {
         String loggerName = cfg.loggerName().orElse(null);
         if (loggerName == null) {
-            loggerName = cfg.pathMapping().loggerName();
+            loggerName = cfg.route().loggerName();
         }
 
         return new RequestContextAwareLogger(this, LoggerFactory.getLogger(
                 cfg.server().config().serviceLoggerPrefix() + '.' + loggerName));
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public HttpRequest request() {
+        return super.request();
     }
 
     @Nonnull
@@ -186,8 +239,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     @Override
     public ServiceRequestContext newDerivedContext(Request request) {
         final DefaultServiceRequestContext ctx = new DefaultServiceRequestContext(
-                cfg, ch, meterRegistry(), sessionProtocol(), pathMappingContext,
-                pathMappingResult, request, sslSession(), proxiedAddresses(), clientAddress);
+                cfg, ch, meterRegistry(), sessionProtocol(), routingContext,
+                routingResult, (HttpRequest) request, sslSession(), proxiedAddresses(), clientAddress);
 
         final HttpHeaders additionalHeaders = additionalResponseHeaders();
         if (!additionalHeaders.isEmpty()) {
@@ -208,7 +261,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     private HttpHeaders createAdditionalHeadersIfAbsent() {
         final HttpHeaders additionalResponseHeaders = this.additionalResponseHeaders;
         if (additionalResponseHeaders == null) {
-            final HttpHeaders newHeaders = new DefaultHttpHeaders();
+            final HttpHeaders newHeaders = HttpHeaders.of();
             if (additionalResponseHeadersUpdater.compareAndSet(this, null, newHeaders)) {
                 return newHeaders;
             } else {
@@ -224,7 +277,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     private HttpHeaders createAdditionalTrailersIfAbsent() {
         final HttpHeaders additionalResponseTrailers = this.additionalResponseTrailers;
         if (additionalResponseTrailers == null) {
-            final HttpHeaders newTrailers = new DefaultHttpHeaders();
+            final HttpHeaders newTrailers = HttpHeaders.of();
             if (additionalResponseTrailersUpdater.compareAndSet(this, null, newTrailers)) {
                 return newTrailers;
             } else {
@@ -259,18 +312,18 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     }
 
     @Override
-    public PathMapping pathMapping() {
-        return cfg.pathMapping();
+    public Route route() {
+        return cfg.route();
     }
 
     @Override
-    public PathMappingContext pathMappingContext() {
-        return pathMappingContext;
+    public RoutingContext routingContext() {
+        return routingContext;
     }
 
     @Override
     public Map<String, String> pathParams() {
-        return pathMappingResult.pathParams();
+        return routingResult.pathParams();
     }
 
     @Override
@@ -289,18 +342,18 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
     @Override
     public String mappedPath() {
-        return pathMappingResult.path();
+        return routingResult.path();
     }
 
     @Override
     public String decodedMappedPath() {
-        return pathMappingResult.decodedPath();
+        return routingResult.decodedPath();
     }
 
     @Nullable
     @Override
     public MediaType negotiatedResponseMediaType() {
-        return pathMappingResult.negotiatedResponseMediaType();
+        return routingResult.negotiatedResponseMediaType();
     }
 
     @Override
@@ -358,6 +411,15 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         this.requestTimeoutHandler = requireNonNull(requestTimeoutHandler, "requestTimeoutHandler");
     }
 
+    /**
+     * Marks this {@link ServiceRequestContext} as having been timed out. Any callbacks created with
+     * {@code makeContextAware} that are run after this will be failed with {@link CancellationException}.
+     */
+    @Override
+    public void setTimedOut() {
+        super.setTimedOut();
+    }
+
     @Override
     public long maxRequestLength() {
         return maxRequestLength;
@@ -373,85 +435,110 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     }
 
     @Override
+    public boolean verboseResponses() {
+        return cfg.verboseResponses();
+    }
+
+    @Override
     public HttpHeaders additionalResponseHeaders() {
         final HttpHeaders additionalResponseHeaders = this.additionalResponseHeaders;
         if (additionalResponseHeaders == null) {
-            return HttpHeaders.EMPTY_HEADERS;
+            return HttpHeaders.of();
         }
-        return additionalResponseHeaders.asImmutable();
+        return additionalResponseHeaders;
     }
 
     @Override
-    public void setAdditionalResponseHeader(AsciiString name, String value) {
+    public void setAdditionalResponseHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        createAdditionalHeadersIfAbsent().set(name, value);
+        additionalResponseHeaders = createAdditionalHeadersIfAbsent().toBuilder()
+                                                                     .setObject(name, value).build();
     }
 
     @Override
-    public void setAdditionalResponseHeaders(Headers<? extends AsciiString, ? extends String, ?> headers) {
+    public void setAdditionalResponseHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        createAdditionalHeadersIfAbsent().set(headers);
+        additionalResponseHeaders = createAdditionalHeadersIfAbsent().toBuilder().setObject(headers).build();
     }
 
     @Override
-    public void addAdditionalResponseHeader(AsciiString name, String value) {
+    public void addAdditionalResponseHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        createAdditionalHeadersIfAbsent().add(name, value);
+        additionalResponseHeaders = createAdditionalHeadersIfAbsent().toBuilder()
+                                                                     .addObject(name, value).build();
     }
 
     @Override
-    public void addAdditionalResponseHeaders(Headers<? extends AsciiString, ? extends String, ?> headers) {
+    public void addAdditionalResponseHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        createAdditionalHeadersIfAbsent().add(headers);
+        additionalResponseHeaders = createAdditionalHeadersIfAbsent().toBuilder().addObject(headers).build();
     }
 
     @Override
-    public boolean removeAdditionalResponseHeader(AsciiString name) {
+    public boolean removeAdditionalResponseHeader(CharSequence name) {
         requireNonNull(name, "name");
-        return createAdditionalHeadersIfAbsent().remove(name);
+        final HttpHeaders additionalResponseHeaders = this.additionalResponseHeaders;
+        if (additionalResponseHeaders == null || additionalResponseHeaders.isEmpty()) {
+            return false;
+        }
+
+        final HttpHeadersBuilder builder = createAdditionalHeadersIfAbsent().toBuilder();
+        final boolean removed = builder.remove(name);
+        this.additionalResponseHeaders = builder.build();
+        return removed;
     }
 
     @Override
     public HttpHeaders additionalResponseTrailers() {
         final HttpHeaders additionalResponseTrailers = this.additionalResponseTrailers;
         if (additionalResponseTrailers == null) {
-            return HttpHeaders.EMPTY_HEADERS;
+            return HttpHeaders.of();
         }
-        return additionalResponseTrailers.asImmutable();
+        return additionalResponseTrailers;
     }
 
     @Override
-    public void setAdditionalResponseTrailer(AsciiString name, String value) {
+    public void setAdditionalResponseTrailer(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        createAdditionalTrailersIfAbsent().set(name, value);
+        additionalResponseTrailers = createAdditionalTrailersIfAbsent().toBuilder()
+                                                                       .setObject(name, value).build();
     }
 
     @Override
-    public void setAdditionalResponseTrailers(Headers<? extends AsciiString, ? extends String, ?> headers) {
+    public void setAdditionalResponseTrailers(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        createAdditionalTrailersIfAbsent().set(headers);
+        additionalResponseTrailers = createAdditionalTrailersIfAbsent().toBuilder().setObject(headers).build();
     }
 
     @Override
-    public void addAdditionalResponseTrailer(AsciiString name, String value) {
+    public void addAdditionalResponseTrailer(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        createAdditionalTrailersIfAbsent().add(name, value);
+        additionalResponseTrailers = createAdditionalTrailersIfAbsent().toBuilder()
+                                                                       .addObject(name, value).build();
     }
 
     @Override
-    public void addAdditionalResponseTrailers(Headers<? extends AsciiString, ? extends String, ?> headers) {
+    public void addAdditionalResponseTrailers(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        createAdditionalTrailersIfAbsent().add(headers);
+        additionalResponseTrailers = createAdditionalTrailersIfAbsent().toBuilder().addObject(headers).build();
     }
 
     @Override
-    public boolean removeAdditionalResponseTrailer(AsciiString name) {
+    public boolean removeAdditionalResponseTrailer(CharSequence name) {
         requireNonNull(name, "name");
-        return createAdditionalTrailersIfAbsent().remove(name);
+        final HttpHeaders additionalResponseTrailers = this.additionalResponseTrailers;
+        if (additionalResponseTrailers == null || additionalResponseTrailers.isEmpty()) {
+            return false;
+        }
+
+        final HttpHeadersBuilder builder = createAdditionalTrailersIfAbsent().toBuilder();
+        final boolean removed = builder.remove(name);
+        this.additionalResponseTrailers = builder.build();
+        return removed;
     }
 
     @Nullable

@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 
 import reactor.core.publisher.Flux;
@@ -41,7 +42,7 @@ public class ArmeriaClientHttpResponseTest {
 
     @Test
     public void readBodyStream() {
-        final HttpHeaders httpHeaders = HttpHeaders.of(HttpStatus.OK);
+        final ResponseHeaders httpHeaders = ResponseHeaders.of(HttpStatus.OK);
         final HttpResponse httpResponse = HttpResponse.of(
                 Flux.concat(Mono.just(httpHeaders),
                             Flux.just("a", "b", "c", "d", "e")
@@ -68,14 +69,14 @@ public class ArmeriaClientHttpResponseTest {
 
     @Test
     public void getCookies() {
-        final HttpHeaders httpHeaders = HttpHeaders.of(HttpStatus.OK)
-                                                   .add(HttpHeaderNames.of("blahblah"), "armeria")
-                                                   .add(HttpHeaderNames.SET_COOKIE, "a=1; b=2");
+        final HttpHeaders httpHeaders = ResponseHeaders.of(HttpStatus.OK,
+                                                           HttpHeaderNames.of("blahblah"), "armeria",
+                                                           HttpHeaderNames.SET_COOKIE, "a=1; b=2");
         final HttpResponse httpResponse = HttpResponse.of(httpHeaders);
         final ArmeriaClientHttpResponse response =
                 response(new ArmeriaHttpClientResponseSubscriber(httpResponse), httpHeaders);
 
-        // HttpResponse would be completed after Httpheaders is completed, because there's no body.
+        // HttpResponse would be completed after ResponseHeader is completed, because there's no body.
         assertThat(httpResponse.completionFuture().isDone()).isTrue();
 
         assertThat(response.getStatusCode()).isEqualTo(org.springframework.http.HttpStatus.OK);
@@ -93,7 +94,7 @@ public class ArmeriaClientHttpResponseTest {
                                            .map(HttpData::ofUtf8)
                                            .doOnCancel(() -> completedWithError.set(true));
 
-        final HttpHeaders httpHeaders = HttpHeaders.of(HttpStatus.OK);
+        final ResponseHeaders httpHeaders = ResponseHeaders.of(HttpStatus.OK);
         final HttpResponse httpResponse = HttpResponse.of(Flux.concat(Mono.just(httpHeaders), bodyPub));
         final ArmeriaClientHttpResponse response =
                 response(new ArmeriaHttpClientResponseSubscriber(httpResponse), httpHeaders);
@@ -119,11 +120,11 @@ public class ArmeriaClientHttpResponseTest {
         await().untilTrue(completedWithError);
     }
 
-    private ArmeriaClientHttpResponse response(ArmeriaHttpClientResponseSubscriber subscriber,
-                                               HttpHeaders expectedHttpHeaders) {
+    private static ArmeriaClientHttpResponse response(ArmeriaHttpClientResponseSubscriber subscriber,
+                                                      HttpHeaders expectedHttpHeaders) {
         await().until(() -> subscriber.httpHeadersFuture().isDone());
 
-        final HttpHeaders h = subscriber.httpHeadersFuture().join();
+        final ResponseHeaders h = subscriber.httpHeadersFuture().join();
         assertThat(h).isEqualTo(expectedHttpHeaders);
 
         return new ArmeriaClientHttpResponse(h, subscriber.toResponseBodyPublisher(),

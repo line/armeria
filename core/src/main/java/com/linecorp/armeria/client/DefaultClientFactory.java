@@ -25,6 +25,8 @@ import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.function.Supplier;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -126,6 +128,14 @@ final class DefaultClientFactory extends AbstractClientFactory {
     public <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
         final Scheme scheme = validateScheme(uri);
         return clientFactories.get(scheme).newClient(uri, clientType, options);
+    }
+
+    @Override
+    public <T> T newClient(Scheme scheme, Endpoint endpoint, @Nullable String path, Class<T> clientType,
+                           ClientOptions options) {
+        final Scheme validatedScheme = validateScheme(scheme);
+        return clientFactories.get(validatedScheme)
+                              .newClient(validatedScheme, endpoint, path, clientType, options);
     }
 
     @Override

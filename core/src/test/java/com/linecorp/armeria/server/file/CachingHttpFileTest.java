@@ -32,11 +32,11 @@ import org.junit.Test;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -67,8 +67,9 @@ public class CachingHttpFileTest {
         assertThat(cached.read(executor, alloc)).isNull();
         assertThat(cached.aggregate(executor).join()).isSameAs(HttpFile.nonExistent());
         assertThat(cached.aggregateWithPooledObjects(executor, alloc).join()).isSameAs(HttpFile.nonExistent());
-        assertThat(cached.asService().serve(mock(ServiceRequestContext.class),
-                                            HttpRequest.of(HttpMethod.GET, "/")).aggregate().join().status())
+
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        assertThat(cached.asService().serve(ctx, ctx.request()).aggregate().join().status())
                 .isEqualTo(HttpStatus.NOT_FOUND);
     }
 
@@ -78,7 +79,7 @@ public class CachingHttpFileTest {
     @Test
     public void existentFile() throws Exception {
         final HttpFileAttributes attrs = new HttpFileAttributes(3, 0);
-        final HttpHeaders headers = HttpHeaders.of(200);
+        final ResponseHeaders headers = ResponseHeaders.of(200);
         final HttpFile uncached = mock(HttpFile.class);
         when(uncached.readAttributes()).thenReturn(attrs);
         when(uncached.readHeaders()).thenReturn(headers);
@@ -113,7 +114,7 @@ public class CachingHttpFileTest {
         // First read() should trigger uncached.aggregate().
         HttpResponse res = cached.read(executor, alloc);
         assertThat(res).isNotNull();
-        assertThat(res.aggregate().join().content().toStringUtf8()).isEqualTo("foo");
+        assertThat(res.aggregate().join().contentUtf8()).isEqualTo("foo");
         verify(uncached, times(1)).readAttributes();
         verify(uncached, times(1)).aggregate(executor);
         verifyNoMoreInteractions(uncached);
@@ -122,7 +123,7 @@ public class CachingHttpFileTest {
         // Second read() should not trigger uncached.aggregate().
         res = cached.read(executor, alloc);
         assertThat(res).isNotNull();
-        assertThat(res.aggregate().join().content().toStringUtf8()).isEqualTo("foo");
+        assertThat(res.aggregate().join().contentUtf8()).isEqualTo("foo");
         verify(uncached, times(1)).readAttributes();
         verifyNoMoreInteractions(uncached);
         clearInvocations(uncached);
@@ -136,7 +137,7 @@ public class CachingHttpFileTest {
         // Make sure read() invalidates the cache and triggers uncached.aggregate().
         res = cached.read(executor, alloc);
         assertThat(res).isNotNull();
-        assertThat(res.aggregate().join().content().toStringUtf8()).isEqualTo("bar");
+        assertThat(res.aggregate().join().contentUtf8()).isEqualTo("bar");
         verify(uncached, times(1)).readAttributes();
         verify(uncached, times(1)).aggregate(executor);
         verifyNoMoreInteractions(uncached);
@@ -149,7 +150,7 @@ public class CachingHttpFileTest {
     @Test
     public void largeFile() throws Exception {
         final HttpFileAttributes attrs = new HttpFileAttributes(5, 0);
-        final HttpHeaders headers = HttpHeaders.of(200);
+        final ResponseHeaders headers = ResponseHeaders.of(200);
         final HttpResponse res = HttpResponse.of("large");
         final CompletableFuture<AggregatedHttpFile> aggregated =
                 CompletableFuture.completedFuture(HttpFile.of(HttpData.ofUtf8("large"), 0));

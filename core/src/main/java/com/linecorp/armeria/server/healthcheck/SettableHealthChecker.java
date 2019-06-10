@@ -27,6 +27,22 @@ public final class SettableHealthChecker implements HealthChecker {
 
     private volatile boolean isHealthy;
 
+    /**
+     * Constructs a new {@link SettableHealthChecker} which starts out in a healthy state and can be changed
+     * using {@link #setHealthy(boolean)}.
+     */
+    public SettableHealthChecker() {
+        this(true);
+    }
+
+    /**
+     * Constructs a new {@link SettableHealthChecker} which starts out in the specified health state and can be
+     * changed using {@link #setHealthy(boolean)}.
+     */
+    public SettableHealthChecker(boolean isHealthy) {
+        this.isHealthy = isHealthy;
+    }
+
     @Override
     public boolean isHealthy() {
         return isHealthy;
@@ -35,8 +51,9 @@ public final class SettableHealthChecker implements HealthChecker {
     /**
      * Sets if the {@link Server} is healthy or not.
      */
-    public void setHealthy(boolean isHealthy) {
+    public SettableHealthChecker setHealthy(boolean isHealthy) {
         this.isHealthy = isHealthy;
+        return this;
     }
 
     @Override

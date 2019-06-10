@@ -49,7 +49,15 @@ public final class CorsDecoratorsFactoryFunction implements DecoratorFactoryFunc
             builder.setConfig(policies[i]);
             cb.addPolicy(builder.build());
         }
-        return cb.newDecorator();
+
+        final Function<Service<HttpRequest, HttpResponse>, CorsService> decorator = cb.newDecorator();
+        return service -> {
+            if (service.as(CorsService.class).isPresent()) {
+                return service;
+            } else {
+                return decorator.apply(service);
+            }
+        };
     }
 
     private static void ensureValidConfig(CorsDecorators conf) {

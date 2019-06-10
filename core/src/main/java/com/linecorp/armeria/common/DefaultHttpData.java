@@ -24,17 +24,13 @@ import com.google.common.base.MoreObjects;
 public final class DefaultHttpData extends AbstractHttpData {
 
     private final byte[] data;
-    private final int offset;
-    private final int length;
     private final boolean endOfStream;
 
     /**
      * Creates a new instance.
      */
-    public DefaultHttpData(byte[] data, int offset, int length, boolean endOfStream) {
+    public DefaultHttpData(byte[] data, boolean endOfStream) {
         this.data = data;
-        this.offset = offset;
-        this.length = length;
         this.endOfStream = endOfStream;
     }
 
@@ -44,22 +40,15 @@ public final class DefaultHttpData extends AbstractHttpData {
     }
 
     @Override
-    public int offset() {
-        return offset;
-    }
-
-    @Override
     public int length() {
-        return length;
+        return data.length;
     }
 
     @Override
-    @SuppressWarnings("ImplicitArrayToString")
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("offset", offset)
-                          .add("length", length)
-                          .add("array", data.toString()).toString();
+                          .add("length", data.length)
+                          .toString();
     }
 
     @Override
@@ -69,6 +58,6 @@ public final class DefaultHttpData extends AbstractHttpData {
 
     @Override
     protected byte getByte(int index) {
-        return data[offset + index];
+        return data[index];
     }
 }

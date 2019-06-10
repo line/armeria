@@ -34,6 +34,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -45,7 +46,7 @@ import com.linecorp.armeria.common.logging.RequestLogListener;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 public class RetryingClientWithLoggingTest {
 
@@ -59,6 +60,7 @@ public class RetryingClientWithLoggingTest {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
+                    ctx.addAdditionalResponseTrailer(HttpHeaderNames.of("foo"), "bar");
                     if (reqCount.getAndIncrement() < 2) {
                         return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
                     } else {
@@ -99,9 +101,16 @@ public class RetryingClientWithLoggingTest {
         successLogIndex = 5;
         final HttpClient client = new HttpClientBuilder(server.uri("/"))
                 .decorator(loggingDecorator())
-                .decorator(RetryingHttpClient.newDecorator(RetryStrategy.onServerErrorStatus()))
+                .decorator(new RetryingHttpClientBuilder(
+                        (RetryStrategyWithContent<HttpResponse>)
+                                (ctx, response) -> response.aggregate().handle((msg, cause) -> {
+                                    if ("hello".equals(msg.contentUtf8())) {
+                                        return null;
+                                    }
+                                    return Backoff.ofDefault();
+                                })).newDecorator())
                 .build();
-        assertThat(client.get("/hello").aggregate().join().content().toStringUtf8()).isEqualTo("hello");
+        assertThat(client.get("/hello").aggregate().join().contentUtf8()).isEqualTo("hello");
 
         // wait until 6 logs(3 requests and 3 responses) are called back
         await().untilAsserted(() -> assertThat(logResult.size()).isEqualTo(successLogIndex + 1));
@@ -116,7 +125,7 @@ public class RetryingClientWithLoggingTest {
                 .decorator(RetryingHttpClient.newDecorator(RetryStrategy.onServerErrorStatus()))
                 .decorator(loggingDecorator())
                 .build();
-        assertThat(client.get("/hello").aggregate().join().content().toStringUtf8()).isEqualTo("hello");
+        assertThat(client.get("/hello").aggregate().join().contentUtf8()).isEqualTo("hello");
 
         // wait until 2 logs are called back
         await().untilAsserted(() -> assertThat(logResult.size()).isEqualTo(successLogIndex + 1));
@@ -148,6 +157,7 @@ public class RetryingClientWithLoggingTest {
     private static void assertResponseSideLog(RequestLog log, boolean success) {
         assertThat(log.requestHeaders()).isNotNull();
         assertThat(log.responseHeaders()).isNotNull();
+        assertThat(log.responseTrailers().get(HttpHeaderNames.of("foo"))).isEqualTo("bar");
 
         assertThat(log.responseHeaders().status()).isEqualTo(success ? HttpStatus.OK
                                                                      : HttpStatus.INTERNAL_SERVER_ERROR);

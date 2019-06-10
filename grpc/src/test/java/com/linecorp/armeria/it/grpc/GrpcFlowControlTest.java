@@ -46,7 +46,7 @@ import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.grpc.stub.ClientCallStreamObserver;
 import io.grpc.stub.ClientResponseObserver;
@@ -187,8 +187,8 @@ public class GrpcFlowControlTest {
     public static ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.defaultMaxRequestLength(0);
-            sb.defaultRequestTimeoutMillis(0);
+            sb.maxRequestLength(0);
+            sb.requestTimeoutMillis(0);
 
             sb.serviceUnder("/", new GrpcServiceBuilder()
                     .addService(new FlowControlService())
@@ -205,8 +205,8 @@ public class GrpcFlowControlTest {
     @Before
     public void setUp() {
         client = new ClientBuilder(server.uri(GrpcSerializationFormats.PROTO, "/"))
-                .defaultMaxResponseLength(0)
-                .defaultResponseTimeoutMillis(0)
+                .maxResponseLength(0)
+                .responseTimeoutMillis(0)
                 .option(GrpcClientOptions.MAX_INBOUND_MESSAGE_SIZE_BYTES.newValue(Integer.MAX_VALUE))
                 .build(FlowControlTestServiceStub.class);
     }
@@ -292,40 +292,40 @@ public class GrpcFlowControlTest {
         final AtomicBoolean done = new AtomicBoolean();
         final AtomicBoolean clientClosed = new AtomicBoolean();
         client.clientBackPressure(
-                        new ClientResponseObserver<SimpleRequest, SimpleResponse>() {
-                            private ClientCallStreamObserver<SimpleRequest> requestStream;
+                new ClientResponseObserver<SimpleRequest, SimpleResponse>() {
+                    private ClientCallStreamObserver<SimpleRequest> requestStream;
 
-                            @Override
-                            public void onNext(SimpleResponse value) {
-                                if (numResponses.incrementAndGet() < CAPPED_NUM_MESSAGES) {
-                                    requestStream.request(1);
-                                } else {
-                                    if (!clientClosed.get()) {
-                                        for (int i = 0; i < TOTAL_NUM_MESSAGES; i++) {
-                                            requestStream.onNext(SimpleRequest.getDefaultInstance());
-                                        }
-                                        requestStream.onCompleted();
-                                        clientClosed.set(true);
-                                    }
-                                    requestStream.request(1);
+                    @Override
+                    public void onNext(SimpleResponse value) {
+                        if (numResponses.incrementAndGet() < CAPPED_NUM_MESSAGES) {
+                            requestStream.request(1);
+                        } else {
+                            if (!clientClosed.get()) {
+                                for (int i = 0; i < TOTAL_NUM_MESSAGES; i++) {
+                                    requestStream.onNext(SimpleRequest.getDefaultInstance());
                                 }
+                                requestStream.onCompleted();
+                                clientClosed.set(true);
                             }
+                            requestStream.request(1);
+                        }
+                    }
 
-                            @Override
-                            public void onError(Throwable t) {
-                            }
+                    @Override
+                    public void onError(Throwable t) {
+                    }
 
-                            @Override
-                            public void onCompleted() {
-                                done.set(true);
-                            }
+                    @Override
+                    public void onCompleted() {
+                        done.set(true);
+                    }
 
-                            @Override
-                            public void beforeStart(ClientCallStreamObserver<SimpleRequest> requestStream) {
-                                this.requestStream = requestStream;
-                                requestStream.disableAutoInboundFlowControl();
-                            }
-                        });
+                    @Override
+                    public void beforeStart(ClientCallStreamObserver<SimpleRequest> requestStream) {
+                        this.requestStream = requestStream;
+                        requestStream.disableAutoInboundFlowControl();
+                    }
+                });
 
         await().untilAsserted(() -> assertThat(done).isTrue());
         // Flow control happens on the second request, and an extra message is often sent after the last

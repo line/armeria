@@ -21,6 +21,7 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.util.AbstractOption;
 
 import io.netty.util.ConstantPool;
@@ -41,21 +42,43 @@ public final class ClientOption<T> extends AbstractOption<T> {
     };
 
     /**
-     * The default timeout of a socket write.
+     * The timeout of a socket write.
      */
-    public static final ClientOption<Long> DEFAULT_WRITE_TIMEOUT_MILLIS =
-            valueOf("DEFAULT_WRITE_TIMEOUT_MILLIS");
+    public static final ClientOption<Long> WRITE_TIMEOUT_MILLIS = valueOf("WRITE_TIMEOUT_MILLIS");
 
     /**
-     * The default timeout of a server reply to a client call.
+     * The timeout of a socket write.
+     *
+     * @deprecated Use {@link #WRITE_TIMEOUT_MILLIS}.
      */
-    public static final ClientOption<Long> DEFAULT_RESPONSE_TIMEOUT_MILLIS =
-            valueOf("DEFAULT_RESPONSE_TIMEOUT_MILLIS");
+    @Deprecated
+    public static final ClientOption<Long> DEFAULT_WRITE_TIMEOUT_MILLIS = WRITE_TIMEOUT_MILLIS;
 
     /**
-     * The default maximum allowed length of a server response.
+     * The timeout of a server reply to a client call.
      */
-    public static final ClientOption<Long> DEFAULT_MAX_RESPONSE_LENGTH = valueOf("DEFAULT_MAX_RESPONSE_LENGTH");
+    public static final ClientOption<Long> RESPONSE_TIMEOUT_MILLIS = valueOf("RESPONSE_TIMEOUT_MILLIS");
+
+    /**
+     * The timeout of a server reply to a client call.
+     *
+     * @deprecated Use {@link #RESPONSE_TIMEOUT_MILLIS}.
+     */
+    @Deprecated
+    public static final ClientOption<Long> DEFAULT_RESPONSE_TIMEOUT_MILLIS = RESPONSE_TIMEOUT_MILLIS;
+
+    /**
+     * The maximum allowed length of a server response.
+     */
+    public static final ClientOption<Long> MAX_RESPONSE_LENGTH = valueOf("DEFAULT_MAX_RESPONSE_LENGTH");
+
+    /**
+     * The maximum allowed length of a server response.
+     *
+     * @deprecated Use {@link #MAX_RESPONSE_LENGTH};
+     */
+    @Deprecated
+    public static final ClientOption<Long> DEFAULT_MAX_RESPONSE_LENGTH = MAX_RESPONSE_LENGTH;
 
     /**
      * The additional HTTP headers to send with requests. Used only when the underlying
@@ -67,6 +90,12 @@ public final class ClientOption<T> extends AbstractOption<T> {
      * The {@link Function} that decorates the client components.
      */
     public static final ClientOption<ClientDecoration> DECORATION = valueOf("DECORATION");
+
+    public static final ClientOption<ContentPreviewerFactory> REQ_CONTENT_PREVIEWER_FACTORY = valueOf(
+            "REQ_CONTENT_PREVIEWER_FACTORY");
+
+    public static final ClientOption<ContentPreviewerFactory> RES_CONTENT_PREVIEWER_FACTORY = valueOf(
+            "RES_CONTENT_PREVIEWER_FACTORY");
 
     /**
      * Returns the {@link ClientOption} of the specified name.

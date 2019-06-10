@@ -29,10 +29,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.internal.FallthroughException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -45,9 +47,10 @@ public class ByteArrayResponseConverterFunctionTest {
     private static final ResponseConverterFunction function = new ByteArrayResponseConverterFunction();
     private static final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
 
-    private static final HttpHeaders OCTET_STREAM_HEADERS =
-            HttpHeaders.of(HttpStatus.OK).contentType(MediaType.OCTET_STREAM);
-    private static final HttpHeaders DEFAULT_TRAILING_HEADERS = HttpHeaders.EMPTY_HEADERS;
+    private static final ResponseHeaders OCTET_STREAM_HEADERS =
+            ResponseHeaders.of(HttpStatus.OK,
+                               HttpHeaderNames.CONTENT_TYPE, MediaType.OCTET_STREAM);
+    private static final HttpHeaders DEFAULT_TRAILERS = HttpHeaders.of();
 
     @BeforeClass
     public static void setup() {
@@ -71,7 +74,9 @@ public class ByteArrayResponseConverterFunctionTest {
         }
 
         StepVerifier.create(from(contents.get(0)))
-                    .expectNext(OCTET_STREAM_HEADERS)
+                    .expectNext(OCTET_STREAM_HEADERS.toBuilder()
+                                                    .addInt(HttpHeaderNames.CONTENT_LENGTH, 3)
+                                                    .build())
                     .expectNext(contents.get(0))
                     .expectComplete()
                     .verify();
@@ -86,16 +91,18 @@ public class ByteArrayResponseConverterFunctionTest {
                                                     contents.stream())) {
             StepVerifier.create(from(result))
                         .expectNext(OCTET_STREAM_HEADERS)
-                        .expectNext(HttpData.of(contents.get(0)))
-                        .expectNext(HttpData.of(contents.get(1)))
-                        .expectNext(HttpData.of(contents.get(2)))
+                        .expectNext(HttpData.wrap(contents.get(0)))
+                        .expectNext(HttpData.wrap(contents.get(1)))
+                        .expectNext(HttpData.wrap(contents.get(2)))
                         .expectComplete()
                         .verify();
         }
 
         StepVerifier.create(from(contents.get(0)))
-                    .expectNext(OCTET_STREAM_HEADERS)
-                    .expectNext(HttpData.of(contents.get(0)))
+                    .expectNext(OCTET_STREAM_HEADERS.toBuilder()
+                                                    .addInt(HttpHeaderNames.CONTENT_LENGTH, 3)
+                                                    .build())
+                    .expectNext(HttpData.wrap(contents.get(0)))
                     .expectComplete()
                     .verify();
     }
@@ -116,23 +123,27 @@ public class ByteArrayResponseConverterFunctionTest {
     }
 
     private static HttpResponse from(Object result) throws Exception {
-        return function.convertResponse(ctx, OCTET_STREAM_HEADERS, result, DEFAULT_TRAILING_HEADERS);
+        return function.convertResponse(ctx, OCTET_STREAM_HEADERS, result, DEFAULT_TRAILERS);
     }
 
     @Test
     public void withoutContentType() throws Exception {
-        StepVerifier.create(function.convertResponse(ctx, HttpHeaders.of(HttpStatus.OK),
-                                                     HttpData.ofUtf8("foo"), DEFAULT_TRAILING_HEADERS))
+        StepVerifier.create(function.convertResponse(ctx, ResponseHeaders.of(HttpStatus.OK),
+                                                     HttpData.ofUtf8("foo"), DEFAULT_TRAILERS))
                     // 'application/octet-stream' should be added.
-                    .expectNext(OCTET_STREAM_HEADERS)
+                    .expectNext(OCTET_STREAM_HEADERS.toBuilder()
+                                                    .addInt(HttpHeaderNames.CONTENT_LENGTH, 3)
+                                                    .build())
                     .expectNext(HttpData.ofUtf8("foo"))
                     .expectComplete()
                     .verify();
 
-        StepVerifier.create(function.convertResponse(ctx, HttpHeaders.of(HttpStatus.OK),
-                                                     "foo".getBytes(), DEFAULT_TRAILING_HEADERS))
-                    .expectNext(OCTET_STREAM_HEADERS)
-                    .expectNext(HttpData.of("foo".getBytes()))
+        StepVerifier.create(function.convertResponse(ctx, ResponseHeaders.of(HttpStatus.OK),
+                                                     "foo".getBytes(), DEFAULT_TRAILERS))
+                    .expectNext(OCTET_STREAM_HEADERS.toBuilder()
+                                                    .addInt(HttpHeaderNames.CONTENT_LENGTH, 3)
+                                                    .build())
+                    .expectNext(HttpData.wrap("foo".getBytes()))
                     .expectComplete()
                     .verify();
 

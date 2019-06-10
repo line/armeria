@@ -15,8 +15,7 @@
  */
 package com.linecorp.armeria.server.annotation;
 
-import static com.linecorp.armeria.internal.annotation.ResponseConversionUtil.streamingFrom;
-import static com.linecorp.armeria.internal.annotation.ResponseConversionUtil.toMutableHeaders;
+import static com.linecorp.armeria.internal.ResponseConversionUtil.streamingFrom;
 
 import java.util.stream.Stream;
 
@@ -28,6 +27,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -38,9 +38,9 @@ public class ByteArrayResponseConverterFunction implements ResponseConverterFunc
 
     @Override
     public HttpResponse convertResponse(ServiceRequestContext ctx,
-                                        HttpHeaders headers,
+                                        ResponseHeaders headers,
                                         @Nullable Object result,
-                                        HttpHeaders trailingHeaders) throws Exception {
+                                        HttpHeaders trailers) throws Exception {
         final MediaType contentType = headers.contentType();
         if (contentType != null) {
             // @Produces("application/binary") or @ProducesBinary
@@ -50,29 +50,29 @@ public class ByteArrayResponseConverterFunction implements ResponseConverterFunc
                 // We assume that the publisher and stream produces HttpData or byte[].
                 // An IllegalStateException will be raised for other types due to conversion failure.
                 if (result instanceof Publisher) {
-                    return streamingFrom((Publisher<?>) result, headers, trailingHeaders,
+                    return streamingFrom((Publisher<?>) result, headers, trailers,
                                          ByteArrayResponseConverterFunction::toHttpData);
                 }
                 if (result instanceof Stream) {
-                    return streamingFrom((Stream<?>) result, headers, trailingHeaders,
+                    return streamingFrom((Stream<?>) result, headers, trailers,
                                          ByteArrayResponseConverterFunction::toHttpData,
                                          ctx.blockingTaskExecutor());
                 }
                 if (result instanceof HttpData) {
-                    return HttpResponse.of(headers, (HttpData) result, trailingHeaders);
+                    return HttpResponse.of(headers, (HttpData) result, trailers);
                 }
                 if (result instanceof byte[]) {
-                    return HttpResponse.of(headers, HttpData.of((byte[]) result), trailingHeaders);
+                    return HttpResponse.of(headers, HttpData.wrap((byte[]) result), trailers);
                 }
 
                 return ResponseConverterFunction.fallthrough();
             }
         } else if (result instanceof HttpData) {
-            return HttpResponse.of(toMutableHeaders(headers).contentType(MediaType.OCTET_STREAM),
-                                   (HttpData) result, trailingHeaders);
+            return HttpResponse.of(headers.toBuilder().contentType(MediaType.OCTET_STREAM).build(),
+                                   (HttpData) result, trailers);
         } else if (result instanceof byte[]) {
-            return HttpResponse.of(toMutableHeaders(headers).contentType(MediaType.OCTET_STREAM),
-                                   HttpData.of((byte[]) result), trailingHeaders);
+            return HttpResponse.of(headers.toBuilder().contentType(MediaType.OCTET_STREAM).build(),
+                                   HttpData.wrap((byte[]) result), trailers);
         }
 
         return ResponseConverterFunction.fallthrough();
@@ -83,7 +83,7 @@ public class ByteArrayResponseConverterFunction implements ResponseConverterFunc
             return (HttpData) value;
         }
         if (value instanceof byte[]) {
-            return HttpData.of((byte[]) value);
+            return HttpData.wrap((byte[]) value);
         }
         if (value == null) {
             return HttpData.EMPTY_DATA;

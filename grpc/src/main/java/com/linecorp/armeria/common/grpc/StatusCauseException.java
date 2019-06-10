@@ -38,8 +38,8 @@ public final class StatusCauseException extends RuntimeException {
     public StatusCauseException(ThrowableProto proto) {
         super(requireNonNull(proto, "proto").getOriginalClassName() + ": " + proto.getOriginalMessage());
 
-        this.originalClassName = proto.getOriginalClassName();
-        this.originalMessage = proto.getOriginalMessage();
+        originalClassName = proto.getOriginalClassName();
+        originalMessage = proto.getOriginalMessage();
 
         if (proto.getStackTraceCount() > 0) {
             setStackTrace(proto.getStackTraceList().stream()

@@ -18,116 +18,111 @@ package com.linecorp.armeria.server.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
+import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.logging.DefaultRequestLog;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
-import com.linecorp.armeria.server.PathMapping;
-import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.RoutingResult;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 
 // Tests error cases, success cases are checked in ArmeriaGrpcServiceInteropTest
-public class GrpcServiceTest {
+class GrpcServiceTest {
 
-    @Rule
-    public MockitoRule mocks = MockitoJUnit.rule();
-
-    @Mock
-    private ServiceRequestContext ctx;
-
-    private GrpcService grpcService;
-
-    @Before
-    public void setUp() {
-        grpcService = (GrpcService) new GrpcServiceBuilder()
-                .addService(mock(TestServiceImplBase.class))
-                .build();
-        final Server server = new ServerBuilder().service(grpcService).build();
-        when(ctx.server()).thenReturn(server);
-        when(ctx.logBuilder()).thenReturn(new DefaultRequestLog(ctx));
-    }
+    private final GrpcService grpcService = (GrpcService) new GrpcServiceBuilder()
+            .addService(mock(TestServiceImplBase.class))
+            .build();
 
     @Test
-    public void missingContentType() throws Exception {
-        final HttpResponse response = grpcService.doPost(
-                ctx,
-                HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/grpc.testing.TestService.UnaryCall")));
-        assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
-                HttpHeaders.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
-                           .contentType(MediaType.PLAIN_TEXT_UTF_8),
+    void missingContentType() throws Exception {
+        final HttpRequest req = HttpRequest.of(HttpMethod.POST, "/grpc.testing.TestService.UnaryCall");
+        final ServiceRequestContext ctx = ServiceRequestContext.of(req);
+        final HttpResponse response = grpcService.doPost(ctx, req);
+        assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpResponse.of(
+                ResponseHeaders.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                                   HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
+                                   HttpHeaderNames.CONTENT_LENGTH, 39),
                 HttpData.ofUtf8("Missing or invalid Content-Type header.")));
     }
 
     @Test
-    public void badContentType() throws Exception {
-        final HttpResponse response = grpcService.doPost(
-                ctx,
-                HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/grpc.testing.TestService.UnaryCall")
-                                          .contentType(MediaType.JSON_UTF_8)));
-        assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
-                HttpHeaders.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
-                           .contentType(MediaType.PLAIN_TEXT_UTF_8),
+    void badContentType() throws Exception {
+        final HttpRequest req = HttpRequest.of(
+                RequestHeaders.of(HttpMethod.POST, "/grpc.testing.TestService.UnaryCall",
+                                  HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8));
+        final ServiceRequestContext ctx = ServiceRequestContext.of(req);
+        final HttpResponse response = grpcService.doPost(ctx, req);
+        assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpResponse.of(
+                ResponseHeaders.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                                   HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
+                                   HttpHeaderNames.CONTENT_LENGTH, 39),
                 HttpData.ofUtf8("Missing or invalid Content-Type header.")));
     }
 
     @Test
-    public void pathMissingSlash() throws Exception {
-        when(ctx.mappedPath()).thenReturn("grpc.testing.TestService.UnaryCall");
-        final HttpResponse response = grpcService.doPost(
-                ctx,
-                HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "grpc.testing.TestService.UnaryCall")
-                                          .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto")));
-        assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
-                HttpHeaders.of(HttpStatus.BAD_REQUEST)
-                           .contentType(MediaType.PLAIN_TEXT_UTF_8),
+    void pathMissingSlash() throws Exception {
+        final HttpRequest req = HttpRequest.of(
+                RequestHeaders.of(HttpMethod.POST, "/grpc.testing.TestService.UnaryCall",
+                                  HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto"));
+        final RoutingResult routingResult = RoutingResult.builder()
+                                                         .path("grpc.testing.TestService.UnaryCall")
+                                                         .build();
+        final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(req)
+                                                                      .routingResult(routingResult)
+                                                                      .build();
+        final HttpResponse response = grpcService.doPost(ctx, req);
+        assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpResponse.of(
+                ResponseHeaders.of(HttpStatus.BAD_REQUEST,
+                                   HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
+                                   HttpHeaderNames.CONTENT_LENGTH, 13),
                 HttpData.ofUtf8("Invalid path.")));
     }
 
     @Test
-    public void missingMethod() throws Exception {
-        when(ctx.mappedPath()).thenReturn("/grpc.testing.TestService/FooCall");
-        final HttpResponse response = grpcService.doPost(
-                ctx,
-                HttpRequest.of(HttpHeaders.of(HttpMethod.POST, "/grpc.testing.TestService/FooCall")
-                                          .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto")));
-        assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpMessage.of(
-                HttpHeaders.of(HttpStatus.OK)
-                           .set(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto")
-                           .set(HttpHeaderNames.of("grpc-status"), "12")
-                           .set(HttpHeaderNames.of("grpc-message"),
-                                "Method not found: grpc.testing.TestService/FooCall")
-                           .set(HttpHeaderNames.CONTENT_LENGTH, "0"),
+    void missingMethod() throws Exception {
+        final HttpRequest req = HttpRequest.of(
+                RequestHeaders.of(HttpMethod.POST, "/grpc.testing.TestService/FooCall",
+                                  HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto"));
+        final RoutingResult routingResult = RoutingResult.builder()
+                                                         .path("/grpc.testing.TestService/FooCall")
+                                                         .build();
+        final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(req)
+                                                                      .routingResult(routingResult)
+                                                                      .build();
+        final HttpResponse response = grpcService.doPost(ctx, req);
+        assertThat(response.aggregate().get()).isEqualTo(AggregatedHttpResponse.of(
+                ResponseHeaders.builder(HttpStatus.OK)
+                               .endOfStream(true)
+                               .add(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto")
+                               .addInt("grpc-status", 12)
+                               .add("grpc-message", "Method not found: grpc.testing.TestService/FooCall")
+                               .addInt(HttpHeaderNames.CONTENT_LENGTH, 0)
+                               .build(),
                 HttpData.EMPTY_DATA));
     }
 
     @Test
-    public void pathMappings() throws Exception {
-        assertThat(grpcService.pathMappings())
+    public void routes() throws Exception {
+        assertThat(grpcService.routes())
                 .containsExactlyInAnyOrder(
-                        PathMapping.ofExact("/armeria.grpc.testing.TestService/EmptyCall"),
-                        PathMapping.ofExact("/armeria.grpc.testing.TestService/UnaryCall"),
-                        PathMapping.ofExact("/armeria.grpc.testing.TestService/UnaryCall2"),
-                        PathMapping.ofExact("/armeria.grpc.testing.TestService/StreamingOutputCall"),
-                        PathMapping.ofExact("/armeria.grpc.testing.TestService/StreamingInputCall"),
-                        PathMapping.ofExact("/armeria.grpc.testing.TestService/FullDuplexCall"),
-                        PathMapping.ofExact("/armeria.grpc.testing.TestService/HalfDuplexCall"),
-                        PathMapping.ofExact("/armeria.grpc.testing.TestService/UnimplementedCall"));
+                        Route.builder().exact("/armeria.grpc.testing.TestService/EmptyCall").build(),
+                        Route.builder().exact("/armeria.grpc.testing.TestService/UnaryCall").build(),
+                        Route.builder().exact("/armeria.grpc.testing.TestService/UnaryCall2").build(),
+                        Route.builder().exact("/armeria.grpc.testing.TestService/StreamingOutputCall").build(),
+                        Route.builder().exact("/armeria.grpc.testing.TestService/StreamingInputCall").build(),
+                        Route.builder().exact("/armeria.grpc.testing.TestService/FullDuplexCall").build(),
+                        Route.builder().exact("/armeria.grpc.testing.TestService/HalfDuplexCall").build(),
+                        Route.builder().exact("/armeria.grpc.testing.TestService/UnimplementedCall").build());
     }
 }

@@ -59,6 +59,16 @@ public final class PrometheusMeterRegistries {
     public static PrometheusMeterRegistry newRegistry(CollectorRegistry registry, Clock clock) {
         final PrometheusMeterRegistry meterRegistry = new PrometheusMeterRegistry(
                 PrometheusConfig.DEFAULT, requireNonNull(registry, "registry"), requireNonNull(clock, "clock"));
+        return configureRegistry(meterRegistry);
+    }
+
+    /**
+     * Configures the {@link PrometheusMeterRegistry} with Armeria's defaults.
+     *
+     * @return the specified {@link PrometheusMeterRegistry}
+     */
+    public static <T extends PrometheusMeterRegistry> T configureRegistry(T meterRegistry) {
+        requireNonNull(meterRegistry, "meterRegistry");
         meterRegistry.config().namingConvention(MoreNamingConventions.prometheus());
         meterRegistry.config().pauseDetector(new NoPauseDetector());
         return meterRegistry;

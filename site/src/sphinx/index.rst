@@ -3,12 +3,11 @@
 .. _`gRPC`: https://grpc.io/
 .. _`HTTP/2`: https://http2.github.io/
 .. _`HTTP/2 connection preface`: https://tools.ietf.org/html/rfc7540#section-3.5
-.. _`Java 8`: https://java.oracle.com/
+.. _`Java 8`: https://go.java/
 .. _`LINE Corporation`: https://linecorp.com/en/
 .. _`Netty`: https://netty.io/
 .. _`Reactive Streams`: http://www.reactive-streams.org/
 .. _`Spring Boot`: https://projects.spring.io/spring-boot/
-.. _`the introductory slides`: https://speakerdeck.com/trustin/building-asynchronous-microservices-with-armeria
 .. _`Thrift`: https://thrift.apache.org/
 .. _`traditional HTTP/1 upgrade request`: https://tools.ietf.org/html/rfc7540#section-3.2
 .. _`Zipkin`: http://zipkin.io/
@@ -26,11 +25,11 @@ It is open-sourced and licensed under `Apache License 2.0`_ by `LINE Corporation
 
 Want a quick tour?
 ------------------
-Check out `the introductory slides`_:
+Check out `the introductory slides <https://speakerdeck.com/trustin/armeria-the-only-thrift-grpc-rest-microservice-framework-youll-need>`_:
 
 .. raw:: html
 
-    <div style="max-width: 512px; margin-bottom: 1em"><script async class="speakerdeck-embed" data-id="aa6b9f1dc9b34401997e8d737ebb2e52" data-ratio="1.77777777777778" src="//speakerdeck.com/assets/embed.js"></script></div>
+    <div style="max-width: 640px; margin-bottom: 1em"><script async class="speakerdeck-embed" data-id="c160591ad87c4edaa8ca62afb26b1904" data-ratio="1.77777777777778" src="//speakerdeck.com/assets/embed.js"></script></div>
 
 Features
 --------
@@ -107,6 +106,6 @@ Read more
     Release notes <https://github.com/line/armeria/releases>
     API documentation <apidocs/index.html#://>
     Source cross-reference <xref/index.html#://>
-    Questions and answers <https://github.com/line/armeria/issues?q=label%3Aquestion-answered>
-    Fork me at GitHub <https://github.com/line/armeria>
+    Questions and answers <https://github.com/line/armeria/issues?q=label%3Aquestion>
+    Fork me on GitHub <https://github.com/line/armeria>
     Contributing <https://github.com/line/armeria/blob/master/CONTRIBUTING.md>

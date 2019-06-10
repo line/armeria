@@ -1,7 +1,6 @@
 .. _gRPC: https://grpc.io/
 .. _gRPC-Web: https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-WEB.md
 .. _gRPC-Web-Client: https://github.com/improbable-eng/grpc-web
-.. _protobuf-gradle-plugin: https://github.com/google/protobuf-gradle-plugin
 .. _Protobuf-JSON: https://developers.google.com/protocol-buffers/docs/proto3#json
 .. _the gRPC-Java README: https://github.com/grpc/grpc-java/blob/master/README.md#download
 
@@ -9,6 +8,10 @@
 
 Running a gRPC service
 ======================
+
+.. note::
+
+    Visit `armeria-examples <https://github.com/line/armeria-examples>`_ to find a fully working example.
 
 Let's assume we have the following gRPC_ service definition:
 
@@ -90,8 +93,32 @@ a :api:`GrpcServiceBuilder` and add it to the :api:`ServerBuilder`:
 
 .. note::
 
-    We bound the :api:`GrpcService` without specifying any path mappings. It is because :api:`GrpcService`
-    implements :api:`ServiceWithPathMappings`, which dynamically provides path mappings by itself.
+    We bound the :api:`GrpcService` without specifying any path. It is because :api:`GrpcService`
+    implements :api:`ServiceWithPathRoutes`, which dynamically provides :apiplural:`Route` by itself.
+
+.. _server-grpc-decorator:
+
+Decorating a ``GrpcService``
+----------------------------
+
+Unlike a usual Armeria :api:`Service`, :api:`GrpcService` implements a special interface called
+:api:`ServiceWithRoutes`. Therefore, it is recommended to decorate a :api:`GrpcService` by specifying
+decorator functions as extra parameters rather than using ``Service.decorate()``:
+
+.. code-block:: java
+
+    import com.linecorp.armeria.server.logging.LoggingService;
+
+    ServerBuilder sb = new ServerBuilder();
+    ...
+    sb.service(new GrpcServiceBuilder().addService(new MyHelloService())
+                                       .build(),
+               LoggingService.newDecorator());
+    ...
+    Server server = sb.build();
+    server.start();
+
+See :ref:`server-decorator-service-with-routes` for more information about :api:`ServiceWithRoutes`.
 
 ``gRPC-Web``
 ------------
@@ -125,6 +152,7 @@ you build a :api:`GrpcService`:
 
 .. code-block:: java
 
+    import com.linecorp.armeria.common.grpc.GrpcHeaderNames;
     import com.linecorp.armeria.server.cors.CorsServiceBuilder;
 
     ServerBuilder sb = new ServerBuilder();
@@ -135,11 +163,17 @@ you build a :api:`GrpcService`:
                               .allowRequestMethods(HttpMethod.POST) // Allow POST method.
                               // Allow Content-type and X-GRPC-WEB headers.
                               .allowRequestHeaders(HttpHeaderNames.CONTENT_TYPE,
-                                                   HttpHeaderNames.of("X-GRPC-WEB"));
+                                                   HttpHeaderNames.of("X-GRPC-WEB"))
+                              // Expose trailers of the HTTP response to the client.
+                              .exposeHeaders(GrpcHeaderNames.GRPC_STATUS,
+                                             GrpcHeaderNames.GRPC_MESSAGE,
+                                             GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN);
 
     sb.service(new GrpcServiceBuilder().addService(new MyHelloService())
                                        .supportedSerializationFormats(GrpcSerializationFormats.values())
-                                       .build(), corsBuilder.newDecorator());
+                                       .build(),
+               corsBuilder.newDecorator(),
+               LoggingService.newDecorator());
     ...
     Server server = sb.build();
     server.start();
@@ -175,7 +209,7 @@ for JSON POST body.
 Blocking service implementation
 -------------------------------
 
-Unlike upstream gRPC-java, Armeria does not run service logic in a separate thread pool by default. If your
+Unlike upstream gRPC-Java, Armeria does not run service logic in a separate thread pool by default. If your
 service implementation requires blocking, either run the individual blocking logic in a thread pool, wrap the
 entire service implementation in ``RequestContext.current().blockingTaskExecutor().submit``, or set
 ``GrpcServiceBuilder.useBlockingTaskExecutor()`` so the above happens automatically for all service methods
@@ -227,7 +261,7 @@ and lifecycle callbacks.
                                        .build());
 
 Exception propagation
-=====================
+---------------------
 
 It can be very useful to enable ``Flags.verboseResponses()`` in your server by specifying the
 ``-Dcom.linecorp.armeria.verboseResponses=true`` system property, which will automatically return
@@ -237,6 +271,26 @@ the actual source code in the server - make sure it is safe to send such potenti
 to all your clients before enabling this flag!
 
 See more details at :ref:`client-grpc`.
+
+Server Reflection
+-----------------
+
+Armeria supports gRPC server reflection - just add an instance of ``ProtoReflectionService`` to your server.
+
+.. code-block:: java
+
+    import io.grpc.protobuf.services.ProtoReflectionService;
+
+    ServerBuilder sb = new ServerBuilder();
+    ...
+    sb.service(new GrpcServiceBuilder().addService(new MyHelloService())
+                                       .addService(ProtoReflectionService.newInstance())
+                                       .build());
+    ...
+    Server server = sb.build();
+    server.start();
+
+For more information, see the official `gRPC Server Reflection tutorial <https://github.com/grpc/grpc-java/blob/master/documentation/server-reflection-tutorial.md>`_.
 
 See also
 --------

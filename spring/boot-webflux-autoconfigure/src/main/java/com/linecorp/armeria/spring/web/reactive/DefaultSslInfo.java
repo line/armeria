@@ -49,7 +49,7 @@ import org.springframework.util.Assert;
  */
 final class DefaultSslInfo implements SslInfo {
 
-    // Forked from spring-web-5.0.8.RELEASE
+    // Forked from spring-web-5.1.5.RELEASE at 1e4a3a2370b9ded44a62155aea59c0d81c36149f
 
     @Nullable
     private final String sessionId;
@@ -107,7 +107,7 @@ final class DefaultSslInfo implements SslInfo {
         Certificate[] certificates;
         try {
             certificates = session.getPeerCertificates();
-        } catch (Exception ex) {
+        } catch (Throwable ex) {
             return null;
         }
 

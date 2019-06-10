@@ -2,6 +2,9 @@
 # NB: Update NOTICE.txt and add/remove LICENSE.*.txt when adding/removing a dependency.
 #
 
+cglib:
+  cglib: { version: '3.2.12' }
+
 ch.qos.logback:
   logback-classic:
     version: '1.2.3'
@@ -10,13 +13,13 @@ ch.qos.logback:
 
 com.auth0:
   java-jwt:
-    version: '3.5.0'
+    version: '3.8.1'
     javadocs:
-    - https://static.javadoc.io/com.auth0/java-jwt/3.5.0/
+    - https://static.javadoc.io/com.auth0/java-jwt/3.8.1/
 
 com.fasterxml.jackson.core:
   jackson-annotations:
-    version: &JACKSON_VERSION '2.9.8'
+    version: &JACKSON_VERSION '2.9.9'
     javadocs:
     - https://fasterxml.github.io/jackson-annotations/javadoc/2.9/
   jackson-core:
@@ -30,25 +33,27 @@ com.fasterxml.jackson.core:
 
 com.github.ben-manes.caffeine:
   caffeine:
-    version: '2.6.2'
+    version: '2.7.0'
+    exclusions:
+    - com.google.errorprone:error_prone_annotations
     javadocs:
-    - https://static.javadoc.io/com.github.ben-manes.caffeine/caffeine/2.6.2/
+    - https://static.javadoc.io/com.github.ben-manes.caffeine/caffeine/2.7.0/
     relocations:
     - from: com.github.benmanes.caffeine
       to: com.linecorp.armeria.internal.shaded.caffeine
 
 com.github.jengelman.gradle.plugins:
-  shadow: { version: '4.0.3' }
+  shadow: { version: '5.0.0' }
 
 com.google.api:
-  gax-grpc: { version: '1.37.0' }
+  gax-grpc: { version: '1.45.0' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
 
 com.google.guava:
   guava:
-    version: &GUAVA_VERSION '27.0.1-jre'
+    version: &GUAVA_VERSION '27.1-jre'
     exclusions:
     - com.google.errorprone:error_prone_annotations
     - com.google.j2objc:j2objc-annotations
@@ -73,15 +78,28 @@ com.google.guava:
     - from: com.google.common
       to: com.linecorp.armeria.internal.shaded.guava
 
+# We do not depend on j2objc-annotations. We just need this to stop Javadoc from
+# complaining about 'unknown enum constant Level.FULL'.
+com.google.j2objc:
+  j2objc-annotations: { version: '1.3' }
+
+# Ensure that we use the same Protobuf version as what gRPC depends on.
+# See: https://github.com/grpc/grpc-java/blob/master/build.gradle
+#      (Switch to the right tag and look for 'protobufVersion' and 'protocVersion'.)
 com.google.protobuf:
-  protoc: { version: '3.5.1-1' }
+  protoc: { version: '3.7.1' }
+  protobuf-java: { version: &PROTOBUF_VERSION '3.7.1' }
+  protobuf-java-util:
+    version: *PROTOBUF_VERSION
+    exclusions:
+    - com.google.errorprone:error_prone_annotations
   protobuf-gradle-plugin: { version: '0.8.8' }
 
 com.moowork.gradle:
-  gradle-node-plugin: { version: '1.2.0' }
+  gradle-node-plugin: { version: '1.3.1' }
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.16' }
+  checkstyle: { version: '8.19' }
 
 com.spotify:
   completable-futures:
@@ -92,7 +110,7 @@ com.spotify:
 
 com.squareup.retrofit2:
   retrofit:
-    version: &RETROFIT2_VERSION '2.5.0'
+    version: &RETROFIT2_VERSION '2.6.0'
     javadocs:
     - https://square.github.io/retrofit/2.x/retrofit/
   converter-jackson: { version: *RETROFIT2_VERSION }
@@ -102,23 +120,29 @@ gradle.plugin.net.davidecavestro:
 
 io.dropwizard.metrics:
   metrics-core:
-    version: &DROPWIZARD_VERSION '4.0.5'
+    version: &DROPWIZARD_VERSION '4.1.0'
     javadocs:
     - https://metrics.dropwizard.io/4.0.0/apidocs/
   metrics-json: { version: *DROPWIZARD_VERSION }
 
+# Ensure to update the Protobuf version in this file when updating gRPC.
 io.grpc:
   grpc-core:
-    version: &GRPC_VERSION '1.18.0'
+    version: &GRPC_VERSION '1.21.0'
     javadocs:
     - https://grpc.io/grpc-java/javadoc/
     - https://developers.google.com/protocol-buffers/docs/reference/java/
     exclusions:
     - com.google.errorprone:error_prone_annotations
+    - org.codehaus.mojo:animal-sniffer-annotations
+  grpc-alts: { version: *GRPC_VERSION }
+  grpc-auth: { version: *GRPC_VERSION }
   grpc-interop-testing:
     version: *GRPC_VERSION
     exclusions:
+    - com.google.errorprone:error_prone_annotations
     - com.google.guava:guava-jdk5
+    - com.google.j2objc:j2objc-annotations
     - io.netty:netty-codec-http
     - io.netty:netty-codec-http2
     - io.netty:netty-codec-socks
@@ -129,29 +153,30 @@ io.grpc:
   grpc-netty-shaded: { version: *GRPC_VERSION }
   grpc-okhttp: { version: *GRPC_VERSION }
   grpc-protobuf: { version: *GRPC_VERSION }
+  grpc-services: { version: *GRPC_VERSION }
   grpc-stub: { version: *GRPC_VERSION }
   grpc-testing: { version: *GRPC_VERSION }
 
 io.micrometer:
   micrometer-core:
-    version: &MICROMETER_VERSION '1.1.2'
+    version: &MICROMETER_VERSION '1.1.4'
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-core/1.1.2/
+    - https://static.javadoc.io/io.micrometer/micrometer-core/1.1.4/
   micrometer-registry-prometheus:
     version: *MICROMETER_VERSION
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.1.2/
+    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.1.4/
   micrometer-spring-legacy:
     version: *MICROMETER_VERSION
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.1.2/
+    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.1.4/
     exclusions:
     - org.springframework:spring-web
     - org.springframework:spring-webmvc
 
 io.netty:
   netty-common:
-    version: &NETTY_VERSION '4.1.32.Final'
+    version: &NETTY_VERSION '4.1.34.Final'
     javadocs:
     - https://netty.io/4.1/api/
   netty-buffer: { version: *NETTY_VERSION }
@@ -166,11 +191,11 @@ io.netty:
   netty-transport: { version: *NETTY_VERSION }
   netty-transport-native-epoll: { version: *NETTY_VERSION }
   netty-transport-native-unix-common: { version: *NETTY_VERSION }
-  netty-tcnative-boringssl-static: { version: '2.0.20.Final' }
+  netty-tcnative-boringssl-static: { version: '2.0.23.Final' }
 
 io.projectreactor:
   reactor-core:
-    version: &REACTOR_VERSION '3.2.5.RELEASE'
+    version: &REACTOR_VERSION '3.2.9.RELEASE'
     javadocs:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }
@@ -183,15 +208,15 @@ io.prometheus:
 
 io.reactivex.rxjava2:
   rxjava:
-    version: '2.2.5'
+    version: '2.2.9'
     javadocs:
     - http://reactivex.io/RxJava/2.x/javadoc/
 
 io.zipkin.brave:
   brave:
-    version: '5.6.0'
+    version: '5.6.3'
     javadocs:
-    - https://static.javadoc.io/io.zipkin.brave/brave/5.6.0/
+    - https://static.javadoc.io/io.zipkin.brave/brave/5.6.3/
 
 it.unimi.dsi:
   fastutil:
@@ -199,6 +224,9 @@ it.unimi.dsi:
     relocations:
     - from: it.unimi.dsi.fastutil
       to: com.linecorp.armeria.internal.shaded.fastutil
+
+jakarta.annotation:
+  jakarta.annotation-api: { version: '1.3.4' }
 
 javax.inject:
   javax.inject: { version: '1' }
@@ -212,8 +240,26 @@ junit:
     javadocs:
     - https://junit.org/junit4/javadoc/4.12/
 
+org.junit.jupiter:
+  junit-jupiter-api:
+    version: &JUNIT_JUPITER_VERSION '5.4.2'
+    javadocs:
+    - https://junit.org/junit5/docs/5.4.2/api/
+  junit-jupiter-engine:
+    version: *JUNIT_JUPITER_VERSION
+  junit-jupiter-params:
+    version: *JUNIT_JUPITER_VERSION
+org.junit.platform:
+  junit-platform-commons:
+    version: &JUNIT_PLATFORM_VERSION '1.4.2'
+  junit-platform-launcher:
+    version: *JUNIT_PLATFORM_VERSION
+org.junit.vintage:
+  junit-vintage-engine:
+    version: '5.4.2'
+
 kr.motd.gradle:
-  sphinx-gradle-plugin: { version: '2.3.1' }
+  sphinx-gradle-plugin: { version: '2.4.0' }
 
 # We do not depend on log4j. We just need this to stop dependency-management-plugin from
 # complaining about its bad POM.
@@ -225,20 +271,20 @@ me.champeau.gradle:
   jmh-gradle-plugin: { version: '0.4.8' }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION '2.3.0' }
+  json-unit: { version: &JSON_UNIT_VERSION '2.7.0' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 net.sf.proguard:
-  proguard-gradle: { version: '6.0.3' }
+  proguard-gradle: { version: '6.1.0' }
 
 net.shibboleth.utilities:
   java-support: { version: '7.3.0' }
 
 org.apache.curator:
   curator-recipes:
-    version: '4.1.0'
+    version: '4.2.0'
     javadocs:
-    - https://static.javadoc.io/org.apache.curator/curator-recipes/4.1.0/
+    - https://static.javadoc.io/org.apache.curator/curator-recipes/4.2.0/
     exclusions:
     - org.apache.zookeeper:zookeeper
 
@@ -253,7 +299,7 @@ org.apache.hbase:
 
 org.apache.httpcomponents:
   httpclient:
-    version: '4.5.6'
+    version: '4.5.8'
     exclusions:
     - commons-logging:commons-logging
 
@@ -265,16 +311,16 @@ org.apache.kafka:
 
 org.apache.thrift:
   libthrift:
-    version: '0.11.0'
+    version: '0.12.0'
     javadocs:
-    - https://static.javadoc.io/org.apache.thrift/libthrift/0.11.0/
+    - https://static.javadoc.io/org.apache.thrift/libthrift/0.12.0/
     exclusions:
     - org.apache.httpcomponents:httpcore
     - org.apache.httpcomponents:httpclient
 
 org.apache.tomcat.embed:
   tomcat-embed-core:
-    version: &TOMCAT_VERSION '9.0.14'
+    version: &TOMCAT_VERSION '9.0.20'
     javadocs:
     - https://tomcat.apache.org/tomcat-9.0-doc/api/
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
@@ -282,21 +328,21 @@ org.apache.tomcat.embed:
 
 org.apache.zookeeper:
   zookeeper:
-    version: '3.4.13'
+    version: '3.5.5'
     exclusions:
-    - jline:jline
+    - io.netty:netty-all
     - log4j:log4j
     - org.slf4j:slf4j-log4j12
 
 org.assertj:
-  assertj-core: { version: '3.11.1' }
+  assertj-core: { version: '3.12.2' }
 
 org.awaitility:
-  awaitility: { version: '3.1.5' }
+  awaitility: { version: '3.1.6' }
 
 org.bouncycastle:
   bcprov-jdk15on:
-    version: '1.60'
+    version: '1.62'
     relocations:
     - from: org.bouncycastle
       to: com.linecorp.armeria.internal.shaded.bouncycastle
@@ -305,13 +351,13 @@ org.checkerframework:
   checker-compat-qual: { version: '2.5.5' }
 
 org.curioswitch.curiostack:
-  protobuf-jackson: { version: '0.3.0' }
+  protobuf-jackson: { version: '0.4.0' }
 
 org.dmonix.junit:
   zookeeper-junit: { version: '1.2' }
 
 org.eclipse.jetty:
-  apache-jsp: { version: &JETTY_VERSION '9.4.14.v20181114' }
+  apache-jsp: { version: &JETTY_VERSION '9.4.18.v20190429' }
   apache-jstl: { version: *JETTY_VERSION }
   jetty-annotations:
     version: *JETTY_VERSION
@@ -331,7 +377,7 @@ org.eclipse.jetty.http2:
   http2-server: { version: *JETTY_VERSION }
 
 org.hibernate.validator:
-  hibernate-validator: { version: '6.0.14.Final' }
+  hibernate-validator: { version: '6.0.16.Final' }
 
 org.jctools:
   jctools-core:
@@ -341,10 +387,11 @@ org.jctools:
       to: com.linecorp.armeria.internal.shaded.jctools
 
 org.jsoup:
-  jsoup: { version: '1.11.3' }
+  jsoup: { version: '1.12.1' }
 
 org.mockito:
-  mockito-core: { version: '2.23.4' }
+  mockito-core: { version: &MOCKITO_VERSION '2.28.2' }
+  mockito-junit-jupiter: { version: *MOCKITO_VERSION }
 
 org.mortbay.jetty.alpn:
   jetty-alpn-agent: { version: '2.0.9' }
@@ -377,19 +424,21 @@ org.reflections:
       to: com.linecorp.armeria.internal.shaded.reflections
 
 org.slf4j:
-  jcl-over-slf4j: { version: &SLF4J_VERSION '1.7.25' }
+  jcl-over-slf4j: { version: &SLF4J_VERSION '1.7.26' }
   jul-to-slf4j: { version: *SLF4J_VERSION }
   log4j-over-slf4j: { version: *SLF4J_VERSION }
   slf4j-api:
     version: *SLF4J_VERSION
     javadocs:
     - https://www.slf4j.org/api/
+  slf4j-simple: { version: *SLF4J_VERSION }
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.1.2.RELEASE'
+    version: &SPRING_BOOT_VERSION '2.1.5.RELEASE'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
+  spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }
   spring-boot-starter-actuator: { version: *SPRING_BOOT_VERSION }
   spring-boot-starter-test: { version: *SPRING_BOOT_VERSION }
   spring-boot-starter-web: { version: *SPRING_BOOT_VERSION }
@@ -401,8 +450,8 @@ org.springframework.boot:
   spring-boot-gradle-plugin: { version: *SPRING_BOOT_VERSION }
 
 pl.project13.scala:
-  sbt-jmh-extras: { version: 0.3.4 }
+  sbt-jmh-extras: { version: 0.3.6 }
 
 # Needed to work around the problem with Gradle not supporting POM relocation correctly.
 xml-apis:
-  xml-apis: { version: '1.0.b2' }
+  xml-apis: { version: '1.4.01' }

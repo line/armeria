@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -32,7 +32,7 @@ import com.google.common.io.ByteStreams;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.netty.util.NetUtil;
 
@@ -49,6 +49,19 @@ public class HttpServerPathTest {
                 }
             });
 
+            // '/another/foo/' and '/another/foo' should be differently handled.
+            sb.service("/another/{id}/", new AbstractHttpService() {
+                @Override
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
+                    return HttpResponse.of(HttpStatus.OK);
+                }
+            }).service("/another/{id}", new AbstractHttpService() {
+                @Override
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
+                    return HttpResponse.of(HttpStatus.NO_CONTENT);
+                }
+            });
+
             sb.serviceUnder("/", new AbstractHttpService() {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
@@ -58,7 +71,7 @@ public class HttpServerPathTest {
         }
     };
 
-    private static final Map<String, HttpStatus> TEST_URLS = new HashMap<>();
+    private static final Map<String, HttpStatus> TEST_URLS = new LinkedHashMap<>();
 
     static {
         // 200 test
@@ -71,6 +84,8 @@ public class HttpServerPathTest {
         TEST_URLS.put("/service//test//////a/?flag=hello", HttpStatus.OK);
         TEST_URLS.put("/service/foo:bar", HttpStatus.OK);
         TEST_URLS.put("/service/foo::::::bar", HttpStatus.OK);
+        TEST_URLS.put("/another/foo/", HttpStatus.OK);
+        TEST_URLS.put("/another/foo", HttpStatus.NO_CONTENT);
         TEST_URLS.put("/cache/v1.0/rnd_team/get/krisjey:56578015655:1223", HttpStatus.OK);
 
         TEST_URLS.put("/signout/56578015655?crumb=s-1475829101-cec4230588-%E2%98%83", HttpStatus.OK);
@@ -97,11 +112,9 @@ public class HttpServerPathTest {
         TEST_URLS.put("/\\\\", HttpStatus.BAD_REQUEST);
         TEST_URLS.put("/service/foo>bar", HttpStatus.BAD_REQUEST);
         TEST_URLS.put("/service/foo<bar", HttpStatus.BAD_REQUEST);
-
-        // 404 test
-        TEST_URLS.put("/gwturl#user:45/comments", HttpStatus.NOT_FOUND);
-        TEST_URLS.put("/service:name/hello", HttpStatus.NOT_FOUND);
-        TEST_URLS.put("/service::::name/hello", HttpStatus.NOT_FOUND);
+        TEST_URLS.put("/gwturl#user:45/comments", HttpStatus.BAD_REQUEST);
+        TEST_URLS.put("/service:name/hello", HttpStatus.BAD_REQUEST);
+        TEST_URLS.put("/service::::name/hello", HttpStatus.BAD_REQUEST);
     }
 
     @Test(timeout = 10000)

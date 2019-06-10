@@ -119,7 +119,7 @@ configure(projectsWithFlags('publish', 'java')) {
                                         version dep.moduleVersion
 
                                         // Write classifier if exists.
-                                        if (dep.moduleArtifacts.find().classifier) {
+                                        if (dep.moduleArtifacts.find()?.classifier) {
                                             classifier dep.moduleArtifacts.find().classifier
                                         }
 

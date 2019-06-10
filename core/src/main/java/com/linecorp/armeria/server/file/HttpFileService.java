@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Objects;
 
 import javax.annotation.Nullable;
@@ -39,12 +40,15 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.metric.CaffeineMetricSupport;
 import com.linecorp.armeria.server.AbstractHttpService;
+import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -136,14 +140,14 @@ public final class HttpFileService extends AbstractHttpService {
                     registry,
                     new MeterIdPrefix("armeria.server.file.vfsCache",
                                       "hostnamePattern", cfg.virtualHost().hostnamePattern(),
-                                      "pathMapping", cfg.pathMapping().meterTag(),
+                                      "route", cfg.route().meterTag(),
                                       "vfs", config.vfs().meterTag()),
                     cache);
         }
     }
 
     @Override
-    public boolean shouldCachePath(String path, @Nullable String query, PathMapping pathMapping) {
+    public boolean shouldCachePath(String path, @Nullable String query, Route route) {
         // We assume that if a file cache is enabled, the number of paths is also finite.
         return cache != null;
     }
@@ -191,9 +195,32 @@ public final class HttpFileService extends AbstractHttpService {
             return file;
         }
 
-        if (decodedMappedPath.charAt(decodedMappedPath.length() - 1) == '/') {
+        final boolean endsWithSlash = decodedMappedPath.charAt(decodedMappedPath.length() - 1) == '/';
+        if (endsWithSlash) {
             // Try index.html if it was a directory access.
-            return findFile(ctx, decodedMappedPath + "index.html", supportedEncodings);
+            final HttpFile indexFile = findFile(ctx, decodedMappedPath + "index.html", supportedEncodings);
+            if (indexFile != null) {
+                return indexFile;
+            }
+
+            // Auto-generate directory listing if enabled.
+            if (config.autoIndex() && config.vfs().canList(decodedMappedPath)) {
+                final List<String> listing = config.vfs().list(decodedMappedPath);
+                final HttpData autoIndex =
+                        AutoIndex.listingToHtml(ctx.decodedPath(), decodedMappedPath, listing);
+                return HttpFileBuilder.of(autoIndex)
+                                      .addHeader(HttpHeaderNames.CONTENT_TYPE, MediaType.HTML_UTF_8)
+                                      .setHeaders(config.headers())
+                                      .build();
+            }
+        } else {
+            // Redirect to the slash appended path if 1) /index.html exists or 2) it has a directory listing.
+            if (findFile(ctx, decodedMappedPath + "/index.html", supportedEncodings) != null ||
+                config.autoIndex() && config.vfs().canList(decodedMappedPath)) {
+                throw HttpResponseException.of(HttpResponse.of(
+                        ResponseHeaders.of(HttpStatus.TEMPORARY_REDIRECT,
+                                           HttpHeaderNames.LOCATION, ctx.path() + '/')));
+            }
         }
 
         return null;
@@ -216,7 +243,7 @@ public final class HttpFileService extends AbstractHttpService {
     @Nullable
     private HttpFile findFile(ServiceRequestContext ctx, String path,
                               @Nullable String contentEncoding) throws IOException {
-        final HttpFile uncachedFile = config.vfs().get(path, config.clock(), contentEncoding);
+        final HttpFile uncachedFile = config.vfs().get(path, config.clock(), contentEncoding, config.headers());
         final HttpFileAttributes uncachedAttrs = uncachedFile.readAttributes();
         if (cache == null) {
             return uncachedAttrs != null ? uncachedFile : null;
@@ -307,11 +334,11 @@ public final class HttpFileService extends AbstractHttpService {
         }
 
         @Override
-        public boolean shouldCachePath(String path, @Nullable String query, PathMapping pathMapping) {
+        public boolean shouldCachePath(String path, @Nullable String query, Route route) {
             // No good way of propagating the first vs second decision to the cache decision, so just make a
             // best effort, it should work for most cases.
-            return first.shouldCachePath(path, query, pathMapping) &&
-                   second.shouldCachePath(path, query, pathMapping);
+            return first.shouldCachePath(path, query, route) &&
+                   second.shouldCachePath(path, query, route);
         }
     }
 

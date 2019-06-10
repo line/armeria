@@ -1,4 +1,7 @@
 dependencies {
+    // cglib
+    testCompile 'cglib:cglib'
+
     // Caffeine
     compile 'com.github.ben-manes.caffeine:caffeine'
 
@@ -56,10 +59,11 @@ task testStreaming(type: Test,
 
     include '**/HttpServerStreamingTest**'
     testClassesDirs = tasks.shadedTest.testClassesDirs
+    classpath = testClassesDirs
 
     // Set the class path as late as possible so that the 'shadedTest' task has the correct classpath.
-    afterProjectsWithFlag('java') {
-        classpath = tasks.shadedTest.classpath
+    doFirst {
+        classpath += project.files(configurations.shadedTestRuntime.resolve())
     }
 }
 tasks.shadedTest.finalizedBy tasks.testStreaming
@@ -75,10 +79,11 @@ task testNg(type: Test,
 
     scanForTestClasses = false
     testClassesDirs = tasks.shadedTest.testClassesDirs
+    classpath = testClassesDirs
 
     // Set the class path as late as possible so that the 'shadedTest' task has the correct classpath.
-    afterProjectsWithFlag('java') {
-        classpath = tasks.shadedTest.classpath
+    doFirst {
+        classpath += project.files(configurations.shadedTestRuntime.resolve())
     }
 }
 tasks.shadedTest.finalizedBy tasks.testNg

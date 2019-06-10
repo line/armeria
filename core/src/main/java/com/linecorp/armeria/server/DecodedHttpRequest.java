@@ -23,6 +23,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.internal.InboundTrafficController;
 
 import io.netty.channel.ChannelHandlerContext;
@@ -35,7 +36,7 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
     private final int streamId;
     private final boolean keepAlive;
     private final InboundTrafficController inboundTrafficController;
-    private final long defaultMaxRequestLength;
+    private final long maxRequestLength;
     @Nullable
     private ServiceRequestContext ctx;
     private long transferredBytes;
@@ -44,8 +45,8 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
     private HttpResponse response;
     private boolean isResponseAborted;
 
-    DecodedHttpRequest(EventLoop eventLoop, int id, int streamId, HttpHeaders headers, boolean keepAlive,
-                       InboundTrafficController inboundTrafficController, long defaultMaxRequestLength) {
+    DecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers, boolean keepAlive,
+                       InboundTrafficController inboundTrafficController, long maxRequestLength) {
 
         super(headers);
 
@@ -54,17 +55,11 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
         this.streamId = streamId;
         this.keepAlive = keepAlive;
         this.inboundTrafficController = inboundTrafficController;
-        this.defaultMaxRequestLength = defaultMaxRequestLength;
+        this.maxRequestLength = maxRequestLength;
     }
 
     void init(ServiceRequestContext ctx) {
         this.ctx = ctx;
-        ctx.logBuilder().requestHeaders(headers());
-
-        // For the server, request headers are processed well before ServiceRequestContext is created. It means
-        // there is some delay between the actual channel read and this logging, but it's the best we can do for
-        // now.
-        ctx.logBuilder().requestFirstBytesTransferred();
     }
 
     int id() {
@@ -83,7 +78,7 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
     }
 
     long maxRequestLength() {
-        return ctx != null ? ctx.maxRequestLength() : defaultMaxRequestLength;
+        return ctx != null ? ctx.maxRequestLength() : maxRequestLength;
     }
 
     long transferredBytes() {
@@ -105,13 +100,23 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
 
     @Override
     public boolean tryWrite(HttpObject obj) {
-        final boolean published = super.tryWrite(obj);
-        if (published && obj instanceof HttpData) {
-            final int length = ((HttpData) obj).length();
-            inboundTrafficController.inc(length);
-            assert ctx != null : "uninitialized DecodedHttpRequest must be aborted.";
-            ctx.logBuilder().requestLength(transferredBytes);
+        assert ctx != null : "uninitialized DecodedHttpRequest must be aborted.";
+
+        final boolean published;
+        if (obj instanceof HttpHeaders) { // HTTP trailers.
+            ctx.logBuilder().requestTrailers((HttpHeaders) obj);
+            published = super.tryWrite(obj);
+            // Close this stream because HTTP trailers is the last element of the request.
+            close();
+        } else {
+            final HttpData httpData = (HttpData) obj;
+            ctx.logBuilder().increaseRequestLength(httpData);
+            published = super.tryWrite(httpData);
+            if (published) {
+                inboundTrafficController.inc(httpData.length());
+            }
         }
+
         return published;
     }
 

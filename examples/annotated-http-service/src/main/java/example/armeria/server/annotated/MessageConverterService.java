@@ -10,11 +10,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.JacksonRequestConverterFunction;
@@ -167,13 +168,12 @@ public class MessageConverterService {
     }
 
     public static final class CustomRequestConverter implements RequestConverterFunction {
-        @Nullable
         @Override
-        public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
+        public Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
                                      Class<?> expectedResultType) throws Exception {
-            final MediaType mediaType = request.headers().contentType();
+            final MediaType mediaType = request.contentType();
             if (mediaType != null && mediaType.is(MediaType.PLAIN_TEXT_UTF_8)) {
-                return new Request(request.content().toStringUtf8());
+                return new Request(request.contentUtf8());
             }
             return RequestConverterFunction.fallthrough();
         }
@@ -182,13 +182,13 @@ public class MessageConverterService {
     public static final class CustomResponseConverter implements ResponseConverterFunction {
         @Override
         public HttpResponse convertResponse(ServiceRequestContext ctx,
-                                            HttpHeaders headers,
+                                            ResponseHeaders headers,
                                             @Nullable Object result,
-                                            HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailers) throws Exception {
             if (result instanceof Response) {
                 final Response response = (Response) result;
                 final HttpData body = HttpData.ofUtf8(response.result() + ':' + response.from());
-                return HttpResponse.of(headers, body, trailingHeaders);
+                return HttpResponse.of(headers, body, trailers);
             }
             return ResponseConverterFunction.fallthrough();
         }

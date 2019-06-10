@@ -30,12 +30,18 @@ import org.apache.http.util.EntityUtils;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 public class HttpServiceTest {
 
@@ -53,6 +59,28 @@ public class HttpServiceTest {
                                     HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "Hello, %s!", name);
                         }
                     }.decorate(LoggingService.newDecorator()));
+            sb.service("/trailersWithoutData", new AbstractHttpService() {
+                @Override
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                    return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
+                                           HttpHeaders.of(HttpHeaderNames.of("foo"), "bar"));
+                }
+            });
+            sb.service("/dataAndTrailers", new AbstractHttpService() {
+                @Override
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                    return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
+                                           HttpData.ofUtf8("trailer"),
+                                           HttpHeaders.of(HttpHeaderNames.of("foo"), "bar"));
+                }
+            });
+            sb.service("/additionalTrailers", new AbstractHttpService() {
+                @Override
+                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                    ctx.addAdditionalResponseTrailer(HttpHeaderNames.of("foo"), "baz");
+                    return HttpResponse.of(HttpStatus.OK);
+                }
+            });
 
             sb.service(
                     "/200",
@@ -111,7 +139,7 @@ public class HttpServiceTest {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
                 assertThat(res.containsHeader("Content-Length")).isTrue();
                 assertThat(res.getHeaders("Content-Length"))
-                          .extracting(Header::getValue).containsExactly("6");
+                        .extracting(Header::getValue).containsExactly("6");
                 assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("200 OK");
             }
         }
@@ -129,5 +157,23 @@ public class HttpServiceTest {
                 assertThat(res.getEntity()).isNull();
             }
         }
+    }
+
+    @Test
+    public void contentLengthIsNotSetWhenTrailerExists() {
+        final HttpClient client = HttpClient.of(rule.uri("/"));
+        AggregatedHttpResponse res = client.get("/trailersWithoutData").aggregate().join();
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
+        assertThat(res.trailers().get(HttpHeaderNames.of("foo"))).isEqualTo("bar");
+        assertThat(res.content()).isSameAs(HttpData.EMPTY_DATA);
+
+        res = client.get("/dataAndTrailers").aggregate().join();
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
+        assertThat(res.trailers().get(HttpHeaderNames.of("foo"))).isEqualTo("bar");
+        assertThat(res.contentUtf8()).isEqualTo("trailer");
+
+        res = client.get("/additionalTrailers").aggregate().join();
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
+        assertThat(res.trailers().get(HttpHeaderNames.of("foo"))).isEqualTo("baz");
     }
 }

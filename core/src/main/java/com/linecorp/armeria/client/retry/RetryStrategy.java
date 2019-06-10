@@ -24,12 +24,11 @@ import java.util.function.BiFunction;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.UnprocessedRequestException;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.util.Exceptions;
 
 /**
@@ -112,20 +111,18 @@ public interface RetryStrategy {
     }
 
     /**
-     * Returns a {@link CompletionStage} that contains {@link Backoff} which will be used for retry.
-     * If the condition does not match, this will return a {@link CompletionStage} completed with
-     * {@code null} to stop retry attempt.
-     * Note that {@link ResponseTimeoutException} is not retriable for the whole retry,
-     * but only for each attempt.
-     * To retrieve the response {@link HttpHeaders}, you can use the specified {@link ClientRequestContext}:
+     * Tells whether the request sent with the specified {@link ClientRequestContext} requires a retry or not.
+     * Implement this method to return a {@link CompletionStage} and to complete it with a desired
+     * {@link Backoff}. To stop trying further, complete it with {@code null}.
      *
+     * <p>To retrieve the {@link ResponseHeaders}, you can use the specified {@link ClientRequestContext}:
      * <pre>{@code
      * CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx, @Nullable Throwable cause) {
      *     if (cause != null) {
      *         return CompletableFuture.completedFuture(backoff);
      *     }
      *
-     *     HttpHeaders responseHeaders = ctx.log().responseHeaders();
+     *     ResponseHeaders responseHeaders = ctx.log().responseHeaders();
      *     if (responseHeaders.status().codeClass() == HttpStatusClass.SERVER_ERROR) {
      *         return CompletableFuture.completedFuture(backoff);
      *     }
@@ -136,11 +133,6 @@ public interface RetryStrategy {
      * @param ctx the {@link ClientRequestContext} of this request
      * @param cause the {@link Throwable} which is raised while sending a request. {@code null} it there's no
      *              exception.
-     *
-     * @see RetryingClientBuilder#responseTimeoutMillisForEachAttempt(long)
-     *
-     * @see <a href="https://line.github.io/armeria/advanced-retry.html#per-attempt-timeout">Per-attempt
-     *      timeout</a>
      */
     CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx, @Nullable Throwable cause);
 }

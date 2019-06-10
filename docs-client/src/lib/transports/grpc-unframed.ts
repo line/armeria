@@ -26,17 +26,19 @@ export default class GrpcUnframedTransport extends Transport {
     return mimeType === GRPC_UNFRAMED_MIME_TYPE;
   }
 
+  public getDebugMimeType(): string {
+    return GRPC_UNFRAMED_MIME_TYPE;
+  }
+
   protected async doSend(
     method: Method,
-    bodyJson: string,
     headers: { [name: string]: string },
+    bodyJson?: string,
   ): Promise<string> {
-    const endpoint = method.endpoints.find((ep) =>
-      ep.availableMimeTypes.includes(GRPC_UNFRAMED_MIME_TYPE),
-    );
-    if (!endpoint) {
-      throw new Error('Endpoint does not support gRPC debug transport');
+    if (!bodyJson) {
+      throw new Error('A gRPC request must have body.');
     }
+    const endpoint = this.findDebugMimeTypeEndpoint(method);
 
     const hdrs = new Headers();
     hdrs.set('content-type', GRPC_UNFRAMED_MIME_TYPE);

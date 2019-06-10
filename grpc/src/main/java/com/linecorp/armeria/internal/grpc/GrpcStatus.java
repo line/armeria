@@ -44,6 +44,7 @@ import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.grpc.StackTraceElementProto;
 import com.linecorp.armeria.common.grpc.StatusCauseException;
 import com.linecorp.armeria.common.grpc.ThrowableProto;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 
 import io.grpc.Status;
 import io.grpc.Status.Code;
@@ -57,10 +58,20 @@ public final class GrpcStatus {
 
     /**
      * Converts the {@link Throwable} to a {@link Status}, taking into account exceptions specific to Armeria as
-     * well.
+     * well and the protocol package.
      */
     public static Status fromThrowable(Throwable t) {
         requireNonNull(t, "t");
+
+        Throwable cause = t;
+        while (cause != null) {
+            if (cause instanceof ArmeriaStatusException) {
+                t = StatusExceptionConverter.toGrpc((ArmeriaStatusException) cause);
+                break;
+            }
+            cause = cause.getCause();
+        }
+
         final Status s = Status.fromThrowable(t);
         if (s.getCode() != Code.UNKNOWN) {
             return s;
@@ -195,10 +206,11 @@ public final class GrpcStatus {
     }
 
     private static StackTraceElementProto serializeStackTraceElement(StackTraceElement element) {
-        final StackTraceElementProto.Builder builder = StackTraceElementProto.newBuilder()
-                .setClassName(element.getClassName())
-                .setMethodName(element.getMethodName())
-                .setLineNumber(element.getLineNumber());
+        final StackTraceElementProto.Builder builder =
+                StackTraceElementProto.newBuilder()
+                                      .setClassName(element.getClassName())
+                                      .setMethodName(element.getMethodName())
+                                      .setLineNumber(element.getLineNumber());
         if (element.getFileName() != null) {
             builder.setFileName(element.getFileName());
         }

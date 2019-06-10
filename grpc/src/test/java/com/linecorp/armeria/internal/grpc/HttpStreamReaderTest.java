@@ -37,14 +37,16 @@ import org.reactivestreams.Subscription;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 
 import io.grpc.DecompressorRegistry;
 import io.grpc.Status;
 
 public class HttpStreamReaderTest {
 
-    private static final HttpHeaders HEADERS = HttpHeaders.of(HttpStatus.OK);
-    private static final HttpHeaders TRAILERS = HttpHeaders.of().set(GrpcHeaderNames.GRPC_STATUS, "2");
+    private static final ResponseHeaders HEADERS = ResponseHeaders.of(HttpStatus.OK);
+    private static final HttpHeaders TRAILERS = HttpHeaders.of(GrpcHeaderNames.GRPC_STATUS, 2);
     private static final HttpData DATA = HttpData.ofUtf8("foobarbaz");
 
     @Rule
@@ -54,7 +56,7 @@ public class HttpStreamReaderTest {
     private TransportStatusListener transportStatusListener;
 
     @Mock
-    private ArmeriaMessageDeframer deframer;
+    private com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer deframer;
 
     @Mock
     private Subscription subscription;
@@ -110,7 +112,7 @@ public class HttpStreamReaderTest {
     }
 
     @Test
-    public void onMessage_noServerRequests() {
+    public void onMessage_noServerRequests() throws Exception {
         reader.onSubscribe(subscription);
         reader.onNext(DATA);
         verify(deframer).deframe(DATA, false);
@@ -118,7 +120,7 @@ public class HttpStreamReaderTest {
     }
 
     @Test
-    public void onMessage_hasServerRequests() {
+    public void onMessage_hasServerRequests() throws Exception {
         reader.onSubscribe(subscription);
         when(deframer.isStalled()).thenReturn(true);
         reader.onNext(DATA);
@@ -127,7 +129,7 @@ public class HttpStreamReaderTest {
     }
 
     @Test
-    public void onMessage_deframeError() {
+    public void onMessage_deframeError() throws Exception {
         doThrow(Status.INTERNAL.asRuntimeException())
                 .when(deframer).deframe(isA(HttpData.class), anyBoolean());
         reader.onSubscribe(subscription);
@@ -138,7 +140,7 @@ public class HttpStreamReaderTest {
     }
 
     @Test
-    public void onMessage_deframeError_errorListenerThrows() {
+    public void onMessage_deframeError_errorListenerThrows() throws Exception {
         doThrow(Status.INTERNAL.asRuntimeException())
                 .when(deframer).deframe(isA(HttpData.class), anyBoolean());
         doThrow(new IllegalStateException())
@@ -149,10 +151,10 @@ public class HttpStreamReaderTest {
     }
 
     @Test
-    public void clientDone() {
+    public void clientDone() throws Exception {
         reader.apply(null, null);
         verify(deframer).deframe(HttpData.EMPTY_DATA, true);
-        verify(deframer).close();
+        verify(deframer).closeWhenComplete();
     }
 
     @Test
@@ -166,7 +168,7 @@ public class HttpStreamReaderTest {
     public void httpNotOk() {
         reader.onSubscribe(subscription);
         verifyZeroInteractions(subscription);
-        reader.onNext(HttpHeaders.of(HttpStatus.UNAUTHORIZED));
+        reader.onNext(ResponseHeaders.of(HttpStatus.UNAUTHORIZED));
         verifyZeroInteractions(subscription);
         verifyZeroInteractions(deframer);
 

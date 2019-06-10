@@ -33,6 +33,9 @@ For example, the following configuration:
                  req.http_headers.user-agent,
                  attrs.some_value:com.example.AttrKeys#SOME_VALUE</exports>
         -->
+        <!-- ... or with wildcard:
+        <export>req.*</export>
+        -->
       </appender>
       ...
     </configuration>
@@ -64,6 +67,10 @@ Built-in properties
 -------------------
 A built-in property is a common property available for most requests. See the complete list of the built-in
 properties and their MDC keys at :api:`BuiltInProperty`.
+You can also use wildcard character ``*`` instead of listing all properties. For example:
+
+- ``"*"``
+- ``"req.*"``
 
 HTTP request and response headers
 ---------------------------------
@@ -77,7 +84,7 @@ request and response. The MDC key of the exported header is ``"req.http_headers.
 Custom attributes
 -----------------
 A user can attach an arbitrary custom attribute to a :api:`RequestContext` by using
-``RequestContext.attr(...).set(...)`` to store the information associated with the request being handled.
+:ref:`advanced-custom-attribute` to store the information associated with the request being handled.
 :api:`RequestContextExportingAppender` can export such attributes to the `MDC`_ property map as well.
 
 Unlike other property types, you need to specify the full name of an attribute as well as its alias.

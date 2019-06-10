@@ -15,14 +15,14 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Strings;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.auth.Authorizer;
 import com.linecorp.armeria.server.saml.SamlNameIdFormat;
@@ -66,7 +66,7 @@ final class MyAuthHandler implements Authorizer<HttpRequest>, SamlSingleSignOnHa
      * browser via {@code Set-Cookie} header.
      */
     @Override
-    public HttpResponse loginSucceeded(ServiceRequestContext ctx, AggregatedHttpMessage req,
+    public HttpResponse loginSucceeded(ServiceRequestContext ctx, AggregatedHttpRequest req,
                                        MessageContext<Response> message, @Nullable String sessionIndex,
                                        @Nullable String relayState) {
         final String username =
@@ -85,9 +85,9 @@ final class MyAuthHandler implements Authorizer<HttpRequest>, SamlSingleSignOnHa
         cookie.setMaxAge(60);
         cookie.setPath("/");
         return HttpResponse.of(
-                HttpHeaders.of(HttpStatus.OK)
-                           .contentType(MediaType.HTML_UTF_8)
-                           .add(HttpHeaderNames.SET_COOKIE, ServerCookieEncoder.LAX.encode(cookie)),
+                ResponseHeaders.of(HttpStatus.OK,
+                                   HttpHeaderNames.CONTENT_TYPE, MediaType.HTML_UTF_8,
+                                   HttpHeaderNames.SET_COOKIE, ServerCookieEncoder.LAX.encode(cookie)),
                 HttpData.ofUtf8("<html><body onLoad=\"window.location.href='/welcome'\"></body></html>"));
     }
 
@@ -95,7 +95,7 @@ final class MyAuthHandler implements Authorizer<HttpRequest>, SamlSingleSignOnHa
      * Invoked when a single sign-on request is rejected from the identity provider.
      */
     @Override
-    public HttpResponse loginFailed(ServiceRequestContext ctx, AggregatedHttpMessage req,
+    public HttpResponse loginFailed(ServiceRequestContext ctx, AggregatedHttpRequest req,
                                     @Nullable MessageContext<Response> message, Throwable cause) {
         return HttpResponse.of(HttpStatus.UNAUTHORIZED, MediaType.HTML_UTF_8,
                                "<html><body>Login failed.</body></html>");

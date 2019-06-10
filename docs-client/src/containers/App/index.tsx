@@ -46,11 +46,12 @@ import MethodPage from '../MethodPage';
 import StructPage from '../StructPage';
 
 import {
-  methodKey,
   simpleName,
   Specification,
   SpecificationData,
 } from '../../lib/specification';
+
+import GotoSelect from '../../components/GotoSelect';
 
 const styles = (theme: Theme) =>
   createStyles({
@@ -188,19 +189,11 @@ function AppDrawer({
                   {service.methods.map((method) => (
                     <ListItem
                       dense
-                      key={methodKey(
-                        service.name,
-                        method.name,
-                        method.httpMethod,
-                      )}
+                      key={`${service.name}/${method.name}/${method.httpMethod}`}
                       button
                       onClick={() =>
                         navigateTo(
-                          `/methods/${methodKey(
-                            service.name,
-                            method.name,
-                            method.httpMethod,
-                          )}`,
+                          `/methods/${service.name}/${method.name}/${method.httpMethod}`,
                         )
                       }
                     >
@@ -379,6 +372,11 @@ class App extends React.PureComponent<Props, State> {
             >
               Armeria documentation service
             </Typography>
+            <div style={{ flex: 1 }} />
+            <GotoSelect
+              specification={specification}
+              navigateTo={this.navigateTo}
+            />
           </Toolbar>
         </AppBar>
         <Hidden smDown>
@@ -434,7 +432,7 @@ class App extends React.PureComponent<Props, State> {
             )}
           />
           <Route
-            path="/methods/:serviceName/:methodName"
+            path="/methods/:serviceName/:methodName/:httpMethod"
             render={(props) => (
               <MethodPage {...props} specification={specification} />
             )}

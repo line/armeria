@@ -39,9 +39,11 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestHeadersBuilder;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -53,7 +55,7 @@ final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
 
     private final HttpClient client;
 
-    private final HttpHeaders headers;
+    private final RequestHeadersBuilder headers;
     private final DataBufferFactoryWrapper<?> factoryWrapper;
 
     private final HttpMethod httpMethod;
@@ -71,8 +73,9 @@ final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
         this.httpMethod = requireNonNull(httpMethod, "httpMethod");
         this.uri = requireNonNull(uri, "uri");
         this.factoryWrapper = requireNonNull(factoryWrapper, "factoryWrapper");
-        headers = HttpHeaders.of(com.linecorp.armeria.common.HttpMethod.valueOf(httpMethod.name()),
-                                 requireNonNull(pathAndQuery, "pathAndQuery"));
+        headers = RequestHeaders.builder()
+                                .add(HttpHeaderNames.METHOD, httpMethod.name())
+                                .add(HttpHeaderNames.PATH, requireNonNull(pathAndQuery, "pathAndQuery"));
     }
 
     @Override
@@ -124,13 +127,13 @@ final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
     }
 
     private Mono<Void> write(Flux<? extends DataBuffer> body) {
-        return doCommit(execute(() -> HttpRequest.of(headers, body.map(factoryWrapper::toHttpData))));
+        return doCommit(execute(() -> HttpRequest.of(headers.build(), body.map(factoryWrapper::toHttpData))));
     }
 
     @Override
     public Mono<Void> setComplete() {
         return isCommitted() ? Mono.empty()
-                             : doCommit(execute(() -> HttpRequest.of(headers)));
+                             : doCommit(execute(() -> HttpRequest.of(headers.build())));
     }
 
     private Supplier<Mono<Void>> execute(Supplier<HttpRequest> supplier) {
@@ -161,7 +164,7 @@ final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
                           .toString();
     }
 
-    private static void setDefaultRequestHeaders(HttpHeaders headers) {
+    private static void setDefaultRequestHeaders(HttpHeadersBuilder headers) {
         if (!headers.contains(HttpHeaderNames.ACCEPT)) {
             headers.add(HttpHeaderNames.ACCEPT, "*/*");
         }

@@ -143,6 +143,38 @@ You might be interested in decorating a service using other decorators, for exam
 
 You can also use an arbitrary object that's annotated by the ``@Path`` annotation using ``annotatedService()``.
 
+Per service configuration
+-------------------------
+
+The examples above are just mapping the path of an HTTP request on a service. If you want to set configuration
+for a specific service, you can use fluent API:
+
+.. code-block:: java
+
+    ServerBuilder sb = new ServerBuilder();
+    sb.route()                                   // Configure the service.
+      .post("/foo/bar")                          // Matched when the path is "/foo/bar" and the method is POST.
+      .consumes(MediaType.JSON)                  // Matched when the "content-type" header is "application/json".
+      .produces(MediaType.JSON)                  // Matched when the "accept" headers is "application/json".
+      .requestTimeoutMillis(5000)
+      .maxRequestLength(8192)
+      .verboseResponses(true)
+      .requestContentPreview(500)
+      .responseContentPreview(1000)
+      .build((ctx, req) -> HttpResponse.of(OK)); // Should call to finish and return to the ServerBuilder.
+
+Or use a ``Consumer``:
+
+.. code-block:: java
+
+    import com.linecorp.armeria.common.HttpMethod;
+
+    ServerBuilder sb = new ServerBuilder();
+    sb.withRoute(builder -> builder.path("/baz")         // Matched when the path is "/baz".
+                                   // Matched when the method is GET or POST.
+                                   .methods(HttpMethod.GET, HttpMethod.POST)
+                                   ...
+                                   .build((ctx, req) -> HttpResponse.of(OK)));
 
 SSL/TLS
 -------
@@ -194,26 +226,25 @@ implementations that supports port unification:
 Virtual hosts
 -------------
 
-Use ``ServerBuilder.withVirtualHost()`` to configure `a name-based virtual host`_:
+Use ``ServerBuilder.virtualHost(...)`` to configure `a name-based virtual host`_:
 
 .. code-block:: java
 
-    import com.linecorp.armeria.server.VirtualHost;
-    import com.linecorp.armeria.server.VirtualHostBuilder;
-
     ServerBuilder sb = new ServerBuilder();
     // Configure foo.com.
-    sb.withVirtualHost("foo.com")
+    sb.virtualHost("foo.com")
       .service(...)
       .tls(...)
       .and() // Configure *.bar.com.
-      .withVirtualHost("*.bar.com")
+      .virtualHost("*.bar.com")
       .service(...)
       .tls(...)
       .and() // Configure the default virtual host.
       .service(...)
       .tls(...);
     ...
+
+.. _client_address:
 
 Getting an IP address of a client who initiated a request
 ---------------------------------------------------------

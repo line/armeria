@@ -16,19 +16,18 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.server.PathMapping.ofCatchAll;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class CatchAllPathMappingTest {
+class CatchAllPathMappingTest {
     @Test
-    public void testLoggerName() throws Exception {
-        assertThat(ofCatchAll().loggerName()).isEqualTo("__ROOT__");
+    void testLoggerName() throws Exception {
+        assertThat(Route.builder().catchAll().build().loggerName()).isEqualTo("__ROOT__");
     }
 
     @Test
-    public void testMetricName() throws Exception {
-        assertThat(ofCatchAll().meterTag()).isEqualTo("catch-all");
+    void testMetricName() throws Exception {
+        assertThat(Route.builder().catchAll().build().meterTag()).isEqualTo("catch-all");
     }
 }

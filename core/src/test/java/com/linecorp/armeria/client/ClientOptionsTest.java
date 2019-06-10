@@ -32,7 +32,7 @@ public class ClientOptionsTest {
         assertThat(options.get(ClientOption.HTTP_HEADERS)).contains(httpHeader);
 
         final ClientOptions options2 = ClientOptions.DEFAULT;
-        assertThat(options2.get(ClientOption.HTTP_HEADERS)).contains(HttpHeaders.EMPTY_HEADERS);
+        assertThat(options2.get(ClientOption.HTTP_HEADERS)).contains(HttpHeaders.of());
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -42,17 +42,17 @@ public class ClientOptionsTest {
     }
 
     @Test(expected = NullPointerException.class)
-    public void testInvalidDefaultWriteTimeoutMillis() {
-        ClientOptions.of(ClientOption.DEFAULT_WRITE_TIMEOUT_MILLIS.newValue(null));
+    public void testInvalidWriteTimeoutMillis() {
+        ClientOptions.of(ClientOption.WRITE_TIMEOUT_MILLIS.newValue(null));
     }
 
     @Test(expected = NullPointerException.class)
-    public void testInvalidDefaultResponseTimeoutMillis() {
-        ClientOptions.of(ClientOption.DEFAULT_RESPONSE_TIMEOUT_MILLIS.newValue(null));
+    public void testInvalidResponseTimeoutMillis() {
+        ClientOptions.of(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(null));
     }
 
     @Test(expected = NullPointerException.class)
-    public void testInvalidDefaultMaxResponseLength() {
-        ClientOptions.of(ClientOption.DEFAULT_MAX_RESPONSE_LENGTH.newValue(null));
+    public void testInvalidMaxResponseLength() {
+        ClientOptions.of(ClientOption.MAX_RESPONSE_LENGTH.newValue(null));
     }
 }

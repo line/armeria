@@ -34,6 +34,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.EventLoop;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -51,7 +52,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     private enum State {
         NEED_HEADERS,
         NEED_INFORMATIONAL_DATA,
-        NEED_DATA_OR_TRAILING_HEADERS,
+        NEED_DATA_OR_TRAILERS,
         DISCARD
     }
 
@@ -74,19 +75,27 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                 super.addResponse(id, req, res, logBuilder, responseTimeoutMillis, maxContentLength);
 
         resWrapper.completionFuture().handle((unused, cause) -> {
-            // Cancel timeout future and abort the request if it exists.
-            resWrapper.onSubscriptionCancelled();
-
-            if (cause != null) {
-                // Disconnect when the response has been closed with an exception because there's no way
-                // to recover from it in HTTP/1.
-                channel().close();
+            final EventLoop eventLoop = channel().eventLoop();
+            if (eventLoop.inEventLoop()) {
+                onWrapperCompleted(resWrapper, cause);
+            } else {
+                eventLoop.execute(() -> onWrapperCompleted(resWrapper, cause));
             }
-
             return null;
         });
 
         return resWrapper;
+    }
+
+    private void onWrapperCompleted(HttpResponseWrapper resWrapper, @Nullable Throwable cause) {
+        // Cancel timeout future and abort the request if it exists.
+        resWrapper.onSubscriptionCancelled();
+
+        if (cause != null) {
+            // Disconnect when the response has been closed with an exception because there's no way
+            // to recover from it in HTTP/1.
+            channel().close();
+        }
     }
 
     @Override
@@ -149,7 +158,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         if (nettyRes.status().codeClass() == HttpStatusClass.INFORMATIONAL) {
                             state = State.NEED_INFORMATIONAL_DATA;
                         } else {
-                            state = State.NEED_DATA_OR_TRAILING_HEADERS;
+                            state = State.NEED_DATA_OR_TRAILERS;
                         }
 
                         res.scheduleTimeout(channel().eventLoop());
@@ -165,7 +174,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         failWithUnexpectedMessageType(ctx, msg);
                     }
                     break;
-                case NEED_DATA_OR_TRAILING_HEADERS:
+                case NEED_DATA_OR_TRAILERS:
                     if (msg instanceof HttpContent) {
                         final HttpContent content = (HttpContent) msg;
                         final DecoderResult decoderResult = content.decoderResult();
@@ -183,7 +192,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                                 fail(ctx, ContentTooLargeException.get());
                                 return;
                             } else {
-                                res.write(HttpData.of(data));
+                                res.write(HttpData.wrap(data.retain()));
                             }
                         }
 

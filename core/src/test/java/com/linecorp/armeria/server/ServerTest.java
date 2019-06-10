@@ -48,26 +48,28 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.HttpHeaders;
+import com.google.common.util.concurrent.MoreExecutors;
+
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.CompletionActions;
+import com.linecorp.armeria.common.util.EventLoopThreadFactory;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.metric.MicrometerUtil;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
-import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
 
@@ -92,7 +94,7 @@ public class ServerTest {
 
             final Service<HttpRequest, HttpResponse> delayedResponseOnIoThread = new EchoService() {
                 @Override
-                protected HttpResponse echo(AggregatedHttpMessage aReq) {
+                protected HttpResponse echo(AggregatedHttpRequest aReq) {
                     try {
                         Thread.sleep(processDelayMillis);
                         return super.echo(aReq);
@@ -104,7 +106,7 @@ public class ServerTest {
 
             final Service<HttpRequest, HttpResponse> lazyResponseNotOnIoThread = new EchoService() {
                 @Override
-                protected HttpResponse echo(AggregatedHttpMessage aReq) {
+                protected HttpResponse echo(AggregatedHttpRequest aReq) {
                     final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
                     final HttpResponse res = HttpResponse.from(responseFuture);
                     asyncExecutorGroup.schedule(
@@ -201,7 +203,7 @@ public class ServerTest {
 
     @Test
     public void testRequestTimeoutInvocation() throws Exception {
-         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             final HttpPost req = new HttpPost(server.uri("/timeout"));
             req.setEntity(new StringEntity("Hello, world!", StandardCharsets.UTF_8));
 
@@ -303,7 +305,7 @@ public class ServerTest {
     @Test
     public void testOptions() throws Exception {
         testSimple("OPTIONS * HTTP/1.1", "HTTP/1.1 200 OK",
-                   "allow: OPTIONS,GET,HEAD,POST,PUT,PATCH,DELETE,TRACE");
+                   "allow: OPTIONS,GET,HEAD,POST,PUT,PATCH,DELETE,TRACE,CONNECT");
     }
 
     @Test
@@ -345,7 +347,7 @@ public class ServerTest {
     public void customStartStopExecutor() {
         final Queue<Thread> threads = new LinkedTransferQueue<>();
         final String prefix = getClass().getName() + "#customStartStopExecutor";
-        final ExecutorService executor = Executors.newSingleThreadExecutor(new DefaultThreadFactory(prefix));
+        final ExecutorService executor = Executors.newSingleThreadExecutor(new EventLoopThreadFactory(prefix));
         final Server server = new ServerBuilder()
                 .startStopExecutor(executor)
                 .service("/", (ctx, req) -> HttpResponse.of(200))
@@ -356,6 +358,57 @@ public class ServerTest {
         threads.add(server.stop().thenApply(unused -> Thread.currentThread()).join());
 
         threads.forEach(t -> assertThat(t.getName()).startsWith(prefix));
+    }
+
+    @Test
+    public void gracefulShutdownBlockingTaskExecutor() {
+        final ExecutorService executor = Executors.newSingleThreadExecutor();
+
+        final Server server = new ServerBuilder()
+                .blockingTaskExecutor(executor, true)
+                .service("/", (ctx, req) -> HttpResponse.of(200))
+                .build();
+
+        server.start().join();
+
+        executor.execute(() -> {
+            try {
+                Thread.sleep(processDelayMillis * 2);
+            } catch (InterruptedException ignored) {
+                // Ignored
+            }
+        });
+
+        server.stop().join();
+
+        assertThat(server.config().blockingTaskExecutor().isShutdown()).isTrue();
+        assertThat(server.config().blockingTaskExecutor().isTerminated()).isTrue();
+    }
+
+    @Test
+    public void notGracefulShutdownBlockingTaskExecutor() {
+        final ExecutorService executor = Executors.newSingleThreadExecutor();
+
+        final Server server = new ServerBuilder()
+                .blockingTaskExecutor(executor, false)
+                .service("/", (ctx, req) -> HttpResponse.of(200))
+                .build();
+
+        server.start().join();
+
+        executor.execute(() -> {
+            try {
+                Thread.sleep(processDelayMillis * 2);
+            } catch (InterruptedException ignored) {
+                // Ignored
+            }
+        });
+
+        server.stop().join();
+
+        assertThat(server.config().blockingTaskExecutor().isShutdown()).isFalse();
+        assertThat(server.config().blockingTaskExecutor().isTerminated()).isFalse();
+        assertThat(MoreExecutors.shutdownAndAwaitTermination(executor, 10, TimeUnit.SECONDS)).isTrue();
     }
 
     private static void testSimple(
@@ -405,10 +458,8 @@ public class ServerTest {
                                         .exceptionally(CompletionActions::log));
         }
 
-        protected HttpResponse echo(AggregatedHttpMessage aReq) {
-            return HttpResponse.of(
-                    HttpHeaders.of(HttpStatus.OK),
-                    aReq.content());
+        protected HttpResponse echo(AggregatedHttpRequest aReq) {
+            return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK), aReq.content());
         }
     }
 

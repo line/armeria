@@ -32,10 +32,10 @@ import org.springframework.http.HttpMethod;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -100,7 +100,7 @@ public class ArmeriaClientHttpRequestTest {
         assertThat(httpRequest).isNotNull();
 
         // Check the headers.
-        final HttpHeaders headers = httpRequest.headers();
+        final RequestHeaders headers = httpRequest.headers();
         assertThat(headers.method()).isEqualTo(com.linecorp.armeria.common.HttpMethod.GET);
         assertThat(headers.path()).isEqualTo(TEST_PATH_AND_QUERY);
         assertThat(headers.get(HttpHeaderNames.ACCEPT)).isEqualTo("*/*");
@@ -146,7 +146,7 @@ public class ArmeriaClientHttpRequestTest {
         assertThat(httpRequest).isNotNull();
 
         // Check the headers.
-        final HttpHeaders headers = httpRequest.headers();
+        final RequestHeaders headers = httpRequest.headers();
         assertThat(headers.method()).isEqualTo(com.linecorp.armeria.common.HttpMethod.GET);
         assertThat(headers.path()).isEqualTo(TEST_PATH_AND_QUERY);
         assertThat(headers.get(HttpHeaderNames.ACCEPT)).isEqualTo("*/*");

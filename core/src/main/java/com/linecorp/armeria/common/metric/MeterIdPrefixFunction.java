@@ -22,17 +22,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiFunction;
 
-import com.google.common.base.MoreObjects;
-
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
@@ -56,7 +54,7 @@ public interface MeterIdPrefixFunction {
      * <ul>
      *   <li>Server-side tags:<ul>
      *     <li>{@code hostnamePattern} - {@link VirtualHost#hostnamePattern()}
-     *     <li>{@code pathMapping} - {@link PathMapping#meterTag()}</li>
+     *     <li>{@code route} - {@link Route#meterTag()}</li>
      *     <li>{@code method} - RPC method name or {@link HttpMethod#name()} if RPC method name is not
      *                          available</li>
      *     <li>{@code httpStatus} - {@link HttpStatus#code()}</li>
@@ -79,9 +77,15 @@ public interface MeterIdPrefixFunction {
             @Override
             public MeterIdPrefix apply(MeterRegistry registry, RequestLog log) {
                 final List<Tag> tags = buildTags(log);
+
+                // Add the 'httpStatus' tag.
+                final HttpStatus status;
                 if (log.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
-                    tags.add(Tag.of("httpStatus", log.status().codeAsText()));
+                    status = log.status();
+                } else {
+                    status = HttpStatus.UNKNOWN;
                 }
+                tags.add(Tag.of("httpStatus", status.codeAsText()));
 
                 return new MeterIdPrefix(name, tags);
             }
@@ -96,24 +100,17 @@ public interface MeterIdPrefixFunction {
                 }
 
                 if (methodName == null) {
-                    final HttpHeaders requestHeaders = log.requestHeaders();
-                    final HttpMethod httpMethod = requestHeaders.method();
-                    if (httpMethod != null) {
-                        methodName = httpMethod.name();
-                    }
+                    final RequestHeaders requestHeaders = log.requestHeaders();
+                    methodName = requestHeaders.method().name();
                 }
 
-                if (methodName == null) {
-                    methodName = MoreObjects.firstNonNull(log.method().name(), "__UNKNOWN_METHOD__");
-                }
-
-                final List<Tag> tags = new ArrayList<>(4); // method, hostNamePattern, pathMapping, status
+                final List<Tag> tags = new ArrayList<>(4); // method, hostNamePattern, route, status
                 tags.add(Tag.of("method", methodName));
 
                 if (ctx instanceof ServiceRequestContext) {
                     final ServiceRequestContext sCtx = (ServiceRequestContext) ctx;
                     tags.add(Tag.of("hostnamePattern", sCtx.virtualHost().hostnamePattern()));
-                    tags.add(Tag.of("pathMapping", sCtx.pathMapping().meterTag()));
+                    tags.add(Tag.of("route", sCtx.route().meterTag()));
                 }
                 return tags;
             }

@@ -32,15 +32,20 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.grpc.StatusCauseException;
 import com.linecorp.armeria.common.grpc.ThrowableProto;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
+import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
+import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 
 import io.grpc.Decompressor;
 import io.grpc.DecompressorRegistry;
+import io.grpc.Metadata;
 import io.grpc.Status;
 
 /**
@@ -107,21 +112,22 @@ public class HttpStreamReader implements Subscriber<HttpObject>, BiFunction<Void
             final HttpHeaders headers = (HttpHeaders) obj;
 
             if (!sawLeadingHeaders) {
-                final HttpStatus status = headers.status();
-                if (status == null) {
+                final String statusText = headers.get(HttpHeaderNames.STATUS);
+                if (statusText == null) {
                     // Not allowed to have empty leading headers, kill the stream hard.
                     transportStatusListener.transportReportStatus(
                             Status.INTERNAL.withDescription("Missing HTTP status code"));
                     return;
                 }
 
-                if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
+                if (ArmeriaHttpUtil.isInformational(statusText)) {
                     // Skip informational headers.
                     return;
                 }
 
                 sawLeadingHeaders = true;
 
+                final HttpStatus status = HttpStatus.valueOf(statusText);
                 if (!status.equals(HttpStatus.OK)) {
                     transportStatusListener.transportReportStatus(
                             GrpcStatus.httpStatusToGrpcStatus(status.code()));
@@ -133,8 +139,8 @@ public class HttpStreamReader implements Subscriber<HttpObject>, BiFunction<Void
             if (grpcStatus != null) {
                 Status status = Status.fromCodeValue(Integer.valueOf(grpcStatus));
                 if (status.getCode() == Status.OK.getCode()) {
-                   // Successful response, finish delivering messages before returning the status.
-                   closeDeframer();
+                    // Successful response, finish delivering messages before returning the status.
+                    closeDeframer();
                 }
                 final String grpcMessage = headers.get(GrpcHeaderNames.GRPC_MESSAGE);
                 if (grpcMessage != null) {
@@ -144,7 +150,10 @@ public class HttpStreamReader implements Subscriber<HttpObject>, BiFunction<Void
                 if (grpcThrowable != null) {
                     status = addCause(status, grpcThrowable);
                 }
-                transportStatusListener.transportReportStatus(status);
+
+                Metadata metadata = MetadataUtil.copyFromHeaders(headers);
+
+                transportStatusListener.transportReportStatus(status, metadata);
                 return;
             }
             // Headers without grpc-status are the leading headers of a non-failing response, prepare to receive
@@ -157,7 +166,7 @@ public class HttpStreamReader implements Subscriber<HttpObject>, BiFunction<Void
                             "Can't find decompressor for " + grpcEncoding));
                     return;
                 }
-                deframer.decompressor(decompressor);
+                deframer.decompressor(ForwardingDecompressor.forGrpc(decompressor));
             }
             requestHttpFrame();
             return;
@@ -167,7 +176,7 @@ public class HttpStreamReader implements Subscriber<HttpObject>, BiFunction<Void
             deframer.deframe(data, false);
         } catch (Throwable cause) {
             try {
-                transportStatusListener.transportReportStatus(Status.fromThrowable(cause));
+                transportStatusListener.transportReportStatus(GrpcStatus.fromThrowable(cause));
                 return;
             } finally {
                 deframer.close();
@@ -214,7 +223,7 @@ public class HttpStreamReader implements Subscriber<HttpObject>, BiFunction<Void
     private void closeDeframer() {
         if (!deframer.isClosed()) {
             deframer.deframe(HttpData.EMPTY_DATA, true);
-            deframer.close();
+            deframer.closeWhenComplete();
         }
     }
 

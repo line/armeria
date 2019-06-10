@@ -38,7 +38,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService.AsyncIface;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 public class GracefulShutdownIntegrationTest {
 
@@ -47,7 +47,7 @@ public class GracefulShutdownIntegrationTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.gracefulShutdownTimeout(1000L, 2000L);
-            sb.defaultRequestTimeoutMillis(0); // Disable RequestTimeoutException.
+            sb.requestTimeoutMillis(0); // Disable RequestTimeoutException.
 
             sb.service("/sleep", THttpService.of(
                     (AsyncIface) (milliseconds, resultHandler) ->

@@ -32,7 +32,6 @@ import com.linecorp.armeria.common.CommonPools;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.EventLoop;
-import io.netty.handler.codec.dns.DefaultDnsQuestion;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRawRecord;
 import io.netty.handler.codec.dns.DnsRecord;
@@ -107,14 +106,14 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
             case IPV4_ONLY:
             case IPV4_PREFERRED:
             case IPV6_PREFERRED:
-                builder.add(new DefaultDnsQuestion(hostname, DnsRecordType.A));
+                builder.add(new DnsQuestionWithoutTrailingDot(hostname, DnsRecordType.A));
                 break;
         }
         switch (resolvedAddressTypes) {
             case IPV6_ONLY:
             case IPV4_PREFERRED:
             case IPV6_PREFERRED:
-                builder.add(new DefaultDnsQuestion(hostname, DnsRecordType.AAAA));
+                builder.add(new DnsQuestionWithoutTrailingDot(hostname, DnsRecordType.AAAA));
                 break;
         }
         return builder.build();

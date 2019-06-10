@@ -18,12 +18,12 @@ package com.linecorp.armeria.server.annotation;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.internal.FallthroughException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
- * Converts an {@link AggregatedHttpMessage} to an object. The class implementing this interface would
+ * Converts an {@link AggregatedHttpRequest} to an object. The class implementing this interface would
  * be specified as a value of a {@link RequestConverter} annotation.
  *
  * @see RequestConverter
@@ -38,7 +38,7 @@ public interface RequestConverterFunction {
      * this converter cannot convert the {@code request} to an object.
      */
     @Nullable
-    Object convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage request,
+    Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
                           Class<?> expectedResultType) throws Exception;
 
     /**

@@ -9,6 +9,10 @@
 Calling a gRPC service
 ======================
 
+.. note::
+
+    Visit `armeria-examples <https://github.com/line/armeria-examples>`_ to find a fully working example.
+
 Let's assume we have the following gRPC_ service definition, served at ``http://127.0.0.1:8080/``, just like
 what we used in :ref:`server-grpc`:
 
@@ -145,7 +149,7 @@ You can also use the builder pattern for client construction:
     import com.linecorp.armeria.common.HttpResponse;
 
     HelloServiceBlockingStub helloService = new ClientBuilder("gproto+http://127.0.0.1:8080/")
-            .defaultResponseTimeoutMillis(10000)
+            .responseTimeoutMillis(10000)
             .decorator(LoggingClient.newDecorator())
             .build(HelloServiceBlockingStub.class); // or HelloServiceFutureStub.class or HelloServiceStub.class
 
@@ -158,7 +162,7 @@ requests and responses. You might be interested in decorating a client using oth
 to gather metrics. Please also refer to :api:`ClientBuilder` for more configuration options.
 
 Exception propagation
-=====================
+---------------------
 
 If you have enabled ``Flags.verboseResponses()`` in the server being accessed by specifying
 ``-Dcom.linecorp.armeria.verboseResponses=true`` system property, then any exception during processing

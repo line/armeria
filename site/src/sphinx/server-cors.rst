@@ -98,6 +98,26 @@ You can also directly add a :api:`CorsPolicy` created by a :api:`CorsPolicyBuild
                                             .build())
                               .newDecorator()));
 
+Applying a policy to the specific paths
+---------------------------------------
+To configure a policy to the specific paths, you can use ``route()`` methods in the
+:api:`CorsServiceBuilder` and :api:`ChainedCorsPolicyBuilder`. They can help you to adjust the scope that
+a policy is applied to, e.g.
+
+.. code-block:: java
+
+    HttpService myService = (ctx, req) -> ...;
+    ServerBuilder sb = new ServerBuilder().service("/message", myService.decorate(
+            CorsServiceBuilder.forOrigins("http://example.com")
+                              // CORS policy will be applied for the path that starts with '/message/web/api/'.
+                              .route("prefix:/message/web/api/")
+                              .allowRequestMethods(HttpMethod.POST, HttpMethod.GET)
+                              .newDecorator()));
+
+.. note::
+
+    Please refer to the :api:`Route` in order to learn how to specify a path pattern.
+
 Configuring CORS via annotation
 -------------------------------
 
@@ -150,4 +170,14 @@ Note that the :api:`@CorsDecorator` annotation specified at the method level tak
         public HttpResponse post() {
             return HttpResponse.of(HttpStatus.OK);
         }
+    }
+
+If you want to allow a CORS policy to the specific paths, you can use ``pathPatterns`` property:
+
+.. code-block:: java
+
+    // This policy will be applied only to the paths matched by the pattern.
+    @CorsDecorator(origins = "http://example.com", pathPatterns = "glob:/**/web/api", credentialsAllowed = true)
+    class MyAnnotatedService {
+        ...
     }

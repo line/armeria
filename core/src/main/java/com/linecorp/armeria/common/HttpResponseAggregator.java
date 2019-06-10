@@ -27,85 +27,79 @@ import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nullable;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.ReferenceCountUtil;
 
-final class HttpResponseAggregator extends HttpMessageAggregator {
-
-    enum State {
-        WAIT_NON_INFORMATIONAL,
-        WAIT_CONTENT,
-        WAIT_TRAILERS
-    }
+final class HttpResponseAggregator extends HttpMessageAggregator<AggregatedHttpResponse> {
 
     @Nullable
-    private List<HttpHeaders> informationals; // needs aggregation as well
+    private List<ResponseHeaders> informationals; // needs aggregation as well
     @Nullable
-    private HttpHeaders headers;
-    private HttpHeaders trailingHeaders;
-    private State state = State.WAIT_NON_INFORMATIONAL;
+    private ResponseHeaders headers;
+    private HttpHeaders trailers;
 
-    HttpResponseAggregator(CompletableFuture<AggregatedHttpMessage> future,
+    private boolean receivedMessageHeaders;
+
+    HttpResponseAggregator(CompletableFuture<AggregatedHttpResponse> future,
                            @Nullable ByteBufAllocator alloc) {
         super(future, alloc);
-        trailingHeaders = HttpHeaders.EMPTY_HEADERS;
+        trailers = HttpHeaders.of();
     }
 
     @Override
-    @SuppressWarnings("checkstyle:FallThrough")
     protected void onHeaders(HttpHeaders headers) {
-        switch (state) {
-            case WAIT_NON_INFORMATIONAL:
-                final HttpStatus status = headers.status();
-                if (status != null && status.codeClass() != HttpStatusClass.INFORMATIONAL) {
-                    state = State.WAIT_CONTENT;
-                    // Fall through
-                } else {
-                    if (informationals == null) {
-                        informationals = new ArrayList<>(2);
-                        informationals.add(headers);
-                    } else if (status != null) {
-                        // A new informational headers
-                        informationals.add(headers);
-                    } else {
-                        // Append to the last informational headers
-                        informationals.get(informationals.size() - 1).add(headers);
-                    }
-                    break;
-                }
-            case WAIT_CONTENT:
-                if (this.headers == null) {
-                    this.headers = headers;
-                } else {
-                    this.headers.add(headers);
-                }
-                break;
-            case WAIT_TRAILERS:
-                if (!headers.isEmpty()) {
-                    if (trailingHeaders.isEmpty()) {
-                        trailingHeaders = headers;
-                    } else {
-                        trailingHeaders.add(headers);
-                    }
-                }
-                break;
+        if (!receivedMessageHeaders) {
+            onInformationalOrMessageHeaders(headers);
+        } else if (trailers.isEmpty()) {
+            trailers = headers;
+        } else {
+            // Optionally, only one trailers can be present.
+            // See https://tools.ietf.org/html/rfc7540#section-8.1
         }
     }
 
     @Override
     protected void onData(HttpData data) {
-        state = State.WAIT_TRAILERS;
+        if (!trailers.isEmpty()) {
+            ReferenceCountUtil.safeRelease(data);
+            // Data can't come after trailers.
+            // See https://tools.ietf.org/html/rfc7540#section-8.1
+            return;
+        }
         super.onData(data);
     }
 
+    private void onInformationalOrMessageHeaders(HttpHeaders headers) {
+        final String status = headers.get(HttpHeaderNames.STATUS);
+        if (status != null && !status.isEmpty() && status.charAt(0) != '1') {
+            // Message headers.
+            assert this.headers == null;
+            this.headers = (ResponseHeaders) headers;
+            receivedMessageHeaders = true;
+        } else {
+            if (informationals == null) {
+                informationals = new ArrayList<>(2);
+                informationals.add((ResponseHeaders) headers);
+            } else if (status != null) {
+                // A new informational headers
+                informationals.add((ResponseHeaders) headers);
+            } else {
+                // Append to the last informational headers
+                final int lastIdx = informationals.size() - 1;
+                informationals.set(lastIdx, informationals.get(lastIdx).withMutations(h -> h.add(headers)));
+            }
+        }
+    }
+
     @Override
-    protected AggregatedHttpMessage onSuccess(HttpData content) {
+    protected AggregatedHttpResponse onSuccess(HttpData content) {
         checkState(headers != null, "An aggregated message does not have headers.");
-        return AggregatedHttpMessage.of(firstNonNull(informationals, Collections.emptyList()),
-                                        headers, content, trailingHeaders);
+        return AggregatedHttpResponse.of(firstNonNull(informationals, Collections.emptyList()),
+                                         headers, content, trailers);
     }
 
     @Override
     protected void onFailure() {
         headers = null;
-        trailingHeaders = HttpHeaders.EMPTY_HEADERS;
+        trailers = HttpHeaders.of();
     }
 }

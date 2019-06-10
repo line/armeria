@@ -32,20 +32,23 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.ByteBufOrStream;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
+import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer;
-import com.linecorp.armeria.internal.grpc.ArmeriaMessageDeframer.ByteBufOrStream;
-import com.linecorp.armeria.internal.grpc.ArmeriaMessageFramer;
-import com.linecorp.armeria.internal.grpc.GrpcHeaderNames;
+import com.linecorp.armeria.internal.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.grpc.GrpcMessageMarshaller;
+import com.linecorp.armeria.internal.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.grpc.HttpStreamReader;
+import com.linecorp.armeria.internal.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.internal.grpc.TransportStatusListener;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
@@ -70,8 +73,6 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     private static final Runnable NO_OP = () -> {
     };
-
-    private static final Metadata EMPTY_METADATA = new Metadata();
 
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaClientCall.class);
 
@@ -146,8 +147,9 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     @Override
-    public void start(Listener<O> responseListener, Metadata unused) {
+    public void start(Listener<O> responseListener, Metadata metadata) {
         requireNonNull(responseListener, "responseListener");
+        requireNonNull(metadata, "metadata");
         final Compressor compressor;
         if (callOptions.getCompressor() != null) {
             compressor = compressorRegistry.lookupCompressor(callOptions.getCompressor());
@@ -155,20 +157,20 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 responseListener.onClose(
                         Status.INTERNAL.withDescription(
                                 "Unable to find compressor by name " + callOptions.getCompressor()),
-                        EMPTY_METADATA);
+                        new Metadata());
                 return;
             }
         } else {
             compressor = Identity.NONE;
         }
-        messageFramer.setCompressor(compressor);
-        prepareHeaders(req.headers(), compressor);
+        messageFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
+        final HttpRequest req = prepareHeaders(compressor, metadata);
         listener = responseListener;
         final HttpResponse res;
         try (SafeCloseable ignored = ctx.push()) {
             res = httpClient.execute(ctx, req);
         } catch (Exception e) {
-            close(Status.fromThrowable(e));
+            close(GrpcStatus.fromThrowable(e), new Metadata());
             return;
         }
         res.subscribe(responseReader, ctx.eventLoop(), true);
@@ -209,7 +211,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         if (cause != null) {
             status = status.withCause(cause);
         }
-        close(status);
+        close(status, new Metadata());
         req.abort();
     }
 
@@ -249,7 +251,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                     try (SafeCloseable ignored = ctx.push()) {
                         listener.onReady();
                     } catch (Throwable t) {
-                        close(Status.fromThrowable(t));
+                        close(GrpcStatus.fromThrowable(t), new Metadata());
                     }
                 }
             });
@@ -279,7 +281,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 listener.onMessage(msg);
             }
         } catch (Throwable t) {
-            req.close(Status.fromThrowable(t).asException());
+            req.close(GrpcStatus.fromThrowable(t).asException());
             throw t instanceof RuntimeException ? (RuntimeException) t : new RuntimeException(t);
         }
     }
@@ -290,29 +292,38 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     @Override
-    public void transportReportStatus(Status status) {
-        close(status);
+    public void transportReportStatus(Status status, Metadata metadata) {
+        close(status, metadata);
     }
 
-    private void prepareHeaders(HttpHeaders headers, Compressor compressor) {
+    private HttpRequest prepareHeaders(Compressor compressor, Metadata metadata) {
+        final RequestHeadersBuilder newHeaders = req.headers().toBuilder();
         if (compressor != Identity.NONE) {
-            headers.set(GrpcHeaderNames.GRPC_ENCODING, compressor.getMessageEncoding());
+            newHeaders.set(GrpcHeaderNames.GRPC_ENCODING, compressor.getMessageEncoding());
         }
+
         if (!advertisedEncodingsHeader.isEmpty()) {
-            headers.add(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, advertisedEncodingsHeader);
+            newHeaders.add(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, advertisedEncodingsHeader);
         }
-        headers.add(GrpcHeaderNames.GRPC_TIMEOUT,
-                    TimeoutHeaderUtil.toHeaderValue(
-                            TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis())));
+
+        newHeaders.add(GrpcHeaderNames.GRPC_TIMEOUT,
+                       TimeoutHeaderUtil.toHeaderValue(
+                               TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis())));
+
+        MetadataUtil.fillHeaders(metadata, newHeaders);
+
+        final HttpRequest newReq = HttpRequest.of(req, newHeaders.build());
+        ctx.updateRequest(newReq);
+        return newReq;
     }
 
-    private void close(Status status) {
+    private void close(Status status, Metadata metadata) {
         ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(status, firstResponse), null);
         req.abort();
         responseReader.cancel();
 
         try (SafeCloseable ignored = ctx.push()) {
-            listener.onClose(status, EMPTY_METADATA);
+            listener.onClose(status, metadata);
         }
 
         notifyExecutor();

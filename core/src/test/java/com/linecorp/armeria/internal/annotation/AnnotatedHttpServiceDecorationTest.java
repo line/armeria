@@ -23,12 +23,12 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.server.DecoratingServiceFunction;
 import com.linecorp.armeria.server.HttpStatusException;
@@ -40,7 +40,7 @@ import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 public class AnnotatedHttpServiceDecorationTest {
 
@@ -168,39 +168,38 @@ public class AnnotatedHttpServiceDecorationTest {
     public void testDecoratingAnnotatedService() throws Exception {
         final HttpClient client = HttpClient.of(rule.uri("/"));
 
-        AggregatedHttpMessage response;
+        AggregatedHttpResponse response;
 
-        response = client.execute(HttpHeaders.of(HttpMethod.GET, "/1/ok")).aggregate().get();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
+        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/1/ok")).aggregate().get();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
 
-        response = client.execute(HttpHeaders.of(HttpMethod.GET, "/1/tooManyRequests")).aggregate().get();
-        assertThat(response.headers().status()).isEqualTo(
-                HttpStatus.TOO_MANY_REQUESTS);
+        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/1/tooManyRequests")).aggregate().get();
+        assertThat(response.status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
 
-        response = client.execute(HttpHeaders.of(HttpMethod.GET, "/1/locked")).aggregate().get();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.LOCKED);
+        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/1/locked")).aggregate().get();
+        assertThat(response.status()).isEqualTo(HttpStatus.LOCKED);
 
         // Call inherited methods.
-        response = client.execute(HttpHeaders.of(HttpMethod.GET, "/2/tooManyRequests")).aggregate().get();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/2/tooManyRequests")).aggregate().get();
+        assertThat(response.status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
 
-        response = client.execute(HttpHeaders.of(HttpMethod.GET, "/2/locked")).aggregate().get();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.LOCKED);
+        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/2/locked")).aggregate().get();
+        assertThat(response.status()).isEqualTo(HttpStatus.LOCKED);
 
         // Call a new method.
-        response = client.execute(HttpHeaders.of(HttpMethod.GET, "/2/added")).aggregate().get();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
+        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/2/added")).aggregate().get();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
 
         // Call an overriding method.
-        response = client.execute(HttpHeaders.of(HttpMethod.GET, "/2/override")).aggregate().get();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/2/override")).aggregate().get();
+        assertThat(response.status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
 
         // Respond by the class-level decorator.
-        response = client.execute(HttpHeaders.of(HttpMethod.GET, "/3/tooManyRequests")).aggregate().get();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/3/tooManyRequests")).aggregate().get();
+        assertThat(response.status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
 
         // Respond by the method-level decorator.
-        response = client.execute(HttpHeaders.of(HttpMethod.GET, "/4/tooManyRequests")).aggregate().get();
-        assertThat(response.headers().status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        response = client.execute(RequestHeaders.of(HttpMethod.GET, "/4/tooManyRequests")).aggregate().get();
+        assertThat(response.status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
     }
 }

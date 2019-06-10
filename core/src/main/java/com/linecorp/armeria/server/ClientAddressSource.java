@@ -16,6 +16,7 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 
@@ -53,7 +54,7 @@ public final class ClientAddressSource {
      * in a request will be used to determine a client address.
      */
     public static ClientAddressSource ofHeader(CharSequence header) {
-        checkArgument(header != null && header.length() > 0, "empty header");
+        checkArgument(requireNonNull(header, "header").length() > 0, "empty header");
         return new ClientAddressSource(HttpHeaderNames.of(header));
     }
 
@@ -84,7 +85,24 @@ public final class ClientAddressSource {
      * Returns {@code true} if the specified {@code source} is for a PROXY protocol.
      */
     boolean isProxyProtocol() {
-        return this == PROXY_PROTOCOL;
+        return equals(PROXY_PROTOCOL);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof ClientAddressSource)) {
+            return false;
+        }
+        final ClientAddressSource that = (ClientAddressSource) o;
+        return header.equals(that.header);
+    }
+
+    @Override
+    public int hashCode() {
+        return header.hashCode();
     }
 
     @Override

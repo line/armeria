@@ -29,6 +29,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -54,15 +55,17 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
-import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.ExceptionInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
+import com.linecorp.armeria.server.docs.FieldInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.NamedTypeInfo;
@@ -93,12 +96,20 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
     // Methods related with generating a service specification.
 
     @Override
+    public String name() {
+        return "thrift";
+    }
+
+    @Override
     public Set<Class<? extends Service<?, ?>>> supportedServiceTypes() {
         return ImmutableSet.of(THttpService.class);
     }
 
     @Override
-    public ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs) {
+    public ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs,
+                                                      DocServiceFilter filter) {
+        requireNonNull(serviceConfigs, "serviceConfigs");
+        requireNonNull(filter, "filter");
 
         final Map<Class<?>, EntryBuilder> map = new LinkedHashMap<>();
 
@@ -112,8 +123,8 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
 
                     // Add all available endpoints. Accept only the services with exact and prefix path
                     // mappings, whose endpoint path can be determined.
-                    final PathMapping pathMapping = c.pathMapping();
-                    final String path = pathMapping.exactPath().orElse(pathMapping.prefix().orElse(null));
+                    final Route route = c.route();
+                    final String path = route.exactPath().orElse(route.prefix().orElse(null));
                     if (path != null) {
                         builder.endpoint(new EndpointInfoBuilder(c.virtualHost().hostnamePattern(), path)
                                                  .fragment(serviceName)
@@ -128,20 +139,24 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
         final List<Entry> entries = map.values().stream()
                                        .map(EntryBuilder::build)
                                        .collect(Collectors.toList());
-        return generate(entries);
+        return generate(entries, filter);
     }
 
     @VisibleForTesting
-    static ServiceSpecification generate(List<Entry> entries) {
-        final List<ServiceInfo> services = entries.stream()
-                                                  .map(e -> newServiceInfo(e.serviceType, e.endpointInfos))
-                                                  .collect(toImmutableList());
+    ServiceSpecification generate(List<Entry> entries, DocServiceFilter filter) {
+        final List<ServiceInfo> services =
+                entries.stream()
+                       .map(e -> newServiceInfo(e.serviceType, e.endpointInfos, filter))
+                       .filter(Objects::nonNull)
+                       .collect(toImmutableList());
 
         return ServiceSpecification.generate(services, ThriftDocServicePlugin::newNamedTypeInfo);
     }
 
     @VisibleForTesting
-    static ServiceInfo newServiceInfo(Class<?> serviceClass, Iterable<EndpointInfo> endpoints) {
+    @Nullable
+    ServiceInfo newServiceInfo(Class<?> serviceClass, Iterable<EndpointInfo> endpoints,
+                               DocServiceFilter filter) {
         requireNonNull(serviceClass, "serviceClass");
 
         final String name = serviceClass.getName();
@@ -155,16 +170,26 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
         }
         final Method[] methods = interfaceClass.getDeclaredMethods();
 
-        return new ServiceInfo(name, Arrays.stream(methods).map(m -> newMethodInfo(m, endpoints))::iterator);
+        final List<MethodInfo> methodInfos = Arrays.stream(methods)
+                                                   .map(m -> newMethodInfo(m, endpoints, filter))
+                                                   .filter(Objects::nonNull)
+                                                   .collect(toImmutableList());
+        if (methodInfos.isEmpty()) {
+            return null;
+        }
+        return new ServiceInfo(name, methodInfos);
     }
 
-    private static MethodInfo newMethodInfo(Method method, Iterable<EndpointInfo> endpoints) {
-        requireNonNull(method, "method");
-
+    @Nullable
+    private MethodInfo newMethodInfo(Method method, Iterable<EndpointInfo> endpoints,
+                                     DocServiceFilter filter) {
         final String methodName = method.getName();
 
         final Class<?> serviceClass = method.getDeclaringClass().getDeclaringClass();
         final String serviceName = serviceClass.getName();
+        if (!filter.test(name(), serviceName, methodName)) {
+            return null;
+        }
         final ClassLoader classLoader = serviceClass.getClassLoader();
 
         final String argsClassName = serviceName + '$' + methodName + "_args";
@@ -180,7 +205,7 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
 
         Class<?> resultClass;
         try {
-            resultClass =  Class.forName(serviceName + '$' + methodName + "_result", false, classLoader);
+            resultClass = Class.forName(serviceName + '$' + methodName + "_result", false, classLoader);
         } catch (ClassNotFoundException ignored) {
             // Oneway function does not have a result type.
             resultClass = null;
@@ -315,9 +340,8 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
             typeSignature = toTypeSignature(fieldValueMetaData);
         }
 
-        return new FieldInfo(fieldMetaData.fieldName,
-                             convertRequirement(fieldMetaData.requirementType),
-                             typeSignature);
+        return new FieldInfoBuilder(fieldMetaData.fieldName, typeSignature)
+                .requirement(convertRequirement(fieldMetaData.requirementType)).build();
     }
 
     @VisibleForTesting
@@ -383,7 +407,8 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
             case TFieldRequirementType.OPTIONAL:
                 return FieldRequirement.OPTIONAL;
             case TFieldRequirementType.DEFAULT:
-                return FieldRequirement.DEFAULT;
+                // Convert to unspecified for consistency with gRPC and AnnotatedHttpService.
+                return FieldRequirement.UNSPECIFIED;
             default:
                 throw new IllegalArgumentException("unknown requirement type: " + value);
         }

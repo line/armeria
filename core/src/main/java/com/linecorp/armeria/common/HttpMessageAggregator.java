@@ -33,9 +33,10 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.util.ReferenceCountUtil;
 
-abstract class HttpMessageAggregator implements Subscriber<HttpObject>, BiFunction<Void, Throwable, Void> {
+abstract class HttpMessageAggregator<T extends AggregatedHttpMessage>
+        implements Subscriber<HttpObject>, BiFunction<Void, Throwable, Void> {
 
-    private final CompletableFuture<AggregatedHttpMessage> future;
+    private final CompletableFuture<T> future;
     private final List<HttpData> contentList = new ArrayList<>();
     // ByteBufAllocator is only provided when pooled objects are requested.
     @Nullable
@@ -44,7 +45,7 @@ abstract class HttpMessageAggregator implements Subscriber<HttpObject>, BiFuncti
     @Nullable
     private Subscription subscription;
 
-    HttpMessageAggregator(CompletableFuture<AggregatedHttpMessage> future,
+    HttpMessageAggregator(CompletableFuture<T> future,
                           @Nullable ByteBufAllocator alloc) {
         this.future = future;
         this.alloc = alloc;
@@ -131,7 +132,7 @@ abstract class HttpMessageAggregator implements Subscriber<HttpObject>, BiFuncti
                             byteBufData.release();
                         }
                     } else {
-                        merged.writeBytes(data.array(), data.offset(), data.length());
+                        merged.writeBytes(data.array());
                     }
                 }
                 content = new ByteBufHttpData(merged, true);
@@ -140,10 +141,10 @@ abstract class HttpMessageAggregator implements Subscriber<HttpObject>, BiFuncti
                 for (int i = 0, offset = 0; i < contentList.size(); i++) {
                     final HttpData data = contentList.set(i, null);
                     final int dataLength = data.length();
-                    System.arraycopy(data.array(), data.offset(), merged, offset, dataLength);
+                    System.arraycopy(data.array(), 0, merged, offset, dataLength);
                     offset += dataLength;
                 }
-                content = HttpData.of(merged);
+                content = HttpData.wrap(merged);
             }
         }
 
@@ -163,7 +164,7 @@ abstract class HttpMessageAggregator implements Subscriber<HttpObject>, BiFuncti
         future.completeExceptionally(cause);
     }
 
-    protected abstract AggregatedHttpMessage onSuccess(HttpData content);
+    protected abstract T onSuccess(HttpData content);
 
     protected abstract void onFailure();
 }

@@ -42,11 +42,11 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
@@ -56,7 +56,7 @@ import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.server.metric.PrometheusExpositionService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
@@ -82,12 +82,10 @@ public class PrometheusMetricsIntegrationTest {
             });
 
             sb.service("/foo", helloService.decorate(
-                    MetricCollectingService.newDecorator(
-                            (registry, log) -> meterIdPrefix(registry, log, "server", "Foo"))));
+                    MetricCollectingService.newDecorator(new MeterIdPrefixFunctionImpl("server", "Foo"))));
 
             sb.service("/bar", helloService.decorate(
-                    MetricCollectingService.newDecorator(
-                            (registry, log) -> meterIdPrefix(registry, log, "server", "Bar"))));
+                    MetricCollectingService.newDecorator(new MeterIdPrefixFunctionImpl("server", "Bar"))));
 
             sb.service("/internal/prometheus/metrics",
                        new PrometheusExpositionService(prometheusRegistry));
@@ -121,7 +119,7 @@ public class PrometheusMetricsIntegrationTest {
         makeRequest1("world");
 
         // Wait until all RequestLogs are collected.
-        await().untilAsserted(() -> assertThat(makeMetricsRequest().content().toStringUtf8())
+        await().untilAsserted(() -> assertThat(makeMetricsRequest().contentUtf8())
                 .contains("server_active_requests{handler=\"Foo\"",
                           "server_active_requests{handler=\"Foo\"",
                           "server_requests_total{handler=\"Foo\",",
@@ -148,22 +146,22 @@ public class PrometheusMetricsIntegrationTest {
                           "client_total_duration_seconds_count{handler=\"Foo\",",
                           "client_total_duration_seconds_sum{handler=\"Foo\","));
 
-        final String content = makeMetricsRequest().content().toStringUtf8();
+        final String content = makeMetricsRequest().contentUtf8();
         logger.debug("Metrics reported by the exposition service:\n{}", content);
 
         // Server entry count check
         assertThat(content).containsPattern(
                 multilinePattern("server_request_duration_seconds_count",
                                  "{handler=\"Foo\",hostnamePattern=\"*\",httpStatus=\"200\",",
-                                 "method=\"hello\",pathMapping=\"exact:/foo\",} 7.0"));
+                                 "method=\"hello\",route=\"exact:/foo\",} 7.0"));
         assertThat(content).containsPattern(
                 multilinePattern("server_request_length_count",
                                  "{handler=\"Foo\",hostnamePattern=\"*\",httpStatus=\"200\",",
-                                 "method=\"hello\",pathMapping=\"exact:/foo\",} 7.0"));
+                                 "method=\"hello\",route=\"exact:/foo\",} 7.0"));
         assertThat(content).containsPattern(
                 multilinePattern("server_response_length_count",
                                  "{handler=\"Foo\",hostnamePattern=\"*\",httpStatus=\"200\",",
-                                 "method=\"hello\",pathMapping=\"exact:/foo\",} 7.0"));
+                                 "method=\"hello\",route=\"exact:/foo\",} 7.0"));
         // Client entry count check
         assertThat(content).containsPattern(
                 multilinePattern("client_request_duration_seconds_count",
@@ -179,8 +177,8 @@ public class PrometheusMetricsIntegrationTest {
         assertThat(content).containsPattern(
                 multilinePattern("server_requests_total",
                                  "{handler=\"Foo\",hostnamePattern=\"*\",httpStatus=\"200\",",
-                                 "method=\"hello\",pathMapping=\"exact:/foo\",",
-                                 "result=\"failure\",} 3.0"));
+                                 "method=\"hello\",result=\"failure\",",
+                                 "route=\"exact:/foo\",} 3.0"));
         assertThat(content).containsPattern(
                 multilinePattern("client_requests_total",
                                  "{handler=\"Foo\",httpStatus=\"200\",method=\"hello\"," +
@@ -190,8 +188,8 @@ public class PrometheusMetricsIntegrationTest {
         assertThat(content).containsPattern(
                 multilinePattern("server_requests_total",
                                  "{handler=\"Foo\",hostnamePattern=\"*\",httpStatus=\"200\",",
-                                 "method=\"hello\",pathMapping=\"exact:/foo\",",
-                                 "result=\"success\",} 4.0"));
+                                 "method=\"hello\",result=\"success\",",
+                                 "route=\"exact:/foo\",} 4.0"));
         assertThat(content).containsPattern(
                 multilinePattern("client_requests_total",
                                  "{handler=\"Foo\",httpStatus=\"200\",method=\"hello\"," +
@@ -201,7 +199,7 @@ public class PrometheusMetricsIntegrationTest {
         assertThat(content).containsPattern(
                 multilinePattern("server_active_requests",
                                  "{handler=\"Foo\",hostnamePattern=\"*\",",
-                                 "method=\"hello\",pathMapping=\"exact:/foo\",} 0.0"));
+                                 "method=\"hello\",route=\"exact:/foo\",} 0.0"));
         assertThat(content).containsPattern(
                 multilinePattern("client_active_requests",
                                  "{handler=\"Foo\",method=\"hello\",} 0.0"));
@@ -211,7 +209,7 @@ public class PrometheusMetricsIntegrationTest {
         makeRequest2("world");
 
         // Wait until all RequestLogs are collected.
-        await().untilAsserted(() -> assertThat(makeMetricsRequest().content().toStringUtf8())
+        await().untilAsserted(() -> assertThat(makeMetricsRequest().contentUtf8())
                 .contains("server_active_requests{handler=\"Bar\"",
                           "server_active_requests{handler=\"Bar\"",
                           "server_requests_total{handler=\"Bar\",",
@@ -238,21 +236,21 @@ public class PrometheusMetricsIntegrationTest {
                           "client_total_duration_seconds_count{handler=\"Bar\",",
                           "client_total_duration_seconds_sum{handler=\"Bar\","));
 
-        final String content = makeMetricsRequest().content().toStringUtf8();
+        final String content = makeMetricsRequest().contentUtf8();
 
         // Server entry count check
         assertThat(content).containsPattern(
                 multilinePattern("server_request_duration_seconds_count",
                                  "{handler=\"Bar\",hostnamePattern=\"*\",httpStatus=\"200\",",
-                                 "method=\"hello\",pathMapping=\"exact:/bar\",} 1.0"));
+                                 "method=\"hello\",route=\"exact:/bar\",} 1.0"));
         assertThat(content).containsPattern(
                 multilinePattern("server_request_length_count",
                                  "{handler=\"Bar\",hostnamePattern=\"*\",httpStatus=\"200\",",
-                                 "method=\"hello\",pathMapping=\"exact:/bar\",} 1.0"));
+                                 "method=\"hello\",route=\"exact:/bar\",} 1.0"));
         assertThat(content).containsPattern(
                 multilinePattern("server_response_length_count",
                                  "{handler=\"Bar\",hostnamePattern=\"*\",httpStatus=\"200\",",
-                                 "method=\"hello\",pathMapping=\"exact:/bar\",} 1.0"));
+                                 "method=\"hello\",route=\"exact:/bar\",} 1.0"));
         // Client entry count check
         assertThat(content).containsPattern(
                 multilinePattern("client_request_duration_seconds_count",
@@ -268,8 +266,8 @@ public class PrometheusMetricsIntegrationTest {
         assertThat(content).containsPattern(
                 multilinePattern("server_requests_total",
                                  "{handler=\"Bar\",hostnamePattern=\"*\",httpStatus=\"200\",",
-                                 "method=\"hello\",pathMapping=\"exact:/bar\",",
-                                 "result=\"success\",} 1.0"));
+                                 "method=\"hello\",result=\"success\",",
+                                 "route=\"exact:/bar\",} 1.0"));
         assertThat(content).containsPattern(
                 multilinePattern("client_requests_total",
                                  "{handler=\"Bar\",httpStatus=\"200\",method=\"hello\"," +
@@ -279,7 +277,7 @@ public class PrometheusMetricsIntegrationTest {
         assertThat(content).containsPattern(
                 multilinePattern("server_active_requests",
                                  "{handler=\"Bar\",hostnamePattern=\"*\",",
-                                 "method=\"hello\",pathMapping=\"exact:/bar\",} 0.0"));
+                                 "method=\"hello\",route=\"exact:/bar\",} 0.0"));
         assertThat(content).containsPattern(
                 multilinePattern("client_active_requests",
                                  "{handler=\"Bar\",method=\"hello\",} 0.0"));
@@ -297,24 +295,17 @@ public class PrometheusMetricsIntegrationTest {
         final Iface client = new ClientBuilder(server.uri(BINARY, path))
                 .factory(clientFactory)
                 .rpcDecorator(MetricCollectingClient.newDecorator(
-                        (registry, log) -> meterIdPrefix(registry, log, "client", serviceName)))
+                        new MeterIdPrefixFunctionImpl("client", serviceName)))
                 .build(Iface.class);
         client.hello(name);
     }
 
-    private static AggregatedHttpMessage makeMetricsRequest() throws ExecutionException,
-                                                                     InterruptedException {
+    private static AggregatedHttpResponse makeMetricsRequest() throws ExecutionException,
+                                                                      InterruptedException {
         final HttpClient client = HttpClient.of("http://127.0.0.1:" + server.httpPort());
-        return client.execute(HttpHeaders.of(HttpMethod.GET, "/internal/prometheus/metrics")
-                                         .setObject(HttpHeaderNames.ACCEPT, MediaType.PLAIN_TEXT_UTF_8))
+        return client.execute(RequestHeaders.of(HttpMethod.GET, "/internal/prometheus/metrics",
+                                                HttpHeaderNames.ACCEPT, MediaType.PLAIN_TEXT_UTF_8))
                      .aggregate().get();
-    }
-
-    private static MeterIdPrefix meterIdPrefix(MeterRegistry registry, RequestLog log,
-                                               String name, String serviceName) {
-        return MeterIdPrefixFunction.ofDefault(name)
-                                    .withTags("handler", serviceName)
-                                    .apply(registry, log);
     }
 
     private static Pattern multilinePattern(String... lines) {
@@ -327,5 +318,30 @@ public class PrometheusMetricsIntegrationTest {
         buf.append('$');
 
         return Pattern.compile(buf.toString(), Pattern.MULTILINE);
+    }
+
+    private static final class MeterIdPrefixFunctionImpl implements MeterIdPrefixFunction {
+
+        private final String name;
+        private final String serviceName;
+
+        MeterIdPrefixFunctionImpl(String name, String serviceName) {
+            this.name = name;
+            this.serviceName = serviceName;
+        }
+
+        @Override
+        public MeterIdPrefix apply(MeterRegistry registry, RequestLog log) {
+            return MeterIdPrefixFunction.ofDefault(name)
+                                        .withTags("handler", serviceName)
+                                        .apply(registry, log);
+        }
+
+        @Override
+        public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestLog log) {
+            return MeterIdPrefixFunction.ofDefault(name)
+                                        .withTags("handler", serviceName)
+                                        .activeRequestPrefix(registry, log);
+        }
     }
 }

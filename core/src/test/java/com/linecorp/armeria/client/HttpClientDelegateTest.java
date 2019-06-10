@@ -17,8 +17,6 @@ package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.client.HttpClientDelegate.extractHost;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import org.junit.Test;
 
@@ -26,24 +24,25 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestHeaders;
 
 public class HttpClientDelegateTest {
     @Test
     public void testExtractHost() {
         // additionalRequestHeaders has the highest precedence.
         assertThat(extractHost(context(HttpHeaders.of(HttpHeaderNames.AUTHORITY, "foo")),
-                               HttpRequest.of(HttpHeaders.of(HttpMethod.GET, "/")
-                                          .set(HttpHeaderNames.AUTHORITY, "bar:8080")),
+                               HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/",
+                                                                HttpHeaderNames.AUTHORITY, "bar:8080")),
                                Endpoint.of("baz", 8080))).isEqualTo("foo");
 
         // Request header
-        assertThat(extractHost(context(HttpHeaders.EMPTY_HEADERS),
-                               HttpRequest.of(HttpHeaders.of(HttpMethod.GET, "/")
-                                                         .set(HttpHeaderNames.AUTHORITY, "bar:8080")),
+        assertThat(extractHost(context(HttpHeaders.of()),
+                               HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/",
+                                                                HttpHeaderNames.AUTHORITY, "bar:8080")),
                                Endpoint.of("baz", 8080))).isEqualTo("bar");
 
         // Endpoint.host() has the lowest precedence.
-        assertThat(extractHost(context(HttpHeaders.EMPTY_HEADERS),
+        assertThat(extractHost(context(HttpHeaders.of()),
                                HttpRequest.of(HttpMethod.GET, "/"),
                                Endpoint.of("baz", 8080))).isEqualTo("baz");
 
@@ -64,19 +63,19 @@ public class HttpClientDelegateTest {
         // If additionalRequestHeader's authority is invalid but req.authority() is valid,
         // use the authority from 'req'.
         assertThat(extractHost(context(HttpHeaders.of(HttpHeaderNames.AUTHORITY, "[::1")),
-                               HttpRequest.of(HttpHeaders.of(HttpMethod.GET, "/")
-                                                         .set(HttpHeaderNames.AUTHORITY, "bar")),
+                               HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/",
+                                                                HttpHeaderNames.AUTHORITY, "bar")),
                                Endpoint.of("baz", 8080))).isEqualTo("bar");
 
         assertThat(extractHost(context(HttpHeaders.of(HttpHeaderNames.AUTHORITY, ":8080")),
-                               HttpRequest.of(HttpHeaders.of(HttpMethod.GET, "/")
-                                                         .set(HttpHeaderNames.AUTHORITY, "bar")),
+                               HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/",
+                                                                HttpHeaderNames.AUTHORITY, "bar")),
                                Endpoint.of("baz", 8080))).isEqualTo("bar");
     }
 
     private static ClientRequestContext context(HttpHeaders additionalHeaders) {
-        final ClientRequestContext ctx = mock(ClientRequestContext.class);
-        when(ctx.additionalRequestHeaders()).thenReturn(additionalHeaders.asImmutable());
+        final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        ctx.setAdditionalRequestHeaders(additionalHeaders);
         return ctx;
     }
 }

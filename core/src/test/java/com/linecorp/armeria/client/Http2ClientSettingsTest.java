@@ -39,8 +39,8 @@ import org.junit.rules.Timeout;
 
 import com.google.common.io.ByteStreams;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.testing.common.EventLoopRule;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -75,7 +75,7 @@ public class Http2ClientSettingsTest {
             final int port = ss.getLocalPort();
 
             final HttpClient client = HttpClient.of(clientFactory, "h2c://127.0.0.1:" + port);
-            final CompletableFuture<AggregatedHttpMessage> future = client.get("/").aggregate();
+            final CompletableFuture<AggregatedHttpResponse> future = client.get("/").aggregate();
 
             try (Socket s = ss.accept()) {
 

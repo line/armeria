@@ -32,22 +32,31 @@ import com.linecorp.armeria.common.HttpHeaders;
 public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<T>> {
     private static final Function<HttpHeaders, HttpHeaders> DEFAULT_HEADERS_SANITIZER = Function.identity();
     private static final Function<Object, Object> DEFAULT_CONTENT_SANITIZER = Function.identity();
+    private static final Function<Throwable, Throwable> DEFAULT_CAUSE_SANITIZER = Function.identity();
 
     private LogLevel requestLogLevel = LogLevel.TRACE;
     private LogLevel successfulResponseLogLevel = LogLevel.TRACE;
     private LogLevel failedResponseLogLevel = LogLevel.WARN;
-    private Function<HttpHeaders, HttpHeaders> requestHeadersSanitizer = DEFAULT_HEADERS_SANITIZER;
-    private Function<Object, Object> requestContentSanitizer = DEFAULT_CONTENT_SANITIZER;
-    private Function<HttpHeaders, HttpHeaders> responseHeadersSanitizer = DEFAULT_HEADERS_SANITIZER;
-    private Function<Object, Object> responseContentSanitizer = DEFAULT_CONTENT_SANITIZER;
+    private Function<? super HttpHeaders, ? extends HttpHeaders> requestHeadersSanitizer =
+            DEFAULT_HEADERS_SANITIZER;
+    private Function<Object, ?> requestContentSanitizer = DEFAULT_CONTENT_SANITIZER;
+    private Function<? super HttpHeaders, ? extends HttpHeaders> requestTrailersSanitizer =
+            DEFAULT_HEADERS_SANITIZER;
+
+    private Function<? super HttpHeaders, ? extends HttpHeaders> responseHeadersSanitizer =
+            DEFAULT_HEADERS_SANITIZER;
+    private Function<Object, ?> responseContentSanitizer = DEFAULT_CONTENT_SANITIZER;
+    private Function<? super Throwable, ? extends Throwable> responseCauseSanitizer = DEFAULT_CAUSE_SANITIZER;
     private float samplingRate = 1.0f;
+    private Function<? super HttpHeaders, ? extends HttpHeaders> responseTrailersSanitizer =
+            DEFAULT_HEADERS_SANITIZER;
 
     /**
      * Sets the {@link LogLevel} to use when logging requests. If unset, will use {@link LogLevel#TRACE}.
      */
     public T requestLogLevel(LogLevel requestLogLevel) {
         this.requestLogLevel = requireNonNull(requestLogLevel, "requestLogLevel");
-        return unsafeCast(this);
+        return self();
     }
 
     /**
@@ -64,7 +73,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     public T successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
         this.successfulResponseLogLevel =
                 requireNonNull(successfulResponseLogLevel, "successfulResponseLogLevel");
-        return unsafeCast(this);
+        return self();
     }
 
     /**
@@ -80,7 +89,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      */
     public T failureResponseLogLevel(LogLevel failedResponseLogLevel) {
         this.failedResponseLogLevel = requireNonNull(failedResponseLogLevel, "failedResponseLogLevel");
-        return unsafeCast(this);
+        return self();
     }
 
     /**
@@ -92,70 +101,168 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
 
     /**
      * Sets the {@link Function} to use to sanitize request headers before logging. It is common to have the
-     * {@link Function} remove sensitive headers, like {@code Cookie}, before logging. If unset, will use
+     * {@link Function} that removes sensitive headers, like {@code Cookie}, before logging. If unset, will use
      * {@link Function#identity()}.
      */
-    public T requestHeadersSanitizer(Function<HttpHeaders, HttpHeaders> requestHeadersSanitizer) {
+    public T requestHeadersSanitizer(
+            Function<? super HttpHeaders, ? extends HttpHeaders> requestHeadersSanitizer) {
         this.requestHeadersSanitizer = requireNonNull(requestHeadersSanitizer, "requestHeadersSanitizer");
-        return unsafeCast(this);
+        return self();
     }
 
     /**
      * Returns the {@link Function} to use to sanitize request headers before logging.
      */
-    protected Function<HttpHeaders, HttpHeaders> requestHeadersSanitizer() {
+    protected Function<? super HttpHeaders, ? extends HttpHeaders> requestHeadersSanitizer() {
         return requestHeadersSanitizer;
     }
 
     /**
-     * Sets the {@link Function} to use to sanitize request content before logging. It is common to have the
-     * {@link Function} remove sensitive content, such as an GPS location query, before logging. If unset,
-     * will use {@link Function#identity()}.
-     */
-    public T requestContentSanitizer(Function<Object, Object> requestContentSanitizer) {
-        this.requestContentSanitizer = requireNonNull(requestContentSanitizer, "requestContentSanitizer");
-        return unsafeCast(this);
-    }
-
-    /**
-     * Returns the {@link Function} to use to sanitize request content before logging.
-     */
-    protected Function<Object, Object> requestContentSanitizer() {
-        return requestContentSanitizer;
-    }
-
-    /**
      * Sets the {@link Function} to use to sanitize response headers before logging. It is common to have the
-     * {@link Function} remove sensitive headers, like {@code Set-Cookie}, before logging. If unset,
+     * {@link Function} that removes sensitive headers, like {@code Set-Cookie}, before logging. If unset,
      * will use {@link Function#identity()}.
      */
-    public T responseHeadersSanitizer(Function<HttpHeaders, HttpHeaders> responseHeadersSanitizer) {
+    public T responseHeadersSanitizer(
+            Function<? super HttpHeaders, ? extends HttpHeaders> responseHeadersSanitizer) {
         this.responseHeadersSanitizer = requireNonNull(responseHeadersSanitizer, "responseHeadersSanitizer");
-        return unsafeCast(this);
+        return self();
     }
 
     /**
      * Returns the {@link Function} to use to sanitize response headers before logging.
      */
-    protected Function<HttpHeaders, HttpHeaders> responseHeadersSanitizer() {
+    protected Function<? super HttpHeaders, ? extends HttpHeaders> responseHeadersSanitizer() {
         return responseHeadersSanitizer;
     }
 
     /**
-     * Sets the {@link Function} to use to sanitize response content before logging. It is common to have the
-     * {@link Function} remove sensitive content, such as an address, before logging. If unset,
+     * Sets the {@link Function} to use to sanitize request trailers before logging. If unset,
      * will use {@link Function#identity()}.
      */
-    public T responseContentSanitizer(Function<Object, Object> responseContentSanitizer) {
+    public T requestTrailersSanitizer(
+            Function<? super HttpHeaders, ? extends HttpHeaders> requestTrailersSanitizer) {
+        this.requestTrailersSanitizer = requireNonNull(requestTrailersSanitizer, "requestTrailersSanitizer");
+        return self();
+    }
+
+    /**
+     * Returns the {@link Function} to use to sanitize request trailers before logging.
+     */
+    protected Function<? super HttpHeaders, ? extends HttpHeaders> requestTrailersSanitizer() {
+        return requestTrailersSanitizer;
+    }
+
+    /**
+     * Sets the {@link Function} to use to sanitize response trailers before logging. If unset,
+     * will use {@link Function#identity()}.
+     */
+    public T responseTrailersSanitizer(
+            Function<? super HttpHeaders, ? extends HttpHeaders> responseTrailersSanitizer) {
+        this.responseTrailersSanitizer = requireNonNull(responseTrailersSanitizer, "responseTrailersSanitizer");
+        return self();
+    }
+
+    /**
+     * Returns the {@link Function} to use to sanitize response trailers before logging.
+     */
+    protected Function<? super HttpHeaders, ? extends HttpHeaders> responseTrailersSanitizer() {
+        return responseTrailersSanitizer;
+    }
+
+    /**
+     * Sets the {@link Function} to use to sanitize request, response and trailers before logging.
+     * It is common to have the {@link Function} that removes sensitive headers, like {@code "Cookie"} and
+     * {@code "Set-Cookie"}, before logging. This method is a shortcut of:
+     * <pre>{@code
+     * builder.requestHeadersSanitizer(headersSanitizer);
+     * builder.requestTrailersSanitizer(headersSanitizer);
+     * builder.responseHeadersSanitizer(headersSanitizer);
+     * builder.responseTrailersSanitizer(headersSanitizer);
+     * }</pre>
+     *
+     * @see #requestHeadersSanitizer(Function)
+     * @see #requestTrailersSanitizer(Function)
+     * @see #responseHeadersSanitizer(Function)
+     * @see #responseTrailersSanitizer(Function)
+     */
+    public T headersSanitizer(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer) {
+        requireNonNull(headersSanitizer, "headersSanitizer");
+        requestHeadersSanitizer(headersSanitizer);
+        requestTrailersSanitizer(headersSanitizer);
+        responseHeadersSanitizer(headersSanitizer);
+        responseTrailersSanitizer(headersSanitizer);
+        return self();
+    }
+
+    /**
+     * Sets the {@link Function} to use to sanitize request content before logging. It is common to have the
+     * {@link Function} that removes sensitive content, such as an GPS location query, before logging. If unset,
+     * will use {@link Function#identity()}.
+     */
+    public T requestContentSanitizer(Function<Object, ?> requestContentSanitizer) {
+        this.requestContentSanitizer = requireNonNull(requestContentSanitizer, "requestContentSanitizer");
+        return self();
+    }
+
+    /**
+     * Returns the {@link Function} to use to sanitize request content before logging.
+     */
+    protected Function<Object, ?> requestContentSanitizer() {
+        return requestContentSanitizer;
+    }
+
+    /**
+     * Sets the {@link Function} to use to sanitize response content before logging. It is common to have the
+     * {@link Function} that removes sensitive content, such as an address, before logging. If unset,
+     * will use {@link Function#identity()}.
+     */
+    public T responseContentSanitizer(Function<Object, ?> responseContentSanitizer) {
         this.responseContentSanitizer = requireNonNull(responseContentSanitizer, "responseContentSanitizer");
-        return unsafeCast(this);
+        return self();
     }
 
     /**
      * Returns the {@link Function} to use to sanitize response content before logging.
      */
-    protected Function<Object, Object> responseContentSanitizer() {
+    protected Function<Object, ?> responseContentSanitizer() {
         return responseContentSanitizer;
+    }
+
+    /**
+     * Sets the {@link Function} to use to sanitize request and response content before logging. It is common
+     * to have the {@link Function} that removes sensitive content, such as an GPS location query and
+     * an address, before logging. If unset, will use {@link Function#identity()}. This method is a shortcut of:
+     * <pre>{@code
+     * builder.requestContentSanitizer(contentSanitizer);
+     * builder.responseContentSanitizer(contentSanitizer);
+     * }</pre>
+     *
+     * @see #requestContentSanitizer(Function)
+     * @see #responseContentSanitizer(Function)
+     */
+    public T contentSanitizer(Function<Object, ?> contentSanitizer) {
+        requireNonNull(contentSanitizer, "contentSanitizer");
+        requestContentSanitizer(contentSanitizer);
+        responseContentSanitizer(contentSanitizer);
+        return self();
+    }
+
+    /**
+     * Sets the {@link Function} to use to sanitize a response cause before logging. You can
+     * sanitize the stack trace of the exception to remove sensitive information, or prevent from logging
+     * the stack trace completely by returning {@code null} in the {@link Function}. If unset, will use
+     * {@link Function#identity()}.
+     */
+    public T responseCauseSanitizer(Function<? super Throwable, ? extends Throwable> responseCauseSanitizer) {
+        this.responseCauseSanitizer = requireNonNull(responseCauseSanitizer, "responseCauseSanitizer");
+        return self();
+    }
+
+    /**
+     * Returns the {@link Function} to use to sanitize response cause before logging.
+     */
+    protected Function<? super Throwable, ? extends Throwable> responseCauseSanitizer() {
+        return responseCauseSanitizer;
     }
 
     /**
@@ -166,7 +273,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     public T samplingRate(float samplingRate) {
         checkArgument(0.0 <= samplingRate && samplingRate <= 1.0, "samplingRate must be between 0.0 and 1.0");
         this.samplingRate = samplingRate;
-        return unsafeCast(this);
+        return self();
     }
 
     /**
@@ -177,15 +284,16 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     }
 
     @SuppressWarnings("unchecked")
-    private T unsafeCast(LoggingDecoratorBuilder<T> self) {
-        return (T) self;
+    private T self() {
+        return (T) this;
     }
 
     @Override
     public String toString() {
         return toString(this, requestLogLevel, successfulResponseLogLevel, failedResponseLogLevel,
-                        requestHeadersSanitizer, requestContentSanitizer, responseHeadersSanitizer,
-                        responseContentSanitizer, samplingRate);
+                        requestHeadersSanitizer, requestContentSanitizer, requestTrailersSanitizer,
+                        responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer,
+                        samplingRate);
     }
 
     private static <T extends LoggingDecoratorBuilder<T>> String toString(
@@ -193,10 +301,12 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
             LogLevel requestLogLevel,
             LogLevel successfulResponseLogLevel,
             LogLevel failureResponseLogLevel,
-            Function<HttpHeaders, HttpHeaders> requestHeadersSanitizer,
-            Function<Object, Object> requestContentSanitizer,
-            Function<HttpHeaders, HttpHeaders> responseHeadersSanitizer,
-            Function<Object, Object> responseContentSanitizer,
+            Function<? super HttpHeaders, ? extends HttpHeaders> requestHeadersSanitizer,
+            Function<?, ?> requestContentSanitizer,
+            Function<? super HttpHeaders, ? extends HttpHeaders> requestTrailersSanitizer,
+            Function<? super HttpHeaders, ? extends HttpHeaders> responseHeadersSanitizer,
+            Function<?, ?> responseContentSanitizer,
+            Function<? super HttpHeaders, ? extends HttpHeaders> responseTrailersSanitizer,
             float samplingRate) {
         final ToStringHelper helper = MoreObjects.toStringHelper(self)
                                                  .add("requestLogLevel", requestLogLevel)
@@ -209,11 +319,18 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
         if (requestContentSanitizer != DEFAULT_CONTENT_SANITIZER) {
             helper.add("requestContentSanitizer", requestContentSanitizer);
         }
+        if (requestTrailersSanitizer != DEFAULT_HEADERS_SANITIZER) {
+            helper.add("requestTrailersSanitizer", requestTrailersSanitizer);
+        }
+
         if (responseHeadersSanitizer != DEFAULT_HEADERS_SANITIZER) {
             helper.add("responseHeadersSanitizer", responseHeadersSanitizer);
         }
         if (responseContentSanitizer != DEFAULT_CONTENT_SANITIZER) {
             helper.add("responseContentSanitizer", responseContentSanitizer);
+        }
+        if (responseTrailersSanitizer != DEFAULT_HEADERS_SANITIZER) {
+            helper.add("responseTrailersSanitizer", responseTrailersSanitizer);
         }
         return helper.toString();
     }

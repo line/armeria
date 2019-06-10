@@ -16,18 +16,20 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.linecorp.armeria.internal.docs.DocServiceUtil.unifyFilter;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
-import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Descriptors.ServiceDescriptor;
 
 import com.linecorp.armeria.common.HttpRequest;
@@ -46,15 +48,14 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceImplBase;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
-import com.linecorp.armeria.server.PathMapping;
-import com.linecorp.armeria.server.ServiceConfig;
-import com.linecorp.armeria.server.ServiceWithPathMappings;
-import com.linecorp.armeria.server.VirtualHost;
-import com.linecorp.armeria.server.VirtualHostBuilder;
+import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceWithRoutes;
+import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.EnumValueInfo;
-import com.linecorp.armeria.server.docs.FieldInfo;
+import com.linecorp.armeria.server.docs.FieldInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.ServiceInfo;
@@ -69,37 +70,13 @@ public class GrpcDocServicePluginTest {
             com.linecorp.armeria.grpc.testing.Test.getDescriptor()
                                                   .findServiceByName("TestService");
 
-    private final GrpcDocServicePlugin generator = new GrpcDocServicePlugin();
+    private static final GrpcDocServicePlugin generator = new GrpcDocServicePlugin();
 
     @Test
-    public void services() throws Exception {
-        final VirtualHost vhost = new VirtualHostBuilder().build();
-        final Set<ServiceConfig> serviceCfgs = new HashSet<>();
+    public void servicesTest() throws Exception {
+        final Map<String, ServiceInfo> services = services((plugin, service, method) -> true,
+                                                           (plugin, service, method) -> false);
 
-        // The case where a GrpcService is added to ServerBuilder without a prefix.
-        final ServiceWithPathMappings<HttpRequest, HttpResponse> prefixlessService =
-                new GrpcServiceBuilder().addService(mock(TestServiceImplBase.class)).build();
-        prefixlessService.pathMappings().forEach(
-                mapping -> serviceCfgs.add(new ServiceConfig(vhost, mapping, prefixlessService)));
-
-        // The case where a GrpcService is added to ServerBuilder with a prefix.
-        serviceCfgs.add(new ServiceConfig(
-                new VirtualHostBuilder().build(),
-                PathMapping.ofPrefix("/test"),
-                new GrpcServiceBuilder().addService(mock(UnitTestServiceImplBase.class)).build()));
-
-        // Another GrpcService with a different prefix.
-        serviceCfgs.add(new ServiceConfig(
-                new VirtualHostBuilder().build(),
-                PathMapping.ofPrefix("/reconnect"),
-                new GrpcServiceBuilder().addService(mock(ReconnectServiceImplBase.class)).build()));
-
-        // Make sure all services and their endpoints exist in the specification.
-        final ServiceSpecification specification = generator.generateSpecification(serviceCfgs);
-        final Map<String, ServiceInfo> services = specification
-                .services()
-                .stream()
-                .collect(toImmutableMap(ServiceInfo::name, Function.identity()));
         assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME,
                                               UnitTestServiceGrpc.SERVICE_NAME,
                                               ReconnectServiceGrpc.SERVICE_NAME);
@@ -114,6 +91,119 @@ public class GrpcDocServicePluginTest {
             assertThat(e.pathMapping()).isEqualTo("/reconnect/armeria.grpc.testing.ReconnectService/" +
                                                   m.name());
         }));
+    }
+
+    @Test
+    public void include() {
+
+        // 1. Nothing specified: include all.
+        // 2. Exclude specified: include all except the methods which the exclude filter returns true.
+        // 3. Include specified: include the methods which the include filter returns true.
+        // 4. Include and exclude specified: include the methods which the include filter returns true and
+        //    the exclude filter returns false.
+
+        // 1. Nothing specified.
+        DocServiceFilter include = (plugin, service, method) -> true;
+        DocServiceFilter exclude = (plugin, service, method) -> false;
+        Map<String, ServiceInfo> services = services(include, exclude);
+        assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME, UnitTestServiceGrpc.SERVICE_NAME,
+                                              ReconnectServiceGrpc.SERVICE_NAME);
+
+        // 2. Exclude specified.
+        exclude = DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME, "EmptyCall").or(
+                DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME, "HalfDuplexCall"));
+        services = services(include, exclude);
+        assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME, UnitTestServiceGrpc.SERVICE_NAME,
+                                              ReconnectServiceGrpc.SERVICE_NAME);
+
+        List<String> methods = methods(services);
+        assertThat(methods).containsExactlyInAnyOrder("FullDuplexCall",
+                                                      "StreamingInputCall",
+                                                      "StreamingOutputCall",
+                                                      "UnaryCall",
+                                                      "UnaryCall2",
+                                                      "UnimplementedCall");
+
+        // 3-1. Include serviceName specified.
+        include = DocServiceFilter.ofServiceName(TestServiceGrpc.SERVICE_NAME);
+        // Set the exclude to the default.
+        exclude = (plugin, service, method) -> false;
+        services = services(include, exclude);
+        assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME);
+
+        methods = methods(services);
+        assertThat(methods).containsExactlyInAnyOrder("EmptyCall",
+                                                      "FullDuplexCall",
+                                                      "HalfDuplexCall",
+                                                      "StreamingInputCall",
+                                                      "StreamingOutputCall",
+                                                      "UnaryCall",
+                                                      "UnaryCall2",
+                                                      "UnimplementedCall");
+
+        // 3-2. Include methodName specified.
+        include = DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME, "EmptyCall");
+        services = services(include, exclude);
+        assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME);
+
+        methods = methods(services);
+        assertThat(methods).containsOnlyOnce("EmptyCall");
+
+        // 4-1. Include and exclude specified.
+        include = DocServiceFilter.ofServiceName(TestServiceGrpc.SERVICE_NAME);
+        exclude = DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME, "EmptyCall").or(
+                DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME, "HalfDuplexCall"));
+        services = services(include, exclude);
+        assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME);
+
+        methods = methods(services);
+        assertThat(methods).containsExactlyInAnyOrder("FullDuplexCall",
+                                                      "StreamingInputCall",
+                                                      "StreamingOutputCall",
+                                                      "UnaryCall",
+                                                      "UnaryCall2",
+                                                      "UnimplementedCall");
+
+        // 4-2. Include and exclude specified.
+        include = DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME, "EmptyCall");
+        exclude = DocServiceFilter.ofServiceName(TestServiceGrpc.SERVICE_NAME);
+        services = services(include, exclude);
+        assertThat(services.size()).isZero();
+    }
+
+    private static Map<String, ServiceInfo> services(DocServiceFilter include, DocServiceFilter exclude) {
+        final ServerBuilder serverBuilder = new ServerBuilder();
+
+        // The case where a GrpcService is added to ServerBuilder without a prefix.
+        final ServiceWithRoutes<HttpRequest, HttpResponse> prefixlessService =
+                new GrpcServiceBuilder().addService(mock(TestServiceImplBase.class)).build();
+        serverBuilder.service(prefixlessService);
+
+        // The case where a GrpcService is added to ServerBuilder with a prefix.
+        serverBuilder.service(
+                Route.builder().prefix("/test").build(),
+                new GrpcServiceBuilder().addService(mock(UnitTestServiceImplBase.class)).build());
+
+        // Another GrpcService with a different prefix.
+        serverBuilder.service(
+                Route.builder().prefix("/reconnect").build(),
+                new GrpcServiceBuilder().addService(mock(ReconnectServiceImplBase.class)).build());
+
+        // Make sure all services and their endpoints exist in the specification.
+        final ServiceSpecification specification = generator.generateSpecification(
+                ImmutableSet.copyOf(serverBuilder.build().serviceConfigs()),
+                unifyFilter(include, exclude));
+        return specification
+                .services()
+                .stream()
+                .collect(toImmutableMap(ServiceInfo::name, Function.identity()));
+    }
+
+    private static List<String> methods(Map<String, ServiceInfo> services) {
+        return services.get(TestServiceGrpc.SERVICE_NAME).methods()
+                       .stream()
+                       .map(MethodInfo::name)
+                       .collect(toImmutableList());
     }
 
     @Test
@@ -177,7 +267,7 @@ public class GrpcDocServicePluginTest {
 
     @Test
     public void newServiceInfo() throws Exception {
-        final ServiceInfo service = GrpcDocServicePlugin.newServiceInfo(
+        final ServiceInfo service = generator.newServiceInfo(
                 new ServiceEntry(
                         TEST_SERVICE_DESCRIPTOR,
                         ImmutableList.of(
@@ -186,7 +276,8 @@ public class GrpcDocServicePluginTest {
                                         .build(),
                                 new EndpointInfoBuilder("*", "/debug/foo")
                                         .fragment("b").availableFormats(GrpcSerializationFormats.JSON)
-                                        .build())));
+                                        .build())),
+                (pluginName, serviceName, methodName) -> true);
 
         final Map<String, MethodInfo> functions = service
                 .methods()
@@ -196,11 +287,11 @@ public class GrpcDocServicePluginTest {
         final MethodInfo emptyCall = functions.get("EmptyCall");
         assertThat(emptyCall.name()).isEqualTo("EmptyCall");
         assertThat(emptyCall.parameters())
-                .containsExactly(
-                        new FieldInfo(
-                                "request",
-                                FieldRequirement.REQUIRED,
-                                TypeSignature.ofNamed("armeria.grpc.testing.Empty", Empty.getDescriptor())));
+                .containsExactly(new FieldInfoBuilder("request",
+                                                      TypeSignature.ofNamed("armeria.grpc.testing.Empty",
+                                                                            Empty.getDescriptor()))
+                                         .requirement(FieldRequirement.REQUIRED)
+                                         .build());
         assertThat(emptyCall.returnTypeSignature())
                 .isEqualTo(TypeSignature.ofNamed("armeria.grpc.testing.Empty", Empty.getDescriptor()));
 

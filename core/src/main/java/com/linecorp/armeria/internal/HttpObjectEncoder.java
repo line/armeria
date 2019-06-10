@@ -56,8 +56,8 @@ public abstract class HttpObjectEncoder {
         return doWriteHeaders(id, streamId, headers, endStream);
     }
 
-    protected abstract ChannelFuture doWriteHeaders(
-            int id, int streamId, HttpHeaders headers, boolean endStream);
+    protected abstract ChannelFuture doWriteHeaders(int id, int streamId, HttpHeaders headers,
+                                                    boolean endStream);
 
     /**
      * Writes an {@link HttpData}.
@@ -119,7 +119,7 @@ public abstract class HttpObjectEncoder {
             return ((ByteBufHolder) data).content();
         }
         final ByteBuf buf = channel().alloc().directBuffer(data.length(), data.length());
-        buf.writeBytes(data.array(), data.offset(), data.length());
+        buf.writeBytes(data.array());
         return buf;
     }
 }

@@ -21,17 +21,18 @@ import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nullable;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.ReferenceCountUtil;
 
-final class HttpRequestAggregator extends HttpMessageAggregator {
+final class HttpRequestAggregator extends HttpMessageAggregator<AggregatedHttpRequest> {
 
     private final HttpRequest request;
-    private HttpHeaders trailingHeaders;
+    private HttpHeaders trailers;
 
-    HttpRequestAggregator(HttpRequest request, CompletableFuture<AggregatedHttpMessage> future,
+    HttpRequestAggregator(HttpRequest request, CompletableFuture<AggregatedHttpRequest> future,
                           @Nullable ByteBufAllocator alloc) {
         super(future, alloc);
         this.request = request;
-        trailingHeaders = HttpHeaders.EMPTY_HEADERS;
+        trailers = HttpHeaders.of();
     }
 
     @Override
@@ -40,20 +41,32 @@ final class HttpRequestAggregator extends HttpMessageAggregator {
             return;
         }
 
-        if (trailingHeaders.isEmpty()) {
-            trailingHeaders = headers;
+        if (trailers.isEmpty()) {
+            trailers = headers;
         } else {
-            trailingHeaders.add(headers);
+            // Optionally, only one trailers can be present.
+            // See https://tools.ietf.org/html/rfc7540#section-8.1
         }
     }
 
     @Override
-    protected AggregatedHttpMessage onSuccess(HttpData content) {
-        return AggregatedHttpMessage.of(request.headers(), content, trailingHeaders);
+    protected void onData(HttpData data) {
+        if (!trailers.isEmpty()) {
+            ReferenceCountUtil.safeRelease(data);
+            // Data can't come after trailers.
+            // See https://tools.ietf.org/html/rfc7540#section-8.1
+            return;
+        }
+        super.onData(data);
+    }
+
+    @Override
+    protected AggregatedHttpRequest onSuccess(HttpData content) {
+        return AggregatedHttpRequest.of(request.headers(), content, trailers);
     }
 
     @Override
     protected void onFailure() {
-        trailingHeaders = HttpHeaders.EMPTY_HEADERS;
+        trailers = HttpHeaders.of();
     }
 }

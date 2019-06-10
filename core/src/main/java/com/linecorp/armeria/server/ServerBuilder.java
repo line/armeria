@@ -18,12 +18,13 @@ package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static com.linecorp.armeria.common.SessionProtocol.PROXY;
-import static com.linecorp.armeria.server.ServerConfig.validateDefaultMaxRequestLength;
-import static com.linecorp.armeria.server.ServerConfig.validateDefaultRequestTimeoutMillis;
+import static com.linecorp.armeria.server.ServerConfig.validateMaxRequestLength;
 import static com.linecorp.armeria.server.ServerConfig.validateNonNegative;
+import static com.linecorp.armeria.server.ServerConfig.validateRequestTimeoutMillis;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_UPPER_BOUND;
 import static java.util.Objects.requireNonNull;
@@ -31,6 +32,7 @@ import static java.util.Objects.requireNonNull;
 import java.io.File;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.charset.Charset;
 import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -40,11 +42,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
 
 import org.slf4j.Logger;
@@ -61,6 +64,10 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.ContentPreviewer;
+import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
+import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -71,7 +78,9 @@ import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.EpollChannelOption;
+import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.DomainNameMappingBuilder;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -84,8 +93,6 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
  * ServerBuilder sb = new ServerBuilder();
  * // Add a port to listen
  * sb.http(8080);
- * // Build and add a virtual host.
- * sb.virtualHost(new VirtualHostBuilder("*.foo.com").service(...).build());
  * // Add services to the default virtual host.
  * sb.service(...);
  * sb.serviceUnder(...);
@@ -98,15 +105,14 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
  * ServerBuilder sb = new ServerBuilder();
  * Server server =
  *     sb.http(8080) // Add a port to listen
- *       .withDefaultVirtualHost() // Add services to the default virtual host.
+ *       .defaultVirtualHost() // Add services to the default virtual host.
  *           .service(...)
  *           .serviceUnder(...)
- *       .and().withVirtualHost("*.foo.com") // Add a another virtual host.
+ *       .and().virtualHost("*.foo.com") // Add a another virtual host.
  *           .service(...)
  *           .serviceUnder(...)
  *       .and().build(); // Build a server.
  * }</pre>
- *
  *
  * <h2 id="no_port_specified">What happens if no HTTP(S) port is specified?</h2>
  *
@@ -143,14 +149,9 @@ public final class ServerBuilder {
 
     private final List<ServerPort> ports = new ArrayList<>();
     private final List<ServerListener> serverListeners = new ArrayList<>();
-    private final List<VirtualHost> virtualHosts = new ArrayList<>();
-    private final List<ChainedVirtualHostBuilder> virtualHostBuilders = new ArrayList<>();
-    private final ChainedVirtualHostBuilder defaultVirtualHostBuilder = new ChainedVirtualHostBuilder(this);
-    private boolean updatedDefaultVirtualHostBuilder;
-    private RejectedPathMappingHandler rejectedPathMappingHandler = RejectedPathMappingHandler.WARN;
+    private final List<VirtualHostBuilder> virtualHostBuilders = new ArrayList<>();
+    private final VirtualHostBuilder defaultVirtualHostBuilder = new VirtualHostBuilder(this, true);
 
-    @Nullable
-    private VirtualHost defaultVirtualHost;
     private EventLoopGroup workerGroup = CommonPools.workerGroup();
     private boolean shutdownWorkerGroupOnStop;
     private Executor startStopExecutor = GlobalEventExecutor.INSTANCE;
@@ -158,9 +159,6 @@ public final class ServerBuilder {
     private final Map<ChannelOption<?>, Object> childChannelOptions = new Object2ObjectArrayMap<>();
     private int maxNumConnections = Flags.maxNumConnections();
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
-    private long defaultRequestTimeoutMillis = Flags.defaultRequestTimeoutMillis();
-    private long defaultMaxRequestLength = Flags.defaultMaxRequestLength();
-    private boolean verboseResponses = Flags.verboseResponses();
     private int http2InitialConnectionWindowSize = Flags.defaultHttp2InitialConnectionWindowSize();
     private int http2InitialStreamWindowSize = Flags.defaultHttp2InitialStreamWindowSize();
     private long http2MaxStreamsPerConnection = Flags.defaultHttp2MaxStreamsPerConnection();
@@ -173,6 +171,7 @@ public final class ServerBuilder {
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
     private Executor blockingTaskExecutor = CommonPools.blockingTaskExecutor();
+    private boolean shutdownBlockingTaskExecutorOnStop;
     private MeterRegistry meterRegistry = Metrics.globalRegistry;
     private String serviceLoggerPrefix = DEFAULT_SERVICE_LOGGER_PREFIX;
     private AccessLogWriter accessLogWriter = AccessLogWriter.disabled();
@@ -180,6 +179,15 @@ public final class ServerBuilder {
     private List<ClientAddressSource> clientAddressSources = ClientAddressSource.DEFAULT_SOURCES;
     private Predicate<InetAddress> clientAddressTrustedProxyFilter = address -> false;
     private Predicate<InetAddress> clientAddressFilter = address -> true;
+    private RejectedRouteHandler rejectedRouteHandler = RejectedRouteHandler.WARN;
+
+    // These properties can also be set in the service level.
+
+    private long requestTimeoutMillis = Flags.defaultRequestTimeoutMillis();
+    private long maxRequestLength = Flags.defaultMaxRequestLength();
+    private boolean verboseResponses = Flags.verboseResponses();
+    private ContentPreviewerFactory requestContentPreviewerFactory = ContentPreviewerFactory.disabled();
+    private ContentPreviewerFactory responseContentPreviewerFactory = ContentPreviewerFactory.disabled();
 
     @Nullable
     private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
@@ -390,15 +398,6 @@ public final class ServerBuilder {
     }
 
     /**
-     * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>
-     * specified by {@link VirtualHost}.
-     */
-    public ServerBuilder virtualHost(VirtualHost virtualHost) {
-        virtualHosts.add(requireNonNull(virtualHost, "virtualHost"));
-        return this;
-    }
-
-    /**
      * Sets the worker {@link EventLoopGroup} which is responsible for performing socket I/O and running
      * {@link Service#serve(ServiceRequestContext, Request)}.
      * If not set, {@linkplain CommonPools#workerGroup() the common worker group} is used.
@@ -452,48 +451,6 @@ public final class ServerBuilder {
     public ServerBuilder idleTimeout(Duration idleTimeout) {
         requireNonNull(idleTimeout, "idleTimeout");
         idleTimeoutMillis = ServerConfig.validateIdleTimeoutMillis(idleTimeout.toMillis());
-        return this;
-    }
-
-    /**
-     * Sets the default timeout of a request in milliseconds.
-     *
-     * @param defaultRequestTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
-     */
-    public ServerBuilder defaultRequestTimeoutMillis(long defaultRequestTimeoutMillis) {
-        this.defaultRequestTimeoutMillis = validateDefaultRequestTimeoutMillis(defaultRequestTimeoutMillis);
-        return this;
-    }
-
-    /**
-     * Sets the default timeout of a request.
-     *
-     * @param defaultRequestTimeout the timeout. {@code 0} disables the timeout.
-     */
-    public ServerBuilder defaultRequestTimeout(Duration defaultRequestTimeout) {
-        return defaultRequestTimeoutMillis(
-                requireNonNull(defaultRequestTimeout, "defaultRequestTimeout").toMillis());
-    }
-
-    /**
-     * Sets the maximum allowed length of the content decoded at the session layer.
-     * e.g. the content length of an HTTP request.
-     *
-     * @param defaultMaxRequestLength the maximum allowed length. {@code 0} disables the length limit.
-     */
-    public ServerBuilder defaultMaxRequestLength(long defaultMaxRequestLength) {
-        this.defaultMaxRequestLength = validateDefaultMaxRequestLength(defaultMaxRequestLength);
-        return this;
-    }
-
-    /**
-     * Sets whether the verbose response mode is enabled. When enabled, the server responses will contain
-     * the exception type and its full stack trace, which may be useful for debugging while potentially
-     * insecure. When disabled, the server responses will not expose such server-side details to the client.
-     * The default value of this property is retrieved from {@link Flags#verboseResponses()}.
-     */
-    public ServerBuilder verboseResponses(boolean verboseResponses) {
-        this.verboseResponses = verboseResponses;
         return this;
     }
 
@@ -639,9 +596,24 @@ public final class ServerBuilder {
     /**
      * Sets the {@link Executor} dedicated to the execution of blocking tasks or invocations.
      * If not set, {@linkplain CommonPools#blockingTaskExecutor() the common pool} is used.
+     *
+     * @deprecated Use {@link #blockingTaskExecutor(Executor, boolean)}.
+     *
      */
+    @Deprecated
     public ServerBuilder blockingTaskExecutor(Executor blockingTaskExecutor) {
+        return blockingTaskExecutor(blockingTaskExecutor, false);
+    }
+
+    /**
+     * Sets the {@link Executor} dedicated to the execution of blocking tasks or invocations.
+     * If not set, {@linkplain CommonPools#blockingTaskExecutor() the common pool} is used.
+     *
+     * @param shutdownOnStop whether to shut down the {@link Executor} when the {@link Server} stops
+     */
+    public ServerBuilder blockingTaskExecutor(Executor blockingTaskExecutor, boolean shutdownOnStop) {
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+        shutdownBlockingTaskExecutorOnStop = shutdownOnStop;
         return this;
     }
 
@@ -700,12 +672,8 @@ public final class ServerBuilder {
 
     /**
      * Sets the {@link SslContext} of the default {@link VirtualHost}.
-     *
-     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
-     *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
     public ServerBuilder tls(SslContext sslContext) {
-        defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.tls(sslContext);
         return this;
     }
@@ -713,28 +681,50 @@ public final class ServerBuilder {
     /**
      * Configures SSL or TLS of the default {@link VirtualHost} from the specified {@code keyCertChainFile}
      * and cleartext {@code keyFile}.
-     *
-     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
-     *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
     public ServerBuilder tls(File keyCertChainFile, File keyFile) throws SSLException {
-        defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.tls(keyCertChainFile, keyFile);
         return this;
     }
 
     /**
      * Configures SSL or TLS of the default {@link VirtualHost} from the specified {@code keyCertChainFile},
+     * cleartext {@code keyFile} and {@code tlsCustomizer}.
+     */
+    public ServerBuilder tls(File keyCertChainFile, File keyFile,
+                             Consumer<SslContextBuilder> tlsCustomizer) throws SSLException {
+        defaultVirtualHostBuilder.tls(keyCertChainFile, keyFile, tlsCustomizer);
+        return this;
+    }
+
+    /**
+     * Configures SSL or TLS of the default {@link VirtualHost} from the specified {@code keyCertChainFile},
      * {@code keyFile} and {@code keyPassword}.
-     *
-     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
-     *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
     public ServerBuilder tls(
             File keyCertChainFile, File keyFile, @Nullable String keyPassword) throws SSLException {
-
-        defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.tls(keyCertChainFile, keyFile, keyPassword);
+        return this;
+    }
+
+    /**
+     * Configures SSL or TLS of the default {@link VirtualHost} from the specified {@code keyCertChainFile},
+     * {@code keyFile}, {@code keyPassword} and {@code tlsCustomizer}.
+     */
+    public ServerBuilder tls(
+            File keyCertChainFile, File keyFile, @Nullable String keyPassword,
+            Consumer<SslContextBuilder> tlsCustomizer) throws SSLException {
+        defaultVirtualHostBuilder.tls(keyCertChainFile, keyFile, keyPassword, tlsCustomizer);
+        return this;
+    }
+
+    /**
+     * Configures SSL or TLS of the default {@link VirtualHost} from the specified {@code keyManagerFactory}
+     * and {@code tlsCustomizer}.
+     */
+    public ServerBuilder tls(KeyManagerFactory keyManagerFactory,
+                             Consumer<SslContextBuilder> tlsCustomizer) throws SSLException {
+        defaultVirtualHostBuilder.tls(keyManagerFactory, tlsCustomizer);
         return this;
     }
 
@@ -743,12 +733,9 @@ public final class ServerBuilder {
      * certificate. <strong>Note:</strong> You should never use this in production but only for a testing
      * purpose.
      *
-     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
-     *                               {@link #defaultVirtualHost(VirtualHost)} already
      * @throws CertificateException if failed to generate a self-signed certificate
      */
     public ServerBuilder tlsSelfSigned() throws SSLException, CertificateException {
-        defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.tlsSelfSigned();
         return this;
     }
@@ -757,13 +744,9 @@ public final class ServerBuilder {
      * Sets the {@link SslContext} of the default {@link VirtualHost}.
      *
      * @deprecated Use {@link #tls(SslContext)}.
-     *
-     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
-     *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
     @Deprecated
     public ServerBuilder sslContext(SslContext sslContext) {
-        defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.tls(sslContext);
         return this;
     }
@@ -773,14 +756,10 @@ public final class ServerBuilder {
      * {@link SessionProtocol}, {@code keyCertChainFile} and cleartext {@code keyFile}.
      *
      * @deprecated Use {@link #tls(File, File)}.
-     *
-     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
-     *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
     @Deprecated
     public ServerBuilder sslContext(
             SessionProtocol protocol, File keyCertChainFile, File keyFile) throws SSLException {
-        defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.sslContext(protocol, keyCertChainFile, keyFile);
         return this;
     }
@@ -790,18 +769,29 @@ public final class ServerBuilder {
      * {@link SessionProtocol}, {@code keyCertChainFile}, {@code keyFile} and {@code keyPassword}.
      *
      * @deprecated Use {@link #tls(File, File, String)}.
-     *
-     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
-     *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
     @Deprecated
     public ServerBuilder sslContext(
             SessionProtocol protocol,
             File keyCertChainFile, File keyFile, String keyPassword) throws SSLException {
-
-        defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.sslContext(protocol, keyCertChainFile, keyFile, keyPassword);
         return this;
+    }
+
+    /**
+     * Configures a {@link Service} of the default {@link VirtualHost} with the {@code customizer}.
+     */
+    public ServerBuilder withRoute(Consumer<ServiceBindingBuilder> customizer) {
+        final ServiceBindingBuilder serviceBindingBuilder = new ServiceBindingBuilder(this);
+        customizer.accept(serviceBindingBuilder);
+        return this;
+    }
+
+    /**
+     * Returns a {@link ServiceBindingBuilder} which is for binding a {@link Service} fluently.
+     */
+    public ServiceBindingBuilder route() {
+        return new ServiceBindingBuilder(this);
     }
 
     /**
@@ -816,12 +806,8 @@ public final class ServerBuilder {
 
     /**
      * Binds the specified {@link Service} under the specified directory of the default {@link VirtualHost}.
-     *
-     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
-     *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
     public ServerBuilder serviceUnder(String pathPrefix, Service<HttpRequest, HttpResponse> service) {
-        defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.serviceUnder(pathPrefix, service);
         return this;
     }
@@ -840,69 +826,49 @@ public final class ServerBuilder {
      * </ul>
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
-     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
-     *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
     public ServerBuilder service(String pathPattern, Service<HttpRequest, HttpResponse> service) {
-        defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.service(pathPattern, service);
         return this;
     }
 
     /**
-     * Binds the specified {@link Service} at the specified {@link PathMapping} of the default
+     * Binds the specified {@link Service} at the specified {@link Route} of the default
      * {@link VirtualHost}.
-     *
-     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
-     *                               {@link #defaultVirtualHost(VirtualHost)} already
      */
-    public ServerBuilder service(PathMapping pathMapping, Service<HttpRequest, HttpResponse> service) {
-        defaultVirtualHostBuilderUpdated();
-        defaultVirtualHostBuilder.service(pathMapping, service);
+    public ServerBuilder service(Route route, Service<HttpRequest, HttpResponse> service) {
+        defaultVirtualHostBuilder.service(route, service);
         return this;
     }
 
     /**
-     * Binds the specified {@link Service} at the specified {@link PathMapping} of the default
-     * {@link VirtualHost}.
-     *
-     * @deprecated Use a logging framework integration such as {@code RequestContextExportingAppender} in
-     *             {@code armeria-logback}.
-     */
-    @Deprecated
-    public ServerBuilder service(PathMapping pathMapping, Service<HttpRequest, HttpResponse> service,
-                                 String loggerName) {
-        defaultVirtualHostBuilderUpdated();
-        defaultVirtualHostBuilder.service(pathMapping, service, loggerName);
-        return this;
-    }
-
-    /**
-     * Binds the specified {@link ServiceWithPathMappings} at multiple {@link PathMapping}s
+     * Decorates and binds the specified {@link ServiceWithRoutes} at multiple {@link Route}s
      * of the default {@link VirtualHost}.
      *
-     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
-     *                               {@link #defaultVirtualHost(VirtualHost)} already
+     * @param serviceWithRoutes the {@link ServiceWithRoutes}.
+     * @param decorators the decorator functions, which will be applied in the order specified.
      */
-    public <T extends ServiceWithPathMappings<HttpRequest, HttpResponse>>
-    ServerBuilder service(T serviceWithPathMappings) {
-        defaultVirtualHostBuilderUpdated();
-        defaultVirtualHostBuilder.service(serviceWithPathMappings);
+    public ServerBuilder service(
+            ServiceWithRoutes<HttpRequest, HttpResponse> serviceWithRoutes,
+            Iterable<Function<? super Service<HttpRequest, HttpResponse>,
+                    ? extends Service<HttpRequest, HttpResponse>>> decorators) {
+        defaultVirtualHostBuilder.service(serviceWithRoutes, decorators);
         return this;
     }
 
     /**
-     * Decorates and binds the specified {@link ServiceWithPathMappings} at multiple {@link PathMapping}s
+     * Decorates and binds the specified {@link ServiceWithRoutes} at multiple {@link Route}s
      * of the default {@link VirtualHost}.
      *
-     * @throws IllegalStateException if the default {@link VirtualHost} has been set via
-     *                               {@link #defaultVirtualHost(VirtualHost)} already
+     * @param serviceWithRoutes the {@link ServiceWithRoutes}.
+     * @param decorators the decorator functions, which will be applied in the order specified.
      */
-    public <T extends ServiceWithPathMappings<HttpRequest, HttpResponse>,
-            R extends Service<HttpRequest, HttpResponse>>
-    ServerBuilder service(T serviceWithPathMappings, Function<? super T, R> decorator) {
-        defaultVirtualHostBuilderUpdated();
-        defaultVirtualHostBuilder.service(serviceWithPathMappings, decorator);
+    @SafeVarargs
+    public final ServerBuilder service(
+            ServiceWithRoutes<HttpRequest, HttpResponse> serviceWithRoutes,
+            Function<? super Service<HttpRequest, HttpResponse>,
+                    ? extends Service<HttpRequest, HttpResponse>>... decorators) {
+        defaultVirtualHostBuilder.service(serviceWithRoutes, decorators);
         return this;
     }
 
@@ -1009,41 +975,13 @@ public final class ServerBuilder {
         requireNonNull(decorator, "decorator");
         requireNonNull(exceptionHandlersAndConverters, "exceptionHandlersAndConverters");
 
-        defaultVirtualHostBuilderUpdated();
         defaultVirtualHostBuilder.annotatedService(pathPrefix, service, decorator,
                                                    exceptionHandlersAndConverters);
         return this;
     }
 
-    private void defaultVirtualHostBuilderUpdated() {
-        updatedDefaultVirtualHostBuilder = true;
-        if (defaultVirtualHost != null) {
-            throw new IllegalStateException("ServerBuilder.defaultVirtualHost() invoked already.");
-        }
-    }
-
-    /**
-     * Sets the default {@link VirtualHost}, which is used when no other {@link VirtualHost}s match the
-     * host name of a client request. e.g. the {@code "Host"} header in HTTP or host name in TLS SNI extension
-     *
-     * @throws IllegalStateException
-     *     if other default {@link VirtualHost} builder methods have been invoked already, including:
-     *     <ul>
-     *       <li>{@link #tls(SslContext)}</li>
-     *       <li>{@link #service(String, Service)}</li>
-     *       <li>{@link #serviceUnder(String, Service)}</li>
-     *       <li>{@link #service(PathMapping, Service)}</li>
-     *     </ul>
-     *
-     * @see #virtualHost(VirtualHost)
-     */
-    public ServerBuilder defaultVirtualHost(VirtualHost defaultVirtualHost) {
-        requireNonNull(defaultVirtualHost, "defaultVirtualHost");
-        if (updatedDefaultVirtualHostBuilder) {
-            throw new IllegalStateException("invoked other default VirtualHost builder methods already");
-        }
-
-        this.defaultVirtualHost = defaultVirtualHost;
+    ServerBuilder serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder) {
+        defaultVirtualHostBuilder.serviceConfigBuilder(serviceConfigBuilder);
         return this;
     }
 
@@ -1057,41 +995,108 @@ public final class ServerBuilder {
     }
 
     /**
-     * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>
-     * specified by {@link VirtualHost}.
-     *
-     * @return {@link VirtualHostBuilder} for build the default virtual host
+     * Sets the default hostname of the default {@link VirtualHostBuilder}.
      */
-    public ChainedVirtualHostBuilder withDefaultVirtualHost() {
-        defaultVirtualHostBuilderUpdated();
+    public ServerBuilder defaultHostname(String defaultHostname) {
+        defaultVirtualHostBuilder.defaultHostname(defaultHostname);
+        return this;
+    }
+
+    /**
+     * Configures the default {@link VirtualHost} with the {@code customizer}.
+     */
+    public ServerBuilder withDefaultVirtualHost(Consumer<VirtualHostBuilder> customizer) {
+        customizer.accept(defaultVirtualHostBuilder);
+        return this;
+    }
+
+    /**
+     * Returns the {@link VirtualHostBuilder} for building the default
+     * <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>.
+     *
+     * @deprecated Use {@link #defaultVirtualHost()}.
+     */
+    @Deprecated
+    public VirtualHostBuilder withDefaultVirtualHost() {
         return defaultVirtualHostBuilder;
     }
 
     /**
-     * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>
-     * specified by {@link VirtualHost}.
+     * Returns the {@link VirtualHostBuilder} for building the default
+     * <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>.
+     */
+    public VirtualHostBuilder defaultVirtualHost() {
+        return defaultVirtualHostBuilder;
+    }
+
+    /**
+     * Configures a {@link VirtualHost} with the {@code customizer}.
+     */
+    public ServerBuilder withVirtualHost(Consumer<VirtualHostBuilder> customizer) {
+        final VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(this, false);
+        customizer.accept(virtualHostBuilder);
+        virtualHostBuilders.add(virtualHostBuilder);
+        return this;
+    }
+
+    /**
+     * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>.
+     *
+     * @deprecated Use {@link #virtualHost(String)}.
      *
      * @param hostnamePattern virtual host name regular expression
-     * @return {@link VirtualHostBuilder} for build the virtual host
+     * @return {@link VirtualHostBuilder} for building the virtual host
      */
-    public ChainedVirtualHostBuilder withVirtualHost(String hostnamePattern) {
-        final ChainedVirtualHostBuilder virtualHostBuilder =
-                new ChainedVirtualHostBuilder(hostnamePattern, this);
+    @Deprecated
+    public VirtualHostBuilder withVirtualHost(String hostnamePattern) {
+        final VirtualHostBuilder virtualHostBuilder =
+                new VirtualHostBuilder(this, false).hostnamePattern(hostnamePattern);
         virtualHostBuilders.add(virtualHostBuilder);
         return virtualHostBuilder;
     }
 
     /**
-     * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>
-     * specified by {@link VirtualHost}.
+     * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>.
+     *
+     * @deprecated Use {@link #virtualHost(String, String)}.
      *
      * @param defaultHostname default hostname of this virtual host
      * @param hostnamePattern virtual host name regular expression
-     * @return {@link VirtualHostBuilder} for build the virtual host
+     * @return {@link VirtualHostBuilder} for building the virtual host
      */
-    public ChainedVirtualHostBuilder withVirtualHost(String defaultHostname, String hostnamePattern) {
-        final ChainedVirtualHostBuilder virtualHostBuilder =
-                new ChainedVirtualHostBuilder(defaultHostname, hostnamePattern, this);
+    @Deprecated
+    public VirtualHostBuilder withVirtualHost(String defaultHostname, String hostnamePattern) {
+        final VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(this, false)
+                .defaultHostname(defaultHostname)
+                .hostnamePattern(hostnamePattern);
+        virtualHostBuilders.add(virtualHostBuilder);
+        return virtualHostBuilder;
+    }
+
+    /**
+     * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>.
+     *
+     * @param hostnamePattern virtual host name regular expression
+     * @return {@link VirtualHostBuilder} for building the virtual host
+     */
+    public VirtualHostBuilder virtualHost(String hostnamePattern) {
+        final VirtualHostBuilder virtualHostBuilder =
+                new VirtualHostBuilder(this, false).hostnamePattern(hostnamePattern);
+        virtualHostBuilders.add(virtualHostBuilder);
+        return virtualHostBuilder;
+    }
+
+    /**
+     * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>.
+     *
+     * @param defaultHostname default hostname of this virtual host
+     * @param hostnamePattern virtual host name regular expression
+     * @return {@link VirtualHostBuilder} for building the virtual host
+     */
+    public VirtualHostBuilder virtualHost(String defaultHostname, String hostnamePattern) {
+        final VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(this, false)
+                .defaultHostname(defaultHostname)
+                .hostnamePattern(hostnamePattern);
         virtualHostBuilders.add(virtualHostBuilder);
         return virtualHostBuilder;
     }
@@ -1118,16 +1123,6 @@ public final class ServerBuilder {
             this.decorator = castDecorator;
         }
 
-        return this;
-    }
-
-    /**
-     * Sets the {@link RejectedPathMappingHandler} which will be invoked when an attempt to bind
-     * a {@link Service} at a certain {@link PathMapping} is rejected. By default, the duplicate
-     * mappings are logged at WARN level.
-     */
-    public ServerBuilder rejectedPathMappingHandler(RejectedPathMappingHandler handler) {
-        rejectedPathMappingHandler = requireNonNull(handler, "handler");
         return this;
     }
 
@@ -1172,13 +1167,14 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the default access logger mapper for all {@link VirtualHost}s.
+     * Sets the default access logger name for all {@link VirtualHost}s.
      * The {@link VirtualHost}s which do not have an access logger specified by a {@link VirtualHostBuilder}
-     * will have an access logger set by the {@code mapper} when {@link ServerBuilder#build()} is called.
+     * will have the same access {@link Logger} named the {@code loggerName}
+     * when {@link ServerBuilder#build()} is called.
      */
-    public ServerBuilder accessLogger(Function<VirtualHost, Logger> mapper) {
-        accessLoggerMapper = requireNonNull(mapper, "mapper");
-        return this;
+    public ServerBuilder accessLogger(String loggerName) {
+        requireNonNull(loggerName, "loggerName");
+        return accessLogger(LoggerFactory.getLogger(loggerName));
     }
 
     /**
@@ -1192,54 +1188,233 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the default access logger name for all {@link VirtualHost}s.
+     * Sets the default access logger mapper for all {@link VirtualHost}s.
      * The {@link VirtualHost}s which do not have an access logger specified by a {@link VirtualHostBuilder}
-     * will have the same access {@link Logger} named the {@code loggerName}
-     * when {@link ServerBuilder#build()} is called.
+     * will have an access logger set by the {@code mapper} when {@link ServerBuilder#build()} is called.
      */
-    public ServerBuilder accessLogger(String loggerName) {
-        requireNonNull(loggerName, "loggerName");
-        return accessLogger(LoggerFactory.getLogger(loggerName));
+    public ServerBuilder accessLogger(Function<VirtualHost, Logger> mapper) {
+        accessLoggerMapper = requireNonNull(mapper, "mapper");
+        return this;
+    }
+
+    Function<VirtualHost, Logger> accessLoggerMapper() {
+        return accessLoggerMapper;
+    }
+
+    /**
+     * Sets the {@link RejectedRouteHandler} which will be invoked when an attempt to bind
+     * a {@link Service} at a certain {@link Route} is rejected. By default, the duplicate
+     * routes are logged at WARN level.
+     */
+    public ServerBuilder rejectedRouteHandler(RejectedRouteHandler handler) {
+        rejectedRouteHandler = requireNonNull(handler, "handler");
+        defaultVirtualHostBuilder.rejectedRouteHandler(handler);
+        return this;
+    }
+
+    RejectedRouteHandler rejectedRouteHandler() {
+        return rejectedRouteHandler;
+    }
+
+    /**
+     * Sets the timeout of a request.
+     *
+     * @deprecated Use {@link #requestTimeout(Duration)}.
+     * @param requestTimeout the timeout. {@code 0} disables the timeout.
+     */
+    @Deprecated
+    public ServerBuilder defaultRequestTimeout(Duration requestTimeout) {
+        return requestTimeout(requestTimeout);
+    }
+
+    /**
+     * Sets the timeout of a request in milliseconds.
+     *
+     * @deprecated Use {@link #requestTimeoutMillis(long)}.
+     * @param requestTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
+     */
+    @Deprecated
+    public ServerBuilder defaultRequestTimeoutMillis(long requestTimeoutMillis) {
+        return requestTimeoutMillis(requestTimeoutMillis);
+    }
+
+    /**
+     * Returns the timeout of a request in milliseconds.
+     *
+     * @deprecated Use {@link #requestTimeoutMillis()}.
+     */
+    @Deprecated
+    long defaultRequestTimeoutMillis() {
+        return requestTimeoutMillis;
+    }
+
+    /**
+     * Sets the timeout of a request.
+     *
+     * @param requestTimeout the timeout. {@code 0} disables the timeout.
+     */
+    public ServerBuilder requestTimeout(Duration requestTimeout) {
+        return requestTimeoutMillis(requireNonNull(requestTimeout, "requestTimeout").toMillis());
+    }
+
+    /**
+     * Sets the timeout of a request in milliseconds.
+     *
+     * @param requestTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
+     */
+    public ServerBuilder requestTimeoutMillis(long requestTimeoutMillis) {
+        this.requestTimeoutMillis = validateRequestTimeoutMillis(requestTimeoutMillis);
+        defaultVirtualHostBuilder.requestTimeoutMillis(requestTimeoutMillis);
+        return this;
+    }
+
+    /**
+     * Returns the timeout of a request in milliseconds.
+     */
+    long requestTimeoutMillis() {
+        return requestTimeoutMillis;
+    }
+
+    /**
+     * Sets the maximum allowed length of the content decoded at the session layer.
+     * e.g. the content length of an HTTP request.
+     *
+     * @deprecated Use {@link #maxRequestLength(long)}.
+     *
+     * @param maxRequestLength the maximum allowed length. {@code 0} disables the length limit.
+     */
+    @Deprecated
+    public ServerBuilder defaultMaxRequestLength(long maxRequestLength) {
+        return maxRequestLength(maxRequestLength);
+    }
+
+    /**
+     * Returns the maximum allowed length of the content decoded at the session layer.
+     * e.g. the content length of an HTTP request.
+     *
+     * @deprecated Use {@link #maxRequestLength()}.
+     */
+    @Deprecated
+    long defaultMaxRequestLength() {
+        return maxRequestLength;
+    }
+
+    /**
+     * Sets the maximum allowed length of the content decoded at the session layer.
+     * e.g. the content length of an HTTP request.
+     *
+     * @param maxRequestLength the maximum allowed length. {@code 0} disables the length limit.
+     */
+    public ServerBuilder maxRequestLength(long maxRequestLength) {
+        this.maxRequestLength = validateMaxRequestLength(maxRequestLength);
+        defaultVirtualHostBuilder.maxRequestLength(maxRequestLength);
+        return this;
+    }
+
+    /**
+     * Returns the maximum allowed length of the content decoded at the session layer.
+     * e.g. the content length of an HTTP request.
+     */
+    long maxRequestLength() {
+        return maxRequestLength;
+    }
+
+    /**
+     * Sets whether the verbose response mode is enabled. When enabled, the server responses will contain
+     * the exception type and its full stack trace, which may be useful for debugging while potentially
+     * insecure. When disabled, the server responses will not expose such server-side details to the client.
+     * The default value of this property is retrieved from {@link Flags#verboseResponses()}.
+     */
+    public ServerBuilder verboseResponses(boolean verboseResponses) {
+        this.verboseResponses = verboseResponses;
+        defaultVirtualHostBuilder.verboseResponses(verboseResponses);
+        return this;
+    }
+
+    boolean verboseResponses() {
+        return verboseResponses;
+    }
+
+    /**
+     * Sets the {@link ContentPreviewerFactory} for a request of this {@link Server}.
+     */
+    public ServerBuilder requestContentPreviewerFactory(ContentPreviewerFactory factory) {
+        requestContentPreviewerFactory = requireNonNull(factory, "factory");
+        defaultVirtualHostBuilder.requestContentPreviewerFactory(factory);
+        return this;
+    }
+
+    ContentPreviewerFactory requestContentPreviewerFactory() {
+        return requestContentPreviewerFactory;
+    }
+
+    /**
+     * Sets the {@link ContentPreviewerFactory} for a response of this {@link Server}.
+     */
+    public ServerBuilder responseContentPreviewerFactory(ContentPreviewerFactory factory) {
+        responseContentPreviewerFactory = requireNonNull(factory, "factory");
+        defaultVirtualHostBuilder.responseContentPreviewerFactory(factory);
+        return this;
+    }
+
+    ContentPreviewerFactory responseContentPreviewerFactory() {
+        return responseContentPreviewerFactory;
+    }
+
+    /**
+     * Sets the {@link ContentPreviewerFactory} for a request and a response of this {@link Server}.
+     */
+    public ServerBuilder contentPreviewerFactory(ContentPreviewerFactory factory) {
+        requestContentPreviewerFactory(factory);
+        responseContentPreviewerFactory(factory);
+        return this;
+    }
+
+    /**
+     * Sets the {@link ContentPreviewerFactory} for creating a {@link ContentPreviewer} which produces the
+     * preview with the maximum {@code length} limit for a request and a response of this {@link Server}.
+     * The previewer is enabled only if the content type of a request/response meets
+     * any of the following conditions:
+     * <ul>
+     *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
+     *     <li>when its charset has been specified</li>
+     *     <li>when its subtype is {@code "xml"} or {@code "json"}</li>
+     *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
+     * </ul>
+     * @param length the maximum length of the preview
+     * @param defaultCharset the default charset used when a charset is not specified in the
+     *                       {@code "content-type"} header
+     */
+    public ServerBuilder contentPreview(int length, Charset defaultCharset) {
+        return contentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
+    }
+
+    /**
+     * Sets the {@link ContentPreviewerFactory} for creating a {@link ContentPreviewer} which produces the
+     * preview with the maximum {@code length} limit for a request and a response of this {@link Server}.
+     * The previewer is enabled only if the content type of a request/response meets
+     * any of the following conditions:
+     * <ul>
+     *     <li>when it matches {@code text/*} or {@code application/x-www-form-urlencoded}</li>
+     *     <li>when its charset has been specified</li>
+     *     <li>when its subtype is {@code "xml"} or {@code "json"}</li>
+     *     <li>when its subtype ends with {@code "+xml"} or {@code "+json"}</li>
+     * </ul>
+     * @param length the maximum length of the preview.
+     */
+    public ServerBuilder contentPreview(int length) {
+        return contentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
     }
 
     /**
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
-        final VirtualHost defaultVirtualHost;
-        if (this.defaultVirtualHost != null) {
-            defaultVirtualHost = this.defaultVirtualHost.decorate(decorator);
-        } else {
-            defaultVirtualHost = defaultVirtualHostBuilder.build().decorate(decorator);
-        }
-
-        virtualHostBuilders.forEach(vhb -> virtualHosts.add(vhb.build()));
-
-        final List<VirtualHost> virtualHosts;
-        if (decorator != null) {
-            virtualHosts = this.virtualHosts.stream()
-                                            .map(h -> h.decorate(decorator))
-                                            .collect(Collectors.toList());
-        } else {
-            virtualHosts = this.virtualHosts;
-        }
-
-        // Gets the access logger for each virtual host.
-        virtualHosts.forEach(vh -> {
-            if (vh.accessLoggerOrNull() == null) {
-                final Logger logger = accessLoggerMapper.apply(vh);
-
-                checkState(logger != null, "accessLoggerMapper.apply() has returned null for virtual host: %s.",
-                           vh.hostnamePattern());
-                vh.accessLogger(logger);
-            }
-        });
-        if (defaultVirtualHost.accessLoggerOrNull() == null) {
-            final Logger logger = accessLoggerMapper.apply(defaultVirtualHost);
-            checkState(logger != null,
-                       "accessLoggerMapper.apply() has returned null for the default virtual host.");
-            defaultVirtualHost.accessLogger(logger);
-        }
+        final VirtualHost defaultVirtualHost = defaultVirtualHostBuilder.build().decorate(decorator);
+        final List<VirtualHost> virtualHosts = virtualHostBuilders.stream()
+                                                                  .map(VirtualHostBuilder::build)
+                                                                  .map(vh -> vh.decorate(decorator))
+                                                                  .collect(toImmutableList());
 
         // Pre-populate the domain name mapping for later matching.
         final DomainNameMapping<SslContext> sslContexts;
@@ -1265,6 +1440,15 @@ public final class ServerBuilder {
                 ports = ImmutableList.of(new ServerPort(0, HTTP));
             }
         } else {
+            if ((!OpenSsl.isAvailable() || !Flags.useOpenSsl()) && !SystemInfo.jettyAlpnOptionalOrAvailable()) {
+                throw new IllegalStateException(
+                        "TLS configured but this is Java 8 and neither OpenSSL nor Jetty ALPN could be " +
+                        "detected. To use TLS with Armeria, you must either use Java 9+, enable OpenSSL, " +
+                        "usually by adding a build dependency on the " +
+                        "io.netty:netty-tcnative-boringssl-static artifact or enable Jetty ALPN as described " +
+                        "at https://www.eclipse.org/jetty/documentation/9.4.x/alpn-chapter.html");
+            }
+
             if (!this.ports.isEmpty()) {
                 ports = resolveDistinctPorts(this.ports);
             } else {
@@ -1283,13 +1467,14 @@ public final class ServerBuilder {
         }
 
         final Server server = new Server(new ServerConfig(
-                ports, normalizeDefaultVirtualHost(defaultVirtualHost, defaultSslContext), virtualHosts,
+                ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext), virtualHosts,
                 workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
-                idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength, verboseResponses,
+                idleTimeoutMillis, requestTimeoutMillis, maxRequestLength, verboseResponses,
                 http2InitialConnectionWindowSize, http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
                 http2MaxFrameSize, http2MaxHeaderListSize,
                 http1MaxInitialLineLength, http1MaxHeaderSize, http1MaxChunkSize,
-                gracefulShutdownQuietPeriod, gracefulShutdownTimeout, blockingTaskExecutor,
+                gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
+                blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
                 meterRegistry, serviceLoggerPrefix, accessLogWriter, shutdownAccessLogWriterOnStop,
                 proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter), sslContexts);
@@ -1330,30 +1515,29 @@ public final class ServerBuilder {
         return Collections.unmodifiableList(distinctPorts);
     }
 
-    private VirtualHost normalizeDefaultVirtualHost(VirtualHost h,
-                                                    @Nullable SslContext defaultSslContext) {
-        final SslContext sslCtx = h.sslContext() != null ? h.sslContext() : defaultSslContext;
-        return new VirtualHost(
-                h.defaultHostname(), "*", sslCtx,
-                h.serviceConfigs().stream().map(
-                        e -> new ServiceConfig(e.pathMapping(), e.service(), e.loggerName().orElse(null)))
-                 .collect(Collectors.toList()), h.producibleMediaTypes(),
-                          rejectedPathMappingHandler, host -> h.accessLogger());
+    private static VirtualHost setSslContextIfAbsent(VirtualHost h,
+                                                     @Nullable SslContext defaultSslContext) {
+        if (h.sslContext() != null || defaultSslContext == null) {
+            return h;
+        }
+        return h.withNewSslContext(defaultSslContext);
     }
 
     @Nullable
     private static SslContext findDefaultSslContext(VirtualHost defaultVirtualHost,
                                                     List<VirtualHost> virtualHosts) {
-        SslContext lastSslContext = null;
-        for (VirtualHost h : virtualHosts) {
-            if (h.sslContext() != null) {
-                lastSslContext = h.sslContext();
+        final SslContext defaultSslContext = defaultVirtualHost.sslContext();
+        if (defaultSslContext != null) {
+            return defaultSslContext;
+        }
+
+        for (int i = virtualHosts.size() - 1; i >= 0; i--) {
+            final SslContext sslContext = virtualHosts.get(i).sslContext();
+            if (sslContext != null) {
+                return sslContext;
             }
         }
-        if (defaultVirtualHost.sslContext() != null) {
-            lastSslContext = defaultVirtualHost.sslContext();
-        }
-        return lastSslContext;
+        return null;
     }
 
     private static String defaultAccessLoggerName(String hostnamePattern) {
@@ -1376,13 +1560,14 @@ public final class ServerBuilder {
     @Override
     public String toString() {
         return ServerConfig.toString(
-                getClass(), ports, defaultVirtualHost, virtualHosts, workerGroup, shutdownWorkerGroupOnStop,
-                maxNumConnections, idleTimeoutMillis, defaultRequestTimeoutMillis, defaultMaxRequestLength,
+                getClass(), ports, null, ImmutableList.of(), workerGroup, shutdownWorkerGroupOnStop,
+                maxNumConnections, idleTimeoutMillis, requestTimeoutMillis, maxRequestLength,
                 verboseResponses, http2InitialConnectionWindowSize, http2InitialStreamWindowSize,
                 http2MaxStreamsPerConnection, http2MaxFrameSize, http2MaxHeaderListSize,
                 http1MaxInitialLineLength, http1MaxHeaderSize, http1MaxChunkSize,
                 proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
-                blockingTaskExecutor, meterRegistry, serviceLoggerPrefix,
+                blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
+                meterRegistry, serviceLoggerPrefix,
                 accessLogWriter, shutdownAccessLogWriterOnStop,
                 channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter

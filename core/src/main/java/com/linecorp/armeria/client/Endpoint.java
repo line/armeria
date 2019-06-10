@@ -20,8 +20,12 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.StandardProtocolFamily;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Comparator;
 import java.util.Objects;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
@@ -31,6 +35,9 @@ import com.google.common.net.HostAndPort;
 import com.google.common.net.InternetDomainName;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
+import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.util.NetUtil;
 
@@ -53,6 +60,13 @@ public final class Endpoint implements Comparable<Endpoint> {
                       .thenComparing(e -> e.port);
 
     private static final int DEFAULT_WEIGHT = 1000;
+
+    /**
+     * Validator for the scheme part of the URI, as defined in
+     * <a href="https://tools.ietf.org/html/rfc3986#section-3.1">the section 3.1 of RFC3986</a>.
+     */
+    private static final Predicate<String> SCHEME_VALIDATOR =
+            scheme -> Pattern.compile("^([a-z][a-z0-9+\\-.]*)").matcher(scheme).matches();
 
     /**
      * Parse the authority part of a URI. The authority part may have one of the following formats:
@@ -431,6 +445,97 @@ public final class Endpoint implements Comparable<Endpoint> {
         }
 
         return this.authority = authority;
+    }
+
+    /**
+     * Converts this endpoint into a URI using the {@code scheme}.
+     *
+     * @param scheme the {@code scheme} for {@link URI}.
+     *
+     * @return the URI
+     */
+    public URI toUri(String scheme) {
+        requireNonNull(scheme, "scheme");
+
+        return toUri(scheme, null);
+    }
+
+    /**
+     * Converts this endpoint into a URI using the {@code scheme} and {@code path}.
+     *
+     * @param scheme the {@code scheme} for {@link URI}.
+     * @param path the {@code path} for {@link URI}.
+     *
+     * @return the URI
+     */
+    public URI toUri(String scheme, @Nullable String path) {
+        requireNonNull(scheme, "scheme");
+
+        if (!SCHEME_VALIDATOR.test(scheme)) {
+            throw new IllegalArgumentException("scheme: " + scheme + " (expected: a valid scheme)");
+        }
+
+        try {
+            return new URI(scheme, authority(), path, null, null);
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException(e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Converts this endpoint into a URI using the {@link SessionProtocol}.
+     *
+     * @param sessionProtocol the {@link SessionProtocol} for {@link URI}.
+     *
+     * @return the URI
+     */
+    public URI toUri(SessionProtocol sessionProtocol) {
+        requireNonNull(sessionProtocol, "sessionProtocol");
+
+        return toUri(sessionProtocol, null);
+    }
+
+    /**
+     * Converts this endpoint into a URI using the {@link SessionProtocol} and {@code path}.
+     *
+     * @param sessionProtocol the {@link SessionProtocol} for {@link URI}.
+     * @param path the {@code path} for {@link URI}.
+     *
+     * @return the URI
+     */
+    public URI toUri(SessionProtocol sessionProtocol, @Nullable String path) {
+        requireNonNull(sessionProtocol, "sessionProtocol");
+
+        return toUri(Scheme.of(SerializationFormat.NONE, sessionProtocol), path);
+    }
+
+    /**
+     * Converts this endpoint into a URI using the {@link Scheme}.
+     *
+     * @param scheme the {@link Scheme} for {@link URI}.
+     *
+     * @return the URI
+     */
+    public URI toUri(Scheme scheme) {
+        requireNonNull(scheme, "scheme");
+        return toUri(scheme, null);
+    }
+
+    /**
+     * Converts this endpoint into a URI using the {@link Scheme} and the {@code path}.
+     *
+     * @param scheme the {@link Scheme} for {@link URI}.
+     * @param path the {@code path} for {@link URI}.
+     *
+     * @return the URI
+     */
+    public URI toUri(Scheme scheme, @Nullable String path) {
+        requireNonNull(scheme, "scheme");
+        try {
+            return new URI(scheme.uriText(), authority(), path, null, null);
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException(e.getMessage(), e);
+        }
     }
 
     private void ensureGroup() {

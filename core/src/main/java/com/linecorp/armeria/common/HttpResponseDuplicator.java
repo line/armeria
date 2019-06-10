@@ -57,7 +57,7 @@ public class HttpResponseDuplicator
     /**
      * Creates a new instance wrapping a {@link HttpResponse} and publishing to multiple subscribers.
      * The length of response is limited by default with the client-side parameter which is
-     * {@link Flags#DEFAULT_MAX_RESPONSE_LENGTH}. If you are at server-side, you need to use
+     * {@link Flags#defaultMaxResponseLength()}. If you are at server-side, you need to use
      * {@link #HttpResponseDuplicator(HttpResponse, long)} and the {@code long} value should be greater than
      * the length of response or {@code 0} which disables the limit.
      * @param res the response that will publish data to subscribers
@@ -91,8 +91,13 @@ public class HttpResponseDuplicator
     }
 
     @Override
-    protected HttpResponse doDuplicateStream(StreamMessage<HttpObject> delegate) {
-        return new DuplicateHttpResponse(delegate);
+    public HttpResponse duplicateStream() {
+        return new DuplicateHttpResponse(super.duplicateStream());
+    }
+
+    @Override
+    public HttpResponse duplicateStream(boolean lastStream) {
+        return new DuplicateHttpResponse(super.duplicateStream(lastStream));
     }
 
     private static class DuplicateHttpResponse

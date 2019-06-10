@@ -19,6 +19,15 @@ package com.linecorp.armeria.server.file;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Clock;
+import java.util.Map.Entry;
+
+import javax.annotation.Nullable;
+
+import com.google.common.base.MoreObjects;
+
+import com.linecorp.armeria.common.HttpHeaders;
+
+import io.netty.util.AsciiString;
 
 /**
  * {@link HttpFileService} configuration.
@@ -30,14 +39,18 @@ public final class HttpFileServiceConfig {
     private final int maxCacheEntries;
     private final int maxCacheEntrySizeBytes;
     private final boolean serveCompressedFiles;
+    private final boolean autoIndex;
+    private final HttpHeaders headers;
 
     HttpFileServiceConfig(HttpVfs vfs, Clock clock, int maxCacheEntries, int maxCacheEntrySizeBytes,
-                          boolean serveCompressedFiles) {
+                          boolean serveCompressedFiles, boolean autoIndex, HttpHeaders headers) {
         this.vfs = requireNonNull(vfs, "vfs");
         this.clock = requireNonNull(clock, "clock");
         this.maxCacheEntries = validateMaxCacheEntries(maxCacheEntries);
         this.maxCacheEntrySizeBytes = validateMaxCacheEntrySizeBytes(maxCacheEntrySizeBytes);
         this.serveCompressedFiles = serveCompressedFiles;
+        this.autoIndex = autoIndex;
+        this.headers = requireNonNull(headers, "headers");
     }
 
     static int validateMaxCacheEntries(int maxCacheEntries) {
@@ -85,24 +98,46 @@ public final class HttpFileServiceConfig {
     }
 
     /**
-     * Whether pre-compressed files should be served.
+     * Returns whether pre-compressed files should be served.
      */
     public boolean serveCompressedFiles() {
         return serveCompressedFiles;
     }
 
+    /**
+     * Returns whether a directory listing for a directory without an {@code index.html} file will be
+     * auto-generated.
+     */
+    public boolean autoIndex() {
+        return autoIndex;
+    }
+
+    /**
+     * Returns the additional {@link HttpHeaders} to send in a response.
+     */
+    public HttpHeaders headers() {
+        return headers;
+    }
+
     @Override
     public String toString() {
-        return toString(this, vfs(), clock(), maxCacheEntries(), maxCacheEntrySizeBytes());
+        return toString(this, vfs(), clock(), maxCacheEntries(), maxCacheEntrySizeBytes(),
+                        serveCompressedFiles(), autoIndex(), headers());
     }
 
     static String toString(Object holder, HttpVfs vfs, Clock clock,
-                           int maxCacheEntries, int maxCacheEntrySizeBytes) {
+                           int maxCacheEntries, int maxCacheEntrySizeBytes,
+                           boolean serveCompressedFiles, boolean autoIndex,
+                           @Nullable Iterable<Entry<AsciiString, String>> headers) {
 
-        return holder.getClass().getSimpleName() +
-               "(vfs: " + vfs +
-               ", clock: " + clock +
-               ", maxCacheEntries: " + maxCacheEntries +
-               ", maxCacheEntrySizeBytes: " + maxCacheEntrySizeBytes + ')';
+        return MoreObjects.toStringHelper(holder).omitNullValues()
+                          .add("vfs", vfs)
+                          .add("clock", clock)
+                          .add("maxCacheEntries", maxCacheEntries)
+                          .add("maxCacheEntrySizeBytes", maxCacheEntrySizeBytes)
+                          .add("serveCompressedFiles", serveCompressedFiles)
+                          .add("autoIndex", autoIndex)
+                          .add("headers", headers)
+                          .toString();
     }
 }

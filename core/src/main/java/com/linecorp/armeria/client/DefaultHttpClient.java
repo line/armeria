@@ -20,7 +20,7 @@ import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -43,32 +43,38 @@ final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> impl
     }
 
     private HttpResponse execute(@Nullable EventLoop eventLoop, HttpRequest req) {
-        final String concatPaths = concatPaths(uri().getRawPath(), req.path());
-        req.path(concatPaths);
-
-        final PathAndQuery pathAndQuery = PathAndQuery.parse(concatPaths);
+        final String originalPath = req.path();
+        final String newPath = concatPaths(uri().getRawPath(), originalPath);
+        final PathAndQuery pathAndQuery = PathAndQuery.parse(newPath);
         if (pathAndQuery == null) {
             req.abort();
-            return HttpResponse.ofFailure(new IllegalArgumentException("invalid path: " + concatPaths));
+            return HttpResponse.ofFailure(new IllegalArgumentException("invalid path: " + newPath));
         }
 
-        return execute(eventLoop, req.method(), pathAndQuery.path(), pathAndQuery.query(), null, req,
+        final HttpRequest newReq;
+        if (newPath != originalPath) {
+            newReq = HttpRequest.of(req, req.headers().toBuilder().path(newPath).build());
+        } else {
+            newReq = req;
+        }
+
+        return execute(eventLoop, newReq.method(), pathAndQuery.path(), pathAndQuery.query(), null, newReq,
                        (ctx, cause) -> {
                            if (ctx != null && !ctx.log().isAvailable(RequestLogAvailability.REQUEST_START)) {
                                // An exception is raised even before sending a request, so abort the request to
                                // release the elements.
-                               req.abort();
+                               newReq.abort();
                            }
                            return HttpResponse.ofFailure(cause);
                        });
     }
 
     @Override
-    public HttpResponse execute(AggregatedHttpMessage aggregatedReq) {
+    public HttpResponse execute(AggregatedHttpRequest aggregatedReq) {
         return execute(null, aggregatedReq);
     }
 
-    HttpResponse execute(@Nullable EventLoop eventLoop, AggregatedHttpMessage aggregatedReq) {
+    HttpResponse execute(@Nullable EventLoop eventLoop, AggregatedHttpRequest aggregatedReq) {
         return execute(eventLoop, HttpRequest.of(aggregatedReq));
     }
 }

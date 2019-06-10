@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.common.logback;
 
-import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
@@ -27,7 +26,6 @@ import java.net.InetSocketAddress;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 
@@ -36,7 +34,6 @@ import javax.net.ssl.SSLSession;
 
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
-import org.assertj.core.util.Lists;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -45,39 +42,28 @@ import org.junit.rules.TestName;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
-import com.google.common.collect.ImmutableList;
-
-import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.DefaultClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextBuilder;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.DefaultRpcRequest;
 import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logback.HelloService.hello_args;
 import com.linecorp.armeria.common.logback.HelloService.hello_result;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.server.DefaultServiceRequestContext;
-import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.PathMappingContext;
-import com.linecorp.armeria.server.PathMappingResult;
-import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.VirtualHost;
+import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -87,8 +73,6 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import ch.qos.logback.core.status.Status;
 import ch.qos.logback.core.status.StatusManager;
-import io.netty.channel.Channel;
-import io.netty.channel.EventLoop;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -315,7 +299,7 @@ public class RequestContextExportingAppenderTest {
                            .containsEntry("remote.port", "5678")
                            .containsEntry("client.ip", "9.10.11.12")
                            .containsEntry("req.direction", "INBOUND")
-                           .containsEntry("req.authority", "?")
+                           .containsEntry("req.authority", "server.com:8080")
                            .containsEntry("req.method", "GET")
                            .containsEntry("req.path", "/foo")
                            .containsEntry("req.query", "name=alice")
@@ -350,11 +334,13 @@ public class RequestContextExportingAppenderTest {
             final RequestLogBuilder log = ctx.logBuilder();
             log.serializationFormat(ThriftSerializationFormats.BINARY);
             log.requestLength(64);
-            log.requestHeaders(HttpHeaders.of(HttpHeaderNames.USER_AGENT, "some-client"));
+            log.requestHeaders(RequestHeaders.of(HttpMethod.GET, "/foo?bar=baz",
+                                                 HttpHeaderNames.USER_AGENT, "some-client"));
             log.requestContent(RPC_REQ, THRIFT_CALL);
             log.endRequest();
             log.responseLength(128);
-            log.responseHeaders(HttpHeaders.of(200).set(HttpHeaderNames.DATE, "some-date"));
+            log.responseHeaders(ResponseHeaders.of(HttpStatus.OK,
+                                                   HttpHeaderNames.DATE, "some-date"));
             log.responseContent(RPC_RES, THRIFT_REPLY);
             log.endResponse();
 
@@ -406,29 +392,23 @@ public class RequestContextExportingAppenderTest {
     private static ServiceRequestContext newServiceContext(
             String path, @Nullable String query) throws Exception {
 
-        final Channel ch = mock(Channel.class);
-        when(ch.remoteAddress()).thenReturn(
-                new InetSocketAddress(InetAddress.getByAddress("client.com", new byte[] { 1, 2, 3, 4 }),
-                                      5678));
-        when(ch.localAddress()).thenReturn(
-                new InetSocketAddress(InetAddress.getByAddress("server.com", new byte[] { 5, 6, 7, 8 }),
-                                      8080));
+        final InetSocketAddress remoteAddress = new InetSocketAddress(
+                InetAddress.getByAddress("client.com", new byte[] { 1, 2, 3, 4 }), 5678);
+        final InetSocketAddress localAddress = new InetSocketAddress(
+                InetAddress.getByAddress("server.com", new byte[] { 5, 6, 7, 8 }), 8080);
 
-        final HttpService service = mock(HttpService.class);
-        final Server server = new ServerBuilder().withVirtualHost("some-host.server.com")
-                                                 .serviceUnder("/", service)
-                                                 .and().build();
-        final VirtualHost virtualHost = server.config().findVirtualHost("some-host.server.com");
-        final ServiceConfig serviceConfig = virtualHost.serviceConfigs().get(0);
-        final HttpRequest req = HttpRequest.of(HttpHeaders.of(HttpMethod.GET, path + '?' + query)
-                                                          .authority("server.com:8080"));
-        final PathMappingContext mappingCtx =
-                new DummyPathMappingContext(virtualHost, "server.com", path, query, req.headers());
+        final String pathAndQuery = path + (query != null ? '?' + query : "");
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, pathAndQuery,
+                                                                 HttpHeaderNames.AUTHORITY, "server.com:8080",
+                                                                 HttpHeaderNames.USER_AGENT, "some-client"));
 
-        final ServiceRequestContext ctx = new DefaultServiceRequestContext(
-                serviceConfig, ch, NoopMeterRegistry.get(), SessionProtocol.H2, mappingCtx,
-                PathMappingResult.of(path, query), req, newSslSession(), null,
-                InetAddress.getByName("9.10.11.12"));
+        final ServiceRequestContext ctx =
+                ServiceRequestContextBuilder.of(req)
+                                            .sslSession(newSslSession())
+                                            .remoteAddress(remoteAddress)
+                                            .localAddress(localAddress)
+                                            .clientAddress(InetAddress.getByName("9.10.11.12"))
+                                            .build();
 
         ctx.attr(MY_ATTR).set(new CustomValue("some-attr"));
         return ctx;
@@ -485,11 +465,13 @@ public class RequestContextExportingAppenderTest {
             final RequestLogBuilder log = ctx.logBuilder();
             log.serializationFormat(ThriftSerializationFormats.BINARY);
             log.requestLength(64);
-            log.requestHeaders(HttpHeaders.of(HttpHeaderNames.USER_AGENT, "some-client"));
+            log.requestHeaders(RequestHeaders.of(HttpMethod.GET, "/bar",
+                                                 HttpHeaderNames.USER_AGENT, "some-client"));
             log.requestContent(RPC_REQ, THRIFT_CALL);
             log.endRequest();
             log.responseLength(128);
-            log.responseHeaders(HttpHeaders.of(200).set(HttpHeaderNames.DATE, "some-date"));
+            log.responseHeaders(ResponseHeaders.of(HttpStatus.OK,
+                                                   HttpHeaderNames.DATE, "some-date"));
             log.responseContent(RPC_RES, THRIFT_REPLY);
             log.endResponse();
 
@@ -527,29 +509,23 @@ public class RequestContextExportingAppenderTest {
     private static ClientRequestContext newClientContext(
             String path, @Nullable String query) throws Exception {
 
-        final Channel ch = mock(Channel.class);
-        when(ch.remoteAddress()).thenReturn(
-                new InetSocketAddress(InetAddress.getByAddress("server.com", new byte[] { 1, 2, 3, 4 }),
-                                      8080));
-        when(ch.localAddress()).thenReturn(
-                new InetSocketAddress(InetAddress.getByAddress("client.com", new byte[] { 5, 6, 7, 8 }),
-                                      5678));
+        final InetSocketAddress remoteAddress = new InetSocketAddress(
+                InetAddress.getByAddress("server.com", new byte[] { 1, 2, 3, 4 }), 8080);
+        final InetSocketAddress localAddress = new InetSocketAddress(
+                InetAddress.getByAddress("client.com", new byte[] { 5, 6, 7, 8 }), 5678);
 
-        final HttpRequest req = HttpRequest.of(HttpHeaders.of(HttpMethod.GET, path + '?' + query)
-                                                          .authority("server.com:8080"));
+        final String pathAndQuery = path + (query != null ? '?' + query : "");
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, pathAndQuery,
+                                                                 HttpHeaderNames.AUTHORITY, "server.com:8080",
+                                                                 HttpHeaderNames.USER_AGENT, "some-client"));
 
-        final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
-                mock(EventLoop.class), NoopMeterRegistry.get(), SessionProtocol.H2,
-                Endpoint.of("server.com", 8080), req.method(), path, query, null,
-                ClientOptions.DEFAULT, req) {
-
-            @Override
-            public SSLSession sslSession() {
-                return newSslSession();
-            }
-        };
-
-        ctx.logBuilder().startRequest(ch, ctx.sessionProtocol());
+        final ClientRequestContext ctx =
+                ClientRequestContextBuilder.of(req)
+                                           .remoteAddress(remoteAddress)
+                                           .localAddress(localAddress)
+                                           .endpoint(Endpoint.of("server.com", 8080))
+                                           .sslSession(newSslSession())
+                                           .build();
 
         ctx.attr(MY_ATTR).set(new CustomValue("some-attr"));
         return ctx;
@@ -576,85 +552,5 @@ public class RequestContextExportingAppenderTest {
         la.start();
         testLogger.addAppender(a);
         return la.list;
-    }
-
-    private static class DummyPathMappingContext implements PathMappingContext {
-
-        private final VirtualHost virtualHost;
-        private final String hostname;
-        private final String path;
-        @Nullable
-        private final String query;
-        private final HttpHeaders headers;
-        private final List<Object> summary;
-        @Nullable
-        private Throwable delayedCause;
-
-        DummyPathMappingContext(VirtualHost virtualHost, String hostname,
-                                String path, @Nullable String query, HttpHeaders headers) {
-            this.virtualHost = requireNonNull(virtualHost, "virtualHost");
-            this.hostname = requireNonNull(hostname, "hostname");
-            this.path = requireNonNull(path, "path");
-            this.query = query;
-            this.headers = requireNonNull(headers, "headers");
-            summary = Lists.newArrayList(hostname, path, headers.method());
-        }
-
-        @Override
-        public VirtualHost virtualHost() {
-            return virtualHost;
-        }
-
-        @Override
-        public String hostname() {
-            return hostname;
-        }
-
-        @Override
-        public HttpMethod method() {
-            return headers.method();
-        }
-
-        @Override
-        public String path() {
-            return path;
-        }
-
-        @Nullable
-        @Override
-        public String query() {
-            return query;
-        }
-
-        @Nullable
-        @Override
-        public MediaType consumeType() {
-            return null;
-        }
-
-        @Override
-        public List<MediaType> produceTypes() {
-            return ImmutableList.of();
-        }
-
-        @Override
-        public boolean isCorsPreflight() {
-            return false;
-        }
-
-        @Override
-        public List<Object> summary() {
-            return summary;
-        }
-
-        @Override
-        public void delayThrowable(Throwable delayedCause) {
-            this.delayedCause = delayedCause;
-        }
-
-        @Override
-        public Optional<Throwable> delayedThrowable() {
-            return Optional.ofNullable(delayedCause);
-        }
     }
 }

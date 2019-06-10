@@ -32,6 +32,8 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -39,6 +41,7 @@ import com.linecorp.armeria.internal.InboundTrafficController;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.concurrent.ScheduledFuture;
@@ -125,6 +128,13 @@ abstract class HttpResponseDecoder {
     }
 
     static final class HttpResponseWrapper implements StreamWriter<HttpObject>, Runnable {
+
+        enum State {
+            WAIT_NON_INFORMATIONAL,
+            WAIT_DATA_OR_TRAILERS,
+            DONE
+        }
+
         @Nullable
         private final HttpRequest request;
         private final DecodedHttpResponse delegate;
@@ -135,6 +145,8 @@ abstract class HttpResponseDecoder {
         private ScheduledFuture<?> responseTimeoutFuture;
 
         private boolean loggedResponseFirstBytesTransferred;
+
+        private State state = State.WAIT_NON_INFORMATIONAL;
 
         HttpResponseWrapper(@Nullable HttpRequest request, DecodedHttpResponse delegate,
                             RequestLogBuilder logBuilder, long responseTimeoutMillis, long maxContentLength) {
@@ -205,16 +217,33 @@ abstract class HttpResponseDecoder {
 
         @Override
         public boolean tryWrite(HttpObject o) {
-            if (o instanceof HttpHeaders) {
-                // NB: It's safe to call logBuilder.start() multiple times.
-                logBuilder.startResponse();
-                final HttpHeaders headers = (HttpHeaders) o;
-                final HttpStatus status = headers.status();
-                if (status != null && status.codeClass() != HttpStatusClass.INFORMATIONAL) {
-                    logBuilder.responseHeaders(headers);
-                }
-            } else if (o instanceof HttpData) {
-                logBuilder.increaseResponseLength(((HttpData) o).length());
+            switch (state) {
+                case WAIT_NON_INFORMATIONAL:
+                    // NB: It's safe to call logBuilder.startResponse() multiple times.
+                    logBuilder.startResponse();
+
+                    assert o instanceof HttpHeaders && !(o instanceof RequestHeaders) : o;
+
+                    if (o instanceof ResponseHeaders) {
+                        final ResponseHeaders headers = (ResponseHeaders) o;
+                        final HttpStatus status = headers.status();
+                        if (status.codeClass() != HttpStatusClass.INFORMATIONAL) {
+                            state = State.WAIT_DATA_OR_TRAILERS;
+                            logBuilder.responseHeaders(headers);
+                        }
+                    }
+                    break;
+                case WAIT_DATA_OR_TRAILERS:
+                    if (o instanceof HttpHeaders) {
+                        state = State.DONE;
+                        logBuilder.responseTrailers((HttpHeaders) o);
+                    } else {
+                        logBuilder.increaseResponseLength((HttpData) o);
+                    }
+                    break;
+                case DONE:
+                    ReferenceCountUtil.safeRelease(o);
+                    return false;
             }
             return delegate.tryWrite(o);
         }
@@ -245,6 +274,7 @@ abstract class HttpResponseDecoder {
 
         private void close(@Nullable Throwable cause,
                            Consumer<Throwable> actionOnTimeoutCancelled) {
+            state = State.DONE;
             if (cancelTimeout()) {
                 actionOnTimeoutCancelled.accept(cause);
             } else {

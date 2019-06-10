@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
@@ -44,7 +45,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
     private static final Logger logger = LoggerFactory.getLogger(FilteredStreamMessage.class);
 
     private final StreamMessage<T> delegate;
-    private final boolean withPooledObjects;
+    private final boolean filterSupportsPooledObjects;
 
     /**
      * Creates a new {@link FilteredStreamMessage} that filters objects published by {@code delegate}
@@ -63,9 +64,8 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
      *                          this means, use {@link #FilteredStreamMessage(StreamMessage)}.
      */
     protected FilteredStreamMessage(StreamMessage<T> delegate, boolean withPooledObjects) {
-        requireNonNull(delegate, "delegate");
-        this.delegate = delegate;
-        this.withPooledObjects = withPooledObjects;
+        this.delegate = requireNonNull(delegate, "delegate");
+        this.filterSupportsPooledObjects = withPooledObjects;
     }
 
     /**
@@ -116,20 +116,20 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
     @Override
     public void subscribe(Subscriber<? super U> subscriber) {
         requireNonNull(subscriber, "subscriber");
-        delegate.subscribe(new FilteringSubscriber(subscriber));
+        delegate.subscribe(new FilteringSubscriber(subscriber, false));
     }
 
     @Override
     public void subscribe(Subscriber<? super U> subscriber, boolean withPooledObjects) {
         requireNonNull(subscriber, "subscriber");
-        delegate.subscribe(new FilteringSubscriber(subscriber), withPooledObjects);
+        delegate.subscribe(new FilteringSubscriber(subscriber, withPooledObjects), withPooledObjects);
     }
 
     @Override
     public void subscribe(Subscriber<? super U> subscriber, EventExecutor executor) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
-        delegate.subscribe(new FilteringSubscriber(subscriber), executor);
+        delegate.subscribe(new FilteringSubscriber(subscriber, false), executor);
     }
 
     @Override
@@ -137,7 +137,33 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
                           boolean withPooledObjects) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
-        delegate.subscribe(new FilteringSubscriber(subscriber), executor, withPooledObjects);
+        delegate.subscribe(new FilteringSubscriber(subscriber, withPooledObjects), executor, withPooledObjects);
+    }
+
+    @Override
+    public CompletableFuture<List<U>> drainAll() {
+        return drainAll(false);
+    }
+
+    @Override
+    public CompletableFuture<List<U>> drainAll(EventExecutor executor) {
+        return drainAll(executor, false);
+    }
+
+    @Override
+    public CompletableFuture<List<U>> drainAll(boolean withPooledObjects) {
+        final StreamMessageDrainer<U> drainer = new StreamMessageDrainer<>(withPooledObjects);
+        delegate.subscribe(new FilteringSubscriber(drainer, withPooledObjects), withPooledObjects);
+        return drainer.future();
+    }
+
+    @Override
+    public CompletableFuture<List<U>> drainAll(EventExecutor executor, boolean withPooledObjects) {
+        requireNonNull(executor, "executor");
+
+        final StreamMessageDrainer<U> drainer = new StreamMessageDrainer<>(withPooledObjects);
+        delegate.subscribe(new FilteringSubscriber(drainer, withPooledObjects), executor, withPooledObjects);
+        return drainer.future();
     }
 
     @Override
@@ -148,10 +174,12 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
     private final class FilteringSubscriber implements Subscriber<T> {
 
         private final Subscriber<? super U> delegate;
+        private final boolean subscribedWithPooledObjects;
 
-        FilteringSubscriber(Subscriber<? super U> delegate) {
+        FilteringSubscriber(Subscriber<? super U> delegate, boolean subscribedWithPooledObjects) {
             requireNonNull(delegate, "delegate");
             this.delegate = delegate;
+            this.subscribedWithPooledObjects = subscribedWithPooledObjects;
         }
 
         @Override
@@ -163,10 +191,14 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
         @Override
         public void onNext(T o) {
             ReferenceCountUtil.touch(o);
-            if (!withPooledObjects) {
+            if (!filterSupportsPooledObjects) {
                 o = PooledObjects.toUnpooled(o);
             }
-            delegate.onNext(filter(o));
+            U filtered = filter(o);
+            if (!subscribedWithPooledObjects) {
+                filtered = PooledObjects.toUnpooled(filtered);
+            }
+            delegate.onNext(filtered);
         }
 
         @Override

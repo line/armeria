@@ -25,7 +25,13 @@ import java.lang.annotation.Target;
  * The containing annotation type for {@link RequestConverter}.
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.TYPE, ElementType.METHOD })
+@Target({
+        ElementType.TYPE,
+        ElementType.METHOD,
+        ElementType.PARAMETER,
+        ElementType.CONSTRUCTOR,
+        ElementType.FIELD
+})
 public @interface RequestConverters {
     /**
      * An array of {@link RequestConverter}s.

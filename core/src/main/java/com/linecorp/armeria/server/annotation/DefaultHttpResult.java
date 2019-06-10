@@ -31,20 +31,20 @@ final class DefaultHttpResult<T> implements HttpResult<T> {
     private final HttpHeaders headers;
     @Nullable
     private final T content;
-    private final HttpHeaders trailingHeaders;
+    private final HttpHeaders trailers;
 
     DefaultHttpResult(HttpHeaders headers) {
-        this(headers, null, HttpHeaders.EMPTY_HEADERS);
+        this(headers, null, HttpHeaders.of());
     }
 
     DefaultHttpResult(HttpHeaders headers, T content) {
-        this(headers, requireNonNull(content, "content"), HttpHeaders.EMPTY_HEADERS);
+        this(headers, requireNonNull(content, "content"), HttpHeaders.of());
     }
 
-    DefaultHttpResult(HttpHeaders headers, @Nullable T content, HttpHeaders trailingHeaders) {
+    DefaultHttpResult(HttpHeaders headers, @Nullable T content, HttpHeaders trailers) {
         this.headers = requireNonNull(headers, "headers");
         this.content = content;
-        this.trailingHeaders = requireNonNull(trailingHeaders, "trailingHeaders");
+        this.trailers = requireNonNull(trailers, "trailers");
     }
 
     @Override
@@ -58,7 +58,7 @@ final class DefaultHttpResult<T> implements HttpResult<T> {
     }
 
     @Override
-    public HttpHeaders trailingHeaders() {
-        return trailingHeaders;
+    public HttpHeaders trailers() {
+        return trailers;
     }
 }

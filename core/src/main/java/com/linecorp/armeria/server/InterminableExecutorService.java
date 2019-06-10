@@ -33,6 +33,10 @@ final class InterminableExecutorService implements ExecutorService {
         this.executor = executor;
     }
 
+    ExecutorService getExecutorService() {
+        return executor;
+    }
+
     @Override
     public void shutdown() {
         throw new UnsupportedOperationException();

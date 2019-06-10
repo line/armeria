@@ -88,7 +88,7 @@ public final class ExceptionInfo implements NamedTypeInfo {
             return true;
         }
 
-        if (o == null || getClass() != o.getClass()) {
+        if (!(o instanceof ExceptionInfo)) {
             return false;
         }
 

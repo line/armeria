@@ -18,7 +18,7 @@ package com.linecorp.armeria.server.composition;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.server.PathMapping;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Service;
 
 /**
@@ -34,7 +34,7 @@ public final class SimpleCompositeServiceBuilder<I extends Request, O extends Re
     @Override
     public SimpleCompositeServiceBuilder<I, O> serviceAt(
             String pathPattern, Service<I, O> service) {
-        return super.serviceAt(pathPattern, service);
+        return super.service(pathPattern, service);
     }
 
     @Override
@@ -51,12 +51,12 @@ public final class SimpleCompositeServiceBuilder<I extends Request, O extends Re
 
     @Override
     public SimpleCompositeServiceBuilder<I, O> service(
-            PathMapping pathMapping, Service<I, O>  service) {
-        return super.service(pathMapping, service);
+            Route route, Service<I, O>  service) {
+        return super.service(route, service);
     }
 
     /**
-     * Returns a newly-created {@link SimpleCompositeService} based on the {@link Service}s adde to this
+     * Returns a newly-created {@link SimpleCompositeService} based on the {@link Service}s added to this
      * builder.
      */
     public SimpleCompositeService<I, O> build() {

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Armeria animation</title>
+</head>
+<style>
+h1, div {
+  display: flex;
+  justify-content: center;
+  font-family: Inconsolata, monospace;
+}
+.ascii-art {
+  font-size: 20px;
+}
+.description {
+  font-size: 24px;
+}
+</style>
+<script>
+  fetch('/animation')
+    .then(response => response.body.getReader())
+    .then(reader => {
+      const decoder = new TextDecoder('utf-8');
+      return new ReadableStream({
+        start(controller) {
+          return animation();
+          function animation() {
+            return reader.read().then(({ done, value }) => {
+              if (done) {
+                controller.close();
+                return;
+              }
+              document.getElementById("root").innerHTML = decoder.decode(value);
+              return animation();
+            })
+          }
+        }
+      })
+   });
+</script>
+<body>
+  <h1 align="center">Armeria animation!</h1>
+  <div class="description">Refresh your browser to access the different backend.</div>
+  <div id="root" class="ascii-art"></div>
+</body>
+</html>

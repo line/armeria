@@ -16,39 +16,35 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.server.PathMapping.ofPrefix;
-import static com.linecorp.armeria.server.PathMappingContextTest.create;
+import static com.linecorp.armeria.server.RoutingContextTest.create;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assume.assumeTrue;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 
-public class PrefixPathMappingTest {
+class PrefixPathMappingTest {
 
     @Test
-    public void testLoggerName() throws Exception {
-        assertThat(ofPrefix("/foo/bar").loggerName()).isEqualTo("foo.bar");
+    void loggerAndMetricName() throws Exception {
+        final PrefixPathMapping prefixPathMapping = new PrefixPathMapping("/foo/bar", true);
+        assertThat(prefixPathMapping.loggerName()).isEqualTo("foo.bar");
+        assertThat(prefixPathMapping.meterTag()).isEqualTo("prefix:/foo/bar/");
     }
 
     @Test
-    public void testMetricName() throws Exception {
-        assertThat(ofPrefix("/foo/bar").meterTag()).isEqualTo("prefix:/foo/bar/");
-    }
-
-    @Test
-    public void mappingResult() {
-        final PathMapping a = ofPrefix("/foo");
-        final PathMappingResult result = a.apply(create("/foo/bar/cat"));
+    void routingResult() {
+        final PrefixPathMapping prefixPathMapping = new PrefixPathMapping("/foo", true);
+        final RoutingResult result = prefixPathMapping.apply(create("/foo/bar/cat")).build();
         assertThat(result.path()).isEqualTo("/bar/cat");
     }
 
     @Test
-    public void equality() {
-        final PathMapping a = ofPrefix("/foo");
-        final PathMapping b = ofPrefix("/bar");
-        final PathMapping c = ofPrefix("/foo");
+    void equality() {
+        final PrefixPathMapping a = new PrefixPathMapping("/foo", true);
+        final PrefixPathMapping b = new PrefixPathMapping("/bar", true);
+        final PrefixPathMapping c = new PrefixPathMapping("/foo", true);
 
-        assumeTrue(a != c);
+        Assumptions.assumeTrue(a != c);
         assertThat(a).isEqualTo(c);
         assertThat(a).isNotEqualTo(b);
         assertThat(a.hashCode()).isEqualTo(c.hashCode());
@@ -56,7 +52,8 @@ public class PrefixPathMappingTest {
     }
 
     @Test
-    public void pathParams() {
-        assertThat(ofPrefix("/bar/baz").paramNames()).isEmpty();
+    void pathParams() {
+        final PrefixPathMapping prefixPathMapping = new PrefixPathMapping("/bar/baz", true);
+        assertThat(prefixPathMapping.paramNames()).isEmpty();
     }
 }

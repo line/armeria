@@ -88,7 +88,14 @@ configure(projectsWithFlags('java')) {
 
     // Enable full exception logging for test failures.
     tasks.withType(Test) {
-        it.testLogging.exceptionFormat = 'full'
+        testLogging.exceptionFormat = 'full'
+    }
+
+    // Use JUnit 5 if it's defined in the dependencies.
+    if (managedVersions.containsKey('org.junit.jupiter:junit-jupiter-engine')) {
+        tasks.withType(Test) {
+            useJUnitPlatform()
+        }
     }
 
     // Enforce checkstyle rules.
@@ -103,9 +110,14 @@ configure(projectsWithFlags('java')) {
             }
         }
 
-        task checkstyle(group: 'Verification',
-                description: 'Runs the checkstyle rules.',
-                dependsOn: [tasks.checkstyleMain, tasks.checkstyleTest])
+        task checkstyle(group: 'Verification', description: 'Runs the checkstyle rules.') {
+            project.sourceSets.all { SourceSet sourceSet ->
+                def dependencyTask = project.tasks.findByName(sourceSet.getTaskName("checkstyle", ""))
+                if (dependencyTask instanceof Checkstyle) {
+                    dependsOn dependencyTask
+                }
+            }
+        }
 
         test {
             dependsOn tasks.checkstyle

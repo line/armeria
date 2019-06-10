@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import java.io.IOException;
+import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -25,6 +27,7 @@ import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,21 +38,27 @@ import com.github.benmanes.caffeine.cache.CaffeineSpec;
 import com.google.common.base.Ascii;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingHttpClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.server.PathMappingContext;
+import com.linecorp.armeria.internal.SslContextUtil;
+import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.epoll.Epoll;
 import io.netty.handler.codec.http2.Http2CodecUtil;
+import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.ssl.OpenSsl;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.util.ReferenceCountUtil;
 
 /**
  * The system properties that affect Armeria's runtime behavior.
@@ -66,6 +75,8 @@ public final class Flags {
 
     private static final boolean VERBOSE_EXCEPTIONS = getBoolean("verboseExceptions", false);
 
+    private static final boolean VERBOSE_SOCKET_EXCEPTIONS = getBoolean("verboseSocketExceptions", false);
+
     private static final boolean VERBOSE_RESPONSES = getBoolean("verboseResponses", false);
 
     private static final boolean HAS_WSLENV = System.getenv("WSLENV") != null;
@@ -74,6 +85,8 @@ public final class Flags {
 
     private static final boolean USE_OPENSSL = getBoolean("useOpenSsl", OpenSsl.isAvailable(),
                                                           value -> OpenSsl.isAvailable() || !value);
+
+    private static final boolean DUMP_OPENSSL_INFO = getBoolean("dumpOpenSslInfo", false);
 
     private static final int DEFAULT_MAX_NUM_CONNECTIONS = Integer.MAX_VALUE;
     private static final int MAX_NUM_CONNECTIONS =
@@ -120,6 +133,12 @@ public final class Flags {
             getLong("defaultConnectTimeoutMillis",
                     DEFAULT_DEFAULT_CONNECT_TIMEOUT_MILLIS,
                     value -> value > 0);
+
+    private static final long DEFAULT_DEFAULT_WRITE_TIMEOUT_MILLIS = 1000; // 1 second
+    private static final long DEFAULT_WRITE_TIMEOUT_MILLIS =
+            getLong("defaultWriteTimeoutMillis",
+                    DEFAULT_DEFAULT_WRITE_TIMEOUT_MILLIS,
+                    value -> value >= 0);
 
     // Use slightly greater value than the client-side default so that clients close the connection more often.
     private static final long DEFAULT_DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS = 15000; // 15 seconds
@@ -258,6 +277,19 @@ public final class Flags {
             logger.info("Using OpenSSL: {}, 0x{}",
                         OpenSsl.versionString(),
                         Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
+
+            if (dumpOpenSslInfo()) {
+                final SSLEngine engine = SslContextUtil.createSslContext(
+                        SslContextBuilder::forClient,
+                        false,
+                        unused -> {}).newEngine(ByteBufAllocator.DEFAULT);
+                logger.info("All available SSL protocols: {}",
+                            ImmutableList.copyOf(engine.getSupportedProtocols()));
+                logger.info("Default enabled SSL protocols: {}", SslContextUtil.DEFAULT_PROTOCOLS);
+                ReferenceCountUtil.release(engine);
+                logger.info("All available SSL ciphers: {}", OpenSsl.availableJavaCipherSuites());
+                logger.info("Default enabled SSL ciphers: {}", SslContextUtil.DEFAULT_CIPHERS);
+            }
         }
     }
 
@@ -277,6 +309,31 @@ public final class Flags {
      */
     public static boolean verboseExceptions() {
         return VERBOSE_EXCEPTIONS;
+    }
+
+    /**
+     * Returns whether to log the socket exceptions which are mostly harmless. If enabled, the following
+     * exceptions will be logged:
+     * <ul>
+     *   <li>{@link ClosedChannelException}</li>
+     *   <li>{@link ClosedSessionException}</li>
+     *   <li>{@link IOException} - 'Connection reset/closed/aborted by peer'</li>
+     *   <li>'Broken pipe'</li>
+     *   <li>{@link Http2Exception} - 'Stream closed'</li>
+     *   <li>{@link SSLException} - 'SSLEngine closed already'</li>
+     * </ul>
+     *
+     * <p>It is recommended to keep this flag disabled, because it increases the amount of log messages for
+     * the errors you usually do not have control over, e.g. unexpected socket disconnection due to network
+     * or remote peer issues.</p>
+     *
+     * <p>This flag is disabled by default.
+     * Specify the {@code -Dcom.linecorp.armeria.verboseSocketExceptions=true} JVM option to enable it.</p>
+     *
+     * @see Exceptions#isExpected(Throwable)
+     */
+    public static boolean verboseSocketExceptions() {
+        return VERBOSE_SOCKET_EXCEPTIONS;
     }
 
     /**
@@ -313,6 +370,17 @@ public final class Flags {
      */
     public static boolean useOpenSsl() {
         return USE_OPENSSL;
+    }
+
+    /**
+     * Returns whether information about the OpenSSL environment should be dumped when first starting the
+     * application, including supported ciphers.
+     *
+     * <p>This flag is disabled by default. Specify the {@code -Dcom.linecorp.armeria.dumpOpenSslInfo=true} JVM
+     * option to enable it.
+     */
+    public static boolean dumpOpenSslInfo() {
+        return DUMP_OPENSSL_INFO;
     }
 
     /**
@@ -407,6 +475,18 @@ public final class Flags {
      */
     public static long defaultConnectTimeoutMillis() {
         return DEFAULT_CONNECT_TIMEOUT_MILLIS;
+    }
+
+    /**
+     * Returns the default client-side timeout of a socket write attempt in milliseconds.
+     * Note that this value has effect only if a user did not specify it.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_DEFAULT_WRITE_TIMEOUT_MILLIS}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultWriteTimeoutMillis=<integer>} JVM option to override
+     * the default value. {@code 0} disables the timeout.
+     */
+    public static long defaultWriteTimeoutMillis() {
+        return DEFAULT_WRITE_TIMEOUT_MILLIS;
     }
 
     /**
@@ -584,7 +664,7 @@ public final class Flags {
     /**
      * Returns the value of the {@code routeCache} parameter. It would be used to create a Caffeine
      * {@link Cache} instance using {@link Caffeine#from(String)} for routing a request. The {@link Cache}
-     * would hold the mappings of {@link PathMappingContext} and the designated {@link ServiceConfig}
+     * would hold the mappings of {@link RoutingContext} and the designated {@link ServiceConfig}
      * for a request to improve server performance.
      *
      * <p>The default value of this flag is {@value DEFAULT_ROUTE_CACHE_SPEC}. Specify the
@@ -635,7 +715,7 @@ public final class Flags {
     /**
      * Returns the value of the {@code compositeServiceCache} parameter. It would be used to create a
      * Caffeine {@link Cache} instance using {@link Caffeine#from(String)} for routing a request.
-     * The {@link Cache} would hold the mappings of {@link PathMappingContext} and the designated
+     * The {@link Cache} would hold the mappings of {@link RoutingContext} and the designated
      * {@link ServiceConfig} for a request to improve server performance.
      *
      * <p>The default value of this flag is {@value DEFAULT_COMPOSITE_SERVICE_CACHE_SPEC}. Specify the

@@ -30,8 +30,9 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.HttpStatusClass;
+import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+
+import io.netty.buffer.ByteBufAllocator;
 
 /**
  * A {@link FilteredHttpResponse} that applies HTTP decoding to {@link HttpObject}s as they are published.
@@ -39,14 +40,17 @@ import com.linecorp.armeria.common.HttpStatusClass;
 class HttpDecodedResponse extends FilteredHttpResponse {
 
     private final Map<String, StreamDecoderFactory> availableDecoders;
+    private final ByteBufAllocator alloc;
 
     @Nullable
     private StreamDecoder responseDecoder;
     private boolean headersReceived;
 
-    HttpDecodedResponse(HttpResponse delegate, Map<String, StreamDecoderFactory> availableDecoders) {
-        super(delegate);
+    HttpDecodedResponse(HttpResponse delegate, Map<String, StreamDecoderFactory> availableDecoders,
+                        ByteBufAllocator alloc) {
+        super(delegate, true);
         this.availableDecoders = availableDecoders;
+        this.alloc = alloc;
     }
 
     @Override
@@ -55,13 +59,13 @@ class HttpDecodedResponse extends FilteredHttpResponse {
             final HttpHeaders headers = (HttpHeaders) obj;
 
             // Skip informational headers.
-            final HttpStatus status = headers.status();
-            if (status != null && status.codeClass() == HttpStatusClass.INFORMATIONAL) {
+            final String status = headers.get(HttpHeaderNames.STATUS);
+            if (ArmeriaHttpUtil.isInformational(status)) {
                 return obj;
             }
 
             if (headersReceived) {
-                // Trailing headers, no modification.
+                // Trailers, no modification.
                 return obj;
             }
 
@@ -79,7 +83,7 @@ class HttpDecodedResponse extends FilteredHttpResponse {
                 // If the server returned an encoding we don't support (shouldn't happen since we set
                 // Accept-Encoding), decoding will be skipped which is ok.
                 if (decoderFactory != null) {
-                    responseDecoder = decoderFactory.newDecoder();
+                    responseDecoder = decoderFactory.newDecoder(alloc);
                 }
             }
 

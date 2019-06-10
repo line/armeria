@@ -20,26 +20,37 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.SSLSession;
 
+import com.linecorp.armeria.client.Client;
+import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.VirtualHostBuilder;
 
 import io.netty.channel.Channel;
+import io.netty.util.Attribute;
+import io.netty.util.AttributeMap;
 
 /**
  * A set of informational properties collected while processing a {@link Request} and its {@link Response}.
@@ -53,7 +64,12 @@ import io.netty.channel.Channel;
  * @see RequestLogAvailability
  * @see RequestLogListener
  */
-public interface RequestLog {
+public interface RequestLog extends AttributeMap {
+
+    /**
+     * Returns all {@link Attribute}s set in this log.
+     */
+    Iterator<Attribute<?>> attrs();
 
     /**
      * Returns the list of child {@link RequestLog}s, ordered by the time it was added.
@@ -191,14 +207,14 @@ public interface RequestLog {
     }
 
     /**
-     * Returns the time when the processing of the request started, in micros since the epoch.
+     * Returns the time when the processing of the request started, in microseconds since the epoch.
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
     long requestStartTimeMicros();
 
     /**
-     * Returns the time when the processing of the request started, in millis since the epoch.
+     * Returns the time when the processing of the request started, in milliseconds since the epoch.
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
@@ -252,14 +268,14 @@ public interface RequestLog {
     Throwable requestCause();
 
     /**
-     * Returns the time when the processing of the response started, in micros since the epoch.
+     * Returns the time when the processing of the response started, in microseconds since the epoch.
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
     long responseStartTimeMicros();
 
     /**
-     * Returns the time when the processing of the response started, in millis since the epoch.
+     * Returns the time when the processing of the response started, in milliseconds since the epoch.
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
@@ -334,6 +350,15 @@ public interface RequestLog {
     Channel channel();
 
     /**
+     * Returns the {@link SSLSession} of the connection which handled the {@link Request}.
+     *
+     * @return the {@link SSLSession}, or {@code null} if the {@link Request} has failed even before
+     *         a TLS connection is established.
+     */
+    @Nullable
+    SSLSession sslSession();
+
+    /**
      * Returns the {@link SessionProtocol} of the {@link Request}.
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
@@ -399,9 +424,7 @@ public interface RequestLog {
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
     default HttpStatus status() {
-        final HttpStatus status = responseHeaders().status();
-        assert status != null;
-        return status;
+        return responseHeaders().status();
     }
 
     /**
@@ -415,14 +438,14 @@ public interface RequestLog {
     }
 
     /**
-     * Returns the {@link HttpHeaders} of the {@link Request}. If the {@link Request} was not received or sent
-     * at all, it will return a dummy {@link HttpHeaders} whose {@code :authority} and {@code :path} are
+     * Returns the {@link RequestHeaders}. If the {@link Request} was not received or sent at all,
+     * it will return a dummy {@link RequestHeaders} whose {@code :authority} and {@code :path} are
      * set to {@code "?"}, {@code :scheme} is set to {@code "http"} or {@code "https"}, and {@code :method} is
      * set to {@code "UNKNOWN"}.
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
-    HttpHeaders requestHeaders();
+    RequestHeaders requestHeaders();
 
     /**
      * Returns the high-level content object of the {@link Request}, which is specific
@@ -435,6 +458,23 @@ public interface RequestLog {
     Object requestContent();
 
     /**
+     * Returns the preview of response content of the {@link Request}.
+     * Note that the content preview needs to be enabled when configuring a {@link Server} or a {@link Client}
+     * to use this functionality.
+     *
+     * @return the preview, or {@code null} if preview is not available or disabled.
+     * @throws RequestLogAvailabilityException if this property is not available yet.
+     * @see ServerBuilder#contentPreview(int)
+     * @see ServerBuilder#requestContentPreviewerFactory(ContentPreviewerFactory)
+     * @see VirtualHostBuilder#contentPreview(int)
+     * @see VirtualHostBuilder#requestContentPreviewerFactory(ContentPreviewerFactory)
+     * @see ClientBuilder#requestContentPreviewerFactory(ContentPreviewerFactory)
+     * @see ClientBuilder#contentPreview(int)
+     */
+    @Nullable
+    String requestContentPreview();
+
+    /**
      * Returns the low-level content object of the {@link Request}, which is specific
      * to the {@link SerializationFormat}.
      *
@@ -445,13 +485,20 @@ public interface RequestLog {
     Object rawRequestContent();
 
     /**
-     * Returns the non-informational status {@link HttpHeaders} of the {@link Response}.
-     * If the {@link Response} was not received or sent at all, it will return a dummy
-     * {@link HttpHeaders} whose {@code :status} is {@code "0"}.
+     * Returns the HTTP trailers of the {@link Request}.
      *
      * @throws RequestLogAvailabilityException if this property is not available yet
      */
-    HttpHeaders responseHeaders();
+    HttpHeaders requestTrailers();
+
+    /**
+     * Returns the non-informational status {@link ResponseHeaders}.
+     * If the {@link Response} was not received or sent at all, it will return a dummy
+     * {@link ResponseHeaders} whose {@code :status} is {@code "0"}.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    ResponseHeaders responseHeaders();
 
     /**
      * Returns the high-level content object of the {@link Response}, which is specific
@@ -474,20 +521,61 @@ public interface RequestLog {
     Object rawResponseContent();
 
     /**
+     * Returns the preview of response content of the {@link Response}.
+     * Note that the content preview needs to be enabled when configuring a {@link Server} or a {@link Client}
+     * to use this functionality.
+     *
+     * @return the preview, or {@code null} if preview is not available or disabled.
+     * @throws RequestLogAvailabilityException if this property is not available yet.
+     * @see ServerBuilder#contentPreview(int)
+     * @see ServerBuilder#responseContentPreviewerFactory(ContentPreviewerFactory)
+     * @see VirtualHostBuilder#contentPreview(int)
+     * @see VirtualHostBuilder#responseContentPreviewerFactory(ContentPreviewerFactory)
+     * @see ClientBuilder#responseContentPreviewerFactory(ContentPreviewerFactory)
+     * @see ClientBuilder#contentPreview(int)
+     */
+    @Nullable
+    String responseContentPreview();
+
+    /**
+     * Returns the HTTP trailers of the {@link Response}.
+     *
+     * @throws RequestLogAvailabilityException if this property is not available yet
+     */
+    HttpHeaders responseTrailers();
+
+    /**
      * Returns the string representation of the {@link Request}, with no sanitization of headers or content.
      */
     String toStringRequestOnly();
 
     /**
+     * Returns the string representation of the {@link Request}. This method is a shortcut of:
+     * <pre>{@code
+     * toStringRequestOnly(headersSanitizer, contentSanitizer, headersSanitizer);
+     * }</pre>
+     *
+     * @param headersSanitizer a {@link Function} for sanitizing HTTP headers for logging. The result of the
+     *                         {@link Function} is what is actually logged as headers.
+     * @param contentSanitizer a {@link Function} for sanitizing request content for logging. The result of the
+     *                         {@link Function} is what is actually logged as content.
+     */
+    String toStringRequestOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
+                               Function<Object, ?> contentSanitizer);
+
+    /**
      * Returns the string representation of the {@link Request}.
      *
      * @param headersSanitizer a {@link Function} for sanitizing HTTP headers for logging. The result of the
-     *     {@link Function} is what is actually logged as headers.
+     *                         {@link Function} is what is actually logged as headers.
      * @param contentSanitizer a {@link Function} for sanitizing request content for logging. The result of the
-     *     {@link Function} is what is actually logged as content.
+     *                         {@link Function} is what is actually logged as content.
+     * @param trailersSanitizer a {@link Function} for sanitizing HTTP trailers for logging. The result of the
+     *                          {@link Function} is what is actually logged as trailers.
      */
-    String toStringRequestOnly(Function<HttpHeaders, HttpHeaders> headersSanitizer,
-                               Function<Object, Object> contentSanitizer);
+    String toStringRequestOnly(Function<? super RequestHeaders, ? extends HttpHeaders> headersSanitizer,
+                               Function<Object, ?> contentSanitizer,
+                               Function<? super HttpHeaders, ? extends HttpHeaders> trailersSanitizer);
 
     /**
      * Returns the string representation of the {@link Response}, with no sanitization of headers or content.
@@ -495,13 +583,30 @@ public interface RequestLog {
     String toStringResponseOnly();
 
     /**
+     * Returns the string representation of the {@link Response}. This method is a shortcut of:
+     * <pre>{@code
+     * toStringResponseOnly(headersSanitizer, contentSanitizer, headersSanitizer);
+     * }</pre>
+     *
+     * @param headersSanitizer a {@link Function} for sanitizing HTTP headers for logging. The result of the
+     *                         {@link Function} is what is actually logged as headers.
+     * @param contentSanitizer a {@link Function} for sanitizing response content for logging. The result of the
+     *                         {@link Function} is what is actually logged as content.
+     */
+    String toStringResponseOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
+                                Function<Object, ?> contentSanitizer);
+
+    /**
      * Returns the string representation of the {@link Response}.
      *
      * @param headersSanitizer a {@link Function} for sanitizing HTTP headers for logging. The result of the
-     *     {@link Function} is what is actually logged as headers.
+     *                         {@link Function} is what is actually logged as headers.
      * @param contentSanitizer a {@link Function} for sanitizing response content for logging. The result of the
-     *     {@link Function} is what is actually logged as content.
+     *                         {@link Function} is what is actually logged as content.
+     * @param trailersSanitizer a {@link Function} for sanitizing HTTP trailers for logging. The result of the
+     *                         {@link Function} is what is actually logged as trailers.
      */
-    String toStringResponseOnly(Function<HttpHeaders, HttpHeaders> headersSanitizer,
-                                Function<Object, Object> contentSanitizer);
+    String toStringResponseOnly(Function<? super ResponseHeaders, ? extends HttpHeaders> headersSanitizer,
+                                Function<Object, ?> contentSanitizer,
+                                Function<? super HttpHeaders, ? extends HttpHeaders> trailersSanitizer);
 }

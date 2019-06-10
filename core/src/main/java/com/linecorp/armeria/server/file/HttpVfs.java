@@ -21,8 +21,11 @@ import static java.util.Objects.requireNonNull;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Clock;
+import java.util.List;
 
 import javax.annotation.Nullable;
+
+import com.linecorp.armeria.common.HttpHeaders;
 
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Tag;
@@ -67,10 +70,30 @@ public interface HttpVfs {
      * @param clock the {@link Clock} which provides the current date and time
      * @param contentEncoding the desired {@code 'content-encoding'} header value of the file.
      *                        {@code null} to omit the header.
+     * @param additionalHeaders the additional HTTP headers to add to the returned {@link HttpFile}.
      *
      * @return the {@link HttpFile} at the specified {@code path}
      */
-    HttpFile get(String path, Clock clock, @Nullable String contentEncoding);
+    HttpFile get(String path, Clock clock, @Nullable String contentEncoding, HttpHeaders additionalHeaders);
+
+    /**
+     * Returns whether the file at the specified {@code path} is a directory.
+     *
+     * @param path an absolute path whose component separator is {@code '/'}.
+     * @return {@code true} if the file is a directory. {@code false} if the directory does not exist or
+     *         the file listing is not available.
+     */
+    boolean canList(String path);
+
+    /**
+     * Lists the files at the specified directory {@code path} non-recursively.
+     *
+     * @param path an absolute path whose component separator is {@code '/'}.
+     * @return the list of the file names. If the file is a directory, the file name will end with
+     *         {@code '/'}. If the directory does not exist or the file listing is not available,
+     *         an empty {@link List} is returned.
+     */
+    List<String> list(String path);
 
     /**
      * Returns the value of the {@code "vfs"} {@link Tag} in a {@link Meter}.

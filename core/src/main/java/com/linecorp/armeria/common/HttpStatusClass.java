@@ -37,7 +37,7 @@ import io.netty.util.AsciiString;
  */
 public enum HttpStatusClass {
 
-    // Forked from Netty at 4875a2aad4c82204caedb2d121fb5ef03c09fe44
+    // Forked from Netty 4.1.34 at 4875a2aad4c82204caedb2d121fb5ef03c09fe44
 
     /**
      * The informational class (1xx).

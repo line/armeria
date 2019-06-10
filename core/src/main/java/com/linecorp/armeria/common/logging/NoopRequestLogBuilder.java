@@ -17,8 +17,12 @@
 package com.linecorp.armeria.common.logging;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.SSLSession;
 
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 
@@ -33,7 +37,18 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
     public void endResponseWithLastChild() {}
 
     @Override
-    public void startRequest(Channel ch, SessionProtocol sessionProtocol) {}
+    public void startRequest(Channel channel, SessionProtocol sessionProtocol) {}
+
+    @Override
+    public void startRequest(Channel channel, SessionProtocol sessionProtocol,
+                             long requestStartTimeNanos, long requestStartTimeMicros) {}
+
+    @Override
+    public void startRequest(Channel ch, SessionProtocol sessionProtocol, @Nullable SSLSession sslSession) {}
+
+    @Override
+    public void startRequest(Channel channel, SessionProtocol sessionProtocol, @Nullable SSLSession sslSession,
+                             long requestStartTimeNanos, long requestStartTimeMicros) {}
 
     @Override
     public void serializationFormat(SerializationFormat serializationFormat) {}
@@ -42,16 +57,25 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
     public void increaseRequestLength(long deltaBytes) {}
 
     @Override
+    public void increaseRequestLength(HttpData data) {}
+
+    @Override
     public void requestLength(long requestLength) {}
 
     @Override
     public void requestFirstBytesTransferred() {}
 
     @Override
-    public void requestHeaders(HttpHeaders requestHeaders) {}
+    public void requestFirstBytesTransferred(long requestFirstBytesTransferredNanos) {}
+
+    @Override
+    public void requestHeaders(RequestHeaders requestHeaders) {}
 
     @Override
     public void requestContent(@Nullable Object requestContent, @Nullable Object rawRequestContent) {}
+
+    @Override
+    public void requestContentPreview(@Nullable String requestContentPreview) {}
 
     @Override
     public void deferRequestContent() {}
@@ -62,16 +86,31 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
     }
 
     @Override
+    public void requestTrailers(HttpHeaders requestTrailers) {}
+
+    @Override
     public void endRequest() {}
 
     @Override
     public void endRequest(Throwable requestCause) {}
 
     @Override
+    public void endRequest(long requestEndTimeNanos) {}
+
+    @Override
+    public void endRequest(Throwable requestCause, long requestEndTimeNanos) {}
+
+    @Override
     public void startResponse() {}
 
     @Override
+    public void startResponse(long responseStartTimeNanos, long responseStartTimeMicros) {}
+
+    @Override
     public void increaseResponseLength(long deltaBytes) {}
+
+    @Override
+    public void increaseResponseLength(HttpData data) {}
 
     @Override
     public void responseLength(long responseLength) {}
@@ -80,10 +119,16 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
     public void responseFirstBytesTransferred() {}
 
     @Override
-    public void responseHeaders(HttpHeaders responseHeaders) {}
+    public void responseFirstBytesTransferred(long responseFirstBytesTransferredNanos) {}
+
+    @Override
+    public void responseHeaders(ResponseHeaders responseHeaders) {}
 
     @Override
     public void responseContent(@Nullable Object responseContent, @Nullable Object rawResponseContent) {}
+
+    @Override
+    public void responseContentPreview(@Nullable String responseContentPreview) {}
 
     @Override
     public void deferResponseContent() {}
@@ -94,8 +139,17 @@ final class NoopRequestLogBuilder implements RequestLogBuilder {
     }
 
     @Override
+    public void responseTrailers(HttpHeaders responseTrailers) {}
+
+    @Override
     public void endResponse() {}
 
     @Override
     public void endResponse(Throwable responseCause) {}
+
+    @Override
+    public void endResponse(long responseEndTimeNanos) {}
+
+    @Override
+    public void endResponse(Throwable responseCause, long responseEndTimeNanos) {}
 }

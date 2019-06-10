@@ -49,7 +49,7 @@ import org.apache.tomcat.util.http.MimeHeaders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -58,6 +58,9 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.internal.tomcat.TomcatVersion;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpStatusException;
@@ -119,6 +122,12 @@ public abstract class TomcatService implements HttpService {
             }
         }
     }
+
+    private static final ResponseHeaders INVALID_AUTHORITY_HEADERS =
+            ResponseHeaders.of(HttpStatus.BAD_REQUEST,
+                               HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8);
+    private static final HttpData INVALID_AUTHORITY_DATA =
+            HttpData.ofUtf8(HttpStatus.BAD_REQUEST + "\nInvalid authority");
 
     TomcatService() {}
 
@@ -271,13 +280,17 @@ public abstract class TomcatService implements HttpService {
             try {
                 if (cause != null) {
                     logger.warn("{} Failed to aggregate a request:", ctx, cause);
-                    res.close(HttpHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
+                    res.close(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
                     return null;
                 }
 
                 final Request coyoteReq = convertRequest(ctx, aReq);
                 if (coyoteReq == null) {
-                    res.close(HttpHeaders.of(HttpStatus.BAD_REQUEST));
+                    if (res.tryWrite(INVALID_AUTHORITY_HEADERS)) {
+                        if (res.tryWrite(INVALID_AUTHORITY_DATA)) {
+                            res.close();
+                        }
+                    }
                     return null;
                 }
                 final Response coyoteRes = new Response();
@@ -321,7 +334,7 @@ public abstract class TomcatService implements HttpService {
     }
 
     @Nullable
-    private Request convertRequest(ServiceRequestContext ctx, AggregatedHttpMessage req) throws Throwable {
+    private Request convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest req) throws Throwable {
         final String mappedPath = ctx.mappedPath();
         final Request coyoteReq = new Request();
 
@@ -339,7 +352,7 @@ public abstract class TomcatService implements HttpService {
         coyoteReq.localName().setString(hostName());
         coyoteReq.setLocalPort(localAddr.getPort());
 
-        final String hostHeader = req.headers().authority();
+        final String hostHeader = req.authority();
         final int colonPos = hostHeader.indexOf(':');
         if (colonPos < 0) {
             coyoteReq.serverName().setString(hostHeader);
@@ -370,7 +383,7 @@ public abstract class TomcatService implements HttpService {
         // Set the headers.
         final MimeHeaders cHeaders = coyoteReq.getMimeHeaders();
         convertHeaders(req.headers(), cHeaders);
-        convertHeaders(req.trailingHeaders(), cHeaders);
+        convertHeaders(req.trailers(), cHeaders);
 
         // Set the content.
         final HttpData content = req.content();
@@ -398,8 +411,9 @@ public abstract class TomcatService implements HttpService {
         }
     }
 
-    private static HttpHeaders convertResponse(Response coyoteRes) {
-        final HttpHeaders headers = HttpHeaders.of(HttpStatus.valueOf(coyoteRes.getStatus()));
+    private static ResponseHeaders convertResponse(Response coyoteRes) {
+        final ResponseHeadersBuilder headers = ResponseHeaders.builder();
+        headers.status(coyoteRes.getStatus());
 
         final String contentType = coyoteRes.getContentType();
         if (contentType != null && !contentType.isEmpty()) {
@@ -428,7 +442,7 @@ public abstract class TomcatService implements HttpService {
             headers.add(name.toLowerCase(), value);
         }
 
-        return headers;
+        return headers.build();
     }
 
     @Nullable

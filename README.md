@@ -3,7 +3,7 @@ Visit [the official web site](https://line.github.io/armeria/) for more informat
 # Armeria
 
 _Armeria_ is an open-source asynchronous RPC/API client/server library built on top of
-[Java 8](https://java.oracle.com/), [Netty 4.1](https://netty.io/), [HTTP/2](https://http2.github.io/),
+[Java 8](https://go.java/), [Netty 4.1](https://netty.io/), [HTTP/2](https://http2.github.io/),
 [Thrift](https://thrift.apache.org/) and [gRPC](https://grpc.io/). Its primary goal is to help engineers build
 high-performance asynchronous microservices that use HTTP/2 as a session layer protocol.
 
@@ -12,7 +12,7 @@ by [LINE Corporation](https://linecorp.com/en/), who uses it in production.
 
 ## How to build
 
-We use [Gradle](https://gradle.org/) and [Java 10 or later](https://java.oracle.com/) to build Armeria. The following command will compile Armeria and generate
+We use [Gradle](https://gradle.org/) and [Java 11 or later](https://adoptopenjdk.net/) to build Armeria. The following command will compile Armeria and generate
 JARs and web site:
 
 ```bash
@@ -24,7 +24,7 @@ $ ./gradlew build
 Just [create a new issue](https://github.com/line/armeria/issues/new) to ask a question, and browse
 [the list of previously answered questions](https://github.com/line/armeria/issues?q=label%3Aquestion).
 
-We also have [a Slack workspace](https://line-slacknow.herokuapp.com/line-armeria/).
+We also have [a Slack workspace](https://join.slack.com/t/line-armeria/shared_invite/enQtNjIxNDU1ODU1MTI2LTgwMzk0MzVhOGRhZjJiY2ExODc0MzNhYzIxZDFlYjM5OGRjNTE1MzYzYzQ4MzNhNGY2ZDM0NThhMTRmZmQ3ZjQ).
 
 ## How to contribute
 

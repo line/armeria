@@ -16,7 +16,11 @@
 
 package com.linecorp.armeria.client;
 
+import static java.util.Objects.requireNonNull;
+
+import java.net.URI;
 import java.time.Duration;
+import java.util.Map.Entry;
 
 import javax.annotation.Nullable;
 
@@ -26,15 +30,49 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
-
-import io.netty.handler.codec.Headers;
-import io.netty.util.AsciiString;
+import com.linecorp.armeria.common.RpcRequest;
 
 /**
  * Provides information about a {@link Request}, its {@link Response} and its related utilities.
  * Every client request has its own {@link ClientRequestContext} instance.
  */
 public interface ClientRequestContext extends RequestContext {
+
+    /**
+     * Returns a new {@link ClientRequestContext} created from the specified {@link HttpRequest}.
+     * Note that it is not usually required to create a new context by yourself, because Armeria
+     * will always provide a context object for you. However, it may be useful in some cases such as
+     * unit testing.
+     *
+     * @see ClientRequestContextBuilder
+     */
+    static ClientRequestContext of(HttpRequest request) {
+        return ClientRequestContextBuilder.of(request).build();
+    }
+
+    /**
+     * Returns a new {@link ClientRequestContext} created from the specified {@link RpcRequest} and URI.
+     * Note that it is not usually required to create a new context by yourself, because Armeria
+     * will always provide a context object for you. However, it may be useful in some cases such as
+     * unit testing.
+     *
+     * @see ClientRequestContextBuilder
+     */
+    static ClientRequestContext of(RpcRequest request, String uri) {
+        return ClientRequestContextBuilder.of(request, URI.create(requireNonNull(uri, "uri"))).build();
+    }
+
+    /**
+     * Returns a new {@link ClientRequestContext} created from the specified {@link RpcRequest} and {@link URI}.
+     * Note that it is not usually required to create a new context by yourself, because Armeria
+     * will always provide a context object for you. However, it may be useful in some cases such as
+     * unit testing.
+     *
+     * @see ClientRequestContextBuilder
+     */
+    static ClientRequestContext of(RpcRequest request, URI uri) {
+        return ClientRequestContextBuilder.of(request, uri).build();
+    }
 
     @Override
     ClientRequestContext newDerivedContext();
@@ -63,46 +101,46 @@ public interface ClientRequestContext extends RequestContext {
 
     /**
      * Returns the amount of time allowed until the initial write attempt of the current {@link Request}
-     * succeeds. This value is initially set from {@link ClientOption#DEFAULT_WRITE_TIMEOUT_MILLIS}.
+     * succeeds. This value is initially set from {@link ClientOption#WRITE_TIMEOUT_MILLIS}.
      */
     long writeTimeoutMillis();
 
     /**
      * Returns the amount of time allowed until the initial write attempt of the current {@link Request}
-     * succeeds. This value is initially set from {@link ClientOption#DEFAULT_WRITE_TIMEOUT_MILLIS}.
+     * succeeds. This value is initially set from {@link ClientOption#WRITE_TIMEOUT_MILLIS}.
      */
     void setWriteTimeoutMillis(long writeTimeoutMillis);
 
     /**
      * Returns the amount of time allowed until the initial write attempt of the current {@link Request}
-     * succeeds. This value is initially set from {@link ClientOption#DEFAULT_WRITE_TIMEOUT_MILLIS}.
+     * succeeds. This value is initially set from {@link ClientOption#WRITE_TIMEOUT_MILLIS}.
      */
     void setWriteTimeout(Duration writeTimeout);
 
     /**
      * Returns the amount of time allowed until receiving the {@link Response} completely
      * since the transfer of the {@link Response} started. This value is initially set from
-     * {@link ClientOption#DEFAULT_RESPONSE_TIMEOUT_MILLIS}.
+     * {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
      */
     long responseTimeoutMillis();
 
     /**
      * Sets the amount of time allowed until receiving the {@link Response} completely
      * since the transfer of the {@link Response} started. This value is initially set from
-     * {@link ClientOption#DEFAULT_RESPONSE_TIMEOUT_MILLIS}.
+     * {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
      */
     void setResponseTimeoutMillis(long responseTimeoutMillis);
 
     /**
      * Sets the amount of time allowed until receiving the {@link Response} completely
      * since the transfer of the {@link Response} started. This value is initially set from
-     * {@link ClientOption#DEFAULT_RESPONSE_TIMEOUT_MILLIS}.
+     * {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
      */
     void setResponseTimeout(Duration responseTimeout);
 
     /**
      * Returns the maximum length of the received {@link Response}.
-     * This value is initially set from {@link ClientOption#DEFAULT_MAX_RESPONSE_LENGTH}.
+     * This value is initially set from {@link ClientOption#MAX_RESPONSE_LENGTH}.
      *
      * @see ContentTooLargeException
      */
@@ -110,15 +148,14 @@ public interface ClientRequestContext extends RequestContext {
 
     /**
      * Sets the maximum length of the received {@link Response}.
-     * This value is initially set from {@link ClientOption#DEFAULT_MAX_RESPONSE_LENGTH}.
+     * This value is initially set from {@link ClientOption#MAX_RESPONSE_LENGTH}.
      *
      * @see ContentTooLargeException
      */
     void setMaxResponseLength(long maxResponseLength);
 
     /**
-     * Returns an immutable {@link HttpHeaders} which is included when a {@link Client} sends an
-     * {@link HttpRequest}.
+     * Returns an {@link HttpHeaders} which is included when a {@link Client} sends an {@link HttpRequest}.
      */
     HttpHeaders additionalRequestHeaders();
 
@@ -127,30 +164,30 @@ public interface ClientRequestContext extends RequestContext {
      * associated with the specified {@code name}.
      * The header will be included when a {@link Client} sends an {@link HttpRequest}.
      */
-    void setAdditionalRequestHeader(AsciiString name, String value);
+    void setAdditionalRequestHeader(CharSequence name, Object value);
 
     /**
-     * Clears the current header and sets the specified {@link Headers} which is included when a
+     * Clears the current header and sets the specified {@link HttpHeaders} which is included when a
      * {@link Client} sends an {@link HttpRequest}.
      */
-    void setAdditionalRequestHeaders(Headers<? extends AsciiString, ? extends String, ?> headers);
+    void setAdditionalRequestHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
 
     /**
      * Adds a header with the specified {@code name} and {@code value}. The header will be included when
      * a {@link Client} sends an {@link HttpRequest}.
      */
-    void addAdditionalRequestHeader(AsciiString name, String value);
+    void addAdditionalRequestHeader(CharSequence name, Object value);
 
     /**
-     * Adds the specified {@link Headers} which is included when a {@link Client} sends an
+     * Adds the specified {@link HttpHeaders} which is included when a {@link Client} sends an
      * {@link HttpRequest}.
      */
-    void addAdditionalRequestHeaders(Headers<? extends AsciiString, ? extends String, ?> headers);
+    void addAdditionalRequestHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers);
 
     /**
      * Removes all headers with the specified {@code name}.
      *
      * @return {@code true} if at least one entry has been removed
      */
-    boolean removeAdditionalRequestHeader(AsciiString name);
+    boolean removeAdditionalRequestHeader(CharSequence name);
 }

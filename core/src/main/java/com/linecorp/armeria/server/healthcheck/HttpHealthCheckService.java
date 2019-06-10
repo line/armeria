@@ -24,7 +24,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -51,10 +51,8 @@ import com.linecorp.armeria.server.TransientService;
  * <h2>Example:</h2>
  * <pre>{@code
  * Server server = new ServerBuilder()
- *         .defaultVirtualHost(new VirtualHostBuilder()
- *                 .service("/rpc", new THttpService(myHandler))
- *                 .service("/health", new HttpHealthCheckService())
- *                 .build())
+ *         .service("/services", myService)
+ *         .service("/health", new HttpHealthCheckService())
  *         .build();
  * }</pre>
  *
@@ -66,10 +64,8 @@ import com.linecorp.armeria.server.TransientService;
  * <pre>{@code
  * SettableHealthChecker healthChecker = new SettableHealthChecker();
  * Server server = new ServerBuilder()
- *         .defaultVirtualHost(new VirtualHostBuilder()
- *                 .service("/rpc", new THttpService(myHandler))
- *                 .service("/health", new HttpHealthCheckService(healthChecker))
- *                 .build())
+ *         .service("/services", myService)
+ *         .service("/health", new HttpHealthCheckService(healthChecker))
  *         .build();
  * }</pre>
  */
@@ -103,26 +99,25 @@ public class HttpHealthCheckService extends AbstractHttpService
      */
     public HttpHealthCheckService(Iterable<? extends HealthChecker> healthCheckers) {
         this.healthCheckers = ImmutableList.copyOf(requireNonNull(healthCheckers, "healthCheckers"));
-        serverHealth = new SettableHealthChecker();
+        serverHealth = new SettableHealthChecker(false);
         serverHealthUpdater = new ServerHealthUpdater();
     }
 
     /**
      * Creates a new response which is sent when the {@link Server} is healthy.
      */
-    protected AggregatedHttpMessage newHealthyResponse(
+    protected AggregatedHttpResponse newHealthyResponse(
             @SuppressWarnings("UnusedParameters") ServiceRequestContext ctx) {
-
-        return AggregatedHttpMessage.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, RES_OK);
+        return AggregatedHttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, RES_OK);
     }
 
     /**
      * Creates a new response which is sent when the {@link Server} is unhealthy.
      */
-    protected AggregatedHttpMessage newUnhealthyResponse(
+    protected AggregatedHttpResponse newUnhealthyResponse(
             @SuppressWarnings("UnusedParameters") ServiceRequestContext ctx) {
-
-        return AggregatedHttpMessage.of(HttpStatus.SERVICE_UNAVAILABLE, MediaType.PLAIN_TEXT_UTF_8, RES_NOT_OK);
+        return AggregatedHttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE, MediaType.PLAIN_TEXT_UTF_8,
+                                         RES_NOT_OK);
     }
 
     @Override
@@ -151,7 +146,7 @@ public class HttpHealthCheckService extends AbstractHttpService
         return HttpResponse.of(newResponse(ctx));
     }
 
-    private AggregatedHttpMessage newResponse(ServiceRequestContext ctx) {
+    private AggregatedHttpResponse newResponse(ServiceRequestContext ctx) {
         return isHealthy() ? newHealthyResponse(ctx)
                            : newUnhealthyResponse(ctx);
     }

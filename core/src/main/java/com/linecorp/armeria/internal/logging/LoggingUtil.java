@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 
 import io.netty.channel.Channel;
@@ -35,7 +36,7 @@ public final class LoggingUtil {
     public static String remoteHost(HttpHeaders headers, Channel channel) {
         requireNonNull(headers, "headers");
         requireNonNull(channel, "channel");
-        String host = headers.authority();
+        String host = headers.get(HttpHeaderNames.AUTHORITY);
         if (host == null) {
             host = ((InetSocketAddress) channel.remoteAddress()).getHostString();
         } else {

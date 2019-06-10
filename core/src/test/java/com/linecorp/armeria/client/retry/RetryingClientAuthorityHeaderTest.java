@@ -30,14 +30,15 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
-import com.linecorp.armeria.common.AggregatedHttpMessage;
-import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 public class RetryingClientAuthorityHeaderTest {
 
@@ -73,17 +74,18 @@ public class RetryingClientAuthorityHeaderTest {
     public void authorityIsDifferentByBackendsWhenRetry() {
         final HttpClient client = newHttpClientWithEndpointGroup();
 
-        final AggregatedHttpMessage msg = client.get("/").aggregate().join();
-        assertThat(msg.content().toStringUtf8()).contains("www.bar.com");
+        final AggregatedHttpResponse res = client.get("/").aggregate().join();
+        assertThat(res.contentUtf8()).contains("www.bar.com");
     }
 
     @Test
     public void authorityIsSameWhenSet() {
         final HttpClient client = newHttpClientWithEndpointGroup();
 
-        final HttpHeaders headers = HttpHeaders.of(GET, "/").authority("www.armeria.com");
-        final AggregatedHttpMessage msg = client.execute(headers).aggregate().join();
-        assertThat(msg.content().toStringUtf8()).contains("www.armeria.com");
+        final RequestHeaders headers = RequestHeaders.of(GET, "/",
+                                                         HttpHeaderNames.AUTHORITY, "www.armeria.com");
+        final AggregatedHttpResponse res = client.execute(headers).aggregate().join();
+        assertThat(res.contentUtf8()).contains("www.armeria.com");
     }
 
     private static HttpClient newHttpClientWithEndpointGroup() {

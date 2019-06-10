@@ -20,9 +20,9 @@ import java.util.concurrent.Executor;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.HttpService;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -33,6 +33,7 @@ final class NonExistentHttpFile implements AggregatedHttpFile {
 
     private NonExistentHttpFile() {}
 
+    @Nullable
     @Override
     public HttpFileAttributes readAttributes() {
         return null;
@@ -40,7 +41,7 @@ final class NonExistentHttpFile implements AggregatedHttpFile {
 
     @Nullable
     @Override
-    public HttpHeaders readHeaders() {
+    public ResponseHeaders readHeaders() {
         return null;
     }
 

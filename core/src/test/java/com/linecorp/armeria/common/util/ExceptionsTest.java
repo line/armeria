@@ -80,7 +80,7 @@ public class ExceptionsTest {
 
     @Test
     public void testIsExpected() {
-        final boolean expected = !Flags.verboseExceptions();
+        final boolean expected = !Flags.verboseSocketExceptions();
 
         assertThat(Exceptions.isExpected(new Exception())).isFalse();
         assertThat(Exceptions.isExpected(new Exception("broken pipe"))).isFalse();

@@ -49,7 +49,10 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpParameters;
@@ -60,6 +63,8 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -81,7 +86,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
-import com.linecorp.armeria.testing.server.ServerRule;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 public class AnnotatedHttpServiceTest {
 
@@ -230,9 +235,9 @@ public class AnnotatedHttpServiceTest {
     static class VoidTo200ResponseConverter implements ResponseConverterFunction {
         @Override
         public HttpResponse convertResponse(ServiceRequestContext ctx,
-                                            HttpHeaders headers,
+                                            ResponseHeaders headers,
                                             @Nullable Object result,
-                                            HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailers) throws Exception {
             if (result == null) {
                 return HttpResponse.of(HttpStatus.OK);
             }
@@ -313,44 +318,44 @@ public class AnnotatedHttpServiceTest {
     public static class MyAnnotatedService5 {
         @Post
         @Path("/a/string")
-        public String postString(AggregatedHttpMessage message, RequestContext ctx) {
+        public String postString(AggregatedHttpRequest request, RequestContext ctx) {
             validateContext(ctx);
-            return message.content().toStringUtf8();
+            return request.contentUtf8();
         }
 
         @Post
         @Path("/a/string-async1")
-        public CompletionStage<String> postStringAsync1(AggregatedHttpMessage message, RequestContext ctx) {
+        public CompletionStage<String> postStringAsync1(AggregatedHttpRequest request, RequestContext ctx) {
             validateContext(ctx);
-            return CompletableFuture.supplyAsync(() -> message.content().toStringUtf8());
+            return CompletableFuture.supplyAsync(request::contentUtf8);
         }
 
         @Post
         @Path("/a/string-async2")
-        public HttpResponse postStringAsync2(AggregatedHttpMessage message, RequestContext ctx) {
+        public HttpResponse postStringAsync2(AggregatedHttpRequest request, RequestContext ctx) {
             validateContext(ctx);
             final HttpResponseWriter response = HttpResponse.streaming();
-            response.write(HttpHeaders.of(HttpStatus.OK));
-            response.write(message.content());
+            response.write(ResponseHeaders.of(HttpStatus.OK));
+            response.write(request.content());
             response.close();
             return response;
         }
 
         @Post
         @Path("/a/string-aggregate-response1")
-        public AggregatedHttpMessage postStringAggregateResponse1(AggregatedHttpMessage message,
-                                                                  RequestContext ctx) {
+        public AggregatedHttpResponse postStringAggregateResponse1(AggregatedHttpRequest request,
+                                                                   RequestContext ctx) {
             validateContext(ctx);
-            return AggregatedHttpMessage.of(HttpHeaders.of(HttpStatus.OK), message.content());
+            return AggregatedHttpResponse.of(ResponseHeaders.of(HttpStatus.OK), request.content());
         }
 
         @Post
         @Path("/a/string-aggregate-response2")
-        public AggregatedHttpMessage postStringAggregateResponse2(HttpRequest req,
-                                                                  RequestContext ctx) {
+        public AggregatedHttpResponse postStringAggregateResponse2(HttpRequest req,
+                                                                   RequestContext ctx) {
             validateContextAndRequest(ctx, req);
-            final AggregatedHttpMessage message = req.aggregate().join();
-            return AggregatedHttpMessage.of(HttpHeaders.of(HttpStatus.OK), message.content());
+            final AggregatedHttpRequest request = req.aggregate().join();
+            return AggregatedHttpResponse.of(ResponseHeaders.of(HttpStatus.OK), request.content());
         }
     }
 
@@ -449,10 +454,9 @@ public class AnnotatedHttpServiceTest {
                                  @Param("type") List<UserType> types,
                                  @Param("level") Set<UserLevel> levels) {
             validateContext(ctx);
-            return String.join("/",
-                               ImmutableList.builder().addAll(types).addAll(levels).build()
-                                            .stream().map(e -> ((Enum<?>) e).name())
-                                            .collect(Collectors.toList()));
+            return ImmutableList.builder().addAll(types).addAll(levels).build().stream()
+                                .map(e -> ((Enum<?>) e).name())
+                                .collect(Collectors.joining("/"));
         }
 
         @Get
@@ -500,16 +504,16 @@ public class AnnotatedHttpServiceTest {
             return "POST";
         }
 
-        @Post("/same/path")
-        @Consumes("application/json")
-        public String sharedPostJson() {
-            return "POST/JSON";
-        }
-
         @Get("/same/path")
         @Produces("application/json")
         public String sharedGetJson() {
             return "GET/JSON";
+        }
+
+        @Post("/same/path")
+        @Consumes("application/json")
+        public String sharedPostJson() {
+            return "POST/JSON";
         }
 
         @Order(-1)
@@ -624,9 +628,9 @@ public class AnnotatedHttpServiceTest {
         @Post("/customHeader5")
         public String customHeader5(@Header List<Integer> numbers,
                                     @Header Set<String> strings) {
-            return String.join(":",
-                               numbers.stream()
-                                      .map(String::valueOf).collect(Collectors.toList())) + '/' +
+            return numbers.stream()
+                          .map(String::valueOf)
+                          .collect(Collectors.joining(":")) + '/' +
                    String.join(":", strings);
         }
 
@@ -713,7 +717,7 @@ public class AnnotatedHttpServiceTest {
     }
 
     @Test
-    public void testNonDefaultPathMappings() throws Exception {
+    public void testNonDefaultRoute() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             // Exact pattern
             testBody(hc, get("/6/exact"), "String[exact:/6/exact]");
@@ -780,35 +784,99 @@ public class AnnotatedHttpServiceTest {
 
     @Test
     public void testAdvancedAnnotatedHttpService() throws Exception {
-        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+        final HttpClient client = HttpClient.of(rule.uri("/"));
+        final String path = "/8/same/path";
 
-            final String uri = "/8/same/path";
+        // No 'Accept' header means accepting everything. The order of -1 would be matched first.
+        RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, path);
+        AggregatedHttpResponse res = client.execute(headers).aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.headers().contentType()).hasToString("text/plain");
+        assertThat(res.contentUtf8()).isEqualTo("GET/TEXT");
 
-            // No 'Accept' header means accepting everything. The order of -1 would be matched first.
-            testBodyAndContentType(hc, get(uri), "GET/TEXT", "text/plain");
-            // The same as the above.
-            testBodyAndContentType(hc, get(uri, "*/*"), "GET/TEXT", "text/plain");
-            testBodyAndContentType(hc, post(uri, "application/json", "application/json"),
-                                   "POST/JSON/BOTH", "application/json");
-            testBodyAndContentType(hc, get(uri, "application/json;q=0.9, text/plain"),
-                                   "GET/TEXT", "text/plain");
-            testBodyAndContentType(hc, get(uri, "application/json;q=0.9, text/plain;q=0.7"),
-                                   "GET/JSON", "application/json");
-            testBodyAndContentType(hc, get(uri, "application/json;charset=UTF-8;q=0.9, text/plain;q=0.7"),
-                                   "GET/TEXT", "text/plain");
-            testBodyAndContentType(hc, get(uri, "application/x-www-form-urlencoded" +
-                                                ",application/json;charset=UTF-8;q=0.9" +
-                                                ",text/plain;q=0.7"),
-                                   "GET/TEXT", "text/plain");
-            testBodyAndContentType(hc, post(uri, "application/json"),
-                                   "POST/JSON/BOTH", "application/json");
+        // The same as the above.
+        headers = RequestHeaders.of(HttpMethod.GET, path, HttpHeaderNames.ACCEPT, "*/*");
+        res = client.execute(headers).aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.headers().contentType()).hasToString("text/plain");
+        assertThat(res.contentUtf8()).isEqualTo("GET/TEXT");
 
-            testBody(hc, post(uri), "POST");
+        headers = RequestHeaders.of(HttpMethod.GET, path,
+                                    HttpHeaderNames.ACCEPT, "application/json;q=0.9, text/plain");
+        res = client.execute(headers).aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.headers().contentType()).hasToString("text/plain");
+        assertThat(res.contentUtf8()).isEqualTo("GET/TEXT");
 
-            // No match on 'Accept' header list.
-            testStatusCode(hc, post(uri, null, "application/json"), 406);
-            testStatusCode(hc, get(uri, "application/json;charset=UTF-8;q=0.9, text/html;q=0.7"), 406);
-        }
+        headers = RequestHeaders.of(HttpMethod.GET, path,
+                                    HttpHeaderNames.ACCEPT, "application/json;q=0.9, text/plain;q=0.7");
+        res = client.execute(headers).aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.headers().contentType()).isSameAs(MediaType.JSON);
+        assertThat(res.contentUtf8()).isEqualTo("GET/JSON");
+
+        // Because of the charset, sharedGetJson() is not matched.
+        headers = RequestHeaders.of(HttpMethod.GET, path,
+                                    HttpHeaderNames.ACCEPT,
+                                    "application/json;charset=UTF-8;q=0.9, text/plain;q=0.7");
+        res = client.execute(headers).aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.headers().contentType()).hasToString("text/plain");
+        assertThat(res.contentUtf8()).isEqualTo("GET/TEXT");
+
+        // Because of the charset, sharedGetJson() is not matched.
+        headers = RequestHeaders.of(HttpMethod.GET, path,
+                                    HttpHeaderNames.ACCEPT,
+                                    "application/json;charset=UTF-8;q=0.9, text/html;q=0.7");
+        res = client.execute(headers).aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.headers().contentType()).isNull();
+        assertThat(res.contentUtf8()).isEqualTo("GET");
+
+        headers = RequestHeaders.of(HttpMethod.GET, path,
+                                    HttpHeaderNames.ACCEPT,
+                                    "application/x-www-form-urlencoded, " +
+                                    "application/json;charset=UTF-8;q=0.9, text/plain;q=0.7");
+        res = client.execute(headers).aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.headers().contentType()).hasToString("text/plain");
+        assertThat(res.contentUtf8()).isEqualTo("GET/TEXT");
+
+        headers = RequestHeaders.of(HttpMethod.POST, path,
+                                    HttpHeaderNames.ACCEPT, "application/json",
+                                    HttpHeaderNames.CONTENT_TYPE, "application/json");
+        res = client.execute(headers).aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.headers().contentType()).isSameAs(MediaType.JSON);
+        assertThat(res.contentUtf8()).isEqualTo("POST/JSON/BOTH");
+
+        headers = RequestHeaders.of(HttpMethod.POST, path,
+                                    HttpHeaderNames.CONTENT_TYPE, "application/json");
+        res = client.execute(headers).aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.headers().contentType()).isSameAs(MediaType.JSON);
+        assertThat(res.contentUtf8()).isEqualTo("POST/JSON/BOTH");
+
+        headers = RequestHeaders.of(HttpMethod.POST, path,
+                                    HttpHeaderNames.ACCEPT, "application/json");
+        res = client.execute(headers).aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.headers().contentType()).isNull();
+        assertThat(res.contentUtf8()).isEqualTo("POST");
+
+        headers = RequestHeaders.of(HttpMethod.POST, path);
+        res = client.execute(headers).aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.headers().contentType()).isNull();
+        assertThat(res.contentUtf8()).isEqualTo("POST");
+
+        headers = RequestHeaders.of(HttpMethod.POST, path,
+                                    HttpHeaderNames.ACCEPT, "test/json",
+                                    HttpHeaderNames.CONTENT_TYPE, "application/json");
+        res = client.execute(headers).aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.headers().contentType()).isNull();
+        assertThat(res.contentUtf8()).isEqualTo("POST/JSON");
     }
 
     @Test

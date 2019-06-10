@@ -25,6 +25,12 @@ public class SettableHealthCheckerTest {
     @Test
     public void justCreated() {
         final SettableHealthChecker checker = new SettableHealthChecker();
+        assertTrue(checker.isHealthy());
+    }
+
+    @Test
+    public void justCreatedExplicit() {
+        final SettableHealthChecker checker = new SettableHealthChecker(false);
         assertFalse(checker.isHealthy());
     }
 

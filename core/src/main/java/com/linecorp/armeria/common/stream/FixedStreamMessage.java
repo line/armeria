@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.common.stream;
 
-import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import javax.annotation.Nullable;
@@ -104,20 +103,21 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
     }
 
     @Override
-    final void subscribe(SubscriptionImpl subscription) {
-        final Subscriber<Object> subscriber = subscription.subscriber();
-        final Executor executor = subscription.executor();
-
+    final SubscriptionImpl subscribe(SubscriptionImpl subscription) {
         if (!subscriptionUpdater.compareAndSet(this, null, subscription)) {
-            failLateSubscriber(this.subscription, subscriber);
-            return;
+            final SubscriptionImpl oldSubscription = this.subscription;
+            assert oldSubscription != null;
+            return oldSubscription;
         }
 
+        final Subscriber<Object> subscriber = subscription.subscriber();
         if (subscription.needsDirectInvocation()) {
             subscriber.onSubscribe(subscription);
         } else {
-            executor.execute(() -> subscriber.onSubscribe(subscription));
+            subscription.executor().execute(() -> subscriber.onSubscribe(subscription));
         }
+
+        return subscription;
     }
 
     @Override

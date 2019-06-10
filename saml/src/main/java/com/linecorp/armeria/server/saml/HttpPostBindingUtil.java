@@ -37,7 +37,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.escape.Escaper;
 import com.google.common.html.HtmlEscapers;
 
-import com.linecorp.armeria.common.AggregatedHttpMessage;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.server.saml.SamlService.SamlParameters;
 
@@ -100,16 +100,17 @@ final class HttpPostBindingUtil {
     }
 
     /**
-     * Converts an {@link AggregatedHttpMessage} which is received from the remote entity to
+     * Converts an {@link AggregatedHttpRequest} which is received from the remote entity to
      * a {@link SAMLObject}.
      */
-    static <T extends SAMLObject> MessageContext<T> toSamlObject(AggregatedHttpMessage msg, String name) {
-        final SamlParameters parameters = new SamlParameters(msg);
+    static <T extends SAMLObject> MessageContext<T> toSamlObject(AggregatedHttpRequest req, String name) {
+        final SamlParameters parameters = new SamlParameters(req);
         final byte[] decoded;
         try {
             decoded = Base64.getMimeDecoder().decode(parameters.getFirstValue(name));
         } catch (IllegalArgumentException e) {
-            throw new SamlException("failed to decode a base64 string of the parameter: " + name, e);
+            throw new InvalidSamlRequestException(
+                    "failed to decode a base64 string of the parameter: " + name, e);
         }
 
         @SuppressWarnings("unchecked")

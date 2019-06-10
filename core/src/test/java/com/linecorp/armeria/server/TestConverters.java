@@ -26,6 +26,8 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
 public final class TestConverters {
@@ -33,9 +35,9 @@ public final class TestConverters {
     public static class NaiveIntConverterFunction implements ResponseConverterFunction {
         @Override
         public HttpResponse convertResponse(ServiceRequestContext ctx,
-                                            HttpHeaders headers,
+                                            ResponseHeaders headers,
                                             @Nullable Object result,
-                                            HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailers) throws Exception {
             if (result instanceof Integer) {
                 return httpResponse(HttpData.ofUtf8(String.format("Integer: %d", result)));
             }
@@ -46,9 +48,9 @@ public final class TestConverters {
     public static class NaiveStringConverterFunction implements ResponseConverterFunction {
         @Override
         public HttpResponse convertResponse(ServiceRequestContext ctx,
-                                            HttpHeaders headers,
+                                            ResponseHeaders headers,
                                             @Nullable Object result,
-                                            HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailers) throws Exception {
             if (result instanceof String) {
                 return httpResponse(HttpData.ofUtf8(String.format("String: %s", result)));
             }
@@ -59,9 +61,9 @@ public final class TestConverters {
     public static class TypedNumberConverterFunction implements ResponseConverterFunction {
         @Override
         public HttpResponse convertResponse(ServiceRequestContext ctx,
-                                            HttpHeaders headers,
+                                            ResponseHeaders headers,
                                             @Nullable Object result,
-                                            HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailers) throws Exception {
             if (result instanceof Number) {
                 return httpResponse(HttpData.ofUtf8(String.format("Number[%s]", result)));
             }
@@ -72,9 +74,9 @@ public final class TestConverters {
     public static class TypedStringConverterFunction implements ResponseConverterFunction {
         @Override
         public HttpResponse convertResponse(ServiceRequestContext ctx,
-                                            HttpHeaders headers,
+                                            ResponseHeaders headers,
                                             @Nullable Object result,
-                                            HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailers) throws Exception {
             if (result instanceof String) {
                 return httpResponse(HttpData.ofUtf8(String.format("String[%s]", result)));
             }
@@ -85,11 +87,11 @@ public final class TestConverters {
     public static class ByteArrayConverterFunction implements ResponseConverterFunction {
         @Override
         public HttpResponse convertResponse(ServiceRequestContext ctx,
-                                            HttpHeaders headers,
+                                            ResponseHeaders headers,
                                             @Nullable Object result,
-                                            HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailers) throws Exception {
             if (result instanceof byte[]) {
-                return httpResponse(HttpData.of((byte[]) result));
+                return httpResponse(HttpData.wrap((byte[]) result));
             }
             return ResponseConverterFunction.fallthrough();
         }
@@ -98,11 +100,11 @@ public final class TestConverters {
     public static class ByteArrayConverter implements ResponseConverterFunction {
         @Override
         public HttpResponse convertResponse(ServiceRequestContext ctx,
-                                            HttpHeaders headers,
+                                            ResponseHeaders headers,
                                             @Nullable Object result,
-                                            HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailers) throws Exception {
             if (result instanceof byte[]) {
-                return httpResponse(HttpData.of((byte[]) result));
+                return httpResponse(HttpData.wrap((byte[]) result));
             }
             throw new IllegalArgumentException("Cannot convert " +
                                                (result != null ? result.getClass().getName() : "null"));
@@ -113,9 +115,9 @@ public final class TestConverters {
     public static class UnformattedStringConverterFunction implements ResponseConverterFunction {
         @Override
         public HttpResponse convertResponse(ServiceRequestContext ctx,
-                                            HttpHeaders headers,
+                                            ResponseHeaders headers,
                                             @Nullable Object result,
-                                            HttpHeaders trailingHeaders) throws Exception {
+                                            HttpHeaders trailers) throws Exception {
             return httpResponse(HttpData.ofUtf8(result != null ? result.toString() : "(null)"));
         }
     }
@@ -123,9 +125,9 @@ public final class TestConverters {
     private static HttpResponse httpResponse(HttpData data) {
         final HttpResponseWriter res = HttpResponse.streaming();
         final long current = System.currentTimeMillis();
-        final HttpHeaders headers = HttpHeaders.of(HttpStatus.OK)
-                                               .setInt(HttpHeaderNames.CONTENT_LENGTH, data.length())
-                                               .setTimeMillis(HttpHeaderNames.DATE, current);
+        final ResponseHeadersBuilder headers = ResponseHeaders.builder(HttpStatus.OK);
+        headers.setInt(HttpHeaderNames.CONTENT_LENGTH, data.length());
+        headers.setTimeMillis(HttpHeaderNames.DATE, current);
 
         final MediaType contentType =
                 ((ServiceRequestContext) RequestContext.current()).negotiatedResponseMediaType();
@@ -133,7 +135,7 @@ public final class TestConverters {
             headers.contentType(contentType);
         }
 
-        res.write(headers);
+        res.write(headers.build());
         res.write(data);
         res.close();
         return res;
