@@ -33,7 +33,7 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.client.endpoint.FileWatcherRegistry.FileSystemWatchContext;
 
 /**
- * Initializes a runnable which watches files.
+ * A runnable which watches files.
  */
 class FileWatcherRunnable implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(FileWatcherRunnable.class);
@@ -43,8 +43,8 @@ class FileWatcherRunnable implements Runnable {
 
     /**
      * Initializes a runnable which watches files.
-     * @param watchService the {@code WatchService} to poll events from
-     * @param fileSystemWatchContext context which contains target files
+     * @param watchService the {@code WatchService} to receive events from
+     * @param fileSystemWatchContext the context which contains target files
      */
     FileWatcherRunnable(WatchService watchService, FileSystemWatchContext fileSystemWatchContext) {
         this.watchService = watchService;
@@ -108,7 +108,7 @@ class FileWatcherRunnable implements Runnable {
         /**
          * Initializes the context for each watched path.
          * @param watchKey the {@link WatchKey} registered for the current path
-         * @param callback callback to be invoked on a watch event
+         * @param callback the callback which is invoked on a watch event
          * @param dirPath path which is watched
          */
         FileWatchEvent(WatchKey watchKey, Runnable callback, Path dirPath) {

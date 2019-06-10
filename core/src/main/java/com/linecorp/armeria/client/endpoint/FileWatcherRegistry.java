@@ -29,6 +29,7 @@ import java.nio.file.Path;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -38,12 +39,12 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.client.endpoint.FileWatcherRunnable.FileWatchEvent;
 
 /**
- * Wraps a {@link WatchService} and allows paths to be registered.
+ * A registry which wraps a {@link WatchService} and allows paths to be registered.
  */
 final class FileWatcherRegistry implements AutoCloseable {
 
     /**
-     * Context responsible for watching a {@link FileSystem}. Contains a reference to
+     * A context responsible for watching a {@link FileSystem}. It contains references to
      * a {@link WatchService} and a {@link Thread} which continuously watches for changes
      * in registered file paths.
      */
@@ -67,14 +68,14 @@ final class FileWatcherRegistry implements AutoCloseable {
 
         /**
          * Starts to watch changes for the path corresponding to the {@link FileWatchRegisterKey}.
-         * When changes are detected, the {@code callback} is invoked. If the {@link WatchService}
+         * When changes are detected, the {@code callback} is invoked. If a {@link WatchService}
          * isn't running yet, this method starts a thread to start watching the {@link FileSystem}.
-         * @param watchRegisterKey key that contains the path to be watched
-         * @param callback function invoked on file change
+         * @param watchRegisterKey the key that contains the path to be watched
+         * @param callback the function invoked on file change
          *
          * @throws IllegalArgumentException if failed to locate file or failed to start watching
          */
-        void register(FileWatchRegisterKey watchRegisterKey, Runnable callback) {
+        private void register(FileWatchRegisterKey watchRegisterKey, Runnable callback) {
             final Path dirPath = watchRegisterKey.filePath().getParent();
             checkArgument(dirPath != null, "no parent directory for input path: %s",
                           watchRegisterKey.filePath());
@@ -86,18 +87,16 @@ final class FileWatcherRegistry implements AutoCloseable {
                 throw new IllegalArgumentException("failed to watch a file " + watchRegisterKey.filePath(), e);
             }
             currWatchEventMap.put(watchRegisterKey, new FileWatchEvent(watchKey, callback, dirPath));
-            if (!currWatchEventMap.isEmpty()) {
-                restartableThread.start();
-            }
+            restartableThread.start();
         }
 
         /**
          * Unregisters a {@link FileWatchRegisterKey}. The {@code callback} won't be invoked anymore when the
          * contents of the file for the {@code filePath} is changed. If no paths are watched by the
          * {@link WatchService}, then the background thread is stopped.
-         * @param watchRegisterKey key for which the {@link WatchService} will stop watching.
+         * @param watchRegisterKey the key for which the {@link WatchService} will stop watching.
          */
-        void unregister(FileWatchRegisterKey watchRegisterKey) {
+        private void unregister(FileWatchRegisterKey watchRegisterKey) {
             if (!currWatchEventMap.containsKey(watchRegisterKey)) {
                 return;
             }
@@ -114,7 +113,7 @@ final class FileWatcherRegistry implements AutoCloseable {
 
         /**
          * Whether a background thread for watching changes is running.
-         * @return true if the thread is running.
+         * @return {@code true} if the thread is running.
          */
         boolean isRunning() {
             return restartableThread.isRunning();
@@ -132,15 +131,15 @@ final class FileWatcherRegistry implements AutoCloseable {
     }
 
     private final Map<FileSystem, FileSystemWatchContext> fileSystemWatchServiceMap
-            = new ConcurrentHashMap<>();
+            = new HashMap<>();
 
     /**
      * Registers a {@code filePath} and {@code callback} to the {@link WatchService}. When the
      * contents of the registered file is changed, then the {@code callback} function
      * is invoked. If the {@code watchEventKey} is already registered, then nothing happens.
      * This method is thread safe.
-     * @param filePath path of the file which will be watched for changes.
-     * @param callback function which is invoked when file is changed.
+     * @param filePath the path of the file which will be watched for changes.
+     * @param callback the function which is invoked when the file is changed.
      *
      * @return a key which is used to unregister from watching.
      */
@@ -154,7 +153,8 @@ final class FileWatcherRegistry implements AutoCloseable {
                                 fileSystem.newWatchService());
                     } catch (IOException e) {
                         throw new IllegalArgumentException(
-                                "invalid filesystem for path: " + watchRegisterKey.filePath());
+                                "failed to create a new watch service for the path: " +
+                                watchRegisterKey.filePath());
                     }
                 });
         watchServiceContext.register(watchRegisterKey, callback);
@@ -165,7 +165,7 @@ final class FileWatcherRegistry implements AutoCloseable {
      * Stops watching a properties file corresponding to the {@link FileWatchRegisterKey}. Nothing
      * happens if the {@link FileWatchRegisterKey} is not registered or already unregistered. This
      * method is thread safe.
-     * @param watchRegisterKey key that was used to register for watching a file.
+     * @param watchRegisterKey the key that was used to register for watching a file.
      */
     synchronized void unregister(FileWatchRegisterKey watchRegisterKey) {
         final FileSystem fileSystem = watchRegisterKey.filePath().getFileSystem();
@@ -181,7 +181,7 @@ final class FileWatcherRegistry implements AutoCloseable {
 
     /**
      * Returns whether the current registry is watching a file.
-     * @return true if a file is watched
+     * @return {@code true} if a file is watched
      */
     @VisibleForTesting
     boolean isRunning() {
@@ -189,7 +189,7 @@ final class FileWatcherRegistry implements AutoCloseable {
     }
 
     /**
-     * Closes the {@link WatchService}, thread, and clear registry.
+     * Closes the {@link WatchService}, thread, and registry.
      * @throws Exception may be thrown if an I/O error occurs
      */
     @Override
@@ -206,7 +206,7 @@ final class FileWatcherRegistry implements AutoCloseable {
 
     /**
      * A key representing the registration to watch file events for a {@code filePath}. The
-     * key is later used to unregister the watch. Key comparison is done via identity
+     * key is later used to unregister. Key comparison is done via identity
      * comparison to allow duplicate path registration.
      */
     static final class FileWatchRegisterKey {

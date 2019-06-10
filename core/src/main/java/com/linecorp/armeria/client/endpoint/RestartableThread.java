@@ -34,8 +34,8 @@ final class RestartableThread {
 
     /**
      * Initialize a restartable thread.
-     * @param name name of thread
-     * @param runnableSupplier supplies the runnable for the thread to use on each restart
+     * @param name the name of the thread
+     * @param runnableSupplier supplies a runnable for the thread on each restart
      */
     RestartableThread(String name, Supplier<Runnable> runnableSupplier) {
         this.name = name;
@@ -43,7 +43,7 @@ final class RestartableThread {
     }
 
     /**
-     * Starts thread with runnable if not running yet.
+     * Starts a thread with the supplied runnable if it isn't running yet.
      */
     synchronized void start() {
         if (!isRunning()) {
@@ -78,8 +78,8 @@ final class RestartableThread {
     }
 
     /**
-     * Whether thread is currently running.
-     * @return whether thread is currently running
+     * Whether a thread is currently running.
+     * @return {@code true} if a thread is currently running
      */
     boolean isRunning() {
         return thread != null && thread.isAlive();

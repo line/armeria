@@ -46,7 +46,7 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
     private static FileWatcherRegistry registry = new FileWatcherRegistry();
 
     /**
-     * Resets registry for {@link PropertiesEndpointGroup}.
+     * Resets the registry for {@link PropertiesEndpointGroup}.
      * @throws Exception when an exception occurs while closing the {@link FileWatcherRegistry}.
      */
     @VisibleForTesting
@@ -100,7 +100,7 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
         validateDefaultPort(defaultPort);
         final URL resourceUrl = getResourceUrl(
                 requireNonNull(classLoader, "classLoader"),
-                requireNonNull(resourceName, "fileName"));
+                requireNonNull(resourceName, "resourceName"));
         return new PropertiesEndpointGroup(loadEndpoints(
                 resourceUrl,
                 requireNonNull(endpointKeyPrefix, "endpointKeyPrefix"),
