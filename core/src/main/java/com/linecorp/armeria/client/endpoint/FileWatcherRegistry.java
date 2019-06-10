@@ -154,7 +154,7 @@ final class FileWatcherRegistry implements AutoCloseable {
                     } catch (IOException e) {
                         throw new IllegalArgumentException(
                                 "failed to create a new watch service for the path: " +
-                                watchRegisterKey.filePath());
+                                watchRegisterKey.filePath(), e);
                     }
                 });
         watchServiceContext.register(watchRegisterKey, callback);
