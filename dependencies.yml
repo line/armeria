@@ -195,7 +195,7 @@ io.netty:
 
 io.projectreactor:
   reactor-core:
-    version: &REACTOR_VERSION '3.2.9.RELEASE'
+    version: &REACTOR_VERSION '3.2.10.RELEASE'
     javadocs:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }
@@ -275,7 +275,7 @@ net.javacrumbs.json-unit:
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 net.sf.proguard:
-  proguard-gradle: { version: '6.1.0' }
+  proguard-gradle: { version: '6.1.1' }
 
 net.shibboleth.utilities:
   java-support: { version: '7.3.0' }
@@ -320,7 +320,7 @@ org.apache.thrift:
 
 org.apache.tomcat.embed:
   tomcat-embed-core:
-    version: &TOMCAT_VERSION '9.0.20'
+    version: &TOMCAT_VERSION '9.0.21'
     javadocs:
     - https://tomcat.apache.org/tomcat-9.0-doc/api/
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
