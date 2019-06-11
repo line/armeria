@@ -101,6 +101,8 @@ import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import io.grpc.Codec;
+import io.grpc.Context;
+import io.grpc.Contexts;
 import io.grpc.DecompressorRegistry;
 import io.grpc.ForwardingServerCall.SimpleForwardingServerCall;
 import io.grpc.ManagedChannel;
@@ -341,6 +343,14 @@ class GrpcServiceServerTest {
                                                                   .toByteArray()));
             responseObserver.onError(new IllegalStateException("This error should have metadata"));
         }
+
+        @Override
+        public void grpcContext(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            final String contextValue = CONTEXT_KEY.get();
+            assertThat(contextValue).isEqualTo("value");
+            responseObserver.onNext(SimpleResponse.getDefaultInstance());
+            responseObserver.onCompleted();
+        }
     }
 
     private static final ServerInterceptor REPLACE_EXCEPTION = new ServerInterceptor() {
@@ -363,6 +373,17 @@ class GrpcServiceServerTest {
         }
     };
 
+    private static final Context.Key<String> CONTEXT_KEY = Context.key("CONTEXT_KEY");
+
+    private static final ServerInterceptor ADD_TO_CONTEXT = new ServerInterceptor() {
+        @Override
+        public <REQ, RESP> Listener<REQ> interceptCall(ServerCall<REQ, RESP> call, Metadata headers,
+                                                       ServerCallHandler<REQ, RESP> next) {
+            final Context grpcContext = Context.current().withValue(CONTEXT_KEY, "value");
+            return Contexts.interceptCall(grpcContext, call, headers, next);
+        }
+    };
+
     private static final BlockingQueue<RequestLog> requestLogQueue = new LinkedTransferQueue<>();
 
     @RegisterExtension
@@ -376,7 +397,8 @@ class GrpcServiceServerTest {
                     new GrpcServiceBuilder()
                             .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
                             .addService(ServerInterceptors.intercept(
-                                    new UnitTestServiceImpl(), REPLACE_EXCEPTION))
+                                    new UnitTestServiceImpl(),
+                                    REPLACE_EXCEPTION, ADD_TO_CONTEXT))
                             .enableUnframedRequests(true)
                             .supportedSerializationFormats(GrpcSerializationFormats.values())
                             .build(),
@@ -414,7 +436,8 @@ class GrpcServiceServerTest {
             sb.serviceUnder("/", new GrpcServiceBuilder()
                     .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
                     .addService(ServerInterceptors.intercept(
-                            new UnitTestServiceImpl(), REPLACE_EXCEPTION))
+                            new UnitTestServiceImpl(),
+                            REPLACE_EXCEPTION, ADD_TO_CONTEXT))
                     .enableUnframedRequests(true)
                     .supportedSerializationFormats(GrpcSerializationFormats.values())
                     .useBlockingTaskExecutor(true)
@@ -1170,6 +1193,17 @@ class GrpcServiceServerTest {
                 assertThat(error.getTrailers().get(ERROR_METADATA_KEY).getValue()).isEqualTo(
                         "an error occurred");
             });
+
+            requestLogQueue.take();
+        });
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(BlockingClientProvider.class)
+    void grpcContext(UnitTestServiceBlockingStub blockingClient) throws Exception {
+        withTimeout(() -> {
+            assertThat(blockingClient.grpcContext(SimpleRequest.getDefaultInstance()))
+                    .isEqualTo(SimpleResponse.getDefaultInstance());
 
             requestLogQueue.take();
         });
