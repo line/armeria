@@ -94,8 +94,6 @@ public class DropwizardMetricsIntegrationTest {
             assertThat(dropwizardRegistry.getMeters()
                                          .get(clientMetricNameWithStatusAndResult("requests", 200, "failure"))
                                          .getCount()).isEqualTo(3L);
-            System.err.println(dropwizardRegistry.getMeters());
-            System.err.println(serverMetricNameWithStatusAndResult("requests", 200, "failure"));
             assertThat(dropwizardRegistry.getMeters()
                                          .get(serverMetricNameWithStatusAndResult("requests", 200, "failure"))
                                          .getCount()).isEqualTo(3L);
@@ -106,11 +104,11 @@ public class DropwizardMetricsIntegrationTest {
                                          .get(serverMetricNameWithStatusAndResult("requests", 200, "success"))
                                          .getCount()).isEqualTo(4L);
 
-            assertTimer("requestDuration", 7);
-            assertHistogram("requestLength", 7);
-            assertTimer("responseDuration", 7);
-            assertHistogram("responseLength", 7);
-            assertTimer("totalDuration", 7);
+            assertTimer("request.duration", 7);
+            assertHistogram("request.length", 7);
+            assertTimer("response.duration", 7);
+            assertHistogram("response.length", 7);
+            assertTimer("total.duration", 7);
         });
     }
 
@@ -123,6 +121,14 @@ public class DropwizardMetricsIntegrationTest {
     }
 
     private static void assertSummary(Map<String, ?> map, String property, int expectedCount) {
+        String clientMetricNameWithStatus = clientMetricNameWithStatus(property, 200);
+        String serverMetricNameWithStatus = serverMetricNameWithStatus(property, 200);
+
+        assertThat(map.get(clientMetricNameWithStatus)).as("Metric %s not found", clientMetricNameWithStatus)
+                .isNotNull();
+        assertThat(map.get(serverMetricNameWithStatus)).as("Metric %s nof found", serverMetricNameWithStatus)
+                .isNotNull();
+
         assertThat(((Counting) map.get(clientMetricNameWithStatus(property, 200))).getCount())
                 .isEqualTo(expectedCount);
         assertThat(((Sampling) map.get(clientMetricNameWithStatus(property, 200))).getSnapshot().getMean())

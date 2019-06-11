@@ -37,6 +37,7 @@ import io.micrometer.prometheus.PrometheusNamingConvention;
 /**
  * Provides commonly-used {@link NamingConvention}s.
  */
+@Deprecated
 public final class MoreNamingConventions {
 
     /**
