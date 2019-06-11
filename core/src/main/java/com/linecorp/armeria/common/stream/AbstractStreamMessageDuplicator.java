@@ -461,44 +461,48 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
         @Override
         public void subscribe(Subscriber<? super T> subscriber) {
-            requireNonNull(subscriber, "subscriber");
             subscribe(subscriber, parent.duplicatorExecutor());
         }
 
         @Override
         public void subscribe(Subscriber<? super T> subscriber, boolean withPooledObjects) {
-            if (withPooledObjects) {
-                subscribe(subscriber, WITH_POOLED_OBJECTS);
-            } else {
-                subscribe(subscriber);
-            }
+            subscribe(subscriber, parent.duplicatorExecutor(), withPooledObjects, false);
         }
 
         @Override
         public void subscribe(Subscriber<? super T> subscriber, SubscriptionOption... options) {
-            requireNonNull(subscriber, "subscriber");
-            subscribe(subscriber, parent.duplicatorExecutor(), options);
+            requireNonNull(options, "options");
+
+            final boolean withPooledObjects = containsWithPooledObjects(options);
+            final boolean notifyCancellation = containsNotifyCancellation(options);
+            subscribe(subscriber, parent.duplicatorExecutor(), withPooledObjects, notifyCancellation);
+        }
+
+        @Override
+        public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
+            subscribe(subscriber, executor, false, false);
         }
 
         @Override
         public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
                               boolean withPooledObjects) {
-            if (withPooledObjects) {
-                subscribe(subscriber, executor, WITH_POOLED_OBJECTS);
-            } else {
-                subscribe(subscriber, executor);
-            }
+            subscribe(subscriber, executor, withPooledObjects, false);
         }
 
         @Override
         public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
                               SubscriptionOption... options) {
-            requireNonNull(subscriber, "subscriber");
-            requireNonNull(executor, "executor");
             requireNonNull(options, "options");
 
             final boolean withPooledObjects = containsWithPooledObjects(options);
             final boolean notifyCancellation = containsNotifyCancellation(options);
+            subscribe(subscriber, executor, withPooledObjects, notifyCancellation);
+        }
+
+        private void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
+                               boolean withPooledObjects, boolean notifyCancellation) {
+            requireNonNull(subscriber, "subscriber");
+            requireNonNull(executor, "executor");
             final DownstreamSubscription<T> subscription = new DownstreamSubscription<>(
                     this, subscriber, processor, executor, withPooledObjects, notifyCancellation, lastStream);
 
@@ -535,33 +539,27 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
         @Override
         public CompletableFuture<List<T>> drainAll(boolean withPooledObjects) {
-            if (withPooledObjects) {
-                return drainAll(parent.duplicatorExecutor(), WITH_POOLED_OBJECTS);
-            } else {
-                return drainAll(parent.duplicatorExecutor());
-            }
+            return drainAll(parent.duplicatorExecutor(), withPooledObjects);
         }
 
         @Override
         public CompletableFuture<List<T>> drainAll(SubscriptionOption... options) {
-            return drainAll(parent.duplicatorExecutor(), options);
-        }
-
-        @Override
-        public CompletableFuture<List<T>> drainAll(EventExecutor executor, boolean withPooledObjects) {
-            if (withPooledObjects) {
-                return drainAll(executor, WITH_POOLED_OBJECTS);
-            } else {
-                return drainAll(executor);
-            }
-        }
-
-        @Override
-        public CompletableFuture<List<T>> drainAll(EventExecutor executor, SubscriptionOption... options) {
-            requireNonNull(executor, "executor");
             requireNonNull(options, "options");
 
             final boolean withPooledObjects = containsWithPooledObjects(options);
+            return drainAll(parent.duplicatorExecutor(), withPooledObjects);
+        }
+
+        @Override
+        public CompletableFuture<List<T>> drainAll(EventExecutor executor) {
+            return drainAll(executor, false);
+        }
+
+        // TODO(minwoox) Make this method private after the deprecated overriden method is removed.
+        @Override
+        public CompletableFuture<List<T>> drainAll(EventExecutor executor, boolean withPooledObjects) {
+            requireNonNull(executor, "executor");
+
             final StreamMessageDrainer<T> drainer = new StreamMessageDrainer<>(withPooledObjects);
             final DownstreamSubscription<T> subscription = new DownstreamSubscription<>(
                     this, drainer, processor, executor, withPooledObjects,
@@ -575,6 +573,14 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             }
 
             return drainer.future();
+        }
+
+        @Override
+        public CompletableFuture<List<T>> drainAll(EventExecutor executor, SubscriptionOption... options) {
+            requireNonNull(options, "options");
+
+            final boolean withPooledObjects = containsWithPooledObjects(options);
+            return drainAll(executor, withPooledObjects);
         }
 
         @Override

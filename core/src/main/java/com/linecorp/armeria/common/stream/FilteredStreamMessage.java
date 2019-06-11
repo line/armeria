@@ -122,37 +122,39 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
     @Override
     public void subscribe(Subscriber<? super U> subscriber) {
-        requireNonNull(subscriber, "subscriber");
-        delegate.subscribe(new FilteringSubscriber(subscriber, false),
-                           filteringSubscriptionOptions());
+        subscribe(subscriber, false, false);
     }
 
     @Override
     public void subscribe(Subscriber<? super U> subscriber, boolean withPooledObjects) {
-        if (withPooledObjects) {
-            subscribe(subscriber, WITH_POOLED_OBJECTS);
-        } else {
-            subscribe(subscriber);
-        }
+        subscribe(subscriber, withPooledObjects, false);
     }
 
     @Override
     public void subscribe(Subscriber<? super U> subscriber, SubscriptionOption... options) {
-        requireNonNull(subscriber, "subscriber");
         requireNonNull(options, "options");
 
-        delegate.subscribe(new FilteringSubscriber(subscriber, containsWithPooledObjects(options)),
-                           filteringSubscriptionOptions(options));
+        final boolean withPooledObjects = containsWithPooledObjects(options);
+        final boolean notifyCancellation = containsNotifyCancellation(options);
+        subscribe(subscriber, withPooledObjects, notifyCancellation);
+    }
+
+    private void subscribe(Subscriber<? super U> subscriber,
+                           boolean withPooledObjects, boolean notifyCancellation) {
+        requireNonNull(subscriber, "subscriber");
+        delegate.subscribe(new FilteringSubscriber(subscriber, withPooledObjects),
+                           filteringSubscriptionOptions(notifyCancellation));
     }
 
     @Override
     public void subscribe(Subscriber<? super U> subscriber, EventExecutor executor,
                           boolean withPooledObjects) {
-        if (withPooledObjects) {
-            subscribe(subscriber, executor, WITH_POOLED_OBJECTS);
-        } else {
-            subscribe(subscriber, executor);
-        }
+        subscribe(subscriber, executor, withPooledObjects, false);
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super U> subscriber, EventExecutor executor) {
+        subscribe(subscriber, executor, false, false);
     }
 
     @Override
@@ -161,16 +163,23 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
-        delegate.subscribe(new FilteringSubscriber(subscriber, containsWithPooledObjects(options)),
-                           executor, filteringSubscriptionOptions(options));
+        final boolean withPooledObjects = containsWithPooledObjects(options);
+        final boolean notifyCancellation = containsNotifyCancellation(options);
+        subscribe(subscriber, executor, withPooledObjects, notifyCancellation);
     }
 
-    private SubscriptionOption[] filteringSubscriptionOptions(SubscriptionOption... options) {
+    private void subscribe(Subscriber<? super U> subscriber, EventExecutor executor, boolean withPooledObjects,
+                           boolean notifyCancellation) {
+        delegate.subscribe(new FilteringSubscriber(subscriber, withPooledObjects),
+                           executor, filteringSubscriptionOptions(notifyCancellation));
+    }
+
+    private SubscriptionOption[] filteringSubscriptionOptions(boolean notifyCancellation) {
         final ArrayList<SubscriptionOption> list = new ArrayList<>(2);
         if (filterSupportsPooledObjects) {
             list.add(WITH_POOLED_OBJECTS);
         }
-        if (containsNotifyCancellation(options)) {
+        if (notifyCancellation) {
             list.add(NOTIFY_CANCELLATION);
         }
         return list.toArray(EMPTY_OPTIONS);
@@ -178,18 +187,12 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
 
     @Override
     public CompletableFuture<List<U>> drainAll() {
-        final StreamMessageDrainer<U> drainer = new StreamMessageDrainer<>(false);
-        delegate.subscribe(new FilteringSubscriber(drainer, false), filteringSubscriptionOptions());
-        return drainer.future();
+        return drainAll(false, false);
     }
 
     @Override
     public CompletableFuture<List<U>> drainAll(boolean withPooledObjects) {
-        if (withPooledObjects) {
-            return drainAll(WITH_POOLED_OBJECTS);
-        } else {
-            return drainAll();
-        }
+        return drainAll(withPooledObjects, false);
     }
 
     @Override
@@ -197,30 +200,42 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
         requireNonNull(options, "options");
 
         final boolean withPooledObjects = containsWithPooledObjects(options);
+        final boolean notifyCancellation = containsNotifyCancellation(options);
+        return drainAll(withPooledObjects, notifyCancellation);
+    }
+
+    private CompletableFuture<List<U>> drainAll(boolean withPooledObjects, boolean notifyCancellation) {
         final StreamMessageDrainer<U> drainer = new StreamMessageDrainer<>(withPooledObjects);
         delegate.subscribe(new FilteringSubscriber(drainer, withPooledObjects),
-                           filteringSubscriptionOptions(options));
+                           filteringSubscriptionOptions(notifyCancellation));
         return drainer.future();
     }
 
     @Override
     public CompletableFuture<List<U>> drainAll(EventExecutor executor, boolean withPooledObjects) {
-        if (withPooledObjects) {
-            return drainAll(executor, WITH_POOLED_OBJECTS);
-        } else {
-            return drainAll(executor);
-        }
+        return drainAll(executor, withPooledObjects, false);
+    }
+
+    @Override
+    public CompletableFuture<List<U>> drainAll(EventExecutor executor) {
+        return drainAll(executor, false, false);
     }
 
     @Override
     public CompletableFuture<List<U>> drainAll(EventExecutor executor, SubscriptionOption... options) {
-        requireNonNull(executor, "executor");
         requireNonNull(options, "options");
 
         final boolean withPooledObjects = containsWithPooledObjects(options);
+        final boolean notifyCancellation = containsNotifyCancellation(options);
+        return drainAll(executor, withPooledObjects, notifyCancellation);
+    }
+
+    private CompletableFuture<List<U>> drainAll(EventExecutor executor,
+                                                boolean withPooledObjects, boolean notifyCancellation) {
+        requireNonNull(executor, "executor");
         final StreamMessageDrainer<U> drainer = new StreamMessageDrainer<>(withPooledObjects);
         delegate.subscribe(new FilteringSubscriber(drainer, withPooledObjects), executor,
-                           filteringSubscriptionOptions(options));
+                           filteringSubscriptionOptions(notifyCancellation));
         return drainer.future();
     }
 

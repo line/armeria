@@ -18,7 +18,6 @@ package com.linecorp.armeria.common.stream;
 
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.abortedOrLate;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
-import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -90,35 +89,42 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
     @Override
     public void subscribe(Subscriber<? super T> subscriber, boolean withPooledObjects) {
-        if (withPooledObjects) {
-            subscribe(subscriber, WITH_POOLED_OBJECTS);
-        } else {
-            subscribe(subscriber);
-        }
+        subscribe0(subscriber, defaultSubscriberExecutor(), false);
     }
 
     @Override
     public void subscribe(Subscriber<? super T> subscriber, SubscriptionOption... options) {
-        subscribe(subscriber, defaultSubscriberExecutor(), options);
+        requireNonNull(options, "options");
+
+        final boolean notifyCancellation = containsNotifyCancellation(options);
+        subscribe0(subscriber, defaultSubscriberExecutor(), notifyCancellation);
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
+        subscribe0(subscriber, executor, false);
     }
 
     @Override
     public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor, boolean withPooledObjects) {
-        if (withPooledObjects) {
-            subscribe(subscriber, executor, WITH_POOLED_OBJECTS);
-        } else {
-            subscribe(subscriber, executor);
-        }
+        subscribe0(subscriber, executor, false);
     }
 
     @Override
     public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
-        requireNonNull(subscriber, "subscriber");
-        requireNonNull(executor, "executor");
         requireNonNull(options, "options");
 
-        if (!subscribe0(subscriber, executor, containsNotifyCancellation(options))) {
+        final boolean notifyCancellation = containsNotifyCancellation(options);
+        subscribe0(subscriber, executor, notifyCancellation);
+    }
+
+    private void subscribe0(Subscriber<? super T> subscriber, EventExecutor executor,
+                           boolean notifyCancellation) {
+        requireNonNull(subscriber, "subscriber");
+        requireNonNull(executor, "executor");
+
+        if (!subscribe1(subscriber, executor, notifyCancellation)) {
             final AbortableSubscriber oldSubscriber = this.subscriber;
             assert oldSubscriber != null;
             failLateSubscriber(executor, subscriber, oldSubscriber.subscriber);
@@ -133,7 +139,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         return RequestContext.mapCurrent(RequestContext::eventLoop, () -> CommonPools.workerGroup().next());
     }
 
-    private boolean subscribe0(Subscriber<? super T> subscriber, EventExecutor executor,
+    private boolean subscribe1(Subscriber<? super T> subscriber, EventExecutor executor,
                                boolean notifyCancellation) {
         final AbortableSubscriber s = new AbortableSubscriber(this, subscriber, executor, notifyCancellation);
         if (!subscriberUpdater.compareAndSet(this, null, s)) {
@@ -162,42 +168,38 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
     @Override
     public CompletableFuture<List<T>> drainAll(boolean withPooledObjects) {
-        if (withPooledObjects) {
-            return drainAll(defaultSubscriberExecutor(), WITH_POOLED_OBJECTS);
-        } else {
-            return drainAll(defaultSubscriberExecutor());
-        }
+        return drainAll(defaultSubscriberExecutor());
     }
 
     @Override
     public CompletableFuture<List<T>> drainAll(SubscriptionOption... options) {
-        return drainAll(defaultSubscriberExecutor(), options);
+        return drainAll(defaultSubscriberExecutor());
     }
 
     @Override
-    public CompletableFuture<List<T>> drainAll(EventExecutor executor, boolean withPooledObjects) {
-        if (withPooledObjects) {
-            return drainAll(executor, WITH_POOLED_OBJECTS);
-        } else {
-            return drainAll(executor);
-        }
-    }
-
-    @Override
-    public CompletableFuture<List<T>> drainAll(EventExecutor executor, SubscriptionOption... options) {
+    public CompletableFuture<List<T>> drainAll(EventExecutor executor) {
         requireNonNull(executor, "executor");
-        requireNonNull(options, "options");
 
-        final boolean notifyCancellation = containsNotifyCancellation(options);
-        final StreamMessageDrainer<T> drainer = new StreamMessageDrainer<>(notifyCancellation);
-
-        if (!subscribe0(drainer, executor, notifyCancellation)) {
+        final StreamMessageDrainer<T> drainer = new StreamMessageDrainer<>(false);
+        if (!subscribe1(drainer, executor, false)) {
             final AbortableSubscriber subscriber = this.subscriber;
             assert subscriber != null;
             return CompletableFutures.exceptionallyCompletedFuture(abortedOrLate(subscriber.subscriber));
         }
 
         return drainer.future();
+    }
+
+    @Override
+    public CompletableFuture<List<T>> drainAll(EventExecutor executor, boolean withPooledObjects) {
+        return drainAll(executor);
+    }
+
+    @Override
+    public CompletableFuture<List<T>> drainAll(EventExecutor executor, SubscriptionOption... options) {
+        requireNonNull(options, "options");
+
+        return drainAll(executor);
     }
 
     @Override

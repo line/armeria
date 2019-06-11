@@ -93,6 +93,11 @@ final class HeaderOverridingHttpRequest implements HttpRequest {
     }
 
     @Override
+    public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor) {
+        delegate.subscribe(subscriber, executor);
+    }
+
+    @Override
     public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor,
                           boolean withPooledObjects) {
         if (withPooledObjects) {
@@ -125,6 +130,11 @@ final class HeaderOverridingHttpRequest implements HttpRequest {
     @Override
     public CompletableFuture<List<HttpObject>> drainAll(SubscriptionOption... options) {
         return delegate.drainAll(options);
+    }
+
+    @Override
+    public CompletableFuture<List<HttpObject>> drainAll(EventExecutor executor) {
+        return delegate.drainAll(executor);
     }
 
     @Override
