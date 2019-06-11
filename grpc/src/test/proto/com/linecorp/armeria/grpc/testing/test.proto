@@ -139,7 +139,10 @@ service UnitTestService {
     rpc ErrorReplaceException(SimpleRequest) returns (SimpleResponse);
 
     // A call that has an error with extra metadata attached to it.
-    rpc ErrorAdditionalMetadata(SimpleRequest) returns(SimpleResponse);
+    rpc ErrorAdditionalMetadata(SimpleRequest) returns (SimpleResponse);
+
+    // A call where we check an interceptor correctly set a context value.
+    rpc GrpcContext(SimpleRequest) returns (SimpleResponse);
 }
 
 // A simple service NOT implemented at servers so clients can test for
