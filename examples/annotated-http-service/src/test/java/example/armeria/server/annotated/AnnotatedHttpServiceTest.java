@@ -1,5 +1,6 @@
 package example.armeria.server.annotated;
 
+import static example.armeria.server.annotated.Main.newServer;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -25,7 +26,7 @@ public class AnnotatedHttpServiceTest {
 
     @BeforeClass
     public static void beforeClass() {
-        server = ServerFactory.of(0);
+        server = newServer(0);
         server.start().join();
         client = HttpClient.of("http://127.0.0.1:" + server.activePort().get().localAddress().getPort());
     }
