@@ -69,9 +69,13 @@ import io.netty.util.concurrent.EventExecutor;
  * leaks.
  *
  * <p>If a {@link Subscriber} does not want a {@link StreamMessage} to make a copy of a {@link ByteBufHolder},
- * use {@link #subscribe(Subscriber, boolean)} or {@link #subscribe(Subscriber, EventExecutor, boolean)} and
- * specify {@code true} for {@code withPooledObjects}. Note that the {@link Subscriber} is responsible for
- * releasing the objects given with {@link Subscriber#onNext(Object)}.
+ * specify {@link SubscriptionOption#WITH_POOLED_OBJECTS} when you subscribe. Note that the {@link Subscriber}
+ * is responsible for releasing the objects given with {@link Subscriber#onNext(Object)}.
+ *
+ * <p>{@link Subscriber#onError(Throwable)} is invoked when any exception is raised except the
+ * {@link CancelledSubscriptionException} which is caused by {@link Subscription#cancel()}. If you want your
+ * {@link Subscriber} get notified by {@link Subscriber#onError(Throwable)} when {@link Subscription#cancel()}
+ * is called, specify {@link SubscriptionOption#NOTIFY_CANCELLATION} when you subscribe.
  *
  * @param <T> the type of element signaled
  */
@@ -185,6 +189,9 @@ public interface StreamMessage<T> extends Publisher<T> {
      * <ul>
      *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already.</li>
      *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     *   <li>{@link CancelledSubscriptionException} if this stream has been
+     *       {@linkplain Subscription#cancel() cancelled} and {@link SubscriptionOption#NOTIFY_CANCELLATION} is
+     *       specified when subscribed.</li>
      *   <li>Other exceptions that occurred due to an error while retrieving the elements.</li>
      * </ul>
      */
@@ -197,13 +204,64 @@ public interface StreamMessage<T> extends Publisher<T> {
      * <ul>
      *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already.</li>
      *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     *   <li>{@link CancelledSubscriptionException} if this stream has been
+     *       {@linkplain Subscription#cancel() cancelled} and {@link SubscriptionOption#NOTIFY_CANCELLATION} is
+     *       specified when subscribed.</li>
      *   <li>Other exceptions that occurred due to an error while retrieving the elements.</li>
      * </ul>
      *
-     * @param withPooledObjects if {@code true}, receives the pooled {@link ByteBuf} and {@link ByteBufHolder}
-     *                          as is, without making a copy. If you don't know what this means, use
-     *                          {@link StreamMessage#subscribe(Subscriber)}.
+     * @param options {@link SubscriptionOption}s to subscribe with
      */
+    void subscribe(Subscriber<? super T> subscriber, SubscriptionOption... options);
+
+    /**
+     * Requests to start streaming data to the specified {@link Subscriber}. If there is a problem subscribing,
+     * {@link Subscriber#onError(Throwable)} will be invoked with one of the following exceptions:
+     * <ul>
+     *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already.</li>
+     *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     *   <li>{@link CancelledSubscriptionException} if this stream has been
+     *       {@linkplain Subscription#cancel() cancelled} and {@link SubscriptionOption#NOTIFY_CANCELLATION} is
+     *       specified when subscribed.</li>
+     *   <li>Other exceptions that occurred due to an error while retrieving the elements.</li>
+     * </ul>
+     *
+     * @param executor the executor to subscribe
+     */
+    void subscribe(Subscriber<? super T> subscriber, EventExecutor executor);
+
+    /**
+     * Requests to start streaming data to the specified {@link Subscriber}. If there is a problem subscribing,
+     * {@link Subscriber#onError(Throwable)} will be invoked with one of the following exceptions:
+     * <ul>
+     *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already.</li>
+     *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     *   <li>{@link CancelledSubscriptionException} if this stream has been
+     *       {@linkplain Subscription#cancel() cancelled} and {@link SubscriptionOption#NOTIFY_CANCELLATION} is
+     *       specified when subscribed.</li>
+     *   <li>Other exceptions that occurred due to an error while retrieving the elements.</li>
+     * </ul>
+     *
+     * @param executor the executor to subscribe
+     * @param options {@link SubscriptionOption}s to subscribe with
+     */
+    void subscribe(Subscriber<? super T> subscriber, EventExecutor executor, SubscriptionOption... options);
+
+    /**
+     * Requests to start streaming data to the specified {@link Subscriber}. If there is a problem subscribing,
+     * {@link Subscriber#onError(Throwable)} will be invoked with one of the following exceptions:
+     * <ul>
+     *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already.</li>
+     *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     *   <li>{@link CancelledSubscriptionException} if this stream has been
+     *       {@linkplain Subscription#cancel() cancelled} and {@link SubscriptionOption#NOTIFY_CANCELLATION} is
+     *       specified when subscribed.</li>
+     *   <li>Other exceptions that occurred due to an error while retrieving the elements.</li>
+     * </ul>
+     *
+     * @deprecated Use {@link #subscribe(Subscriber, SubscriptionOption...)}.
+     */
+    @Deprecated
     void subscribe(Subscriber<? super T> subscriber, boolean withPooledObjects);
 
     /**
@@ -213,25 +271,17 @@ public interface StreamMessage<T> extends Publisher<T> {
      * <ul>
      *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already.</li>
      *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
-     *   <li>Other exceptions that occurred due to an error while retrieving the elements.</li>
-     * </ul>
-     */
-    void subscribe(Subscriber<? super T> subscriber, EventExecutor executor);
-
-    /**
-     * Requests to start streaming data, invoking the specified {@link Subscriber} from the specified
-     * {@link Executor}. If there is a problem subscribing, {@link Subscriber#onError(Throwable)} will be
-     * invoked with one of the following exceptions:
-     * <ul>
-     *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already.</li>
-     *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     *   <li>{@link CancelledSubscriptionException} if this stream has been
+     *       {@linkplain Subscription#cancel() cancelled} and {@link SubscriptionOption#NOTIFY_CANCELLATION} is
+     *       specified when subscribed.</li>
      *   <li>Other exceptions that occurred due to an error while retrieving the elements.</li>
      * </ul>
      *
-     * @param withPooledObjects if {@code true}, receives the pooled {@link ByteBuf} and {@link ByteBufHolder}
-     *                          as is, without making a copy. If you don't know what this means, use
-     *                          {@link StreamMessage#subscribe(Subscriber)}.
+     * @deprecated Use {@link #subscribe(Subscriber, EventExecutor, SubscriptionOption...)}.
+     *
+     * @param executor the executor to subscribe
      */
+    @Deprecated
     void subscribe(Subscriber<? super T> subscriber, EventExecutor executor, boolean withPooledObjects);
 
     /**
@@ -256,6 +306,56 @@ public interface StreamMessage<T> extends Publisher<T> {
      *   <li>Other exceptions that occurred due to an error while retrieving the elements.</li>
      * </ul>
      *
+     * @deprecated Use {@link #drainAll(SubscriptionOption...)}.
+     *
+     * @return the {@link CompletableFuture} which will be completed with the list of the elements retrieved.
+     */
+    @Deprecated
+    CompletableFuture<List<T>> drainAll(boolean withPooledObjects);
+
+    /**
+     * Subscribes to this {@link StreamMessage} and retrieves all elements from it.
+     * The returned {@link CompletableFuture} may be completed exceptionally with the following exceptions:
+     * <ul>
+     *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already.</li>
+     *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     *   <li>Other exceptions that occurred due to an error while retrieving the elements.</li>
+     * </ul>
+     *
+     * @deprecated Use {@link #drainAll(EventExecutor, SubscriptionOption...)}.
+     *
+     * @param executor the executor to retrieve all elements
+     *
+     * @return the {@link CompletableFuture} which will be completed with the list of the elements retrieved.
+     */
+    @Deprecated
+    CompletableFuture<List<T>> drainAll(EventExecutor executor, boolean withPooledObjects);
+
+    /**
+     * Subscribes to this {@link StreamMessage} and retrieves all elements from it.
+     * The returned {@link CompletableFuture} may be completed exceptionally with the following exceptions:
+     * <ul>
+     *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already.</li>
+     *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     *   <li>Other exceptions that occurred due to an error while retrieving the elements.</li>
+     * </ul>
+     *
+     * @param options {@link SubscriptionOption}s to subscribe with. Note that
+     *                {@link SubscriptionOption#NOTIFY_CANCELLATION} is ineffective because there's no
+     *                cancelling while draining all elements.
+     * @return the {@link CompletableFuture} which will be completed with the list of the elements retrieved.
+     */
+    CompletableFuture<List<T>> drainAll(SubscriptionOption... options);
+
+    /**
+     * Subscribes to this {@link StreamMessage} and retrieves all elements from it.
+     * The returned {@link CompletableFuture} may be completed exceptionally with the following exceptions:
+     * <ul>
+     *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already.</li>
+     *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
+     *   <li>Other exceptions that occurred due to an error while retrieving the elements.</li>
+     * </ul>
+     *
      * @param executor the executor to retrieve all elements
      * @return the {@link CompletableFuture} which will be completed with the list of the elements retrieved.
      */
@@ -270,29 +370,13 @@ public interface StreamMessage<T> extends Publisher<T> {
      *   <li>Other exceptions that occurred due to an error while retrieving the elements.</li>
      * </ul>
      *
-     * @param withPooledObjects if {@code true}, receives the pooled {@link ByteBuf} and {@link ByteBufHolder}
-     *                          as is, without making a copy. If you don't know what this means, use
-     *                          {@link StreamMessage#drainAll()}.
-     * @return the {@link CompletableFuture} which will be completed with the list of the elements retrieved.
-     */
-    CompletableFuture<List<T>> drainAll(boolean withPooledObjects);
-
-    /**
-     * Subscribes to this {@link StreamMessage} and retrieves all elements from it.
-     * The returned {@link CompletableFuture} may be completed exceptionally with the following exceptions:
-     * <ul>
-     *   <li>{@link IllegalStateException} if other {@link Subscriber} subscribed to this stream already.</li>
-     *   <li>{@link AbortedStreamException} if this stream has been {@linkplain #abort() aborted}.</li>
-     *   <li>Other exceptions that occurred due to an error while retrieving the elements.</li>
-     * </ul>
-     *
      * @param executor the executor to retrieve all elements
-     * @param withPooledObjects if {@code true}, receives the pooled {@link ByteBuf} and {@link ByteBufHolder}
-     *                          as is, without making a copy. If you don't know what this means, use
-     *                          {@link StreamMessage#drainAll(EventExecutor)}.
+     * @param options {@link SubscriptionOption}s to subscribe with. Note that
+     *                {@link SubscriptionOption#NOTIFY_CANCELLATION} is ineffective because there's no
+     *                cancelling while draining all elements.
      * @return the {@link CompletableFuture} which will be completed with the list of the elements retrieved.
      */
-    CompletableFuture<List<T>> drainAll(EventExecutor executor, boolean withPooledObjects);
+    CompletableFuture<List<T>> drainAll(EventExecutor executor, SubscriptionOption... options);
 
     /**
      * Closes this stream with {@link AbortedStreamException} and prevents further subscription.

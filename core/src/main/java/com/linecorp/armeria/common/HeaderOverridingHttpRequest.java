@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common;
 
+import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
+
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -23,6 +25,8 @@ import javax.annotation.Nullable;
 import org.reactivestreams.Subscriber;
 
 import com.google.common.base.MoreObjects;
+
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
@@ -76,7 +80,16 @@ final class HeaderOverridingHttpRequest implements HttpRequest {
 
     @Override
     public void subscribe(Subscriber<? super HttpObject> subscriber, boolean withPooledObjects) {
-        delegate.subscribe(subscriber, withPooledObjects);
+        if (withPooledObjects) {
+            delegate.subscribe(subscriber, WITH_POOLED_OBJECTS);
+        } else {
+            delegate.subscribe(subscriber);
+        }
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super HttpObject> subscriber, SubscriptionOption... options) {
+        delegate.subscribe(subscriber, options);
     }
 
     @Override
@@ -85,9 +98,19 @@ final class HeaderOverridingHttpRequest implements HttpRequest {
     }
 
     @Override
-    public void subscribe(Subscriber<? super HttpObject> subscriber,
-                          EventExecutor executor, boolean withPooledObjects) {
-        delegate.subscribe(subscriber, executor, withPooledObjects);
+    public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor,
+                          boolean withPooledObjects) {
+        if (withPooledObjects) {
+            delegate.subscribe(subscriber, executor, WITH_POOLED_OBJECTS);
+        } else {
+            delegate.subscribe(subscriber, executor);
+        }
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor,
+                          SubscriptionOption... options) {
+        delegate.subscribe(subscriber, executor, options);
     }
 
     @Override
@@ -96,19 +119,36 @@ final class HeaderOverridingHttpRequest implements HttpRequest {
     }
 
     @Override
+    public CompletableFuture<List<HttpObject>> drainAll(boolean withPooledObjects) {
+        if (withPooledObjects) {
+            return drainAll(WITH_POOLED_OBJECTS);
+        } else {
+            return drainAll();
+        }
+    }
+
+    @Override
+    public CompletableFuture<List<HttpObject>> drainAll(SubscriptionOption... options) {
+        return delegate.drainAll(options);
+    }
+
+    @Override
     public CompletableFuture<List<HttpObject>> drainAll(EventExecutor executor) {
         return delegate.drainAll(executor);
     }
 
     @Override
-    public CompletableFuture<List<HttpObject>> drainAll(boolean withPooledObjects) {
-        return delegate.drainAll(withPooledObjects);
+    public CompletableFuture<List<HttpObject>> drainAll(EventExecutor executor, boolean withPooledObjects) {
+        if (withPooledObjects) {
+            return drainAll(executor, WITH_POOLED_OBJECTS);
+        } else {
+            return drainAll(executor);
+        }
     }
 
     @Override
-    public CompletableFuture<List<HttpObject>> drainAll(EventExecutor executor,
-                                                        boolean withPooledObjects) {
-        return delegate.drainAll(executor, withPooledObjects);
+    public CompletableFuture<List<HttpObject>> drainAll(EventExecutor executor, SubscriptionOption... options) {
+        return delegate.drainAll(executor, options);
     }
 
     @Override

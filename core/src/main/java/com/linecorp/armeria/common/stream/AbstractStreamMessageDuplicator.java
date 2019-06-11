@@ -20,6 +20,9 @@ import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.abortedOrLate;
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
+import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -54,22 +57,20 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
  * Allows subscribing to a {@link StreamMessage} multiple times by duplicating the stream.
- * <p>
- * Only one subscriber can subscribe other stream messages such as {@link DefaultStreamMessage},
+ *
+ * <p>Only one subscriber can subscribe other stream messages such as {@link DefaultStreamMessage},
  * {@link DeferredStreamMessage}, etc.
  * This factory is wrapping one of those {@link StreamMessage}s and spawns duplicated stream messages
  * which are created using {@link AbstractStreamMessageDuplicator#duplicateStream()} and subscribed
- * by subscribers one by one.
- * </p><p>
- * The published elements can be shared across {@link Subscriber}s, so do not manipulate the
- * data unless you copy them. Only one case does not share the elements which is when you
- * {@link StreamMessage#subscribe(Subscriber, boolean)} with the {@code withPooledObjects}
- * as {@code false} while the elements is one of two pooled object classes which are {@link ByteBufHolder}
- * and {@link ByteBuf}.
- * </p><p>
- * This factory has to be closed by {@link AbstractStreamMessageDuplicator#close()} when
- * you do not need the contents anymore, otherwise memory leak might happen.
- * </p>
+ * by subscribers one by one.</p>
+ *
+ * <p>The published elements can be shared across {@link Subscriber}s, if you subscribe with the
+ * {@link SubscriptionOption#WITH_POOLED_OBJECTS}, so do not manipulate the
+ * data unless you copy them.</p>
+ *
+ * <p>This factory has to be closed by {@link AbstractStreamMessageDuplicator#close()} when
+ * you do not need the contents anymore, otherwise memory leak might happen.</p>
+ *
  * @param <T> the type of elements
  * @param <U> the type of the publisher and duplicated stream messages
  */
@@ -130,8 +131,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
     /**
      * Returns the default {@link EventExecutor} which will be used when a user subscribes to a child
-     * stream using {@link StreamMessage#subscribe(Subscriber)} or
-     * {@link StreamMessage#subscribe(Subscriber, boolean)}.
+     * stream using {@link StreamMessage#subscribe(Subscriber, SubscriptionOption...)}.
      */
     protected EventExecutor duplicatorExecutor() {
         return duplicatorExecutor;
@@ -204,7 +204,8 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                 this.maxSignalLength = (int) maxSignalLength;
             }
             signals = new SignalQueue(this.signalLengthGetter);
-            upstream.subscribe(this, processorExecutor, true);
+            upstream.subscribe(this, processorExecutor,
+                               WITH_POOLED_OBJECTS, SubscriptionOption.NOTIFY_CANCELLATION);
         }
 
         StreamMessage<T> upstream() {
@@ -340,7 +341,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             }
 
             try {
-                if (!(cause instanceof CancelledSubscriptionException)) {
+                if (subscription.notifyCancellation || !(cause instanceof CancelledSubscriptionException)) {
                     subscriber.onError(cause);
                 }
             } finally {
@@ -460,28 +461,50 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
         @Override
         public void subscribe(Subscriber<? super T> subscriber) {
-            requireNonNull(subscriber, "subscriber");
-            subscribe(subscriber, parent.duplicatorExecutor(), false);
+            subscribe(subscriber, parent.duplicatorExecutor());
         }
 
         @Override
         public void subscribe(Subscriber<? super T> subscriber, boolean withPooledObjects) {
-            requireNonNull(subscriber, "subscriber");
-            subscribe(subscriber, parent.duplicatorExecutor(), withPooledObjects);
+            subscribe(subscriber, parent.duplicatorExecutor(), withPooledObjects, false);
+        }
+
+        @Override
+        public void subscribe(Subscriber<? super T> subscriber, SubscriptionOption... options) {
+            requireNonNull(options, "options");
+
+            final boolean withPooledObjects = containsWithPooledObjects(options);
+            final boolean notifyCancellation = containsNotifyCancellation(options);
+            subscribe(subscriber, parent.duplicatorExecutor(), withPooledObjects, notifyCancellation);
         }
 
         @Override
         public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
-            subscribe(subscriber, executor, false);
+            subscribe(subscriber, executor, false, false);
         }
 
         @Override
         public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
                               boolean withPooledObjects) {
+            subscribe(subscriber, executor, withPooledObjects, false);
+        }
+
+        @Override
+        public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
+                              SubscriptionOption... options) {
+            requireNonNull(options, "options");
+
+            final boolean withPooledObjects = containsWithPooledObjects(options);
+            final boolean notifyCancellation = containsNotifyCancellation(options);
+            subscribe(subscriber, executor, withPooledObjects, notifyCancellation);
+        }
+
+        private void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
+                               boolean withPooledObjects, boolean notifyCancellation) {
             requireNonNull(subscriber, "subscriber");
             requireNonNull(executor, "executor");
             final DownstreamSubscription<T> subscription = new DownstreamSubscription<>(
-                    this, subscriber, processor, executor, withPooledObjects, lastStream);
+                    this, subscriber, processor, executor, withPooledObjects, notifyCancellation, lastStream);
 
             if (!subscribe0(subscription)) {
                 final DownstreamSubscription<T> oldSubscription = this.subscription;
@@ -511,12 +534,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
         @Override
         public CompletableFuture<List<T>> drainAll() {
-            return drainAll(parent.duplicatorExecutor(), false);
-        }
-
-        @Override
-        public CompletableFuture<List<T>> drainAll(EventExecutor executor) {
-            return drainAll(executor, false);
+            return drainAll(parent.duplicatorExecutor());
         }
 
         @Override
@@ -525,12 +543,28 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         }
 
         @Override
+        public CompletableFuture<List<T>> drainAll(SubscriptionOption... options) {
+            requireNonNull(options, "options");
+
+            final boolean withPooledObjects = containsWithPooledObjects(options);
+            return drainAll(parent.duplicatorExecutor(), withPooledObjects);
+        }
+
+        @Override
+        public CompletableFuture<List<T>> drainAll(EventExecutor executor) {
+            return drainAll(executor, false);
+        }
+
+        // TODO(minwoox) Make this method private after the deprecated overriden method is removed.
+        @Override
         public CompletableFuture<List<T>> drainAll(EventExecutor executor, boolean withPooledObjects) {
             requireNonNull(executor, "executor");
 
             final StreamMessageDrainer<T> drainer = new StreamMessageDrainer<>(withPooledObjects);
             final DownstreamSubscription<T> subscription = new DownstreamSubscription<>(
-                    this, drainer, processor, executor, withPooledObjects, lastStream);
+                    this, drainer, processor, executor, withPooledObjects,
+                    false, /* We do not call Subscription.cancel() in StreamMessageDrainer. */
+                    lastStream);
             if (!subscribe0(subscription)) {
                 final DownstreamSubscription<T> oldSubscription = this.subscription;
                 assert oldSubscription != null;
@@ -542,6 +576,14 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         }
 
         @Override
+        public CompletableFuture<List<T>> drainAll(EventExecutor executor, SubscriptionOption... options) {
+            requireNonNull(options, "options");
+
+            final boolean withPooledObjects = containsWithPooledObjects(options);
+            return drainAll(executor, withPooledObjects);
+        }
+
+        @Override
         public void abort() {
             final DownstreamSubscription<T> currentSubscription = subscription;
             if (currentSubscription != null) {
@@ -550,7 +592,8 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             }
 
             final DownstreamSubscription<T> newSubscription = new DownstreamSubscription<>(
-                    this, AbortingSubscriber.get(), processor, ImmediateEventExecutor.INSTANCE, false, false);
+                    this, AbortingSubscriber.get(), processor, ImmediateEventExecutor.INSTANCE,
+                    false, false, false);
             if (subscriptionUpdater.compareAndSet(this, null, newSubscription)) {
                 newSubscription.completionFuture().completeExceptionally(AbortedStreamException.get());
             } else {
@@ -578,6 +621,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         private final StreamMessageProcessor<T> processor;
         private final EventExecutor executor;
         private final boolean withPooledObjects;
+        private final boolean notifyCancellation;
         final boolean lastSubscription;
 
         @SuppressWarnings("unused")
@@ -599,12 +643,14 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
         DownstreamSubscription(ChildStreamMessage<T> streamMessage,
                                Subscriber<? super T> subscriber, StreamMessageProcessor<T> processor,
-                               EventExecutor executor, boolean withPooledObjects, boolean lastSubscription) {
+                               EventExecutor executor, boolean withPooledObjects, boolean notifyCancellation,
+                               boolean lastSubscription) {
             this.streamMessage = streamMessage;
             this.subscriber = subscriber;
             this.processor = processor;
             this.executor = executor;
             this.withPooledObjects = withPooledObjects;
+            this.notifyCancellation = notifyCancellation;
             this.lastSubscription = lastSubscription;
         }
 

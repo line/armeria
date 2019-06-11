@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.FixedHttpResponse.OneElementFixedHttpResponse
 import com.linecorp.armeria.common.FixedHttpResponse.RegularFixedHttpResponse;
 import com.linecorp.armeria.common.FixedHttpResponse.TwoElementFixedHttpResponse;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -352,7 +353,6 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     default CompletableFuture<AggregatedHttpResponse> aggregate() {
         final CompletableFuture<AggregatedHttpResponse> future = new CompletableFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, null);
-        completionFuture().handle(aggregator);
         subscribe(aggregator);
         return future;
     }
@@ -364,7 +364,6 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     default CompletableFuture<AggregatedHttpResponse> aggregate(EventExecutor executor) {
         final CompletableFuture<AggregatedHttpResponse> future = new CompletableFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, null);
-        completionFuture().handleAsync(aggregator, executor);
         subscribe(aggregator, executor);
         return future;
     }
@@ -379,8 +378,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         requireNonNull(alloc, "alloc");
         final CompletableFuture<AggregatedHttpResponse> future = new CompletableFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, alloc);
-        completionFuture().handle(aggregator);
-        subscribe(aggregator, true);
+        subscribe(aggregator, SubscriptionOption.WITH_POOLED_OBJECTS);
         return future;
     }
 
@@ -396,8 +394,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         requireNonNull(alloc, "alloc");
         final CompletableFuture<AggregatedHttpResponse> future = new CompletableFuture<>();
         final HttpResponseAggregator aggregator = new HttpResponseAggregator(future, alloc);
-        completionFuture().handleAsync(aggregator, executor);
-        subscribe(aggregator, executor, true);
+        subscribe(aggregator, executor, SubscriptionOption.WITH_POOLED_OBJECTS);
         return future;
     }
 }

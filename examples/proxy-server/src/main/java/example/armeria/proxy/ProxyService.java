@@ -16,11 +16,11 @@ import com.linecorp.armeria.client.endpoint.healthcheck.HttpHealthCheckedEndpoin
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -138,10 +138,10 @@ public final class ProxyService extends AbstractHttpService {
             @Override
             protected HttpObject filter(HttpObject obj) {
                 // You can remove or add specific headers to a response.
-                if (obj instanceof HttpHeaders) {
-                    return ((HttpHeaders) obj).toBuilder()
-                                              .add(HttpHeaderNames.VIA, viaHeaderValue)
-                                              .build();
+                if (obj instanceof ResponseHeaders) {
+                    return ((ResponseHeaders) obj).toBuilder()
+                                                  .add(HttpHeaderNames.VIA, viaHeaderValue)
+                                                  .build();
                 }
                 return obj;
             }

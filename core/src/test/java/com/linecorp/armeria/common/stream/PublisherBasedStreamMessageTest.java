@@ -18,12 +18,14 @@ package com.linecorp.armeria.common.stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.reactivestreams.Publisher;
@@ -32,14 +34,16 @@ import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage.AbortableSubscriber;
 
-public class PublisherBasedStreamMessageTest {
+import io.netty.buffer.ByteBufHolder;
+
+class PublisherBasedStreamMessageTest {
 
     /**
      * Tests if {@link PublisherBasedStreamMessage#abort()} cancels the {@link Subscription}, and tests if
      * the abort operation is idempotent.
      */
     @Test
-    public void testAbortWithEarlyOnSubscribe() {
+    void testAbortWithEarlyOnSubscribe() {
         final AbortTest test = new AbortTest();
         test.prepare();
         test.invokeOnSubscribe();
@@ -57,7 +61,7 @@ public class PublisherBasedStreamMessageTest {
      * {@link PublisherBasedStreamMessage#abort()} is called.
      */
     @Test
-    public void testAbortWithLateOnSubscribe() {
+    void testAbortWithLateOnSubscribe() {
         final AbortTest test = new AbortTest();
         test.prepare();
         test.abort();
@@ -70,7 +74,7 @@ public class PublisherBasedStreamMessageTest {
      * Tests if {@link PublisherBasedStreamMessage#abort()} prohibits further subscription.
      */
     @Test
-    public void testAbortWithoutSubscriber() {
+    void testAbortWithoutSubscriber() {
         @SuppressWarnings("unchecked")
         final Publisher<Integer> delegate = mock(Publisher.class);
         final PublisherBasedStreamMessage<Integer> p = new PublisherBasedStreamMessage<>(delegate);
@@ -78,6 +82,44 @@ public class PublisherBasedStreamMessageTest {
 
         // Publisher should not be involved at all because we are aborting without subscribing.
         verify(delegate, never()).subscribe(any());
+    }
+
+    @Test
+    void notifyCancellation() {
+        final DefaultStreamMessage<ByteBufHolder> delegate = new DefaultStreamMessage<>();
+        final PublisherBasedStreamMessage<ByteBufHolder> p = new PublisherBasedStreamMessage<>(delegate);
+        SubscriptionOptionTest.notifyCancellation(p);
+    }
+
+    @Test
+    void cancellationIsNotPropagatedByDefault() {
+        final DefaultStreamMessage<Integer> delegate = new DefaultStreamMessage<>();
+        final PublisherBasedStreamMessage<Integer> p = new PublisherBasedStreamMessage<>(delegate);
+
+        p.subscribe(new Subscriber<Integer>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                s.cancel();
+            }
+
+            @Override
+            public void onNext(Integer integer) {
+                fail();
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                fail();
+            }
+
+            @Override
+            public void onComplete() {
+                fail();
+            }
+        });
+
+        // We do call onError(t) first before completing the future.
+        await().untilAsserted(() -> assertThat(p.completionFuture().isCompletedExceptionally()));
     }
 
     private static final class AbortTest {

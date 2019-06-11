@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -179,7 +180,7 @@ public final class GrpcService extends AbstractHttpService
                 methodName, method, ctx, req.headers(), res, serializationFormat);
         if (call != null) {
             ctx.setRequestTimeoutHandler(() -> call.close(Status.DEADLINE_EXCEEDED, new Metadata()));
-            req.subscribe(call.messageReader(), ctx.eventLoop(), true);
+            req.subscribe(call.messageReader(), ctx.eventLoop(), WITH_POOLED_OBJECTS);
             req.completionFuture().handleAsync(call.messageReader(), ctx.eventLoop());
         }
         return res;

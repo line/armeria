@@ -19,6 +19,7 @@ import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
+import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.ScheduledFuture;
@@ -156,8 +157,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                 new HttpRequestSubscriber(channel, requestEncoder,
                                           numRequestsSent, req, wrappedRes, ctx,
                                           writeTimeoutMillis),
-                channel.eventLoop(),
-                true);
+                channel.eventLoop(), WITH_POOLED_OBJECTS);
 
         if (numRequestsSent >= MAX_NUM_REQUESTS_SENT) {
             responseDecoder.disconnectWhenFinished();

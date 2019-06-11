@@ -348,7 +348,6 @@ Other classes automatically injected
 
 The following classes are automatically injected when you specify them on the parameter list of your method.
 
--
 - :api:`ServiceRequestContext` (or :api:`RequestContext`)
 - :api:`RequestHeaders` (or :api:`HttpHeaders`)
 - :api:`HttpRequest` (or :api:`Request`)

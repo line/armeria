@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.grpc;
 
+import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CancellationException;
@@ -173,7 +174,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             close(GrpcStatus.fromThrowable(e), new Metadata());
             return;
         }
-        res.subscribe(responseReader, ctx.eventLoop(), true);
+        res.subscribe(responseReader, ctx.eventLoop(), WITH_POOLED_OBJECTS);
         res.completionFuture().handleAsync(responseReader, ctx.eventLoop());
     }
 

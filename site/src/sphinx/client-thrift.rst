@@ -74,7 +74,7 @@ You can also use the builder pattern for client construction:
 
     HelloService.Iface helloService = new ClientBuilder("tbinary+http://127.0.0.1:8080/hello")
             .responseTimeoutMillis(10000)
-            .decorator(LoggingClient.newDecorator())
+            .rpcDecorator(LoggingClient.newDecorator())
             .build(HelloService.Iface.class); // or AsyncIface.class
 
     String greeting = helloService.hello("Armerian World");

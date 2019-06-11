@@ -21,6 +21,7 @@ import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
+import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isCorsPreflightRequest;
 import static com.linecorp.armeria.server.HttpHeaderUtil.determineClientAddress;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
@@ -440,7 +441,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             final HttpResponseSubscriber resSubscriber =
                     new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req, accessLogWriter);
             reqCtx.setRequestTimeoutChangeListener(resSubscriber);
-            res.subscribe(resSubscriber, eventLoop, true);
+            res.subscribe(resSubscriber, eventLoop, WITH_POOLED_OBJECTS);
         }
     }
 

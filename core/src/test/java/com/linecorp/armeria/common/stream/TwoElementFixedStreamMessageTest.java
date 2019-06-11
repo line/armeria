@@ -16,11 +16,12 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import javax.annotation.Nullable;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -30,27 +31,29 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
 
-public class TwoElementFixedStreamMessageTest {
+class TwoElementFixedStreamMessageTest {
 
     @Test
-    public void cancelOnFirstElement() {
+    void cancelOnFirstElement() {
         final ByteBuf obj1 = newBuffer("obj1");
         final ByteBuf obj2 = newBuffer("obj2");
         final TwoElementFixedStreamMessage<ByteBuf> streamMessage =
                 new TwoElementFixedStreamMessage<>(obj1, obj2);
-        streamMessage.subscribe(new CancelSubscriber(1), EventLoopGroups.directEventLoop(), true);
+        streamMessage.subscribe(new CancelSubscriber(1), EventLoopGroups.directEventLoop(),
+                                WITH_POOLED_OBJECTS);
 
         assertThat(obj1.refCnt()).isZero();
         assertThat(obj2.refCnt()).isZero();
     }
 
     @Test
-    public void cancelOnSecondElement() {
+    void cancelOnSecondElement() {
         final ByteBuf obj1 = newBuffer("obj1");
         final ByteBuf obj2 = newBuffer("obj2");
         final TwoElementFixedStreamMessage<ByteBuf> streamMessage =
                 new TwoElementFixedStreamMessage<>(obj1, obj2);
-        streamMessage.subscribe(new CancelSubscriber(2), EventLoopGroups.directEventLoop(), true);
+        streamMessage.subscribe(new CancelSubscriber(2), EventLoopGroups.directEventLoop(),
+                                WITH_POOLED_OBJECTS);
 
         assertThat(obj1.refCnt()).isZero();
         assertThat(obj2.refCnt()).isZero();

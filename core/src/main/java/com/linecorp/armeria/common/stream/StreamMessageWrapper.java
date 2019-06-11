@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -72,45 +73,78 @@ public class StreamMessageWrapper<T> implements StreamMessage<T> {
 
     @Override
     public void subscribe(Subscriber<? super T> s, boolean withPooledObjects) {
-        delegate().subscribe(s, withPooledObjects);
+        if (withPooledObjects) {
+            delegate().subscribe(s, WITH_POOLED_OBJECTS);
+        } else {
+            delegate().subscribe(s);
+        }
     }
 
     @Override
-    public void subscribe(Subscriber<? super T> s, EventExecutor executor) {
-        delegate().subscribe(s, executor);
+    public void subscribe(Subscriber<? super T> subscriber, SubscriptionOption... options) {
+        delegate().subscribe(subscriber, options);
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
+        delegate().subscribe(subscriber, executor);
     }
 
     @Override
     public void subscribe(Subscriber<? super T> s, EventExecutor executor, boolean withPooledObjects) {
-        delegate().subscribe(s, executor, withPooledObjects);
+        if (withPooledObjects) {
+            delegate().subscribe(s, executor, WITH_POOLED_OBJECTS);
+        } else {
+            delegate().subscribe(s, executor);
+        }
     }
 
     @Override
-    @SuppressWarnings("unchecked")
+    public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
+                          SubscriptionOption... options) {
+        delegate().subscribe(subscriber, executor, options);
+    }
+
+    @Override
     public CompletableFuture<List<T>> drainAll() {
-        final CompletableFuture<? extends List<? extends T>> future = delegate().drainAll();
-        return (CompletableFuture<List<T>>) future;
+        return cast(delegate().drainAll());
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public CompletableFuture<List<T>> drainAll(EventExecutor executor) {
-        final CompletableFuture<? extends List<? extends T>> future = delegate().drainAll(executor);
-        return (CompletableFuture<List<T>>) future;
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
     public CompletableFuture<List<T>> drainAll(boolean withPooledObjects) {
-        final CompletableFuture<? extends List<? extends T>> future = delegate().drainAll(withPooledObjects);
-        return (CompletableFuture<List<T>>) future;
+        if (withPooledObjects) {
+            return drainAll(WITH_POOLED_OBJECTS);
+        } else {
+            return drainAll();
+        }
     }
 
     @Override
-    @SuppressWarnings("unchecked")
+    public CompletableFuture<List<T>> drainAll(SubscriptionOption... options) {
+        return cast(delegate().drainAll(options));
+    }
+
+    @Override
+    public CompletableFuture<List<T>> drainAll(EventExecutor executor) {
+        return cast(delegate().drainAll(executor));
+    }
+
+    @Override
     public CompletableFuture<List<T>> drainAll(EventExecutor executor, boolean withPooledObjects) {
-        final CompletableFuture<? extends List<? extends T>> future =
-                delegate().drainAll(executor, withPooledObjects);
+        if (withPooledObjects) {
+            return drainAll(executor, WITH_POOLED_OBJECTS);
+        } else {
+            return drainAll(executor);
+        }
+    }
+
+    @Override
+    public CompletableFuture<List<T>> drainAll(EventExecutor executor, SubscriptionOption... options) {
+        return cast(delegate().drainAll(executor, options));
+    }
+
+    @SuppressWarnings("unchecked")
+    private CompletableFuture<List<T>> cast(CompletableFuture<? extends List<? extends T>> future) {
         return (CompletableFuture<List<T>>) future;
     }
 

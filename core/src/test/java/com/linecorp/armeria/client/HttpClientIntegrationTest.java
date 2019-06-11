@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
@@ -160,7 +161,7 @@ class HttpClientIntegrationTest {
                 public void onComplete() {
                     decorated.close();
                 }
-            }, true);
+            }, WITH_POOLED_OBJECTS);
             return decorated;
         }
     }

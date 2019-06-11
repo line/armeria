@@ -17,6 +17,8 @@
 package com.linecorp.armeria.common.stream;
 
 import static com.linecorp.armeria.common.stream.StreamMessageUtil.abortedOrLate;
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsNotifyCancellation;
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.containsWithPooledObjects;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -48,27 +50,46 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
 
     @Override
     public final void subscribe(Subscriber<? super T> subscriber) {
-        subscribe(subscriber, defaultSubscriberExecutor(), false);
+        subscribe(subscriber, defaultSubscriberExecutor());
     }
 
     @Override
     public final void subscribe(Subscriber<? super T> subscriber, boolean withPooledObjects) {
-        subscribe(subscriber, defaultSubscriberExecutor(), withPooledObjects);
+        subscribe(subscriber, defaultSubscriberExecutor(), withPooledObjects, false);
     }
 
     @Override
-    public final void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
-        subscribe(subscriber, executor, false);
+    public final void subscribe(Subscriber<? super T> subscriber, SubscriptionOption... options) {
+        subscribe(subscriber, defaultSubscriberExecutor(), options);
     }
 
     @Override
     public final void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
                                 boolean withPooledObjects) {
+        subscribe(subscriber, executor, withPooledObjects, false);
+    }
+
+    @Override
+    public final void subscribe(Subscriber<? super T> subscriber, EventExecutor executor) {
+        subscribe(subscriber, executor, false, false);
+    }
+
+    @Override
+    public final void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
+                                SubscriptionOption... options) {
+        requireNonNull(options, "options");
+
+        final boolean withPooledObjects = containsWithPooledObjects(options);
+        final boolean notifyCancellation = containsNotifyCancellation(options);
+        subscribe(subscriber, executor, withPooledObjects, notifyCancellation);
+    }
+
+    private void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
+                           boolean withPooledObjects, boolean notifyCancellation) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
-
         final SubscriptionImpl subscription =
-                new SubscriptionImpl(this, subscriber, executor, withPooledObjects);
+                new SubscriptionImpl(this, subscriber, executor, withPooledObjects, notifyCancellation);
         final SubscriptionImpl actualSubscription = subscribe(subscription);
         if (actualSubscription != subscription) {
             // Failed to subscribe.
@@ -87,34 +108,34 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
 
     /**
      * Returns the default {@link EventExecutor} which will be used when a user subscribes using
-     * {@link #subscribe(Subscriber)} or {@link #subscribe(Subscriber, boolean)}.
+     * {@link #subscribe(Subscriber)} or {@link #subscribe(Subscriber, SubscriptionOption...)}.
      */
     protected EventExecutor defaultSubscriberExecutor() {
         return RequestContext.mapCurrent(RequestContext::eventLoop, () -> CommonPools.workerGroup().next());
     }
 
     @Override
-    public CompletableFuture<List<T>> drainAll() {
-        return drainAll(defaultSubscriberExecutor(), false);
+    public final CompletableFuture<List<T>> drainAll() {
+        return drainAll(defaultSubscriberExecutor());
     }
 
     @Override
-    public CompletableFuture<List<T>> drainAll(EventExecutor executor) {
-        return drainAll(requireNonNull(executor, "executor"), false);
-    }
-
-    @Override
-    public CompletableFuture<List<T>> drainAll(boolean withPooledObjects) {
+    public final CompletableFuture<List<T>> drainAll(boolean withPooledObjects) {
         return drainAll(defaultSubscriberExecutor(), withPooledObjects);
     }
 
     @Override
-    public CompletableFuture<List<T>> drainAll(EventExecutor executor, boolean withPooledObjects) {
-        requireNonNull(executor, "executor");
+    public final CompletableFuture<List<T>> drainAll(SubscriptionOption... options) {
+        return drainAll(defaultSubscriberExecutor(), options);
+    }
 
+    // TODO(minwoox) Make this method private after the deprecated overriden method is removed.
+    @Override
+    public final CompletableFuture<List<T>> drainAll(EventExecutor executor, boolean withPooledObjects) {
+        requireNonNull(executor, "executor");
         final StreamMessageDrainer<T> drainer = new StreamMessageDrainer<>(withPooledObjects);
-        final SubscriptionImpl subscription = new SubscriptionImpl(this, drainer,
-                                                                   executor, withPooledObjects);
+        final SubscriptionImpl subscription = new SubscriptionImpl(this, drainer, executor,
+                                                                   withPooledObjects, false);
         final SubscriptionImpl actualSubscription = subscribe(subscription);
 
         if (actualSubscription != subscription) {
@@ -124,6 +145,19 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         }
 
         return drainer.future();
+    }
+
+    @Override
+    public final CompletableFuture<List<T>> drainAll(EventExecutor executor) {
+        return drainAll(executor, false);
+    }
+
+    @Override
+    public final CompletableFuture<List<T>> drainAll(EventExecutor executor, SubscriptionOption... options) {
+        requireNonNull(options, "options");
+
+        final boolean withPooledObjects = containsWithPooledObjects(options);
+        return drainAll(executor, withPooledObjects);
     }
 
     @Override
@@ -220,16 +254,18 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         private Subscriber<Object> subscriber;
         private final EventExecutor executor;
         private final boolean withPooledObjects;
+        private final boolean notifyCancellation;
 
         private volatile boolean cancelRequested;
 
         @SuppressWarnings("unchecked")
         SubscriptionImpl(AbstractStreamMessage<?> publisher, Subscriber<?> subscriber,
-                         EventExecutor executor, boolean withPooledObjects) {
+                         EventExecutor executor, boolean withPooledObjects, boolean notifyCancellation) {
             this.publisher = publisher;
             this.subscriber = (Subscriber<Object>) subscriber;
             this.executor = executor;
             this.withPooledObjects = withPooledObjects;
+            this.notifyCancellation = notifyCancellation;
         }
 
         Subscriber<Object> subscriber() {
@@ -252,6 +288,10 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
 
         boolean withPooledObjects() {
             return withPooledObjects;
+        }
+
+        boolean notifyCancellation() {
+            return notifyCancellation;
         }
 
         boolean cancelRequested() {
@@ -326,7 +366,7 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
                 }
             } else {
                 try {
-                    if (!(cause instanceof CancelledSubscriptionException)) {
+                    if (subscription.notifyCancellation || !(cause instanceof CancelledSubscriptionException)) {
                         subscriber.onError(cause);
                     }
                 } finally {

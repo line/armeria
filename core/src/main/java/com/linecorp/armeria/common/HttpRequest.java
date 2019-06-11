@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.RegularFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.TwoElementFixedHttpRequest;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
@@ -348,7 +349,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     default CompletableFuture<AggregatedHttpRequest> aggregate() {
         final CompletableFuture<AggregatedHttpRequest> future = new CompletableFuture<>();
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, null);
-        completionFuture().handle(aggregator);
         subscribe(aggregator);
         return future;
     }
@@ -361,7 +361,6 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
         requireNonNull(executor, "executor");
         final CompletableFuture<AggregatedHttpRequest> future = new CompletableFuture<>();
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, null);
-        completionFuture().handleAsync(aggregator, executor);
         subscribe(aggregator, executor);
         return future;
     }
@@ -376,8 +375,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
         requireNonNull(alloc, "alloc");
         final CompletableFuture<AggregatedHttpRequest> future = new CompletableFuture<>();
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, alloc);
-        completionFuture().handle(aggregator);
-        subscribe(aggregator, true);
+        subscribe(aggregator, SubscriptionOption.WITH_POOLED_OBJECTS);
         return future;
     }
 
@@ -393,8 +391,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
         requireNonNull(alloc, "alloc");
         final CompletableFuture<AggregatedHttpRequest> future = new CompletableFuture<>();
         final HttpRequestAggregator aggregator = new HttpRequestAggregator(this, future, alloc);
-        completionFuture().handleAsync(aggregator, executor);
-        subscribe(aggregator, executor, true);
+        subscribe(aggregator, executor, SubscriptionOption.WITH_POOLED_OBJECTS);
         return future;
     }
 }

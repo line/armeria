@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.thrift;
 
+import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
+
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
@@ -91,7 +93,7 @@ public class PooledResponseBufferBenchmark {
                 public void onComplete() {
                     decorated.close();
                 }
-            }, true);
+            }, WITH_POOLED_OBJECTS);
             return decorated;
         }
     }
@@ -127,7 +129,7 @@ public class PooledResponseBufferBenchmark {
                 public void onComplete() {
                     decorated.close();
                 }
-            }, false);
+            });
             return decorated;
         }
     }

@@ -47,7 +47,8 @@ class DefaultStreamMessageTest {
     /**
      * Makes sure {@link Subscriber#onComplete()} is always invoked after
      * {@link Subscriber#onSubscribe(Subscription)} even if
-     * {@link StreamMessage#subscribe(Subscriber, EventExecutor)} is called from non-{@link EventLoop}.
+     * {@link StreamMessage#subscribe(Subscriber, EventExecutor, SubscriptionOption...)}
+     * is called from non-{@link EventLoop}.
      */
     @Test
     void onSubscribeBeforeOnComplete() throws Exception {
