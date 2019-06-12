@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
@@ -172,12 +171,12 @@ public final class ServiceRequestContextBuilder
 
     private static ServiceConfig findServiceConfig(Server server, String path, Service<?, ?> service) {
         for (ServiceConfig cfg : server.config().defaultVirtualHost().serviceConfigs()) {
-            final Optional<String> exactPath = cfg.route().exactPath();
-            if (!exactPath.isPresent()) {
+            final Route route = cfg.route();
+            if (route.pathType() != RoutePathType.EXACT) {
                 continue;
             }
 
-            if (!path.equals(exactPath.get())) {
+            if (!path.equals(route.paths().get(0))) {
                 continue;
             }
 

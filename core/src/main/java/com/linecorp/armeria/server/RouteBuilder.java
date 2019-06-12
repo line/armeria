@@ -198,7 +198,7 @@ public class RouteBuilder {
             }
         }
 
-        return pathMapping(new PathMappingWithPrefix(prefix, getPathMapping(pathPattern)));
+        return pathMapping(new RegexPathMappingWithPrefix(prefix, getPathMapping(pathPattern)));
     }
 
     /**
@@ -329,7 +329,7 @@ public class RouteBuilder {
         if (!pathPattern.contains("{") && !pathPattern.contains(":")) {
             return new ExactPathMapping(pathPattern);
         }
-        return new DefaultPathMapping(pathPattern);
+        return new ParameterizedPathMapping(pathPattern);
     }
 
     private static PathMapping prefixPathMapping(String prefix, boolean stripPrefix) {

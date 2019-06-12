@@ -142,7 +142,8 @@ class GlobPathMappingTest {
         final Route route = glob(glob);
         for (String p : paths) {
             if (!route.apply(create(p)).isPresent()) {
-                Assertions.fail('\'' + p + "' does not match '" + glob + "' or '" + route.regex() + "'.");
+                Assertions.fail('\'' + p + "' does not match '" + glob + "' or '" +
+                                route.paths().get(0) + "'.");
             }
         }
     }
@@ -151,7 +152,7 @@ class GlobPathMappingTest {
         final Route route = glob(glob);
         for (String p : paths) {
             if (route.apply(create(p)).isPresent()) {
-                Assertions.fail('\'' + p + "' matches '" + glob + "' or '" + route.regex() + "'.");
+                Assertions.fail('\'' + p + "' matches '" + glob + "' or '" + route.paths().get(0) + "'.");
             }
         }
     }

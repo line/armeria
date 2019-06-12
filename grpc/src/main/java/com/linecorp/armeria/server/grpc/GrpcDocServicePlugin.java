@@ -49,6 +49,8 @@ import com.google.protobuf.util.JsonFormat;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
@@ -168,9 +170,9 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
                        });
 
             final String pathPrefix;
-            final Optional<String> prefix = serviceConfig.route().prefix();
-            if (prefix.isPresent()) {
-                pathPrefix = prefix.get();
+            final Route route = serviceConfig.route();
+            if (route.pathType() == RoutePathType.PREFIX) {
+                pathPrefix = route.paths().get(0);
             } else {
                 pathPrefix = "/";
             }

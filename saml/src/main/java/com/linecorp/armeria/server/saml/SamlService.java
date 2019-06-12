@@ -41,6 +41,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
@@ -102,15 +103,16 @@ final class SamlService implements ServiceWithRoutes<HttpRequest, HttpResponse> 
                                                                 sp.defaultIdpConfig(),
                                                                 sp.requestIdManager(),
                                                                 sp.sloHandler())));
-        final Route metadata = sp.metadataRoute();
-        metadata.exactPath().ifPresent(
-                path -> builder.put(path,
-                                    new SamlMetadataServiceFunction(sp.entityId(),
-                                                                    sp.signingCredential(),
-                                                                    sp.encryptionCredential(),
-                                                                    sp.idpConfigs(),
-                                                                    sp.acsConfigs(),
-                                                                    sp.sloEndpoints())));
+        final Route route = sp.metadataRoute();
+        if (route.pathType() == RoutePathType.EXACT) {
+            builder.put(route.paths().get(0),
+                        new SamlMetadataServiceFunction(sp.entityId(),
+                                                        sp.signingCredential(),
+                                                        sp.encryptionCredential(),
+                                                        sp.idpConfigs(),
+                                                        sp.acsConfigs(),
+                                                        sp.sloEndpoints()));
+        }
         serviceMap = builder.build();
         routes = serviceMap.keySet()
                            .stream()

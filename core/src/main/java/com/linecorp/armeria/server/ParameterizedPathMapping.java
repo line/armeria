@@ -22,7 +22,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.regex.Matcher;
@@ -31,6 +30,7 @@ import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 /**
@@ -41,7 +41,7 @@ import com.google.common.collect.ImmutableSet;
  *   <li>A set of path parameters declared in the path pattern</li>
  * </ul>
  */
-final class DefaultPathMapping extends AbstractPathMapping {
+final class ParameterizedPathMapping extends AbstractPathMapping {
 
     private static final Pattern VALID_PATTERN = Pattern.compile("(/[^/{}:]+|/:[^/{}]+|/\\{[^/{}]+})+/?");
 
@@ -67,7 +67,9 @@ final class DefaultPathMapping extends AbstractPathMapping {
      *
      * <p>e.g. "/{x}/{y}/{z}" -> "/:/:/:"
      */
-    private final Optional<String> skeleton;
+    private final String skeleton;
+
+    private final List<String> paths;
 
     /**
      * The names of the path parameters in the order of appearance.
@@ -82,14 +84,14 @@ final class DefaultPathMapping extends AbstractPathMapping {
     private final String loggerName;
 
     /**
-     * Create a {@link DefaultPathMapping} instance from given {@code pathPattern}.
+     * Create a {@link ParameterizedPathMapping} instance from given {@code pathPattern}.
      *
      * @param pathPattern the {@link String} that contains path params.
      *             e.g. {@code /users/{name}} or {@code /users/:name}
      *
      * @throws IllegalArgumentException if the {@code pathPattern} is invalid.
      */
-    DefaultPathMapping(String pathPattern) {
+    ParameterizedPathMapping(String pathPattern) {
         requireNonNull(pathPattern, "pathPattern");
 
         if (!pathPattern.startsWith("/")) {
@@ -128,7 +130,8 @@ final class DefaultPathMapping extends AbstractPathMapping {
 
         this.pathPattern = pathPattern;
         pattern = Pattern.compile(patternJoiner.toString());
-        skeleton = Optional.of(skeletonJoiner.toString());
+        skeleton = skeletonJoiner.toString();
+        paths = ImmutableList.of(skeleton, skeleton);
         paramNameArray = paramNames.toArray(EMPTY_NAMES);
         this.paramNames = ImmutableSet.copyOf(paramNames);
 
@@ -161,7 +164,7 @@ final class DefaultPathMapping extends AbstractPathMapping {
      * Returns the skeleton.
      */
     String skeleton() {
-        return skeleton.get();
+        return skeleton;
     }
 
     @Override
@@ -180,8 +183,13 @@ final class DefaultPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public Optional<String> triePath() {
-        return skeleton;
+    public RoutePathType pathType() {
+        return RoutePathType.PARAMETERIZED;
+    }
+
+    @Override
+    public List<String> paths() {
+        return paths;
     }
 
     @Nullable
@@ -207,11 +215,11 @@ final class DefaultPathMapping extends AbstractPathMapping {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof DefaultPathMapping)) {
+        if (!(o instanceof ParameterizedPathMapping)) {
             return false;
         }
 
-        final DefaultPathMapping that = (DefaultPathMapping) o;
+        final ParameterizedPathMapping that = (ParameterizedPathMapping) o;
 
         return skeleton.equals(that.skeleton) &&
                Arrays.equals(paramNameArray, that.paramNameArray);

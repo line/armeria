@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
-import java.util.Optional;
 
 import javax.annotation.Nullable;
 
@@ -34,6 +33,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Routed;
 import com.linecorp.armeria.server.Router;
 import com.linecorp.armeria.server.Routers;
@@ -95,13 +95,20 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
     public void serviceAdded(ServiceConfig cfg) throws Exception {
         checkState(server == null, "cannot be added to more than one server");
         server = cfg.server();
+
+        final Route route = cfg.route();
+        if (route.pathType() != RoutePathType.PREFIX) {
+            throw new IllegalStateException("The path type of the route must be " + RoutePathType.PREFIX +
+                                            ", path type: " + route.pathType());
+        }
+
         router = Routers.ofCompositeService(services);
 
         final MeterRegistry registry = server.meterRegistry();
         final MeterIdPrefix meterIdPrefix =
                 new MeterIdPrefix("armeria.server.router.compositeServiceCache",
                                   "hostnamePattern", cfg.virtualHost().hostnamePattern(),
-                                  "route", cfg.route().meterTag());
+                                  "route", route.meterTag());
 
         router.registerMetrics(registry, meterIdPrefix);
         for (CompositeServiceEntry<I, O> e : services()) {
@@ -146,10 +153,10 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
             throw HttpStatusException.of(HttpStatus.NOT_FOUND);
         }
 
-        final Optional<String> childPrefix = result.route().prefix();
-        if (childPrefix.isPresent()) {
-            final Route newRoute = Route.builder().prefix(ctx.route().prefix().get() +
-                                                          childPrefix.get().substring(1)).build();
+        if (result.route().pathType() == RoutePathType.PREFIX) {
+            assert ctx.route().pathType() == RoutePathType.PREFIX;
+            final Route newRoute = Route.builder().prefix(ctx.route().paths().get(0) +
+                                                          result.route().paths().get(0).substring(1)).build();
 
             final ServiceRequestContext newCtx = new CompositeServiceRequestContext(
                     ctx, newRoute, result.routingResult().path());

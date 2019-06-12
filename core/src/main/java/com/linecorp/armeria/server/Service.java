@@ -138,6 +138,6 @@ public interface Service<I extends Request, O extends Response> {
      * successful. By default, exact path mappings with no input query are cached.
      */
     default boolean shouldCachePath(String path, @Nullable String query, Route route) {
-        return route.exactPath().isPresent() && query == null;
+        return route.pathType() == RoutePathType.EXACT && query == null;
     }
 }

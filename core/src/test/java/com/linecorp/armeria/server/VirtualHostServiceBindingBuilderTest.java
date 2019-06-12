@@ -56,7 +56,8 @@ class VirtualHostServiceBindingBuilderTest {
         final ServiceConfig serviceConfig = serviceConfigs.get(0);
 
         final Route route = serviceConfig.route();
-        assertThat(route.prefix().get()).isEqualTo("/foo/bar/");
+        assertThat(route.pathType()).isSameAs(RoutePathType.PREFIX);
+        assertThat(route.paths()).containsExactly("/foo/bar/", "/foo/bar/*");
         assertThat(route.consumes()).containsExactly(JSON, PLAIN_TEXT_UTF_8);
         assertThat(route.produces()).containsExactly(JSON_UTF_8,
                                                                PLAIN_TEXT_UTF_8);
@@ -87,7 +88,8 @@ class VirtualHostServiceBindingBuilderTest {
         final ServiceConfig serviceConfig = serviceConfigs.get(0);
 
         final Route route = serviceConfig.route();
-        assertThat(route.prefix().get()).isEqualTo("/foo/bar/");
+        assertThat(route.pathType()).isSameAs(RoutePathType.PREFIX);
+        assertThat(route.paths()).containsExactly("/foo/bar/", "/foo/bar/*");
         assertThat(route.consumes()).containsExactly(JSON, PLAIN_TEXT_UTF_8);
         assertThat(route.produces()).containsExactly(JSON_UTF_8,
                                                                PLAIN_TEXT_UTF_8);

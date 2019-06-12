@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.server;
 
-import java.util.Optional;
+import java.util.List;
 import java.util.Set;
 
 import javax.annotation.Nullable;
@@ -57,33 +57,27 @@ interface PathMapping {
     String meterTag();
 
     /**
-     * Returns the exact path of this {@link PathMapping} if this is an exact path mapping,
-     * {@link Optional#empty()} otherwise.
+     * Returns the type of the path which was specified when this is created.
      */
-    Optional<String> exactPath();
+    RoutePathType pathType();
 
     /**
-     * Returns the prefix of this {@link PathMapping} if this is a {@link PrefixPathMapping} or a
-     * {@link PathMappingWithPrefix}, {@link Optional#empty()} otherwise.
+     * Returns the list of paths that this {@link Route} has. The paths are different according to the value
+     * of {@link #pathType()}. If the path type has a {@linkplain RoutePathType#hasTriePath() trie path},
+     * this method will return a two-element list whose first element is the path that represents the type and
+     * the second element is the trie path. {@link RoutePathType#EXACT}, {@link RoutePathType#PREFIX} and
+     * {@link RoutePathType#PARAMETERIZED} have the trie path.
      *
-     * @return the prefix that ends with '/' if this mapping is a prefix mapping
+     * <ul>
+     *   <li>EXACT: {@code [ "/foo", "/foo" ]} (The trie path is the same.)</li>
+     *   <li>PREFIX: {@code [ "/foo/", "/foo/*" ]}</li>
+     *   <li>PARAMETERIZED: {@code [ "/foo/:", "/foo/:" ]} (The trie path is the same.)</li>
+     * </ul>
+     *
+     * {@link RoutePathType#REGEX} has only one path that represents it. e.g, {@code [ "^/(?<foo>.*)$" ]}
+     *
+     * <p>{@link RoutePathType#REGEX_WITH_PREFIX} has two paths. The first one is the prefix and the second
+     * one is the regex. e.g, {@code [ "/bar/", "^/(?<foo>.*)$" ]}
      */
-    Optional<String> prefix();
-
-    /**
-     * Returns the trie path of this {@link PathMapping} if this has a trie matching condition,
-     * {@link Optional#empty()} otherwise.
-     */
-    default Optional<String> triePath() {
-        return Optional.empty();
-    }
-
-    /**
-     * Returns the regular expression of this {@link PathMapping} if this is created with the regular
-     * expression or glob pattern. Please note that this regex does not include the {@code pathPrefix} if
-     * this is {@link PathMappingWithPrefix}. You should call {@link #prefix()} to retrieve that.
-     */
-    default Optional<String> regex() {
-        return Optional.empty();
-    }
+    List<String> paths();
 }

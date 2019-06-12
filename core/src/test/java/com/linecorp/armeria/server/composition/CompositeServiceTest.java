@@ -24,9 +24,10 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.junit.AfterClass;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -39,11 +40,11 @@ import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import io.micrometer.core.instrument.MeterRegistry;
 
-public class CompositeServiceTest {
+class CompositeServiceTest {
 
     private static final TestService serviceA = new TestService("A");
     private static final TestService serviceB = new TestService("B");
@@ -52,8 +53,8 @@ public class CompositeServiceTest {
 
     private static final TestCompositeService composite = new TestCompositeService();
 
-    @ClassRule
-    public static final ServerRule server = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.meterRegistry(PrometheusMeterRegistries.newRegistry());
@@ -66,8 +67,8 @@ public class CompositeServiceTest {
         }
     };
 
-    @AfterClass
-    public static void checkMetrics() {
+    @AfterAll
+    static void checkMetrics() {
         final MeterRegistry registry = server.server().meterRegistry();
         assertThat(MicrometerUtil.register(registry,
                                            new MeterIdPrefix("armeria.server.router.compositeServiceCache",
@@ -77,7 +78,7 @@ public class CompositeServiceTest {
     }
 
     @Test
-    public void testMapping() throws Exception {
+    void testRoute() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/qux/foo/X")))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
@@ -103,7 +104,7 @@ public class CompositeServiceTest {
     }
 
     @Test
-    public void testNonExistentMapping() throws Exception {
+    void testNonExistentRoute() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(server.uri("/qux/Z/T")))) {
                 assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 404 Not Found");
@@ -112,7 +113,7 @@ public class CompositeServiceTest {
     }
 
     @Test
-    public void testServiceGetters() throws Exception {
+    void testServiceGetters() throws Exception {
         assertThat((Object) composite.serviceAt(0)).isSameAs(serviceA);
         assertThat((Object) composite.serviceAt(1)).isSameAs(serviceB);
         assertThat((Object) composite.serviceAt(2)).isSameAs(serviceC);
@@ -129,6 +130,13 @@ public class CompositeServiceTest {
         } catch (IndexOutOfBoundsException e) {
             // Expected
         }
+    }
+
+    @Test
+    void failWhenThePathIsNotPrefix() {
+        Assertions.assertThrows(IllegalStateException.class,
+                                () -> new ServerBuilder().service("/exact", new TestCompositeService())
+                                                         .build());
     }
 
     private static final class TestCompositeService

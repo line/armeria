@@ -18,17 +18,17 @@ package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.internal.RouteUtil.ROOT_LOGGER_NAME;
 
-import java.util.Optional;
+import java.util.List;
 import java.util.Set;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 final class CatchAllPathMapping extends AbstractPathMapping {
 
     static final CatchAllPathMapping INSTANCE = new CatchAllPathMapping();
 
-    private static final Optional<String> PREFIX_PATH_OPT = Optional.of("/");
-    private static final Optional<String> TRIE_PATH_OPT = Optional.of("/*");
+    private static final List<String> paths = ImmutableList.of("/", "/*");
 
     private CatchAllPathMapping() {}
 
@@ -53,13 +53,13 @@ final class CatchAllPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public Optional<String> prefix() {
-        return PREFIX_PATH_OPT;
+    public RoutePathType pathType() {
+        return RoutePathType.PREFIX;
     }
 
     @Override
-    public Optional<String> triePath() {
-        return TRIE_PATH_OPT;
+    public List<String> paths() {
+        return paths;
     }
 
     @Override

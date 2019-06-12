@@ -20,13 +20,14 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.linecorp.armeria.internal.RouteUtil.GLOB;
 import static com.linecorp.armeria.internal.RouteUtil.newLoggerName;
 
-import java.util.Optional;
+import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 final class GlobPathMapping extends AbstractPathMapping {
@@ -55,12 +56,14 @@ final class GlobPathMapping extends AbstractPathMapping {
     private final String loggerName;
     private final String meterTag;
     private final String strVal;
+    private final List<String> paths;
 
     GlobPathMapping(String glob) {
         final PatternAndParamCount patternAndParamCount = globToRegex(glob);
 
         this.glob = glob;
         pattern = patternAndParamCount.pattern;
+        paths = ImmutableList.of(pattern.pattern());
         numParams = patternAndParamCount.numParams;
 
         final ImmutableSet.Builder<String> paramNames = ImmutableSet.builder();
@@ -113,8 +116,13 @@ final class GlobPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public Optional<String> regex() {
-        return Optional.of(pattern.pattern());
+    public RoutePathType pathType() {
+        return RoutePathType.REGEX;
+    }
+
+    @Override
+    public List<String> paths() {
+        return paths;
     }
 
     @Override

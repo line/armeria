@@ -20,11 +20,12 @@ import static com.linecorp.armeria.internal.RouteUtil.EXACT;
 import static com.linecorp.armeria.internal.RouteUtil.ensureAbsolutePath;
 import static com.linecorp.armeria.internal.RouteUtil.newLoggerName;
 
-import java.util.Optional;
+import java.util.List;
 import java.util.Set;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 final class ExactPathMapping extends AbstractPathMapping {
@@ -32,11 +33,11 @@ final class ExactPathMapping extends AbstractPathMapping {
     private final String exactPath;
     private final String loggerName;
     private final String meterTag;
-    private final Optional<String> exactPathOpt;
+    private final List<String> paths;
 
     ExactPathMapping(String exactPath) {
         this.exactPath = ensureAbsolutePath(exactPath, "exactPath");
-        exactPathOpt = Optional.of(exactPath);
+        paths = ImmutableList.of(exactPath, exactPath);
         loggerName = newLoggerName(exactPath);
         meterTag = EXACT + exactPath;
     }
@@ -66,13 +67,13 @@ final class ExactPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public Optional<String> exactPath() {
-        return exactPathOpt;
+    public RoutePathType pathType() {
+        return RoutePathType.EXACT;
     }
 
     @Override
-    public Optional<String> triePath() {
-        return exactPathOpt;
+    public List<String> paths() {
+        return paths;
     }
 
     @Override

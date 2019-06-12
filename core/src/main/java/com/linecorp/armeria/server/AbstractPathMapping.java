@@ -20,8 +20,6 @@ import static com.linecorp.armeria.internal.RouteUtil.UNKNOWN_LOGGER_NAME;
 import static com.linecorp.armeria.internal.RouteUtil.ensureAbsolutePath;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Optional;
-
 import javax.annotation.Nullable;
 
 /**
@@ -60,15 +58,5 @@ abstract class AbstractPathMapping implements PathMapping {
     @Override
     public String meterTag() {
         return "__UNKNOWN_PATH__";
-    }
-
-    @Override
-    public Optional<String> exactPath() {
-        return Optional.empty();
-    }
-
-    @Override
-    public Optional<String> prefix() {
-        return Optional.empty();
     }
 }

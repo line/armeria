@@ -20,11 +20,12 @@ import static com.linecorp.armeria.internal.RouteUtil.PREFIX;
 import static com.linecorp.armeria.internal.RouteUtil.ensureAbsolutePath;
 import static com.linecorp.armeria.internal.RouteUtil.newLoggerName;
 
-import java.util.Optional;
+import java.util.List;
 import java.util.Set;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 final class PrefixPathMapping extends AbstractPathMapping {
@@ -33,7 +34,7 @@ final class PrefixPathMapping extends AbstractPathMapping {
     private final boolean stripPrefix;
     private final String loggerName;
     private final String meterTag;
-    private final Optional<String> triePath;
+    private final List<String> paths;
     private final String strVal;
 
     PrefixPathMapping(String prefix, boolean stripPrefix) {
@@ -46,7 +47,8 @@ final class PrefixPathMapping extends AbstractPathMapping {
         this.stripPrefix = stripPrefix;
         loggerName = newLoggerName(prefix);
         meterTag = PREFIX + prefix;
-        triePath = Optional.of(prefix + '*');
+        final String triePath = prefix + '*';
+        paths = ImmutableList.of(prefix, triePath);
         strVal = PREFIX + prefix + " (stripPrefix: " + stripPrefix + ')';
     }
 
@@ -79,8 +81,13 @@ final class PrefixPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public Optional<String> triePath() {
-        return triePath;
+    public RoutePathType pathType() {
+        return RoutePathType.PREFIX;
+    }
+
+    @Override
+    public List<String> paths() {
+        return paths;
     }
 
     @Override
@@ -100,11 +107,6 @@ final class PrefixPathMapping extends AbstractPathMapping {
 
         final PrefixPathMapping that = (PrefixPathMapping) obj;
         return stripPrefix == that.stripPrefix && prefix.equals(that.prefix);
-    }
-
-    @Override
-    public Optional<String> prefix() {
-        return Optional.of(prefix);
     }
 
     @Override
