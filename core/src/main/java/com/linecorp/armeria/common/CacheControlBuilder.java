@@ -26,11 +26,9 @@ import javax.annotation.Nullable;
  * building {@link ServerCacheControl} and {@link ClientCacheControlBuilder} for building
  * {@link ClientCacheControl}.
  *
- * @param <B> the self type
- *
  * @see <a href="https://developer.mozilla.org/docs/Web/HTTP/Headers/Cache-Control">Cache-Control (MDN)</a>
  */
-public abstract class CacheControlBuilder<B extends CacheControlBuilder<B>> {
+abstract class CacheControlBuilder {
 
     private boolean noCache;
     private boolean noStore;
@@ -40,27 +38,22 @@ public abstract class CacheControlBuilder<B extends CacheControlBuilder<B>> {
     /**
      * Creates a new builder with all directives disabled initially.
      */
-    protected CacheControlBuilder() {}
+    CacheControlBuilder() {}
 
     /**
      * Creates a new builder using the specified {@link CacheControl} as the initial directives.
      */
-    protected CacheControlBuilder(CacheControl c) {
+    CacheControlBuilder(CacheControl c) {
         noCache = c.noCache();
         noStore = c.noStore();
         noTransform = c.noTransform();
         maxAgeSeconds = c.maxAgeSeconds();
     }
 
-    @SuppressWarnings("unchecked")
-    private B self() {
-        return (B) this;
-    }
-
     /**
      * Enables the {@code "no-cache"} directive.
      */
-    public final B noCache() {
+    public CacheControlBuilder noCache() {
         return noCache(true);
     }
 
@@ -69,15 +62,15 @@ public abstract class CacheControlBuilder<B extends CacheControlBuilder<B>> {
      *
      * @param noCache {@code true} to enable or {@code false} to disable.
      */
-    public final B noCache(boolean noCache) {
+    public CacheControlBuilder noCache(boolean noCache) {
         this.noCache = noCache;
-        return self();
+        return this;
     }
 
     /**
      * Enables the {@code "no-store"} directive.
      */
-    public final B noStore() {
+    public CacheControlBuilder noStore() {
         return noStore(true);
     }
 
@@ -86,15 +79,15 @@ public abstract class CacheControlBuilder<B extends CacheControlBuilder<B>> {
      *
      * @param noStore {@code true} to enable or {@code false} to disable.
      */
-    public final B noStore(boolean noStore) {
+    public CacheControlBuilder noStore(boolean noStore) {
         this.noStore = noStore;
-        return self();
+        return this;
     }
 
     /**
      * Enables the {@code "no-transform"} directive.
      */
-    public final B noTransform() {
+    public CacheControlBuilder noTransform() {
         return noTransform(true);
     }
 
@@ -103,9 +96,9 @@ public abstract class CacheControlBuilder<B extends CacheControlBuilder<B>> {
      *
      * @param noTransform {@code true} to enable or {@code false} to disable.
      */
-    public final B noTransform(boolean noTransform) {
+    public CacheControlBuilder noTransform(boolean noTransform) {
         this.noTransform = noTransform;
-        return self();
+        return this;
     }
 
     /**
@@ -113,9 +106,9 @@ public abstract class CacheControlBuilder<B extends CacheControlBuilder<B>> {
      *
      * @param maxAge the value of the directive to enable, or {@code null} to disable.
      */
-    public final B maxAge(@Nullable Duration maxAge) {
+    public CacheControlBuilder maxAge(@Nullable Duration maxAge) {
         maxAgeSeconds = validateDuration(maxAge, "maxAge");
-        return self();
+        return this;
     }
 
     /**
@@ -125,7 +118,7 @@ public abstract class CacheControlBuilder<B extends CacheControlBuilder<B>> {
      * @param name the name of the parameter
      * @return the duration converted into seconds
      */
-    protected static long validateDuration(@Nullable Duration value, String name) {
+    static long validateDuration(@Nullable Duration value, String name) {
         if (value == null) {
             return -1;
         }
@@ -139,9 +132,9 @@ public abstract class CacheControlBuilder<B extends CacheControlBuilder<B>> {
      *
      * @param maxAgeSeconds the value in seconds.
      */
-    public final B maxAgeSeconds(long maxAgeSeconds) {
+    public CacheControlBuilder maxAgeSeconds(long maxAgeSeconds) {
         this.maxAgeSeconds = validateSeconds(maxAgeSeconds, "maxAgeSeconds");
-        return self();
+        return this;
     }
 
     /**
@@ -151,7 +144,7 @@ public abstract class CacheControlBuilder<B extends CacheControlBuilder<B>> {
      * @param name the name of the parameter
      * @return {@code value}
      */
-    protected static long validateSeconds(long value, String name) {
+    static long validateSeconds(long value, String name) {
         checkArgument(value >= 0, "%s: %s (expected: >= 0)", name, value);
         return value;
     }
@@ -168,6 +161,6 @@ public abstract class CacheControlBuilder<B extends CacheControlBuilder<B>> {
     /**
      * Returns a newly created instance with the specified properties.
      */
-    protected abstract CacheControl build(boolean noCache, boolean noStore,
-                                          boolean noTransform, long maxAgeSeconds);
+    abstract CacheControl build(boolean noCache, boolean noStore,
+                                boolean noTransform, long maxAgeSeconds);
 }

@@ -19,11 +19,12 @@ package com.linecorp.armeria.internal;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.addHttp2Authority;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.decodePath;
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.parseCacheControl;
+import static com.linecorp.armeria.internal.ArmeriaHttpUtil.parseDirectives;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.toArmeria;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.toNettyHttp1;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.toNettyHttp2;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -32,7 +33,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -92,51 +93,51 @@ public class ArmeriaHttpUtilTest {
     }
 
     @Test
-    public void testParseCacheControl() {
+    public void testParseDirectives() {
         final Map<String, String> values = new LinkedHashMap<>();
         final BiConsumer<String, String> cb = (name, value) -> assertThat(values.put(name, value)).isNull();
 
         // Make sure an effectively empty string does not invoke a callback.
-        parseCacheControl("", cb);
+        parseDirectives("", cb);
         assertThat(values).isEmpty();
-        parseCacheControl(" \t ", cb);
+        parseDirectives(" \t ", cb);
         assertThat(values).isEmpty();
-        parseCacheControl(" ,,=, =,= ,", cb);
+        parseDirectives(" ,,=, =,= ,", cb);
         assertThat(values).isEmpty();
 
         // Name only.
-        parseCacheControl("no-cache", cb);
+        parseDirectives("no-cache", cb);
         assertThat(values).hasSize(1).containsEntry("no-cache", null);
         values.clear();
-        parseCacheControl(" no-cache ", cb);
+        parseDirectives(" no-cache ", cb);
         assertThat(values).hasSize(1).containsEntry("no-cache", null);
         values.clear();
-        parseCacheControl("no-cache ,", cb);
+        parseDirectives("no-cache ,", cb);
         assertThat(values).hasSize(1).containsEntry("no-cache", null);
         values.clear();
 
         // Name and value.
-        parseCacheControl("max-age=86400", cb);
+        parseDirectives("max-age=86400", cb);
         assertThat(values).hasSize(1).containsEntry("max-age", "86400");
         values.clear();
-        parseCacheControl(" max-age = 86400 ", cb);
+        parseDirectives(" max-age = 86400 ", cb);
         assertThat(values).hasSize(1).containsEntry("max-age", "86400");
         values.clear();
-        parseCacheControl(" max-age = 86400 ,", cb);
+        parseDirectives(" max-age = 86400 ,", cb);
         assertThat(values).hasSize(1).containsEntry("max-age", "86400");
         values.clear();
-        parseCacheControl("max-age=\"86400\"", cb);
+        parseDirectives("max-age=\"86400\"", cb);
         assertThat(values).hasSize(1).containsEntry("max-age", "86400");
         values.clear();
-        parseCacheControl(" max-age = \"86400\" ", cb);
+        parseDirectives(" max-age = \"86400\" ", cb);
         assertThat(values).hasSize(1).containsEntry("max-age", "86400");
         values.clear();
-        parseCacheControl(" max-age = \"86400\" ,", cb);
+        parseDirectives(" max-age = \"86400\" ,", cb);
         assertThat(values).hasSize(1).containsEntry("max-age", "86400");
         values.clear();
 
         // Multiple names and values.
-        parseCacheControl("a,b=c,d,e=\"f\",g", cb);
+        parseDirectives("a,b=c,d,e=\"f\",g", cb);
         assertThat(values).hasSize(5)
                           .containsEntry("a", null)
                           .containsEntry("b", "c")
@@ -263,9 +264,10 @@ public class ArmeriaHttpUtilTest {
         assertThat(headers.authority()).isEmpty();
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void addHttp2AuthorityWithEmptyAuthority() {
-        addHttp2Authority("info@", RequestHeaders.builder());
+        assertThatThrownBy(() -> addHttp2Authority("info@", RequestHeaders.builder()))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

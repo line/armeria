@@ -37,7 +37,7 @@ public abstract class CacheControl {
      * @param noTransform whether the {@code "no-transform"} directive is enabled.
      * @param maxAgeSeconds the value of the {@code "max-age"} directive, or {@code -1} if disabled.
      */
-    protected CacheControl(boolean noCache, boolean noStore, boolean noTransform, long maxAgeSeconds) {
+    CacheControl(boolean noCache, boolean noStore, boolean noTransform, long maxAgeSeconds) {
         assert maxAgeSeconds >= -1 : maxAgeSeconds;
         this.noCache = noCache;
         this.noStore = noStore;
@@ -84,7 +84,7 @@ public abstract class CacheControl {
      * Returns a newly created {@link CacheControlBuilder} which has the same initial directives with
      * this {@link CacheControl}.
      */
-    public abstract CacheControlBuilder<?> toBuilder();
+    public abstract CacheControlBuilder toBuilder();
 
     /**
      * Encodes the directives in this {@link CacheControl} into an HTTP {@code "cache-control"} header value.
@@ -97,7 +97,7 @@ public abstract class CacheControl {
      * Returns a new {@link StringBuilder} with the common directives appended.
      * Note that the first two characters ({@code ", "} must be stripped.
      */
-    protected final StringBuilder newHeaderValueBuffer() {
+    final StringBuilder newHeaderValueBuffer() {
         final StringBuilder buf = new StringBuilder(40);
         if (noCache) {
             buf.append(", no-cache");

@@ -403,10 +403,10 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
-     * Parses the specified {@code "cache-control"} directives and invokes the specified {@code callback}
+     * Parses the specified HTTP header directives and invokes the specified {@code callback}
      * with the directive names and values.
      */
-    public static void parseCacheControl(String directives, BiConsumer<String, String> callback) {
+    public static void parseDirectives(String directives, BiConsumer<String, String> callback) {
         final int len = directives.length();
         for (int i = 0; i < len;) {
             final int nameStart = i;
@@ -487,12 +487,12 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
-     * Converts the specified {@code "cache-control"} directive value into a long integer.
+     * Converts the specified HTTP header directive value into a long integer.
      *
      * @return the converted value if {@code value} is equal to or greater than {@code 0}.
      *         {@code -1} otherwise, i.e. if a negative integer or not a number.
      */
-    public static long parseCacheControlSeconds(@Nullable String value) {
+    public static long parseDirectiveValueAsSeconds(@Nullable String value) {
         if (value == null) {
             return -1;
         }

@@ -15,8 +15,8 @@
  */
 package com.linecorp.armeria.common;
 
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.parseCacheControl;
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.parseCacheControlSeconds;
+import static com.linecorp.armeria.internal.ArmeriaHttpUtil.parseDirectiveValueAsSeconds;
+import static com.linecorp.armeria.internal.ArmeriaHttpUtil.parseDirectives;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
@@ -65,7 +65,7 @@ public final class ServerCacheControl extends CacheControl {
                     .put("no-store", (b, v) -> b.noStore())
                     .put("no-transform", (b, v) -> b.noTransform())
                     .put("max-age", (b, v) -> {
-                        final long maxAgeSeconds = parseCacheControlSeconds(v);
+                        final long maxAgeSeconds = parseDirectiveValueAsSeconds(v);
                         if (maxAgeSeconds >= 0) {
                             b.maxAgeSeconds(maxAgeSeconds);
                         }
@@ -76,7 +76,7 @@ public final class ServerCacheControl extends CacheControl {
                     .put("must-revalidate", (b, v) -> b.mustRevalidate())
                     .put("proxy-revalidate", (b, v) -> b.proxyRevalidate())
                     .put("s-maxage", (b, v) -> {
-                        final long sMaxAgeSeconds = parseCacheControlSeconds(v);
+                        final long sMaxAgeSeconds = parseDirectiveValueAsSeconds(v);
                         if (sMaxAgeSeconds >= 0) {
                             b.sMaxAgeSeconds(sMaxAgeSeconds);
                         }
@@ -103,7 +103,7 @@ public final class ServerCacheControl extends CacheControl {
         requireNonNull(directives, "directives");
         final ServerCacheControlBuilder builder = new ServerCacheControlBuilder();
         for (String d : directives) {
-            parseCacheControl(d, (name, value) -> {
+            parseDirectives(d, (name, value) -> {
                 final BiConsumer<ServerCacheControlBuilder, String> action = DIRECTIVES.get(name);
                 if (action != null) {
                     action.accept(builder, value);

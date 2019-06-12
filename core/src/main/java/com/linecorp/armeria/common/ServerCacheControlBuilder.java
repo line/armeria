@@ -35,7 +35,7 @@ import javax.annotation.Nullable;
  * @see <a href="https://developers.google.com/web/fundamentals/performance/optimizing-content-efficiency/http-caching">HTTP Caching (Google)</a>
  * @see <a href="https://developer.mozilla.org/docs/Web/HTTP/Headers/Cache-Control">Cache-Control (MDN)</a>
  */
-public final class ServerCacheControlBuilder extends CacheControlBuilder<ServerCacheControlBuilder> {
+public final class ServerCacheControlBuilder extends CacheControlBuilder {
 
     private boolean cachePublic;
     private boolean cachePrivate;
@@ -173,12 +173,53 @@ public final class ServerCacheControlBuilder extends CacheControlBuilder<ServerC
     }
 
     @Override
-    protected ServerCacheControl build(boolean noCache, boolean noStore,
-                                       boolean noTransform, long maxAgeSeconds) {
+    ServerCacheControl build(boolean noCache, boolean noStore, boolean noTransform, long maxAgeSeconds) {
         // 'public' and 'private' are mutually exclusive.
         final boolean cachePublic = cachePrivate ? false : this.cachePublic;
         return new ServerCacheControl(noCache, noStore, noTransform, maxAgeSeconds,
                                       cachePublic, cachePrivate, immutable,
                                       mustRevalidate, proxyRevalidate, sMaxAgeSeconds);
+    }
+
+    // Overridden to change the return type.
+
+    @Override
+    public ServerCacheControlBuilder noCache() {
+        return (ServerCacheControlBuilder) super.noCache();
+    }
+
+    @Override
+    public ServerCacheControlBuilder noCache(boolean noCache) {
+        return (ServerCacheControlBuilder) super.noCache(noCache);
+    }
+
+    @Override
+    public ServerCacheControlBuilder noStore() {
+        return (ServerCacheControlBuilder) super.noStore();
+    }
+
+    @Override
+    public ServerCacheControlBuilder noStore(boolean noStore) {
+        return (ServerCacheControlBuilder) super.noStore(noStore);
+    }
+
+    @Override
+    public ServerCacheControlBuilder noTransform() {
+        return (ServerCacheControlBuilder) super.noTransform();
+    }
+
+    @Override
+    public ServerCacheControlBuilder noTransform(boolean noTransform) {
+        return (ServerCacheControlBuilder) super.noTransform(noTransform);
+    }
+
+    @Override
+    public ServerCacheControlBuilder maxAge(@Nullable Duration maxAge) {
+        return (ServerCacheControlBuilder) super.maxAge(maxAge);
+    }
+
+    @Override
+    public ServerCacheControlBuilder maxAgeSeconds(long maxAgeSeconds) {
+        return (ServerCacheControlBuilder) super.maxAgeSeconds(maxAgeSeconds);
     }
 }
