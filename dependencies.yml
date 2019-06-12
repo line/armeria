@@ -53,7 +53,7 @@ com.google.code.findbugs:
 
 com.google.guava:
   guava:
-    version: &GUAVA_VERSION '27.1-jre'
+    version: &GUAVA_VERSION '28.0-jre'
     exclusions:
     - com.google.errorprone:error_prone_annotations
     - com.google.j2objc:j2objc-annotations
@@ -299,7 +299,7 @@ org.apache.hbase:
 
 org.apache.httpcomponents:
   httpclient:
-    version: '4.5.8'
+    version: '4.5.9'
     exclusions:
     - commons-logging:commons-logging
 
