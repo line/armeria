@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class CacheControlTest {
 
@@ -102,7 +102,7 @@ public class CacheControlTest {
                      .build().isEmpty()).isTrue();
     }
 
-    private static final class CacheControlImplBuilder extends CacheControlBuilder<CacheControlImplBuilder> {
+    private static final class CacheControlImplBuilder extends CacheControlBuilder {
 
         CacheControlImplBuilder() {}
 
@@ -124,7 +124,7 @@ public class CacheControlTest {
         }
 
         @Override
-        public CacheControlBuilder<?> toBuilder() {
+        public CacheControlBuilder toBuilder() {
             return new CacheControlImplBuilder(this);
         }
 

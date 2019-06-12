@@ -31,7 +31,7 @@ import javax.annotation.Nullable;
  * @see <a href="https://developer.mozilla.org/docs/Web/HTTP/Headers/Cache-Control">Cache-Control (MDN)</a>
  * @see <a href="https://stackoverflow.com/q/14541077">Why is Cache-Control header sent in a request?</a>
  */
-public final class ClientCacheControlBuilder extends CacheControlBuilder<ClientCacheControlBuilder> {
+public final class ClientCacheControlBuilder extends CacheControlBuilder {
 
     private boolean onlyIfCached;
     private long maxStaleSeconds = -1;
@@ -177,10 +177,51 @@ public final class ClientCacheControlBuilder extends CacheControlBuilder<ClientC
     }
 
     @Override
-    protected ClientCacheControl build(boolean noCache, boolean noStore,
-                                       boolean noTransform, long maxAgeSeconds) {
+    ClientCacheControl build(boolean noCache, boolean noStore, boolean noTransform, long maxAgeSeconds) {
         return new ClientCacheControl(noCache, noStore, noTransform, maxAgeSeconds,
                                       onlyIfCached, maxStaleSeconds, minFreshSeconds,
                                       staleWhileRevalidateSeconds, staleIfErrorSeconds);
+    }
+
+    // Overridden to change the return type.
+
+    @Override
+    public ClientCacheControlBuilder noCache() {
+        return (ClientCacheControlBuilder) super.noCache();
+    }
+
+    @Override
+    public ClientCacheControlBuilder noCache(boolean noCache) {
+        return (ClientCacheControlBuilder) super.noCache(noCache);
+    }
+
+    @Override
+    public ClientCacheControlBuilder noStore() {
+        return (ClientCacheControlBuilder) super.noStore();
+    }
+
+    @Override
+    public ClientCacheControlBuilder noStore(boolean noStore) {
+        return (ClientCacheControlBuilder) super.noStore(noStore);
+    }
+
+    @Override
+    public ClientCacheControlBuilder noTransform() {
+        return (ClientCacheControlBuilder) super.noTransform();
+    }
+
+    @Override
+    public ClientCacheControlBuilder noTransform(boolean noTransform) {
+        return (ClientCacheControlBuilder) super.noTransform(noTransform);
+    }
+
+    @Override
+    public ClientCacheControlBuilder maxAge(@Nullable Duration maxAge) {
+        return (ClientCacheControlBuilder) super.maxAge(maxAge);
+    }
+
+    @Override
+    public ClientCacheControlBuilder maxAgeSeconds(long maxAgeSeconds) {
+        return (ClientCacheControlBuilder) super.maxAgeSeconds(maxAgeSeconds);
     }
 }
