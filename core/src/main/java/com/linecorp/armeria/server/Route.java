@@ -80,14 +80,14 @@ public interface Route {
     /**
      * Returns the list of paths that this {@link Route} has. The paths are different according to the value
      * of {@link #pathType()}. If the path type has a {@linkplain RoutePathType#hasTriePath() trie path},
-     * the first element is the path that represents the type and the second element is the trie path.
-     * {@link RoutePathType#EXACT}, {@link RoutePathType#PREFIX} and {@link RoutePathType#PATH_PARAM} have the
-     * trie path.
+     * this method will return a two-element list whose first element is the path that represents the type and
+     * the second element is the trie path. {@link RoutePathType#EXACT}, {@link RoutePathType#PREFIX} and
+     * {@link RoutePathType#PARAMETERIZED} have the trie path.
      *
      * <ul>
      *   <li>EXACT: {@code [ "/foo", "/foo" ]} (The trie path is the same.)</li>
      *   <li>PREFIX: {@code [ "/foo/", "/foo/*" ]}</li>
-     *   <li>PATH_PARAM: {@code [ "/foo/:", "/foo/:" ]} (The trie path is the same.)</li>
+     *   <li>PARAMETERIZED: {@code [ "/foo/:", "/foo/:" ]} (The trie path is the same.)</li>
      * </ul>
      *
      * {@link RoutePathType#REGEX} has only one path that represents it. e.g, {@code [ "^/(?<foo>.*)$" ]}

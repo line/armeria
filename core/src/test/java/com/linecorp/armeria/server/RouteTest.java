@@ -43,11 +43,11 @@ class RouteTest {
         assertThat(route.paths()).containsExactly("/foo", "/foo");
 
         route = Route.builder().path("/foo/{bar}").build();
-        assertThat(route.pathType()).isSameAs(RoutePathType.PATH_PARAM);
+        assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
         assertThat(route.paths()).containsExactly("/foo/:", "/foo/:");
 
         route = Route.builder().path("/bar/:baz").build();
-        assertThat(route.pathType()).isSameAs(RoutePathType.PATH_PARAM);
+        assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
         assertThat(route.paths()).containsExactly("/bar/:", "/bar/:");
 
         route = Route.builder().path("exact:/:foo/bar").build();

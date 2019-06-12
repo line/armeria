@@ -179,8 +179,8 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
             case PREFIX:
                 builder = new EndpointInfoBuilder(hostnamePattern, RouteUtil.PREFIX + path.get(0));
                 break;
-            case PATH_PARAM:
-                builder = new EndpointInfoBuilder(hostnamePattern, normalizedPathParam(route));
+            case PARAMETERIZED:
+                builder = new EndpointInfoBuilder(hostnamePattern, normalizeParameterized(route));
                 break;
             case REGEX:
                 builder = new EndpointInfoBuilder(hostnamePattern, RouteUtil.REGEX + path.get(0));
@@ -198,7 +198,7 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
         return builder.build();
     }
 
-    private static String normalizedPathParam(Route route) {
+    private static String normalizeParameterized(Route route) {
         final String path = route.paths().get(0);
         int beginIndex = 0;
 

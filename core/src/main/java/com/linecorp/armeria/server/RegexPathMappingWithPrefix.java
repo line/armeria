@@ -27,7 +27,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 
-final class RegexWithPrefixMapping extends AbstractPathMapping {
+final class RegexPathMappingWithPrefix extends AbstractPathMapping {
 
     private final String pathPrefix;
     private final PathMapping mapping;
@@ -35,7 +35,7 @@ final class RegexWithPrefixMapping extends AbstractPathMapping {
     private final String meterTag;
     private final List<String> prefixAndRegex;
 
-    RegexWithPrefixMapping(String pathPrefix, PathMapping mapping) {
+    RegexPathMappingWithPrefix(String pathPrefix, PathMapping mapping) {
         requireNonNull(mapping, "mapping");
         // mapping should be GlobPathMapping or RegexPathMapping
         assert mapping.pathType() == RoutePathType.REGEX
@@ -95,11 +95,11 @@ final class RegexWithPrefixMapping extends AbstractPathMapping {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof RegexWithPrefixMapping)) {
+        if (!(o instanceof RegexPathMappingWithPrefix)) {
             return false;
         }
 
-        final RegexWithPrefixMapping that = (RegexWithPrefixMapping) o;
+        final RegexPathMappingWithPrefix that = (RegexPathMappingWithPrefix) o;
         return pathPrefix.equals(that.pathPrefix) && mapping.equals(that.mapping);
     }
 

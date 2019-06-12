@@ -41,7 +41,7 @@ import com.google.common.collect.ImmutableSet;
  *   <li>A set of path parameters declared in the path pattern</li>
  * </ul>
  */
-final class PathParamMapping extends AbstractPathMapping {
+final class ParameterizedPathMapping extends AbstractPathMapping {
 
     private static final Pattern VALID_PATTERN = Pattern.compile("(/[^/{}:]+|/:[^/{}]+|/\\{[^/{}]+})+/?");
 
@@ -84,14 +84,14 @@ final class PathParamMapping extends AbstractPathMapping {
     private final String loggerName;
 
     /**
-     * Create a {@link PathParamMapping} instance from given {@code pathPattern}.
+     * Create a {@link ParameterizedPathMapping} instance from given {@code pathPattern}.
      *
      * @param pathPattern the {@link String} that contains path params.
      *             e.g. {@code /users/{name}} or {@code /users/:name}
      *
      * @throws IllegalArgumentException if the {@code pathPattern} is invalid.
      */
-    PathParamMapping(String pathPattern) {
+    ParameterizedPathMapping(String pathPattern) {
         requireNonNull(pathPattern, "pathPattern");
 
         if (!pathPattern.startsWith("/")) {
@@ -184,7 +184,7 @@ final class PathParamMapping extends AbstractPathMapping {
 
     @Override
     public RoutePathType pathType() {
-        return RoutePathType.PATH_PARAM;
+        return RoutePathType.PARAMETERIZED;
     }
 
     @Override
@@ -215,11 +215,11 @@ final class PathParamMapping extends AbstractPathMapping {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof PathParamMapping)) {
+        if (!(o instanceof ParameterizedPathMapping)) {
             return false;
         }
 
-        final PathParamMapping that = (PathParamMapping) o;
+        final ParameterizedPathMapping that = (ParameterizedPathMapping) o;
 
         return skeleton.equals(that.skeleton) &&
                Arrays.equals(paramNameArray, that.paramNameArray);

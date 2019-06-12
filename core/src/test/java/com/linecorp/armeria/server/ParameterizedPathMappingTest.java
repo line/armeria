@@ -23,12 +23,12 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-class PathParamMappingTest {
+class ParameterizedPathMappingTest {
 
     @Test
     void givenMatchingPathParam_whenApply_thenReturns() throws Exception {
-        final PathParamMapping ppe = new PathParamMapping("/service/{value}");
-        final RoutingResult result = ppe.apply(create("/service/hello", "foo=bar")).build();
+        final ParameterizedPathMapping ppm = new ParameterizedPathMapping("/service/{value}");
+        final RoutingResult result = ppm.apply(create("/service/hello", "foo=bar")).build();
 
         assertThat(result.isPresent()).isTrue();
         assertThat(result.path()).isEqualTo("/service/hello");
@@ -41,15 +41,16 @@ class PathParamMappingTest {
 
     @Test
     void givenNoMatchingPathParam_whenApply_thenReturnsNull() throws Exception {
-        final PathParamMapping ppe = new PathParamMapping("/service/{value}");
-        final RoutingResultBuilder builder = ppe.apply(create("/service2/hello", "bar=baz"));
+        final ParameterizedPathMapping ppm = new ParameterizedPathMapping("/service/{value}");
+        final RoutingResultBuilder builder = ppm.apply(create("/service2/hello", "bar=baz"));
         assertThat(builder).isNull();
     }
 
     @Test
     void testMultipleMatches() throws Exception {
-        final PathParamMapping ppe = new PathParamMapping("/service/{value}/test/:value2/something");
-        final RoutingResult result = ppe.apply(create("/service/hello/test/world/something", "q=1")).build();
+        final ParameterizedPathMapping
+                ppm = new ParameterizedPathMapping("/service/{value}/test/:value2/something");
+        final RoutingResult result = ppm.apply(create("/service/hello/test/world/something", "q=1")).build();
 
         assertThat(result.isPresent()).isTrue();
         assertThat(result.path()).isEqualTo("/service/hello/test/world/something");
@@ -63,8 +64,8 @@ class PathParamMappingTest {
 
     @Test
     void testPathEndsWithSlash() throws Exception {
-        final PathParamMapping ppe = new PathParamMapping("/service/{value}/");
-        final RoutingResult result = ppe.apply(create("/service/hello/", null)).build();
+        final ParameterizedPathMapping ppm = new ParameterizedPathMapping("/service/{value}/");
+        final RoutingResult result = ppm.apply(create("/service/hello/", null)).build();
 
         assertThat(result.isPresent()).isTrue();
         assertThat(result.path()).isEqualTo("/service/hello/");
@@ -72,7 +73,7 @@ class PathParamMappingTest {
 
     @Test
     void testNumericPathParamNames() {
-        final PathParamMapping m = new PathParamMapping("/{0}/{1}/{2}");
+        final ParameterizedPathMapping m = new ParameterizedPathMapping("/{0}/{1}/{2}");
         assertThat(m.paramNames()).containsExactlyInAnyOrder("0", "1", "2");
         assertThat(m.apply(create("/alice/bob/charlie")).build().pathParams())
                 .containsEntry("0", "alice")
@@ -83,7 +84,7 @@ class PathParamMappingTest {
 
     @Test
     void utf8() {
-        final PathParamMapping m = new PathParamMapping("/{foo}");
+        final ParameterizedPathMapping m = new ParameterizedPathMapping("/{foo}");
         final RoutingResult res = m.apply(create("/%C2%A2")).build();
         assertThat(res.path()).isEqualTo("/%C2%A2");
         assertThat(res.decodedPath()).isEqualTo("/¢");
@@ -92,33 +93,33 @@ class PathParamMappingTest {
 
     @Test
     void testVariables() throws Exception {
-        final PathParamMapping ppe =
-                new PathParamMapping("/service/{value}/test/:value2/something/{value3}");
+        final ParameterizedPathMapping ppm =
+                new ParameterizedPathMapping("/service/{value}/test/:value2/something/{value3}");
 
-        assertThat(ppe.paramNames()).containsExactlyInAnyOrder("value", "value2", "value3");
+        assertThat(ppm.paramNames()).containsExactlyInAnyOrder("value", "value2", "value3");
     }
 
     @Test
     void testSkeleton() throws Exception {
-        final PathParamMapping ppe =
-                new PathParamMapping("/service/{value}/test/:value2/something/{value3}");
+        final ParameterizedPathMapping ppm =
+                new ParameterizedPathMapping("/service/{value}/test/:value2/something/{value3}");
 
-        assertThat(ppe.skeleton()).isEqualTo("/service/:/test/:/something/:");
+        assertThat(ppm.skeleton()).isEqualTo("/service/:/test/:/something/:");
     }
 
     @Test
     void testInvalidPattern() throws Exception {
-        assertThatThrownBy(() -> new PathParamMapping("/service/{value}/test/{value2"))
+        assertThatThrownBy(() -> new ParameterizedPathMapping("/service/{value}/test/{value2"))
                 .isInstanceOf(IllegalArgumentException.class);
 
-        assertThatThrownBy(() -> new PathParamMapping("/service/:value/test/value2}"))
+        assertThatThrownBy(() -> new ParameterizedPathMapping("/service/:value/test/value2}"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void testEmptyPattern() throws Exception {
-        final PathParamMapping ppe = new PathParamMapping("/service/value/test/value2");
-        final RoutingResult result = ppe.apply(create("/service/value/test/value2")).build();
+        final ParameterizedPathMapping ppm = new ParameterizedPathMapping("/service/value/test/value2");
+        final RoutingResult result = ppm.apply(create("/service/value/test/value2")).build();
 
         assertThat(result.isPresent()).isTrue();
         assertThat(result.path()).isEqualTo("/service/value/test/value2");
@@ -128,29 +129,30 @@ class PathParamMappingTest {
 
     @Test
     void testToString() throws Exception {
-        final PathParamMapping ppe = new PathParamMapping("/service/{value}/test/:value2");
-        assertThat(ppe).hasToString("/service/{value}/test/:value2");
+        final ParameterizedPathMapping ppm = new ParameterizedPathMapping("/service/{value}/test/:value2");
+        assertThat(ppm).hasToString("/service/{value}/test/:value2");
     }
 
     @Test
     void testHashcodeAndEquals() throws Exception {
-        final PathParamMapping ppe = new PathParamMapping("/service/:value/test/:value2");
-        final PathParamMapping ppe2 = new PathParamMapping("/service/{value}/test/{value2}");
-        final PathParamMapping ppe3 = new PathParamMapping("/service/{value}/test/{value3}");
+        final ParameterizedPathMapping ppm = new ParameterizedPathMapping("/service/:value/test/:value2");
+        final ParameterizedPathMapping ppm2 = new ParameterizedPathMapping("/service/{value}/test/{value2}");
+        final ParameterizedPathMapping ppm3 = new ParameterizedPathMapping("/service/{value}/test/{value3}");
 
-        assertThat(ppe).isEqualTo(ppe2);
-        assertThat(ppe).isNotEqualTo(ppe3);
-        assertThat(ppe2).isNotEqualTo(ppe3);
+        assertThat(ppm).isEqualTo(ppm2);
+        assertThat(ppm).isNotEqualTo(ppm3);
+        assertThat(ppm2).isNotEqualTo(ppm3);
 
-        assertThat(ppe.hashCode()).isEqualTo(ppe2.hashCode());
-        assertThat(ppe.hashCode()).isNotEqualTo(ppe3.hashCode());
-        assertThat(ppe2.hashCode()).isNotEqualTo(ppe3.hashCode());
+        assertThat(ppm.hashCode()).isEqualTo(ppm2.hashCode());
+        assertThat(ppm.hashCode()).isNotEqualTo(ppm3.hashCode());
+        assertThat(ppm2.hashCode()).isNotEqualTo(ppm3.hashCode());
     }
 
     @Test
     void loggerAndMetricName() {
-        final PathParamMapping pathParamMapping = new PathParamMapping("/service/{value}");
-        assertThat(pathParamMapping.loggerName()).isEqualTo("service._value_");
-        assertThat(pathParamMapping.meterTag()).isEqualTo("/service/{value}");
+        final ParameterizedPathMapping parameterizedPathMapping =
+                new ParameterizedPathMapping("/service/{value}");
+        assertThat(parameterizedPathMapping.loggerName()).isEqualTo("service._value_");
+        assertThat(parameterizedPathMapping.meterTag()).isEqualTo("/service/{value}");
     }
 }

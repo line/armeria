@@ -36,7 +36,7 @@ public enum RoutePathType {
     /**
      * The path which contains path parameters. e.g, "/:", "/foo/:/bar/:"
      */
-    PATH_PARAM(true),
+    PARAMETERIZED(true),
 
     /**
      * The regex path type. e.g, {@code "^/(?<foo>.*)$"}
