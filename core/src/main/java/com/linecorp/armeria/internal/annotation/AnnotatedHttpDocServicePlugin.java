@@ -186,8 +186,8 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
                 builder = new EndpointInfoBuilder(hostnamePattern, RouteUtil.REGEX + path.get(0));
                 break;
             case REGEX_WITH_PREFIX:
-                builder = new EndpointInfoBuilder(hostnamePattern, RouteUtil.REGEX + path.get(1));
-                builder.regexPathPrefix(RouteUtil.PREFIX + path.get(0));
+                builder = new EndpointInfoBuilder(hostnamePattern, RouteUtil.REGEX + path.get(0));
+                builder.regexPathPrefix(RouteUtil.PREFIX + path.get(1));
                 break;
             default:
                 // Should never reach here.

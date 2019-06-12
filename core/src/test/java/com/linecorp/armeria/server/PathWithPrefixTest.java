@@ -30,8 +30,7 @@ class PathWithPrefixTest {
 
         route = Route.builder().pathWithPrefix("/foo/", "glob:bar").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.REGEX_WITH_PREFIX);
-        assertThat(route.paths().get(0)).isEqualTo("/foo/");
-        assertThat(route.paths().get(1)).isEqualTo("^/(?:.+/)?bar$");
+        assertThat(route.paths()).containsExactly("^/(?:.+/)?bar$", "/foo/");
     }
 
     @Test
