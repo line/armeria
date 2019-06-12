@@ -29,7 +29,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
@@ -131,8 +130,8 @@ public final class Routers {
 
         for (V value : values) {
             final Route route = routeResolver.apply(value);
-            final boolean triePathPresent = route.triePath().isPresent();
-            if (addingTrie && triePathPresent || !addingTrie && !triePathPresent) {
+            final boolean hasTriePath = route.pathType().hasTriePath();
+            if (addingTrie && hasTriePath || !addingTrie && !hasTriePath) {
                 // We are adding the same type of Route to 'group'.
                 group.add(value);
                 continue;
@@ -158,11 +157,11 @@ public final class Routers {
         final Map<String, List<Route>> triePath2Routes = new HashMap<>();
         for (V v : values) {
             final Route route = routeResolver.apply(v);
-            final Optional<String> triePathOpt = route.triePath();
-            if (!triePathOpt.isPresent()) {
+            final boolean hasTriePath = route.pathType().hasTriePath();
+            if (!hasTriePath) {
                 continue;
             }
-            final String triePath = triePathOpt.get();
+            final String triePath = route.paths().get(1);
             final List<Route> existingRoutes =
                     triePath2Routes.computeIfAbsent(triePath, unused -> new ArrayList<>());
             for (Route existingRoute : existingRoutes) {
@@ -219,7 +218,7 @@ public final class Routers {
             // Set a comparator to sort services by the number of conditions to be checked in a descending
             // order.
             builder.comparator(valueComparator);
-            values.forEach(v -> builder.add(routeResolver.apply(v).triePath().get(), v));
+            values.forEach(v -> builder.add(routeResolver.apply(v).paths().get(1), v));
             router = new TrieRouter<>(builder.build(), routeResolver);
         } else {
             values.sort(valueComparator);

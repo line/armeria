@@ -58,7 +58,8 @@ public class ServiceBindingBuilderTest {
         final ServiceConfig serviceConfig = serviceConfigs.get(0);
 
         final Route route = serviceConfig.route();
-        assertThat(route.exactPath().get()).isEqualTo("/foo/bar");
+        assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
+        assertThat(route.paths()).containsExactly("/foo/bar", "/foo/bar");
         assertThat(route.consumes()).containsExactly(JSON, PLAIN_TEXT_UTF_8);
         assertThat(route.produces()).containsExactly(JSON_UTF_8,
                                                                PLAIN_TEXT_UTF_8);
@@ -84,7 +85,8 @@ public class ServiceBindingBuilderTest {
         final ServiceConfig serviceConfig = serviceConfigs.get(0);
 
         final Route route = serviceConfig.route();
-        assertThat(route.exactPath().get()).isEqualTo("/foo/bar");
+        assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
+        assertThat(route.paths()).containsExactly("/foo/bar", "/foo/bar");
         assertThat(route.consumes()).containsExactly(JSON, PLAIN_TEXT_UTF_8);
         assertThat(route.produces()).containsExactly(JSON_UTF_8,
                                                                PLAIN_TEXT_UTF_8);
@@ -111,7 +113,8 @@ public class ServiceBindingBuilderTest {
         assertThat(serviceConfigs.size()).isOne();
         final ServiceConfig serviceConfig = serviceConfigs.get(0);
         final Route route = serviceConfig.route();
-        assertThat(route.exactPath().get()).isEqualTo("/foo/bar");
+        assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
+        assertThat(route.paths()).containsExactly("/foo/bar", "/foo/bar");
         assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(10);
         assertThat(serviceConfig.maxRequestLength()).isEqualTo(1024);
         assertThat(serviceConfig.verboseResponses()).isEqualTo(true);
@@ -127,7 +130,9 @@ public class ServiceBindingBuilderTest {
 
         List<ServiceConfig> serviceConfigs = sb.build().serviceConfigs();
         assertThat(serviceConfigs.size()).isOne();
-        assertThat(serviceConfigs.get(0).route().exactPath().get()).isEqualTo("/foo/bar");
+        Route route = serviceConfigs.get(0).route();
+        assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
+        assertThat(route.paths()).containsExactly("/foo/bar", "/foo/bar");
 
         sb = new ServerBuilder();
         sb.route().path("/foo/bar")
@@ -136,7 +141,9 @@ public class ServiceBindingBuilderTest {
 
         serviceConfigs = sb.build().serviceConfigs();
         assertThat(serviceConfigs.size()).isOne();
-        assertThat(serviceConfigs.get(0).route().exactPath().get()).isEqualTo("/foo/bar");
+        route = serviceConfigs.get(0).route();
+        assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
+        assertThat(route.paths()).containsExactly("/foo/bar", "/foo/bar");
     }
 
     @Test
@@ -149,8 +156,13 @@ public class ServiceBindingBuilderTest {
 
         final List<ServiceConfig> serviceConfigs = sb.build().serviceConfigs();
         assertThat(serviceConfigs.size()).isEqualTo(2);
-        assertThat(serviceConfigs.get(0).route().exactPath().get()).isEqualTo("/foo/bar");
-        assertThat(serviceConfigs.get(1).route().exactPath().get()).isEqualTo("/foo/bar/baz");
+        final Route route1 = serviceConfigs.get(0).route();
+        assertThat(route1.pathType()).isSameAs(RoutePathType.EXACT);
+        assertThat(route1.paths()).containsExactly("/foo/bar", "/foo/bar");
+
+        final Route route2 = serviceConfigs.get(1).route();
+        assertThat(route2.pathType()).isSameAs(RoutePathType.EXACT);
+        assertThat(route2.paths()).containsExactly("/foo/bar/baz", "/foo/bar/baz");
     }
 
     @Test(expected = IllegalStateException.class)

@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.StringJoiner;
 
@@ -170,23 +169,13 @@ final class DefaultRoute implements Route {
     }
 
     @Override
-    public Optional<String> exactPath() {
-        return pathMapping.exactPath();
+    public RoutePathType pathType() {
+        return pathMapping.pathType();
     }
 
     @Override
-    public Optional<String> prefix() {
-        return pathMapping.prefix();
-    }
-
-    @Override
-    public Optional<String> triePath() {
-        return pathMapping.triePath();
-    }
-
-    @Override
-    public Optional<String> regex() {
-        return pathMapping.regex();
+    public List<String> paths() {
+        return pathMapping.paths();
     }
 
     @Override

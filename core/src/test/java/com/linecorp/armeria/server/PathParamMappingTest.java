@@ -23,11 +23,11 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-class DefaultPathMappingTest {
+class PathParamMappingTest {
 
     @Test
     void givenMatchingPathParam_whenApply_thenReturns() throws Exception {
-        final DefaultPathMapping ppe = new DefaultPathMapping("/service/{value}");
+        final PathParamMapping ppe = new PathParamMapping("/service/{value}");
         final RoutingResult result = ppe.apply(create("/service/hello", "foo=bar")).build();
 
         assertThat(result.isPresent()).isTrue();
@@ -41,14 +41,14 @@ class DefaultPathMappingTest {
 
     @Test
     void givenNoMatchingPathParam_whenApply_thenReturnsNull() throws Exception {
-        final DefaultPathMapping ppe = new DefaultPathMapping("/service/{value}");
+        final PathParamMapping ppe = new PathParamMapping("/service/{value}");
         final RoutingResultBuilder builder = ppe.apply(create("/service2/hello", "bar=baz"));
         assertThat(builder).isNull();
     }
 
     @Test
     void testMultipleMatches() throws Exception {
-        final DefaultPathMapping ppe = new DefaultPathMapping("/service/{value}/test/:value2/something");
+        final PathParamMapping ppe = new PathParamMapping("/service/{value}/test/:value2/something");
         final RoutingResult result = ppe.apply(create("/service/hello/test/world/something", "q=1")).build();
 
         assertThat(result.isPresent()).isTrue();
@@ -63,7 +63,7 @@ class DefaultPathMappingTest {
 
     @Test
     void testPathEndsWithSlash() throws Exception {
-        final DefaultPathMapping ppe = new DefaultPathMapping("/service/{value}/");
+        final PathParamMapping ppe = new PathParamMapping("/service/{value}/");
         final RoutingResult result = ppe.apply(create("/service/hello/", null)).build();
 
         assertThat(result.isPresent()).isTrue();
@@ -72,7 +72,7 @@ class DefaultPathMappingTest {
 
     @Test
     void testNumericPathParamNames() {
-        final DefaultPathMapping m = new DefaultPathMapping("/{0}/{1}/{2}");
+        final PathParamMapping m = new PathParamMapping("/{0}/{1}/{2}");
         assertThat(m.paramNames()).containsExactlyInAnyOrder("0", "1", "2");
         assertThat(m.apply(create("/alice/bob/charlie")).build().pathParams())
                 .containsEntry("0", "alice")
@@ -83,7 +83,7 @@ class DefaultPathMappingTest {
 
     @Test
     void utf8() {
-        final DefaultPathMapping m = new DefaultPathMapping("/{foo}");
+        final PathParamMapping m = new PathParamMapping("/{foo}");
         final RoutingResult res = m.apply(create("/%C2%A2")).build();
         assertThat(res.path()).isEqualTo("/%C2%A2");
         assertThat(res.decodedPath()).isEqualTo("/¢");
@@ -92,32 +92,32 @@ class DefaultPathMappingTest {
 
     @Test
     void testVariables() throws Exception {
-        final DefaultPathMapping ppe =
-                new DefaultPathMapping("/service/{value}/test/:value2/something/{value3}");
+        final PathParamMapping ppe =
+                new PathParamMapping("/service/{value}/test/:value2/something/{value3}");
 
         assertThat(ppe.paramNames()).containsExactlyInAnyOrder("value", "value2", "value3");
     }
 
     @Test
     void testSkeleton() throws Exception {
-        final DefaultPathMapping ppe =
-                new DefaultPathMapping("/service/{value}/test/:value2/something/{value3}");
+        final PathParamMapping ppe =
+                new PathParamMapping("/service/{value}/test/:value2/something/{value3}");
 
         assertThat(ppe.skeleton()).isEqualTo("/service/:/test/:/something/:");
     }
 
     @Test
     void testInvalidPattern() throws Exception {
-        assertThatThrownBy(() -> new DefaultPathMapping("/service/{value}/test/{value2"))
+        assertThatThrownBy(() -> new PathParamMapping("/service/{value}/test/{value2"))
                 .isInstanceOf(IllegalArgumentException.class);
 
-        assertThatThrownBy(() -> new DefaultPathMapping("/service/:value/test/value2}"))
+        assertThatThrownBy(() -> new PathParamMapping("/service/:value/test/value2}"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void testEmptyPattern() throws Exception {
-        final DefaultPathMapping ppe = new DefaultPathMapping("/service/value/test/value2");
+        final PathParamMapping ppe = new PathParamMapping("/service/value/test/value2");
         final RoutingResult result = ppe.apply(create("/service/value/test/value2")).build();
 
         assertThat(result.isPresent()).isTrue();
@@ -128,15 +128,15 @@ class DefaultPathMappingTest {
 
     @Test
     void testToString() throws Exception {
-        final DefaultPathMapping ppe = new DefaultPathMapping("/service/{value}/test/:value2");
+        final PathParamMapping ppe = new PathParamMapping("/service/{value}/test/:value2");
         assertThat(ppe).hasToString("/service/{value}/test/:value2");
     }
 
     @Test
     void testHashcodeAndEquals() throws Exception {
-        final DefaultPathMapping ppe = new DefaultPathMapping("/service/:value/test/:value2");
-        final DefaultPathMapping ppe2 = new DefaultPathMapping("/service/{value}/test/{value2}");
-        final DefaultPathMapping ppe3 = new DefaultPathMapping("/service/{value}/test/{value3}");
+        final PathParamMapping ppe = new PathParamMapping("/service/:value/test/:value2");
+        final PathParamMapping ppe2 = new PathParamMapping("/service/{value}/test/{value2}");
+        final PathParamMapping ppe3 = new PathParamMapping("/service/{value}/test/{value3}");
 
         assertThat(ppe).isEqualTo(ppe2);
         assertThat(ppe).isNotEqualTo(ppe3);
@@ -149,8 +149,8 @@ class DefaultPathMappingTest {
 
     @Test
     void loggerAndMetricName() {
-        final DefaultPathMapping defaultPathMapping = new DefaultPathMapping("/service/{value}");
-        assertThat(defaultPathMapping.loggerName()).isEqualTo("service._value_");
-        assertThat(defaultPathMapping.meterTag()).isEqualTo("/service/{value}");
+        final PathParamMapping pathParamMapping = new PathParamMapping("/service/{value}");
+        assertThat(pathParamMapping.loggerName()).isEqualTo("service._value_");
+        assertThat(pathParamMapping.meterTag()).isEqualTo("/service/{value}");
     }
 }

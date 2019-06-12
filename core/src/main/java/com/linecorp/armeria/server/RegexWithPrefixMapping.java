@@ -20,24 +20,29 @@ import static com.linecorp.armeria.internal.RouteUtil.PREFIX;
 import static com.linecorp.armeria.internal.RouteUtil.newLoggerName;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Optional;
+import java.util.List;
 import java.util.Set;
 
 import javax.annotation.Nullable;
 
-final class PathMappingWithPrefix extends AbstractPathMapping {
+import com.google.common.collect.ImmutableList;
+
+final class RegexWithPrefixMapping extends AbstractPathMapping {
 
     private final String pathPrefix;
     private final PathMapping mapping;
     private final String loggerName;
     private final String meterTag;
+    private final List<String> prefixAndRegex;
 
-    PathMappingWithPrefix(String pathPrefix, PathMapping mapping) {
+    RegexWithPrefixMapping(String pathPrefix, PathMapping mapping) {
         requireNonNull(mapping, "mapping");
         // mapping should be GlobPathMapping or RegexPathMapping
-        assert mapping.regex().isPresent() : "unexpected mapping type: " + mapping.getClass().getName();
+        assert mapping.pathType() == RoutePathType.REGEX
+                : "unexpected mapping type: " + mapping.getClass().getName();
         this.pathPrefix = requireNonNull(pathPrefix, "pathPrefix");
         this.mapping = mapping;
+        prefixAndRegex = ImmutableList.of(pathPrefix, mapping.paths().get(0));
         loggerName = newLoggerName(pathPrefix) + '.' + mapping.loggerName();
         meterTag = PREFIX + pathPrefix + ',' + mapping.meterTag();
     }
@@ -76,13 +81,13 @@ final class PathMappingWithPrefix extends AbstractPathMapping {
     }
 
     @Override
-    public Optional<String> prefix() {
-        return Optional.of(pathPrefix);
+    public RoutePathType pathType() {
+        return RoutePathType.REGEX_WITH_PREFIX;
     }
 
     @Override
-    public Optional<String> regex() {
-        return mapping.regex();
+    public List<String> paths() {
+        return prefixAndRegex;
     }
 
     @Override
@@ -90,11 +95,11 @@ final class PathMappingWithPrefix extends AbstractPathMapping {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof PathMappingWithPrefix)) {
+        if (!(o instanceof RegexWithPrefixMapping)) {
             return false;
         }
 
-        final PathMappingWithPrefix that = (PathMappingWithPrefix) o;
+        final RegexWithPrefixMapping that = (RegexWithPrefixMapping) o;
         return pathPrefix.equals(that.pathPrefix) && mapping.equals(that.mapping);
     }
 

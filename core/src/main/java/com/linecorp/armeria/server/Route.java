@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server;
 
-import java.util.Optional;
+import java.util.List;
 import java.util.Set;
 
 import com.linecorp.armeria.common.HttpMethod;
@@ -73,37 +73,29 @@ public interface Route {
     String meterTag();
 
     /**
-     * Returns the exact path of this {@link Route} if this has an exact path matching condition,
-     * {@link Optional#empty()} otherwise.
+     * Returns the type of the path which was specified when this is created.
      */
-    Optional<String> exactPath();
+    RoutePathType pathType();
 
     /**
-     * Returns the prefix of this {@link Route} if this has a prefix matching condition,
-     * {@link Optional#empty()} otherwise.
+     * Returns the list of paths that this {@link Route} has. The paths are different according to the value
+     * of {@link #pathType()}. If the path type has a {@linkplain RoutePathType#hasTriePath() trie path},
+     * the first element is the path that represents the type and the second element is the trie path.
+     * {@link RoutePathType#EXACT}, {@link RoutePathType#PREFIX} and {@link RoutePathType#PATH_PARAM} have the
+     * trie path.
      *
-     * @return the prefix that ends with '/' if this {@link Route} has a prefix matching condition
-     */
-    Optional<String> prefix();
-
-    /**
-     * Returns the trie path of this {@link Route} if this has a trie matching condition,
-     * {@link Optional#empty()} otherwise. The trie path does not exist when the {@link Route} is created
-     * using a glob or a regex expression.
+     * <ul>
+     *   <li>EXACT: {@code [ "/foo", "/foo" ]} (The trie path is the same.)</li>
+     *   <li>PREFIX: {@code [ "/foo/", "/foo/*" ]}</li>
+     *   <li>PATH_PARAM: {@code [ "/foo/:", "/foo/:" ]} (The trie path is the same.)</li>
+     * </ul>
      *
-     * @see RouteBuilder#path(String)
-     * @see RouteBuilder#glob(String)
-     * @see RouteBuilder#regex(String)
+     * {@link RoutePathType#REGEX} has only one path that represents it. e.g, {@code [ "^/(?<foo>.*)$" ]}
+     *
+     * <p>{@link RoutePathType#REGEX_WITH_PREFIX} has two paths. The first one is the prefix and the second
+     * one is the regex. e.g, {@code [ "/bar/", "^/(?<foo>.*)$" ]}
      */
-    Optional<String> triePath();
-
-    /**
-     * Returns the regular expression of this {@link Route} if this is created with the regular expression or
-     * glob pattern, {@link Optional#empty()} otherwise. Please note that this regex does not include the
-     * {@code pathPrefix} if this is created with {@link RouteBuilder#pathWithPrefix(String, String)}.
-     * You should call {@link #prefix()} to retrieve that.
-     */
-    Optional<String> regex();
+    List<String> paths();
 
     /**
      * Returns the complexity of this {@link Route}. A higher complexity indicates more expensive computation

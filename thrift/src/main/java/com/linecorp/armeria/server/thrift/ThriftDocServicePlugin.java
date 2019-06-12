@@ -56,6 +56,7 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
@@ -124,13 +125,14 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
                     // Add all available endpoints. Accept only the services with exact and prefix path
                     // mappings, whose endpoint path can be determined.
                     final Route route = c.route();
-                    final String path = route.exactPath().orElse(route.prefix().orElse(null));
-                    if (path != null) {
-                        builder.endpoint(new EndpointInfoBuilder(c.virtualHost().hostnamePattern(), path)
-                                                 .fragment(serviceName)
-                                                 .defaultFormat(service.defaultSerializationFormat())
-                                                 .availableFormats(service.allowedSerializationFormats())
-                                                 .build());
+                    final RoutePathType pathType = route.pathType();
+                    if (pathType == RoutePathType.EXACT || pathType == RoutePathType.PREFIX) {
+                        builder.endpoint(
+                                new EndpointInfoBuilder(c.virtualHost().hostnamePattern(), route.paths().get(0))
+                                        .fragment(serviceName)
+                                        .defaultFormat(service.defaultSerializationFormat())
+                                        .availableFormats(service.allowedSerializationFormats())
+                                        .build());
                     }
                 }
             });

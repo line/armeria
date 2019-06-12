@@ -16,13 +16,8 @@
 
 package com.linecorp.armeria.internal.annotation;
 
-import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.linecorp.armeria.internal.RouteUtil.EXACT;
-import static com.linecorp.armeria.internal.RouteUtil.PREFIX;
-import static com.linecorp.armeria.internal.RouteUtil.REGEX;
-import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServiceUtil.getNormalizedTriePath;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.findDescription;
 import static com.linecorp.armeria.server.docs.FieldLocation.HEADER;
 import static com.linecorp.armeria.server.docs.FieldLocation.PATH;
@@ -58,8 +53,10 @@ import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.internal.RouteUtil;
 import com.linecorp.armeria.internal.annotation.AnnotatedBeanFactoryRegistry.BeanFactoryId;
 import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.annotation.Header;
@@ -156,10 +153,6 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
                                       String hostnamePattern, AnnotatedHttpService service) {
         final Route route = service.route();
         final EndpointInfo endpoint = endpointInfo(route, hostnamePattern);
-        if (endpoint == null) {
-            return;
-        }
-
         final Method method = service.method();
         final String name = method.getName();
         final TypeSignature returnTypeSignature = toTypeSignature(method.getGenericReturnType());
@@ -174,41 +167,55 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
                 });
     }
 
-    @Nullable
     @VisibleForTesting
     static EndpointInfo endpointInfo(Route route, String hostnamePattern) {
-        final String endpointPathMapping = endpointPathMapping(route);
-        if (isNullOrEmpty(endpointPathMapping)) {
-            return null;
-        }
-
-        final EndpointInfoBuilder builder = new EndpointInfoBuilder(hostnamePattern, endpointPathMapping);
-        if (endpointPathMapping.startsWith(REGEX) && route.prefix().isPresent()) {
-            // PathMappingWithPrefix
-            builder.regexPathPrefix(PREFIX + route.prefix().get());
+        final EndpointInfoBuilder builder;
+        final RoutePathType pathType = route.pathType();
+        final List<String> path = route.paths();
+        switch (pathType) {
+            case EXACT:
+                builder = new EndpointInfoBuilder(hostnamePattern, RouteUtil.EXACT + path.get(0));
+                break;
+            case PREFIX:
+                builder = new EndpointInfoBuilder(hostnamePattern, RouteUtil.PREFIX + path.get(0));
+                break;
+            case PATH_PARAM:
+                builder = new EndpointInfoBuilder(hostnamePattern, normalizedPathParam(route));
+                break;
+            case REGEX:
+                builder = new EndpointInfoBuilder(hostnamePattern, RouteUtil.REGEX + path.get(0));
+                break;
+            case REGEX_WITH_PREFIX:
+                builder = new EndpointInfoBuilder(hostnamePattern, RouteUtil.REGEX + path.get(1));
+                builder.regexPathPrefix(RouteUtil.PREFIX + path.get(0));
+                break;
+            default:
+                // Should never reach here.
+                throw new Error();
         }
 
         builder.availableMimeTypes(availableMimeTypes(route));
         return builder.build();
     }
 
-    private static String endpointPathMapping(Route route) {
-        final Optional<String> exactPath = route.exactPath();
-        if (exactPath.isPresent()) {
-            return EXACT + exactPath.get();
-        }
+    private static String normalizedPathParam(Route route) {
+        final String path = route.paths().get(0);
+        int beginIndex = 0;
 
-        final Optional<String> regex = route.regex();
-        if (regex.isPresent()) {
-            return REGEX + regex.get();
+        final StringBuilder sb = new StringBuilder();
+        for (String paramName : route.paramNames()) {
+            final int colonIndex = path.indexOf(':', beginIndex);
+            assert colonIndex != -1;
+            sb.append(path, beginIndex, colonIndex);
+            sb.append('{');
+            sb.append(paramName);
+            sb.append('}');
+            beginIndex = colonIndex + 1;
         }
-
-        final Optional<String> prefix = route.prefix();
-        if (prefix.isPresent()) {
-            return PREFIX + prefix.get();
+        if (beginIndex < path.length()) {
+            sb.append(path, beginIndex, path.length());
         }
-
-        return getNormalizedTriePath(route);
+        return sb.toString();
     }
 
     private static Set<MediaType> availableMimeTypes(Route route) {

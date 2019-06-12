@@ -129,7 +129,7 @@ public class RouteBuilder {
      * Sets the {@link Route} to match any path.
      */
     public RouteBuilder catchAll() {
-        return pathMapping(CatchAllPathMapping.INSTANCE);
+        return pathMapping(CatchAllPathMapping.instance);
     }
 
     /**
@@ -198,7 +198,7 @@ public class RouteBuilder {
             }
         }
 
-        return pathMapping(new PathMappingWithPrefix(prefix, getPathMapping(pathPattern)));
+        return pathMapping(new RegexWithPrefixMapping(prefix, getPathMapping(pathPattern)));
     }
 
     /**
@@ -329,13 +329,13 @@ public class RouteBuilder {
         if (!pathPattern.contains("{") && !pathPattern.contains(":")) {
             return new ExactPathMapping(pathPattern);
         }
-        return new DefaultPathMapping(pathPattern);
+        return new PathParamMapping(pathPattern);
     }
 
     private static PathMapping prefixPathMapping(String prefix, boolean stripPrefix) {
         if ("/".equals(prefix)) {
             // Every path starts with '/'.
-            return CatchAllPathMapping.INSTANCE;
+            return CatchAllPathMapping.instance;
         }
 
         return new PrefixPathMapping(prefix, stripPrefix);

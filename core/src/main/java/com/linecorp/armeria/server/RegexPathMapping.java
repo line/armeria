@@ -19,13 +19,14 @@ package com.linecorp.armeria.server;
 import static com.linecorp.armeria.internal.RouteUtil.REGEX;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Optional;
+import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 final class RegexPathMapping extends AbstractPathMapping {
@@ -36,12 +37,14 @@ final class RegexPathMapping extends AbstractPathMapping {
     private final Set<String> paramNames;
     private final String loggerName;
     private final String meterTag;
+    private final List<String> paths;
 
     RegexPathMapping(Pattern regex) {
         this.regex = requireNonNull(regex, "regex");
         paramNames = findParamNames(regex);
         loggerName = toLoggerName(regex);
         meterTag = REGEX + regex.pattern();
+        paths = ImmutableList.of(regex.pattern());
     }
 
     private static Set<String> findParamNames(Pattern regex) {
@@ -109,8 +112,13 @@ final class RegexPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public Optional<String> regex() {
-        return Optional.of(regex.pattern());
+    public RoutePathType pathType() {
+        return RoutePathType.REGEX;
+    }
+
+    @Override
+    public List<String> paths() {
+        return paths;
     }
 
     @Override
