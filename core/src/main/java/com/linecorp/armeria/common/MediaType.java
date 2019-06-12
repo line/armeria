@@ -92,7 +92,7 @@ import com.google.common.collect.Multimaps;
 @JsonDeserialize(using = MediaTypeJsonDeserializer.class)
 public final class MediaType {
 
-    // Forked from Guava 27.1 at 8e174e76971449665658a800af6dd350806cc934
+    // Forked from Guava 28.0 at bf9e8fa954bd76fd6642445fa644c729f91f30f2
 
     private static final String CHARSET_ATTRIBUTE = "charset";
     private static final ImmutableListMultimap<String, String> UTF_8_CONSTANT_PARAMETERS =
@@ -397,6 +397,12 @@ public final class MediaType {
      * {@link #OCTET_STREAM} for binary data that is not being served to a browser.
      */
     public static final MediaType APPLICATION_BINARY = createConstant(APPLICATION_TYPE, "binary");
+
+    /**
+     * <a href="https://tools.ietf.org/html/rfc7946">GeoJSON Format</a>, a geospatial data interchange format
+     * based on JSON.
+     */
+    public static final MediaType GEO_JSON = createConstant(APPLICATION_TYPE, "geo+json");
 
     public static final MediaType GZIP = createConstant(APPLICATION_TYPE, "x-gzip");
 
