@@ -129,7 +129,7 @@ public class RouteBuilder {
      * Sets the {@link Route} to match any path.
      */
     public RouteBuilder catchAll() {
-        return pathMapping(CatchAllPathMapping.instance);
+        return pathMapping(CatchAllPathMapping.INSTANCE);
     }
 
     /**
@@ -335,7 +335,7 @@ public class RouteBuilder {
     private static PathMapping prefixPathMapping(String prefix, boolean stripPrefix) {
         if ("/".equals(prefix)) {
             // Every path starts with '/'.
-            return CatchAllPathMapping.instance;
+            return CatchAllPathMapping.INSTANCE;
         }
 
         return new PrefixPathMapping(prefix, stripPrefix);

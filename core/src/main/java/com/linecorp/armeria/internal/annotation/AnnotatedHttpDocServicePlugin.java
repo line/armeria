@@ -171,23 +171,23 @@ public final class AnnotatedHttpDocServicePlugin implements DocServicePlugin {
     static EndpointInfo endpointInfo(Route route, String hostnamePattern) {
         final EndpointInfoBuilder builder;
         final RoutePathType pathType = route.pathType();
-        final List<String> path = route.paths();
+        final List<String> paths = route.paths();
         switch (pathType) {
             case EXACT:
-                builder = new EndpointInfoBuilder(hostnamePattern, RouteUtil.EXACT + path.get(0));
+                builder = new EndpointInfoBuilder(hostnamePattern, RouteUtil.EXACT + paths.get(0));
                 break;
             case PREFIX:
-                builder = new EndpointInfoBuilder(hostnamePattern, RouteUtil.PREFIX + path.get(0));
+                builder = new EndpointInfoBuilder(hostnamePattern, RouteUtil.PREFIX + paths.get(0));
                 break;
             case PARAMETERIZED:
                 builder = new EndpointInfoBuilder(hostnamePattern, normalizeParameterized(route));
                 break;
             case REGEX:
-                builder = new EndpointInfoBuilder(hostnamePattern, RouteUtil.REGEX + path.get(0));
+                builder = new EndpointInfoBuilder(hostnamePattern, RouteUtil.REGEX + paths.get(0));
                 break;
             case REGEX_WITH_PREFIX:
-                builder = new EndpointInfoBuilder(hostnamePattern, RouteUtil.REGEX + path.get(0));
-                builder.regexPathPrefix(RouteUtil.PREFIX + path.get(1));
+                builder = new EndpointInfoBuilder(hostnamePattern, RouteUtil.REGEX + paths.get(0));
+                builder.regexPathPrefix(RouteUtil.PREFIX + paths.get(1));
                 break;
             default:
                 // Should never reach here.

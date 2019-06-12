@@ -26,7 +26,7 @@ import com.google.common.collect.ImmutableSet;
 
 final class CatchAllPathMapping extends AbstractPathMapping {
 
-    static final CatchAllPathMapping instance = new CatchAllPathMapping();
+    static final CatchAllPathMapping INSTANCE = new CatchAllPathMapping();
 
     private static final List<String> paths = ImmutableList.of("/", "/*");
 
