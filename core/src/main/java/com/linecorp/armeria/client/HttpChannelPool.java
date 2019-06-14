@@ -41,6 +41,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.bootstrap.Bootstrap;
@@ -391,7 +392,8 @@ final class HttpChannelPool implements AutoCloseable {
                 final SessionProtocol protocol = getProtocolIfHealthy(channel);
                 if (closed || protocol == null) {
                     channel.close();
-                    promise.completeExceptionally(UnprocessedRequestException.get());
+                    promise.completeExceptionally(
+                            new UnprocessedRequestException(ClosedSessionException.get()));
                     return;
                 }
 
@@ -421,7 +423,8 @@ final class HttpChannelPool implements AutoCloseable {
                 } else {
                     // Server set MAX_CONCURRENT_STREAMS to 0, which means we can't send anything.
                     channel.close();
-                    promise.completeExceptionally(UnprocessedRequestException.get());
+                    promise.completeExceptionally(
+                            new UnprocessedRequestException(RefusedStreamException.get()));
                 }
 
                 channel.closeFuture().addListener(f -> {

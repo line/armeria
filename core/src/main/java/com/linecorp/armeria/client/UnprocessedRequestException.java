@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client;
 
-import com.linecorp.armeria.common.Flags;
+import javax.annotation.Nullable;
 
 /**
  * A {@link RuntimeException} raised when it is certain that a request has not been handled by a server and
@@ -29,19 +29,26 @@ public final class UnprocessedRequestException extends RuntimeException {
 
     private static final long serialVersionUID = 4679512839715213302L;
 
-    private static final UnprocessedRequestException INSTANCE = new UnprocessedRequestException(false);
-
     /**
-     * Returns an {@link UnprocessedRequestException} which may be a singleton or a new instance, depending on
-     * whether {@linkplain Flags#verboseExceptions() the verbose exception mode} is enabled.
+     * Creates a new instance with the specified {@code message} and {@code cause}.
      */
-    public static UnprocessedRequestException get() {
-        return Flags.verboseExceptions() ? new UnprocessedRequestException() : INSTANCE;
+    public UnprocessedRequestException(@Nullable String message, @Nullable Throwable cause) {
+        super(message, cause);
     }
 
-    private UnprocessedRequestException() {}
+    /**
+     * Creates a new instance with the specified {@code cause}.
+     */
+    public UnprocessedRequestException(@Nullable Throwable cause) {
+        super(cause);
+    }
 
-    private UnprocessedRequestException(@SuppressWarnings("unused") boolean dummy) {
-        super(null, null, false, false);
+    /**
+     * Creates a new instance with the specified {@code message}, {@code cause}, suppression enabled or
+     * disabled, and writable stack trace enabled or disabled.
+     */
+    protected UnprocessedRequestException(@Nullable String message, @Nullable Throwable cause,
+                                     boolean enableSuppression, boolean writableStackTrace) {
+        super(message, cause, enableSuppression, writableStackTrace);
     }
 }
