@@ -202,11 +202,13 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
             final HttpSession session = HttpSession.get(channel);
             res.init(session.inboundTrafficController());
             final SessionProtocol sessionProtocol = session.protocol();
+
+            // Should never reach here.
             if (sessionProtocol == null) {
                 needsRelease = false;
                 try {
                     // TODO(minwoox): Make a test that handles this case
-                    final UnprocessedRequestException cause = UnprocessedRequestException.get();
+                    final NullPointerException cause = new NullPointerException("sessionProtocol");
                     handleEarlyRequestException(ctx, req, cause);
                     res.close(cause);
                 } finally {

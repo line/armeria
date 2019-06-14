@@ -22,10 +22,9 @@ import java.util.Map.Entry;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContextWrapper;
-import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
- * Wraps an existing {@link ServiceRequestContext}.
+ * Wraps an existing {@link ClientRequestContext}.
  */
 public class ClientRequestContextWrapper
         extends RequestContextWrapper<ClientRequestContext> implements ClientRequestContext {

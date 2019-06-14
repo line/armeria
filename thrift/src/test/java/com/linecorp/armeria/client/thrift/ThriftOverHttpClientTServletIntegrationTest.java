@@ -67,6 +67,7 @@ import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.SessionProtocolNegotiationCache;
 import com.linecorp.armeria.client.SessionProtocolNegotiationException;
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
@@ -274,11 +275,14 @@ public class ThriftOverHttpClientTServletIntegrationTest {
         try {
             client.hello("unused");
             fail();
-        } catch (SessionProtocolNegotiationException e) {
+        } catch (UnprocessedRequestException e) {
+            assertThat(e).hasCauseExactlyInstanceOf(SessionProtocolNegotiationException.class);
+            SessionProtocolNegotiationException cause = (SessionProtocolNegotiationException) e.getCause();
+
             // Test if a failed upgrade attempt triggers an exception with
             // both 'expected' and 'actual' protocols.
-            assertThat(e.expected()).isEqualTo(H2C);
-            assertThat(e.actual()).contains(H1C);
+            assertThat(cause.expected()).isEqualTo(H2C);
+            assertThat(cause.actual()).contains(H1C);
             // .. and if the negotiation cache is updated.
             assertTrue(SessionProtocolNegotiationCache.isUnsupported(remoteAddress, H2C));
         }
@@ -286,11 +290,13 @@ public class ThriftOverHttpClientTServletIntegrationTest {
         try {
             client.hello("unused");
             fail();
-        } catch (SessionProtocolNegotiationException e) {
+        } catch (UnprocessedRequestException e) {
+            assertThat(e).hasCauseExactlyInstanceOf(SessionProtocolNegotiationException.class);
+            SessionProtocolNegotiationException cause = (SessionProtocolNegotiationException) e.getCause();
             // Test if no upgrade attempt is made thanks to the cache.
-            assertThat(e.expected()).isEqualTo(H2C);
+            assertThat(cause.expected()).isEqualTo(H2C);
             // It has no idea about the actual protocol, because it did not create any connection.
-            assertThat(e.actual().isPresent()).isFalse();
+            assertThat(cause.actual().isPresent()).isFalse();
         }
     }
 

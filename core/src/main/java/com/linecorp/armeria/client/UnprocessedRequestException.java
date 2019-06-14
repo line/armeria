@@ -16,6 +16,11 @@
 
 package com.linecorp.armeria.client;
 
+import static java.util.Objects.requireNonNull;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.Flags;
 
 /**
@@ -29,19 +34,31 @@ public final class UnprocessedRequestException extends RuntimeException {
 
     private static final long serialVersionUID = 4679512839715213302L;
 
-    private static final UnprocessedRequestException INSTANCE = new UnprocessedRequestException(false);
-
     /**
-     * Returns an {@link UnprocessedRequestException} which may be a singleton or a new instance, depending on
-     * whether {@linkplain Flags#verboseExceptions() the verbose exception mode} is enabled.
+     * Creates a new instance with the specified {@code message} and {@code cause}.
      */
-    public static UnprocessedRequestException get() {
-        return Flags.verboseExceptions() ? new UnprocessedRequestException() : INSTANCE;
+    public UnprocessedRequestException(@Nullable String message, Throwable cause) {
+        super(message, requireNonNull(cause, "cause"));
     }
 
-    private UnprocessedRequestException() {}
+    /**
+     * Creates a new instance with the specified {@code cause}.
+     */
+    public UnprocessedRequestException(Throwable cause) {
+        super(requireNonNull(cause, "cause").toString(), cause);
+    }
 
-    private UnprocessedRequestException(@SuppressWarnings("unused") boolean dummy) {
-        super(null, null, false, false);
+    @Nonnull
+    @Override
+    public Throwable getCause() {
+        return super.getCause();
+    }
+
+    @Override
+    public Throwable fillInStackTrace() {
+        if (Flags.verboseExceptions()) {
+            super.fillInStackTrace();
+        }
+        return this;
     }
 }

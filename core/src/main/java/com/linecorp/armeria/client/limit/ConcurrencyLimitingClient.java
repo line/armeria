@@ -26,11 +26,12 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.server.RequestTimeoutException;
 
 import io.netty.util.concurrent.ScheduledFuture;
 
@@ -124,7 +125,8 @@ public abstract class ConcurrencyLimitingClient<I extends Request, O extends Res
         if (!currentTask.isRun() && timeoutMillis != 0) {
             // Current request was not delegated. Schedule a timeout.
             final ScheduledFuture<?> timeoutFuture = ctx.eventLoop().schedule(
-                    () -> deferred.close(ResponseTimeoutException.get()),
+                    () -> deferred
+                            .close(new UnprocessedRequestException(RequestTimeoutException.get())),
                     timeoutMillis, TimeUnit.MILLISECONDS);
             currentTask.set(timeoutFuture);
         }

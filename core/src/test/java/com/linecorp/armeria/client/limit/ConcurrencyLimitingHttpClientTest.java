@@ -33,12 +33,13 @@ import org.mockito.Mock;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextBuilder;
-import com.linecorp.armeria.client.ResponseTimeoutException;
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
+import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
 
 class ConcurrencyLimitingHttpClientTest {
@@ -140,7 +141,8 @@ class ConcurrencyLimitingHttpClientTest {
         Thread.sleep(1000);
         res2.subscribe(NoopSubscriber.get());
         assertThatThrownBy(() -> res2.completionFuture().join())
-                .hasCauseInstanceOf(ResponseTimeoutException.class);
+                .hasCauseExactlyInstanceOf(UnprocessedRequestException.class)
+                .hasRootCauseExactlyInstanceOf(RequestTimeoutException.class);
         assertThat(res2.isOpen()).isFalse();
 
         // req1 should not time out because it's been delegated already.
