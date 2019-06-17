@@ -82,7 +82,7 @@ public class HttpResponseSubscriberTest {
         req.init(sctx);
         return new HttpResponseSubscriber(mock(ChannelHandlerContext.class),
                                           new ImmediateWriteEmulator(sctx.channel()),
-                                          sctx, req, unused -> {});
+                                          sctx, req);
     }
 
     private static ByteBuf newBuffer(String content) {

@@ -18,10 +18,13 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
+import static org.awaitility.Awaitility.await;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -42,7 +45,8 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 class ServiceBindingTest {
 
-    private static final CountDownLatch propertyCheckLatch = new CountDownLatch(1);
+    private static CountDownLatch accessLogWriterCheckLatch;
+    private static CountDownLatch propertyCheckLatch;
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension(true) {
@@ -71,6 +75,7 @@ class ServiceBindingTest {
               .verboseResponses(true)
               .requestContentPreviewerFactory(requestContentPreviewerFactory)
               .responseContentPreviewerFactory(responseContentPreviewerFactory)
+              .accessLogWriter(log -> accessLogWriterCheckLatch.countDown(), true)
               .decorator(delegate -> (ctx, req) -> {
                   ctx.log().addListener(log -> {
                       assertThat(ctx.requestTimeoutMillis()).isEqualTo(1000);
@@ -112,6 +117,12 @@ class ServiceBindingTest {
                       })));
         }
     };
+
+    @BeforeEach
+    void setup() {
+        accessLogWriterCheckLatch = new CountDownLatch(1);
+        propertyCheckLatch = new CountDownLatch(1);
+    }
 
     @Test
     void routeService() throws InterruptedException {
@@ -166,5 +177,18 @@ class ServiceBindingTest {
                              "armeria").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("armeria");
+    }
+
+    @Test
+    void accessLogWriter() throws InterruptedException {
+        final HttpClient client = HttpClient.of(server.uri("/"));
+        client.execute(RequestHeaders.of(HttpMethod.POST, "/hello"), "armeria")
+              .aggregate().join();
+
+        await().atMost(1, TimeUnit.SECONDS);
+        assertThat(accessLogWriterCheckLatch.getCount()).isOne();
+
+        client.get("/greet/armeria");
+        accessLogWriterCheckLatch.await();
     }
 }

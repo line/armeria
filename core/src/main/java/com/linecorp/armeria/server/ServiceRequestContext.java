@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
  * Provides information about an invocation and related utilities. Every request being handled has its own
@@ -254,6 +255,8 @@ public interface ServiceRequestContext extends RequestContext {
      * insecure. When disabled, the service responses will not expose such server-side details to the client.
      */
     boolean verboseResponses();
+
+    AccessLogWriter accessLogWriter();
 
     /**
      * Returns an immutable {@link HttpHeaders} which is included when a {@link Service} sends an

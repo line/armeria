@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -48,7 +49,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSet.Builder;
 import com.google.common.collect.Iterables;
+import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
@@ -489,10 +492,32 @@ public final class Server implements AutoCloseable {
                 return;
             }
 
-            config.accessLogWriter().shutdown().exceptionally(cause -> {
-                logger.warn("Failed to close the {}:", AccessLogWriter.class.getSimpleName(), cause);
-                return null;
-            }).thenRunAsync(() -> future.complete(null), config.startStopExecutor());
+            final Builder<AccessLogWriter> builder = ImmutableSet.builder();
+            if (config.shutdownAccessLogWriterOnStop()) {
+                builder.add(config.accessLogWriter());
+            }
+            config.virtualHosts()
+                  .stream()
+                  .filter(VirtualHost::shutdownAccessLogWriterOnStop)
+                  .forEach(virtualHost -> builder.add(virtualHost.accessLogWriter()));
+            config.serviceConfigs()
+                  .stream()
+                  .filter(ServiceConfig::shutdownAccessLogWriterOnStop)
+                  .forEach(serviceConfig -> builder.add(serviceConfig.accessLogWriter()));
+
+            final Set<AccessLogWriter> writers = builder.build();
+            final List<CompletableFuture<Void>> completionFutures = new ArrayList<>(writers.size());
+            writers.forEach(accessLogWriter -> {
+                final CompletableFuture<Void> shutdownFuture = accessLogWriter.shutdown();
+                shutdownFuture.exceptionally(cause -> {
+                    logger.warn("Failed to close the {}:", AccessLogWriter.class.getSimpleName(), cause);
+                    return null;
+                });
+                completionFutures.add(shutdownFuture);
+            });
+
+            CompletableFutures.successfulAsList(completionFutures, cause -> null)
+                              .thenRunAsync(() -> future.complete(null), config.startStopExecutor());
         }
 
         @Override

@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
+import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
  * A {@link Service} configuration.
@@ -60,6 +61,8 @@ public final class ServiceConfig {
 
     private final ContentPreviewerFactory requestContentPreviewerFactory;
     private final ContentPreviewerFactory responseContentPreviewerFactory;
+    private final AccessLogWriter accessLogWriter;
+    private final boolean shutdownAccessLogWriterOnStop;
 
     /**
      * Creates a new instance.
@@ -69,9 +72,11 @@ public final class ServiceConfig {
                   @Nullable String loggerName, long requestTimeoutMillis,
                   long maxRequestLength, boolean verboseResponses,
                   ContentPreviewerFactory requestContentPreviewerFactory,
-                  ContentPreviewerFactory responseContentPreviewerFactory) {
+                  ContentPreviewerFactory responseContentPreviewerFactory, AccessLogWriter accessLogWriter,
+                  boolean shutdownAccessLogWriterOnStop) {
         this(null, route, service, loggerName, requestTimeoutMillis, maxRequestLength,
-             verboseResponses, requestContentPreviewerFactory, responseContentPreviewerFactory);
+             verboseResponses, requestContentPreviewerFactory, responseContentPreviewerFactory,
+             accessLogWriter, shutdownAccessLogWriterOnStop);
     }
 
     /**
@@ -82,7 +87,8 @@ public final class ServiceConfig {
                           @Nullable String loggerName, long requestTimeoutMillis,
                           long maxRequestLength, boolean verboseResponses,
                           ContentPreviewerFactory requestContentPreviewerFactory,
-                          ContentPreviewerFactory responseContentPreviewerFactory) {
+                          ContentPreviewerFactory responseContentPreviewerFactory,
+                          AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop) {
         this.virtualHost = virtualHost;
         this.route = requireNonNull(route, "route");
         this.service = requireNonNull(service, "service");
@@ -94,6 +100,8 @@ public final class ServiceConfig {
                                                              "requestContentPreviewerFactory");
         this.responseContentPreviewerFactory = requireNonNull(responseContentPreviewerFactory,
                                                               "responseContentPreviewerFactory");
+        this.accessLogWriter = requireNonNull(accessLogWriter, "accessLogWriter");
+        this.shutdownAccessLogWriterOnStop = shutdownAccessLogWriterOnStop;
     }
 
     static String validateLoggerName(String value, String propertyName) {
@@ -107,8 +115,9 @@ public final class ServiceConfig {
     ServiceConfig withVirtualHost(VirtualHost virtualHost) {
         requireNonNull(virtualHost, "virtualHost");
         return new ServiceConfig(virtualHost, route, service, loggerName, requestTimeoutMillis,
-                                 maxRequestLength, verboseResponses,
-                                 requestContentPreviewerFactory, responseContentPreviewerFactory);
+                                 maxRequestLength, verboseResponses, requestContentPreviewerFactory,
+                                 responseContentPreviewerFactory, accessLogWriter,
+                                 shutdownAccessLogWriterOnStop);
     }
 
     ServiceConfig withDecoratedService(
@@ -116,7 +125,8 @@ public final class ServiceConfig {
         requireNonNull(decorator, "decorator");
         return new ServiceConfig(virtualHost, route, service.decorate(decorator), loggerName,
                                  requestTimeoutMillis, maxRequestLength, verboseResponses,
-                                 requestContentPreviewerFactory, responseContentPreviewerFactory);
+                                 requestContentPreviewerFactory, responseContentPreviewerFactory,
+                                 accessLogWriter, shutdownAccessLogWriterOnStop);
     }
 
     /**
@@ -202,6 +212,20 @@ public final class ServiceConfig {
         return responseContentPreviewerFactory;
     }
 
+    /**
+     * Returns the access log writer.
+     */
+    public AccessLogWriter accessLogWriter() {
+        return accessLogWriter;
+    }
+
+    /**
+     * Tells whether the {@link AccessLogWriter} is shut down when the {@link Server} stops.
+     */
+    public boolean shutdownAccessLogWriterOnStop() {
+        return shutdownAccessLogWriterOnStop;
+    }
+
     @Override
     public String toString() {
         final ToStringHelper toStringHelper = MoreObjects.toStringHelper(this).omitNullValues();
@@ -216,6 +240,8 @@ public final class ServiceConfig {
                              .add("verboseResponses", verboseResponses)
                              .add("requestContentPreviewerFactory", requestContentPreviewerFactory)
                              .add("responseContentPreviewerFactory", responseContentPreviewerFactory)
+                             .add("accessLogWriter", accessLogWriter)
+                             .add("shutdownAccessLogWriterOnStop", shutdownAccessLogWriterOnStop)
                              .toString();
     }
 }

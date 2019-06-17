@@ -60,6 +60,7 @@ import com.linecorp.armeria.internal.crypto.BouncyCastleKeyFactoryProvider;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
+import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
@@ -119,6 +120,9 @@ public final class VirtualHostBuilder {
     private ContentPreviewerFactory requestContentPreviewerFactory;
     @Nullable
     private ContentPreviewerFactory responseContentPreviewerFactory;
+    @Nullable
+    private AccessLogWriter accessLogWriter;
+    private boolean shutdownAccessLogWriterOnStop;
 
     /**
      * Creates a new {@link VirtualHostBuilder}.
@@ -727,6 +731,16 @@ public final class VirtualHostBuilder {
     }
 
     /**
+     * Sets the access log writer of this {@link VirtualHost}. If not set,
+     * {@link ServerBuilder#accessLogWriter()} is used.
+     */
+    public VirtualHostBuilder accessLogWriter(AccessLogWriter accessLogWriter, boolean shutdownOnStop) {
+        this.accessLogWriter = requireNonNull(accessLogWriter, "accessLogWriter");
+        shutdownAccessLogWriterOnStop = shutdownOnStop;
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link VirtualHost} based on the properties of this builder and the services
      * added to this builder.
      */
@@ -758,6 +772,8 @@ public final class VirtualHostBuilder {
         final RejectedRouteHandler rejectedRouteHandler =
                 this.rejectedRouteHandler != null ?
                 this.rejectedRouteHandler : serverBuilder.rejectedRouteHandler();
+        final AccessLogWriter accessLogWriter =
+                this.accessLogWriter != null ? this.accessLogWriter : serverBuilder.accessLogWriter();
 
         final List<ServiceConfig> serviceConfigs = serviceConfigBuilders.stream().map(cfgBuilder -> {
             if (cfgBuilder.requestTimeoutMillis() == null) {
@@ -775,6 +791,10 @@ public final class VirtualHostBuilder {
             if (cfgBuilder.responseContentPreviewerFactory() == null) {
                 cfgBuilder.responseContentPreviewerFactory(responseContentPreviewerFactory);
             }
+            if (cfgBuilder.accessLogWriter() == null) {
+                cfgBuilder.accessLogWriter(accessLogWriter, shutdownAccessLogWriterOnStop);
+            }
+
             return cfgBuilder.build();
         }).collect(toImmutableList());
 
@@ -795,7 +815,8 @@ public final class VirtualHostBuilder {
                                 rejectedRouteHandler,
                                 accessLoggerMapper, requestTimeout, maxRequest,
                                 verboseResponses, requestContentPreviewerFactory,
-                                responseContentPreviewerFactory);
+                                responseContentPreviewerFactory, accessLogWriter,
+                                shutdownAccessLogWriterOnStop);
         return decorator != null ? virtualHost.decorate(decorator) : virtualHost;
     }
 
@@ -815,6 +836,8 @@ public final class VirtualHostBuilder {
                           .add("verboseResponses", verboseResponses)
                           .add("requestContentPreviewerFactory", requestContentPreviewerFactory)
                           .add("responseContentPreviewerFactory", responseContentPreviewerFactory)
+                          .add("accessLogWriter", accessLogWriter)
+                          .add("shutdownAccessLogWriterOnStop", shutdownAccessLogWriterOnStop)
                           .toString();
     }
 }

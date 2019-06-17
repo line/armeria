@@ -26,21 +26,29 @@ import static org.junit.Assert.fail;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService.AsyncIface;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 public class GracefulShutdownIntegrationTest {
+
+    private static final AtomicInteger accessLogWriterCounter1 = new AtomicInteger();
+    private static final AtomicInteger accessLogWriterCounter2 = new AtomicInteger();
 
     @ClassRule
     public static final ServerRule server = new ServerRule() {
@@ -53,6 +61,40 @@ public class GracefulShutdownIntegrationTest {
                     (AsyncIface) (milliseconds, resultHandler) ->
                             RequestContext.current().eventLoop().schedule(
                                     () -> resultHandler.onComplete(milliseconds), milliseconds, MILLISECONDS)));
+
+            final AccessLogWriter writer1 = new AccessLogWriter() {
+                @Override
+                public void log(RequestLog log) throws Exception {}
+
+                @Override
+                public CompletableFuture<Void> shutdown() {
+                    accessLogWriterCounter1.getAndIncrement();
+                    return CompletableFuture.completedFuture(null);
+                }
+            };
+            final AccessLogWriter writer2 = new AccessLogWriter() {
+                @Override
+                public void log(RequestLog log) throws Exception {}
+
+                @Override
+                public CompletableFuture<Void> shutdown() {
+                    accessLogWriterCounter2.getAndIncrement();
+                    return CompletableFuture.completedFuture(null);
+                }
+            };
+            sb.route()
+              .get("/dummy1")
+              .accessLogWriter(writer1, true)
+              .build((ctx, req) -> HttpResponse.of(HttpStatus.OK));
+            sb.route()
+              .get("/dummy2")
+              .accessLogWriter(writer1, true)
+              .build((ctx, req) -> HttpResponse.of(HttpStatus.OK));
+
+            sb.route()
+              .get("/dummy3")
+              .accessLogWriter(writer2, true)
+              .build((ctx, req) -> HttpResponse.of(HttpStatus.OK));
         }
     };
 
@@ -69,6 +111,8 @@ public class GracefulShutdownIntegrationTest {
         server.stop().join();
         final long stopTime = System.nanoTime();
 
+        assertThat(accessLogWriterCounter1.get()).isOne();
+        assertThat(accessLogWriterCounter2.get()).isOne();
         return baselineNanos = stopTime - startTime;
     }
 

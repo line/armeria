@@ -169,8 +169,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private boolean isReading;
     private boolean handledLastRequest;
 
-    private final AccessLogWriter accessLogWriter;
-
     HttpServerHandler(ServerConfig config,
                       GracefulShutdownSupport gracefulShutdownSupport,
                       @Nullable HttpObjectEncoder responseEncoder,
@@ -187,7 +185,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         this.proxiedAddresses = proxiedAddresses;
 
         unfinishedRequests = new IdentityHashMap<>();
-        accessLogWriter = config.accessLogWriter();
     }
 
     @Override
@@ -334,16 +331,17 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             routed = host.findServiceConfig(routingCtx);
         } catch (HttpStatusException cause) {
             // We do not need to handle HttpResponseException here because we do not use it internally.
-            respond(ctx, req, pathAndQuery, cause.httpStatus(), null, cause);
+            respond(ctx, host.accessLogWriter(), req, pathAndQuery, cause.httpStatus(), null, cause);
             return;
         } catch (Throwable cause) {
             logger.warn("{} Unexpected exception: {}", ctx.channel(), req, cause);
-            respond(ctx, req, pathAndQuery, HttpStatus.INTERNAL_SERVER_ERROR, null, cause);
+            respond(ctx, host.accessLogWriter(), req, pathAndQuery,
+                    HttpStatus.INTERNAL_SERVER_ERROR, null, cause);
             return;
         }
         if (!routed.isPresent()) {
             // No services matched the path.
-            handleNonExistentMapping(ctx, req, host, pathAndQuery, routingCtx);
+            handleNonExistentMapping(ctx, host.accessLogWriter(), req, host, pathAndQuery, routingCtx);
             return;
         }
 
@@ -377,12 +375,14 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 serviceResponse = cause.httpResponse();
             } catch (Throwable cause) {
                 try {
+                    final HttpStatus status;
                     if (cause instanceof HttpStatusException) {
-                        respond(ctx, reqCtx, ((HttpStatusException) cause).httpStatus(), null, cause);
+                        status = ((HttpStatusException) cause).httpStatus();
                     } else {
                         logger.warn("{} Unexpected exception: {}, {}", reqCtx, service, req, cause);
-                        respond(ctx, reqCtx, HttpStatus.INTERNAL_SERVER_ERROR, null, cause);
+                        status = HttpStatus.INTERNAL_SERVER_ERROR;
                     }
+                    respond(ctx, reqCtx, reqCtx.accessLogWriter(), status, null, cause);
                 } finally {
                     logBuilder.endRequest(cause);
                     logBuilder.endResponse(cause);
@@ -439,7 +439,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
             assert responseEncoder != null;
             final HttpResponseSubscriber resSubscriber =
-                    new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req, accessLogWriter);
+                    new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req);
             reqCtx.setRequestTimeoutChangeListener(resSubscriber);
             res.subscribe(resSubscriber, eventLoop, WITH_POOLED_OBJECTS);
         }
@@ -448,18 +448,19 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private void handleOptions(ChannelHandlerContext ctx, DecodedHttpRequest req) {
         respond(ctx,
                 newEarlyRespondingRequestContext(ctx, req, req.path(), null),
-                ResponseHeaders.builder(HttpStatus.OK)
-                               .add(HttpHeaderNames.ALLOW, ALLOWED_METHODS_STRING),
+                config.accessLogWriter(), ResponseHeaders.builder(HttpStatus.OK)
+                                                         .add(HttpHeaderNames.ALLOW, ALLOWED_METHODS_STRING),
                 null, null);
     }
 
     private void rejectInvalidPath(ChannelHandlerContext ctx, DecodedHttpRequest req) {
         // Reject requests without a valid path.
-        respond(ctx, req, HttpStatus.BAD_REQUEST, DATA_INVALID_REQUEST_PATH,
+        respond(ctx, config.accessLogWriter(), req, HttpStatus.BAD_REQUEST, DATA_INVALID_REQUEST_PATH,
                 new ProtocolViolationException(MSG_INVALID_REQUEST_PATH));
     }
 
-    private void handleNonExistentMapping(ChannelHandlerContext ctx, DecodedHttpRequest req,
+    private void handleNonExistentMapping(ChannelHandlerContext ctx, AccessLogWriter accessLogWriter,
+                                          DecodedHttpRequest req,
                                           VirtualHost host, PathAndQuery pathAndQuery,
                                           RoutingContext routingCtx) {
 
@@ -475,12 +476,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 } else {
                     location = pathWithSlash + originalPath.substring(path.length());
                 }
-                redirect(ctx, req, pathAndQuery, location);
+                redirect(ctx, accessLogWriter, req, pathAndQuery, location);
                 return;
             }
         }
 
-        respond(ctx, req, HttpStatus.NOT_FOUND, null, null);
+        respond(ctx, accessLogWriter, req, HttpStatus.NOT_FOUND, null, null);
     }
 
     private static String hostname(RequestHeaders headers) {
@@ -494,32 +495,36 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         return authority.substring(0, hostnameColonIdx);
     }
 
-    private void redirect(ChannelHandlerContext ctx, DecodedHttpRequest req,
+    private void redirect(ChannelHandlerContext ctx, AccessLogWriter accessLogWriter, DecodedHttpRequest req,
                           PathAndQuery pathAndQuery, String location) {
         respond(ctx,
                 newEarlyRespondingRequestContext(ctx, req, pathAndQuery.path(), pathAndQuery.query()),
-                ResponseHeaders.builder(HttpStatus.TEMPORARY_REDIRECT)
-                               .add(HttpHeaderNames.LOCATION, location),
+                accessLogWriter, ResponseHeaders.builder(HttpStatus.TEMPORARY_REDIRECT)
+                                                .add(HttpHeaderNames.LOCATION, location),
                 null, null);
     }
 
-    private void respond(ChannelHandlerContext ctx, DecodedHttpRequest req,
+    // TODO(minwoox) Refactor response() methods so that they are easily read
+    private void respond(ChannelHandlerContext ctx, AccessLogWriter accessLogWriter, DecodedHttpRequest req,
                          HttpStatus status, @Nullable HttpData resContent, @Nullable Throwable cause) {
         respond(ctx, newEarlyRespondingRequestContext(ctx, req, req.path(), null),
-                status, resContent, cause);
+                accessLogWriter, status, resContent, cause);
     }
 
-    private void respond(ChannelHandlerContext ctx, DecodedHttpRequest req, PathAndQuery pathAndQuery,
-                         HttpStatus status, @Nullable HttpData resContent, @Nullable Throwable cause) {
+    private void respond(ChannelHandlerContext ctx, AccessLogWriter accessLogWriter, DecodedHttpRequest req,
+                         PathAndQuery pathAndQuery, HttpStatus status, @Nullable HttpData resContent,
+                         @Nullable Throwable cause) {
         respond(ctx, newEarlyRespondingRequestContext(ctx, req, pathAndQuery.path(), pathAndQuery.query()),
-                status, resContent, cause);
+                accessLogWriter, status, resContent, cause);
     }
 
-    private void respond(ChannelHandlerContext ctx, RequestContext reqCtx,
-                         HttpStatus status, @Nullable HttpData resContent, @Nullable Throwable cause) {
+    private void respond(ChannelHandlerContext ctx, RequestContext reqCtx, AccessLogWriter accessLogWriter,
+                         HttpStatus status,
+                         @Nullable HttpData resContent,
+                         @Nullable Throwable cause) {
 
         if (status.code() < 400) {
-            respond(ctx, reqCtx, ResponseHeaders.builder(status), null, cause);
+            respond(ctx, reqCtx, accessLogWriter, ResponseHeaders.builder(status), null, cause);
             return;
         }
 
@@ -532,17 +537,20 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         respond(ctx, reqCtx,
-                ResponseHeaders.builder(status)
-                               .addObject(HttpHeaderNames.CONTENT_TYPE, ERROR_CONTENT_TYPE),
+                accessLogWriter, ResponseHeaders.builder(status)
+                                                .addObject(HttpHeaderNames.CONTENT_TYPE, ERROR_CONTENT_TYPE),
                 resContent, cause);
     }
 
-    private void respond(ChannelHandlerContext ctx, RequestContext reqCtx, ResponseHeadersBuilder resHeaders,
-                         @Nullable HttpData resContent, @Nullable Throwable cause) {
+    private void respond(ChannelHandlerContext ctx, RequestContext reqCtx, AccessLogWriter accessLogWriter,
+                         ResponseHeadersBuilder resHeaders, @Nullable HttpData resContent,
+                         @Nullable Throwable cause) {
         if (!handledLastRequest) {
-            respond0(reqCtx, true, resHeaders, resContent, cause).addListener(CLOSE_ON_FAILURE);
+            respond0(reqCtx, accessLogWriter, true, resHeaders, resContent, cause)
+                    .addListener(CLOSE_ON_FAILURE);
         } else {
-            respond0(reqCtx, false, resHeaders, resContent, cause).addListener(CLOSE);
+            respond0(reqCtx, accessLogWriter, false, resHeaders, resContent, cause)
+                    .addListener(CLOSE);
         }
 
         if (!isReading) {
@@ -551,7 +559,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     private ChannelFuture respond0(
-            RequestContext reqCtx, boolean addKeepAlive,
+            RequestContext reqCtx, AccessLogWriter accessLogWriter, boolean addKeepAlive,
             ResponseHeadersBuilder resHeaders, @Nullable HttpData resContent, @Nullable Throwable cause) {
 
         assert resContent == null || !resContent.isEmpty() : resContent;

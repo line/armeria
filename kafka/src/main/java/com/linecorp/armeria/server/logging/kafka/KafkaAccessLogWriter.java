@@ -60,7 +60,7 @@ public final class KafkaAccessLogWriter<K, V> implements AccessLogWriter {
     public KafkaAccessLogWriter(Producer<K, V> producer, String topic,
                                 Function<? super RequestLog, ? extends V> valueExtractor) {
 
-        this(producer, topic, null, valueExtractor,0);
+        this(producer, topic, null, valueExtractor, 0);
     }
 
     /**

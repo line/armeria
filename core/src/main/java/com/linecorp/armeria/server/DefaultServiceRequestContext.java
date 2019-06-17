@@ -47,6 +47,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
@@ -437,6 +438,11 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     @Override
     public boolean verboseResponses() {
         return cfg.verboseResponses();
+    }
+
+    @Override
+    public AccessLogWriter accessLogWriter() {
+        return cfg.accessLogWriter();
     }
 
     @Override

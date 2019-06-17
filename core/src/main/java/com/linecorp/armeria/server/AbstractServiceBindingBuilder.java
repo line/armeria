@@ -53,6 +53,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
  * A builder class for binding a {@link Service} fluently.
@@ -84,6 +85,9 @@ abstract class AbstractServiceBindingBuilder {
     private ContentPreviewerFactory responseContentPreviewerFactory;
     @Nullable
     private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
+    @Nullable
+    private AccessLogWriter accessLogWriter;
+    private boolean shutdownAccessLogWriterOnStop;
 
     /**
      * Sets the path pattern that a {@link Service} will be bound to.
@@ -385,6 +389,26 @@ abstract class AbstractServiceBindingBuilder {
     }
 
     /**
+     * Sets the format of this {@link Service}'s access log. The specified {@code accessLogFormat} would be
+     * parsed by {@link AccessLogWriter#custom(String)}.
+     */
+    public AbstractServiceBindingBuilder accessLogFormat(String accessLogFormat) {
+        return accessLogWriter(AccessLogWriter.custom(requireNonNull(accessLogFormat, "accessLogFormat")),
+                               true);
+    }
+
+    /**
+     * Sets the access log writer of this {@link Service}. If not set, {@link ServerConfig#accessLogWriter()}
+     * is used.
+     */
+    public AbstractServiceBindingBuilder accessLogWriter(AccessLogWriter accessLogWriter,
+                                                         boolean shutdownOnStop) {
+        this.accessLogWriter = requireNonNull(accessLogWriter, "accessLogWriter");
+        shutdownAccessLogWriterOnStop = shutdownOnStop;
+        return this;
+    }
+
+    /**
      * Decorates a {@link Service} with the specified {@code decorator}.
      *
      * @param decorator the {@link Function} that decorates the {@link Service}
@@ -440,6 +464,9 @@ abstract class AbstractServiceBindingBuilder {
             }
             if (responseContentPreviewerFactory != null) {
                 serviceConfigBuilder.responseContentPreviewerFactory(responseContentPreviewerFactory);
+            }
+            if (accessLogWriter != null) {
+                serviceConfigBuilder.accessLogWriter(accessLogWriter, shutdownAccessLogWriterOnStop);
             }
             serviceConfigBuilder(serviceConfigBuilder);
         }

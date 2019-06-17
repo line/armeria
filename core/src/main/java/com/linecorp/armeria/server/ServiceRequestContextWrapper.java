@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContextWrapper;
+import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
  * Wraps an existing {@link ServiceRequestContext}.
@@ -170,6 +171,11 @@ public class ServiceRequestContextWrapper
     @Override
     public boolean verboseResponses() {
         return delegate().verboseResponses();
+    }
+
+    @Override
+    public AccessLogWriter accessLogWriter() {
+        return delegate().accessLogWriter();
     }
 
     @Override
