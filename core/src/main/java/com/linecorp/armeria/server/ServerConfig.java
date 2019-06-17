@@ -39,6 +39,9 @@ import com.linecorp.armeria.internal.ConnectionLimitingHandler;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
+import io.micrometer.core.instrument.internal.TimedExecutor;
+import io.micrometer.core.instrument.internal.TimedExecutorService;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.DomainNameMapping;
@@ -158,9 +161,19 @@ public final class ServerConfig {
 
         requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
         if (blockingTaskExecutor instanceof ExecutorService) {
-            this.blockingTaskExecutor = new InterminableExecutorService((ExecutorService) blockingTaskExecutor);
+            ExecutorService taskExecutor = (ExecutorService) blockingTaskExecutor;
+            if (!(blockingTaskExecutor instanceof TimedExecutorService)) {
+                taskExecutor = ExecutorServiceMetrics.monitor(meterRegistry, taskExecutor,
+                                                              "armeriaBlockingTaskExecutor");
+            }
+            this.blockingTaskExecutor = new InterminableExecutorService(taskExecutor);
         } else {
-            this.blockingTaskExecutor = new ExecutorBasedExecutorService(blockingTaskExecutor);
+            Executor taskExecutor = blockingTaskExecutor;
+            if (!(blockingTaskExecutor instanceof TimedExecutor)) {
+                taskExecutor = ExecutorServiceMetrics.monitor(meterRegistry, taskExecutor,
+                                                              "armeriaBlockingTaskExecutor");
+            }
+            this.blockingTaskExecutor = new ExecutorBasedExecutorService(taskExecutor);
         }
         this.shutdownBlockingTaskExecutorOnStop = shutdownBlockingTaskExecutorOnStop;
 
