@@ -15,11 +15,8 @@
  */
 package com.linecorp.armeria.client.retrofit2;
 
-import java.util.Optional;
-
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.client.retrofit2.metric.RetrofitMeterIdPrefixFunction;
 import com.linecorp.armeria.common.logging.RequestLog;
 
 import io.netty.util.AttributeKey;
@@ -27,11 +24,11 @@ import retrofit2.Invocation;
 
 /**
  * Armeria Retrofit automatically adds an invocation to {@link RequestLog}. You can retrieve
- * the invocation by {@link InvocationAttribute#getInvocation(RequestLog)} for metrics and monitoring.
+ * the invocation by {@link InvocationUtil#getInvocation(RequestLog)} for metrics and monitoring.
  *
  * @see Invocation
  */
-public final class InvocationAttribute {
+public final class InvocationUtil {
 
     private static final AttributeKey<Invocation> RETROFIT_INVOCATION =
             AttributeKey.valueOf(RetrofitMeterIdPrefixFunction.class, "RETROFIT_INVOCATION");
@@ -49,9 +46,10 @@ public final class InvocationAttribute {
     /**
      * Get {@code Invocation} from {@code RequestLog}.
      */
-    public static Optional<Invocation> getInvocation(RequestLog log) {
-        return Optional.ofNullable(log.attr(RETROFIT_INVOCATION).get());
+    @Nullable
+    public static Invocation getInvocation(RequestLog log) {
+        return log.attr(RETROFIT_INVOCATION).get();
     }
 
-    private InvocationAttribute() {}
+    private InvocationUtil() {}
 }

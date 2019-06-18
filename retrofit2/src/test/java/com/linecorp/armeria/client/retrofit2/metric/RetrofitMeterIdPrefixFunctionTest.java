@@ -28,6 +28,7 @@ import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.client.retrofit2.ArmeriaRetrofitBuilder;
+import com.linecorp.armeria.client.retrofit2.RetrofitMeterIdPrefixFunction;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -84,7 +85,7 @@ public class RetrofitMeterIdPrefixFunctionTest {
                 .withClientOptions((s, clientOptionsBuilder) -> {
                     return clientOptionsBuilder.decorator(
                             MetricCollectingClient.newDecorator(
-                                    RetrofitMeterIdPrefixFunctionBuilder.ofName("foo").build()));
+                                    RetrofitMeterIdPrefixFunction.builder("foo").build()));
                 })
                 .build()
                 .create(Example.class);
@@ -107,8 +108,8 @@ public class RetrofitMeterIdPrefixFunctionTest {
                 .withClientOptions((s, clientOptionsBuilder) -> {
                     return clientOptionsBuilder.decorator(
                             MetricCollectingClient.newDecorator(
-                                    RetrofitMeterIdPrefixFunctionBuilder
-                                            .ofName("foo")
+                                    RetrofitMeterIdPrefixFunction
+                                            .builder("foo")
                                             .withServiceTag("service", "fallbackService")
                                             .build()));
                 })
@@ -129,7 +130,7 @@ public class RetrofitMeterIdPrefixFunctionTest {
     @Test
     public void hasSameNameAndTagAsDefaultMeterIdPrefixFunction() {
         final MeterRegistry registry = NoopMeterRegistry.get();
-        final MeterIdPrefixFunction f1 = RetrofitMeterIdPrefixFunctionBuilder.ofName("foo").build();
+        final MeterIdPrefixFunction f1 = RetrofitMeterIdPrefixFunction.builder("foo").build();
         final MeterIdPrefixFunction f2 = MeterIdPrefixFunction.ofDefault("foo");
 
         final ClientRequestContext ctx = newContext();
