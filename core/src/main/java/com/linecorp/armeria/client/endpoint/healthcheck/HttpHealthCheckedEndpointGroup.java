@@ -28,6 +28,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -86,9 +87,9 @@ public final class HttpHealthCheckedEndpointGroup extends HealthCheckedEndpointG
                                    SessionProtocol protocol,
                                    String healthCheckPath,
                                    int healthCheckPort,
-                                   Duration healthCheckRetryInterval,
+                                   Backoff healthCheckRetryBackoff,
                                    Function<? super ClientOptionsBuilder, ClientOptionsBuilder> configurator) {
-        super(clientFactory, delegate, healthCheckRetryInterval);
+        super(clientFactory, delegate, healthCheckRetryBackoff);
         this.protocol = requireNonNull(protocol, "protocol");
         this.healthCheckPath = requireNonNull(healthCheckPath, "healthCheckPath");
         this.healthCheckPort = healthCheckPort;

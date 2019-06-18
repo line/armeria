@@ -33,6 +33,7 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.micrometer.core.instrument.binder.MeterBinder;
@@ -41,13 +42,27 @@ import io.micrometer.core.instrument.binder.MeterBinder;
  * An {@link EndpointGroup} decorator that only provides healthy {@link Endpoint}s.
  */
 public abstract class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
-    static final Duration DEFAULT_HEALTHCHECK_RETRY_INTERVAL = Duration.ofSeconds(3);
+    static final Backoff DEFAULT_HEALTHCHECK_RETRY_BACKOFF = Backoff.fixed(3000).withJitter(0.1);
 
     private final ClientFactory clientFactory;
     private final EndpointGroup delegate;
-    private final Duration retryInterval;
+    private final Backoff retryBackoff;
 
     volatile List<ServerConnection> allServers = ImmutableList.of();
+
+    /**
+     * Creates a new instance.
+     * A subclass being initialized with this constructor must call {@link #init()} before start being used.
+     *
+     * @deprecated Use {@link #HealthCheckedEndpointGroup(ClientFactory, EndpointGroup, Backoff)}.
+     */
+    @Deprecated
+    protected HealthCheckedEndpointGroup(ClientFactory clientFactory,
+                                         EndpointGroup delegate,
+                                         Duration retryInterval) {
+        this(clientFactory, delegate,
+             Backoff.fixed(requireNonNull(retryInterval, "retryInterval").toMillis()));
+    }
 
     /**
      * Creates a new instance.
@@ -55,10 +70,10 @@ public abstract class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
      */
     protected HealthCheckedEndpointGroup(ClientFactory clientFactory,
                                          EndpointGroup delegate,
-                                         Duration retryInterval) {
+                                         Backoff retryBackoff) {
         this.clientFactory = requireNonNull(clientFactory, "clientFactory");
         this.delegate = requireNonNull(delegate, "delegate");
-        this.retryInterval = requireNonNull(retryInterval, "retryInterval");
+        this.retryBackoff = requireNonNull(retryBackoff, "retryBackoff");
     }
 
     /**
@@ -80,7 +95,7 @@ public abstract class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     private void scheduleCheckAndUpdateHealthyServers() {
         clientFactory.eventLoopGroup().schedule(
                 () -> checkAndUpdateHealthyServers().thenRun(this::scheduleCheckAndUpdateHealthyServers),
-                retryInterval.toMillis(), TimeUnit.MILLISECONDS);
+                retryBackoff.nextDelayMillis(0), TimeUnit.MILLISECONDS);
     }
 
     private CompletableFuture<Void> checkAndUpdateHealthyServers() {
