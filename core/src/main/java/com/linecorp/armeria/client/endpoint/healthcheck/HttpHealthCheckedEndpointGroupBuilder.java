@@ -84,7 +84,8 @@ public class HttpHealthCheckedEndpointGroupBuilder {
         requireNonNull(retryInterval, "retryInterval");
         checkArgument(!retryInterval.isNegative() && !retryInterval.isZero(),
                       "retryInterval: %s (expected > 0)", retryInterval);
-        retryBackoff = Backoff.fixed(retryInterval.toMillis());
+        retryBackoff = Backoff.fixed(retryInterval.toMillis())
+                              .withJitter(0.2);
         return this;
     }
 
