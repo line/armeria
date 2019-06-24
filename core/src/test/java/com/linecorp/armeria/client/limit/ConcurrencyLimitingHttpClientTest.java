@@ -141,7 +141,7 @@ class ConcurrencyLimitingHttpClientTest {
         res2.subscribe(NoopSubscriber.get());
         assertThatThrownBy(() -> res2.completionFuture().join())
                 .hasCauseExactlyInstanceOf(UnprocessedRequestException.class)
-                .hasRootCauseExactlyInstanceOf(ConcurrencyLimitingExceedException.class);
+                .hasRootCauseExactlyInstanceOf(PendingRequestTimeoutException.class);
         assertThat(res2.isOpen()).isFalse();
 
         // req1 should not time out because it's been delegated already.

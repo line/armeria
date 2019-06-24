@@ -125,7 +125,7 @@ public abstract class ConcurrencyLimitingClient<I extends Request, O extends Res
             // Current request was not delegated. Schedule a timeout.
             final ScheduledFuture<?> timeoutFuture = ctx.eventLoop().schedule(
                     () -> deferred
-                            .close(new UnprocessedRequestException(ConcurrencyLimitingExceedException.get())),
+                            .close(new UnprocessedRequestException(PendingRequestTimeoutException.get())),
                     timeoutMillis, TimeUnit.MILLISECONDS);
             currentTask.set(timeoutFuture);
         }

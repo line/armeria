@@ -16,24 +16,25 @@
 
 package com.linecorp.armeria.client.limit;
 
+import com.linecorp.armeria.common.TimeoutException;
+
 /**
- * A {@link RuntimeException} raised when {@link ConcurrencyLimitingClient#numActiveRequests()} exceeds
- * the configured {@code maxConcurrency}.
+ * A {@link TimeoutException} raised only when the client was not able to send a request until it reaches at the timeout.
  */
-public final class ConcurrencyLimitingExceedException extends RuntimeException {
+public final class PendingRequestTimeoutException extends TimeoutException {
 
     private static final long serialVersionUID = 2380973537286999696L;
 
-    private static final ConcurrencyLimitingExceedException INSTANCE = new ConcurrencyLimitingExceedException();
+    private static final PendingRequestTimeoutException INSTANCE = new PendingRequestTimeoutException();
 
     /**
-     * Returns a singleton {@link ConcurrencyLimitingExceedException}.
+     * Returns a singleton {@link PendingRequestTimeoutException}.
      */
-    public static ConcurrencyLimitingExceedException get() {
+    public static PendingRequestTimeoutException get() {
         return INSTANCE;
     }
 
-    private ConcurrencyLimitingExceedException() {
+    private PendingRequestTimeoutException() {
         super(null, null, false, false);
     }
 }

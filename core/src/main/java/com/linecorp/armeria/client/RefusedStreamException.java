@@ -17,9 +17,9 @@
 package com.linecorp.armeria.client;
 
 /**
- * A {@link RuntimeException} raised when a server set MAX_CONCURRENT_STREAMS to 0,
+ * A {@link RuntimeException} raised when a server set
+ * HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#SETTINGS_MAX_CONCURRENT_STREAMS">{@code MAX_CONCURRENT_STREAMS}</a> to 0,
  * which means a client can't send anything.
- * @see <a href="https://httpwg.org/specs/rfc7540.html#n-stream-concurrency">Section 5.1.2, RFC7540</a>
  */
 public final class RefusedStreamException extends RuntimeException {
 
