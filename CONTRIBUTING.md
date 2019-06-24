@@ -9,6 +9,10 @@ source projects you are aware of. It will be amazing if you could help us by doi
   - Browse [the list of previously answered questions](https://github.com/line/armeria/issues?q=label%3Aquestion).
 - Contribute your work by sending [a pull request](https://github.com/line/armeria/pulls).
 
+### Build requirements
+
+- [OpenJDK 11 (or later)](https://adoptopenjdk.net/)
+
 ### Contributor license agreement
 
 When you are sending a pull request and it's a non-trivial change beyond fixing typos, please sign 
