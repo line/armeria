@@ -455,10 +455,10 @@ final class HttpChannelPool implements AutoCloseable {
                     }
                 });
             } else {
-                promise.completeExceptionally(future.cause());
+                promise.completeExceptionally(new UnprocessedRequestException(future.cause()));
             }
         } catch (Exception e) {
-            promise.completeExceptionally(e);
+            promise.completeExceptionally(new UnprocessedRequestException(e));
         }
     }
 

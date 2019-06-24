@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client;
 
+import com.linecorp.armeria.common.Flags;
+
 import javax.annotation.Nullable;
 
 /**
@@ -51,4 +53,13 @@ public final class UnprocessedRequestException extends RuntimeException {
                                      boolean enableSuppression, boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
     }
+
+    @Override
+    public Throwable fillInStackTrace() {
+        if (Flags.verboseExceptions()) {
+            super.fillInStackTrace();
+        }
+        return this;
+    }
+
 }
