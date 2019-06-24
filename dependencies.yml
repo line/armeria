@@ -351,7 +351,10 @@ org.checkerframework:
   checker-compat-qual: { version: '2.5.5' }
 
 org.curioswitch.curiostack:
-  protobuf-jackson: { version: '0.4.0' }
+  protobuf-jackson:
+    version: '1.0.0'
+    javadocs:
+    - https://developers.curioswitch.org/apidocs/java/
 
 org.dmonix.junit:
   zookeeper-junit: { version: '1.2' }
