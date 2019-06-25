@@ -17,15 +17,13 @@ package com.linecorp.armeria.client.retrofit2;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import javax.annotation.Nullable;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 
@@ -50,7 +48,7 @@ public final class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunctio
 
         private final String name;
         @Nullable
-        private String tagName;
+        private String serviceTagName;
         @Nullable
         private String defaultServiceName;
 
@@ -61,14 +59,15 @@ public final class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunctio
         /**
          * Make tag of {@link RetrofitMeterIdPrefixFunction} contains Retrofit service interface name.
          */
-        public RetrofitMeterIdPrefixFunctionBuilder withServiceTag(String tagName, String defaultServiceName) {
-            this.tagName = tagName;
-            this.defaultServiceName = defaultServiceName;
+        public RetrofitMeterIdPrefixFunctionBuilder withServiceTag(String serviceTagName,
+                                                                   String defaultServiceName) {
+            this.serviceTagName = requireNonNull(serviceTagName, "serviceTagName");
+            this.defaultServiceName = requireNonNull(defaultServiceName, "defaultServiceName");
             return this;
         }
 
         public RetrofitMeterIdPrefixFunction build() {
-            return new RetrofitMeterIdPrefixFunction(name, tagName, defaultServiceName);
+            return new RetrofitMeterIdPrefixFunction(name, serviceTagName, defaultServiceName);
         }
     }
 
@@ -99,39 +98,33 @@ public final class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunctio
 
     @Override
     public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestLog log) {
-        return new MeterIdPrefix(name, buildTags(log));
+        final ImmutableList.Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(3);
+        buildTags(tagListBuilder, log);
+        return new MeterIdPrefix(name, tagListBuilder.build());
     }
 
     @Override
     public MeterIdPrefix apply(MeterRegistry registry, RequestLog log) {
-        final List<Tag> tags = buildTags(log);
-        // Add the 'httpStatus' tag.
-        final HttpStatus status;
-        if (log.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
-            status = log.status();
-        } else {
-            status = HttpStatus.UNKNOWN;
-        }
-        tags.add(Tag.of("httpStatus", status.codeAsText()));
-
-        return new MeterIdPrefix(name, tags);
+        final ImmutableList.Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(3);
+        buildTags(tagListBuilder, log);
+        MeterIdPrefixFunction.appendHttpStatusTag(tagListBuilder, log);
+        return new MeterIdPrefix(name, tagListBuilder.build());
     }
 
-    private List<Tag> buildTags(RequestLog log) {
-        final List<Tag> tags = new ArrayList<>(3);
-        final Invocation invocation = InvocationUtil.getInvocation(log);
+    private void buildTags(ImmutableList.Builder<Tag> tagListBuilder, RequestLog log) {
+        final Invocation invocation = ArmeriaCallFactory.getInvocation(log);
         if (invocation != null) {
             if (serviceTagName != null) {
-                tags.add(Tag.of(serviceTagName, invocation.method().getDeclaringClass().getSimpleName()));
+                tagListBuilder.add(Tag.of(serviceTagName,
+                                          invocation.method().getDeclaringClass().getSimpleName()));
             }
-            tags.add(Tag.of("method", invocation.method().getName()));
+            tagListBuilder.add(Tag.of("method", invocation.method().getName()));
         } else {
             if (serviceTagName != null) {
                 assert defaultServiceName != null;
-                tags.add(Tag.of(serviceTagName, defaultServiceName));
+                tagListBuilder.add(Tag.of(serviceTagName, defaultServiceName));
             }
-            tags.add(Tag.of("method", log.method().name()));
+            tagListBuilder.add(Tag.of("method", log.method().name()));
         }
-        return tags;
     }
 }
