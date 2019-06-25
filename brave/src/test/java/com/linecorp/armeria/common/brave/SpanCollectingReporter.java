@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,11 +14,24 @@
  * under the License.
  */
 
-// TODO(minwoox) Move this package into "internal.brave" in "brave" module.
-/**
- * Various classes used internally. Anything in this package can be changed or removed at any time.
- */
-@NonNullByDefault
-package com.linecorp.armeria.internal.tracing;
+package com.linecorp.armeria.common.brave;
 
-import com.linecorp.armeria.common.util.NonNullByDefault;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedTransferQueue;
+
+import zipkin2.Span;
+import zipkin2.reporter.Reporter;
+
+public final class SpanCollectingReporter implements Reporter<Span> {
+
+    private final BlockingQueue<Span> spans = new LinkedTransferQueue<>();
+
+    @Override
+    public void report(Span span) {
+        spans.add(span);
+    }
+
+    public BlockingQueue<Span> spans() {
+        return spans;
+    }
+}

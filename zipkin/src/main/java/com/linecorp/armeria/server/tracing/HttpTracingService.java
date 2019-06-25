@@ -17,12 +17,15 @@
 package com.linecorp.armeria.server.tracing;
 
 import static com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext.ensureScopeUsesRequestContext;
+import static java.util.Objects.requireNonNull;
 
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.internal.tracing.AsciiStringKeyFactory;
@@ -47,7 +50,7 @@ import brave.propagation.TraceContextOrSamplingFlags;
  * <p>This decorator retrieves trace data from HTTP headers. The specifications of header names and its values
  * correspond to <a href="http://zipkin.io/">Zipkin</a>.
  *
- * @deprecated Use {@link TracingService}.
+ * @deprecated Use {@code BraveService} in the `armeria-brave` dependency.
  */
 @Deprecated
 public class HttpTracingService extends SimpleDecoratingService<HttpRequest, HttpResponse> {
@@ -55,7 +58,7 @@ public class HttpTracingService extends SimpleDecoratingService<HttpRequest, Htt
     /**
      * Creates a new tracing {@link Service} decorator using the specified {@link Tracing} instance.
      *
-     * @deprecated Use {@link TracingService#newDecorator(Tracing)}.
+     * @deprecated Use {@code BraveService#newDecorator(httpTracing)} in the `armeria-brave` dependency.
      */
     @Deprecated
     public static Function<Service<HttpRequest, HttpResponse>, HttpTracingService>
@@ -66,18 +69,31 @@ public class HttpTracingService extends SimpleDecoratingService<HttpRequest, Htt
 
     private final Tracer tracer;
     private final TraceContext.Extractor<HttpHeaders> extractor;
+    private final BiConsumer<RequestContext, RequestContext> traceContextPropagator;
 
     /**
      * Creates a new instance.
      *
-     * @deprecated Use {@link TracingService#newDecorator(Tracing)}.
+     * @deprecated Use {@code BraveService#newDecorator(httpTracing)} in the `armeria-brave` dependency.
      */
     @Deprecated
     public HttpTracingService(Service<HttpRequest, HttpResponse> delegate, Tracing tracing) {
+        this(delegate, tracing, RequestContextCurrentTraceContext::copy);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @deprecated Use {@code BraveService#newDecorator(httpTracing)} in the `armeria-brave` dependency.
+     */
+    @Deprecated
+    protected HttpTracingService(Service<HttpRequest, HttpResponse> delegate, Tracing tracing,
+                                 BiConsumer<RequestContext, RequestContext> traceContextPropagator) {
         super(delegate);
-        tracer = tracing.tracer();
+        tracer = requireNonNull(tracing, "tracing").tracer();
         extractor = tracing.propagationFactory().create(AsciiStringKeyFactory.INSTANCE)
                            .extractor(HttpHeaders::get);
+        this.traceContextPropagator = requireNonNull(traceContextPropagator, "traceContextPropagator");
     }
 
     @Override
@@ -96,7 +112,7 @@ public class HttpTracingService extends SimpleDecoratingService<HttpRequest, Htt
                               RequestLogAvailability.REQUEST_START);
 
         // Ensure the trace context propagates to children
-        ctx.onChild(RequestContextCurrentTraceContext::copy);
+        ctx.onChild(traceContextPropagator);
 
         ctx.log().addListener(log -> {
             SpanTags.logWireReceive(span, log.requestFirstBytesTransferredTimeNanos(), log);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,11 +14,10 @@
  * under the License.
  */
 
-// TODO(minwoox) Move this package into "internal.brave" in "brave" module.
 /**
- * Various classes used internally. Anything in this package can be changed or removed at any time.
+ * Common classes for distributed tracing support based on <a href="https://github.com/openzipkin/brave">Brave</a>.
  */
 @NonNullByDefault
-package com.linecorp.armeria.internal.tracing;
+package com.linecorp.armeria.common.brave;
 
 import com.linecorp.armeria.common.util.NonNullByDefault;

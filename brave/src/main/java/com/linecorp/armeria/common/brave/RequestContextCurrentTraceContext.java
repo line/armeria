@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.tracing;
+package com.linecorp.armeria.common.brave;
 
 import static java.util.Objects.requireNonNull;
 
@@ -29,9 +29,9 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import com.linecorp.armeria.client.tracing.HttpTracingClient;
+import com.linecorp.armeria.client.brave.BraveClient;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.server.tracing.HttpTracingService;
+import com.linecorp.armeria.server.brave.BraveService;
 
 import brave.Tracing;
 import brave.propagation.CurrentTraceContext;
@@ -40,35 +40,24 @@ import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
 /**
- * {@linkplain brave.Tracing.Builder#currentTraceContext(brave.propagation.CurrentTraceContext) Tracing
- * context} implemented with {@link com.linecorp.armeria.common.RequestContext}.
+ * {@linkplain Tracing.Builder#currentTraceContext(CurrentTraceContext) Tracing
+ * context} implemented with {@link RequestContext}.
  *
  * <p>This {@link CurrentTraceContext} stores/loads the trace context into/from a
  * {@link RequestContext}'s attribute so that there's no need for thread local variables
  * which can lead to unpredictable behavior in asynchronous programming.
- *
- * @deprecated Use the same class in the `armeria-brave` dependency.
  */
-@Deprecated
 public final class RequestContextCurrentTraceContext extends CurrentTraceContext {
 
     /**
-     * Use this singleton when building a {@link brave.Tracing} instance for use with
-     * {@link HttpTracingService} or {@link HttpTracingClient}.
+     * Use this singleton when building a {@link Tracing} instance for use with
+     * {@link BraveService} or {@link BraveClient}.
      *
      * <p>If you need to customize the context, use {@link #builder()} instead.
      *
-     * @see brave.Tracing.Builder#currentTraceContext(brave.propagation.CurrentTraceContext)
+     * @see Tracing.Builder#currentTraceContext(CurrentTraceContext)
      */
     public static final CurrentTraceContext DEFAULT = new RequestContextCurrentTraceContext(new Builder());
-
-    /**
-     * Singleton retained for backwards compatibility, but replaced by {@link #DEFAULT}.
-     *
-     * @deprecated Please use {@link #DEFAULT} or {@link #builder()} to customize an instance.
-     */
-    @Deprecated
-    public static final CurrentTraceContext INSTANCE = DEFAULT;
 
     private static final Logger logger = LoggerFactory.getLogger(RequestContextCurrentTraceContext.class);
     private static final AttributeKey<TraceContext> TRACE_CONTEXT_KEY =
@@ -112,20 +101,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
      * Use this when you need customizations such as log integration via
      * {@linkplain Builder#addScopeDecorator(ScopeDecorator)}.
      *
-     * @deprecated Use {@link #builder()}.
-     *
-     * @see brave.Tracing.Builder#currentTraceContext(brave.propagation.CurrentTraceContext)
-     */
-    @Deprecated
-    public static CurrentTraceContext.Builder newBuilder() {
-        return new Builder();
-    }
-
-    /**
-     * Use this when you need customizations such as log integration via
-     * {@linkplain Builder#addScopeDecorator(ScopeDecorator)}.
-     *
-     * @see brave.Tracing.Builder#currentTraceContext(brave.propagation.CurrentTraceContext)
+     * @see Tracing.Builder#currentTraceContext(CurrentTraceContext)
      */
     public static CurrentTraceContext.Builder builder() {
         return new Builder();

@@ -1,0 +1,6 @@
+dependencies {
+    testCompile project(':thrift')
+
+    compile project(':zipkin')
+    compile 'io.zipkin.brave:brave-instrumentation-http'
+}

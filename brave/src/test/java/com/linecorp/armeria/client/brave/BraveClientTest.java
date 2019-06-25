@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.tracing;
+package com.linecorp.armeria.client.brave;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -27,8 +27,6 @@ import static org.mockito.Mockito.when;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import javax.annotation.Nullable;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -46,19 +44,20 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.tracing.HelloService;
-import com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext;
-import com.linecorp.armeria.common.tracing.SpanCollectingReporter;
+import com.linecorp.armeria.common.brave.HelloService;
+import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
+import com.linecorp.armeria.common.brave.SpanCollectingReporter;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import brave.Tracing;
+import brave.http.HttpTracing;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.CurrentTraceContext.ScopeDecorator;
 import brave.sampler.Sampler;
 import zipkin2.Span;
 import zipkin2.Span.Kind;
 
-class TracingClientTest {
+class BraveClientTest {
 
     private static final String TEST_SERVICE = "test-service";
 
@@ -71,13 +70,13 @@ class TracingClientTest {
 
     @Test
     void newDecorator_shouldWorkWhenRequestContextCurrentTraceContextNotConfigured() {
-        HttpTracingClient.newDecorator(Tracing.newBuilder().build());
+        BraveClient.newDecorator(HttpTracing.create(Tracing.newBuilder().build()));
     }
 
     @Test
     void newDecorator_shouldWorkWhenRequestContextCurrentTraceContextConfigured() {
-        HttpTracingClient.newDecorator(
-                Tracing.newBuilder().currentTraceContext(RequestContextCurrentTraceContext.DEFAULT).build());
+        BraveClient.newDecorator(HttpTracing.create(
+                Tracing.newBuilder().currentTraceContext(RequestContextCurrentTraceContext.DEFAULT).build()));
     }
 
     @Test
@@ -89,7 +88,7 @@ class TracingClientTest {
                                        .spanReporter(reporter)
                                        .sampler(Sampler.create(1.0f))
                                        .build();
-        testRemoteInvocation(tracing, null);
+        testRemoteInvocation(HttpTracing.create(tracing));
 
         // check span name
         final Span span = reporter.spans().take();
@@ -123,7 +122,7 @@ class TracingClientTest {
                                        .spanReporter(reporter)
                                        .sampler(Sampler.create(1.0f))
                                        .build();
-        testRemoteInvocation(tracing, "fooService");
+        testRemoteInvocation(HttpTracing.create(tracing).clientOf("fooService"));
 
         // check span name
         final Span span = reporter.spans().take();
@@ -162,7 +161,7 @@ class TracingClientTest {
                                        .spanReporter(reporter)
                                        .sampler(Sampler.create(1.0f))
                                        .build();
-        testRemoteInvocation(tracing, null);
+        testRemoteInvocation(HttpTracing.create(tracing));
 
         // check span name
         final Span span = reporter.spans().take();
@@ -183,12 +182,12 @@ class TracingClientTest {
                                        .spanReporter(reporter)
                                        .sampler(Sampler.create(0.0f))
                                        .build();
-        testRemoteInvocation(tracing, null);
+        testRemoteInvocation(HttpTracing.create(tracing));
 
         assertThat(reporter.spans().poll(1, TimeUnit.SECONDS)).isNull();
     }
 
-    private static void testRemoteInvocation(Tracing tracing, @Nullable String remoteServiceName)
+    private static void testRemoteInvocation(HttpTracing httpTracing)
             throws Exception {
 
         // prepare parameters
@@ -211,8 +210,7 @@ class TracingClientTest {
             final Client<HttpRequest, HttpResponse> delegate = mock(Client.class);
             when(delegate.execute(any(), any())).thenReturn(res);
 
-            final HttpTracingClient stub = HttpTracingClient.newDecorator(tracing, remoteServiceName)
-                                                            .apply(delegate);
+            final BraveClient stub = BraveClient.newDecorator(httpTracing).apply(delegate);
             // do invoke
             final HttpResponse actualRes = stub.execute(ctx, req);
 

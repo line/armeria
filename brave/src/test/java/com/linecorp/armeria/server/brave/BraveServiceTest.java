@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.tracing;
+package com.linecorp.armeria.server.brave;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -39,23 +39,24 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.brave.HelloService;
+import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
+import com.linecorp.armeria.common.brave.SpanCollectingReporter;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.tracing.HelloService;
-import com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext;
-import com.linecorp.armeria.common.tracing.SpanCollectingReporter;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 
 import brave.Tracing;
+import brave.http.HttpTracing;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.CurrentTraceContext.ScopeDecorator;
 import brave.sampler.Sampler;
 import zipkin2.Span;
 import zipkin2.Span.Kind;
 
-class TracingServiceTest {
+class BraveServiceTest {
 
     private static final String TEST_SERVICE = "test-service";
 
@@ -68,7 +69,7 @@ class TracingServiceTest {
 
     @Test
     void newDecorator_shouldFailFastWhenRequestContextCurrentTraceContextNotConfigured() {
-        assertThatThrownBy(() -> HttpTracingService.newDecorator(Tracing.newBuilder().build()))
+        assertThatThrownBy(() -> BraveService.newDecorator(HttpTracing.create(Tracing.newBuilder().build())))
                 .isInstanceOf(IllegalStateException.class).hasMessage(
                 "Tracing.currentTraceContext is not a RequestContextCurrentTraceContext scope. " +
                 "Please call Tracing.Builder.currentTraceContext(RequestContextCurrentTraceContext.DEFAULT)."
@@ -77,8 +78,10 @@ class TracingServiceTest {
 
     @Test
     void newDecorator_shouldWorkWhenRequestContextCurrentTraceContextConfigured() {
-        HttpTracingService.newDecorator(
-                Tracing.newBuilder().currentTraceContext(RequestContextCurrentTraceContext.DEFAULT).build());
+        BraveService.newDecorator(
+                HttpTracing.create(Tracing.newBuilder()
+                                          .currentTraceContext(RequestContextCurrentTraceContext.DEFAULT)
+                                          .build()));
     }
 
     @Test
@@ -144,12 +147,12 @@ class TracingServiceTest {
                                                                 float samplingRate) throws Exception {
         final SpanCollectingReporter reporter = new SpanCollectingReporter();
 
-        final Tracing tracing = Tracing.newBuilder()
-                                       .localServiceName(TEST_SERVICE)
-                                       .spanReporter(reporter)
-                                       .currentTraceContext(traceContext)
-                                       .sampler(Sampler.create(samplingRate))
-                                       .build();
+        final HttpTracing httpTracing = HttpTracing.create(Tracing.newBuilder()
+                                                                  .localServiceName(TEST_SERVICE)
+                                                                  .spanReporter(reporter)
+                                                                  .currentTraceContext(traceContext)
+                                                                  .sampler(Sampler.create(samplingRate))
+                                                                  .build());
 
         final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/trustin",
                                                                  HttpHeaderNames.AUTHORITY, "foo.com"));
@@ -165,7 +168,7 @@ class TracingServiceTest {
         try (SafeCloseable ignored = ctx.push()) {
             @SuppressWarnings("unchecked")
             final Service<HttpRequest, HttpResponse> delegate = mock(Service.class);
-            final HttpTracingService service = HttpTracingService.newDecorator(tracing).apply(delegate);
+            final BraveService service = BraveService.newDecorator(httpTracing).apply(delegate);
             when(delegate.serve(ctx, req)).thenReturn(res);
 
             // do invoke
