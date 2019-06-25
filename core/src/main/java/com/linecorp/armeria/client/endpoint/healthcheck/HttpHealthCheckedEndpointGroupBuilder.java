@@ -17,7 +17,7 @@
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroup.DEFAULT_HEALTHCHECK_RETRY_INTERVAL;
+import static com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroup.DEFAULT_HEALTHCHECK_RETRY_BACKOFF;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -29,6 +29,7 @@ import com.linecorp.armeria.client.ClientOptionsBuilder;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.SessionProtocol;
 
 /**
@@ -40,7 +41,7 @@ public class HttpHealthCheckedEndpointGroupBuilder {
     private final String healthCheckPath;
 
     private SessionProtocol protocol = SessionProtocol.HTTP;
-    private Duration retryInterval = DEFAULT_HEALTHCHECK_RETRY_INTERVAL;
+    private Backoff retryBackoff = DEFAULT_HEALTHCHECK_RETRY_BACKOFF;
     private ClientFactory clientFactory = ClientFactory.DEFAULT;
     private Function<? super ClientOptionsBuilder, ClientOptionsBuilder> configurator = Function.identity();
     private int healthCheckPort;
@@ -76,12 +77,23 @@ public class HttpHealthCheckedEndpointGroupBuilder {
 
     /**
      * Sets the interval between health check requests. Must be positive.
+     * @deprecated Use {@link #retryBackoff(Backoff)}.
      */
+    @Deprecated
     public HttpHealthCheckedEndpointGroupBuilder retryInterval(Duration retryInterval) {
         requireNonNull(retryInterval, "retryInterval");
         checkArgument(!retryInterval.isNegative() && !retryInterval.isZero(),
                       "retryInterval: %s (expected > 0)", retryInterval);
-        this.retryInterval = retryInterval;
+        retryBackoff = Backoff.fixed(retryInterval.toMillis())
+                              .withJitter(0.2);
+        return this;
+    }
+
+    /**
+     * Sets the backoff between health check requests.
+     */
+    public HttpHealthCheckedEndpointGroupBuilder retryBackoff(Backoff retryBackoff) {
+        this.retryBackoff = requireNonNull(retryBackoff, "retryBackoff");
         return this;
     }
 
@@ -115,6 +127,6 @@ public class HttpHealthCheckedEndpointGroupBuilder {
      */
     public HttpHealthCheckedEndpointGroup build() {
         return new HttpHealthCheckedEndpointGroup(clientFactory, delegate, protocol, healthCheckPath,
-                                                  healthCheckPort, retryInterval, configurator);
+                                                  healthCheckPort, retryBackoff, configurator);
     }
 }
