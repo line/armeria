@@ -3,6 +3,19 @@
 Setting up a project
 ====================
 
+Requirements
+------------
+
+`Java 8 (or later) <https://adoptopenjdk.net/>`_ is required to build and run an application based on Armeria.
+
+.. note::
+
+    Use Java 11 (or later) if you are a contributor who tries to build Armeria itself.
+    See `CONTRIBUTING.md <https://github.com/line/armeria/blob/master/CONTRIBUTING.md>`_ for more information.
+
+Choosing the artifacts
+----------------------
+
 All Armeria JARs are available in `Maven Central Repository <https://search.maven.org/search?q=g:com.linecorp.armeria%20-shaded>`_
 under group ID ``com.linecorp.armeria`` so that you can fetch them easily using your favorite build tool.
 Add the Armeria artifacts that provide the desired functionality to your project dependencies. The following is
