@@ -181,9 +181,12 @@ public class Http2GoAwayTest {
                 });
                 bos.flush();
 
-                // The second request should fail with UnprocessedRequestException.
+                // The second request should fail with UnprocessedRequestException
+                // which has a cause of GoAwayReceivedException.
                 assertThatThrownBy(future2::join).isInstanceOf(CompletionException.class)
-                                                 .hasCauseInstanceOf(UnprocessedRequestException.class);
+                                                 .hasCauseInstanceOf(UnprocessedRequestException.class)
+                                                 .hasRootCauseInstanceOf(GoAwayReceivedException.class);
+
                 // The first request should not fail.
                 assertThat(future1).isNotDone();
 

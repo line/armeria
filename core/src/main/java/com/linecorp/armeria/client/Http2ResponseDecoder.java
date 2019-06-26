@@ -140,7 +140,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
         final int lastStreamId = conn.local().lastStreamKnownByPeer();
         if (stream.id() > lastStreamId) {
-            res.close(UnprocessedRequestException.get());
+            res.close(new UnprocessedRequestException(GoAwayReceivedException.get()));
         } else {
             res.close(ClosedSessionException.get());
         }

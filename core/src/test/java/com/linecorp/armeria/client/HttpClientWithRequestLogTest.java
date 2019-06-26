@@ -137,7 +137,8 @@ public class HttpClientWithRequestLogTest {
                 .build();
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         assertThatThrownBy(() -> client.execute(req).aggregate().get())
-                .hasCauseInstanceOf(ConnectException.class);
+                .hasCauseInstanceOf(UnprocessedRequestException.class)
+                .hasRootCauseInstanceOf(ConnectException.class);
 
         await().untilAsserted(() -> assertThat(ref.get()).isNotNull());
         final ClientConnectionTimings timings = ref.get();

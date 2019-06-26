@@ -82,7 +82,7 @@ public final class InboundTrafficController extends AtomicInteger {
     public void dec(int numConsumedBytes) {
         final int oldValue = getAndAdd(-numConsumedBytes);
         if (oldValue > lowWatermark && oldValue - numConsumedBytes <= lowWatermark) {
-            // Just went below high watermark
+            // Just went below low watermark
             if (cfg != null) {
                 cfg.setAutoRead(true);
                 suspended = false;
