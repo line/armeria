@@ -396,10 +396,8 @@ class DebugPage extends React.PureComponent<Props, State> {
             params.set('queries', queries);
           }
         } else {
-          if (endpointPath) {
-            this.validateEndpointPath(endpointPath);
-            params.set('endpoint_path', endpointPath);
-          }
+          this.validateEndpointPath(endpointPath);
+          params.set('endpoint_path', endpointPath);
         }
       }
 
@@ -449,6 +447,9 @@ class DebugPage extends React.PureComponent<Props, State> {
   };
 
   private validateEndpointPath(endpointPath: string) {
+    if (!endpointPath) {
+      throw new Error('You must specify the endpoint path.');
+    }
     const method = this.props.method;
     const endpoint = method.endpoints[0];
     const regexPathPrefix = endpoint.regexPathPrefix;

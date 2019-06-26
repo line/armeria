@@ -41,10 +41,10 @@ async function historyFallback(ctx: any, next: any) {
   return next();
 }
 
-const proxyPort = process.env.PROXY_PORT || '8080';
+const armeriaPort = process.env.ARMERIA_PORT || '8080';
 
 const proxier = proxy('/', {
-  target: `http://127.0.0.1:${proxyPort}`,
+  target: `http://127.0.0.1:${armeriaPort}`,
   changeOrigin: true,
 });
 
