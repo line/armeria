@@ -18,17 +18,17 @@ $ ./gradlew :docs-client:yarn_run_start --no-daemon
 ```
 
 This will usually not be useful since without a server running, the client does not have any spec it can render.
-You can have server calls proxied to a running Armeria server by specifying the `PROXY_PORT` environment
+You can have server calls proxied to a running Armeria server by specifying the `ARMERIA_PORT` environment
 variable, e.g.,
 
 ```bash
-$ PROXY_PORT=51234 yarn run start
+$ ARMERIA_PORT=51234 yarn run start
 ```
 
 or with Gradle
 
 ```bash
-$ PROXY_PORT=51234 ./gradlew :docs-client:yarn_run_start --no-daemon
+$ ARMERIA_PORT=51234 ./gradlew :docs-client:yarn_run_start --no-daemon
 ```
 
 Replacing the port of a docs page in the running server with `3000` will use the dev server to render while
