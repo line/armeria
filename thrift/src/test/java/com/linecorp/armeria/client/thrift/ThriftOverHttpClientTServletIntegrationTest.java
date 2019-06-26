@@ -276,7 +276,7 @@ public class ThriftOverHttpClientTServletIntegrationTest {
             client.hello("unused");
             fail();
         } catch (UnprocessedRequestException e) {
-            assertThat(e).hasCauseExactlyInstanceOf(SessionProtocolNegotiationException.class);
+            assertThat(e).hasCauseInstanceOf(SessionProtocolNegotiationException.class);
             SessionProtocolNegotiationException cause = (SessionProtocolNegotiationException) e.getCause();
 
             // Test if a failed upgrade attempt triggers an exception with
@@ -291,7 +291,7 @@ public class ThriftOverHttpClientTServletIntegrationTest {
             client.hello("unused");
             fail();
         } catch (UnprocessedRequestException e) {
-            assertThat(e).hasCauseExactlyInstanceOf(SessionProtocolNegotiationException.class);
+            assertThat(e).hasCauseInstanceOf(SessionProtocolNegotiationException.class);
             SessionProtocolNegotiationException cause = (SessionProtocolNegotiationException) e.getCause();
             // Test if no upgrade attempt is made thanks to the cache.
             assertThat(cause.expected()).isEqualTo(H2C);
