@@ -57,6 +57,7 @@ import org.springframework.http.server.reactive.HttpHandler;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Route;
@@ -208,7 +209,9 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
             final Disposable disposable = handler.handle(ctx, req, future, serverHeader).subscribe();
             response.completionFuture().handle((unused, cause) -> {
                 if (cause != null) {
-                    logger.debug("{} Response stream has been cancelled.", ctx, cause);
+                    if (ctx.method() != HttpMethod.HEAD) {
+                        logger.debug("{} Response stream has been cancelled.", ctx, cause);
+                    }
                     disposable.dispose();
                 }
                 return null;

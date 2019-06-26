@@ -56,6 +56,8 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.channel.EventLoop;
@@ -185,7 +187,10 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
                     new HttpResponseProcessor(ctx.eventLoop(), armeriaHeaders.build(),
                                               publisher.map(factoryWrapper::toHttpData)));
             future.complete(response);
-            return Mono.fromFuture(response.completionFuture());
+            return Mono.fromFuture(response.completionFuture())
+                       .onErrorResume(cause -> cause instanceof CancelledSubscriptionException ||
+                                               cause instanceof AbortedStreamException,
+                                      cause -> Mono.empty());
         });
     }
 
