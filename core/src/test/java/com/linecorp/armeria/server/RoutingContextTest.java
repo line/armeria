@@ -27,8 +27,6 @@ import javax.annotation.Nullable;
 
 import org.junit.jupiter.api.Test;
 
-import com.google.common.collect.ImmutableList;
-
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -77,31 +75,36 @@ class RoutingContextTest {
         final RoutingContext ctx3;
 
         ctx1 = new DefaultRoutingContext(virtualHost, "example.com",
-                                         HttpMethod.GET, "/hello", null,
-                                         MediaType.JSON_UTF_8,
-                                         ImmutableList.of(MediaType.JSON_UTF_8, MediaType.XML_UTF_8),
-                                         false);
+                                         RequestHeaders.of(HttpMethod.GET, "/hello",
+                                                           HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
+                                                           HttpHeaderNames.ACCEPT,
+                                                           MediaType.JSON_UTF_8 + ", " +
+                                                           MediaType.XML_UTF_8 + "; q=0.8"),
+                                         "/hello", null, false);
         ctx2 = new DefaultRoutingContext(virtualHost, "example.com",
-                                         HttpMethod.GET, "/hello", null,
-                                         MediaType.JSON_UTF_8,
-                                         ImmutableList.of(MediaType.JSON_UTF_8, MediaType.XML_UTF_8),
-                                         false);
+                                         RequestHeaders.of(HttpMethod.GET, "/hello",
+                                                           HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
+                                                           HttpHeaderNames.ACCEPT,
+                                                           MediaType.JSON_UTF_8 + ", " +
+                                                           MediaType.XML_UTF_8 + "; q=0.8"),
+                                         "/hello", null, false);
         ctx3 = new DefaultRoutingContext(virtualHost, "example.com",
-                                         HttpMethod.GET, "/hello", null,
-                                         MediaType.JSON_UTF_8,
-                                         ImmutableList.of(MediaType.XML_UTF_8, MediaType.JSON_UTF_8),
-                                         false);
+                                         RequestHeaders.of(HttpMethod.GET, "/hello",
+                                                           HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
+                                                           HttpHeaderNames.ACCEPT,
+                                                           MediaType.XML_UTF_8 + ", " +
+                                                           MediaType.JSON_UTF_8 + "; q=0.8"),
+                                         "/hello", null, false);
 
         assertThat(ctx1.hashCode()).isEqualTo(ctx2.hashCode());
         assertThat(ctx1).isEqualTo(ctx2);
         assertThat(ctx1).isNotEqualTo(ctx3);
 
         ctx1 = new DefaultRoutingContext(virtualHost, "example.com",
-                                         HttpMethod.GET, "/hello", "a=1&b=1",
-                                         null, ImmutableList.of(), false);
+                                         RequestHeaders.of(HttpMethod.GET, "/hello"),
+                                         "/hello", "a=1&b=1", false);
         ctx2 = new DefaultRoutingContext(virtualHost, "example.com",
-                                         HttpMethod.GET, "/hello", "a=1",
-                                         null, ImmutableList.of(), false);
+                                         RequestHeaders.of(HttpMethod.GET, "/hello"), "/hello", "a=1", false);
 
         assertThat(ctx1.hashCode()).isEqualTo(ctx2.hashCode());
         assertThat(ctx1).isEqualTo(ctx2);

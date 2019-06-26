@@ -105,11 +105,8 @@ class ServiceBindingTest {
                           final MediaType contentType = req.contentType();
                           if (contentType == MediaType.JSON) {
                               resContent = "{\"name\":\"" + request.contentUtf8() + "\"}";
-                          } else if (contentType == MediaType.PLAIN_TEXT_UTF_8) {
+                          } else  {
                               resContent = request.contentUtf8();
-                          } else {
-                              fail("Should never reach here");
-                              resContent = "Never reach here.";
                           }
                           return HttpResponse.of(resContent);
                       })));
@@ -140,7 +137,8 @@ class ServiceBindingTest {
         final HttpClient client = HttpClient.of(server.uri("/"));
         AggregatedHttpResponse res = client.execute(RequestHeaders.of(HttpMethod.POST, "/hello"), "armeria")
                                           .aggregate().join();
-        assertThat(res.status()).isSameAs(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.contentUtf8()).isEqualTo("armeria");
 
         res = client.execute(RequestHeaders.of(HttpMethod.POST, "/hello",
                                                HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8),

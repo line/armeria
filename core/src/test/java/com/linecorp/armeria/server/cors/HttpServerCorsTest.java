@@ -43,6 +43,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.AdditionalHeader;
+import com.linecorp.armeria.server.annotation.ConsumesJson;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Options;
 import com.linecorp.armeria.server.annotation.Param;
@@ -56,19 +57,20 @@ public class HttpServerCorsTest {
 
     private static final ClientFactory clientFactory = ClientFactory.DEFAULT;
 
-    @CorsDecorators(value = {
-            @CorsDecorator(origins = "http://example.com", exposedHeaders = "expose_header_1")
-    }, shortCircuit = true)
+    @CorsDecorators(value = @CorsDecorator(origins = "http://example.com", exposedHeaders = "expose_header_1"),
+            shortCircuit = true)
     private static class MyAnnotatedService {
 
         @Get("/index")
         @StatusCode(200)
         public void index() {}
 
+        @ConsumesJson
         @Get("/dup_test")
         @StatusCode(200)
-        @CorsDecorator(origins = "http://example2.com", exposedHeaders = "expose_header_2")
-        public void duptest() {}
+        @CorsDecorator(origins = "http://example2.com", exposedHeaders = "expose_header_2",
+                allowedRequestHeaders = "content-type")
+        public void dupTest() {}
     }
 
     @CorsDecorator(
@@ -170,37 +172,30 @@ public class HttpServerCorsTest {
             sb.annotatedService("/cors6", new Object() {
 
                 @Get("/any/get")
-                @CorsDecorator(
-                        origins = "*", exposedHeaders = { "expose_header_1", "expose_header_2" },
+                @CorsDecorator(origins = "*", exposedHeaders = { "expose_header_1", "expose_header_2" },
                         allowedRequestHeaders = { "allow_request_1", "allow_request_2" },
                         allowedRequestMethods = HttpMethod.GET, maxAge = 3600,
-                        preflightRequestHeaders = {
-                                @AdditionalHeader(name = "x-preflight-cors",
-                                        value = { "Hello CORS", "Hello CORS2" })
-                        })
+                        preflightRequestHeaders = @AdditionalHeader(name = "x-preflight-cors",
+                                value = { "Hello CORS", "Hello CORS2" }))
                 public HttpResponse anyoneGet() {
                     return HttpResponse.of(HttpStatus.OK);
                 }
 
                 @Post("/one/post")
-                @CorsDecorator(
-                        origins = "http://example.com",
+                @CorsDecorator(origins = "http://example.com",
                         exposedHeaders = { "expose_header_1", "expose_header_2" },
                         allowedRequestMethods = HttpMethod.POST, credentialsAllowed = true,
                         allowedRequestHeaders = { "allow_request_1", "allow_request_2" }, maxAge = 1800,
-                        preflightRequestHeaders = {
-                                @AdditionalHeader(name = "x-preflight-cors", value = "Hello CORS")
-                        })
+                        preflightRequestHeaders = @AdditionalHeader(name = "x-preflight-cors",
+                                value = "Hello CORS"))
                 public HttpResponse onePolicyPost() {
                     return HttpResponse.of(HttpStatus.OK);
                 }
 
                 @Get("/multi/get")
-                @CorsDecorator(
-                        origins = "http://example.com", exposedHeaders = { "expose_header_1" },
+                @CorsDecorator(origins = "http://example.com", exposedHeaders = "expose_header_1",
                         allowedRequestMethods = HttpMethod.GET, credentialsAllowed = true)
-                @CorsDecorator(
-                        origins = "http://example2.com", exposedHeaders = { "expose_header_2" },
+                @CorsDecorator(origins = "http://example2.com", exposedHeaders = "expose_header_2",
                         allowedRequestMethods = HttpMethod.GET, credentialsAllowed = true)
                 public HttpResponse multiGet() {
                     return HttpResponse.of(HttpStatus.OK);

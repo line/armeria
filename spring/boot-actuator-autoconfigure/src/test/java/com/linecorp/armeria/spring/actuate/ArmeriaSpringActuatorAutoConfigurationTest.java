@@ -192,9 +192,9 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
         final String loggerPath = "/internal/actuator/loggers/" + TEST_LOGGER_NAME;
         final AggregatedHttpResponse res =
                 client.execute(RequestHeaders.of(HttpMethod.POST, loggerPath),
-                               OBJECT_MAPPER.writeValueAsBytes(ImmutableMap.of("configuredLevel", "info")))
+                               OBJECT_MAPPER.writeValueAsBytes(ImmutableMap.of("configuredLevel", "debug")))
                       .aggregate().get();
-        assertThat(res.status()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+        assertThat(res.status()).isEqualTo(HttpStatus.NO_CONTENT);
     }
 
     @Test

@@ -53,36 +53,29 @@ final class DefaultRoutingContext implements RoutingContext {
     static RoutingContext of(VirtualHost virtualHost, String hostname,
                              String path, @Nullable String query,
                              RequestHeaders headers, boolean isCorsPreflight) {
-        return new DefaultRoutingContext(virtualHost, hostname, headers.method(), path, query,
-                                         headers.contentType(), extractAcceptTypes(headers),
-                                         isCorsPreflight);
+        return new DefaultRoutingContext(virtualHost, hostname, headers, path, query, isCorsPreflight);
     }
 
     private final VirtualHost virtualHost;
     private final String hostname;
-    private final HttpMethod method;
+    private final RequestHeaders headers;
     private final String path;
     @Nullable
     private final String query;
     @Nullable
-    private final MediaType contentType;
-    private final List<MediaType> acceptTypes;
+    private volatile List<MediaType> acceptTypes;
     private final boolean isCorsPreflight;
     private final List<Object> summary;
     @Nullable
     private Throwable delayedCause;
 
-    DefaultRoutingContext(VirtualHost virtualHost, String hostname,
-                          HttpMethod method, String path, @Nullable String query,
-                          @Nullable MediaType contentType, List<MediaType> acceptTypes,
-                          boolean isCorsPreflight) {
+    DefaultRoutingContext(VirtualHost virtualHost, String hostname, RequestHeaders headers,
+                          String path, @Nullable String query, boolean isCorsPreflight) {
         this.virtualHost = requireNonNull(virtualHost, "virtualHost");
         this.hostname = requireNonNull(hostname, "hostname");
-        this.method = requireNonNull(method, "method");
+        this.headers = requireNonNull(headers, "headers");
         this.path = requireNonNull(path, "path");
         this.query = query;
-        this.contentType = contentType;
-        this.acceptTypes = requireNonNull(acceptTypes, "acceptTypes");
         this.isCorsPreflight = isCorsPreflight;
         summary = generateSummary(this);
     }
@@ -99,7 +92,7 @@ final class DefaultRoutingContext implements RoutingContext {
 
     @Override
     public HttpMethod method() {
-        return method;
+        return headers.method();
     }
 
     @Override
@@ -116,11 +109,16 @@ final class DefaultRoutingContext implements RoutingContext {
     @Nullable
     @Override
     public MediaType contentType() {
-        return contentType;
+        return headers.contentType();
     }
 
     @Override
     public List<MediaType> acceptTypes() {
+        List<MediaType> acceptTypes = this.acceptTypes;
+        if (acceptTypes == null) {
+            acceptTypes = extractAcceptTypes(headers);
+            this.acceptTypes = acceptTypes;
+        }
         return acceptTypes;
     }
 
@@ -176,8 +174,8 @@ final class DefaultRoutingContext implements RoutingContext {
                             try {
                                 acceptTypes.add(MediaType.parse(mediaType));
                             } catch (IllegalArgumentException e) {
-                                logger.debug("Failed to parse the media type in 'accept' header: {}",
-                                             mediaType, e);
+                                logger.debug("Ignoring a malformed media type from 'accept' header: {}",
+                                             mediaType);
                             }
                         }));
         if (acceptTypes.isEmpty()) {

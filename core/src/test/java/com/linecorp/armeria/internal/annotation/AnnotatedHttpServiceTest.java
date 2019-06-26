@@ -787,12 +787,11 @@ public class AnnotatedHttpServiceTest {
         final HttpClient client = HttpClient.of(rule.uri("/"));
         final String path = "/8/same/path";
 
-        // No 'Accept' header means accepting everything. The order of -1 would be matched first.
         RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, path);
         AggregatedHttpResponse res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(res.headers().contentType()).hasToString("text/plain");
-        assertThat(res.contentUtf8()).isEqualTo("GET/TEXT");
+        assertThat(res.headers().contentType()).isNull();
+        assertThat(res.contentUtf8()).isEqualTo("GET");
 
         // The same as the above.
         headers = RequestHeaders.of(HttpMethod.GET, path, HttpHeaderNames.ACCEPT, "*/*");
@@ -854,15 +853,15 @@ public class AnnotatedHttpServiceTest {
                                     HttpHeaderNames.CONTENT_TYPE, "application/json");
         res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(res.headers().contentType()).isSameAs(MediaType.JSON);
-        assertThat(res.contentUtf8()).isEqualTo("POST/JSON/BOTH");
+        assertThat(res.headers().contentType()).isNull();
+        assertThat(res.contentUtf8()).isEqualTo("POST/JSON");
 
         headers = RequestHeaders.of(HttpMethod.POST, path,
                                     HttpHeaderNames.ACCEPT, "application/json");
         res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(res.headers().contentType()).isNull();
-        assertThat(res.contentUtf8()).isEqualTo("POST");
+        assertThat(res.headers().contentType()).isSameAs(MediaType.JSON);
+        assertThat(res.contentUtf8()).isEqualTo("POST/JSON/BOTH");
 
         headers = RequestHeaders.of(HttpMethod.POST, path);
         res = client.execute(headers).aggregate().join();

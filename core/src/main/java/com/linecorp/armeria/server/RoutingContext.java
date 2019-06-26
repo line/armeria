@@ -97,8 +97,12 @@ public interface RoutingContext {
      */
     default RoutingContext overridePath(String path) {
         requireNonNull(path, "path");
-        return new DefaultRoutingContext(virtualHost(), hostname(), method(), path, query(),
-                                         contentType(), acceptTypes(), isCorsPreflight());
+        return new RoutingContextWrapper(this) {
+            @Override
+            public String path() {
+                return path;
+            }
+        };
     }
 
     /**

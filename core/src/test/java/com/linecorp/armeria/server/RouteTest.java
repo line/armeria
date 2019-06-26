@@ -232,8 +232,6 @@ class RouteTest {
                      .build();
         getResult = route.apply(method(HttpMethod.GET));
         assertThat(getResult.isPresent()).isTrue();
-        // When there's no "Accept" header, it has the highest score.
-        assertThat(getResult.hasHighestScore()).isTrue();
 
         getResult = route.apply(withAcceptHeader(HttpMethod.GET, "application/json;charset=UTF-8"));
         assertThat(getResult.isPresent()).isFalse();
@@ -254,8 +252,6 @@ class RouteTest {
 
         getResult = route.apply(method(HttpMethod.GET));
         assertThat(getResult.isPresent()).isTrue();
-        // When there's no "Accept" header, it has the highest score.
-        assertThat(getResult.hasHighestScore()).isTrue();
 
         getResult = route.apply(withAcceptHeader(HttpMethod.GET, "*/*"));
         assertThat(getResult.isPresent()).isTrue();
