@@ -448,7 +448,7 @@ class DebugPage extends React.PureComponent<Props, State> {
 
   private validateEndpointPath(endpointPath: string) {
     if (!endpointPath) {
-      throw new Error(`You should set the ENDPOINT PATH.`);
+      throw new Error('You must set the ENDPOINT PATH.');
     }
     const method = this.props.method;
     const endpoint = method.endpoints[0];
