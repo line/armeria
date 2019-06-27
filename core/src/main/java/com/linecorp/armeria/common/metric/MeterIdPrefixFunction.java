@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.internal.metric.RequestMetricSupport;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.VirtualHost;
@@ -76,6 +76,15 @@ public interface MeterIdPrefixFunction {
                 return new MeterIdPrefix(name, tagListBuilder.build());
             }
 
+            @Override
+            public MeterIdPrefix apply(MeterRegistry registry, RequestLog log) {
+                // method, hostNamePattern, route, status
+                final ImmutableList.Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(4);
+                buildTags(tagListBuilder, log);
+                RequestMetricSupport.appendHttpStatusTag(tagListBuilder, log);
+                return new MeterIdPrefix(name, tagListBuilder.build());
+            }
+
             private void buildTags(ImmutableList.Builder<Tag> tagListBuilder, RequestLog log) {
                 final RequestContext ctx = log.context();
                 final Object requestContent = log.requestContent();
@@ -98,32 +107,7 @@ public interface MeterIdPrefixFunction {
                     tagListBuilder.add(Tag.of("route", sCtx.route().meterTag()));
                 }
             }
-
-            @Override
-            public MeterIdPrefix apply(MeterRegistry registry, RequestLog log) {
-                // method, hostNamePattern, route, status
-                final ImmutableList.Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(4);
-                buildTags(tagListBuilder, log);
-                appendHttpStatusTag(tagListBuilder, log);
-                return new MeterIdPrefix(name, tagListBuilder.build());
-            }
         };
-    }
-
-    /**
-     * Append {@link HttpStatus} to {@link Tag}.
-     */
-    static void appendHttpStatusTag(ImmutableList.Builder<Tag> tagListBuilder, RequestLog log) {
-        requireNonNull(tagListBuilder, "tagListBuilder");
-        requireNonNull(log, "log");
-        // Add the 'httpStatus' tag.
-        final HttpStatus status;
-        if (log.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
-            status = log.status();
-        } else {
-            status = HttpStatus.UNKNOWN;
-        }
-        tagListBuilder.add(Tag.of("httpStatus", status.codeAsText()));
     }
 
     /**

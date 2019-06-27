@@ -26,6 +26,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
+import com.linecorp.armeria.internal.metric.RequestMetricSupport;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
@@ -107,12 +108,12 @@ public final class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunctio
     public MeterIdPrefix apply(MeterRegistry registry, RequestLog log) {
         final ImmutableList.Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(3);
         buildTags(tagListBuilder, log);
-        MeterIdPrefixFunction.appendHttpStatusTag(tagListBuilder, log);
+        RequestMetricSupport.appendHttpStatusTag(tagListBuilder, log);
         return new MeterIdPrefix(name, tagListBuilder.build());
     }
 
     private void buildTags(ImmutableList.Builder<Tag> tagListBuilder, RequestLog log) {
-        final Invocation invocation = ArmeriaCallFactory.getInvocation(log);
+        final Invocation invocation = InvocationUtil.getInvocation(log);
         if (invocation != null) {
             if (serviceTagName != null) {
                 tagListBuilder.add(Tag.of(serviceTagName,

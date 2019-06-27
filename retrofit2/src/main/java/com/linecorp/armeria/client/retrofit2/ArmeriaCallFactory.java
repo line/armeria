@@ -37,7 +37,6 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
-import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
@@ -62,18 +61,6 @@ final class ArmeriaCallFactory implements Factory {
 
     private static final AttributeKey<Invocation> RETROFIT_INVOCATION =
             AttributeKey.valueOf(ArmeriaCallFactory.class, "RETROFIT_INVOCATION");
-
-    /**
-     * Retrieves a Retrofit {@link Invocation} associated with a {@link RequestLog}.
-     */
-    @Nullable
-    public static Invocation getInvocation(RequestLog log) {
-        if (log.hasAttr(RETROFIT_INVOCATION)) {
-            return log.attr(RETROFIT_INVOCATION).get();
-        } else {
-            return null;
-        }
-    }
 
     static final String GROUP_PREFIX = "group_";
     private static final Pattern GROUP_PREFIX_MATCHER = Pattern.compile(GROUP_PREFIX);
@@ -167,7 +154,7 @@ final class ArmeriaCallFactory implements Factory {
             if (body == null) {
                 // Without a body.
                 try (SafeCloseable ignored = withContextCustomizer(
-                        ctx -> ctx.log().attr(RETROFIT_INVOCATION).set(invocation))) {
+                        ctx -> InvocationUtil.setInvocation(ctx.log(), invocation))) {
                     return httpClient.execute(headers.build());
                 }
             }
@@ -182,7 +169,7 @@ final class ArmeriaCallFactory implements Factory {
                 body.writeTo(contentBuffer);
 
                 try (SafeCloseable ignored = withContextCustomizer(
-                        ctx -> ctx.log().attr(RETROFIT_INVOCATION).set(invocation))) {
+                        ctx -> InvocationUtil.setInvocation(ctx.log(), invocation))) {
                     return httpClient.execute(headers.build(), contentBuffer.readByteArray());
                 }
             } catch (IOException e) {
