@@ -20,7 +20,7 @@ dependencies {
     testCompile(project(':thrift')) {
         exclude group: 'org.apache.thrift', module: 'libthrift'
     }
-    testCompile('org.apache.thrift:libthrift')
+    testCompile 'org.apache.thrift:libthrift'
 
     // Jetty, for testing TServlet interoperability.
     testCompile 'org.eclipse.jetty:jetty-webapp'
