@@ -482,6 +482,13 @@ public class AnnotatedHttpServiceTest {
         }
 
         @Get
+        @Path("/param/default_null")
+        public String paramDefaultNull(RequestContext ctx, @Param @Default String value) {
+            validateContext(ctx);
+            return value;
+        }
+
+        @Get
         @Path("/param/precedence/{username}")
         public String paramPrecedence(RequestContext ctx,
                                       @Param("username") String username,
@@ -779,6 +786,8 @@ public class AnnotatedHttpServiceTest {
             testBody(hc, get("/7/param/precedence/line5?username=dot&password=armeria5"), "line5/armeria5");
 
             testStatusCode(hc, get("/7/param/default2"), 400);
+
+            testBody(hc, get("/7/param/default_null"), "(null)");
         }
     }
 
