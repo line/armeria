@@ -251,11 +251,11 @@ public final class Routers {
                     //
                     // The services are sorted as follows:
                     //
-                    // 1) annotated service with method and media type negotiation
+                    // 1) the service with method and media type negotiation
                     //    (consumable and producible)
-                    // 2) annotated service with method and producible media type negotiation
-                    // 3) annotated service with method and consumable media type negotiation
-                    // 4) annotated service with method negotiation
+                    // 2) the service with method and producible media type negotiation
+                    // 3) the service with method and consumable media type negotiation
+                    // 4) the service with method negotiation
                     // 5) the other services (in a registered order)
                     //
                     // 1) and 2) may produce a score between the lowest and the highest because they should
@@ -266,15 +266,6 @@ public final class Routers {
                     // Found the best matching.
                     if (routingResult.hasHighestScore()) {
                         result = Routed.of(route, routingResult, value);
-                        break;
-                    }
-
-                    // This means that the 'routingResult' is produced by one of 3), 4) and 5).
-                    // So we have no more chance to find a better matching from now.
-                    if (routingResult.hasLowestScore()) {
-                        if (!result.isPresent()) {
-                            result = Routed.of(route, routingResult, value);
-                        }
                         break;
                     }
 

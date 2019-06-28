@@ -43,6 +43,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.AdditionalHeader;
+import com.linecorp.armeria.server.annotation.ConsumesJson;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Options;
 import com.linecorp.armeria.server.annotation.Param;
@@ -65,10 +66,12 @@ public class HttpServerCorsTest {
         @StatusCode(200)
         public void index() {}
 
+        @ConsumesJson
         @Get("/dup_test")
         @StatusCode(200)
-        @CorsDecorator(origins = "http://example2.com", exposedHeaders = "expose_header_2")
-        public void duptest() {}
+        @CorsDecorator(origins = "http://example2.com", exposedHeaders = "expose_header_2",
+                allowedRequestHeaders = "content-type")
+        public void dupTest() {}
     }
 
     @CorsDecorator(

@@ -96,26 +96,30 @@ final class DefaultRoute implements Route {
             return RoutingResult.empty();
         }
 
-        if (!consumes.isEmpty()) {
-            final MediaType contentType = routingCtx.contentType();
-            boolean found = false;
-            if (contentType != null) {
-                for (MediaType consumeType : consumes) {
-                    found = contentType.belongsTo(consumeType);
-                    if (found) {
-                        break;
-                    }
+        final MediaType contentType = routingCtx.contentType();
+        boolean contentTypeMatched = false;
+        if (contentType == null) {
+            if (consumes().isEmpty()) {
+                contentTypeMatched = true;
+            }
+        } else if (!consumes().isEmpty()) {
+            for (MediaType consumeType : consumes) {
+                contentTypeMatched = contentType.belongsTo(consumeType);
+                if (contentTypeMatched) {
+                    break;
                 }
             }
-            if (!found) {
+            if (!contentTypeMatched) {
                 routingCtx.delayThrowable(HttpStatusException.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE));
                 return RoutingResult.empty();
             }
         }
 
-        final List<MediaType> types = routingCtx.acceptTypes();
-        if (types.isEmpty()) {
-            builder.score(HIGHEST_SCORE);
+        final List<MediaType> acceptTypes = routingCtx.acceptTypes();
+        if (acceptTypes.isEmpty()) {
+            if (contentTypeMatched && produces().isEmpty()) {
+                builder.score(HIGHEST_SCORE);
+            }
             for (MediaType produceType : produces) {
                 if (!isAnyType(produceType)) {
                     return builder.negotiatedResponseMediaType(produceType).build();
@@ -126,8 +130,8 @@ final class DefaultRoute implements Route {
 
         if (!produces.isEmpty()) {
             for (MediaType produceType : produces) {
-                for (int i = 0; i < types.size(); i++) {
-                    final MediaType acceptType = types.get(i);
+                for (int i = 0; i < acceptTypes.size(); i++) {
+                    final MediaType acceptType = acceptTypes.get(i);
                     if (produceType.belongsTo(acceptType)) {
                         // To early stop path mapping traversal,
                         // we set the score as the best score when the index is 0.
