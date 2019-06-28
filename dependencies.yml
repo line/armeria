@@ -353,6 +353,8 @@ org.checkerframework:
 org.curioswitch.curiostack:
   protobuf-jackson:
     version: '1.0.0'
+    exclusions:
+    - javax.annotation:javax.annotation-api
     javadocs:
     - https://developers.curioswitch.org/apidocs/java/
 
