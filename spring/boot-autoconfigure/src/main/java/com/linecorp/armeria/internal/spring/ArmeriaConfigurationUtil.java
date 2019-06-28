@@ -111,6 +111,7 @@ public final class ArmeriaConfigurationUtil {
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaConfigurationUtil.class);
 
     private static final HealthChecker[] EMPTY_HEALTH_CHECKERS = new HealthChecker[0];
+    private static final String[] EMPTY_PROTOCOL_NAMES = new String[0];
 
     private static final String METER_TYPE = "server";
 
@@ -200,7 +201,8 @@ public final class ArmeriaConfigurationUtil {
             final String ip = p.getIp();
             final String iface = p.getIface();
             final int port = p.getPort();
-            final List<SessionProtocol> protocols = p.getProtocols();
+            final List<SessionProtocol> protocols = firstNonNull(p.getProtocols(),
+                                                                 ImmutableList.of(SessionProtocol.HTTP));
 
             if (ip == null) {
                 if (iface == null) {
@@ -439,7 +441,7 @@ public final class ArmeriaConfigurationUtil {
                 }
                 final List<String> enabledProtocols = ssl.getEnabledProtocols();
                 if (enabledProtocols != null) {
-                    sslContextBuilder.protocols(enabledProtocols.toArray(new String[enabledProtocols.size()]));
+                    sslContextBuilder.protocols(enabledProtocols.toArray(EMPTY_PROTOCOL_NAMES));
                 }
                 final List<String> ciphers = ssl.getCiphers();
                 if (ciphers != null) {
@@ -465,8 +467,11 @@ public final class ArmeriaConfigurationUtil {
             store = loadKeyStore(ssl.getKeyStoreType(), ssl.getKeyStore(), ssl.getKeyStorePassword());
         }
 
-        final KeyManagerFactory keyManagerFactory =
+        KeyManagerFactory keyManagerFactory =
                 KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        if (ssl.getKeyAlias() != null) {
+            keyManagerFactory = new CustomAliasKeyManagerFactory(keyManagerFactory, ssl.getKeyAlias());
+        }
 
         String keyPassword = ssl.getKeyPassword();
         if (keyPassword == null) {
