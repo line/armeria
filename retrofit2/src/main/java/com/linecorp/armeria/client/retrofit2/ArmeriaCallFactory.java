@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.client.retrofit2;
 
+import static com.linecorp.armeria.client.Clients.withContextCustomizer;
+
 import java.io.IOException;
 import java.net.URI;
 import java.util.Map;
@@ -36,7 +38,9 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
+import io.netty.util.AttributeKey;
 import okhttp3.Call;
 import okhttp3.Call.Factory;
 import okhttp3.Callback;
@@ -48,11 +52,15 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 import okio.Buffer;
 import okio.Timeout;
+import retrofit2.Invocation;
 
 /**
  * A {@link Factory} that creates a {@link Call} instance for {@link HttpClient}.
  */
 final class ArmeriaCallFactory implements Factory {
+
+    private static final AttributeKey<Invocation> RETROFIT_INVOCATION =
+            AttributeKey.valueOf(ArmeriaCallFactory.class, "RETROFIT_INVOCATION");
 
     static final String GROUP_PREFIX = "group_";
     private static final Pattern GROUP_PREFIX_MATCHER = Pattern.compile(GROUP_PREFIX);
@@ -142,9 +150,13 @@ final class ArmeriaCallFactory implements Factory {
             }
 
             final RequestBody body = request.body();
+            final Invocation invocation = request.tag(Invocation.class);
             if (body == null) {
                 // Without a body.
-                return httpClient.execute(headers.build());
+                try (SafeCloseable ignored = withContextCustomizer(
+                        ctx -> InvocationUtil.setInvocation(ctx.log(), invocation))) {
+                    return httpClient.execute(headers.build());
+                }
             }
 
             // With a body.
@@ -156,7 +168,10 @@ final class ArmeriaCallFactory implements Factory {
             try (Buffer contentBuffer = new Buffer()) {
                 body.writeTo(contentBuffer);
 
-                return httpClient.execute(headers.build(), contentBuffer.readByteArray());
+                try (SafeCloseable ignored = withContextCustomizer(
+                        ctx -> InvocationUtil.setInvocation(ctx.log(), invocation))) {
+                    return httpClient.execute(headers.build(), contentBuffer.readByteArray());
+                }
             } catch (IOException e) {
                 throw new IllegalArgumentException(
                         "Failed to convert RequestBody to HttpData. " + request.method(), e);

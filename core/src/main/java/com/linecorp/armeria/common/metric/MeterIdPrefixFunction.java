@@ -18,9 +18,9 @@ package com.linecorp.armeria.common.metric;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.function.BiFunction;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.common.HttpMethod;
@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.internal.metric.RequestMetricSupport;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.VirtualHost;
@@ -71,26 +71,21 @@ public interface MeterIdPrefixFunction {
         return new MeterIdPrefixFunction() {
             @Override
             public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestLog log) {
-                return new MeterIdPrefix(name, buildTags(log));
+                final ImmutableList.Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(4);
+                buildTags(tagListBuilder, log);
+                return new MeterIdPrefix(name, tagListBuilder.build());
             }
 
             @Override
             public MeterIdPrefix apply(MeterRegistry registry, RequestLog log) {
-                final List<Tag> tags = buildTags(log);
-
-                // Add the 'httpStatus' tag.
-                final HttpStatus status;
-                if (log.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
-                    status = log.status();
-                } else {
-                    status = HttpStatus.UNKNOWN;
-                }
-                tags.add(Tag.of("httpStatus", status.codeAsText()));
-
-                return new MeterIdPrefix(name, tags);
+                // method, hostNamePattern, route, status
+                final ImmutableList.Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(4);
+                buildTags(tagListBuilder, log);
+                RequestMetricSupport.appendHttpStatusTag(tagListBuilder, log);
+                return new MeterIdPrefix(name, tagListBuilder.build());
             }
 
-            private List<Tag> buildTags(RequestLog log) {
+            private void buildTags(ImmutableList.Builder<Tag> tagListBuilder, RequestLog log) {
                 final RequestContext ctx = log.context();
                 final Object requestContent = log.requestContent();
 
@@ -104,15 +99,13 @@ public interface MeterIdPrefixFunction {
                     methodName = requestHeaders.method().name();
                 }
 
-                final List<Tag> tags = new ArrayList<>(4); // method, hostNamePattern, route, status
-                tags.add(Tag.of("method", methodName));
+                tagListBuilder.add(Tag.of("method", methodName));
 
                 if (ctx instanceof ServiceRequestContext) {
                     final ServiceRequestContext sCtx = (ServiceRequestContext) ctx;
-                    tags.add(Tag.of("hostnamePattern", sCtx.virtualHost().hostnamePattern()));
-                    tags.add(Tag.of("route", sCtx.route().meterTag()));
+                    tagListBuilder.add(Tag.of("hostnamePattern", sCtx.virtualHost().hostnamePattern()));
+                    tagListBuilder.add(Tag.of("route", sCtx.route().meterTag()));
                 }
-                return tags;
             }
         };
     }
@@ -129,7 +122,7 @@ public interface MeterIdPrefixFunction {
      * a {@link MeterIdPrefix} using response properties that's not always available when the active request
      * counter is increased, such as HTTP status.
      */
-    default MeterIdPrefix activeRequestPrefix(MeterRegistry registry,  RequestLog log) {
+    default MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestLog log) {
         return apply(registry, log);
     }
 
