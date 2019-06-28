@@ -24,7 +24,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
-import org.apache.thrift.TApplicationException;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -33,6 +32,8 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
 import com.linecorp.armeria.client.ClientBuilder;
+import com.linecorp.armeria.client.InvalidResponseHeadersException;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.server.thrift.ThriftCallService;
@@ -83,7 +84,10 @@ public class ThrottlingRpcServiceTest {
         final HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift-never"))
                 .build(HelloService.Iface.class);
 
-        assertThatThrownBy(() -> client.hello("foo")).isInstanceOf(TApplicationException.class);
+        assertThatThrownBy(() -> client.hello("foo"))
+                .isInstanceOfSatisfying(InvalidResponseHeadersException.class, cause -> {
+                    assertThat(cause.headers().status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+                });
         verifyNoMoreInteractions(serviceHandler);
     }
 }

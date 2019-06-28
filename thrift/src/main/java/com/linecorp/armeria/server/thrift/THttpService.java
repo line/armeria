@@ -67,6 +67,8 @@ import com.linecorp.armeria.internal.thrift.TByteBufTransport;
 import com.linecorp.armeria.internal.thrift.ThriftFieldAccess;
 import com.linecorp.armeria.internal.thrift.ThriftFunction;
 import com.linecorp.armeria.server.AbstractHttpService;
+import com.linecorp.armeria.server.HttpResponseException;
+import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
@@ -678,6 +680,16 @@ public final class THttpService extends AbstractHttpService {
     private static void handleException(
             ServiceRequestContext ctx, RpcResponse rpcRes, CompletableFuture<HttpResponse> httpRes,
             SerializationFormat serializationFormat, int seqId, ThriftFunction func, Throwable cause) {
+
+        if (cause instanceof HttpStatusException) {
+            httpRes.complete(HttpResponse.of(((HttpStatusException) cause).httpStatus()));
+            return;
+        }
+
+        if (cause instanceof HttpResponseException) {
+            httpRes.complete(((HttpResponseException) cause).httpResponse());
+            return;
+        }
 
         final TBase<?, ?> result = func.newResult();
         final HttpData content;
