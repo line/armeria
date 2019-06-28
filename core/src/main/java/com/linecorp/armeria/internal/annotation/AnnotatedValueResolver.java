@@ -1023,7 +1023,7 @@ final class AnnotatedValueResolver {
                     }
 
                     shouldExist = false;
-                    defaultValue = getSpecifiedValue(aDefault.value()).get();
+                    defaultValue = getSpecifiedValue(aDefault.value()).orElse(null);
                 } else {
                     // Warn if @Default exists in an unsupported place.
                     final StringBuilder msg = new StringBuilder();
