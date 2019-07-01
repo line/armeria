@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext.PingPongExtra;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.DefaultAttributeMap;
+import com.linecorp.armeria.internal.brave.TraceContextUtil;
 
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.CurrentTraceContext.Scope;
@@ -54,7 +55,7 @@ public class RequestContextCurrentTraceContextTest {
     @Mock
     EventLoop eventLoop;
 
-    final CurrentTraceContext currentTraceContext = RequestContextCurrentTraceContext.DEFAULT;
+    final CurrentTraceContext currentTraceContext = RequestContextCurrentTraceContext.ofDefault();
     final DefaultAttributeMap attrs1 = new DefaultAttributeMap();
     final DefaultAttributeMap attrs2 = new DefaultAttributeMap();
     final TraceContext traceContext = TraceContext.newBuilder().traceId(1).spanId(1).build();
@@ -75,7 +76,7 @@ public class RequestContextCurrentTraceContextTest {
     public void copy() {
         try (SafeCloseable requestContextScope = mockRequestContext.push()) {
             try (Scope traceContextScope = currentTraceContext.newScope(traceContext)) {
-                RequestContextCurrentTraceContext.copy(mockRequestContext, mockRequestContext2);
+                TraceContextUtil.copy(mockRequestContext, mockRequestContext2);
                 assertThat(attrs1.attrs().next().get())
                         .isEqualTo(traceContext)
                         .isEqualTo(attrs2.attrs().next().get());

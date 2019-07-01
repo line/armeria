@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -73,7 +73,6 @@ import com.linecorp.armeria.testing.junit4.server.ServerRule;
 import brave.ScopedSpan;
 import brave.Tracer.SpanInScope;
 import brave.Tracing;
-import brave.http.HttpTracing;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.StrictScopeDecorator;
 import brave.sampler.Sampler;
@@ -228,17 +227,17 @@ public class BraveIntegrationTest {
                 .build(HelloService.AsyncIface.class);
     }
 
-    private static HttpTracing newTracing(String name) {
+    private static Tracing newTracing(String name) {
         final CurrentTraceContext currentTraceContext =
                 RequestContextCurrentTraceContext.builder()
                                                  .addScopeDecorator(StrictScopeDecorator.create())
                                                  .build();
-        return HttpTracing.create(Tracing.newBuilder()
-                                         .currentTraceContext(currentTraceContext)
-                                         .localServiceName(name)
-                                         .spanReporter(spanReporter)
-                                         .sampler(Sampler.ALWAYS_SAMPLE)
-                                         .build());
+        return Tracing.newBuilder()
+                      .currentTraceContext(currentTraceContext)
+                      .localServiceName(name)
+                      .spanReporter(spanReporter)
+                      .sampler(Sampler.ALWAYS_SAMPLE)
+                      .build();
     }
 
     @Test(timeout = 10000)

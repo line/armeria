@@ -49,7 +49,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 
 import brave.Tracing;
-import brave.http.HttpTracing;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.CurrentTraceContext.ScopeDecorator;
 import brave.sampler.Sampler;
@@ -69,25 +68,25 @@ class BraveServiceTest {
 
     @Test
     void newDecorator_shouldFailFastWhenRequestContextCurrentTraceContextNotConfigured() {
-        assertThatThrownBy(() -> BraveService.newDecorator(HttpTracing.create(Tracing.newBuilder().build())))
+        assertThatThrownBy(() -> BraveService.newDecorator(Tracing.newBuilder().build()))
                 .isInstanceOf(IllegalStateException.class).hasMessage(
-                "Tracing.currentTraceContext is not a RequestContextCurrentTraceContext scope. " +
-                "Please call Tracing.Builder.currentTraceContext(RequestContextCurrentTraceContext.DEFAULT)."
+                "Tracing.currentTraceContext is not a RequestContextCurrentTraceContext scope. Please " +
+                "call Tracing.Builder.currentTraceContext(RequestContextCurrentTraceContext.ofDefault())."
         );
     }
 
     @Test
     void newDecorator_shouldWorkWhenRequestContextCurrentTraceContextConfigured() {
         BraveService.newDecorator(
-                HttpTracing.create(Tracing.newBuilder()
-                                          .currentTraceContext(RequestContextCurrentTraceContext.DEFAULT)
-                                          .build()));
+                Tracing.newBuilder()
+                       .currentTraceContext(RequestContextCurrentTraceContext.ofDefault())
+                       .build());
     }
 
     @Test
     void shouldSubmitSpanWhenRequestIsSampled() throws Exception {
         final SpanCollectingReporter reporter = testServiceInvocation(
-                RequestContextCurrentTraceContext.DEFAULT, 1.0f);
+                RequestContextCurrentTraceContext.ofDefault(), 1.0f);
 
         // check span name
         final Span span = reporter.spans().take();
@@ -112,7 +111,7 @@ class BraveServiceTest {
     @Test
     void shouldNotSubmitSpanWhenRequestIsNotSampled() throws Exception {
         final SpanCollectingReporter reporter = testServiceInvocation(
-                RequestContextCurrentTraceContext.DEFAULT, 0.0f);
+                RequestContextCurrentTraceContext.ofDefault(), 0.0f);
 
         // don't submit any spans
         assertThat(reporter.spans().poll(1, TimeUnit.SECONDS)).isNull();
@@ -147,12 +146,12 @@ class BraveServiceTest {
                                                                 float samplingRate) throws Exception {
         final SpanCollectingReporter reporter = new SpanCollectingReporter();
 
-        final HttpTracing httpTracing = HttpTracing.create(Tracing.newBuilder()
-                                                                  .localServiceName(TEST_SERVICE)
-                                                                  .spanReporter(reporter)
-                                                                  .currentTraceContext(traceContext)
-                                                                  .sampler(Sampler.create(samplingRate))
-                                                                  .build());
+        final Tracing tracing = Tracing.newBuilder()
+                                       .localServiceName(TEST_SERVICE)
+                                       .spanReporter(reporter)
+                                       .currentTraceContext(traceContext)
+                                       .sampler(Sampler.create(samplingRate))
+                                       .build();
 
         final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/trustin",
                                                                  HttpHeaderNames.AUTHORITY, "foo.com"));
@@ -168,7 +167,7 @@ class BraveServiceTest {
         try (SafeCloseable ignored = ctx.push()) {
             @SuppressWarnings("unchecked")
             final Service<HttpRequest, HttpResponse> delegate = mock(Service.class);
-            final BraveService service = BraveService.newDecorator(httpTracing).apply(delegate);
+            final BraveService service = BraveService.newDecorator(tracing).apply(delegate);
             when(delegate.serve(ctx, req)).thenReturn(res);
 
             // do invoke

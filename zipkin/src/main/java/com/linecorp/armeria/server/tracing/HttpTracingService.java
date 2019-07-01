@@ -19,18 +19,16 @@ package com.linecorp.armeria.server.tracing;
 import static com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext.ensureScopeUsesRequestContext;
 import static java.util.Objects.requireNonNull;
 
-import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext;
-import com.linecorp.armeria.internal.tracing.AsciiStringKeyFactory;
-import com.linecorp.armeria.internal.tracing.SpanContextUtil;
-import com.linecorp.armeria.internal.tracing.SpanTags;
+import com.linecorp.armeria.internal.brave.AsciiStringKeyFactory;
+import com.linecorp.armeria.internal.brave.SpanContextUtil;
+import com.linecorp.armeria.internal.brave.SpanTags;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
@@ -69,7 +67,6 @@ public class HttpTracingService extends SimpleDecoratingService<HttpRequest, Htt
 
     private final Tracer tracer;
     private final TraceContext.Extractor<HttpHeaders> extractor;
-    private final BiConsumer<RequestContext, RequestContext> traceContextPropagator;
 
     /**
      * Creates a new instance.
@@ -78,22 +75,10 @@ public class HttpTracingService extends SimpleDecoratingService<HttpRequest, Htt
      */
     @Deprecated
     public HttpTracingService(Service<HttpRequest, HttpResponse> delegate, Tracing tracing) {
-        this(delegate, tracing, RequestContextCurrentTraceContext::copy);
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @deprecated Use {@code BraveService#newDecorator(httpTracing)} in the `armeria-brave` dependency.
-     */
-    @Deprecated
-    protected HttpTracingService(Service<HttpRequest, HttpResponse> delegate, Tracing tracing,
-                                 BiConsumer<RequestContext, RequestContext> traceContextPropagator) {
         super(delegate);
         tracer = requireNonNull(tracing, "tracing").tracer();
         extractor = tracing.propagationFactory().create(AsciiStringKeyFactory.INSTANCE)
                            .extractor(HttpHeaders::get);
-        this.traceContextPropagator = requireNonNull(traceContextPropagator, "traceContextPropagator");
     }
 
     @Override
@@ -112,7 +97,7 @@ public class HttpTracingService extends SimpleDecoratingService<HttpRequest, Htt
                               RequestLogAvailability.REQUEST_START);
 
         // Ensure the trace context propagates to children
-        ctx.onChild(traceContextPropagator);
+        ctx.onChild(RequestContextCurrentTraceContext::copy);
 
         ctx.log().addListener(log -> {
             SpanTags.logWireReceive(span, log.requestFirstBytesTransferredTimeNanos(), log);

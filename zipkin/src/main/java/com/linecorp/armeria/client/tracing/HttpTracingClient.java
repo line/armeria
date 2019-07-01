@@ -23,7 +23,6 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -36,14 +35,13 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext;
-import com.linecorp.armeria.internal.tracing.AsciiStringKeyFactory;
-import com.linecorp.armeria.internal.tracing.SpanContextUtil;
-import com.linecorp.armeria.internal.tracing.SpanTags;
+import com.linecorp.armeria.internal.brave.AsciiStringKeyFactory;
+import com.linecorp.armeria.internal.brave.SpanContextUtil;
+import com.linecorp.armeria.internal.brave.SpanTags;
 
 import brave.Span;
 import brave.Span.Kind;
@@ -92,28 +90,24 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
                         "inside an Armeria server (e.g., this is a normal spring-mvc tomcat server).",
                         e.getMessage());
         }
-        return delegate -> new HttpTracingClient(delegate, tracing, remoteServiceName,
-                                                 RequestContextCurrentTraceContext::copy);
+        return delegate -> new HttpTracingClient(delegate, tracing, remoteServiceName);
     }
 
     private final Tracer tracer;
     private final TraceContext.Injector<RequestHeadersBuilder> injector;
     @Nullable
     private final String remoteServiceName;
-    private final BiConsumer<RequestContext, RequestContext> traceContextPropagator;
 
     /**
      * Creates a new instance.
      */
     protected HttpTracingClient(Client<HttpRequest, HttpResponse> delegate, Tracing tracing,
-                                @Nullable String remoteServiceName,
-                                BiConsumer<RequestContext, RequestContext> traceContextPropagator) {
+                                @Nullable String remoteServiceName) {
         super(delegate);
         tracer = requireNonNull(tracing, "tracing").tracer();
         injector = tracing.propagationFactory().create(AsciiStringKeyFactory.INSTANCE)
                           .injector(RequestHeadersBuilder::set);
         this.remoteServiceName = remoteServiceName;
-        this.traceContextPropagator = requireNonNull(traceContextPropagator, "traceContextPropagator");
     }
 
     @Override
@@ -139,7 +133,7 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
                               RequestLogAvailability.REQUEST_START);
 
         // Ensure the trace context propagates to children
-        ctx.onChild(traceContextPropagator);
+        ctx.onChild(RequestContextCurrentTraceContext::copy);
 
         ctx.log().addListener(log -> {
             SpanTags.logWireSend(span, log.requestFirstBytesTransferredTimeNanos(), log);

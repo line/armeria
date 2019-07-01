@@ -28,6 +28,8 @@ import static org.mockito.Mockito.when;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.annotation.Nullable;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -50,7 +52,6 @@ import com.linecorp.armeria.common.brave.SpanCollectingReporter;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import brave.Tracing;
-import brave.http.HttpTracing;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.CurrentTraceContext.ScopeDecorator;
 import brave.sampler.Sampler;
@@ -70,13 +71,14 @@ class BraveClientTest {
 
     @Test
     void newDecorator_shouldWorkWhenRequestContextCurrentTraceContextNotConfigured() {
-        BraveClient.newDecorator(HttpTracing.create(Tracing.newBuilder().build()));
+        BraveClient.newDecorator(Tracing.newBuilder().build());
     }
 
     @Test
     void newDecorator_shouldWorkWhenRequestContextCurrentTraceContextConfigured() {
-        BraveClient.newDecorator(HttpTracing.create(
-                Tracing.newBuilder().currentTraceContext(RequestContextCurrentTraceContext.DEFAULT).build()));
+        BraveClient.newDecorator(
+                Tracing.newBuilder().currentTraceContext(RequestContextCurrentTraceContext.ofDefault())
+                       .build());
     }
 
     @Test
@@ -88,7 +90,7 @@ class BraveClientTest {
                                        .spanReporter(reporter)
                                        .sampler(Sampler.create(1.0f))
                                        .build();
-        testRemoteInvocation(HttpTracing.create(tracing));
+        testRemoteInvocation(tracing, null);
 
         // check span name
         final Span span = reporter.spans().take();
@@ -122,7 +124,7 @@ class BraveClientTest {
                                        .spanReporter(reporter)
                                        .sampler(Sampler.create(1.0f))
                                        .build();
-        testRemoteInvocation(HttpTracing.create(tracing).clientOf("fooService"));
+        testRemoteInvocation(tracing, "fooService");
 
         // check span name
         final Span span = reporter.spans().take();
@@ -161,7 +163,7 @@ class BraveClientTest {
                                        .spanReporter(reporter)
                                        .sampler(Sampler.create(1.0f))
                                        .build();
-        testRemoteInvocation(HttpTracing.create(tracing));
+        testRemoteInvocation(tracing, null);
 
         // check span name
         final Span span = reporter.spans().take();
@@ -182,12 +184,12 @@ class BraveClientTest {
                                        .spanReporter(reporter)
                                        .sampler(Sampler.create(0.0f))
                                        .build();
-        testRemoteInvocation(HttpTracing.create(tracing));
+        testRemoteInvocation(tracing, null);
 
         assertThat(reporter.spans().poll(1, TimeUnit.SECONDS)).isNull();
     }
 
-    private static void testRemoteInvocation(HttpTracing httpTracing)
+    private static void testRemoteInvocation(Tracing tracing, @Nullable String remoteServiceName)
             throws Exception {
 
         // prepare parameters
@@ -210,7 +212,7 @@ class BraveClientTest {
             final Client<HttpRequest, HttpResponse> delegate = mock(Client.class);
             when(delegate.execute(any(), any())).thenReturn(res);
 
-            final BraveClient stub = BraveClient.newDecorator(httpTracing).apply(delegate);
+            final BraveClient stub = BraveClient.newDecorator(tracing, remoteServiceName).apply(delegate);
             // do invoke
             final HttpResponse actualRes = stub.execute(ctx, req);
 
