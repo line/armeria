@@ -57,7 +57,6 @@ import com.linecorp.armeria.client.tracing.HttpTracingClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.thrift.ThriftCompletableFuture;
 import com.linecorp.armeria.common.tracing.HelloService;
 import com.linecorp.armeria.common.tracing.HelloService.AsyncIface;
@@ -120,7 +119,7 @@ public class HttpTracingIntegrationTest {
                         quxClient.hello(name, f2);
                         CompletableFuture.allOf(f1, f2).whenCompleteAsync((aVoid, throwable) -> {
                             resultHandler.onComplete(f1.join() + ", and " + f2.join());
-                        }, RequestContext.current().contextAwareExecutor());
+                        }, ServiceRequestContext.current().contextAwareExecutor());
                     })));
 
             sb.service("/qux", decorate("service/qux", THttpService.of(
@@ -136,7 +135,7 @@ public class HttpTracingIntegrationTest {
 
                     final ListenableFuture<List<Object>> spanAware = allAsList(IntStream.range(1, 3).mapToObj(
                             i -> executorService.submit(
-                                    RequestContext.current().makeContextAware(() -> {
+                                    ServiceRequestContext.current().makeContextAware(() -> {
                                         if (i == 2) {
                                             countDownLatch.countDown();
                                             countDownLatch.await();
@@ -161,7 +160,7 @@ public class HttpTracingIntegrationTest {
                     transformAsync(spanAware,
                                    result -> allAsList(IntStream.range(1, 3).mapToObj(
                                            i -> executorService.submit(
-                                                   RequestContext.current().makeContextAware(() -> {
+                                                   ServiceRequestContext.current().makeContextAware(() -> {
                                                        ScopedSpan span = Tracing.currentTracer()
                                                                                 .startScopedSpan("aloha");
                                                        try {
@@ -171,10 +170,10 @@ public class HttpTracingIntegrationTest {
                                                        }
                                                    })
                                            )).collect(toImmutableList())),
-                                   RequestContext.current().contextAwareExecutor())
+                                   ServiceRequestContext.current().contextAwareExecutor())
                             .addListener(() -> {
                                 responseFuture.complete(HttpResponse.of(OK, MediaType.PLAIN_TEXT_UTF_8, "Lee"));
-                            }, RequestContext.current().contextAwareExecutor());
+                            }, ServiceRequestContext.current().contextAwareExecutor());
                     return res;
                 }
             }));

@@ -16,11 +16,14 @@
 
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.time.Duration;
 import java.util.Map.Entry;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -37,6 +40,61 @@ import com.linecorp.armeria.common.RpcRequest;
  * Every client request has its own {@link ClientRequestContext} instance.
  */
 public interface ClientRequestContext extends RequestContext {
+
+    /**
+     * Returns the client-side context of the {@link Request} that is being handled in the current thread.
+     *
+     * @throws IllegalStateException if the context is unavailable in the current thread or
+     *                               the current context is not a {@link ClientRequestContext}.
+     */
+    static ClientRequestContext current() {
+        final RequestContext ctx = RequestContext.current();
+        checkState(ctx instanceof ClientRequestContext,
+                   "The current context is not a client-side context: %s", ctx);
+        return (ClientRequestContext) ctx;
+    }
+
+    /**
+     * Returns the client-side context of the {@link Request} that is being handled in the current thread.
+     *
+     * @return the {@link ClientRequestContext} available in the current thread, or {@code null} if unavailable.
+     * @throws IllegalStateException if the current context is not a {@link ClientRequestContext}.
+     */
+    @Nullable
+    static ClientRequestContext currentOrNull() {
+        final RequestContext ctx = RequestContext.currentOrNull();
+        if (ctx == null) {
+            return null;
+        }
+        checkState(ctx instanceof ClientRequestContext,
+                   "The current context is not a client-side context: %s", ctx);
+        return (ClientRequestContext) ctx;
+    }
+
+    /**
+     * Maps the client-side context of the {@link Request} that is being handled in the current thread.
+     *
+     * @param mapper the {@link Function} that maps the {@link ClientRequestContext}
+     * @param defaultValueSupplier the {@link Supplier} that provides the value when the context is unavailable
+     *                             in the current thread. If {@code null}, the {@code null} will be returned
+     *                             when the context is unavailable in the current thread.
+     * @throws IllegalStateException if the current context is not a {@link ClientRequestContext}.
+     */
+    @Nullable
+    static <T> T mapCurrent(
+            Function<? super ClientRequestContext, T> mapper, @Nullable Supplier<T> defaultValueSupplier) {
+
+        final ClientRequestContext ctx = currentOrNull();
+        if (ctx != null) {
+            return mapper.apply(ctx);
+        }
+
+        if (defaultValueSupplier != null) {
+            return defaultValueSupplier.get();
+        }
+
+        return null;
+    }
 
     /**
      * Returns a new {@link ClientRequestContext} created from the specified {@link HttpRequest}.

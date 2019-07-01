@@ -37,7 +37,6 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -54,7 +53,7 @@ public class ThriftHttpHeaderTest {
     private static final String SECRET = "QWxhZGRpbjpPcGVuU2VzYW1l";
 
     private static final HelloService.AsyncIface helloService = (name, resultHandler) -> {
-        final ServiceRequestContext ctx = RequestContext.current();
+        final ServiceRequestContext ctx = ServiceRequestContext.current();
         final HttpRequest httpReq = ctx.request();
         final HttpHeaders headers = httpReq.headers();
         if (headers.contains(AUTHORIZATION, SECRET)) {

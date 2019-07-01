@@ -71,7 +71,6 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -200,11 +199,11 @@ class GrpcServiceServerTest {
 
         @Override
         public void errorWithMessage(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
-            Metadata metadata = new Metadata();
+            final Metadata metadata = new Metadata();
             metadata.put(STRING_VALUE_KEY, StringValue.newBuilder().setValue("custom metadata").build());
             metadata.put(CUSTOM_VALUE_KEY, "custom value");
 
-            ServiceRequestContext ctx = RequestContext.current();
+            final ServiceRequestContext ctx = ServiceRequestContext.current();
             // Metadata takes priority, this trailer will not be written since it has the same name.
             ctx.addAdditionalResponseTrailer(
                     STRING_VALUE_KEY.name(),
@@ -216,7 +215,7 @@ class GrpcServiceServerTest {
                     INT_32_VALUE_KEY.name(),
                     Base64.getEncoder().encodeToString(
                             Int32Value.newBuilder().setValue(10).build().toByteArray()) +
-                    "," +
+                    ',' +
                     Base64.getEncoder().encodeToString(
                             Int32Value.newBuilder().setValue(20).build().toByteArray()));
 
@@ -269,12 +268,12 @@ class GrpcServiceServerTest {
         @Override
         public StreamObserver<SimpleRequest> checkRequestContext(
                 StreamObserver<SimpleResponse> responseObserver) {
-            final RequestContext ctx = RequestContext.current();
+            final ServiceRequestContext ctx = ServiceRequestContext.current();
             ctx.attr(CHECK_REQUEST_CONTEXT_COUNT).set(0);
             return new StreamObserver<SimpleRequest>() {
                 @Override
                 public void onNext(SimpleRequest value) {
-                    final RequestContext ctx = RequestContext.current();
+                    final ServiceRequestContext ctx = ServiceRequestContext.current();
                     final Attribute<Integer> attr = ctx.attr(CHECK_REQUEST_CONTEXT_COUNT);
                     attr.set(attr.get() + 1);
                 }
@@ -284,7 +283,7 @@ class GrpcServiceServerTest {
 
                 @Override
                 public void onCompleted() {
-                    final RequestContext ctx = RequestContext.current();
+                    final ServiceRequestContext ctx = ServiceRequestContext.current();
                     final int count = ctx.attr(CHECK_REQUEST_CONTEXT_COUNT).get();
                     responseObserver.onNext(
                             SimpleResponse.newBuilder()
@@ -334,8 +333,7 @@ class GrpcServiceServerTest {
         @Override
         public void errorAdditionalMetadata(SimpleRequest request,
                                             StreamObserver<SimpleResponse> responseObserver) {
-            final ServiceRequestContext ctx = RequestContext.current();
-            ctx.addAdditionalResponseTrailer(
+            ServiceRequestContext.current().addAdditionalResponseTrailer(
                     ERROR_METADATA_HEADER,
                     Base64.getEncoder().encodeToString(StringValue.newBuilder()
                                                                   .setValue("an error occurred")

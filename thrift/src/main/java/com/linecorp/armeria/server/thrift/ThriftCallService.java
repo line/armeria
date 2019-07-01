@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -59,7 +58,7 @@ public final class ThriftCallService implements Service<RpcRequest, RpcResponse>
 
         @Override
         public void onError(Exception e) {
-            logOneWayFunctionFailure(RequestContext.mapCurrent(Function.identity(), null), e);
+            logOneWayFunctionFailure(RequestContext.currentOrNull(), e);
         }
     };
 

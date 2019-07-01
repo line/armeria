@@ -38,7 +38,6 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.grpc.testing.Messages;
 import com.linecorp.armeria.grpc.testing.Messages.PayloadType;
 import com.linecorp.armeria.grpc.testing.Messages.ResponseParameters;
@@ -94,9 +93,7 @@ public class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
     @Override
     public void emptyCall(EmptyProtos.Empty empty,
                           StreamObserver<Empty> responseObserver) {
-        ServiceRequestContext ctx = RequestContext.current();
-
-        ctx.addAdditionalResponseTrailer(
+        ServiceRequestContext.current().addAdditionalResponseTrailer(
                 STRING_VALUE_KEY.name(),
                 Base64.getEncoder().encodeToString(
                         StringValue.newBuilder().setValue("hello").build().toByteArray()) +

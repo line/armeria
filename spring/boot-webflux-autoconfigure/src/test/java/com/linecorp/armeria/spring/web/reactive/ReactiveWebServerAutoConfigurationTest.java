@@ -55,7 +55,6 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -77,7 +76,7 @@ class ReactiveWebServerAutoConfigurationTest {
             @GetMapping("/hello")
             Flux<String> hello() {
                 // This method would be called in one of Armeria worker threads.
-                assertThat((ServiceRequestContext) RequestContext.current()).isNotNull();
+                assertThat(ServiceRequestContext.current()).isNotNull();
                 return Flux.just("h", "e", "l", "l", "o");
             }
         }
@@ -97,13 +96,13 @@ class ReactiveWebServerAutoConfigurationTest {
         @Component
         static class TestHandler {
             public Mono<ServerResponse> route(ServerRequest request) {
-                assertThat((ServiceRequestContext) RequestContext.current()).isNotNull();
+                assertThat(ServiceRequestContext.current()).isNotNull();
                 return ServerResponse.ok().contentType(MediaType.TEXT_PLAIN)
                                      .body(BodyInserters.fromObject("route"));
             }
 
             public Mono<ServerResponse> route2(ServerRequest request) {
-                assertThat((ServiceRequestContext) RequestContext.current()).isNotNull();
+                assertThat(ServiceRequestContext.current()).isNotNull();
                 return Mono.from(request.bodyToMono(Map.class))
                            .map(map -> assertThat(map.get("a")).isEqualTo(1))
                            .then(ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)

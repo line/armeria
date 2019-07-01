@@ -35,10 +35,10 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService;
@@ -59,7 +59,7 @@ public class GracefulShutdownIntegrationTest {
 
             sb.service("/sleep", THttpService.of(
                     (AsyncIface) (milliseconds, resultHandler) ->
-                            RequestContext.current().eventLoop().schedule(
+                            ServiceRequestContext.current().eventLoop().schedule(
                                     () -> resultHandler.onComplete(milliseconds), milliseconds, MILLISECONDS)));
 
             final AccessLogWriter writer1 = new AccessLogWriter() {

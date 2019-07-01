@@ -1119,14 +1119,14 @@ public class AnnotatedHttpServiceTest {
     }
 
     static void validateContext(RequestContext ctx) {
-        if (RequestContext.current() != ctx) {
+        if (ServiceRequestContext.current() != ctx) {
             throw new RuntimeException("ServiceRequestContext instances are not same!");
         }
     }
 
-    static void validateContextAndRequest(RequestContext ctx, Object req) {
+    static void validateContextAndRequest(RequestContext ctx, Request req) {
         validateContext(ctx);
-        if (RequestContext.current().request() != req) {
+        if (ServiceRequestContext.current().request() != req) {
             throw new RuntimeException("HttpRequest instances are not same!");
         }
     }

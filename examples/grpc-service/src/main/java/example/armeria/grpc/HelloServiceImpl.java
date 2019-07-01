@@ -4,7 +4,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import example.armeria.grpc.Hello.HelloReply;
@@ -31,7 +30,7 @@ public class HelloServiceImpl extends HelloServiceImplBase {
     @Override
     public void lazyHello(HelloRequest request, StreamObserver<HelloReply> responseObserver) {
         // You can use the event loop for scheduling a task.
-        RequestContext.current().contextAwareEventLoop().schedule(() -> {
+        ServiceRequestContext.current().contextAwareEventLoop().schedule(() -> {
             responseObserver.onNext(buildReply(toMessage(request.getName())));
             responseObserver.onCompleted();
         }, 3, TimeUnit.SECONDS);
@@ -54,8 +53,7 @@ public class HelloServiceImpl extends HelloServiceImplBase {
         // 3. Call a blocking API in the separate thread pool you manage.
         //
         // In this example, we chose the option 1:
-        final ServiceRequestContext ctx = RequestContext.current();
-        ctx.blockingTaskExecutor().submit(() -> {
+        ServiceRequestContext.current().blockingTaskExecutor().submit(() -> {
             try {
                 // Simulate a blocking API call.
                 Thread.sleep(3000);
@@ -79,20 +77,20 @@ public class HelloServiceImpl extends HelloServiceImplBase {
             .take(5)
             .map(index -> "Hello, " + request.getName() + "! (sequence: " + (index + 1) + ')')
             // You can make your Flux/Mono publish the signals in the RequestContext-aware executor.
-            .publishOn(Schedulers.fromExecutor(RequestContext.current().contextAwareExecutor()))
+            .publishOn(Schedulers.fromExecutor(ServiceRequestContext.current().contextAwareExecutor()))
             .subscribe(message -> {
                            // Confirm this callback is being executed on the RequestContext-aware executor.
-                           final ServiceRequestContext ctx = RequestContext.current();
+                           ServiceRequestContext.current();
                            responseObserver.onNext(buildReply(message));
                        },
                        cause -> {
                            // Confirm this callback is being executed on the RequestContext-aware executor.
-                           final ServiceRequestContext ctx = RequestContext.current();
+                           ServiceRequestContext.current();
                            responseObserver.onError(cause);
                        },
                        () -> {
                            // Confirm this callback is being executed on the RequestContext-aware executor.
-                           final ServiceRequestContext ctx = RequestContext.current();
+                           ServiceRequestContext.current();
                            responseObserver.onCompleted();
                        });
     }

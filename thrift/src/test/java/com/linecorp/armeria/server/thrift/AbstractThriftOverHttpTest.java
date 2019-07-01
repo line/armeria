@@ -41,7 +41,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -127,7 +126,7 @@ public abstract class AbstractThriftOverHttpTest {
 
             sb.service("/sleep", THttpService.of(
                     (SleepService.AsyncIface) (milliseconds, resultHandler) ->
-                            RequestContext.current().eventLoop().schedule(
+                            ServiceRequestContext.current().eventLoop().schedule(
                                     () -> resultHandler.onComplete(milliseconds),
                                     milliseconds, TimeUnit.MILLISECONDS)));
 

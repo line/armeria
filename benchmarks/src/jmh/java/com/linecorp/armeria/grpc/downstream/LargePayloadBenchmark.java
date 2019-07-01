@@ -29,13 +29,13 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.util.Timestamps;
 
 import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.grpc.BinaryProxyGrpc.BinaryProxyImplBase;
 import com.linecorp.armeria.grpc.BinaryProxyGrpc.BinaryProxyStub;
 import com.linecorp.armeria.grpc.BinaryProxyOuterClass.BinaryPayload;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
@@ -65,36 +65,34 @@ public class LargePayloadBenchmark {
     @Setup
     public void setUp() {
         server = new ServerBuilder()
-                .serviceUnder("/", new GrpcServiceBuilder().addService(
-                        new BinaryProxyImplBase() {
+                .serviceUnder("/", new GrpcServiceBuilder().addService(new BinaryProxyImplBase() {
+                    @Override
+                    public StreamObserver<BinaryPayload> echo(StreamObserver<BinaryPayload> responseObserver) {
+                        return new StreamObserver<BinaryPayload>() {
                             @Override
-                            public StreamObserver<BinaryPayload> echo(
-                                    StreamObserver<BinaryPayload> responseObserver) {
-                                return new StreamObserver<BinaryPayload>() {
-                                    @Override
-                                    public void onNext(BinaryPayload value) {
-                                        try {
-                                            responseObserver.onNext(value);
-                                        } finally {
-                                            if (wrapBuffer) {
-                                                GrpcUnsafeBufferUtil.releaseBuffer(value,
-                                                                                   RequestContext.current());
-                                            }
-                                        }
+                            public void onNext(BinaryPayload value) {
+                                try {
+                                    responseObserver.onNext(value);
+                                } finally {
+                                    if (wrapBuffer) {
+                                        GrpcUnsafeBufferUtil.releaseBuffer(value,
+                                                                           ServiceRequestContext.current());
                                     }
-
-                                    @Override
-                                    public void onError(Throwable t) {
-                                        responseObserver.onError(t);
-                                    }
-
-                                    @Override
-                                    public void onCompleted() {
-                                        responseObserver.onCompleted();
-                                    }
-                                };
+                                }
                             }
-                        }).unsafeWrapRequestBuffers(wrapBuffer).build())
+
+                            @Override
+                            public void onError(Throwable t) {
+                                responseObserver.onError(t);
+                            }
+
+                            @Override
+                            public void onCompleted() {
+                                responseObserver.onCompleted();
+                            }
+                        };
+                    }
+                }).unsafeWrapRequestBuffers(wrapBuffer).build())
                 .build();
         server.start().join();
         final ServerPort httpPort = server.activePorts().values().stream()
