@@ -49,6 +49,7 @@ final class DefaultAddressResolverGroupFactory
         nameResolverBuilder.traceEnabled(true);
         customizers.forEach(customizer -> customizer.accept(nameResolverBuilder));
         nameResolverBuilder.channelType(TransportType.datagramChannelType(eventLoopGroup));
+        nameResolverBuilder.socketChannelType(TransportType.socketChannelType(eventLoopGroup));
         return new DnsAddressResolverGroup(nameResolverBuilder);
     }
 }
