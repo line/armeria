@@ -15,7 +15,9 @@
  */
 
 /**
- * Common classes for distributed tracing support based on <a href="https://github.com/openzipkin/brave">Brave</a>.
+ * Common classes for distributed tracing support based on
+ * <a href="https://github.com/openzipkin/brave">Brave</a>, a Java tracing library compatible with
+ * <a href="http://zipkin.io/">Zipkin</a>.
  */
 @NonNullByDefault
 package com.linecorp.armeria.common.brave;

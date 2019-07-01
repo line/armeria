@@ -47,7 +47,7 @@ import io.netty.util.AttributeKey;
  * {@link RequestContext}'s attribute so that there's no need for thread local variables
  * which can lead to unpredictable behavior in asynchronous programming.
  *
- * @deprecated Use the same class in the `armeria-brave` dependency.
+ * @deprecated Use {@link com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext}.
  */
 @Deprecated
 public final class RequestContextCurrentTraceContext extends CurrentTraceContext {

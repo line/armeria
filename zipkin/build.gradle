@@ -1,5 +1,5 @@
 dependencies {
-    testCompile project(':thrift')
-
     compile project(':brave')
+
+    testCompile project(':thrift')
 }

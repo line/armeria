@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
+import com.linecorp.armeria.client.brave.BraveClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
@@ -57,7 +58,7 @@ import brave.propagation.TraceContext;
  * <p>This decorator puts trace data into HTTP headers. The specifications of header names and its values
  * correspond to <a href="http://zipkin.io/">Zipkin</a>.
  *
- * @deprecated Use {@code BraveClient} in the `armeria-brave` dependency.
+ * @deprecated Use {@link BraveClient}.
  */
 @Deprecated
 public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpResponse> {
@@ -67,7 +68,7 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
     /**
      * Creates a new tracing {@link Client} decorator using the specified {@link Tracing} instance.
      *
-     * @deprecated Use {@code BraveClient#newDecorator(httpTracing)} in the `armeria-brave` dependency.
+     * @deprecated Use {@link BraveClient#newDecorator(Tracing)}.
      */
     @Deprecated
     public static Function<Client<HttpRequest, HttpResponse>, HttpTracingClient> newDecorator(Tracing tracing) {
@@ -78,7 +79,7 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
      * Creates a new tracing {@link Client} decorator using the specified {@link Tracing} instance
      * and the remote service name.
      *
-     * @deprecated Use {@code BraveClient#newDecorator(httpTracing)} in the `armeria-brave` dependency.
+     * @deprecated Use {@link BraveClient#newDecorator(Tracing, String)}.
      */
     @Deprecated
     public static Function<Client<HttpRequest, HttpResponse>, HttpTracingClient> newDecorator(

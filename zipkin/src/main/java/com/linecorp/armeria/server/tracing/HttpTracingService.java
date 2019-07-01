@@ -32,6 +32,7 @@ import com.linecorp.armeria.internal.brave.SpanTags;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
+import com.linecorp.armeria.server.brave.BraveService;
 
 import brave.Span;
 import brave.Span.Kind;
@@ -48,7 +49,7 @@ import brave.propagation.TraceContextOrSamplingFlags;
  * <p>This decorator retrieves trace data from HTTP headers. The specifications of header names and its values
  * correspond to <a href="http://zipkin.io/">Zipkin</a>.
  *
- * @deprecated Use {@code BraveService} in the `armeria-brave` dependency.
+ * @deprecated Use {@link BraveService}.
  */
 @Deprecated
 public class HttpTracingService extends SimpleDecoratingService<HttpRequest, HttpResponse> {
@@ -56,7 +57,7 @@ public class HttpTracingService extends SimpleDecoratingService<HttpRequest, Htt
     /**
      * Creates a new tracing {@link Service} decorator using the specified {@link Tracing} instance.
      *
-     * @deprecated Use {@code BraveService#newDecorator(httpTracing)} in the `armeria-brave` dependency.
+     * @deprecated Use {@link BraveService#newDecorator(Tracing)}.
      */
     @Deprecated
     public static Function<Service<HttpRequest, HttpResponse>, HttpTracingService>
@@ -71,7 +72,7 @@ public class HttpTracingService extends SimpleDecoratingService<HttpRequest, Htt
     /**
      * Creates a new instance.
      *
-     * @deprecated Use {@code BraveService#newDecorator(httpTracing)} in the `armeria-brave` dependency.
+     * @deprecated Use {@link BraveService#newDecorator(Tracing)}.
      */
     @Deprecated
     public HttpTracingService(Service<HttpRequest, HttpResponse> delegate, Tracing tracing) {
