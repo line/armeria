@@ -46,7 +46,7 @@ com.github.jengelman.gradle.plugins:
   shadow: { version: '5.0.0' }
 
 com.google.api:
-  gax-grpc: { version: '1.45.0' }
+  gax-grpc: { version: '1.47.0' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
@@ -93,13 +93,13 @@ com.google.protobuf:
     version: *PROTOBUF_VERSION
     exclusions:
     - com.google.errorprone:error_prone_annotations
-  protobuf-gradle-plugin: { version: '0.8.8' }
+  protobuf-gradle-plugin: { version: '0.8.9' }
 
 com.moowork.gradle:
   gradle-node-plugin: { version: '1.3.1' }
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.19' }
+  checkstyle: { version: '8.22' }
 
 com.spotify:
   completable-futures:
@@ -159,24 +159,24 @@ io.grpc:
 
 io.micrometer:
   micrometer-core:
-    version: &MICROMETER_VERSION '1.1.4'
+    version: &MICROMETER_VERSION '1.2.0'
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-core/1.1.4/
+    - https://static.javadoc.io/io.micrometer/micrometer-core/1.2.0/
   micrometer-registry-prometheus:
     version: *MICROMETER_VERSION
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.1.4/
+    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.2.0/
   micrometer-spring-legacy:
     version: *MICROMETER_VERSION
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.1.4/
+    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.2.0/
     exclusions:
     - org.springframework:spring-web
     - org.springframework:spring-webmvc
 
 io.netty:
   netty-common:
-    version: &NETTY_VERSION '4.1.34.Final'
+    version: &NETTY_VERSION '4.1.37.Final'
     javadocs:
     - https://netty.io/4.1/api/
   netty-buffer: { version: *NETTY_VERSION }
@@ -191,7 +191,7 @@ io.netty:
   netty-transport: { version: *NETTY_VERSION }
   netty-transport-native-epoll: { version: *NETTY_VERSION }
   netty-transport-native-unix-common: { version: *NETTY_VERSION }
-  netty-tcnative-boringssl-static: { version: '2.0.23.Final' }
+  netty-tcnative-boringssl-static: { version: '2.0.25.Final' }
 
 io.projectreactor:
   reactor-core:
@@ -208,19 +208,20 @@ io.prometheus:
 
 io.reactivex.rxjava2:
   rxjava:
-    version: '2.2.9'
+    version: '2.2.10'
     javadocs:
     - http://reactivex.io/RxJava/2.x/javadoc/
 
 io.zipkin.brave:
   brave:
-    version: '5.6.3'
+    version: '5.6.5'
+    # ':site:javadoc' fails when we use a newer version of Javadoc.
     javadocs:
     - https://static.javadoc.io/io.zipkin.brave/brave/5.6.3/
 
 it.unimi.dsi:
   fastutil:
-    version: '8.2.2'
+    version: '8.2.3'
     relocations:
     - from: it.unimi.dsi.fastutil
       to: com.linecorp.armeria.internal.shaded.fastutil
@@ -242,7 +243,7 @@ junit:
 
 org.junit.jupiter:
   junit-jupiter-api:
-    version: &JUNIT_JUPITER_VERSION '5.4.2'
+    version: &JUNIT_JUPITER_VERSION '5.5.0'
     javadocs:
     - https://junit.org/junit5/docs/5.4.2/api/
   junit-jupiter-engine:
@@ -251,15 +252,15 @@ org.junit.jupiter:
     version: *JUNIT_JUPITER_VERSION
 org.junit.platform:
   junit-platform-commons:
-    version: &JUNIT_PLATFORM_VERSION '1.4.2'
+    version: &JUNIT_PLATFORM_VERSION '1.5.0'
   junit-platform-launcher:
     version: *JUNIT_PLATFORM_VERSION
 org.junit.vintage:
   junit-vintage-engine:
-    version: '5.4.2'
+    version: '5.5.0'
 
 kr.motd.gradle:
-  sphinx-gradle-plugin: { version: '2.4.0' }
+  sphinx-gradle-plugin: { version: '2.5.0' }
 
 # We do not depend on log4j. We just need this to stop dependency-management-plugin from
 # complaining about its bad POM.
@@ -362,7 +363,7 @@ org.dmonix.junit:
   zookeeper-junit: { version: '1.2' }
 
 org.eclipse.jetty:
-  apache-jsp: { version: &JETTY_VERSION '9.4.18.v20190429' }
+  apache-jsp: { version: &JETTY_VERSION '9.4.19.v20190610' }
   apache-jstl: { version: *JETTY_VERSION }
   jetty-annotations:
     version: *JETTY_VERSION
@@ -382,7 +383,7 @@ org.eclipse.jetty.http2:
   http2-server: { version: *JETTY_VERSION }
 
 org.hibernate.validator:
-  hibernate-validator: { version: '6.0.16.Final' }
+  hibernate-validator: { version: '6.0.17.Final' }
 
 org.jctools:
   jctools-core:
@@ -440,7 +441,7 @@ org.slf4j:
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.1.5.RELEASE'
+    version: &SPRING_BOOT_VERSION '2.1.6.RELEASE'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }
@@ -455,7 +456,7 @@ org.springframework.boot:
   spring-boot-gradle-plugin: { version: *SPRING_BOOT_VERSION }
 
 pl.project13.scala:
-  sbt-jmh-extras: { version: 0.3.6 }
+  sbt-jmh-extras: { version: 0.3.7 }
 
 # Needed to work around the problem with Gradle not supporting POM relocation correctly.
 xml-apis:
