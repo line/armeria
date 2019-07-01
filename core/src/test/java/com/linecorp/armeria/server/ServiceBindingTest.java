@@ -18,11 +18,9 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
-import static org.awaitility.Awaitility.await;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -110,7 +108,7 @@ class ServiceBindingTest {
                           final MediaType contentType = req.contentType();
                           if (contentType == MediaType.JSON) {
                               resContent = "{\"name\":\"" + request.contentUtf8() + "\"}";
-                          } else  {
+                          } else {
                               resContent = request.contentUtf8();
                           }
                           return HttpResponse.of(resContent);
@@ -147,7 +145,7 @@ class ServiceBindingTest {
     void consumesAndProduces() throws IOException {
         final HttpClient client = HttpClient.of(server.uri("/"));
         AggregatedHttpResponse res = client.execute(RequestHeaders.of(HttpMethod.POST, "/hello"), "armeria")
-                                          .aggregate().join();
+                                           .aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("armeria");
 
@@ -185,7 +183,6 @@ class ServiceBindingTest {
         client.execute(RequestHeaders.of(HttpMethod.POST, "/hello"), "armeria")
               .aggregate().join();
 
-        await().atMost(1, TimeUnit.SECONDS);
         assertThat(accessLogWriterCheckLatch.getCount()).isOne();
 
         client.get("/greet/armeria");
