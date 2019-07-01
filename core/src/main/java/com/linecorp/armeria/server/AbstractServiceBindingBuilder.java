@@ -400,6 +400,8 @@ abstract class AbstractServiceBindingBuilder {
     /**
      * Sets the access log writer of this {@link Service}. If not set, {@link ServerConfig#accessLogWriter()}
      * is used.
+     *
+     * @param shutdownOnStop whether to shut down the {@link AccessLogWriter} when the {@link Server} stops
      */
     public AbstractServiceBindingBuilder accessLogWriter(AccessLogWriter accessLogWriter,
                                                          boolean shutdownOnStop) {

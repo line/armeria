@@ -733,6 +733,8 @@ public final class VirtualHostBuilder {
     /**
      * Sets the access log writer of this {@link VirtualHost}. If not set,
      * {@link ServerBuilder#accessLogWriter()} is used.
+     *
+     * @param shutdownOnStop whether to shut down the {@link AccessLogWriter} when the {@link Server} stops
      */
     public VirtualHostBuilder accessLogWriter(AccessLogWriter accessLogWriter, boolean shutdownOnStop) {
         this.accessLogWriter = requireNonNull(accessLogWriter, "accessLogWriter");
@@ -772,8 +774,16 @@ public final class VirtualHostBuilder {
         final RejectedRouteHandler rejectedRouteHandler =
                 this.rejectedRouteHandler != null ?
                 this.rejectedRouteHandler : serverBuilder.rejectedRouteHandler();
-        final AccessLogWriter accessLogWriter =
-                this.accessLogWriter != null ? this.accessLogWriter : serverBuilder.accessLogWriter();
+
+        final AccessLogWriter accessLogWriter;
+        final boolean shutdownAccessLogWriterOnStop;
+        if (this.accessLogWriter != null) {
+            accessLogWriter = this.accessLogWriter;
+            shutdownAccessLogWriterOnStop = this.shutdownAccessLogWriterOnStop;
+        } else {
+            accessLogWriter = serverBuilder.accessLogWriter();
+            shutdownAccessLogWriterOnStop = serverBuilder.shutdownAccessLogWriterOnStop();
+        }
 
         final List<ServiceConfig> serviceConfigs = serviceConfigBuilders.stream().map(cfgBuilder -> {
             if (cfgBuilder.requestTimeoutMillis() == null) {
