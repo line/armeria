@@ -24,6 +24,7 @@ import org.junit.Test;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
+import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 public class ServiceTest {
 
@@ -67,7 +68,8 @@ public class ServiceTest {
         final ServiceConfig cfg = new ServiceConfig(Route.builder().catchAll().build(),
                                                     (Service) outer, "foo", 1, 1,
                                                     true, ContentPreviewerFactory.disabled(),
-                                                    ContentPreviewerFactory.disabled());
+                                                    ContentPreviewerFactory.disabled(),
+                                                    AccessLogWriter.disabled(), false);
         outer.serviceAdded(cfg);
         assertThat(inner.cfg).isSameAs(cfg);
     }

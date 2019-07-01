@@ -43,7 +43,6 @@ import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
-import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -69,7 +68,6 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     private final HttpObjectEncoder responseEncoder;
     private final DecodedHttpRequest req;
     private final DefaultServiceRequestContext reqCtx;
-    private final AccessLogWriter accessLogWriter;
     private final long startTimeNanos;
 
     @Nullable
@@ -82,13 +80,11 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     private boolean loggedResponseHeadersFirstBytesTransferred;
 
     HttpResponseSubscriber(ChannelHandlerContext ctx, HttpObjectEncoder responseEncoder,
-                           DefaultServiceRequestContext reqCtx, DecodedHttpRequest req,
-                           AccessLogWriter accessLogWriter) {
+                           DefaultServiceRequestContext reqCtx, DecodedHttpRequest req) {
         this.ctx = ctx;
         this.responseEncoder = responseEncoder;
         this.req = req;
         this.reqCtx = reqCtx;
-        this.accessLogWriter = accessLogWriter;
         startTimeNanos = System.nanoTime();
     }
 
@@ -337,7 +333,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
                 if (endOfStream && tryComplete()) {
                     logBuilder().endResponse();
-                    reqCtx.log().addListener(accessLogWriter::log, RequestLogAvailability.COMPLETE);
+                    reqCtx.log().addListener(reqCtx.accessLogWriter()::log, RequestLogAvailability.COMPLETE);
                 }
 
                 subscription.request(1);
@@ -348,7 +344,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                 setDone();
                 logBuilder().endResponse(f.cause());
                 subscription.cancel();
-                reqCtx.log().addListener(accessLogWriter::log, RequestLogAvailability.COMPLETE);
+                reqCtx.log().addListener(reqCtx.accessLogWriter()::log, RequestLogAvailability.COMPLETE);
             }
             HttpServerHandler.CLOSE_ON_FAILURE.operationComplete(f);
         });
@@ -413,7 +409,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                 // Write an access log always with a cause. Respect the first specified cause.
                 if (tryComplete()) {
                     logBuilder().endResponse(cause);
-                    reqCtx.log().addListener(accessLogWriter::log, RequestLogAvailability.COMPLETE);
+                    reqCtx.log().addListener(reqCtx.accessLogWriter()::log, RequestLogAvailability.COMPLETE);
                 }
             });
         }

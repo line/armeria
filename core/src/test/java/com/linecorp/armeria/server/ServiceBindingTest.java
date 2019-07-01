@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.fail;
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -42,7 +43,8 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 class ServiceBindingTest {
 
-    private static final CountDownLatch propertyCheckLatch = new CountDownLatch(1);
+    private static CountDownLatch accessLogWriterCheckLatch;
+    private static CountDownLatch propertyCheckLatch;
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension(true) {
@@ -71,6 +73,7 @@ class ServiceBindingTest {
               .verboseResponses(true)
               .requestContentPreviewerFactory(requestContentPreviewerFactory)
               .responseContentPreviewerFactory(responseContentPreviewerFactory)
+              .accessLogWriter(log -> accessLogWriterCheckLatch.countDown(), true)
               .decorator(delegate -> (ctx, req) -> {
                   ctx.log().addListener(log -> {
                       assertThat(ctx.requestTimeoutMillis()).isEqualTo(1000);
@@ -105,13 +108,19 @@ class ServiceBindingTest {
                           final MediaType contentType = req.contentType();
                           if (contentType == MediaType.JSON) {
                               resContent = "{\"name\":\"" + request.contentUtf8() + "\"}";
-                          } else  {
+                          } else {
                               resContent = request.contentUtf8();
                           }
                           return HttpResponse.of(resContent);
                       })));
         }
     };
+
+    @BeforeEach
+    void setup() {
+        accessLogWriterCheckLatch = new CountDownLatch(1);
+        propertyCheckLatch = new CountDownLatch(1);
+    }
 
     @Test
     void routeService() throws InterruptedException {
@@ -136,7 +145,7 @@ class ServiceBindingTest {
     void consumesAndProduces() throws IOException {
         final HttpClient client = HttpClient.of(server.uri("/"));
         AggregatedHttpResponse res = client.execute(RequestHeaders.of(HttpMethod.POST, "/hello"), "armeria")
-                                          .aggregate().join();
+                                           .aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("armeria");
 
@@ -166,5 +175,17 @@ class ServiceBindingTest {
                              "armeria").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("armeria");
+    }
+
+    @Test
+    void accessLogWriter() throws InterruptedException {
+        final HttpClient client = HttpClient.of(server.uri("/"));
+        client.execute(RequestHeaders.of(HttpMethod.POST, "/hello"), "armeria")
+              .aggregate().join();
+
+        assertThat(accessLogWriterCheckLatch.getCount()).isOne();
+
+        client.get("/greet/armeria");
+        accessLogWriterCheckLatch.await();
     }
 }

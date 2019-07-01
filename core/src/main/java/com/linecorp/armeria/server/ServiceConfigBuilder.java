@@ -25,6 +25,7 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
+import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 final class ServiceConfigBuilder {
 
@@ -43,6 +44,9 @@ final class ServiceConfigBuilder {
     private ContentPreviewerFactory requestContentPreviewerFactory;
     @Nullable
     private ContentPreviewerFactory responseContentPreviewerFactory;
+    @Nullable
+    private AccessLogWriter accessLogWriter;
+    private boolean shutdownAccessLogWriterOnStop;
 
     ServiceConfigBuilder(Route route, Service<HttpRequest, HttpResponse> service) {
         this.route = requireNonNull(route, "route");
@@ -106,15 +110,28 @@ final class ServiceConfigBuilder {
         return this;
     }
 
+    @Nullable
+    AccessLogWriter accessLogWriter() {
+        return accessLogWriter;
+    }
+
+    ServiceConfigBuilder accessLogWriter(AccessLogWriter accessLogWriter, boolean shutdownOnStop) {
+        this.accessLogWriter = accessLogWriter;
+        shutdownAccessLogWriterOnStop = shutdownOnStop;
+        return this;
+    }
+
     ServiceConfig build() {
         assert requestTimeoutMillis != null;
         assert maxRequestLength != null;
         assert verboseResponses != null;
         assert requestContentPreviewerFactory != null;
         assert responseContentPreviewerFactory != null;
+        assert accessLogWriter != null;
         return new ServiceConfig(route, service, loggerName, requestTimeoutMillis,
-                                 maxRequestLength, verboseResponses,
-                                 requestContentPreviewerFactory, responseContentPreviewerFactory);
+                                 maxRequestLength, verboseResponses, requestContentPreviewerFactory,
+                                 responseContentPreviewerFactory, accessLogWriter,
+                                 shutdownAccessLogWriterOnStop);
     }
 
     @Override
@@ -128,6 +145,8 @@ final class ServiceConfigBuilder {
                           .add("verboseResponses", verboseResponses)
                           .add("requestContentPreviewerFactory", requestContentPreviewerFactory)
                           .add("responseContentPreviewerFactory", responseContentPreviewerFactory)
+                          .add("accessLogWriter", accessLogWriter)
+                          .add("shutdownAccessLogWriterOnStop", shutdownAccessLogWriterOnStop)
                           .toString();
     }
 }

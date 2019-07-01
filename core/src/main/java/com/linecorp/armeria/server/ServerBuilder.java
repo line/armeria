@@ -655,6 +655,14 @@ public final class ServerBuilder {
         return this;
     }
 
+    AccessLogWriter accessLogWriter() {
+        return accessLogWriter;
+    }
+
+    boolean shutdownAccessLogWriterOnStop() {
+        return shutdownAccessLogWriterOnStop;
+    }
+
     /**
      * Sets the maximum size of additional data for PROXY protocol. The default value of this property is
      * {@value #PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE}.

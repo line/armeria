@@ -33,6 +33,7 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
+import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 public class ServiceBindingBuilderTest {
 
@@ -41,6 +42,7 @@ public class ServiceBindingBuilderTest {
         final ServerBuilder sb = new ServerBuilder();
         final ContentPreviewerFactory requestFactory = mock(ContentPreviewerFactory.class);
         final ContentPreviewerFactory responseFactory = mock(ContentPreviewerFactory.class);
+        final AccessLogWriter accessLogWriter = mock(AccessLogWriter.class);
         sb.requestContentPreviewerFactory(requestFactory);
         sb.responseContentPreviewerFactory(responseFactory);
 
@@ -51,6 +53,7 @@ public class ServiceBindingBuilderTest {
           .maxRequestLength(8192)
           .verboseResponses(true)
           .requestContentPreviewerFactory(ContentPreviewerFactory.disabled())
+          .accessLogWriter(accessLogWriter, true)
           .build((ctx, req) -> HttpResponse.of(OK));
 
         final List<ServiceConfig> serviceConfigs = sb.build().serviceConfigs();
@@ -68,6 +71,8 @@ public class ServiceBindingBuilderTest {
         assertThat(serviceConfig.verboseResponses()).isEqualTo(true);
         assertThat(serviceConfig.requestContentPreviewerFactory()).isSameAs(ContentPreviewerFactory.disabled());
         assertThat(serviceConfig.responseContentPreviewerFactory()).isSameAs(responseFactory);
+        assertThat(serviceConfig.accessLogWriter()).isSameAs(accessLogWriter);
+        assertThat(serviceConfig.shutdownAccessLogWriterOnStop()).isTrue();
     }
 
     @Test
@@ -97,9 +102,12 @@ public class ServiceBindingBuilderTest {
 
     @Test
     public void overwriteServerBuilderProperty() {
+        final AccessLogWriter accessLogWriter = mock(AccessLogWriter.class);
+
         final ServerBuilder sb = new ServerBuilder();
         sb.defaultVirtualHost()
           .maxRequestLength(1024)
+          .accessLogWriter(accessLogWriter, false)
           .requestTimeoutMillis(10000); // This is overwritten.
 
         sb.route().get("/foo/bar")
@@ -118,6 +126,8 @@ public class ServiceBindingBuilderTest {
         assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(10);
         assertThat(serviceConfig.maxRequestLength()).isEqualTo(1024);
         assertThat(serviceConfig.verboseResponses()).isEqualTo(true);
+        assertThat(serviceConfig.accessLogWriter()).isSameAs(accessLogWriter);
+        assertThat(serviceConfig.shutdownAccessLogWriterOnStop()).isFalse();
     }
 
     @Test

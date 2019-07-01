@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
+import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
  * A builder class for binding a {@link Service} fluently. This class can be instantiated through
@@ -193,6 +194,12 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     @Override
     public VirtualHostServiceBindingBuilder contentPreviewerFactory(ContentPreviewerFactory factory) {
         return (VirtualHostServiceBindingBuilder) super.contentPreviewerFactory(factory);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder accessLogWriter(AccessLogWriter accessLogWriter,
+                                                            boolean shutdownOnStop) {
+        return (VirtualHostServiceBindingBuilder) super.accessLogWriter(accessLogWriter, shutdownOnStop);
     }
 
     @Override

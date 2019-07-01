@@ -23,10 +23,10 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.Service;
 
 /**
- * Consumes the {@link RequestLog}s produced by a {@link Server}, usually for logging purpose.
+ * Consumes the {@link RequestLog}s produced by a {@link Service}, usually for logging purpose.
  */
 @FunctionalInterface
 public interface AccessLogWriter {

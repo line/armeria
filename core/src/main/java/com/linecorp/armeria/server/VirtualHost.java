@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.handler.ssl.SslContext;
@@ -81,6 +82,8 @@ public final class VirtualHost {
     private final boolean verboseResponses;
     private final ContentPreviewerFactory requestContentPreviewerFactory;
     private final ContentPreviewerFactory responseContentPreviewerFactory;
+    private final AccessLogWriter accessLogWriter;
+    private boolean shutdownAccessLogWriterOnStop;
 
     VirtualHost(String defaultHostname, String hostnamePattern,
                 @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
@@ -89,7 +92,8 @@ public final class VirtualHost {
                 long requestTimeoutMillis,
                 long maxRequestLength, boolean verboseResponses,
                 ContentPreviewerFactory requestContentPreviewerFactory,
-                ContentPreviewerFactory responseContentPreviewerFactory) {
+                ContentPreviewerFactory responseContentPreviewerFactory,
+                AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop) {
         defaultHostname = normalizeDefaultHostname(defaultHostname);
         hostnamePattern = normalizeHostnamePattern(hostnamePattern);
         ensureHostnamePatternMatchesDefaultHostname(hostnamePattern, defaultHostname);
@@ -102,6 +106,8 @@ public final class VirtualHost {
         this.verboseResponses = verboseResponses;
         this.requestContentPreviewerFactory = requestContentPreviewerFactory;
         this.responseContentPreviewerFactory = responseContentPreviewerFactory;
+        this.accessLogWriter = accessLogWriter;
+        this.shutdownAccessLogWriterOnStop = shutdownAccessLogWriterOnStop;
 
         requireNonNull(serviceConfigs, "serviceConfigs");
         services = Streams.stream(serviceConfigs)
@@ -119,7 +125,8 @@ public final class VirtualHost {
                                serviceConfigs(), RejectedRouteHandler.DISABLED,
                                host -> accessLogger, requestTimeoutMillis(),
                                maxRequestLength(), verboseResponses(),
-                               requestContentPreviewerFactory(), responseContentPreviewerFactory());
+                               requestContentPreviewerFactory(), responseContentPreviewerFactory(),
+                               accessLogWriter(), shutdownAccessLogWriterOnStop());
     }
 
     /**
@@ -336,6 +343,20 @@ public final class VirtualHost {
     }
 
     /**
+     * Returns the access log writer.
+     */
+    public AccessLogWriter accessLogWriter() {
+        return accessLogWriter;
+    }
+
+    /**
+     * Tells whether the {@link AccessLogWriter} is shut down when the {@link Server} stops.
+     */
+    public boolean shutdownAccessLogWriterOnStop() {
+        return shutdownAccessLogWriterOnStop;
+    }
+
+    /**
      * Finds the {@link Service} whose {@link Router} matches the {@link RoutingContext}.
      *
      * @param routingCtx a context to find the {@link Service}.
@@ -362,7 +383,8 @@ public final class VirtualHost {
                                services, RejectedRouteHandler.DISABLED,
                                host -> accessLogger, requestTimeoutMillis(),
                                maxRequestLength(), verboseResponses(),
-                               requestContentPreviewerFactory(), responseContentPreviewerFactory());
+                               requestContentPreviewerFactory(), responseContentPreviewerFactory(),
+                               accessLogWriter(), shutdownAccessLogWriterOnStop());
     }
 
     @Override
@@ -398,6 +420,10 @@ public final class VirtualHost {
         buf.append(requestContentPreviewerFactory());
         buf.append(", responseContentPreviewerFactory: ");
         buf.append(responseContentPreviewerFactory());
+        buf.append(", accessLogWriter: ");
+        buf.append(accessLogWriter());
+        buf.append(", shutdownAccessLogWriterOnStop: ");
+        buf.append(shutdownAccessLogWriterOnStop());
         buf.append(')');
         return buf.toString();
     }

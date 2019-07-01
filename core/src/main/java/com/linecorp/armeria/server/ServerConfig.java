@@ -771,7 +771,6 @@ public final class ServerConfig {
         buf.append(accessLogWriter);
         buf.append(", shutdownAccessLogWriterOnStop: ");
         buf.append(shutdownAccessLogWriterOnStop);
-        buf.append(')');
         buf.append(", channelOptions: ");
         buf.append(channelOptions);
         buf.append(", childChannelOptions: ");
@@ -782,6 +781,7 @@ public final class ServerConfig {
         buf.append(clientAddressTrustedProxyFilter);
         buf.append(", clientAddressFilter: ");
         buf.append(clientAddressFilter);
+        buf.append(')');
 
         return buf.toString();
     }
