@@ -70,11 +70,21 @@ public interface RequestContext extends AttributeMap {
      * @throws IllegalStateException if the context is unavailable in the current thread
      */
     static <T extends RequestContext> T current() {
-        final T ctx = RequestContextThreadLocal.get();
+        final T ctx = currentOrNull();
         if (ctx == null) {
             throw new IllegalStateException(RequestContext.class.getSimpleName() + " unavailable");
         }
         return ctx;
+    }
+
+    /**
+     * Returns the context of the {@link Request} that is being handled in the current thread.
+     *
+     * @return the {@link RequestContext} available in the current thread, or {@code null} if unavailable.
+     */
+    @Nullable
+    static <T extends RequestContext> T currentOrNull() {
+        return RequestContextThreadLocal.get();
     }
 
     /**
@@ -89,7 +99,7 @@ public interface RequestContext extends AttributeMap {
     static <T> T mapCurrent(
             Function<? super RequestContext, T> mapper, @Nullable Supplier<T> defaultValueSupplier) {
 
-        final RequestContext ctx = RequestContextThreadLocal.get();
+        final RequestContext ctx = currentOrNull();
         if (ctx != null) {
             return mapper.apply(ctx);
         }

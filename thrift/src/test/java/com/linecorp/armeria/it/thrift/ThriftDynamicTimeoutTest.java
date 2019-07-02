@@ -37,7 +37,6 @@ import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -56,11 +55,11 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
 class ThriftDynamicTimeoutTest {
 
     private static final SleepService.AsyncIface sleepService = (delay, resultHandler) ->
-            RequestContext.current().eventLoop().schedule(
+            ServiceRequestContext.current().eventLoop().schedule(
                     () -> resultHandler.onComplete(delay), delay, TimeUnit.MILLISECONDS);
 
     private static final SleepService.AsyncIface fakeSleepService = (delay, resultHandler) ->
-            RequestContext.current().eventLoop().execute(
+            ServiceRequestContext.current().eventLoop().execute(
                     () -> resultHandler.onComplete(delay));
 
     @RegisterExtension

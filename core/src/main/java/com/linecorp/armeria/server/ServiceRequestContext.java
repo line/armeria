@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkState;
+
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -23,6 +25,8 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ExecutorService;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -46,6 +50,62 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
  * {@link ServiceRequestContext} instance.
  */
 public interface ServiceRequestContext extends RequestContext {
+
+    /**
+     * Returns the server-side context of the {@link Request} that is being handled in the current thread.
+     *
+     * @throws IllegalStateException if the context is unavailable in the current thread or
+     *                               the current context is not a {@link ServiceRequestContext}.
+     */
+    static ServiceRequestContext current() {
+        final RequestContext ctx = RequestContext.current();
+        checkState(ctx instanceof ServiceRequestContext,
+                   "The current context is not a server-side context: %s", ctx);
+        return (ServiceRequestContext) ctx;
+    }
+
+    /**
+     * Returns the server-side context of the {@link Request} that is being handled in the current thread.
+     *
+     * @return the {@link ServiceRequestContext} available in the current thread,
+     *         or {@code null} if unavailable.
+     * @throws IllegalStateException if the current context is not a {@link ServiceRequestContext}.
+     */
+    @Nullable
+    static ServiceRequestContext currentOrNull() {
+        final RequestContext ctx = RequestContext.currentOrNull();
+        if (ctx == null) {
+            return null;
+        }
+        checkState(ctx instanceof ServiceRequestContext,
+                   "The current context is not a server-side context: %s", ctx);
+        return (ServiceRequestContext) ctx;
+    }
+
+    /**
+     * Maps the server-side context of the {@link Request} that is being handled in the current thread.
+     *
+     * @param mapper the {@link Function} that maps the {@link ServiceRequestContext}
+     * @param defaultValueSupplier the {@link Supplier} that provides the value when the context is unavailable
+     *                             in the current thread. If {@code null}, the {@code null} will be returned
+     *                             when the context is unavailable in the current thread.
+     * @throws IllegalStateException if the current context is not a {@link ServiceRequestContext}.
+     */
+    @Nullable
+    static <T> T mapCurrent(
+            Function<? super ServiceRequestContext, T> mapper, @Nullable Supplier<T> defaultValueSupplier) {
+
+        final ServiceRequestContext ctx = currentOrNull();
+        if (ctx != null) {
+            return mapper.apply(ctx);
+        }
+
+        if (defaultValueSupplier != null) {
+            return defaultValueSupplier.get();
+        }
+
+        return null;
+    }
 
     /**
      * Returns a new {@link ServiceRequestContext} created from the specified {@link HttpRequest}.

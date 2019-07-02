@@ -60,7 +60,6 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -73,6 +72,7 @@ import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.BinaryService;
@@ -141,8 +141,8 @@ class ThriftOverHttpClientTest {
 
     private static final HeaderService.AsyncIface headerServiceHandler =
             (name, resultHandler) -> {
-                final HttpRequest req = RequestContext.current().request();
-                resultHandler.onComplete(req.headers().get(HttpHeaderNames.of(name), ""));
+                resultHandler.onComplete(ServiceRequestContext.current().request()
+                                                              .headers().get(HttpHeaderNames.of(name), ""));
             };
 
     private enum Handlers {

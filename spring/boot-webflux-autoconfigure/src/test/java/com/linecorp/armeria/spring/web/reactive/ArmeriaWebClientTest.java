@@ -44,7 +44,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import com.linecorp.armeria.client.ClientFactoryBuilder;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.internal.MockAddressResolverGroup;
 
@@ -89,8 +88,8 @@ public class ArmeriaWebClientTest {
                 return new Person(person.name(), person.age() + 1);
             }
 
-            private void ensureInRequestContextAwareEventLoop() {
-                assertThat((ServiceRequestContext) RequestContext.current()).isNotNull();
+            private static void ensureInRequestContextAwareEventLoop() {
+                assertThat(ServiceRequestContext.current()).isNotNull();
             }
         }
     }

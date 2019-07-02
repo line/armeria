@@ -207,7 +207,7 @@ public class RequestContextExportingAppender extends UnsynchronizedAppenderBase<
 
     @Override
     protected void append(ILoggingEvent eventObject) {
-        final RequestContext ctx = RequestContext.mapCurrent(Function.identity(), () -> null);
+        final RequestContext ctx = RequestContext.currentOrNull();
         if (ctx != null) {
             final State state = state(ctx);
             final RequestLog log = ctx.log();

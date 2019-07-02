@@ -56,6 +56,7 @@ import com.google.protobuf.StringValue;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientOption;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.DecoratingClientFunction;
 import com.linecorp.armeria.client.Endpoint;
@@ -67,7 +68,6 @@ import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
@@ -275,7 +275,7 @@ public class GrpcClientTest {
             @Override
             public void onNext(SimpleResponse value) {
                 try {
-                    final RequestContext ctx = RequestContext.current();
+                    final ClientRequestContext ctx = ClientRequestContext.current();
                     assertThat(value).isEqualTo(goldenResponse);
                     final ByteBuf buf = ctx.attr(GrpcUnsafeBufferUtil.BUFFERS).get().get(value);
                     assertThat(buf.refCnt()).isNotZero();

@@ -46,8 +46,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.util.NetUtil;
@@ -100,8 +100,8 @@ public class ByteBufLeakTest {
                 return Mono.empty();
             }
 
-            private void addListenerForCountingCompletedRequests() {
-                RequestContext.current().log().addListener(
+            private static void addListenerForCountingCompletedRequests() {
+                ServiceRequestContext.current().log().addListener(
                         log -> completed.incrementAndGet(), RequestLogAvailability.COMPLETE);
                 requestReceived.set(true);
             }

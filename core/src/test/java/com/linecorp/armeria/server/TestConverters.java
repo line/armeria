@@ -25,7 +25,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -129,8 +128,7 @@ public final class TestConverters {
         headers.setInt(HttpHeaderNames.CONTENT_LENGTH, data.length());
         headers.setTimeMillis(HttpHeaderNames.DATE, current);
 
-        final MediaType contentType =
-                ((ServiceRequestContext) RequestContext.current()).negotiatedResponseMediaType();
+        final MediaType contentType = ServiceRequestContext.current().negotiatedResponseMediaType();
         if (contentType != null) {
             headers.contentType(contentType);
         }
