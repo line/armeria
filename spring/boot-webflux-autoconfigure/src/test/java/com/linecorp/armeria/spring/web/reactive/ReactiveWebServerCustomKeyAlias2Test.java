@@ -27,6 +27,11 @@ class ReactiveWebServerCustomKeyAlias2Test extends AbstractReactiveWebServerCust
     static class TestConfiguration {}
 
     ReactiveWebServerCustomKeyAlias2Test() {
+        // The entry 'key2' contains the self-signed certificate for 'b.com'.
+        // For the complete list of the keystore entries, enter the following command:
+        //
+        //     keytool -list -v -keystore keystore_with_two_keys.pkcs12 -storepass mystorepass
+        //
         super("CN=b.com,OU=Unknown,O=Unknown,L=Unknown,ST=Unknown,C=Unknown");
     }
 }
