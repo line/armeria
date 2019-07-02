@@ -49,6 +49,7 @@ import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.Http2ConnectionPrefaceAndSettingsFrameWrittenEvent;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
+import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
 
@@ -284,6 +285,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         }
 
         if (evt instanceof Http2ConnectionPrefaceAndSettingsFrameWrittenEvent ||
+            evt instanceof SslHandshakeCompletionEvent ||
             evt instanceof SslCloseCompletionEvent ||
             evt instanceof ChannelInputShutdownReadComplete) {
             // Expected events
