@@ -32,3 +32,6 @@
    git add -A .
    git commit -m 'Update Armeria to ${releaseVersion}'
    git push
+
+7. Send an update pull request to openzipkin-contrib/zipkin-armeria-example
+8. Announce the release via Twitter.
