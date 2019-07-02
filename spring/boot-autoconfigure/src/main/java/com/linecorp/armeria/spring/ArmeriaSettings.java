@@ -66,11 +66,13 @@ public class ArmeriaSettings {
         /**
          * IP address to bind to. If not set, will bind to all addresses, e.g. {@code 0.0.0.0}.
          */
+        @Nullable
         private String ip;
 
         /**
          * Network interface to bind to. If not set, will bind to the first detected network interface.
          */
+        @Nullable
         private String iface;
 
         /**
@@ -81,6 +83,7 @@ public class ArmeriaSettings {
         /**
          * Protocol that will be used in this ip/iface and port.
          */
+        @Nullable
         private List<SessionProtocol> protocols;
 
         /**

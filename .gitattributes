@@ -1,6 +1,8 @@
 *.bat text eol=crlf
 *.br binary
 *.gz binary
+*.jks binary
+*.pkcs12 binary
 
 /gradlew text eol=lf
 
