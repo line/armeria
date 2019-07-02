@@ -1,5 +1,5 @@
 dependencies {
-    compile project(':brave')
+    compile 'io.zipkin.brave:brave'
 
     testCompile project(':thrift')
 }

@@ -3,4 +3,4 @@
 Zipkin integration
 ==================
 
-TBW - See :api:`HttpTracingService` and :api:`HttpTracingClient`
+TBW - See :api:`BraveService` and :api:`BraveClient`

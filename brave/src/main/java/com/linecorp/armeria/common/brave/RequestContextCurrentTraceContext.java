@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,8 +14,9 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.tracing;
+package com.linecorp.armeria.common.brave;
 
+import static com.linecorp.armeria.internal.brave.TraceContextUtil.getTraceContextAttribute;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
@@ -29,50 +30,28 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import com.linecorp.armeria.client.tracing.HttpTracingClient;
+import com.linecorp.armeria.client.brave.BraveClient;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.server.tracing.HttpTracingService;
+import com.linecorp.armeria.server.brave.BraveService;
 
 import brave.Tracing;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.TraceContext;
 import io.netty.util.Attribute;
-import io.netty.util.AttributeKey;
 
 /**
- * {@linkplain brave.Tracing.Builder#currentTraceContext(brave.propagation.CurrentTraceContext) Tracing
- * context} implemented with {@link com.linecorp.armeria.common.RequestContext}.
+ * {@linkplain Tracing.Builder#currentTraceContext(CurrentTraceContext) Tracing
+ * context} implemented with {@link RequestContext}.
  *
  * <p>This {@link CurrentTraceContext} stores/loads the trace context into/from a
  * {@link RequestContext}'s attribute so that there's no need for thread local variables
  * which can lead to unpredictable behavior in asynchronous programming.
- *
- * @deprecated Use {@link com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext}.
  */
-@Deprecated
 public final class RequestContextCurrentTraceContext extends CurrentTraceContext {
 
-    /**
-     * Use this singleton when building a {@link brave.Tracing} instance for use with
-     * {@link HttpTracingService} or {@link HttpTracingClient}.
-     *
-     * <p>If you need to customize the context, use {@link #builder()} instead.
-     *
-     * @see brave.Tracing.Builder#currentTraceContext(brave.propagation.CurrentTraceContext)
-     */
-    public static final CurrentTraceContext DEFAULT = new RequestContextCurrentTraceContext(new Builder());
-
-    /**
-     * Singleton retained for backwards compatibility, but replaced by {@link #DEFAULT}.
-     *
-     * @deprecated Please use {@link #DEFAULT} or {@link #builder()} to customize an instance.
-     */
-    @Deprecated
-    public static final CurrentTraceContext INSTANCE = DEFAULT;
+    private static final CurrentTraceContext DEFAULT = new RequestContextCurrentTraceContext(new Builder());
 
     private static final Logger logger = LoggerFactory.getLogger(RequestContextCurrentTraceContext.class);
-    private static final AttributeKey<TraceContext> TRACE_CONTEXT_KEY =
-            AttributeKey.valueOf(RequestContextCurrentTraceContext.class, "TRACE_CONTEXT");
 
     // Thread-local for storing TraceContext when invoking callbacks off the request thread.
     private static final ThreadLocal<TraceContext> THREAD_LOCAL_CONTEXT = new ThreadLocal<>();
@@ -109,23 +88,22 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
     }
 
     /**
-     * Use this when you need customizations such as log integration via
-     * {@linkplain Builder#addScopeDecorator(ScopeDecorator)}.
+     * Returns the default {@link CurrentTraceContext}. Use this when building a {@link Tracing} instance
+     * for use with {@link BraveService} or {@link BraveClient}.
      *
-     * @deprecated Use {@link #builder()}.
+     * <p>If you need to customize the context, use {@link #builder()} instead.
      *
-     * @see brave.Tracing.Builder#currentTraceContext(brave.propagation.CurrentTraceContext)
+     * @see Tracing.Builder#currentTraceContext(CurrentTraceContext)
      */
-    @Deprecated
-    public static CurrentTraceContext.Builder newBuilder() {
-        return new Builder();
+    public static CurrentTraceContext ofDefault() {
+        return DEFAULT;
     }
 
     /**
      * Use this when you need customizations such as log integration via
      * {@linkplain Builder#addScopeDecorator(ScopeDecorator)}.
      *
-     * @see brave.Tracing.Builder#currentTraceContext(brave.propagation.CurrentTraceContext)
+     * @see Tracing.Builder#currentTraceContext(CurrentTraceContext)
      */
     public static CurrentTraceContext.Builder builder() {
         return new Builder();
@@ -151,21 +129,8 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
                     "Tracing.currentTraceContext is not a " + RequestContextCurrentTraceContext.class
                             .getSimpleName() + " scope. " +
                     "Please call Tracing.Builder.currentTraceContext(" + RequestContextCurrentTraceContext.class
-                            .getSimpleName() + ".DEFAULT).");
+                            .getSimpleName() + ".ofDefault()).");
         }
-    }
-
-    /**
-     * Use this to ensure the trace context propagates to children.
-     *
-     * <p>Ex.
-     * <pre>{@code
-     *  // Ensure the trace context propagates to children
-     * ctx.onChild(RequestContextCurrentTraceContext::copy);
-     * }</pre>
-     */
-    public static void copy(RequestContext src, RequestContext dst) {
-        dst.attr(TRACE_CONTEXT_KEY).set(src.attr(TRACE_CONTEXT_KEY).get());
     }
 
     private RequestContextCurrentTraceContext(Builder builder) {
@@ -180,14 +145,14 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
             return null;
         }
         if (ctx.eventLoop().inEventLoop()) {
-            return ctx.attr(TRACE_CONTEXT_KEY).get();
+            return getTraceContextAttribute(ctx).get();
         } else {
             final TraceContext threadLocalContext = THREAD_LOCAL_CONTEXT.get();
             if (threadLocalContext != null) {
                 return threadLocalContext;
             }
             // First span on a non-request thread will use the request's TraceContext as a parent.
-            return ctx.attr(TRACE_CONTEXT_KEY).get();
+            return getTraceContextAttribute(ctx).get();
         }
     }
 
@@ -214,7 +179,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
     }
 
     private Scope createScopeForRequestThread(RequestContext ctx, @Nullable TraceContext currentSpan) {
-        final Attribute<TraceContext> traceContextAttribute = ctx.attr(TRACE_CONTEXT_KEY);
+        final Attribute<TraceContext> traceContextAttribute = getTraceContextAttribute(ctx);
 
         final TraceContext previous = traceContextAttribute.getAndSet(currentSpan);
 
@@ -276,7 +241,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         if (ctx == null) {
             return null;
         }
-        return ctx.attr(TRACE_CONTEXT_KEY);
+        return getTraceContextAttribute(ctx);
     }
 
     private enum LogRequestContextWarningOnce implements Supplier<RequestContext> {

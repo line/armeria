@@ -50,6 +50,33 @@ final class DefaultAggregatedHttpResponse extends AbstractAggregatedHttpMessage
     }
 
     @Override
+    public int hashCode() {
+        int result = informationals().hashCode();
+        result = 31 * result + headers().hashCode();
+        result = 31 * result + content().hashCode();
+        result = 31 * result + trailers().hashCode();
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+
+        if (!(obj instanceof AggregatedHttpResponse)) {
+            return false;
+        }
+
+        final AggregatedHttpResponse that = (AggregatedHttpResponse) obj;
+
+        return informationals().equals(that.informationals()) &&
+               headers().equals(that.headers()) &&
+               content().equals(that.content()) &&
+               trailers().equals(that.trailers());
+    }
+
+    @Override
     public String toString() {
         final ToStringHelper helper = MoreObjects.toStringHelper(this);
 
@@ -65,32 +92,5 @@ final class DefaultAggregatedHttpResponse extends AbstractAggregatedHttpMessage
         }
 
         return helper.toString();
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-
-        if (!(obj instanceof DefaultAggregatedHttpResponse)) {
-            return false;
-        }
-
-        final DefaultAggregatedHttpResponse that = (DefaultAggregatedHttpResponse) obj;
-
-        return informationals().equals(that.informationals()) &&
-               headers().equals(that.headers()) &&
-               content().equals(that.content()) &&
-               trailers().equals(that.trailers());
-    }
-
-    @Override
-    public int hashCode() {
-        int result = informationals().hashCode();
-        result = 31 * result + headers().hashCode();
-        result = 31 * result + content().hashCode();
-        result = 31 * result + trailers().hashCode();
-        return result;
     }
 }

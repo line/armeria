@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,10 +14,9 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.tracing;
+package com.linecorp.armeria.server.brave;
 
-import static com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext.ensureScopeUsesRequestContext;
-import static java.util.Objects.requireNonNull;
+import static com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext.ensureScopeUsesRequestContext;
 
 import java.util.function.Function;
 
@@ -25,14 +24,13 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.internal.brave.AsciiStringKeyFactory;
 import com.linecorp.armeria.internal.brave.SpanContextUtil;
 import com.linecorp.armeria.internal.brave.SpanTags;
+import com.linecorp.armeria.internal.brave.TraceContextUtil;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingService;
-import com.linecorp.armeria.server.brave.BraveService;
 
 import brave.Span;
 import brave.Span.Kind;
@@ -44,26 +42,19 @@ import brave.propagation.TraceContextOrSamplingFlags;
 
 /**
  * Decorates a {@link Service} to trace inbound {@link HttpRequest}s using
- * <a href="http://zipkin.io/">Zipkin</a>.
- *
- * <p>This decorator retrieves trace data from HTTP headers. The specifications of header names and its values
- * correspond to <a href="http://zipkin.io/">Zipkin</a>.
- *
- * @deprecated Use {@link BraveService}.
+ * <a href="https://github.com/openzipkin/brave">Brave</a>.
  */
-@Deprecated
-public class HttpTracingService extends SimpleDecoratingService<HttpRequest, HttpResponse> {
+public final class BraveService extends SimpleDecoratingService<HttpRequest, HttpResponse> {
+
+    // TODO(minwoox) Add the variant which takes HttpTracing.
 
     /**
      * Creates a new tracing {@link Service} decorator using the specified {@link Tracing} instance.
-     *
-     * @deprecated Use {@link BraveService#newDecorator(Tracing)}.
      */
-    @Deprecated
-    public static Function<Service<HttpRequest, HttpResponse>, HttpTracingService>
+    public static Function<Service<HttpRequest, HttpResponse>, BraveService>
     newDecorator(Tracing tracing) {
         ensureScopeUsesRequestContext(tracing);
-        return service -> new HttpTracingService(service, tracing);
+        return service -> new BraveService(service, tracing);
     }
 
     private final Tracer tracer;
@@ -71,13 +62,10 @@ public class HttpTracingService extends SimpleDecoratingService<HttpRequest, Htt
 
     /**
      * Creates a new instance.
-     *
-     * @deprecated Use {@link BraveService#newDecorator(Tracing)}.
      */
-    @Deprecated
-    public HttpTracingService(Service<HttpRequest, HttpResponse> delegate, Tracing tracing) {
+    private BraveService(Service<HttpRequest, HttpResponse> delegate, Tracing tracing) {
         super(delegate);
-        tracer = requireNonNull(tracing, "tracing").tracer();
+        tracer = tracing.tracer();
         extractor = tracing.propagationFactory().create(AsciiStringKeyFactory.INSTANCE)
                            .extractor(HttpHeaders::get);
     }
@@ -98,7 +86,7 @@ public class HttpTracingService extends SimpleDecoratingService<HttpRequest, Htt
                               RequestLogAvailability.REQUEST_START);
 
         // Ensure the trace context propagates to children
-        ctx.onChild(RequestContextCurrentTraceContext::copy);
+        ctx.onChild(TraceContextUtil::copy);
 
         ctx.log().addListener(log -> {
             SpanTags.logWireReceive(span, log.requestFirstBytesTransferredTimeNanos(), log);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,23 +14,24 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.tracing;
+package com.linecorp.armeria.common.brave;
 
-import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedTransferQueue;
 
-import brave.propagation.Propagation;
-import io.netty.util.AsciiString;
+import zipkin2.Span;
+import zipkin2.reporter.Reporter;
 
-/**
- * Converter from {@link String} to {@link AsciiString} which is used by Brave to marshall trace information
- * into Armeria's {@link HttpHeaders}.
- */
-public enum AsciiStringKeyFactory implements Propagation.KeyFactory<AsciiString> {
-    INSTANCE;
+public final class SpanCollectingReporter implements Reporter<Span> {
+
+    private final BlockingQueue<Span> spans = new LinkedTransferQueue<>();
 
     @Override
-    public AsciiString create(String name) {
-        return HttpHeaderNames.of(name);
+    public void report(Span span) {
+        spans.add(span);
+    }
+
+    public BlockingQueue<Span> spans() {
+        return spans;
     }
 }

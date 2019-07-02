@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,11 +14,10 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.tracing;
+package com.linecorp.armeria.client.brave;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
-import static com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext.ensureScopeUsesRequestContext;
-import static java.util.Objects.requireNonNull;
+import static com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext.ensureScopeUsesRequestContext;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -33,16 +32,15 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
-import com.linecorp.armeria.client.brave.BraveClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.common.tracing.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.internal.brave.AsciiStringKeyFactory;
 import com.linecorp.armeria.internal.brave.SpanContextUtil;
 import com.linecorp.armeria.internal.brave.SpanTags;
+import com.linecorp.armeria.internal.brave.TraceContextUtil;
 
 import brave.Span;
 import brave.Span.Kind;
@@ -53,36 +51,26 @@ import brave.propagation.TraceContext;
 
 /**
  * Decorates a {@link Client} to trace outbound {@link HttpRequest}s using
- * <a href="http://zipkin.io/">Zipkin</a>.
- *
- * <p>This decorator puts trace data into HTTP headers. The specifications of header names and its values
- * correspond to <a href="http://zipkin.io/">Zipkin</a>.
- *
- * @deprecated Use {@link BraveClient}.
+ * <a href="https://github.com/openzipkin/brave">Brave</a>.
  */
-@Deprecated
-public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpResponse> {
+public final class BraveClient extends SimpleDecoratingClient<HttpRequest, HttpResponse> {
 
-    private static final Logger logger = LoggerFactory.getLogger(HttpTracingClient.class);
+    private static final Logger logger = LoggerFactory.getLogger(BraveClient.class);
+
+    // TODO(minwoox) Add the variant which takes HttpTracing.
 
     /**
      * Creates a new tracing {@link Client} decorator using the specified {@link Tracing} instance.
-     *
-     * @deprecated Use {@link BraveClient#newDecorator(Tracing)}.
      */
-    @Deprecated
-    public static Function<Client<HttpRequest, HttpResponse>, HttpTracingClient> newDecorator(Tracing tracing) {
+    public static Function<Client<HttpRequest, HttpResponse>, BraveClient> newDecorator(Tracing tracing) {
         return newDecorator(tracing, null);
     }
 
     /**
      * Creates a new tracing {@link Client} decorator using the specified {@link Tracing} instance
-     * and the remote service name.
-     *
-     * @deprecated Use {@link BraveClient#newDecorator(Tracing, String)}.
+     * and remote service name.
      */
-    @Deprecated
-    public static Function<Client<HttpRequest, HttpResponse>, HttpTracingClient> newDecorator(
+    public static Function<Client<HttpRequest, HttpResponse>, BraveClient> newDecorator(
             Tracing tracing, @Nullable String remoteServiceName) {
         try {
             ensureScopeUsesRequestContext(tracing);
@@ -91,7 +79,7 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
                         "inside an Armeria server (e.g., this is a normal spring-mvc tomcat server).",
                         e.getMessage());
         }
-        return delegate -> new HttpTracingClient(delegate, tracing, remoteServiceName);
+        return delegate -> new BraveClient(delegate, tracing, remoteServiceName);
     }
 
     private final Tracer tracer;
@@ -102,10 +90,10 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
     /**
      * Creates a new instance.
      */
-    protected HttpTracingClient(Client<HttpRequest, HttpResponse> delegate, Tracing tracing,
-                                @Nullable String remoteServiceName) {
+    private BraveClient(Client<HttpRequest, HttpResponse> delegate, Tracing tracing,
+                        @Nullable String remoteServiceName) {
         super(delegate);
-        tracer = requireNonNull(tracing, "tracing").tracer();
+        tracer = tracing.tracer();
         injector = tracing.propagationFactory().create(AsciiStringKeyFactory.INSTANCE)
                           .injector(RequestHeadersBuilder::set);
         this.remoteServiceName = remoteServiceName;
@@ -113,9 +101,7 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-        final Tracer tracer = this.tracer;
         final Span span = tracer.nextSpan();
-        final TraceContext.Injector<RequestHeadersBuilder> injector = this.injector;
 
         // Inject the headers.
         final RequestHeadersBuilder newHeaders = req.headers().toBuilder();
@@ -134,7 +120,7 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
                               RequestLogAvailability.REQUEST_START);
 
         // Ensure the trace context propagates to children
-        ctx.onChild(RequestContextCurrentTraceContext::copy);
+        ctx.onChild(TraceContextUtil::copy);
 
         ctx.log().addListener(log -> {
             SpanTags.logWireSend(span, log.requestFirstBytesTransferredTimeNanos(), log);

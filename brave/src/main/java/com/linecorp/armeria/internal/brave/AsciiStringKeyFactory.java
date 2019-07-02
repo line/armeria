@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,10 +14,23 @@
  * under the License.
  */
 
-/**
- * Various classes used internally. Anything in this package can be changed or removed at any time.
- */
-@NonNullByDefault
-package com.linecorp.armeria.internal.tracing;
+package com.linecorp.armeria.internal.brave;
 
-import com.linecorp.armeria.common.util.NonNullByDefault;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
+
+import brave.propagation.Propagation;
+import io.netty.util.AsciiString;
+
+/**
+ * Converter from {@link String} to {@link AsciiString} which is used by Brave to marshall trace information
+ * into Armeria's {@link HttpHeaders}.
+ */
+public enum AsciiStringKeyFactory implements Propagation.KeyFactory<AsciiString> {
+    INSTANCE;
+
+    @Override
+    public AsciiString create(String name) {
+        return HttpHeaderNames.of(name);
+    }
+}
