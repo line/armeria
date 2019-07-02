@@ -458,7 +458,7 @@ The following software may be included in this product: deepmerge. A copy of the
 
 The MIT License (MIT)
 
-Copyright (c) 2012 Nicholas Fisher
+Copyright (c) 2012 James Halliday, Josh Duff, and other contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
