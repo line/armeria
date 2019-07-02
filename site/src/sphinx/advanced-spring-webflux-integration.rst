@@ -28,10 +28,28 @@ For Maven:
 .. parsed-literal::
     :class: highlight-xml
 
+    <dependencyManagement>
+      <dependencies>
+        <dependency>
+          <groupId>com.linecorp.armeria</groupId>
+          <artifactId>armeria-bom</artifactId>
+          <version>\ |release|\ </version>
+          <type>pom</type>
+          <scope>import</scope>
+        </dependency>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-bom</artifactId>
+          <version>\ |io.netty:netty-common:version|\ </version>
+          <type>pom</type>
+          <scope>import</scope>
+        </dependency>
+      </dependencies>
+    </dependencyManagement>
+
     <dependency>
         <groupId>com.linecorp.armeria</groupId>
         <artifactId>armeria-spring-boot-webflux-starter</artifactId>
-        <version>\ |release|\ </version>
     </dependency>
 
 For Gradle:
@@ -39,8 +57,19 @@ For Gradle:
 .. parsed-literal::
     :class: highlight-gradle
 
+    plugins {
+        id "org.springframework.boot" version "\ |org.springframework.boot:spring-boot-starter:version|\ "
+    }
+
+    dependencyManagement {
+        imports {
+            mavenBom 'com.linecorp.armeria:armeria-bom:\ |release|\ '
+            mavenBom 'io.netty:netty-bom:\ |io.netty:netty-common:version|\ '
+        }
+    }
+
     dependencies {
-        compile 'com.linecorp.armeria:armeria-spring-boot-webflux-starter:\ |release|\ '
+        compile 'com.linecorp.armeria:armeria-spring-boot-webflux-starter'
     }
 
 The above starter configures Armeria as the HTTP server for WebFlux to run on by referring to ``application.yml``
