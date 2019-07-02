@@ -44,10 +44,10 @@ abstract class AbstractReactiveWebServerCustomKeyAliasTest {
     @LocalServerPort
     int port;
 
-    private final String expectedKeyAlias;
+    private final String expectedKeyName;
 
-    AbstractReactiveWebServerCustomKeyAliasTest(String expectedKeyAlias) {
-        this.expectedKeyAlias = expectedKeyAlias;
+    AbstractReactiveWebServerCustomKeyAliasTest(String expectedKeyName) {
+        this.expectedKeyName = expectedKeyName;
     }
 
     /**
@@ -55,7 +55,7 @@ abstract class AbstractReactiveWebServerCustomKeyAliasTest {
      */
     @Test
     void test() throws Exception {
-        final AtomicReference<String> chosenKeyAlias = new AtomicReference<>();
+        final AtomicReference<String> actualKeyName = new AtomicReference<>();
 
         // Create a new ClientFactory with a TrustManager that records the received certificate.
         try (ClientFactory clientFactory = new ClientFactoryBuilder()
@@ -75,7 +75,7 @@ abstract class AbstractReactiveWebServerCustomKeyAliasTest {
 
                                     @Override
                                     public void checkServerTrusted(X509Certificate[] chain, String authType) {
-                                        chosenKeyAlias.set(chain[0].getSubjectX500Principal().getName());
+                                        actualKeyName.set(chain[0].getSubjectX500Principal().getName());
                                     }
 
                                     @Override
@@ -91,7 +91,7 @@ abstract class AbstractReactiveWebServerCustomKeyAliasTest {
             final HttpClient client = HttpClient.of(clientFactory, "h2://127.0.0.1:" + port);
             client.get("/").drainAll().join();
 
-            assertThat(chosenKeyAlias).hasValue(expectedKeyAlias);
+            assertThat(actualKeyName).hasValue(expectedKeyName);
         }
     }
 }
