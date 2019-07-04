@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
@@ -36,8 +37,8 @@ import com.linecorp.armeria.server.auth.HttpAuthService;
  */
 public final class HealthCheckServiceBuilder {
 
-    private static final long DEFAULT_LONG_POLLING_TIMEOUT_MILLIS = 60_000;
-    private static final float DEFAULT_LONG_POLLING_TIMEOUT_JITTER_RATE = 0.2f;
+    private static final int DEFAULT_LONG_POLLING_TIMEOUT_SECONDS = 60;
+    private static final double DEFAULT_LONG_POLLING_TIMEOUT_JITTER_RATE = 0.2;
 
     private final ImmutableSet.Builder<HealthChecker> healthCheckers = ImmutableSet.builder();
     private AggregatedHttpResponse healthyResponse = AggregatedHttpResponse.of(HttpStatus.OK,
@@ -46,8 +47,8 @@ public final class HealthCheckServiceBuilder {
     private AggregatedHttpResponse unhealthyResponse = AggregatedHttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE,
                                                                                  MediaType.JSON_UTF_8,
                                                                                  "{\"healthy\":false}");
-    private long maxLongPollingTimeoutMillis = DEFAULT_LONG_POLLING_TIMEOUT_MILLIS;
-    private float longPollingTimeoutJitterRate = DEFAULT_LONG_POLLING_TIMEOUT_JITTER_RATE;
+    private long maxLongPollingTimeoutMillis = TimeUnit.SECONDS.toMillis(DEFAULT_LONG_POLLING_TIMEOUT_SECONDS);
+    private double longPollingTimeoutJitterRate = DEFAULT_LONG_POLLING_TIMEOUT_JITTER_RATE;
     @Nullable
     private HealthCheckUpdateHandler updateHandler;
 
@@ -110,14 +111,14 @@ public final class HealthCheckServiceBuilder {
 
     /**
      * Enables or disables long-polling support. By default, long-polling support is enabled with
-     * the max timeout of {@value #DEFAULT_LONG_POLLING_TIMEOUT_MILLIS} milliseconds and
+     * the max timeout of {@value #DEFAULT_LONG_POLLING_TIMEOUT_SECONDS} seconds and
      * the jitter rate of {@value #DEFAULT_LONG_POLLING_TIMEOUT_JITTER_RATE}.
      *
      * @param maxLongPollingTimeout A positive maximum allowed timeout value which is specified by a client
      *                              in the {@code "prefer: wait=<n>"} request header.
      *                              Specify {@code 0} to disable long-polling support.
      * @return {@code this}
-     * @see #longPolling(Duration, float)
+     * @see #longPolling(Duration, double)
      */
     public HealthCheckServiceBuilder longPolling(Duration maxLongPollingTimeout) {
         return longPolling(maxLongPollingTimeout, longPollingTimeoutJitterRate);
@@ -125,14 +126,14 @@ public final class HealthCheckServiceBuilder {
 
     /**
      * Enables or disables long-polling support. By default, long-polling support is enabled with
-     * the max timeout of {@value #DEFAULT_LONG_POLLING_TIMEOUT_MILLIS} milliseconds and
+     * the max timeout of {@value #DEFAULT_LONG_POLLING_TIMEOUT_SECONDS} seconds and
      * the jitter rate of {@value #DEFAULT_LONG_POLLING_TIMEOUT_JITTER_RATE}.
      *
      * @param maxLongPollingTimeoutMillis A positive maximum allowed timeout value which is specified by
      *                                    a client in the {@code "prefer: wait=<n>"} request header.
      *                                    Specify {@code 0} to disable long-polling support.
      * @return {@code this}
-     * @see #longPolling(long, float)
+     * @see #longPolling(long, double)
      */
     public HealthCheckServiceBuilder longPolling(long maxLongPollingTimeoutMillis) {
         return longPolling(maxLongPollingTimeoutMillis, longPollingTimeoutJitterRate);
@@ -140,7 +141,7 @@ public final class HealthCheckServiceBuilder {
 
     /**
      * Enables or disables long-polling support. By default, long-polling support is enabled with
-     * the max timeout of {@value #DEFAULT_LONG_POLLING_TIMEOUT_MILLIS} milliseconds and
+     * the max timeout of {@value #DEFAULT_LONG_POLLING_TIMEOUT_SECONDS} seconds and
      * the jitter rate of {@value #DEFAULT_LONG_POLLING_TIMEOUT_JITTER_RATE}.
      *
      * @param maxLongPollingTimeout A positive maximum allowed timeout value which is specified by a client
@@ -152,7 +153,7 @@ public final class HealthCheckServiceBuilder {
      * @see #longPolling(Duration)
      */
     public HealthCheckServiceBuilder longPolling(Duration maxLongPollingTimeout,
-                                                 float longPollingTimeoutJitterRate) {
+                                                 double longPollingTimeoutJitterRate) {
         requireNonNull(maxLongPollingTimeout, "maxLongPollingTimeout");
         checkArgument(!maxLongPollingTimeout.isNegative(),
                       "maxLongPollingTimeout: %s (expected: >= 0)", maxLongPollingTimeout);
@@ -161,7 +162,7 @@ public final class HealthCheckServiceBuilder {
 
     /**
      * Enables or disables long-polling support. By default, long-polling support is enabled with
-     * the max timeout of {@value #DEFAULT_LONG_POLLING_TIMEOUT_MILLIS} milliseconds and
+     * the max timeout of {@value #DEFAULT_LONG_POLLING_TIMEOUT_SECONDS} seconds and
      * the jitter rate of {@value #DEFAULT_LONG_POLLING_TIMEOUT_JITTER_RATE}.
      *
      * @param maxLongPollingTimeoutMillis A positive maximum allowed timeout value which is specified by
@@ -173,7 +174,7 @@ public final class HealthCheckServiceBuilder {
      * @see #longPolling(long)
      */
     public HealthCheckServiceBuilder longPolling(long maxLongPollingTimeoutMillis,
-                                                 float longPollingTimeoutJitterRate) {
+                                                 double longPollingTimeoutJitterRate) {
         checkArgument(maxLongPollingTimeoutMillis >= 0,
                       "maxLongPollingTimeoutMillis: %s (expected: >= 0)",
                       maxLongPollingTimeoutMillis);

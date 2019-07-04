@@ -126,7 +126,7 @@ public final class HealthCheckService implements HttpService, TransientService<H
     private final AggregatedHttpResponse unhealthyResponse;
     private final ResponseHeaders notModifiedHeaders;
     private final long maxLongPollingTimeoutMillis;
-    private final float longPollingTimeoutJitterRate;
+    private final double longPollingTimeoutJitterRate;
     @Nullable
     private final Consumer<HealthChecker> healthCheckerListener;
     @Nullable
@@ -141,7 +141,7 @@ public final class HealthCheckService implements HttpService, TransientService<H
 
     HealthCheckService(Iterable<HealthChecker> healthCheckers,
                        AggregatedHttpResponse healthyResponse, AggregatedHttpResponse unhealthyResponse,
-                       long maxLongPollingTimeoutMillis, float longPollingTimeoutJitterRate,
+                       long maxLongPollingTimeoutMillis, double longPollingTimeoutJitterRate,
                        @Nullable HealthCheckUpdateHandler updateHandler) {
         serverHealth = new SettableHealthChecker(false);
         this.healthCheckers = ImmutableSet.copyOf(healthCheckers);
