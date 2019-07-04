@@ -93,10 +93,9 @@ final class DefaultHealthCheckUpdateHandler implements HealthCheckUpdateHandler 
         if (contentType != null && !contentType.is(MediaType.JSON)) {
             throw HttpStatusException.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
         }
+
         final Charset charset = contentType == null ? StandardCharsets.UTF_8
                                                     : contentType.charset().orElse(StandardCharsets.UTF_8);
-
-        final JsonNode node;
         try {
             return mapper.readTree(req.content(charset));
         } catch (IOException e) {

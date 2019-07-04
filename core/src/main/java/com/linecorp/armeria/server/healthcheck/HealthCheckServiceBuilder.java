@@ -95,7 +95,7 @@ public final class HealthCheckServiceBuilder {
      * response is sent by default:
      *
      * <pre>{@code
-     * HTTP/1.1 200 OK
+     * HTTP/1.1 503 Service Unavailable
      * Content-Type: application/json; charset=utf-8
      *
      * { "healthy": false }
@@ -175,9 +175,10 @@ public final class HealthCheckServiceBuilder {
     public HealthCheckServiceBuilder longPolling(long maxLongPollingTimeoutMillis,
                                                  float longPollingTimeoutJitterRate) {
         checkArgument(maxLongPollingTimeoutMillis >= 0,
-                      "maxLongPollingTimeoutMillis: %s (expected: >= 0)", maxLongPollingTimeoutMillis);
+                      "maxLongPollingTimeoutMillis: %s (expected: >= 0)",
+                      maxLongPollingTimeoutMillis);
         checkArgument(longPollingTimeoutJitterRate >= 0 && longPollingTimeoutJitterRate <= 1,
-                      "longPollingTimeoutJitterRate: %s (longPollingTimeoutJitterRate: >= 0 && <= 1)",
+                      "longPollingTimeoutJitterRate: %s (expected: >= 0 && <= 1)",
                       longPollingTimeoutJitterRate);
         this.maxLongPollingTimeoutMillis = maxLongPollingTimeoutMillis;
         this.longPollingTimeoutJitterRate = longPollingTimeoutJitterRate;
