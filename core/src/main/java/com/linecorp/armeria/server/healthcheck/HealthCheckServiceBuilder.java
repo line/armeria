@@ -55,7 +55,7 @@ public final class HealthCheckServiceBuilder {
     HealthCheckServiceBuilder() {}
 
     /**
-     * Adds the specified {@link HealthChecker}s that determines the healthiness of the {@link Server}.
+     * Adds the specified {@link HealthChecker}s that determine the healthiness of the {@link Server}.
      *
      * @return {@code this}
      */
@@ -64,7 +64,7 @@ public final class HealthCheckServiceBuilder {
     }
 
     /**
-     * Adds the specified {@link HealthChecker}s that determines the healthiness of the {@link Server}.
+     * Adds the specified {@link HealthChecker}s that determine the healthiness of the {@link Server}.
      *
      * @return {@code this}
      */

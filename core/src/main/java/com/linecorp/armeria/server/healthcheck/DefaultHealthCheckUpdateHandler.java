@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server.healthcheck;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -42,6 +44,7 @@ final class DefaultHealthCheckUpdateHandler implements HealthCheckUpdateHandler 
 
     @Override
     public CompletionStage<Boolean> handle(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        requireNonNull(req, "req");
         switch (req.method()) {
             case PUT:
             case POST:
