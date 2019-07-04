@@ -16,6 +16,7 @@ First, you need to create the :api:`Tracing`:
     import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 
     import brave.Tracing;
+    import zipkin2.reporter.Reporter;
 
     Reporter<Span> myReporter = ...
     Tracing tracing = Tracing.newBuilder()
