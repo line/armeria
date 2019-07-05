@@ -1072,15 +1072,15 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public String toStringRequestOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
+    public String toStringRequestOnly(Function<? super HttpHeaders, ?> headersSanitizer,
                                       Function<Object, ?> contentSanitizer) {
         return toStringRequestOnly(headersSanitizer, contentSanitizer, headersSanitizer);
     }
 
     @Override
-    public String toStringRequestOnly(Function<? super RequestHeaders, ? extends HttpHeaders> headersSanitizer,
+    public String toStringRequestOnly(Function<? super RequestHeaders, ?> headersSanitizer,
                                       Function<Object, ?> contentSanitizer,
-                                      Function<? super HttpHeaders, ? extends HttpHeaders> trailersSanitizer) {
+                                      Function<? super HttpHeaders, ?> trailersSanitizer) {
         requireNonNull(headersSanitizer, "headersSanitizer");
         requireNonNull(contentSanitizer, "contentSanitizer");
         requireNonNull(trailersSanitizer, "trailersSanitizer");
@@ -1108,7 +1108,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         final String sanitizedHeaders;
         if (isAvailable(flags, REQUEST_HEADERS)) {
-            sanitizedHeaders = String.valueOf(headersSanitizer.apply(requestHeaders));
+            sanitizedHeaders = sanitize(headersSanitizer, requestHeaders);
             additionalCapacity += sanitizedHeaders.length();
         } else {
             sanitizedHeaders = null;
@@ -1116,7 +1116,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         final String sanitizedContent;
         if (isAvailable(flags, REQUEST_CONTENT) && requestContent != null) {
-            sanitizedContent = String.valueOf(contentSanitizer.apply(requestContent));
+            sanitizedContent = sanitize(contentSanitizer, requestContent);
             additionalCapacity += sanitizedContent.length();
         } else {
             sanitizedContent = null;
@@ -1127,7 +1127,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         final String sanitizedTrailers;
         if (!requestTrailers.isEmpty()) {
-            sanitizedTrailers = String.valueOf(trailersSanitizer.apply(requestTrailers));
+            sanitizedTrailers = sanitize(trailersSanitizer, requestTrailers);
             additionalCapacity += sanitizedTrailers.length();
         } else {
             sanitizedTrailers = null;
@@ -1183,16 +1183,15 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
-    public String toStringResponseOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
+    public String toStringResponseOnly(Function<? super HttpHeaders, ?> headersSanitizer,
                                        Function<Object, ?> contentSanitizer) {
         return toStringResponseOnly(headersSanitizer, contentSanitizer, headersSanitizer);
     }
 
     @Override
-    public String toStringResponseOnly(
-            Function<? super ResponseHeaders, ? extends HttpHeaders> headersSanitizer,
-            Function<Object, ?> contentSanitizer,
-            Function<? super HttpHeaders, ? extends HttpHeaders> trailersSanitizer) {
+    public String toStringResponseOnly(Function<? super ResponseHeaders, ?> headersSanitizer,
+                                       Function<Object, ?> contentSanitizer,
+                                       Function<? super HttpHeaders, ?> trailersSanitizer) {
 
         requireNonNull(headersSanitizer, "headersSanitizer");
         requireNonNull(contentSanitizer, "contentSanitizer");
@@ -1221,7 +1220,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         final String sanitizedHeaders;
         if (isAvailable(flags, RESPONSE_HEADERS)) {
-            sanitizedHeaders = String.valueOf(headersSanitizer.apply(responseHeaders));
+            sanitizedHeaders = sanitize(headersSanitizer, responseHeaders);
             additionalCapacity += sanitizedHeaders.length();
         } else {
             sanitizedHeaders = null;
@@ -1229,7 +1228,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         final String sanitizedContent;
         if (isAvailable(flags, RESPONSE_CONTENT) && responseContent != null) {
-            sanitizedContent = String.valueOf(contentSanitizer.apply(responseContent));
+            sanitizedContent = sanitize(contentSanitizer, responseContent);
             additionalCapacity += sanitizedContent.length();
         } else {
             sanitizedContent = null;
@@ -1240,7 +1239,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         final String sanitizedTrailers;
         if (!responseTrailers.isEmpty()) {
-            sanitizedTrailers = String.valueOf(trailersSanitizer.apply(responseTrailers));
+            sanitizedTrailers = sanitize(trailersSanitizer, responseTrailers);
             additionalCapacity += sanitizedTrailers.length();
         } else {
             sanitizedTrailers = null;
@@ -1274,7 +1273,7 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         if (sanitizedContent != null) {                                       // 17
-            buf.append(", content=").append(contentSanitizer.apply(responseContent));
+            buf.append(", content=").append(sanitizedContent);
         } else if (isAvailable(flags, RESPONSE_END) && responseContentPreview != null) {
             buf.append(", contentPreview=").append(responseContentPreview);
         }
@@ -1295,6 +1294,11 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         responseStrFlags = flags;
 
         return responseStr;
+    }
+
+    private static <T> String sanitize(Function<? super T, ?> headersSanitizer, T requestHeaders) {
+        final Object sanitized = headersSanitizer.apply(requestHeaders);
+        return sanitized != null ? sanitized.toString() : "<sanitized>";
     }
 
     private static final class ListenerEntry {

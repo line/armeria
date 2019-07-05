@@ -71,14 +71,14 @@ public final class LoggingService<I extends Request, O extends Response> extends
     private final LogLevel requestLogLevel;
     private final LogLevel successfulResponseLogLevel;
     private final LogLevel failedResponseLogLevel;
-    private final Function<? super RequestHeaders, ? extends HttpHeaders> requestHeadersSanitizer;
+    private final Function<? super RequestHeaders, ?> requestHeadersSanitizer;
     private final Function<Object, ?> requestContentSanitizer;
-    private final Function<? super HttpHeaders, ? extends HttpHeaders> requestTrailersSanitizer;
+    private final Function<? super HttpHeaders, ?> requestTrailersSanitizer;
 
-    private final Function<? super ResponseHeaders, ? extends HttpHeaders> responseHeadersSanitizer;
+    private final Function<? super ResponseHeaders, ?> responseHeadersSanitizer;
     private final Function<Object, ?> responseContentSanitizer;
-    private final Function<? super HttpHeaders, ? extends HttpHeaders> responseTrailersSanitizer;
-    private final Function<? super Throwable, ? extends Throwable> responseCauseSanitizer;
+    private final Function<? super HttpHeaders, ?> responseTrailersSanitizer;
+    private final Function<? super Throwable, ?> responseCauseSanitizer;
     private final Sampler sampler;
 
     /**
@@ -121,13 +121,13 @@ public final class LoggingService<I extends Request, O extends Response> extends
             LogLevel requestLogLevel,
             LogLevel successfulResponseLogLevel,
             LogLevel failedResponseLogLevel,
-            Function<? super RequestHeaders, ? extends HttpHeaders> requestHeadersSanitizer,
+            Function<? super RequestHeaders, ?> requestHeadersSanitizer,
             Function<Object, ?> requestContentSanitizer,
-            Function<? super HttpHeaders, ? extends HttpHeaders> requestTrailersSanitizer,
-            Function<? super ResponseHeaders, ? extends HttpHeaders> responseHeadersSanitizer,
+            Function<? super HttpHeaders, ?> requestTrailersSanitizer,
+            Function<? super ResponseHeaders, ?> responseHeadersSanitizer,
             Function<Object, ?> responseContentSanitizer,
-            Function<? super HttpHeaders, ? extends HttpHeaders> responseTrailersSanitizer,
-            Function<? super Throwable, ? extends Throwable> responseCauseSanitizer,
+            Function<? super HttpHeaders, ?> responseTrailersSanitizer,
+            Function<? super Throwable, ?> responseCauseSanitizer,
             Sampler sampler) {
         super(requireNonNull(delegate, "delegate"));
         this.requestLogLevel = requireNonNull(requestLogLevel, "requestLogLevel");

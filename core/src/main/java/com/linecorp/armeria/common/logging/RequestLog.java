@@ -560,7 +560,7 @@ public interface RequestLog extends AttributeMap {
      * @param contentSanitizer a {@link Function} for sanitizing request content for logging. The result of the
      *                         {@link Function} is what is actually logged as content.
      */
-    String toStringRequestOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
+    String toStringRequestOnly(Function<? super HttpHeaders, ?> headersSanitizer,
                                Function<Object, ?> contentSanitizer);
 
     /**
@@ -573,9 +573,9 @@ public interface RequestLog extends AttributeMap {
      * @param trailersSanitizer a {@link Function} for sanitizing HTTP trailers for logging. The result of the
      *                          {@link Function} is what is actually logged as trailers.
      */
-    String toStringRequestOnly(Function<? super RequestHeaders, ? extends HttpHeaders> headersSanitizer,
+    String toStringRequestOnly(Function<? super RequestHeaders, ?> headersSanitizer,
                                Function<Object, ?> contentSanitizer,
-                               Function<? super HttpHeaders, ? extends HttpHeaders> trailersSanitizer);
+                               Function<? super HttpHeaders, ?> trailersSanitizer);
 
     /**
      * Returns the string representation of the {@link Response}, with no sanitization of headers or content.
@@ -593,7 +593,7 @@ public interface RequestLog extends AttributeMap {
      * @param contentSanitizer a {@link Function} for sanitizing response content for logging. The result of the
      *                         {@link Function} is what is actually logged as content.
      */
-    String toStringResponseOnly(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer,
+    String toStringResponseOnly(Function<? super HttpHeaders, ?> headersSanitizer,
                                 Function<Object, ?> contentSanitizer);
 
     /**
@@ -606,7 +606,7 @@ public interface RequestLog extends AttributeMap {
      * @param trailersSanitizer a {@link Function} for sanitizing HTTP trailers for logging. The result of the
      *                         {@link Function} is what is actually logged as trailers.
      */
-    String toStringResponseOnly(Function<? super ResponseHeaders, ? extends HttpHeaders> headersSanitizer,
+    String toStringResponseOnly(Function<? super ResponseHeaders, ?> headersSanitizer,
                                 Function<Object, ?> contentSanitizer,
-                                Function<? super HttpHeaders, ? extends HttpHeaders> trailersSanitizer);
+                                Function<? super HttpHeaders, ?> trailersSanitizer);
 }

@@ -37,19 +37,15 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     private LogLevel requestLogLevel = LogLevel.TRACE;
     private LogLevel successfulResponseLogLevel = LogLevel.TRACE;
     private LogLevel failedResponseLogLevel = LogLevel.WARN;
-    private Function<? super HttpHeaders, ? extends HttpHeaders> requestHeadersSanitizer =
-            DEFAULT_HEADERS_SANITIZER;
+    private Function<? super HttpHeaders, ?> requestHeadersSanitizer = DEFAULT_HEADERS_SANITIZER;
     private Function<Object, ?> requestContentSanitizer = DEFAULT_CONTENT_SANITIZER;
-    private Function<? super HttpHeaders, ? extends HttpHeaders> requestTrailersSanitizer =
-            DEFAULT_HEADERS_SANITIZER;
+    private Function<? super HttpHeaders, ?> requestTrailersSanitizer = DEFAULT_HEADERS_SANITIZER;
 
-    private Function<? super HttpHeaders, ? extends HttpHeaders> responseHeadersSanitizer =
-            DEFAULT_HEADERS_SANITIZER;
+    private Function<? super HttpHeaders, ?> responseHeadersSanitizer = DEFAULT_HEADERS_SANITIZER;
     private Function<Object, ?> responseContentSanitizer = DEFAULT_CONTENT_SANITIZER;
-    private Function<? super Throwable, ? extends Throwable> responseCauseSanitizer = DEFAULT_CAUSE_SANITIZER;
+    private Function<? super Throwable, ?> responseCauseSanitizer = DEFAULT_CAUSE_SANITIZER;
     private float samplingRate = 1.0f;
-    private Function<? super HttpHeaders, ? extends HttpHeaders> responseTrailersSanitizer =
-            DEFAULT_HEADERS_SANITIZER;
+    private Function<? super HttpHeaders, ?> responseTrailersSanitizer = DEFAULT_HEADERS_SANITIZER;
 
     /**
      * Sets the {@link LogLevel} to use when logging requests. If unset, will use {@link LogLevel#TRACE}.
@@ -104,8 +100,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      * {@link Function} that removes sensitive headers, like {@code Cookie}, before logging. If unset, will use
      * {@link Function#identity()}.
      */
-    public T requestHeadersSanitizer(
-            Function<? super HttpHeaders, ? extends HttpHeaders> requestHeadersSanitizer) {
+    public T requestHeadersSanitizer(Function<? super HttpHeaders, ?> requestHeadersSanitizer) {
         this.requestHeadersSanitizer = requireNonNull(requestHeadersSanitizer, "requestHeadersSanitizer");
         return self();
     }
@@ -113,7 +108,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     /**
      * Returns the {@link Function} to use to sanitize request headers before logging.
      */
-    protected Function<? super HttpHeaders, ? extends HttpHeaders> requestHeadersSanitizer() {
+    protected Function<? super HttpHeaders, ?> requestHeadersSanitizer() {
         return requestHeadersSanitizer;
     }
 
@@ -122,8 +117,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      * {@link Function} that removes sensitive headers, like {@code Set-Cookie}, before logging. If unset,
      * will use {@link Function#identity()}.
      */
-    public T responseHeadersSanitizer(
-            Function<? super HttpHeaders, ? extends HttpHeaders> responseHeadersSanitizer) {
+    public T responseHeadersSanitizer(Function<? super HttpHeaders, ?> responseHeadersSanitizer) {
         this.responseHeadersSanitizer = requireNonNull(responseHeadersSanitizer, "responseHeadersSanitizer");
         return self();
     }
@@ -131,7 +125,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     /**
      * Returns the {@link Function} to use to sanitize response headers before logging.
      */
-    protected Function<? super HttpHeaders, ? extends HttpHeaders> responseHeadersSanitizer() {
+    protected Function<? super HttpHeaders, ?> responseHeadersSanitizer() {
         return responseHeadersSanitizer;
     }
 
@@ -139,8 +133,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      * Sets the {@link Function} to use to sanitize request trailers before logging. If unset,
      * will use {@link Function#identity()}.
      */
-    public T requestTrailersSanitizer(
-            Function<? super HttpHeaders, ? extends HttpHeaders> requestTrailersSanitizer) {
+    public T requestTrailersSanitizer(Function<? super HttpHeaders, ?> requestTrailersSanitizer) {
         this.requestTrailersSanitizer = requireNonNull(requestTrailersSanitizer, "requestTrailersSanitizer");
         return self();
     }
@@ -148,7 +141,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     /**
      * Returns the {@link Function} to use to sanitize request trailers before logging.
      */
-    protected Function<? super HttpHeaders, ? extends HttpHeaders> requestTrailersSanitizer() {
+    protected Function<? super HttpHeaders, ?> requestTrailersSanitizer() {
         return requestTrailersSanitizer;
     }
 
@@ -156,8 +149,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      * Sets the {@link Function} to use to sanitize response trailers before logging. If unset,
      * will use {@link Function#identity()}.
      */
-    public T responseTrailersSanitizer(
-            Function<? super HttpHeaders, ? extends HttpHeaders> responseTrailersSanitizer) {
+    public T responseTrailersSanitizer(Function<? super HttpHeaders, ?> responseTrailersSanitizer) {
         this.responseTrailersSanitizer = requireNonNull(responseTrailersSanitizer, "responseTrailersSanitizer");
         return self();
     }
@@ -165,7 +157,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     /**
      * Returns the {@link Function} to use to sanitize response trailers before logging.
      */
-    protected Function<? super HttpHeaders, ? extends HttpHeaders> responseTrailersSanitizer() {
+    protected Function<? super HttpHeaders, ?> responseTrailersSanitizer() {
         return responseTrailersSanitizer;
     }
 
@@ -185,7 +177,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      * @see #responseHeadersSanitizer(Function)
      * @see #responseTrailersSanitizer(Function)
      */
-    public T headersSanitizer(Function<? super HttpHeaders, ? extends HttpHeaders> headersSanitizer) {
+    public T headersSanitizer(Function<? super HttpHeaders, ?> headersSanitizer) {
         requireNonNull(headersSanitizer, "headersSanitizer");
         requestHeadersSanitizer(headersSanitizer);
         requestTrailersSanitizer(headersSanitizer);
@@ -253,7 +245,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      * the stack trace completely by returning {@code null} in the {@link Function}. If unset, will use
      * {@link Function#identity()}.
      */
-    public T responseCauseSanitizer(Function<? super Throwable, ? extends Throwable> responseCauseSanitizer) {
+    public T responseCauseSanitizer(Function<? super Throwable, ?> responseCauseSanitizer) {
         this.responseCauseSanitizer = requireNonNull(responseCauseSanitizer, "responseCauseSanitizer");
         return self();
     }
@@ -261,7 +253,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     /**
      * Returns the {@link Function} to use to sanitize response cause before logging.
      */
-    protected Function<? super Throwable, ? extends Throwable> responseCauseSanitizer() {
+    protected Function<? super Throwable, ?> responseCauseSanitizer() {
         return responseCauseSanitizer;
     }
 
@@ -301,12 +293,12 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
             LogLevel requestLogLevel,
             LogLevel successfulResponseLogLevel,
             LogLevel failureResponseLogLevel,
-            Function<? super HttpHeaders, ? extends HttpHeaders> requestHeadersSanitizer,
+            Function<? super HttpHeaders, ?> requestHeadersSanitizer,
             Function<?, ?> requestContentSanitizer,
-            Function<? super HttpHeaders, ? extends HttpHeaders> requestTrailersSanitizer,
-            Function<? super HttpHeaders, ? extends HttpHeaders> responseHeadersSanitizer,
-            Function<?, ?> responseContentSanitizer,
-            Function<? super HttpHeaders, ? extends HttpHeaders> responseTrailersSanitizer,
+            Function<? super HttpHeaders, ?> requestTrailersSanitizer,
+            Function<? super HttpHeaders, ?> responseHeadersSanitizer,
+            Function<Object, ?> responseContentSanitizer,
+            Function<? super HttpHeaders, ?> responseTrailersSanitizer,
             float samplingRate) {
         final ToStringHelper helper = MoreObjects.toStringHelper(self)
                                                  .add("requestLogLevel", requestLogLevel)

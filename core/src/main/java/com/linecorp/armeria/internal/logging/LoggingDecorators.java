@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
 public final class LoggingDecorators {
     private static final String REQUEST_FORMAT = "Request: {}";
     private static final String RESPONSE_FORMAT = "Response: {}";
+    private static final String RESPONSE_FORMAT2 = "Response: {}, cause: {}";
 
     private LoggingDecorators() {}
 
@@ -40,9 +41,9 @@ public final class LoggingDecorators {
      */
     public static void logRequest(
             Logger logger, RequestLog log, LogLevel requestLogLevel,
-            Function<? super RequestHeaders, ? extends HttpHeaders> requestHeadersSanitizer,
+            Function<? super RequestHeaders, ?> requestHeadersSanitizer,
             Function<Object, ?> requestContentSanitizer,
-            Function<? super HttpHeaders, ? extends HttpHeaders> requestTrailersSanitizer) {
+            Function<? super HttpHeaders, ?> requestTrailersSanitizer) {
 
         if (requestLogLevel.isEnabled(logger)) {
             requestLogLevel.log(logger, REQUEST_FORMAT,
@@ -56,15 +57,15 @@ public final class LoggingDecorators {
      */
     public static void logResponse(
             Logger logger, RequestLog log, LogLevel requestLogLevel,
-            Function<? super RequestHeaders, ? extends HttpHeaders> requestHeadersSanitizer,
+            Function<? super RequestHeaders, ?> requestHeadersSanitizer,
             Function<Object, ?> requestContentSanitizer,
-            Function<? super HttpHeaders, ? extends HttpHeaders> requestTrailersSanitizer,
+            Function<? super HttpHeaders, ?> requestTrailersSanitizer,
             LogLevel successfulResponseLogLevel,
             LogLevel failedResponseLogLevel,
-            Function<? super ResponseHeaders, ? extends HttpHeaders> responseHeadersSanitizer,
+            Function<? super ResponseHeaders, ?> responseHeadersSanitizer,
             Function<Object, ?> responseContentSanitizer,
-            Function<? super HttpHeaders, ? extends HttpHeaders> responseTrailersSanitizer,
-            Function<? super Throwable, ? extends Throwable> responseCauseSanitizer) {
+            Function<? super HttpHeaders, ?> responseTrailersSanitizer,
+            Function<? super Throwable, ?> responseCauseSanitizer) {
 
         final Throwable responseCause = log.responseCause();
         final LogLevel level = responseCause == null ? successfulResponseLogLevel
@@ -84,9 +85,13 @@ public final class LoggingDecorators {
                                                                               requestTrailersSanitizer));
                 }
 
-                final Throwable sanitizedResponseCause = responseCauseSanitizer.apply(responseCause);
+                final Object sanitizedResponseCause = responseCauseSanitizer.apply(responseCause);
                 if (sanitizedResponseCause != null) {
-                    level.log(logger, RESPONSE_FORMAT, responseStr, sanitizedResponseCause);
+                    if (sanitizedResponseCause instanceof Throwable) {
+                        level.log(logger, RESPONSE_FORMAT, responseStr, sanitizedResponseCause);
+                    } else {
+                        level.log(logger, RESPONSE_FORMAT2, responseStr, sanitizedResponseCause);
+                    }
                 } else {
                     level.log(logger, RESPONSE_FORMAT, responseStr);
                 }
