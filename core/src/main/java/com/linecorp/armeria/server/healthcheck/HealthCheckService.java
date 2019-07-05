@@ -88,15 +88,16 @@ import io.netty.util.concurrent.ScheduledFuture;
  * Once the response is received, the client is supposed to send a new long-polling request to continue
  * watching the healthiness of the {@link Server}.</p>
  *
- * <p>All health check responses will contain a {@code "long-polling-supported"} header whose value is
- * {@code "true"} or {@code "false"}.</p>
+ * <p>All health check responses will contain a {@code "armeria-lphc"} header whose value is the maximum
+ * allowed value of the {@code "Prefer: wait=<seconds>"} header. {@code 0} means long polling has been
+ * disabled. {@code "lphc"} stands for long-polling health check.</p>
  *
  * @see HealthCheckServiceBuilder
  */
 public final class HealthCheckService implements HttpService, TransientService<HttpRequest, HttpResponse> {
 
     private static final Logger logger = LoggerFactory.getLogger(HealthCheckService.class);
-    private static final AsciiString LONG_POLLING_SUPPORTED = HttpHeaderNames.of("long-polling-supported");
+    private static final AsciiString ARMERIA_LPHC = HttpHeaderNames.of("armeria-lphc");
     private static final PendingResponse[] EMPTY_PENDING_RESPONSES = new PendingResponse[0];
 
     /**
@@ -178,13 +179,17 @@ public final class HealthCheckService implements HttpService, TransientService<H
     }
 
     private AggregatedHttpResponse addCommonHeaders(AggregatedHttpResponse res) {
+        final String maxLongPollingTimeoutSeconds =
+                isLongPollingEnabled() ? String.valueOf(Math.max(1, maxLongPollingTimeoutMillis / 1000))
+                                       : "0";
+
         return AggregatedHttpResponse.of(res.informationals(),
                                          res.headers().toBuilder()
-                                            .set(LONG_POLLING_SUPPORTED, String.valueOf(isLongPollingEnabled()))
+                                            .set(ARMERIA_LPHC, maxLongPollingTimeoutSeconds)
                                             .build(),
                                          res.content(),
                                          res.trailers().toBuilder()
-                                            .removeAndThen(LONG_POLLING_SUPPORTED)
+                                            .removeAndThen(ARMERIA_LPHC)
                                             .build());
     }
 
