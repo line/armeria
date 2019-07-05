@@ -32,15 +32,11 @@ public interface HealthCheckUpdateHandler {
      * Determines if the healthiness of the {@link Server} needs to be changed or not from the given
      * {@link HttpRequest}.
      *
-     * @return A {@link CompletionStage} which is completed with one of the following values:
-     *         <ul>
-     *           <li>{@code true} - the {@link Server} has to be marked as 'healthy'.</li>
-     *           <li>{@code false} - the {@link Server} has to be marked as 'unhealthy'.</li>
-     *           <li>{@code null} - the healthiness of the {@link Server} has to remain as-is.</li>
-     *         </ul>
+     * @return A {@link CompletionStage} which is completed with {@link HealthCheckUpdateResult}.
      *         The {@link CompletionStage} can also be completed with an exception, such as
      *         {@link HttpStatusException} and {@link HttpResponseException} to send a specific
      *         HTTP response to the client.
      */
-    CompletionStage<Boolean> handle(ServiceRequestContext ctx, HttpRequest req) throws Exception;
+    CompletionStage<HealthCheckUpdateResult> handle(ServiceRequestContext ctx,
+                                                    HttpRequest req) throws Exception;
 }

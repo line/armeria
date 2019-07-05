@@ -22,7 +22,6 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletionStage;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
@@ -43,7 +42,8 @@ final class DefaultHealthCheckUpdateHandler implements HealthCheckUpdateHandler 
     private DefaultHealthCheckUpdateHandler() {}
 
     @Override
-    public CompletionStage<Boolean> handle(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+    public CompletionStage<HealthCheckUpdateResult> handle(ServiceRequestContext ctx,
+                                                           HttpRequest req) throws Exception {
         requireNonNull(req, "req");
         switch (req.method()) {
             case PUT:
@@ -56,7 +56,7 @@ final class DefaultHealthCheckUpdateHandler implements HealthCheckUpdateHandler 
         }
     }
 
-    private Boolean handlePut(AggregatedHttpRequest req) {
+    private HealthCheckUpdateResult handlePut(AggregatedHttpRequest req) {
         final JsonNode json = toJsonNode(req);
         if (json.getNodeType() != JsonNodeType.OBJECT) {
             throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
@@ -70,25 +70,30 @@ final class DefaultHealthCheckUpdateHandler implements HealthCheckUpdateHandler 
             throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
         }
 
-        return healthy.booleanValue();
+        return healthy.booleanValue() ? HealthCheckUpdateResult.HEALTHY
+                                      : HealthCheckUpdateResult.UNHEALTHY;
     }
 
-    private Boolean handlePatch(AggregatedHttpRequest req) {
-        final String json;
-        try {
-            json = mapper.writeValueAsString(toJsonNode(req));
-        } catch (JsonProcessingException e) {
-            throw new Error(e); // Never happens.
+    private HealthCheckUpdateResult handlePatch(AggregatedHttpRequest req) {
+        final JsonNode json = toJsonNode(req);
+        if (json.getNodeType() != JsonNodeType.ARRAY ||
+            json.size() != 1) {
+            throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
         }
 
-        switch (json) {
-            case "[{\"op\":\"replace\",\"path\":\"/healthy\",\"value\":true}]":
-                return true;
-            case "[{\"op\":\"replace\",\"path\":\"/healthy\",\"value\":false}]":
-                return false;
-            default:
-                throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
+        final JsonNode patchCommand = json.get(0);
+        final JsonNode op = patchCommand.get("op");
+        final JsonNode path = patchCommand.get("path");
+        final JsonNode value = patchCommand.get("value");
+        if (op == null || path == null || value == null ||
+            !"replace".equals(op.textValue()) ||
+            !"/healthy".equals(path.textValue()) ||
+            !value.isBoolean()) {
+            throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
         }
+
+        return value.booleanValue() ? HealthCheckUpdateResult.HEALTHY
+                                    : HealthCheckUpdateResult.UNHEALTHY;
     }
 
     private JsonNode toJsonNode(AggregatedHttpRequest req) {
@@ -100,7 +105,8 @@ final class DefaultHealthCheckUpdateHandler implements HealthCheckUpdateHandler 
         final Charset charset = contentType == null ? StandardCharsets.UTF_8
                                                     : contentType.charset().orElse(StandardCharsets.UTF_8);
         try {
-            return mapper.readTree(req.content(charset));
+            return StandardCharsets.UTF_8.equals(charset) ? mapper.readTree(req.content().array())
+                                                          : mapper.readTree(req.content(charset));
         } catch (IOException e) {
             throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
         }

@@ -82,11 +82,11 @@ class HealthCheckServiceTest {
                                                  final String content = aReq.contentAscii();
                                                  switch (content) {
                                                      case "OK":
-                                                         return true;
+                                                         return HealthCheckUpdateResult.HEALTHY;
                                                      case "KO":
-                                                         return false;
+                                                         return HealthCheckUpdateResult.UNHEALTHY;
                                                      case "NOOP":
-                                                         return null;
+                                                         return HealthCheckUpdateResult.AS_IS;
                                                      default:
                                                          throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
                                                  }

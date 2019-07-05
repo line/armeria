@@ -299,13 +299,24 @@ public final class HealthCheckService implements HttpService, TransientService<H
                 return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
         }
 
+        assert method == HttpMethod.POST ||
+               method == HttpMethod.PUT ||
+               method == HttpMethod.PATCH;
+
         if (updateHandler == null) {
             return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
         }
 
         return HttpResponse.from(updateHandler.handle(ctx, req).thenApply(updateResult -> {
             if (updateResult != null) {
-                serverHealth.setHealthy(updateResult);
+                switch (updateResult) {
+                    case HEALTHY:
+                        serverHealth.setHealthy(true);
+                        break;
+                    case UNHEALTHY:
+                        serverHealth.setHealthy(false);
+                        break;
+                }
             }
             return HttpResponse.of(newResponse(method, isHealthy()));
         }));
@@ -340,6 +351,7 @@ public final class HealthCheckService implements HttpService, TransientService<H
             });
         } catch (NumberFormatException ignored) {
             // Malformed "wait" value.
+            throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
         }
 
         if (timeoutMillisHolder.value <= 0) {
