@@ -35,9 +35,9 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 final class DefaultHealthCheckUpdateHandler implements HealthCheckUpdateHandler {
 
-    static final DefaultHealthCheckUpdateHandler INSTANCE = new DefaultHealthCheckUpdateHandler();
+    private static final ObjectMapper mapper = new ObjectMapper();
 
-    private final ObjectMapper mapper = new ObjectMapper();
+    static final DefaultHealthCheckUpdateHandler INSTANCE = new DefaultHealthCheckUpdateHandler();
 
     private DefaultHealthCheckUpdateHandler() {}
 

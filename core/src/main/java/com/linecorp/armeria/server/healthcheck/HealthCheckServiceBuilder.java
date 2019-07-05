@@ -26,6 +26,7 @@ import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.Server;
@@ -87,7 +88,8 @@ public final class HealthCheckServiceBuilder {
      * @return {@code this}
      */
     public HealthCheckServiceBuilder healthyResponse(AggregatedHttpResponse healthyResponse) {
-        this.healthyResponse = requireNonNull(healthyResponse, "healthyResponse");
+        requireNonNull(healthyResponse, "healthyResponse");
+        this.healthyResponse = copyResponse(healthyResponse);
         return this;
     }
 
@@ -105,8 +107,19 @@ public final class HealthCheckServiceBuilder {
      * @return {@code this}
      */
     public HealthCheckServiceBuilder unhealthyResponse(AggregatedHttpResponse unhealthyResponse) {
-        this.unhealthyResponse = requireNonNull(unhealthyResponse, "unhealthyResponse");
+        requireNonNull(unhealthyResponse, "unhealthyResponse");
+        this.unhealthyResponse = copyResponse(unhealthyResponse);
         return this;
+    }
+
+    /**
+     * Make a copy just in case the content is modified by the caller or is backed by ByteBuf.
+     */
+    private static AggregatedHttpResponse copyResponse(AggregatedHttpResponse res) {
+        return AggregatedHttpResponse.of(res.informationals(),
+                                         res.headers(),
+                                         HttpData.copyOf(res.content().array()),
+                                         res.trailers());
     }
 
     /**
