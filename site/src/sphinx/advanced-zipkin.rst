@@ -70,6 +70,45 @@ If the requests come to Armeria server and go to another backend, you can trace 
 
 Please note that we used the same :api:`Tracing` instance when we create :api:`BraveClient` and
 :api:`BraveService`. Otherwise, there might be problems if the instances are not configured exactly the same.
+In the same manner, you can use the :api:`Tracing` instance with any
+`brave instrumentation libraries <https://github.com/openzipkin/brave/tree/master/instrumentation>`_.
+For example, you can use it with `Kafka <https://kafka.apache.org/>`_ producer:
+
+.. code-block:: java
+
+    import org.apache.kafka.clients.producer.KafkaProducer;
+    import org.apache.kafka.clients.producer.Producer;
+    import org.apache.kafka.clients.producer.ProducerRecord;
+
+    import brave.kafka.clients.KafkaTracing;
+
+    Tracing tracing = ...
+    KafkaTracing kafkaTracing = KafkaTracing.newBuilder(tracing)
+                                            .remoteServiceName("myKafka")
+                                            .writeB3SingleFormat(true)
+                                            .build();
+
+    Properties props = new Properties();
+    props.put("bootstrap.servers", "https://myKafka.com");
+    props.put("acks", "all");
+    ...
+
+    Producer<String, String> kafkaProducer = new KafkaProducer<>(props);
+    Producer<String, String> tracingProducer = kafkaTracing.producer(kafkaProducer);
+
+    Server server =
+            new ServerBuilder().http(8081)
+                               .service("/", (ctx, req) -> {
+                                            tracingProducer.send(
+                                                    new ProducerRecord<>("my-topic", "foo", "bar"));
+                                            return HttpResponse.of(200);
+                                        }
+                               )
+                               .decorator(BraveService.newDecorator(tracing))
+                               .build();
+
+This will trace all the requests sent to `Kafka <https://kafka.apache.org/>`_ and report timing data with
+the ``spanReporter`` you specified.
 
 See also
 --------
