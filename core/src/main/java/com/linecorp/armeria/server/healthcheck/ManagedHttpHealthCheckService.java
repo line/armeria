@@ -48,7 +48,10 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * >         }
  * >     }).build();
  * }</pre>
+ *
+ * @deprecated Use {@link HealthCheckService}.
  */
+@Deprecated
 public class ManagedHttpHealthCheckService extends HttpHealthCheckService {
     private static final AggregatedHttpResponse TURN_ON_RES = AggregatedHttpResponse
             .of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, HttpData.ofUtf8("Set healthy."));

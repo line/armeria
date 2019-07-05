@@ -68,7 +68,10 @@ import com.linecorp.armeria.server.TransientService;
  *         .service("/health", new HttpHealthCheckService(healthChecker))
  *         .build();
  * }</pre>
+ *
+ * @deprecated Use {@link HealthCheckService}.
  */
+@Deprecated
 public class HttpHealthCheckService extends AbstractHttpService
         implements TransientService<HttpRequest, HttpResponse> {
 
@@ -138,15 +141,15 @@ public class HttpHealthCheckService extends AbstractHttpService
 
     @Override
     protected HttpResponse doHead(ServiceRequestContext ctx, HttpRequest req) {
-        return HttpResponse.of(newResponse(ctx).headers()); // Send without the content.
+        return HttpResponse.of(newResponse(ctx, req).headers()); // Send without the content.
     }
 
     @Override
     protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
-        return HttpResponse.of(newResponse(ctx));
+        return HttpResponse.of(newResponse(ctx, req));
     }
 
-    private AggregatedHttpResponse newResponse(ServiceRequestContext ctx) {
+    private AggregatedHttpResponse newResponse(ServiceRequestContext ctx, HttpRequest req) {
         return isHealthy() ? newHealthyResponse(ctx)
                            : newUnhealthyResponse(ctx);
     }
