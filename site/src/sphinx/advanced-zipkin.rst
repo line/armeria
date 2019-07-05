@@ -5,9 +5,9 @@ Zipkin integration
 
 If you want to troubleshoot latency problems in microservice architecture, you will want to use distributed
 tracing system such as `Zipkin <https://zipkin.io/>`_. It gathers timing data and shows which component is
-the problem. Armeria supports distributed tracing via `Brave <https://github.com/openzipkin/brave/>`_, which
-is a Java tracing library compatible with `Zipkin <https://zipkin.io/>`_. Let's find out how to use it
-to trace requests.
+failing or taking more time than others in a distributed environment. Armeria supports distributed tracing via
+`Brave <https://github.com/openzipkin/brave/>`_, which is a Java tracing library compatible with
+`Zipkin <https://zipkin.io/>`_. Let's find out how to use it to trace requests.
 
 First, you need to create the :api:`Tracing`:
 
@@ -71,7 +71,7 @@ If the requests come to Armeria server and go to another backend, you can trace 
 Please note that we used the same :api:`Tracing` instance when we create :api:`BraveClient` and
 :api:`BraveService`. Otherwise, there might be problems if the instances are not configured exactly the same.
 In the same manner, you can use the :api:`Tracing` instance with any
-`brave instrumentation libraries <https://github.com/openzipkin/brave/tree/master/instrumentation>`_.
+`Brave instrumentation libraries <https://github.com/openzipkin/brave/tree/master/instrumentation>`_.
 For example, you can use it with `Kafka <https://kafka.apache.org/>`_ producer:
 
 .. code-block:: java
@@ -84,7 +84,7 @@ For example, you can use it with `Kafka <https://kafka.apache.org/>`_ producer:
 
     Tracing tracing = ...
     KafkaTracing kafkaTracing = KafkaTracing.newBuilder(tracing)
-                                            .remoteServiceName("myKafka")
+                                            .remoteServiceName("backend")
                                             .writeB3SingleFormat(true)
                                             .build();
 
@@ -93,22 +93,24 @@ For example, you can use it with `Kafka <https://kafka.apache.org/>`_ producer:
     props.put("acks", "all");
     ...
 
-    Producer<String, String> kafkaProducer = new KafkaProducer<>(props);
-    Producer<String, String> tracingProducer = kafkaTracing.producer(kafkaProducer);
+    Producer<String, String> kafkaProducer = kafkaTracing.producer(new KafkaProducer<>(props));
 
     Server server =
             new ServerBuilder().http(8081)
                                .service("/", (ctx, req) -> {
-                                            tracingProducer.send(
-                                                    new ProducerRecord<>("my-topic", "foo", "bar"));
+                                            kafkaProducer.send(
+                                                    new ProducerRecord<>("test", "foo", "bar"));
                                             return HttpResponse.of(200);
                                         }
                                )
                                .decorator(BraveService.newDecorator(tracing))
                                .build();
 
-This will trace all the requests sent to `Kafka <https://kafka.apache.org/>`_ and report timing data with
-the ``spanReporter`` you specified.
+This will trace all the requests sent from the client to the above example server to
+`Kafka <https://kafka.apache.org/>`_, and report timing data using the ``spanReporter`` you specified.
+Here's the result:
+
+.. image:: _images/zipkin_1.png
 
 See also
 --------
