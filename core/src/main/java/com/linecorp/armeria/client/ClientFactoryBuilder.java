@@ -48,12 +48,14 @@ import com.linecorp.armeria.common.Request;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
 /**
@@ -105,6 +107,11 @@ public final class ClientFactoryBuilder {
     private int http1MaxChunkSize = Flags.defaultHttp1MaxChunkSize();
 
     // Armeria-related properties:
+    @Nullable
+    private Function<? super EventLoopGroup, ? extends EventLoopScheduler> eventLoopSchedulerFactory;
+    private int maxNumEventLoopsPerEndpoint;
+    private int maxNumEventLoopsPerHttp1Endpoint;
+    private final Map<Endpoint, Integer> maxNumEventLoopsMap = new Object2IntOpenHashMap<>();
     private long idleTimeoutMillis = Flags.defaultClientIdleTimeoutMillis();
     private boolean useHttp2Preface = Flags.defaultUseHttp2Preface();
     private boolean useHttp1Pipelining = Flags.defaultUseHttp1Pipelining();
@@ -129,6 +136,75 @@ public final class ClientFactoryBuilder {
     public ClientFactoryBuilder workerGroup(EventLoopGroup workerGroup, boolean shutdownOnClose) {
         this.workerGroup = requireNonNull(workerGroup, "workerGroup");
         shutdownWorkerGroupOnClose = shutdownOnClose;
+        return this;
+    }
+
+    /**
+     * Sets the factory that creates an {@link EventLoopScheduler} which is responsible for assigning an
+     * {@link EventLoop} to handle a connection to the specified {@link Endpoint}.
+     */
+    public ClientFactoryBuilder eventLoopSchedulerFactory(
+            Function<? super EventLoopGroup, ? extends EventLoopScheduler> eventLoopSchedulerFactory) {
+        checkState(maxNumEventLoopsPerHttp1Endpoint == 0 && maxNumEventLoopsPerEndpoint == 0 &&
+                   maxNumEventLoopsMap.isEmpty(),
+                   "Cannot set eventLoopSchedulerFactory when maxEventLoop per endpoint is specified.");
+        this.eventLoopSchedulerFactory = requireNonNull(eventLoopSchedulerFactory, "eventLoopSchedulerFactory");
+        return this;
+    }
+
+    /**
+     * Sets the maximum number of {@link EventLoop}s which will be used to handle HTTP/1.1 connections
+     * except the ones specified by {@link #maxNumEventLoopsPerEndpoint(Endpoint, int)} or
+     * {@link #maxNumEventLoopsPerEndpoint(String, int)}.
+     */
+    public ClientFactoryBuilder maxNumEventLoopsPerHttp1Endpoint(int maxNumEventLoopsPerEndpoint) {
+        validateMaxNumEventLoopsPerEndpoint(maxNumEventLoopsPerEndpoint);
+        maxNumEventLoopsPerHttp1Endpoint = maxNumEventLoopsPerEndpoint;
+        return this;
+    }
+
+    private void validateMaxNumEventLoopsPerEndpoint(int maxNumEventLoopsPerEndpoint) {
+        checkArgument(maxNumEventLoopsPerEndpoint > 0,
+                      "maxNumEventLoopsPerEndpoint: %s (expected: > 0)", maxNumEventLoopsPerEndpoint);
+        checkState(eventLoopSchedulerFactory == null,
+                   "maxNumEventLoopsPerEndpoint() and eventLoopSchedulerFactory() are mutually exclusive.");
+    }
+
+    /**
+     * Sets the maximum number of {@link EventLoop}s which will be used to handle HTTP/2 connections
+     * except the ones specified by {@link #maxNumEventLoopsPerEndpoint(Endpoint, int)} or
+     * {@link #maxNumEventLoopsPerEndpoint(String, int)}.
+     */
+    public ClientFactoryBuilder maxNumEventLoopsPerEndpoint(int maxNumEventLoopsPerEndpoint) {
+        validateMaxNumEventLoopsPerEndpoint(maxNumEventLoopsPerEndpoint);
+        this.maxNumEventLoopsPerEndpoint = maxNumEventLoopsPerEndpoint;
+        return this;
+    }
+
+    /**
+     * Sets the maximum number of {@link EventLoop}s which will be used to handle connections to the specified
+     * {@code authority}.
+     * This method is a shortcut of:
+     * <pre>{@code
+     * String authority = ...;
+     * maxNumEventLoopsPerEndpoint(Endpoint.parse(authority), maxNumEventLoops);
+     * }</pre>
+     */
+    public ClientFactoryBuilder maxNumEventLoopsPerEndpoint(String authority, int maxNumEventLoops) {
+        return maxNumEventLoopsPerEndpoint(Endpoint.parse(authority), maxNumEventLoops);
+    }
+
+    /**
+     * Sets the maximum number of {@link EventLoop}s which will be used to handle connections to the specified
+     * {@link Endpoint}.
+     */
+    public ClientFactoryBuilder maxNumEventLoopsPerEndpoint(Endpoint endpoint, int maxNumEventLoops) {
+        requireNonNull(endpoint, "endpoint");
+        checkState(eventLoopSchedulerFactory == null,
+                   "maxNumEventLoopsPerEndpoint() and eventLoopSchedulerFactory() are mutually exclusive.");
+        checkArgument(maxNumEventLoops > 0,
+                      "maxNumEventLoops for '%s': %s (expected: > 0)", endpoint, maxNumEventLoops);
+        maxNumEventLoopsMap.put(endpoint, maxNumEventLoops);
         return this;
     }
 
@@ -372,6 +448,15 @@ public final class ClientFactoryBuilder {
      * Returns a newly-created {@link ClientFactory} based on the properties of this builder.
      */
     public ClientFactory build() {
+        final EventLoopScheduler eventLoopScheduler;
+        if (eventLoopSchedulerFactory != null) {
+            eventLoopScheduler = eventLoopSchedulerFactory.apply(workerGroup);
+        } else {
+            eventLoopScheduler = new DefaultEventLoopScheduler(workerGroup, maxNumEventLoopsPerEndpoint,
+                                                               maxNumEventLoopsPerHttp1Endpoint,
+                                                               maxNumEventLoopsMap);
+        }
+
         final Function<? super EventLoopGroup,
                        ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory;
         if (this.addressResolverGroupFactory != null) {
@@ -381,9 +466,14 @@ public final class ClientFactoryBuilder {
                     firstNonNull(domainNameResolverCustomizers, ImmutableList.of()));
         }
 
+        @SuppressWarnings("unchecked")
+        final AddressResolverGroup<InetSocketAddress> addressResolverGroup =
+                (AddressResolverGroup<InetSocketAddress>) addressResolverGroupFactory.apply(workerGroup);
+
         return new DefaultClientFactory(new HttpClientFactory(
-                workerGroup, shutdownWorkerGroupOnClose, channelOptions, sslContextCustomizer,
-                addressResolverGroupFactory, http2InitialConnectionWindowSize, http2InitialStreamWindowSize,
+                workerGroup, shutdownWorkerGroupOnClose, eventLoopScheduler, channelOptions,
+                sslContextCustomizer, addressResolverGroup,
+                http2InitialConnectionWindowSize, http2InitialStreamWindowSize,
                 http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,
                 http1MaxChunkSize, idleTimeoutMillis, useHttp2Preface,
                 useHttp1Pipelining, connectionPoolListener, meterRegistry));
@@ -391,30 +481,10 @@ public final class ClientFactoryBuilder {
 
     @Override
     public String toString() {
-        return toString(this, workerGroup, shutdownWorkerGroupOnClose, channelOptions,
-                        sslContextCustomizer, addressResolverGroupFactory, http2InitialConnectionWindowSize,
-                        http2InitialStreamWindowSize, http2MaxFrameSize, http2MaxHeaderListSize,
-                        http1MaxInitialLineLength, http1MaxHeaderSize, http1MaxChunkSize, idleTimeoutMillis,
-                        useHttp2Preface, useHttp1Pipelining, connectionPoolListener, meterRegistry);
-    }
-
-    static String toString(
-            ClientFactoryBuilder self,
-            EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnClose,
-            Map<ChannelOption<?>, Object> socketOptions,
-            Consumer<? super SslContextBuilder> sslContextCustomizer,
-            @Nullable
-            Function<? super EventLoopGroup,
-                     ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory,
-            int http2InitialConnectionWindowSize, int http2InitialStreamWindowSize, int http2MaxFrameSize,
-            long http2MaxHeaderListSize, int http1MaxInitialLineLength, int http1MaxHeaderSize,
-            int http1MaxChunkSize, long idleTimeoutMillis, boolean useHttp2Preface, boolean useHttp1Pipelining,
-            ConnectionPoolListener connectionPoolListener,
-            MeterRegistry meterRegistry) {
-
-        final ToStringHelper helper = MoreObjects.toStringHelper(self).omitNullValues();
+        final ToStringHelper helper = MoreObjects.toStringHelper(this).omitNullValues();
         helper.add("workerGroup", workerGroup + " (shutdownOnClose=" + shutdownWorkerGroupOnClose + ')')
-              .add("socketOptions", socketOptions)
+              .add("eventLoopSchedulerFactory", eventLoopSchedulerFactory)
+              .add("channelOptions", channelOptions)
               .add("http2InitialConnectionWindowSize", http2InitialConnectionWindowSize)
               .add("http2InitialStreamWindowSize", http2InitialStreamWindowSize)
               .add("http2MaxFrameSize", http2MaxFrameSize)
@@ -425,6 +495,16 @@ public final class ClientFactoryBuilder {
               .add("idleTimeoutMillis", idleTimeoutMillis)
               .add("useHttp2Preface", useHttp2Preface)
               .add("useHttp1Pipelining", useHttp1Pipelining);
+
+        if (maxNumEventLoopsPerHttp1Endpoint > 0) {
+            helper.add("maxNumEventLoopsPerHttp1Endpoint", maxNumEventLoopsPerHttp1Endpoint);
+        } else if (maxNumEventLoopsPerEndpoint > 0) {
+            helper.add("maxNumEventLoopsPerEndpoint", maxNumEventLoopsPerEndpoint);
+        }
+
+        if (!maxNumEventLoopsMap.isEmpty()) {
+            helper.add("maxNumEventLoopsMap", maxNumEventLoopsMap);
+        }
 
         if (connectionPoolListener != DEFAULT_CONNECTION_POOL_LISTENER) {
             helper.add("connectionPoolListener", connectionPoolListener);

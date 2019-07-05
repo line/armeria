@@ -16,22 +16,24 @@
 
 package com.linecorp.armeria.client;
 
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 
 import io.netty.channel.EventLoop;
 
 /**
- * A scheduler which is responsible for assigning an {@link EventLoop} to handle a connection to the
- * specified {@link Endpoint}.
+ * An entry acquired by {@link EventLoopState#acquire()}.
  */
-@FunctionalInterface
-public interface EventLoopScheduler {
+interface EventLoopEntry extends ReleasableHolder<EventLoop> {
 
-    /**
-     * Acquires an {@link EventLoop} that is expected to handle a connection to the specified {@link Endpoint}.
-     * The caller must release the returned {@link EventLoop} back by calling {@link ReleasableHolder#release()}
-     * so that {@link ClientFactory} utilizes {@link EventLoop}s efficiently.
-     */
-    ReleasableHolder<EventLoop> acquire(Endpoint endpoint, SessionProtocol sessionProtocol);
+    int activeRequests();
+
+    void incrementActiveRequests();
+
+    void decrementActiveRequests();
+
+    int id();
+
+    int index();
+
+    void setIndex(int index);
 }

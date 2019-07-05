@@ -44,6 +44,8 @@ public final class ClientUtil {
 
         try {
             if (ctx.init(endpoint)) {
+                // TODO(minwoox) Check if the number eventloops of the resolved endpoint is restricted by the
+                //               maxNumEventLoopsPerEndpoint when the original endpoint is a group.
                 return pushAndExecute(delegate, ctx);
             } else {
                 // Context initialization has failed, but we call the decorator chain anyway

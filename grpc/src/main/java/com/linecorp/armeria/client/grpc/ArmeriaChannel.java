@@ -164,7 +164,7 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwrappable
     }
 
     private DefaultClientRequestContext newContext(HttpMethod method, HttpRequest req) {
-        final ReleasableHolder<EventLoop> eventLoop = factory().acquireEventLoop(endpoint);
+        final ReleasableHolder<EventLoop> eventLoop = factory().acquireEventLoop(endpoint, sessionProtocol);
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
                 eventLoop.get(),
                 meterRegistry,

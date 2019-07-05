@@ -25,15 +25,18 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.client.EventLoopScheduler.Entry;
+import com.google.common.collect.ImmutableMap;
+
+import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.ReleasableHolder;
 
 import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 
-public class EventLoopSchedulerTest {
+class DefaultEventLoopSchedulerTest {
 
     private static final int GROUP_SIZE = 3;
     private static final EventLoopGroup group = new DefaultEventLoopGroup(GROUP_SIZE);
@@ -44,9 +47,9 @@ public class EventLoopSchedulerTest {
      * (acquire, release) * 3.
      */
     @Test
-    public void acquireAndRelease() {
-        final EventLoopScheduler s = new EventLoopScheduler(group);
-        final Entry e0 = s.acquire(endpoint);
+    void acquireAndRelease() {
+        final DefaultEventLoopScheduler s = defaultEventLoopScheduler();
+        final EventLoopEntry e0 = acquireEntry(s, endpoint);
         final EventLoop loop = e0.get();
         assertThat(e0.id()).isZero();
         assertThat(e0.activeRequests()).isEqualTo(1);
@@ -54,7 +57,7 @@ public class EventLoopSchedulerTest {
         assertThat(e0.activeRequests()).isZero();
 
         for (int i = 0; i < 2; i++) {
-            final Entry e0again = s.acquire(endpoint);
+            final EventLoopEntry e0again = acquireEntry(s, endpoint);
             assertThat(e0again).isSameAs(e0);
             assertThat(e0again.id()).isZero();
             assertThat(e0again.activeRequests()).isEqualTo(1);
@@ -68,18 +71,18 @@ public class EventLoopSchedulerTest {
      * (acquire(1), acquire(2), acquire(3), release(1), release(2), release(3))
      */
     @Test
-    public void orderedRelease() {
-        final EventLoopScheduler s = new EventLoopScheduler(group);
+    void orderedRelease() {
+        final DefaultEventLoopScheduler s = defaultEventLoopScheduler();
 
         // acquire() should return the entry 0 because all entries have same activeRequests (0).
-        final Entry e0 = s.acquire(endpoint);
+        final EventLoopEntry e0 = acquireEntry(s, endpoint);
         final EventLoop loop1 = e0.get();
         assertThat(e0.id()).isZero();
         assertThat(e0.activeRequests()).isEqualTo(1);
 
         // acquire() should return the entry 1 because it's the entry with the lowest ID
         // among the entries with the least activeRequests.
-        final Entry e1 = s.acquire(endpoint);
+        final EventLoopEntry e1 = acquireEntry(s, endpoint);
         final EventLoop loop2 = e1.get();
         assertThat(e1).isNotSameAs(e0);
         assertThat(loop2).isNotSameAs(loop1);
@@ -88,7 +91,7 @@ public class EventLoopSchedulerTest {
 
         // acquire() should return the entry 2 because it's the entry with the lowest ID
         // among the entries with the least activeRequests.
-        final Entry e2 = s.acquire(endpoint);
+        final EventLoopEntry e2 = acquireEntry(s, endpoint);
         final EventLoop loop3 = e2.get();
         assertThat(e2).isNotSameAs(e0);
         assertThat(e2).isNotSameAs(e1);
@@ -102,7 +105,7 @@ public class EventLoopSchedulerTest {
         // with the lowest ID among the entries with the least activeRequests.
         e0.release();
         assertThat(e0.activeRequests()).isZero();
-        final Entry e0again = s.acquire(endpoint);
+        final EventLoopEntry e0again = acquireEntry(s, endpoint);
         assertThat(e0again).isSameAs(e0);
         assertThat(e0again.activeRequests()).isEqualTo(1);
 
@@ -111,7 +114,7 @@ public class EventLoopSchedulerTest {
         // with the lowest ID among the entries with the least activeRequests.
         e1.release();
         assertThat(e1.activeRequests()).isZero();
-        final Entry e1again = s.acquire(endpoint);
+        final EventLoopEntry e1again = acquireEntry(s, endpoint);
         assertThat(e1again).isSameAs(e1);
         assertThat(e1again.activeRequests()).isEqualTo(1);
 
@@ -120,7 +123,7 @@ public class EventLoopSchedulerTest {
         // with the lowest ID among the entries with the least activeRequests.
         e2.release();
         assertThat(e2.activeRequests()).isZero();
-        final Entry e2again = s.acquire(endpoint);
+        final EventLoopEntry e2again = acquireEntry(s, endpoint);
         assertThat(e2again).isSameAs(e2);
         assertThat(e2again.activeRequests()).isEqualTo(1);
     }
@@ -129,18 +132,18 @@ public class EventLoopSchedulerTest {
      * Similar to {@link #orderedRelease()}, but entries are released non-sequentially.
      */
     @Test
-    public void unorderedRelease() {
-        final EventLoopScheduler s = new EventLoopScheduler(group);
+    void unorderedRelease() {
+        final DefaultEventLoopScheduler s = defaultEventLoopScheduler();
 
         // acquire() should return the entry 0 because all entries have same activeRequests (0).
-        final Entry e0 = s.acquire(endpoint);
+        final EventLoopEntry e0 = acquireEntry(s, endpoint);
         final EventLoop loop1 = e0.get();
         assertThat(e0.id()).isZero();
         assertThat(e0.activeRequests()).isEqualTo(1);
 
         // acquire() should return the entry 1 because it's the entry with the lowest ID
         // among the entries with the least activeRequests.
-        final Entry e1 = s.acquire(endpoint);
+        final EventLoopEntry e1 = acquireEntry(s, endpoint);
         final EventLoop loop2 = e1.get();
         assertThat(e1).isNotSameAs(e0);
         assertThat(loop2).isNotSameAs(loop1);
@@ -149,7 +152,7 @@ public class EventLoopSchedulerTest {
 
         // acquire() should return the entry 2 because it's the entry with the lowest ID
         // among the entries with the least activeRequests.
-        final Entry e2 = s.acquire(endpoint);
+        final EventLoopEntry e2 = acquireEntry(s, endpoint);
         final EventLoop loop3 = e2.get();
         assertThat(e2).isNotSameAs(e0);
         assertThat(e2).isNotSameAs(e1);
@@ -163,7 +166,7 @@ public class EventLoopSchedulerTest {
         // with the lowest ID among the entries with the least activeRequests.
         e1.release();
         assertThat(e1.activeRequests()).isZero();
-        final Entry e1again = s.acquire(endpoint);
+        final EventLoopEntry e1again = acquireEntry(s, endpoint);
         assertThat(e1again).isSameAs(e1);
         assertThat(e1again.activeRequests()).isEqualTo(1);
 
@@ -172,7 +175,7 @@ public class EventLoopSchedulerTest {
         // with the lowest ID among the entries with the least activeRequests.
         e2.release();
         assertThat(e2.activeRequests()).isZero();
-        final Entry e2again = s.acquire(endpoint);
+        final EventLoopEntry e2again = acquireEntry(s, endpoint);
         assertThat(e2again).isSameAs(e2);
         assertThat(e2again.activeRequests()).isEqualTo(1);
 
@@ -181,7 +184,7 @@ public class EventLoopSchedulerTest {
         // with the lowest ID among the entries with the least activeRequests.
         e0.release();
         assertThat(e0.activeRequests()).isZero();
-        final Entry e0again = s.acquire(endpoint);
+        final EventLoopEntry e0again = acquireEntry(s, endpoint);
         assertThat(e0again).isSameAs(e0);
         assertThat(e0again.activeRequests()).isEqualTo(1);
     }
@@ -190,15 +193,15 @@ public class EventLoopSchedulerTest {
      * Makes sure different endpoints get different entries.
      */
     @Test
-    public void multipleEndpoints() {
-        final EventLoopScheduler s = new EventLoopScheduler(group);
+    void multipleEndpoints() {
+        final DefaultEventLoopScheduler s = defaultEventLoopScheduler();
         final Endpoint endpointA = Endpoint.of("a.com");
         final Endpoint endpointB = Endpoint.of("b.com");
-        final Set<Entry> entriesA = new LinkedHashSet<>();
-        final Set<Entry> entriesB = new LinkedHashSet<>();
+        final Set<EventLoopEntry> entriesA = new LinkedHashSet<>();
+        final Set<EventLoopEntry> entriesB = new LinkedHashSet<>();
         for (int i = 0; i < GROUP_SIZE; i++) {
-            entriesA.add(s.acquire(endpointA));
-            entriesB.add(s.acquire(endpointB));
+            entriesA.add(acquireEntry(s, endpointA));
+            entriesB.add(acquireEntry(s, endpointB));
         }
         assertThat(entriesA).hasSize(GROUP_SIZE);
         assertThat(entriesB).hasSize(GROUP_SIZE);
@@ -209,7 +212,7 @@ public class EventLoopSchedulerTest {
 
         // Acquire again for endpoint A.
         for (int i = 0; i < GROUP_SIZE; i++) {
-            entriesA.add(s.acquire(endpointA));
+            entriesA.add(acquireEntry(s, endpointA));
         }
         assertThat(entriesA).hasSize(GROUP_SIZE);
         entriesA.forEach(e -> assertThat(e.activeRequests()).isEqualTo(2));
@@ -219,26 +222,27 @@ public class EventLoopSchedulerTest {
     }
 
     @Test
-    public void stressTest() {
+    void stressTest() {
         final EventLoopGroup group = new DefaultEventLoopGroup(1024);
-        final EventLoopScheduler s = new EventLoopScheduler(group);
-
-        final List<Entry> acquiredEntries = new ArrayList<>();
+        final DefaultEventLoopScheduler s = new DefaultEventLoopScheduler(group, GROUP_SIZE, GROUP_SIZE,
+                                                                          ImmutableMap.of());
+        final List<EventLoopEntry> acquiredEntries = new ArrayList<>();
         stressTest(s, acquiredEntries, 0.8);
         stressTest(s, acquiredEntries, 0.5);
         stressTest(s, acquiredEntries, 0.2);
 
         // Release all acquired entries to make sure activeRequests are all 0.
-        acquiredEntries.forEach(Entry::release);
-        final List<Entry> entries = s.entries(endpoint);
-        for (Entry e : entries) {
+        acquiredEntries.forEach(EventLoopEntry::release);
+        final List<EventLoopEntry> entries = s.entries(endpoint, SessionProtocol.HTTP);
+        for (EventLoopEntry e : entries) {
             assertThat(e.activeRequests()).withFailMessage("All entries must have 0 activeRequests.").isZero();
         }
         assertThat(entries.get(0).id()).isZero();
     }
 
-    private static void stressTest(EventLoopScheduler s, List<Entry> acquiredEntries, double acquireRatio) {
-        final List<Entry> entries = s.entries(endpoint);
+    private static void stressTest(DefaultEventLoopScheduler s, List<EventLoopEntry> acquiredEntries,
+                                   double acquireRatio) {
+        final List<EventLoopEntry> entries = s.entries(endpoint, SessionProtocol.HTTP);
         final Random random = ThreadLocalRandom.current();
         final int acquireRatioAsInt = (int) (Integer.MAX_VALUE * acquireRatio);
 
@@ -247,12 +251,12 @@ public class EventLoopSchedulerTest {
             // but it shouldn't affect the outcome of this test.
             final int randomValue = Math.abs(random.nextInt());
             if (randomValue < acquireRatioAsInt) {
-                final Entry e = s.acquire(endpoint);
+                final EventLoopEntry e = acquireEntry(s, endpoint);
                 acquiredEntries.add(e);
 
                 // The acquired entry must be the best available.
                 final int activeRequests = e.activeRequests() - 1;
-                for (Entry entry : entries) {
+                for (EventLoopEntry entry : entries) {
                     if (activeRequests == entry.activeRequests()) {
                         assertThat(e.id()).isLessThan(entry.id());
                     } else {
@@ -260,9 +264,19 @@ public class EventLoopSchedulerTest {
                     }
                 }
             } else if (!acquiredEntries.isEmpty()) {
-                final Entry e = acquiredEntries.remove(random.nextInt(acquiredEntries.size()));
+                final EventLoopEntry e = acquiredEntries.remove(random.nextInt(acquiredEntries.size()));
                 e.release();
             }
         }
+    }
+
+    private static DefaultEventLoopScheduler defaultEventLoopScheduler() {
+        return new DefaultEventLoopScheduler(group, GROUP_SIZE, GROUP_SIZE, ImmutableMap.of());
+    }
+
+    static EventLoopEntry acquireEntry(DefaultEventLoopScheduler s, Endpoint endpointA) {
+        final ReleasableHolder<EventLoop> acquired = s.acquire(endpointA, SessionProtocol.HTTP);
+        assert acquired instanceof EventLoopEntry;
+        return (EventLoopEntry) acquired;
     }
 }

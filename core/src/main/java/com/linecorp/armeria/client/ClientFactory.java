@@ -30,6 +30,7 @@ import javax.annotation.Nullable;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.Unwrappable;
 
@@ -103,7 +104,7 @@ public interface ClientFactory extends AutoCloseable {
      * The caller must release the returned {@link EventLoop} back by calling {@link ReleasableHolder#release()}
      * so that {@link ClientFactory} utilizes {@link EventLoop}s efficiently.
      */
-    ReleasableHolder<EventLoop> acquireEventLoop(Endpoint endpoint);
+    ReleasableHolder<EventLoop> acquireEventLoop(Endpoint endpoint, SessionProtocol sessionProtocol);
 
     /**
      * Returns the {@link MeterRegistry} that collects various stats.

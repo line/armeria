@@ -140,7 +140,8 @@ public abstract class UserClient<I extends Request, O extends Response>
                               I req, BiFunction<ClientRequestContext, Throwable, O> fallback) {
         final DefaultClientRequestContext ctx;
         if (eventLoop == null) {
-            final ReleasableHolder<EventLoop> releasableEventLoop = factory().acquireEventLoop(endpoint);
+            final ReleasableHolder<EventLoop> releasableEventLoop = factory().acquireEventLoop(endpoint,
+                                                                                               sessionProtocol);
             ctx = new DefaultClientRequestContext(
                     releasableEventLoop.get(), meterRegistry, sessionProtocol,
                     method, path, query, fragment, options(), req);
