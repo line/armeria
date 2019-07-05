@@ -95,20 +95,18 @@ For example, you can use it with `Kafka <https://kafka.apache.org/>`_ producer:
 
     Producer<String, String> kafkaProducer = kafkaTracing.producer(new KafkaProducer<>(props));
 
-    Server server =
-            new ServerBuilder().http(8081)
-                               .service("/", (ctx, req) -> {
-                                            kafkaProducer.send(
-                                                    new ProducerRecord<>("test", "foo", "bar"));
-                                            return HttpResponse.of(200);
-                                        }
-                               )
-                               .decorator(BraveService.newDecorator(tracing))
-                               .build();
+    Server server = new ServerBuilder()
+            .http(8081)
+            .service("/", (ctx, req) -> {
+                kafkaProducer.send(new ProducerRecord<>("test", "foo", "bar"));
+                return HttpResponse.of(200);
+            })
+            .decorator(BraveService.newDecorator(tracing))
+            .build();
 
 This will trace all the requests sent from the client to the above example server to
 `Kafka <https://kafka.apache.org/>`_, and report timing data using the ``spanReporter`` you specified.
-Here's the result:
+The following screenshot shows a trace of a request:
 
 .. image:: _images/zipkin_1.png
 
