@@ -31,7 +31,6 @@ Create a :api:`ZooKeeperEndpointGroup` to retrieve this information:
             /* zNodePath       */ "/myProductionEndpoints",
             /* sessionTimeout  */ 10000);
 
-
 And then register it to the :api:`EndpointGroupRegistry`, and specify it in a client URI:
 
 .. code-block:: java
