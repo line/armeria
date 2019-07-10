@@ -42,6 +42,7 @@ import org.junit.Test;
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryStrategyWithContent;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
@@ -176,10 +177,25 @@ public class RetryingRpcClientTest {
         // There's no way to notice that the RetryingClient has scheduled the next retry.
         // The next retry will be after 8 seconds so closing the factory after 3 seconds should work.
         Executors.newSingleThreadScheduledExecutor().schedule(factory::close, 3, TimeUnit.SECONDS);
-        assertThatThrownBy(() -> client.hello("hello"))
-                .isInstanceOf(IllegalStateException.class)
-                .satisfies(cause -> assertThat(cause.getMessage()).matches(
-                        "(?i).*(factory has been closed|not accepting a task).*"));
+
+        // But it turned out that it's not working as expected in certain circumstance,
+        // so we should handle all the cases.
+        //
+        // 1 - In RetryingClient, IllegalStateException("ClientFactory has been closed.") can be raised.
+        // 2 - In HttpChannelPool, BootStrap.connect() can raise
+        //     IllegalStateException("executor not accepting a task") wrapped by UnprocessedRequestException.
+        // 3 - In HttpClientDelegate, addressResolverGroup.getResolver(eventLoop) can raise
+        //     IllegalStateException("executor not accepting a task").
+        //
+        Throwable t = catchThrowable(() -> client.hello("hello"));
+        if (t instanceof UnprocessedRequestException) {
+            final Throwable cause = t.getCause();
+            assertThat(cause).isInstanceOf(IllegalStateException.class);
+            t = cause;
+        }
+        assertThat(t).isInstanceOf(IllegalStateException.class)
+                     .satisfies(cause -> assertThat(cause.getMessage()).matches(
+                             "(?i).*(factory has been closed|not accepting a task).*"));
     }
 
     @Test
