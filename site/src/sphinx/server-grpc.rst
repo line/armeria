@@ -94,7 +94,7 @@ a :api:`GrpcServiceBuilder` and add it to the :api:`ServerBuilder`:
 .. note::
 
     We bound the :api:`GrpcService` without specifying any path. It is because :api:`GrpcService`
-    implements :api:`ServiceWithPathRoutes`, which dynamically provides :apiplural:`Route` by itself.
+    implements :api:`ServiceWithRoutes`, which dynamically provides :apiplural:`Route` by itself.
 
 .. _server-grpc-decorator:
 

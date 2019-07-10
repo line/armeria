@@ -8,6 +8,9 @@ import os
 import re
 
 
+class ApiLink(nodes.General, nodes.FixedTextElement): pass
+
+
 def api_role(role, rawtext, text, lineno, inliner, options={}, content=[]):
     return api_role_internal(False, role, rawtext, text, lineno, inliner, options, content)
 
@@ -24,14 +27,11 @@ def api_role_internal(plural, role, rawtext, text, lineno, inliner, options, con
     if 'classes' in options:
         classes.extend(options['classes'])
 
-    node = nodes.literal(rawtext, text, classes=classes, api_reference=True, is_plural=plural)
+    node = ApiLink(rawtext, text, classes=classes, api_reference=True, is_plural=plural)
     return [node], []
 
 
-def api_visit_literal(self, node, next_visitor):
-    if 'api_reference' not in node.attributes:
-        return next_visitor(self, node)
-
+def visit_api_node(self, node):
     env = self.builder.env
     javadoc_dir = os.path.abspath(env.config['javadoc_dir'])
 
@@ -45,8 +45,8 @@ def api_visit_literal(self, node, next_visitor):
                     # a class name always starts with an upper-case English alphabet.
                     continue
                 simple_class_name = basename[:-5].replace('.', '$')
-                javadoc_mappings[simple_class_name] = os.path.relpath(dirname, javadoc_dir) \
-                                                        .replace(os.sep, '/') + '/' + basename
+                javadoc_mappings[simple_class_name] = \
+                    os.path.relpath(dirname, javadoc_dir).replace(os.sep, '/') + '/' + basename
     else:
         javadoc_mappings = env.__javadoc_mappings__
 
@@ -69,7 +69,7 @@ def api_visit_literal(self, node, next_visitor):
     else:
         # Simple class name; find from the pre-calculated mappings.
         if text not in javadoc_mappings:
-            raise ExtensionError('Cannot find a class from Javadoc: ' + text)
+            raise ExtensionError(f'Cannot find a class from Javadoc: {text}')
         uri = javadoc_mappings[text]
         text = text.replace('$', '.')
 
@@ -82,7 +82,8 @@ def api_visit_literal(self, node, next_visitor):
     # Emit the tags.
     self.body.append(self.starttag(node, 'code', suffix='', CLASS='docutils literal javadoc'))
     self.body.append(self.starttag(node, 'a', suffix='', CLASS='reference external javadoc', HREF=uri))
-    self.body.append(text + '</a>')
+    self.body.append(text)
+    self.body.append('</a>')
     # Append a plural suffix.
     if node.attributes['is_plural']:
         self.body.append(self.starttag(node, 'span', suffix='', CLASS='plural-suffix'))
@@ -96,16 +97,33 @@ def api_visit_literal(self, node, next_visitor):
     raise nodes.SkipNode
 
 
+def depart_api_node(self, node):
+    pass
+
+
+def unsupported_visit_api(self, node):
+    self.builder.warn('api: unsupported output format (node skipped)')
+    raise nodes.SkipNode
+
+
+_NODE_VISITORS = {
+    'html': (visit_api_node, depart_api_node),
+    'latex': (unsupported_visit_api, None),
+    'man': (unsupported_visit_api, None),
+    'texinfo': (unsupported_visit_api, None),
+    'text': (unsupported_visit_api, None)
+}
+
+
 def setup(app):
     app.add_config_value('javadoc_dir', os.path.join(app.outdir, 'apidocs'), 'html')
 
-    # Register the 'javadoc' role.
+    # Register the 'api' and 'apiplural' role.
     api_role.options = {'class': directives.class_option}
     register_canonical_role('api', api_role)
     register_canonical_role('apiplural', apiplural_role)
 
-    # Intercept the rendering of HTML literals.
-    old_visitor = HTMLTranslator.visit_literal
-    HTMLTranslator.visit_literal = lambda self, node: api_visit_literal(self, node, old_visitor)
+    # Register the node for 'api' and 'apiplural'.
+    app.add_node(ApiLink, **_NODE_VISITORS)
 
     pass
