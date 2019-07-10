@@ -90,10 +90,13 @@ log4j2
 Customizing a log format
 ------------------------
 
-Access logging is disabled by default. If you want to enable it, you need to specify an access log writer
-using :api:`ServerBuilder`. You may use one of the pre-defined log formats.
+Access logging is disabled by default. If you want to enable it, you need to specify an :api:`AccessLogWriter`.
+You may use one of the pre-defined log formats.
 
 .. code-block:: java
+
+    import com.linecorp.armeria.server.ServerBuilder;
+    import com.linecorp.armeria.server.logging.AccessLogWriter;
 
     ServerBuilder sb = new ServerBuilder();
     // Use NCSA common log format.
@@ -104,6 +107,26 @@ using :api:`ServerBuilder`. You may use one of the pre-defined log formats.
     sb.accessLogFormat("...log format...");
     ...
 
+You can have different :apiplural:`AccessLogWriter` for :apiplural:`VirtualHost` and :apiplural:`Service`.
+
+.. code-block:: java
+
+    ServerBuilder sb = new ServerBuilder();
+    AccessLogWriter fallbackLogWriter = ...
+    sb.accessLogWriter(fallbackLogWriter);
+
+    sb.virtualHost("foo.com")
+      .accessLogWriter(AccessLogWriter.combined(), true)
+      .service((ctx, req) -> HttpResponse.of(OK)); // This service will log using the combined format.
+      ...
+
+    sb.route()
+      .get("/commonAccessLog")
+      .accessLogWriter(AccessLogWriter.common(), true)
+      .build((ctx, req) -> HttpResponse.of(OK)); // This service will log using the common format.
+
+    // This service will log using the fallbackLogWriter.
+    sb.service("/fallbackLogWriter", (ctx, req) -> HttpResponse.of(OK));
 
 Pre-defined log formats are as follows.
 
