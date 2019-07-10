@@ -82,7 +82,8 @@ public class ArmeriaMessageFramer implements AutoCloseable {
     private final ByteBufAllocator alloc;
     private final int maxOutboundMessageSize;
 
-    private boolean messageCompression;
+    private boolean messageCompression = true;
+
     @Nullable
     private Compressor compressor;
     private boolean closed;
