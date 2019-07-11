@@ -808,7 +808,7 @@ more response types which can be used in the annotated service.
           @Get("/users")
           public HttpResult<User> getUsers(@Param int start) {
               List<User> users = ...;
-              ResponseHeaders headers = new ResponseHeadersBuilder()
+              ResponseHeaders headers = ResponseHeaders.builder()
                   .status(HttpStatus.OK)
                   .add(HttpHeaderNames.LINK,
                        String.format("<https://example.com/users?start=%s>; rel=\"next\"", start + 10))
