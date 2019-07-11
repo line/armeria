@@ -9,7 +9,7 @@ failing or taking more time than others in a distributed environment. Armeria su
 `Brave <https://github.com/openzipkin/brave/>`_, which is a Java tracing library compatible with
 `Zipkin <https://zipkin.io/>`_. Let's find out how to use it to trace requests.
 
-First, you need to create the :api:`Tracing`:
+First, you need to create the ``Tracing``:
 
 .. code-block:: java
 
@@ -33,7 +33,7 @@ For more information about the ``spanReporter``, please refer to
 `Zipkin reporter <https://github.com/openzipkin/zipkin-reporter-java>`_ or
 `the fully working example <https://github.com/openzipkin-contrib/zipkin-armeria-example>`_.
 
-Now, you can specify :api:`BraveService` using :ref:`server-decorator` with the :api:`Tracing` you just built:
+Now, you can specify :api:`BraveService` using :ref:`server-decorator` with the ``Tracing`` you just built:
 
 .. code-block:: java
 
@@ -68,9 +68,9 @@ If the requests come to Armeria server and go to another backend, you can trace 
                                        .decorator(BraveService.newDecorator(tracing))
                                        .build();
 
-Please note that we used the same :api:`Tracing` instance when we create :api:`BraveClient` and
+Please note that we used the same ``Tracing`` instance when we create :api:`BraveClient` and
 :api:`BraveService`. Otherwise, there might be problems if the instances are not configured exactly the same.
-In the same manner, you can use the :api:`Tracing` instance with any
+In the same manner, you can use the ``Tracing`` instance with any
 `Brave instrumentation libraries <https://github.com/openzipkin/brave/tree/master/instrumentation>`_.
 For example, you can use it with `Kafka <https://kafka.apache.org/>`_ producer:
 
