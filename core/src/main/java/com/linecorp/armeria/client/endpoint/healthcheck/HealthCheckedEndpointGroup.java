@@ -98,6 +98,8 @@ public abstract class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     @Override
     public void close() {
         super.close();
+        delegate.close();
+
         ScheduledFuture<?> scheduledCheck = this.scheduledCheck;
         if (scheduledCheck != null) {
             scheduledCheck.cancel(true);
