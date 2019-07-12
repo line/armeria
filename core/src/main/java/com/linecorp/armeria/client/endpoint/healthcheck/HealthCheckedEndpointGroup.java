@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
@@ -23,8 +24,11 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+
+import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 import com.spotify.futures.CompletableFutures;
@@ -47,6 +51,9 @@ public abstract class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     private final ClientFactory clientFactory;
     private final EndpointGroup delegate;
     private final Backoff retryBackoff;
+
+    @Nullable
+    private volatile ScheduledFuture<?> scheduledCheck;
 
     volatile List<ServerConnection> allServers = ImmutableList.of();
 
@@ -82,8 +89,20 @@ public abstract class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
      * A subclass being initialized with this constructor must call {@link #init()} before start being used.
      */
     protected void init() {
+        checkState(scheduledCheck == null, "init() must only be called once.");
+
         checkAndUpdateHealthyServers().join();
         scheduleCheckAndUpdateHealthyServers();
+    }
+
+    @Override
+    public void close() {
+        super.close();
+        ScheduledFuture<?> scheduledCheck = this.scheduledCheck;
+        if (scheduledCheck != null) {
+            scheduledCheck.cancel(true);
+            this.scheduledCheck = null;
+        }
     }
 
     /**
@@ -94,7 +113,7 @@ public abstract class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     }
 
     private void scheduleCheckAndUpdateHealthyServers() {
-        clientFactory.eventLoopGroup().schedule(
+        scheduledCheck = clientFactory.eventLoopGroup().schedule(
                 () -> checkAndUpdateHealthyServers().thenRun(this::scheduleCheckAndUpdateHealthyServers),
                 retryBackoff.nextDelayMillis(1), TimeUnit.MILLISECONDS);
     }
