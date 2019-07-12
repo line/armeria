@@ -130,7 +130,10 @@ class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     @Nullable
     private Compressor compressor;
-    private boolean messageCompression;
+
+    // Message compression defaults to being enabled unless a user disables it using a server interceptor.
+    private boolean messageCompression = true;
+
     private boolean messageReceived;
 
     // state
