@@ -42,4 +42,10 @@ final class OrElseEndpointGroup extends AbstractListenable<List<Endpoint>> imple
         }
         return second.endpoints();
     }
+
+    @Override
+    public void close() {
+        first.close();
+        second.close();
+    }
 }
