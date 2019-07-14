@@ -48,8 +48,6 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
@@ -593,12 +591,12 @@ public final class VirtualHostBuilder {
     /**
      * Decorates all {@link Service}s with the specified {@code decorator}.
      *
-     * @param decorator the {@link DecoratingServiceFunction} that decorates a {@link Service}.
+     * @param decoratingServiceFunction the {@link DecoratingServiceFunction} that decorates a {@link Service}.
      */
-    public VirtualHostBuilder decorator(DecoratingServiceFunction<HttpRequest, HttpResponse> decorator) {
-        return decorator(service -> {
-            return (ctx,req) -> decorator.serve(service, ctx, req);
-        });
+    public VirtualHostBuilder decorator(
+            DecoratingServiceFunction<HttpRequest, HttpResponse> decoratingServiceFunction) {
+        requireNonNull(decoratingServiceFunction, "decorator");
+        return decorator(service -> (ctx, req) -> decoratingServiceFunction.serve(service, ctx, req));
     }
 
     /**

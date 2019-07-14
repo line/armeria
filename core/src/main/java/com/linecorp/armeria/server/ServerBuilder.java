@@ -1137,12 +1137,12 @@ public final class ServerBuilder {
     /**
      * Decorates all {@link Service}s with the specified {@code decorator}.
      *
-     * @param decorator the {@link DecoratingServiceFunction} that decorates a {@link Service}.
+     * @param decoratingServiceFunction the {@link DecoratingServiceFunction} that decorates a {@link Service}.
      */
-    public ServerBuilder decorator(DecoratingServiceFunction<HttpRequest, HttpResponse> decorator) {
-        return this.decorator(service -> {
-            return (ctx, req) -> decorator.serve(service, ctx, req);
-        });
+    public ServerBuilder decorator(
+            DecoratingServiceFunction<HttpRequest, HttpResponse> decoratingServiceFunction) {
+        requireNonNull(decoratingServiceFunction, "decorator");
+        return decorator(service -> (ctx, req) -> decoratingServiceFunction.serve(service, ctx, req));
     }
 
     /**
