@@ -45,7 +45,8 @@ final class OrElseEndpointGroup extends AbstractListenable<List<Endpoint>> imple
 
     @Override
     public void close() {
-        try (EndpointGroup first = this.first; EndpointGroup second = this.second) {
+        try (EndpointGroup first = this.first;
+             EndpointGroup second = this.second) {
             // Just want to ensure closure.
         }
     }
