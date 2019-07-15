@@ -72,6 +72,7 @@ import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.SimpleDecoratingService;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
@@ -124,7 +125,7 @@ class HttpClientIntegrationTest {
         }
     }
 
-    private static final class PoolAwareDecorator extends SimpleDecoratingService<HttpRequest, HttpResponse> {
+    private static final class PoolAwareDecorator extends SimpleDecoratingHttpService {
 
         private PoolAwareDecorator(Service<HttpRequest, HttpResponse> delegate) {
             super(delegate);

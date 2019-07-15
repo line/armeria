@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.SimpleDecoratingClient;
+import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.client.brave.BraveClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -61,7 +61,7 @@ import brave.propagation.TraceContext;
  * @deprecated Use {@link BraveClient}.
  */
 @Deprecated
-public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpResponse> {
+public class HttpTracingClient extends SimpleDecoratingHttpClient {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpTracingClient.class);
 

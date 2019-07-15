@@ -116,7 +116,7 @@ class HttpServerStreamingTest {
 
             final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>>
                     decorator =
-                    s -> new SimpleDecoratingService<HttpRequest, HttpResponse>(s) {
+                    s -> new SimpleDecoratingHttpService(s) {
                         @Override
                         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                             ctx.setMaxRequestLength(serverMaxRequestLength);

@@ -36,13 +36,13 @@ import com.google.common.base.Stopwatch;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.SimpleDecoratingClient;
+import com.linecorp.armeria.client.SimpleDecoratingRpcClient;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.server.RpcService;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.SimpleDecoratingService;
+import com.linecorp.armeria.server.SimpleDecoratingRpcService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.server.thrift.ThriftCallService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService;
@@ -127,9 +127,9 @@ class ThriftDynamicTimeoutTest {
         }
     }
 
-    private static final class DynamicTimeoutService extends SimpleDecoratingService<RpcRequest, RpcResponse> {
+    private static final class DynamicTimeoutService extends SimpleDecoratingRpcService {
 
-        DynamicTimeoutService(Service<RpcRequest, RpcResponse> delegate) {
+        DynamicTimeoutService(RpcService delegate) {
             super(delegate);
         }
 
@@ -141,10 +141,9 @@ class ThriftDynamicTimeoutTest {
         }
     }
 
-    private static final class TimeoutDisablingService
-            extends SimpleDecoratingService<RpcRequest, RpcResponse> {
+    private static final class TimeoutDisablingService extends SimpleDecoratingRpcService {
 
-        TimeoutDisablingService(Service<RpcRequest, RpcResponse> delegate) {
+        TimeoutDisablingService(RpcService delegate) {
             super(delegate);
         }
 
@@ -155,8 +154,7 @@ class ThriftDynamicTimeoutTest {
         }
     }
 
-    private static final class DynamicTimeoutClient
-            extends SimpleDecoratingClient<RpcRequest, RpcResponse> {
+    private static final class DynamicTimeoutClient extends SimpleDecoratingRpcClient {
 
         DynamicTimeoutClient(Client<RpcRequest, RpcResponse> delegate) {
             super(delegate);
@@ -170,8 +168,7 @@ class ThriftDynamicTimeoutTest {
         }
     }
 
-    private static final class TimeoutDisablingClient
-            extends SimpleDecoratingClient<RpcRequest, RpcResponse> {
+    private static final class TimeoutDisablingClient extends SimpleDecoratingRpcClient {
 
         TimeoutDisablingClient(Client<RpcRequest, RpcResponse> delegate) {
             super(delegate);

@@ -33,7 +33,7 @@ import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpClientBuilder;
-import com.linecorp.armeria.client.SimpleDecoratingClient;
+import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -136,7 +136,7 @@ public class RetryingClientWithLoggingTest {
 
     private Function<Client<HttpRequest, HttpResponse>, Client<HttpRequest, HttpResponse>>
     loggingDecorator() {
-        return delegate -> new SimpleDecoratingClient<HttpRequest, HttpResponse>(delegate) {
+        return delegate -> new SimpleDecoratingHttpClient(delegate) {
             @Override
             public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
                 ctx.log().addListener(listener, RequestLogAvailability.REQUEST_END);

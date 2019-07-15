@@ -79,7 +79,7 @@ public class ServiceTest {
         return (Class<Service<?, ?>>) service.getClass();
     }
 
-    private static final class FooService implements Service<RpcRequest, RpcResponse> {
+    private static final class FooService implements RpcService {
 
         ServiceConfig cfg;
 
@@ -95,8 +95,8 @@ public class ServiceTest {
         }
     }
 
-    public static class FooServiceDecorator extends SimpleDecoratingService<RpcRequest, RpcResponse> {
-        public FooServiceDecorator(Service<RpcRequest, RpcResponse> delegate) {
+    public static class FooServiceDecorator extends SimpleDecoratingRpcService {
+        public FooServiceDecorator(RpcService delegate) {
             super(delegate);
         }
 
@@ -107,8 +107,7 @@ public class ServiceTest {
     }
 
     public static class BadFooServiceDecorator extends FooServiceDecorator {
-        public BadFooServiceDecorator(Service<RpcRequest, RpcResponse> delegate,
-                                      @SuppressWarnings("unused") Object unused) {
+        public BadFooServiceDecorator(RpcService delegate, @SuppressWarnings("unused") Object unused) {
             super(delegate);
         }
     }

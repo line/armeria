@@ -52,7 +52,7 @@ import com.linecorp.armeria.protobuf.EmptyProtos;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.SimpleDecoratingService;
+import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 
 import io.grpc.Metadata;
 import io.grpc.Metadata.Key;
@@ -521,8 +521,7 @@ public class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
         return payload;
     }
 
-    public static class EchoRequestHeadersInTrailers
-            extends SimpleDecoratingService<HttpRequest, HttpResponse> {
+    public static class EchoRequestHeadersInTrailers extends SimpleDecoratingHttpService {
 
         /**
          * Creates a new instance that decorates the specified {@link Service}.

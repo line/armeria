@@ -45,7 +45,7 @@ import com.linecorp.armeria.server.DecoratingServiceFunction;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.SimpleDecoratingService;
+import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.annotation.AdditionalHeader;
 import com.linecorp.armeria.server.annotation.AdditionalTrailer;
 import com.linecorp.armeria.server.annotation.Consumes;
@@ -188,7 +188,7 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
         @Override
         public Function<Service<HttpRequest, HttpResponse>,
                 ? extends Service<HttpRequest, HttpResponse>> newDecorator(MyDecorator3 parameter) {
-            return delegate -> new SimpleDecoratingService<HttpRequest, HttpResponse>(delegate) {
+            return delegate -> new SimpleDecoratingHttpService(delegate) {
                 @Override
                 public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                     appendAttribute(ctx, " (decorated-3)");

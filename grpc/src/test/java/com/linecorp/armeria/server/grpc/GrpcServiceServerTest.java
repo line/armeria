@@ -59,7 +59,7 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.SimpleDecoratingClient;
+import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.client.grpc.GrpcClientOptions;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.FilteredHttpResponse;
@@ -1026,7 +1026,7 @@ class GrpcServiceServerTest {
             final AtomicReference<byte[]> payload = new AtomicReference<>();
             final UnitTestServiceBlockingStub jsonStub =
                     new ClientBuilder(server.httpUri(GrpcSerializationFormats.JSON, "/"))
-                            .decorator(client -> new SimpleDecoratingClient<HttpRequest, HttpResponse>(client) {
+                            .decorator(client -> new SimpleDecoratingHttpClient(client) {
                                 @Override
                                 public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
                                         throws Exception {
@@ -1068,7 +1068,7 @@ class GrpcServiceServerTest {
                     new ClientBuilder(server.httpUri(GrpcSerializationFormats.JSON, "/json-preserving/"))
                             .option(GrpcClientOptions.JSON_MARSHALLER_CUSTOMIZER.newValue(
                                     marshaller -> marshaller.preservingProtoFieldNames(true)))
-                            .decorator(client -> new SimpleDecoratingClient<HttpRequest, HttpResponse>(client) {
+                            .decorator(client -> new SimpleDecoratingHttpClient(client) {
                                 @Override
                                 public HttpResponse execute(ClientRequestContext ctx, HttpRequest req)
                                         throws Exception {

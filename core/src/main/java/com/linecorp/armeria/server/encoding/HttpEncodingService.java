@@ -29,7 +29,7 @@ import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.SimpleDecoratingService;
+import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 
 /**
  * Decorates a {@link Service} to apply HTTP encoding (e.g., gzip) to an {@link HttpService}.
@@ -41,8 +41,7 @@ import com.linecorp.armeria.server.SimpleDecoratingService;
  *     <li>the response either has no fixed content length or the length is larger than 1KB</li>
  * </ul>
  */
-public class HttpEncodingService
-        extends SimpleDecoratingService<HttpRequest, HttpResponse> {
+public class HttpEncodingService extends SimpleDecoratingHttpService {
 
     private static final Predicate<MediaType> DEFAULT_ENCODABLE_CONTENT_TYPE_PREDICATE =
             contentType -> Stream.of(MediaType.ANY_TEXT_TYPE,
