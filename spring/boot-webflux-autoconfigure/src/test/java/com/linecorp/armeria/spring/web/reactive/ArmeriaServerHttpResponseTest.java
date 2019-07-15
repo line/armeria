@@ -65,6 +65,15 @@ public class ArmeriaServerHttpResponseTest {
         final ArmeriaServerHttpResponse response = response(ctx, future);
 
         response.setStatusCode(HttpStatus.NOT_FOUND);
+        response.addCookie(ResponseCookie.from("a", "1")
+                                         .domain("http://localhost")
+                                         .path("/")
+                                         // A negative value means no "Max-Age" attribute in which case
+                                         // the cookie is removed when the browser is closed.
+                                         .maxAge(-1)
+                                         .secure(true)
+                                         .httpOnly(true)
+                                         .build());
         assertThat(future.isDone()).isFalse();
 
         // Create HttpResponse.
@@ -84,6 +93,15 @@ public class ArmeriaServerHttpResponseTest {
                         assertThat(o).isInstanceOf(ResponseHeaders.class);
                         final ResponseHeaders headers = (ResponseHeaders) o;
                         assertThat(headers.status().code()).isEqualTo(404);
+                        final Cookie setCookie =
+                                ClientCookieDecoder.LAX.decode(headers.get(HttpHeaderNames.SET_COOKIE));
+                        assertThat(setCookie.name()).isEqualTo("a");
+                        assertThat(setCookie.value()).isEqualTo("1");
+                        assertThat(setCookie.domain()).isEqualTo("http://localhost");
+                        assertThat(setCookie.path()).isEqualTo("/");
+                        assertThat(setCookie.maxAge()).isEqualTo(Cookie.UNDEFINED_MAX_AGE);
+                        assertThat(setCookie.isSecure()).isTrue();
+                        assertThat(setCookie.isHttpOnly()).isTrue();
                     })
                     .expectComplete()
                     .verify();

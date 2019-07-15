@@ -56,9 +56,7 @@ final class ArmeriaServerHttpRequest extends AbstractServerHttpRequest {
     ArmeriaServerHttpRequest(ServiceRequestContext ctx,
                              HttpRequest req,
                              DataBufferFactoryWrapper<?> factoryWrapper) {
-        super(URI.create(requireNonNull(req, "req").path()),
-              null,
-              fromArmeriaHttpHeaders(req.headers()));
+        super(uri(req), null, fromArmeriaHttpHeaders(req.headers()));
         this.ctx = requireNonNull(ctx, "ctx");
         this.req = req;
 
@@ -66,6 +64,15 @@ final class ArmeriaServerHttpRequest extends AbstractServerHttpRequest {
                    // Guarantee that the context is accessible from a controller method
                    // when a user specify @RequestBody in order to convert a request body into an object.
                    .publishOn(Schedulers.fromExecutor(ctx.contextAwareExecutor()));
+    }
+
+    private static URI uri(HttpRequest req) {
+        final String scheme = req.scheme();
+        final String authority = req.authority();
+        // Server side Armeria HTTP request always has the scheme and authority.
+        assert scheme != null;
+        assert authority != null;
+        return URI.create(scheme + "://" + authority + req.path());
     }
 
     private static HttpHeaders fromArmeriaHttpHeaders(com.linecorp.armeria.common.HttpHeaders httpHeaders) {
