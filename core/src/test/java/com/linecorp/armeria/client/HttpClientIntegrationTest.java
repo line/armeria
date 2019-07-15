@@ -48,6 +48,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -317,6 +318,15 @@ class HttpClientIntegrationTest {
                 }
                 return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
             });
+
+            // To check https://github.com/line/armeria/issues/1895
+            sb.serviceUnder("/", (ctx, req) -> {
+                if (!completed.compareAndSet(false, true)) {
+                    return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
+                } else {
+                    return HttpResponse.of(HttpStatus.OK);
+                }
+            });
         }
     };
 
@@ -324,6 +334,7 @@ class HttpClientIntegrationTest {
 
     @BeforeEach
     void clearError() {
+        completed.set(false);
         releasedByteBuf.set(null);
     }
 
@@ -697,6 +708,24 @@ class HttpClientIntegrationTest {
         assertThatThrownBy(() -> new ClientBuilder("none+http", endpoint)
                 .serializationFormat(SerializationFormat.NONE)
                 .build(HttpClient.class));
+    }
+
+    @Test
+    void testUpgradeRequestExecutesLogicOnlyOnce() throws Exception {
+        final ClientFactory clientFactory = new ClientFactoryBuilder()
+                .useHttp2Preface(false)
+                .build();
+        final HttpClient client = new HttpClientBuilder(server.httpUri("/"))
+                .factory(clientFactory)
+                .decorator(HttpDecodingClient.newDecorator())
+                .build();
+
+        final AggregatedHttpResponse response = client.execute(
+                AggregatedHttpRequest.of(HttpMethod.GET, "/only-once/request")).aggregate().get();
+
+        assertEquals(HttpStatus.OK, response.status());
+
+        clientFactory.close();
     }
 
     private static void checkGetRequest(String path, HttpClient client) throws Exception {

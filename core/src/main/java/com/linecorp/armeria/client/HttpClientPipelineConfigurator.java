@@ -394,12 +394,12 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         }
 
         /**
-         * Sends the initial upgrade request, which is {@code "HEAD / HTTP/1.1"}.
+         * Sends the initial upgrade request, which is {@code "OPTIONS * HTTP/1.1"}.
          */
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             final FullHttpRequest upgradeReq =
-                    new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.HEAD, "/");
+                    new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.OPTIONS, "*");
 
             // Note: There's no need to fill Connection, Upgrade, and HTTP2-Settings headers here
             //       because they are filled by Http2ClientUpgradeCodec.
