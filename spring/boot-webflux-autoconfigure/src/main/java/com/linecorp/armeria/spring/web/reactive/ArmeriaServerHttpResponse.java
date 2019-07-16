@@ -283,14 +283,19 @@ final class ArmeriaServerHttpResponse implements ServerHttpResponse {
     /**
      * Converts the specified {@link ResponseCookie} to Netty's {@link Cookie} interface.
      */
-    static Cookie toNettyCookie(ResponseCookie resCookie) {
+    private static Cookie toNettyCookie(ResponseCookie resCookie) {
         final DefaultCookie cookie = new DefaultCookie(resCookie.getName(), resCookie.getValue());
-        cookie.setHttpOnly(resCookie.isHttpOnly());
-        cookie.setMaxAge(resCookie.getMaxAge().getSeconds());
+        if (!resCookie.getMaxAge().isNegative()) {
+            cookie.setMaxAge(resCookie.getMaxAge().getSeconds());
+        }
+        if (resCookie.getDomain() != null) {
+            cookie.setDomain(resCookie.getDomain());
+        }
+        if (resCookie.getPath() != null) {
+            cookie.setPath(resCookie.getPath());
+        }
         cookie.setSecure(resCookie.isSecure());
-        // Domain and path are nullable, but the setters allow null as their input.
-        cookie.setDomain(resCookie.getDomain());
-        cookie.setPath(resCookie.getPath());
+        cookie.setHttpOnly(resCookie.isHttpOnly());
         return cookie;
     }
 

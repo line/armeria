@@ -22,7 +22,7 @@ import static org.awaitility.Awaitility.await;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpCookie;
 import org.springframework.util.MultiValueMap;
 
@@ -39,16 +39,30 @@ import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
-public class ArmeriaServerHttpRequestTest {
+class ArmeriaServerHttpRequestTest {
 
     private static ArmeriaServerHttpRequest request(ServiceRequestContext ctx) {
         return new ArmeriaServerHttpRequest(ctx, ctx.request(), DataBufferFactoryWrapper.DEFAULT);
     }
 
     @Test
-    public void readBodyStream() throws Exception {
+    void requestUriContainsBaseUrl() {
+        final HttpRequest httpRequest = HttpRequest.of(RequestHeaders.builder(HttpMethod.POST, "/")
+                                                                     .scheme("http")
+                                                                     .authority("127.0.0.1")
+                                                                     .build());
+        final ServiceRequestContext ctx = newRequestContext(httpRequest);
+        final ArmeriaServerHttpRequest req = request(ctx);
+        assertThat(req.getURI().toString()).isEqualTo("http://127.0.0.1/");
+    }
+
+    @Test
+    void readBodyStream() {
         final HttpRequest httpRequest =
-                HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/"),
+                HttpRequest.of(RequestHeaders.builder(HttpMethod.POST, "/")
+                                             .scheme("http")
+                                             .authority("127.0.0.1")
+                                             .build(),
                                Flux.just("a", "b", "c", "d", "e").map(HttpData::ofUtf8));
 
         final ServiceRequestContext ctx = newRequestContext(httpRequest);
@@ -72,9 +86,12 @@ public class ArmeriaServerHttpRequestTest {
     }
 
     @Test
-    public void getCookies() {
-        final HttpRequest httpRequest = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/",
-                                                                         HttpHeaderNames.COOKIE, "a=1;b=2"));
+    void getCookies() {
+        final HttpRequest httpRequest = HttpRequest.of(RequestHeaders.builder(HttpMethod.POST, "/")
+                                                                     .scheme("http")
+                                                                     .authority("127.0.0.1")
+                                                                     .add(HttpHeaderNames.COOKIE, "a=1;b=2")
+                                                                     .build());
         final ServiceRequestContext ctx = newRequestContext(httpRequest);
         final ArmeriaServerHttpRequest req = request(ctx);
 
@@ -88,9 +105,12 @@ public class ArmeriaServerHttpRequestTest {
     }
 
     @Test
-    public void cancel() {
+    void cancel() {
         final HttpRequest httpRequest =
-                HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/"),
+                HttpRequest.of(RequestHeaders.builder(HttpMethod.POST, "/")
+                                             .scheme("http")
+                                             .authority("127.0.0.1")
+                                             .build(),
                                Flux.just("a", "b", "c", "d", "e").map(HttpData::ofUtf8));
 
         final ServiceRequestContext ctx = newRequestContext(httpRequest);
