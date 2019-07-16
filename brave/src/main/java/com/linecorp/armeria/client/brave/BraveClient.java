@@ -16,15 +16,9 @@
 
 package com.linecorp.armeria.client.brave;
 
-import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext.ensureScopeUsesRequestContext;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.function.Function;
-
-import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,15 +32,14 @@ import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.brave.AsciiStringKeyFactory;
-import com.linecorp.armeria.internal.brave.SpanContextUtil;
 import com.linecorp.armeria.internal.brave.SpanTags;
 import com.linecorp.armeria.internal.brave.TraceContextUtil;
 
 import brave.Span;
-import brave.Span.Kind;
 import brave.Tracer;
 import brave.Tracer.SpanInScope;
-import brave.Tracing;
+import brave.http.HttpClientHandler;
+import brave.http.HttpTracing;
 import brave.propagation.TraceContext;
 
 /**
@@ -57,70 +50,52 @@ public final class BraveClient extends SimpleDecoratingClient<HttpRequest, HttpR
 
     private static final Logger logger = LoggerFactory.getLogger(BraveClient.class);
 
-    // TODO(minwoox) Add the variant which takes HttpTracing.
-
     /**
-     * Creates a new tracing {@link Client} decorator using the specified {@link Tracing} instance.
-     */
-    public static Function<Client<HttpRequest, HttpResponse>, BraveClient> newDecorator(Tracing tracing) {
-        return newDecorator(tracing, null);
-    }
-
-    /**
-     * Creates a new tracing {@link Client} decorator using the specified {@link Tracing} instance
-     * and remote service name.
+     * Creates a new tracing {@link Client} decorator using the specified {@link HttpTracing} instance.
      */
     public static Function<Client<HttpRequest, HttpResponse>, BraveClient> newDecorator(
-            Tracing tracing, @Nullable String remoteServiceName) {
+            HttpTracing httpTracing) {
         try {
-            ensureScopeUsesRequestContext(tracing);
+            ensureScopeUsesRequestContext(httpTracing.tracing());
         } catch (IllegalStateException e) {
             logger.warn("{} - it is appropriate to ignore this warning if this client is not being used " +
                         "inside an Armeria server (e.g., this is a normal spring-mvc tomcat server).",
                         e.getMessage());
         }
-        return delegate -> new BraveClient(delegate, tracing, remoteServiceName);
+        return delegate -> new BraveClient(delegate, httpTracing);
     }
 
     private final Tracer tracer;
     private final TraceContext.Injector<RequestHeadersBuilder> injector;
-    @Nullable
-    private final String remoteServiceName;
+    private final HttpClientHandler<RequestLog, RequestLog> handler;
 
     /**
      * Creates a new instance.
      */
-    private BraveClient(Client<HttpRequest, HttpResponse> delegate, Tracing tracing,
-                        @Nullable String remoteServiceName) {
+    private BraveClient(Client<HttpRequest, HttpResponse> delegate, HttpTracing httpTracing) {
         super(delegate);
-        tracer = tracing.tracer();
-        injector = tracing.propagationFactory().create(AsciiStringKeyFactory.INSTANCE)
-                          .injector(RequestHeadersBuilder::set);
-        this.remoteServiceName = remoteServiceName;
+        tracer = httpTracing.tracing().tracer();
+        handler = HttpClientHandler.create(httpTracing, new ArmeriaHttpClientAdapter());
+        injector = httpTracing.tracing().propagationFactory().create(AsciiStringKeyFactory.INSTANCE)
+                              .injector(RequestHeadersBuilder::set);
     }
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-        final Span span = tracer.nextSpan();
-
-        // Inject the headers.
         final RequestHeadersBuilder newHeaders = req.headers().toBuilder();
-        injector.inject(span.context(), newHeaders);
+        final Span span = handler.handleSend(injector, newHeaders, ctx.log());
         req = HttpRequest.of(req, newHeaders.build());
         ctx.updateRequest(req);
 
-        // For no-op spans, we only need to inject into headers and don't set any other attributes.
-        if (span.isNoop()) {
-            return delegate().execute(ctx, req);
-        }
-
-        final String method = ctx.method().name();
-        span.kind(Kind.CLIENT).name(method);
-        ctx.log().addListener(log -> SpanContextUtil.startSpan(span, log),
-                              RequestLogAvailability.REQUEST_START);
-
         // Ensure the trace context propagates to children
         ctx.onChild(TraceContextUtil::copy);
+
+        // For no-op spans, we only need to inject into headers and don't set any other attributes.
+        if (span.isNoop()) {
+            try (SpanInScope ignored = tracer.withSpanInScope(span)) {
+                return delegate().execute(ctx, req);
+            }
+        }
 
         ctx.log().addListener(log -> {
             // The request might have failed even before it's sent, e.g. validation failure, connection error.
@@ -132,37 +107,11 @@ public final class BraveClient extends SimpleDecoratingClient<HttpRequest, HttpR
             if (log.isAvailable(RequestLogAvailability.RESPONSE_FIRST_BYTES_TRANSFERRED)) {
                 SpanTags.logWireReceive(span, log.responseFirstBytesTransferredTimeNanos(), log);
             }
-
-            finishSpan(span, log);
+            handler.handleReceive(log, log.responseCause(), span);
         }, RequestLogAvailability.COMPLETE);
 
         try (SpanInScope ignored = tracer.withSpanInScope(span)) {
             return delegate().execute(ctx, req);
-        }
-    }
-
-    private void finishSpan(Span span, RequestLog log) {
-        setRemoteEndpoint(span, log);
-        SpanContextUtil.closeSpan(span, log);
-    }
-
-    private void setRemoteEndpoint(Span span, RequestLog log) {
-        final SocketAddress remoteAddress = log.context().remoteAddress();
-        final InetAddress address;
-        final int port;
-        if (remoteAddress instanceof InetSocketAddress) {
-            final InetSocketAddress socketAddress = (InetSocketAddress) remoteAddress;
-            address = socketAddress.getAddress();
-            port = socketAddress.getPort();
-        } else {
-            address = null;
-            port = 0;
-        }
-        if (!isNullOrEmpty(remoteServiceName)) {
-            span.remoteServiceName(remoteServiceName);
-        }
-        if (address != null) {
-            span.remoteIpAndPort(address.getHostAddress(), port);
         }
     }
 }

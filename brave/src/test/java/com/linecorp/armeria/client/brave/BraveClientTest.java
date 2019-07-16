@@ -52,6 +52,7 @@ import com.linecorp.armeria.common.brave.SpanCollectingReporter;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import brave.Tracing;
+import brave.http.HttpTracing;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.CurrentTraceContext.ScopeDecorator;
 import brave.sampler.Sampler;
@@ -71,14 +72,15 @@ class BraveClientTest {
 
     @Test
     void newDecorator_shouldWorkWhenRequestContextCurrentTraceContextNotConfigured() {
-        BraveClient.newDecorator(Tracing.newBuilder().build());
+        BraveClient.newDecorator(HttpTracing.create(Tracing.newBuilder().build()));
     }
 
     @Test
     void newDecorator_shouldWorkWhenRequestContextCurrentTraceContextConfigured() {
         BraveClient.newDecorator(
-                Tracing.newBuilder().currentTraceContext(RequestContextCurrentTraceContext.ofDefault())
-                       .build());
+                HttpTracing.create(
+                        Tracing.newBuilder().currentTraceContext(RequestContextCurrentTraceContext.ofDefault())
+                               .build()));
     }
 
     @Test
@@ -133,7 +135,6 @@ class BraveClientTest {
         assertThat(span.tags()).containsEntry("http.host", "foo.com")
                                .containsEntry("http.method", "POST")
                                .containsEntry("http.path", "/hello/armeria")
-                               .containsEntry("http.status_code", "200")
                                .containsEntry("http.url", "http://foo.com/hello/armeria")
                                .containsEntry("http.protocol", "h2c");
 
@@ -173,7 +174,7 @@ class BraveClientTest {
 
         // check service name
         assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
-        assertThat(scopeDecoratorCallingCounter.get()).isEqualTo(1);
+        assertThat(scopeDecoratorCallingCounter.get()).isEqualTo(3);
     }
 
     @Test
@@ -191,6 +192,13 @@ class BraveClientTest {
 
     private static void testRemoteInvocation(Tracing tracing, @Nullable String remoteServiceName)
             throws Exception {
+
+        HttpTracing httpTracing = HttpTracing.newBuilder(tracing)
+                                             .clientParser(new ArmeriaHttpClientParser())
+                                             .build();
+        if (remoteServiceName != null) {
+            httpTracing = httpTracing.clientOf(remoteServiceName);
+        }
 
         // prepare parameters
         final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/armeria",
@@ -212,7 +220,7 @@ class BraveClientTest {
             final Client<HttpRequest, HttpResponse> delegate = mock(Client.class);
             when(delegate.execute(any(), any())).thenReturn(res);
 
-            final BraveClient stub = BraveClient.newDecorator(tracing, remoteServiceName).apply(delegate);
+            final BraveClient stub = BraveClient.newDecorator(httpTracing).apply(delegate);
             // do invoke
             final HttpResponse actualRes = stub.execute(ctx, req);
 
@@ -236,7 +244,6 @@ class BraveClientTest {
         assertThat(span.tags()).containsEntry("http.host", "foo.com")
                                .containsEntry("http.method", "POST")
                                .containsEntry("http.path", "/hello/armeria")
-                               .containsEntry("http.status_code", "200")
                                .containsEntry("http.url", "http://foo.com/hello/armeria")
                                .containsEntry("http.protocol", "h2c");
     }

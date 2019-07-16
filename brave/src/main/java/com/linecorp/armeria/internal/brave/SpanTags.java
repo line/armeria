@@ -18,8 +18,6 @@ package com.linecorp.armeria.internal.brave;
 
 import java.net.SocketAddress;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -27,6 +25,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 
 import brave.Span;
+import brave.SpanCustomizer;
 
 /**
  * Adds standard Zipkin tags to a span with the information in a {@link RequestLog}.
@@ -51,7 +50,7 @@ public final class SpanTags {
         span.tag("http.host", authority)
             .tag("http.method", log.method().name())
             .tag("http.path", path)
-            .tag("http.url", generateUrl(scheme, authority, path, log.query()))
+            .tag("http.url", generateUrl(log))
             .tag("http.status_code", log.status().codeAsText())
             .tag("http.protocol", scheme.sessionProtocol().uriText());
 
@@ -81,7 +80,43 @@ public final class SpanTags {
         }
     }
 
-    private static String generateUrl(Scheme scheme, String authority, String path, @Nullable String query) {
+    /**
+     * Adds information about the raw HTTP request, RPC request, and endpoint to the span.
+     */
+    public static void addCustomTags(SpanCustomizer span, RequestLog log) {
+        final Scheme scheme = log.scheme();
+        final String authority = log.requestHeaders().authority();
+
+        assert authority != null;
+        span.tag("http.host", authority)
+            .tag("http.protocol", scheme.sessionProtocol().uriText());
+
+        final SerializationFormat serFmt = scheme.serializationFormat();
+        if (serFmt != SerializationFormat.NONE) {
+            span.tag("http.serfmt", serFmt.uriText());
+        }
+
+        final SocketAddress raddr = log.context().remoteAddress();
+        if (raddr != null) {
+            span.tag("address.remote", raddr.toString());
+        }
+
+        final SocketAddress laddr = log.context().localAddress();
+        if (laddr != null) {
+            span.tag("address.local", laddr.toString());
+        }
+
+        final Object requestContent = log.requestContent();
+        if (requestContent instanceof RpcRequest) {
+            span.name(((RpcRequest) requestContent).method());
+        }
+    }
+
+    public static String generateUrl(RequestLog requestLog) {
+        final Scheme scheme = requestLog.scheme();
+        final String authority = requestLog.authority();
+        final String path = requestLog.path();
+        final String query = requestLog.query();
         final SessionProtocol sessionProtocol = scheme.sessionProtocol();
         final String uriScheme;
         if (SessionProtocol.httpValues().contains(sessionProtocol)) {

@@ -53,6 +53,7 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.client.ResponseTimeoutException;
+import com.linecorp.armeria.client.brave.ArmeriaHttpClientParser;
 import com.linecorp.armeria.client.brave.BraveClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -66,6 +67,7 @@ import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.brave.ArmeriaHttpServerParser;
 import com.linecorp.armeria.server.brave.BraveService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
@@ -73,6 +75,7 @@ import com.linecorp.armeria.testing.junit4.server.ServerRule;
 import brave.ScopedSpan;
 import brave.Tracer.SpanInScope;
 import brave.Tracing;
+import brave.http.HttpTracing;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.StrictScopeDecorator;
 import brave.sampler.Sampler;
@@ -227,17 +230,20 @@ public class BraveIntegrationTest {
                 .build(HelloService.AsyncIface.class);
     }
 
-    private static Tracing newTracing(String name) {
+    private static HttpTracing newTracing(String name) {
         final CurrentTraceContext currentTraceContext =
                 RequestContextCurrentTraceContext.builder()
                                                  .addScopeDecorator(StrictScopeDecorator.create())
                                                  .build();
-        return Tracing.newBuilder()
-                      .currentTraceContext(currentTraceContext)
-                      .localServiceName(name)
-                      .spanReporter(spanReporter)
-                      .sampler(Sampler.ALWAYS_SAMPLE)
-                      .build();
+        return HttpTracing.newBuilder(Tracing.newBuilder()
+                                             .currentTraceContext(currentTraceContext)
+                                             .localServiceName(name)
+                                             .spanReporter(spanReporter)
+                                             .sampler(Sampler.ALWAYS_SAMPLE)
+                                             .build())
+                          .clientParser(new ArmeriaHttpClientParser())
+                          .serverParser(new ArmeriaHttpServerParser())
+                          .build();
     }
 
     @Test(timeout = 10000)
