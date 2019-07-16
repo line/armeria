@@ -17,8 +17,10 @@
 package com.linecorp.armeria.client.retry;
 
 import static com.linecorp.armeria.client.retry.RetryingClient.ARMERIA_RETRY_COUNT;
+import static com.linecorp.armeria.common.util.Exceptions.peel;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
@@ -48,6 +50,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.client.ResponseTimeoutException;
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -415,10 +418,27 @@ public class RetryingHttpClientTest {
         // There's no way to notice that the RetryingClient has scheduled the next retry.
         // The next retry will be after 8 seconds so closing the factory after 3 seconds should work.
         Executors.newSingleThreadScheduledExecutor().schedule(factory::close, 3, TimeUnit.SECONDS);
-        assertThatThrownBy(() -> client.get("/service-unavailable").aggregate().join())
-                .hasCauseInstanceOf(IllegalStateException.class)
-                .satisfies(cause -> assertThat(cause.getCause().getMessage()).matches(
-                        "(?i).*(factory has been closed|not accepting a task).*"));
+
+        // But it turned out that it's not working as expected in certain circumstance,
+        // so we should handle all the cases.
+        //
+        // 1 - In RetryingClient, IllegalStateException("ClientFactory has been closed.") can be raised.
+        // 2 - In HttpChannelPool, BootStrap.connect() can raise
+        //     IllegalStateException("executor not accepting a task") wrapped by UnprocessedRequestException.
+        // 3 - In HttpClientDelegate, addressResolverGroup.getResolver(eventLoop) can raise
+        //     IllegalStateException("executor not accepting a task").
+        //
+
+        // Peel CompletionException first.
+        Throwable t = peel(catchThrowable(() -> client.get("/service-unavailable").aggregate().join()));
+        if (t instanceof UnprocessedRequestException) {
+            final Throwable cause = t.getCause();
+            assertThat(cause).isInstanceOf(IllegalStateException.class);
+            t = cause;
+        }
+        assertThat(t).isInstanceOf(IllegalStateException.class)
+                     .satisfies(cause -> assertThat(cause.getMessage()).matches(
+                             "(?i).*(factory has been closed|not accepting a task).*"));
     }
 
     @Test
