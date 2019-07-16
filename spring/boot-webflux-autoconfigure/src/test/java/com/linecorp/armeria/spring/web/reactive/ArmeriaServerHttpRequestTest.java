@@ -67,7 +67,6 @@ class ArmeriaServerHttpRequestTest {
 
         final ServiceRequestContext ctx = newRequestContext(httpRequest);
         final ArmeriaServerHttpRequest req = request(ctx);
-        System.err.println(req.getURI());
         assertThat(req.getMethodValue()).isEqualTo(HttpMethod.POST.name());
         assertThat(req.<Object>getNativeRequest()).isInstanceOf(HttpRequest.class).isEqualTo(httpRequest);
 
