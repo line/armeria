@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.brave.AsciiStringKeyFactory;
+import com.linecorp.armeria.internal.brave.SpanContextUtil;
 import com.linecorp.armeria.internal.brave.SpanTags;
 import com.linecorp.armeria.internal.brave.TraceContextUtil;
 
@@ -47,7 +48,10 @@ import brave.Tracer;
 import brave.Tracer.SpanInScope;
 import brave.Tracing;
 import brave.http.HttpClientHandler;
+import brave.http.HttpClientParser;
 import brave.http.HttpTracing;
+import brave.propagation.CurrentTraceContext;
+import brave.propagation.CurrentTraceContext.Scope;
 import brave.propagation.TraceContext;
 
 /**
@@ -98,14 +102,20 @@ public final class BraveClient extends SimpleDecoratingClient<HttpRequest, HttpR
     private final Tracer tracer;
     private final TraceContext.Injector<RequestHeadersBuilder> injector;
     private final HttpClientHandler<RequestLog, RequestLog> handler;
+    private final CurrentTraceContext currentTraceContext;
+    private final ArmeriaHttpClientAdapter adapter;
+    private final HttpClientParser clientParser;
 
     /**
      * Creates a new instance.
      */
     private BraveClient(Client<HttpRequest, HttpResponse> delegate, HttpTracing httpTracing) {
         super(delegate);
+        currentTraceContext = httpTracing.tracing().currentTraceContext();
         tracer = httpTracing.tracing().tracer();
-        handler = HttpClientHandler.create(httpTracing, new ArmeriaHttpClientAdapter());
+        clientParser = httpTracing.clientParser();
+        adapter = new ArmeriaHttpClientAdapter();
+        handler = HttpClientHandler.create(httpTracing, adapter);
         injector = httpTracing.tracing().propagationFactory().create(AsciiStringKeyFactory.INSTANCE)
                               .injector(RequestHeadersBuilder::set);
     }
@@ -127,18 +137,20 @@ public final class BraveClient extends SimpleDecoratingClient<HttpRequest, HttpR
             }
         }
 
+        ctx.log().addListener(log -> SpanContextUtil.startSpan(span, log),
+                              RequestLogAvailability.REQUEST_START);
+
         ctx.log().addListener(log -> {
             // The request might have failed even before it's sent, e.g. validation failure, connection error.
             if (log.isAvailable(RequestLogAvailability.REQUEST_FIRST_BYTES_TRANSFERRED)) {
                 SpanTags.logWireSend(span, log.requestFirstBytesTransferredTimeNanos(), log);
             }
-
             // If the client timed-out the request, we will have never received any response data at all.
             if (log.isAvailable(RequestLogAvailability.RESPONSE_FIRST_BYTES_TRANSFERRED)) {
                 SpanTags.logWireReceive(span, log.responseFirstBytesTransferredTimeNanos(), log);
             }
             setRemoteEndpoint(span, log);
-            handler.handleReceive(log, log.responseCause(), span);
+            handleFinish(log, span);
         }, RequestLogAvailability.COMPLETE);
 
         try (SpanInScope ignored = tracer.withSpanInScope(span)) {
@@ -160,6 +172,29 @@ public final class BraveClient extends SimpleDecoratingClient<HttpRequest, HttpR
         }
         if (address != null) {
             span.remoteIpAndPort(address.getHostAddress(), port);
+        }
+    }
+
+    /**
+     * Copy from brave.http.HttpHandler#handleFinish(Object, Throwable, Span)
+     */
+    private void handleFinish(RequestLog requestLog, Span span) {
+        if (span.isNoop()) {
+            return;
+        }
+        try {
+            try (Scope ws = currentTraceContext.maybeScope(span.context())) {
+                clientParser.response(adapter, requestLog, requestLog.responseCause(), span.customizer());
+            }
+            // close the scope before finishing the span
+        } finally {
+            finishInNullScope(span, requestLog);
+        }
+    }
+
+    private void finishInNullScope(Span span, RequestLog requestLog) {
+        try (Scope ws = currentTraceContext.maybeScope(null)) {
+            span.finish(SpanContextUtil.wallTimeMicros(requestLog, requestLog.responseEndTimeNanos()));
         }
     }
 }

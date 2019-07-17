@@ -32,10 +32,10 @@ import brave.Span;
 public final class SpanTags {
 
     /** Semi-official annotation for the time the first bytes were sent on the wire. */
-    public static final String WIRE_SEND_ANNOTATION = "ws";
+    private static final String WIRE_SEND_ANNOTATION = "ws";
 
     /** Semi-official annotation for the time the first bytes were received on the wire. */
-    public static final String WIRE_RECEIVE_ANNOTATION = "wr";
+    private static final String WIRE_RECEIVE_ANNOTATION = "wr";
 
     /**
      * Adds information about the raw HTTP request, RPC request, and endpoint to the span.

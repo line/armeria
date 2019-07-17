@@ -17,8 +17,6 @@
 package com.linecorp.armeria.server.brave;
 
 import static com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext.ensureScopeUsesRequestContext;
-import static com.linecorp.armeria.internal.brave.SpanTags.WIRE_RECEIVE_ANNOTATION;
-import static com.linecorp.armeria.internal.brave.SpanTags.WIRE_SEND_ANNOTATION;
 
 import java.util.function.Function;
 
@@ -28,6 +26,8 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.brave.AsciiStringKeyFactory;
+import com.linecorp.armeria.internal.brave.SpanContextUtil;
+import com.linecorp.armeria.internal.brave.SpanTags;
 import com.linecorp.armeria.internal.brave.TraceContextUtil;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -38,7 +38,10 @@ import brave.Tracer;
 import brave.Tracer.SpanInScope;
 import brave.Tracing;
 import brave.http.HttpServerHandler;
+import brave.http.HttpServerParser;
 import brave.http.HttpTracing;
+import brave.propagation.CurrentTraceContext;
+import brave.propagation.CurrentTraceContext.Scope;
 import brave.propagation.TraceContext;
 
 /**
@@ -68,14 +71,20 @@ public final class BraveService extends SimpleDecoratingService<HttpRequest, Htt
     private final Tracer tracer;
     private final TraceContext.Extractor<HttpHeaders> extractor;
     private final HttpServerHandler<RequestLog, RequestLog> handler;
+    private final CurrentTraceContext currentTraceContext;
+    private final ArmeriaHttpServerAdapter adapter;
+    private final HttpServerParser serverParser;
 
     /**
      * Creates a new instance.
      */
     private BraveService(Service<HttpRequest, HttpResponse> delegate, HttpTracing httpTracing) {
         super(delegate);
+        currentTraceContext = httpTracing.tracing().currentTraceContext();
         tracer = httpTracing.tracing().tracer();
-        handler = HttpServerHandler.create(httpTracing, new ArmeriaHttpServerAdapter());
+        serverParser = httpTracing.serverParser();
+        adapter = new ArmeriaHttpServerAdapter();
+        handler = HttpServerHandler.create(httpTracing, adapter);
         extractor = httpTracing.tracing().propagationFactory()
                                .create(AsciiStringKeyFactory.INSTANCE)
                                .extractor(HttpHeaders::get);
@@ -94,17 +103,43 @@ public final class BraveService extends SimpleDecoratingService<HttpRequest, Htt
                 return delegate().serve(ctx, req);
             }
         }
-        ctx.log().addListener(log -> span.annotate(WIRE_RECEIVE_ANNOTATION),
-                              RequestLogAvailability.REQUEST_FIRST_BYTES_TRANSFERRED);
+        ctx.log().addListener(log -> SpanContextUtil.startSpan(span, log),
+                              RequestLogAvailability.REQUEST_START);
 
-        ctx.log().addListener(log -> span.annotate(WIRE_SEND_ANNOTATION),
-                              RequestLogAvailability.RESPONSE_FIRST_BYTES_TRANSFERRED);
-
-        ctx.log().addListener(log -> handler.handleSend(log, log.responseCause(), span),
-                              RequestLogAvailability.COMPLETE);
+        ctx.log().addListener(log -> {
+            SpanTags.logWireReceive(span, log.requestFirstBytesTransferredTimeNanos(), log);
+            // If the client timed-out the request, we will have never sent any response data at all.
+            if (log.isAvailable(RequestLogAvailability.RESPONSE_FIRST_BYTES_TRANSFERRED)) {
+                SpanTags.logWireSend(span, log.responseFirstBytesTransferredTimeNanos(), log);
+            }
+            handleFinish(log, span);
+        }, RequestLogAvailability.COMPLETE);
 
         try (SpanInScope ignored = tracer.withSpanInScope(span)) {
             return delegate().serve(ctx, req);
+        }
+    }
+
+    /**
+     * Copy from brave.http.HttpHandler#handleFinish(Object, Throwable, Span)
+     */
+    private void handleFinish(RequestLog requestLog, Span span) {
+        if (span.isNoop()) {
+            return;
+        }
+        try {
+            try (Scope ws = currentTraceContext.maybeScope(span.context())) {
+                serverParser.response(adapter, requestLog, requestLog.responseCause(), span.customizer());
+            }
+            // close the scope before finishing the span
+        } finally {
+            finishInNullScope(span, requestLog);
+        }
+    }
+
+    private void finishInNullScope(Span span, RequestLog requestLog) {
+        try (Scope ws = currentTraceContext.maybeScope(null)) {
+            span.finish(SpanContextUtil.wallTimeMicros(requestLog, requestLog.responseEndTimeNanos()));
         }
     }
 }
