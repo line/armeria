@@ -20,15 +20,48 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.InMemoryDnsResolver;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
+
+import io.netty.util.NetUtil;
 
 public class ServerBuilderTest {
+
+    private static final InMemoryDnsResolver dnsResolver = new InMemoryDnsResolver();
+    @ClassRule
+    public static final ServerRule server = new ServerRule() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            dnsResolver.add("test.example.com", NetUtil.LOCALHOST4);
+            sb.service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+              .service("/test", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+              .decorator((delegate, ctx, req) -> {
+                  ctx.addAdditionalResponseHeader("global_decorator", "true");
+                  return delegate.serve(ctx, req);
+              })
+              .virtualHost("*.example.com")
+              .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+              .decorator((delegate, ctx, req) -> {
+                  ctx.addAdditionalResponseHeader("virtualhost_decorator", "true");
+                  return delegate.serve(ctx, req);
+              })
+              .build();
+        }
+    };
 
     @Test
     public void acceptDuplicatePort() throws Exception {
@@ -166,5 +199,27 @@ public class ServerBuilderTest {
                 })
                 .virtualHost("*.example.com").and();
         assertThatThrownBy(sb2::build).isInstanceOf(IllegalStateException.class);
+    }
+
+    /**
+     * Makes sure that {@link ServerBuilder#decorator(DecoratingServiceFunction)} works at every service and
+     * virtual hosts and {@link VirtualHostBuilder#decorator(DecoratingServiceFunction)} works only at
+     * its own services.
+     */
+    @Test
+    public void decoratorTest() throws Exception {
+        final HttpClient c = HttpClient.of(server.uri("/"));
+        final AggregatedHttpResponse res = c.get("/").aggregate().get();
+        assertThat(res.headers().get("global_decorator")).isEqualTo("true");
+        assertThat(res.headers().contains("virtualhost_decorator")).isEqualTo(false);
+        final AggregatedHttpResponse res2 = c.get("/test").aggregate().get();
+        assertThat(res2.headers().get("global_decorator")).isEqualTo("true");
+        assertThat(res2.headers().contains("virtualhost_decorator")).isEqualTo(false);
+        final CloseableHttpClient client = HttpClients.custom().setDnsResolver(dnsResolver).build();
+        try (CloseableHttpResponse res3 = client.execute(
+                new HttpGet("http://test.example.com:" + server.httpPort()))) {
+            assertThat(res3.getFirstHeader("global_decorator").getValue()).isEqualTo("true");
+            assertThat(res3.getFirstHeader("virtualhost_decorator").getValue()).isEqualTo("true");
+        }
     }
 }

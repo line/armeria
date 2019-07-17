@@ -589,14 +589,14 @@ public final class VirtualHostBuilder {
     }
 
     /**
-     * Decorates all {@link Service}s with the specified {@code decorator}.
+     * Decorates all {@link Service}s with the specified {@code decoratingServiceFunction}.
      *
      * @param decoratingServiceFunction the {@link DecoratingServiceFunction} that decorates a {@link Service}.
      */
     public VirtualHostBuilder decorator(
             DecoratingServiceFunction<HttpRequest, HttpResponse> decoratingServiceFunction) {
-        requireNonNull(decoratingServiceFunction, "decorator");
-        return decorator(service -> (ctx, req) -> decoratingServiceFunction.serve(service, ctx, req));
+        requireNonNull(decoratingServiceFunction, "decoratingServiceFunction");
+        return decorator(delegate -> new FunctionalDecoratingService<>(delegate, decoratingServiceFunction));
     }
 
     /**
