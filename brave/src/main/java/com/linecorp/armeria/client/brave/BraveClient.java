@@ -17,8 +17,15 @@
 package com.linecorp.armeria.client.brave;
 
 import static com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext.ensureScopeUsesRequestContext;
+import static com.linecorp.armeria.internal.brave.SpanTags.WIRE_RECEIVE_ANNOTATION;
+import static com.linecorp.armeria.internal.brave.SpanTags.WIRE_SEND_ANNOTATION;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.function.Function;
+
+import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +45,7 @@ import com.linecorp.armeria.internal.brave.TraceContextUtil;
 import brave.Span;
 import brave.Tracer;
 import brave.Tracer.SpanInScope;
+import brave.Tracing;
 import brave.http.HttpClientHandler;
 import brave.http.HttpTracing;
 import brave.propagation.TraceContext;
@@ -49,6 +57,28 @@ import brave.propagation.TraceContext;
 public final class BraveClient extends SimpleDecoratingClient<HttpRequest, HttpResponse> {
 
     private static final Logger logger = LoggerFactory.getLogger(BraveClient.class);
+
+    /**
+     * Creates a new tracing {@link Client} decorator using the specified {@link Tracing} instance.
+     */
+    public static Function<Client<HttpRequest, HttpResponse>, BraveClient> newDecorator(Tracing tracing) {
+        return newDecorator(tracing, null);
+    }
+
+    /**
+     * Creates a new tracing {@link Client} decorator using the specified {@link Tracing} instance
+     * and the remote service name.
+     */
+    public static Function<Client<HttpRequest, HttpResponse>, BraveClient> newDecorator(
+            Tracing tracing, @Nullable String remoteServiceName) {
+        HttpTracing httpTracing = HttpTracing.newBuilder(tracing)
+                                             .clientParser(new ArmeriaHttpClientParser())
+                                             .build();
+        if (remoteServiceName != null) {
+            httpTracing = httpTracing.clientOf(remoteServiceName);
+        }
+        return newDecorator(httpTracing);
+    }
 
     /**
      * Creates a new tracing {@link Client} decorator using the specified {@link HttpTracing} instance.
@@ -107,11 +137,29 @@ public final class BraveClient extends SimpleDecoratingClient<HttpRequest, HttpR
             if (log.isAvailable(RequestLogAvailability.RESPONSE_FIRST_BYTES_TRANSFERRED)) {
                 SpanTags.logWireReceive(span, log.responseFirstBytesTransferredTimeNanos(), log);
             }
+            setRemoteEndpoint(span, log);
             handler.handleReceive(log, log.responseCause(), span);
         }, RequestLogAvailability.COMPLETE);
 
         try (SpanInScope ignored = tracer.withSpanInScope(span)) {
             return delegate().execute(ctx, req);
+        }
+    }
+
+    private void setRemoteEndpoint(Span span, RequestLog log) {
+        final SocketAddress remoteAddress = log.context().remoteAddress();
+        final InetAddress address;
+        final int port;
+        if (remoteAddress instanceof InetSocketAddress) {
+            final InetSocketAddress socketAddress = (InetSocketAddress) remoteAddress;
+            address = socketAddress.getAddress();
+            port = socketAddress.getPort();
+        } else {
+            address = null;
+            port = 0;
+        }
+        if (address != null) {
+            span.remoteIpAndPort(address.getHostAddress(), port);
         }
     }
 }

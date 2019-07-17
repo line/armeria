@@ -16,30 +16,58 @@
 
 package com.linecorp.armeria.server.brave;
 
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.internal.brave.SpanTags;
 
 import brave.SpanCustomizer;
 import brave.http.HttpAdapter;
 import brave.http.HttpServerParser;
 
+/**
+ * Default implementation of {@link HttpServerParser}.
+ * This parser add some custom tags and overwrite the name of span if {@link RequestLog#requestContent()}
+ * is {@link RpcRequest}.
+ * The following tags become available:
+ * <ul>
+ *   <li>http.url</li>
+ *   <li>http.host</li>
+ *   <li>http.protocol</li>
+ *   <li>http.serfmt</li>
+ *   <li>address.remote</li>
+ *   <li>address.local</li>
+ * </ul>
+ * User can extend this class or implement own {@link HttpServerParser}.
+ */
 public class ArmeriaHttpServerParser extends HttpServerParser {
     @Override
-    public <T> void request(HttpAdapter<T, ?> adapter, T req, SpanCustomizer customizer) {
-        super.request(adapter, req, customizer);
-        if (req instanceof RequestLog) {
-            ((RequestLog) req).addListener(log -> {
-                customizer.tag("http.url", adapter.url(req));
-            }, RequestLogAvailability.SCHEME);
-        }
-    }
+    public <T> void response(HttpAdapter<?, T> rawAdapter, T res, Throwable error, SpanCustomizer customizer) {
+        super.response(rawAdapter, res, error, customizer);
+        if (res instanceof RequestLog && rawAdapter instanceof ArmeriaHttpServerAdapter) {
+            final RequestLog requestLog = (RequestLog) res;
+            final ArmeriaHttpServerAdapter adapter = (ArmeriaHttpServerAdapter) rawAdapter;
+            customizer.tag("http.host", adapter.authority(requestLog))
+                      .tag("http.url", adapter.url(requestLog))
+                      .tag("http.protocol", adapter.protocol(requestLog));
 
-    @Override
-    public <T> void response(HttpAdapter<?, T> adapter, T res, Throwable error, SpanCustomizer customizer) {
-        super.response(adapter, res, error, customizer);
-        if (res instanceof RequestLog) {
-            SpanTags.addCustomTags(customizer, (RequestLog) res);
+            final String serFmt = adapter.serializationFormat(requestLog);
+            if (serFmt != null) {
+                customizer.tag("http.serfmt", serFmt);
+            }
+
+            final String raddr = adapter.remoteAddress(requestLog);
+            if (raddr != null) {
+                customizer.tag("address.remote", raddr);
+            }
+
+            final String laddr = adapter.localAddress(requestLog);
+            if (laddr != null) {
+                customizer.tag("address.local", laddr);
+            }
+
+            final String rpcMethod = adapter.rpcMethod(requestLog);
+            if (rpcMethod != null) {
+                customizer.name(rpcMethod);
+            }
         }
     }
 }

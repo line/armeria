@@ -25,7 +25,6 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 
 import brave.Span;
-import brave.SpanCustomizer;
 
 /**
  * Adds standard Zipkin tags to a span with the information in a {@link RequestLog}.
@@ -33,10 +32,10 @@ import brave.SpanCustomizer;
 public final class SpanTags {
 
     /** Semi-official annotation for the time the first bytes were sent on the wire. */
-    private static final String WIRE_SEND_ANNOTATION = "ws";
+    public static final String WIRE_SEND_ANNOTATION = "ws";
 
     /** Semi-official annotation for the time the first bytes were received on the wire. */
-    private static final String WIRE_RECEIVE_ANNOTATION = "wr";
+    public static final String WIRE_RECEIVE_ANNOTATION = "wr";
 
     /**
      * Adds information about the raw HTTP request, RPC request, and endpoint to the span.
@@ -62,38 +61,6 @@ public final class SpanTags {
         final Throwable responseCause = log.responseCause();
         if (responseCause != null) {
             span.tag("error", responseCause.toString());
-        }
-
-        final SocketAddress raddr = log.context().remoteAddress();
-        if (raddr != null) {
-            span.tag("address.remote", raddr.toString());
-        }
-
-        final SocketAddress laddr = log.context().localAddress();
-        if (laddr != null) {
-            span.tag("address.local", laddr.toString());
-        }
-
-        final Object requestContent = log.requestContent();
-        if (requestContent instanceof RpcRequest) {
-            span.name(((RpcRequest) requestContent).method());
-        }
-    }
-
-    /**
-     * Adds information about the raw HTTP request, RPC request, and endpoint to the span.
-     */
-    public static void addCustomTags(SpanCustomizer span, RequestLog log) {
-        final Scheme scheme = log.scheme();
-        final String authority = log.requestHeaders().authority();
-
-        assert authority != null;
-        span.tag("http.host", authority)
-            .tag("http.protocol", scheme.sessionProtocol().uriText());
-
-        final SerializationFormat serFmt = scheme.serializationFormat();
-        if (serFmt != SerializationFormat.NONE) {
-            span.tag("http.serfmt", serFmt.uriText());
         }
 
         final SocketAddress raddr = log.context().remoteAddress();

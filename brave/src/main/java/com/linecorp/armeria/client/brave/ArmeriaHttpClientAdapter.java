@@ -16,14 +16,29 @@
 
 package com.linecorp.armeria.client.brave;
 
+import java.net.SocketAddress;
+
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.brave.SpanTags;
 
 import brave.http.HttpClientAdapter;
 
 public class ArmeriaHttpClientAdapter extends HttpClientAdapter<RequestLog, RequestLog> {
+    /**
+     * Original implementation is calling {@link HttpClientAdapter#url(Object)} which needs
+     * {@link RequestLog#scheme()} is not available at {@link RequestLogAvailability#REQUEST_START}.
+     * We need to use {@link RequestLog#path()} directly.
+     *
+     * @see brave.http.HttpAdapter#path(Object)
+     */
     @Override
     public String path(RequestLog requestLog) {
         return requestLog.path();
@@ -46,7 +61,62 @@ public class ArmeriaHttpClientAdapter extends HttpClientAdapter<RequestLog, Requ
     }
 
     @Override
+    @Nullable
     public Integer statusCode(RequestLog requestLog) {
-        return requestLog.status().code();
+        final HttpStatus status = requestLog.status();
+        if (status == HttpStatus.UNKNOWN) {
+            return null;
+        }
+        return status.code();
+    }
+
+    /**
+     * Returns the authority of the {@link Request}.
+     */
+    public String authority(RequestLog requestLog) {
+        return requestLog.authority();
+    }
+
+    /**
+     * Returns the {@link SessionProtocol#uriText()} of the {@link Request}.
+     */
+    public String protocol(RequestLog requestLog) {
+        return requestLog.scheme().sessionProtocol().uriText();
+    }
+
+    /**
+     * Returns the {@link SerializationFormat#uriText()} if it's not {@link SerializationFormat#NONE}.
+     */
+    @Nullable
+    public String serializationFormat(RequestLog requestLog) {
+        final SerializationFormat serFmt = requestLog.scheme().serializationFormat();
+        return serFmt == SerializationFormat.NONE ? null : serFmt.uriText();
+    }
+
+    /**
+     * Returns the remote address.
+     */
+    @Nullable
+    public String remoteAddress(RequestLog requestLog) {
+        final SocketAddress raddr = requestLog.context().remoteAddress();
+        return raddr != null ? raddr.toString() : null;
+    }
+
+    /**
+     * Returns the local address.
+     */
+    @Nullable
+    public String localAddress(RequestLog requestLog) {
+        final SocketAddress laddr = requestLog.context().localAddress();
+        return laddr != null ? laddr.toString() : null;
+    }
+
+    /**
+     * Returns the method name if {@link RequestLog#requestContent()} is {@link RpcRequest}.
+     */
+    @Nullable
+    public String rpcMethod(RequestLog requestLog) {
+        final Object requestContent = requestLog.requestContent();
+        return requestContent instanceof RpcRequest ? ((RpcRequest) requestContent).method() : null;
     }
 }
