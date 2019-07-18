@@ -20,9 +20,6 @@ import static com.linecorp.armeria.common.brave.RequestContextCurrentTraceContex
 import static com.linecorp.armeria.internal.brave.SpanTags.WIRE_RECEIVE_ANNOTATION;
 import static com.linecorp.armeria.internal.brave.SpanTags.WIRE_SEND_ANNOTATION;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -149,7 +146,6 @@ public final class BraveClient extends SimpleDecoratingClient<HttpRequest, HttpR
             if (log.isAvailable(RequestLogAvailability.RESPONSE_FIRST_BYTES_TRANSFERRED)) {
                 SpanTags.logWireReceive(span, log.responseFirstBytesTransferredTimeNanos(), log);
             }
-            setRemoteEndpoint(span, log);
             handleFinish(log, span);
         }, RequestLogAvailability.COMPLETE);
 
@@ -158,25 +154,11 @@ public final class BraveClient extends SimpleDecoratingClient<HttpRequest, HttpR
         }
     }
 
-    private void setRemoteEndpoint(Span span, RequestLog log) {
-        final SocketAddress remoteAddress = log.context().remoteAddress();
-        final InetAddress address;
-        final int port;
-        if (remoteAddress instanceof InetSocketAddress) {
-            final InetSocketAddress socketAddress = (InetSocketAddress) remoteAddress;
-            address = socketAddress.getAddress();
-            port = socketAddress.getPort();
-        } else {
-            address = null;
-            port = 0;
-        }
-        if (address != null) {
-            span.remoteIpAndPort(address.getHostAddress(), port);
-        }
-    }
-
     /**
      * Copy from brave.http.HttpHandler#handleFinish(Object, Throwable, Span)
+     * We need to set timestamp from armeria's clock instead of brave's one. But current implementation
+     * of HttpHandler doesn't allow us to pass in our own timestamp.
+     * https://github.com/openzipkin/brave/issues/946
      */
     private void handleFinish(RequestLog requestLog, Span span) {
         if (span.isNoop()) {

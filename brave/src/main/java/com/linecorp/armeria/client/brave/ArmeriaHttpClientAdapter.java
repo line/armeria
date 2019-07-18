@@ -16,11 +16,8 @@
 
 package com.linecorp.armeria.client.brave;
 
-import java.net.SocketAddress;
-
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -93,24 +90,6 @@ public class ArmeriaHttpClientAdapter extends HttpClientAdapter<RequestLog, Requ
     public String serializationFormat(RequestLog requestLog) {
         final SerializationFormat serFmt = requestLog.scheme().serializationFormat();
         return serFmt == SerializationFormat.NONE ? null : serFmt.uriText();
-    }
-
-    /**
-     * Returns the remote address.
-     */
-    @Nullable
-    public String remoteAddress(RequestLog requestLog) {
-        final SocketAddress raddr = requestLog.context().remoteAddress();
-        return raddr != null ? raddr.toString() : null;
-    }
-
-    /**
-     * Returns the local address.
-     */
-    @Nullable
-    public String localAddress(RequestLog requestLog) {
-        final SocketAddress laddr = requestLog.context().localAddress();
-        return laddr != null ? laddr.toString() : null;
     }
 
     /**

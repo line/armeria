@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.brave;
 
+import java.net.SocketAddress;
+
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 
@@ -54,14 +56,14 @@ public class ArmeriaHttpServerParser extends HttpServerParser {
                 customizer.tag("http.serfmt", serFmt);
             }
 
-            final String raddr = adapter.remoteAddress(requestLog);
+            final SocketAddress raddr = requestLog.context().remoteAddress();
             if (raddr != null) {
-                customizer.tag("address.remote", raddr);
+                customizer.tag("address.remote", raddr.toString());
             }
 
-            final String laddr = adapter.localAddress(requestLog);
+            final SocketAddress laddr = requestLog.context().localAddress();
             if (laddr != null) {
-                customizer.tag("address.local", laddr);
+                customizer.tag("address.local", laddr.toString());
             }
 
             final String rpcMethod = adapter.rpcMethod(requestLog);

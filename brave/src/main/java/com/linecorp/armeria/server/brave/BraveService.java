@@ -122,6 +122,9 @@ public final class BraveService extends SimpleDecoratingService<HttpRequest, Htt
 
     /**
      * Copy from brave.http.HttpHandler#handleFinish(Object, Throwable, Span)
+     * We need to set timestamp from armeria's clock instead of brave's one. But current implementation
+     * of HttpHandler doesn't allow us to pass in our own timestamp.
+     * https://github.com/openzipkin/brave/issues/946
      */
     private void handleFinish(RequestLog requestLog, Span span) {
         if (span.isNoop()) {
