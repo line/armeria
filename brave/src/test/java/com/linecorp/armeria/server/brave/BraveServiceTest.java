@@ -42,6 +42,7 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.brave.HelloService;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.brave.SpanCollectingReporter;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.Service;
@@ -55,6 +56,7 @@ import brave.propagation.CurrentTraceContext.ScopeDecorator;
 import brave.sampler.Sampler;
 import zipkin2.Span;
 import zipkin2.Span.Kind;
+import zipkin2.reporter.Reporter;
 
 class BraveServiceTest {
 
@@ -87,8 +89,10 @@ class BraveServiceTest {
 
     @Test
     void shouldSubmitSpanWhenRequestIsSampled() throws Exception {
-        final SpanCollectingReporter reporter = testServiceInvocation(
-                RequestContextCurrentTraceContext.ofDefault(), 1.0f);
+        final SpanCollectingReporter reporter = new SpanCollectingReporter();
+        final RequestLog requestLog = testServiceInvocation(reporter,
+                                                            RequestContextCurrentTraceContext.ofDefault(),
+                                                            1.0f);
 
         // check span name
         final Span span = reporter.spans().take();
@@ -108,12 +112,16 @@ class BraveServiceTest {
 
         // check service name
         assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
+
+        // check duration is correct from request log
+        assertThat(span.durationAsLong())
+                .isEqualTo(requestLog.totalDurationNanos() / 1000);
     }
 
     @Test
     void shouldNotSubmitSpanWhenRequestIsNotSampled() throws Exception {
-        final SpanCollectingReporter reporter = testServiceInvocation(
-                RequestContextCurrentTraceContext.ofDefault(), 0.0f);
+        final SpanCollectingReporter reporter = new SpanCollectingReporter();
+        testServiceInvocation(reporter, RequestContextCurrentTraceContext.ofDefault(), 0.0f);
 
         // don't submit any spans
         assertThat(reporter.spans().poll(1, TimeUnit.SECONDS)).isNull();
@@ -130,8 +138,8 @@ class BraveServiceTest {
                 RequestContextCurrentTraceContext.builder()
                                                  .addScopeDecorator(scopeDecorator)
                                                  .build();
-
-        final SpanCollectingReporter reporter = testServiceInvocation(traceContext, 1.0f);
+        final SpanCollectingReporter reporter = new SpanCollectingReporter();
+        testServiceInvocation(reporter, traceContext, 1.0f);
 
         // check span name
         final Span span = reporter.spans().take();
@@ -144,10 +152,9 @@ class BraveServiceTest {
         assertThat(scopeDecoratorCallingCounter.get()).isEqualTo(3);
     }
 
-    private static SpanCollectingReporter testServiceInvocation(CurrentTraceContext traceContext,
-                                                                float samplingRate) throws Exception {
-        final SpanCollectingReporter reporter = new SpanCollectingReporter();
-
+    private static RequestLog testServiceInvocation(Reporter<Span> reporter,
+                                                    CurrentTraceContext traceContext,
+                                                    float samplingRate) throws Exception {
         final Tracing tracing = Tracing.newBuilder()
                                        .localServiceName(TEST_SERVICE)
                                        .spanReporter(reporter)
@@ -186,7 +193,7 @@ class BraveServiceTest {
         logBuilder.responseFirstBytesTransferred();
         logBuilder.responseContent(rpcRes, res);
         logBuilder.endResponse();
-        return reporter;
+        return ctx.log();
     }
 
     private static void assertTags(Span span) {

@@ -49,6 +49,7 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.brave.HelloService;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.brave.SpanCollectingReporter;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import brave.Tracing;
@@ -92,7 +93,7 @@ class BraveClientTest {
                                        .spanReporter(reporter)
                                        .sampler(Sampler.create(1.0f))
                                        .build();
-        testRemoteInvocation(tracing, null);
+        final RequestLog requestLog = testRemoteInvocation(tracing, null);
 
         // check span name
         final Span span = reporter.spans().take();
@@ -109,6 +110,10 @@ class BraveClientTest {
         assertTags(span);
 
         assertThat(span.traceId().length()).isEqualTo(16);
+
+        // check duration is correct from request log
+        assertThat(span.durationAsLong())
+                .isEqualTo(requestLog.totalDurationNanos() / 1000);
 
         // check service name
         assertThat(span.localServiceName()).isEqualTo(TEST_SERVICE);
@@ -190,7 +195,7 @@ class BraveClientTest {
         assertThat(reporter.spans().poll(1, TimeUnit.SECONDS)).isNull();
     }
 
-    private static void testRemoteInvocation(Tracing tracing, @Nullable String remoteServiceName)
+    private static RequestLog testRemoteInvocation(Tracing tracing, @Nullable String remoteServiceName)
             throws Exception {
 
         HttpTracing httpTracing = HttpTracing.newBuilder(tracing)
@@ -238,6 +243,7 @@ class BraveClientTest {
         ctx.logBuilder().responseFirstBytesTransferred();
         ctx.logBuilder().responseContent(rpcRes, res);
         ctx.logBuilder().endResponse();
+        return ctx.log();
     }
 
     private static void assertTags(Span span) {
