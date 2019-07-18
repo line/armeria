@@ -20,6 +20,7 @@ import java.net.SocketAddress;
 
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.internal.brave.SpanTags;
 
 import brave.SpanCustomizer;
 import brave.http.HttpAdapter;
@@ -47,23 +48,23 @@ public class ArmeriaHttpClientParser extends HttpClientParser {
         if (res instanceof RequestLog && rawAdapter instanceof ArmeriaHttpClientAdapter) {
             final RequestLog requestLog = (RequestLog) res;
             final ArmeriaHttpClientAdapter adapter = (ArmeriaHttpClientAdapter) rawAdapter;
-            customizer.tag("http.host", adapter.authority(requestLog))
-                      .tag("http.url", adapter.url(requestLog))
-                      .tag("http.protocol", adapter.protocol(requestLog));
+            customizer.tag(SpanTags.TAG_HTTP_HOST, adapter.authority(requestLog))
+                      .tag(SpanTags.TAG_HTTP_URL, adapter.url(requestLog))
+                      .tag(SpanTags.TAG_HTTP_PROTOCOL, adapter.protocol(requestLog));
 
             final String serFmt = adapter.serializationFormat(requestLog);
             if (serFmt != null) {
-                customizer.tag("http.serfmt", serFmt);
+                customizer.tag(SpanTags.TAG_HTTP_SERIALIZATION_FORMAT, serFmt);
             }
 
             final SocketAddress raddr = requestLog.context().remoteAddress();
             if (raddr != null) {
-                customizer.tag("address.remote", raddr.toString());
+                customizer.tag(SpanTags.TAG_ADDRESS_REMOTE, raddr.toString());
             }
 
             final SocketAddress laddr = requestLog.context().localAddress();
             if (laddr != null) {
-                customizer.tag("address.local", laddr.toString());
+                customizer.tag(SpanTags.TAG_ADDRESS_LOCAL, laddr.toString());
             }
 
             final String rpcMethod = adapter.rpcMethod(requestLog);

@@ -39,6 +39,17 @@ public final class SpanTags {
     /** Semi-official annotation for the time the first bytes were received on the wire. */
     private static final String WIRE_RECEIVE_ANNOTATION = "wr";
 
+    public static final String TAG_HTTP_HOST = "http.host";
+    public static final String TAG_HTTP_METHOD = "http.method";
+    public static final String TAG_HTTP_PATH = "http.path";
+    public static final String TAG_HTTP_URL = "http.url";
+    public static final String TAG_HTTP_STATUS_CODE = "http.status_code";
+    public static final String TAG_HTTP_PROTOCOL = "http.protocol";
+    public static final String TAG_HTTP_SERIALIZATION_FORMAT = "http.serfmt";
+    public static final String TAG_ERROR = "error";
+    public static final String TAG_ADDRESS_REMOTE = "address.remote";
+    public static final String TAG_ADDRESS_LOCAL = "address.local";
+
     /**
      * Adds information about the raw HTTP request, RPC request, and endpoint to the span.
      */
@@ -48,31 +59,31 @@ public final class SpanTags {
         final String path = log.path();
 
         assert authority != null;
-        span.tag("http.host", authority)
-            .tag("http.method", log.method().name())
-            .tag("http.path", path)
-            .tag("http.url", generateUrl(log))
-            .tag("http.status_code", log.status().codeAsText())
-            .tag("http.protocol", scheme.sessionProtocol().uriText());
+        span.tag(TAG_HTTP_HOST, authority)
+            .tag(TAG_HTTP_METHOD, log.method().name())
+            .tag(TAG_HTTP_PATH, path)
+            .tag(TAG_HTTP_URL, generateUrl(log))
+            .tag(TAG_HTTP_STATUS_CODE, log.status().codeAsText())
+            .tag(TAG_HTTP_PROTOCOL, scheme.sessionProtocol().uriText());
 
         final SerializationFormat serFmt = scheme.serializationFormat();
         if (serFmt != SerializationFormat.NONE) {
-            span.tag("http.serfmt", serFmt.uriText());
+            span.tag(TAG_HTTP_SERIALIZATION_FORMAT, serFmt.uriText());
         }
 
         final Throwable responseCause = log.responseCause();
         if (responseCause != null) {
-            span.tag("error", responseCause.toString());
+            span.tag(TAG_ERROR, responseCause.toString());
         }
 
         final SocketAddress raddr = log.context().remoteAddress();
         if (raddr != null) {
-            span.tag("address.remote", raddr.toString());
+            span.tag(TAG_ADDRESS_REMOTE, raddr.toString());
         }
 
         final SocketAddress laddr = log.context().localAddress();
         if (laddr != null) {
-            span.tag("address.local", laddr.toString());
+            span.tag(TAG_ADDRESS_LOCAL, laddr.toString());
         }
 
         final Object requestContent = log.requestContent();
