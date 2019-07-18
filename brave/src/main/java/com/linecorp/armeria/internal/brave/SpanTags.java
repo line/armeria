@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.internal.brave;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 import com.linecorp.armeria.common.RpcRequest;
@@ -115,6 +117,24 @@ public final class SpanTags {
 
     public static void logWireReceive(Span span, long wireSendTimeNanos, RequestLog requestLog) {
         span.annotate(SpanContextUtil.wallTimeMicros(requestLog, wireSendTimeNanos), WIRE_RECEIVE_ANNOTATION);
+    }
+
+    public static boolean updateRemoteEndpoint(Span span, RequestLog log) {
+        final SocketAddress remoteAddress = log.context().remoteAddress();
+        final InetAddress address;
+        final int port;
+        if (remoteAddress instanceof InetSocketAddress) {
+            final InetSocketAddress socketAddress = (InetSocketAddress) remoteAddress;
+            address = socketAddress.getAddress();
+            port = socketAddress.getPort();
+        } else {
+            address = null;
+            port = 0;
+        }
+        if (address != null) {
+            return span.remoteIpAndPort(address.getHostAddress(), port);
+        }
+        return false;
     }
 
     private SpanTags() {}

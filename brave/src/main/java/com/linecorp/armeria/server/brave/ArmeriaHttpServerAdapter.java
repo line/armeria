@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.brave;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -26,9 +27,10 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.brave.SpanTags;
 
+import brave.Span;
 import brave.http.HttpServerAdapter;
 
-final class ArmeriaHttpServerAdapter extends HttpServerAdapter<RequestLog, RequestLog> {
+public final class ArmeriaHttpServerAdapter extends HttpServerAdapter<RequestLog, RequestLog> {
     /**
      * Original implementation is calling {@link HttpServerAdapter#url(Object)} which needs
      * {@link RequestLog#scheme()} is not available at {@link RequestLogAvailability#REQUEST_START}.
@@ -99,5 +101,17 @@ final class ArmeriaHttpServerAdapter extends HttpServerAdapter<RequestLog, Reque
     public String rpcMethod(RequestLog requestLog) {
         final Object requestContent = requestLog.requestContent();
         return requestContent instanceof RpcRequest ? ((RpcRequest) requestContent).method() : null;
+    }
+
+    /**
+     * This sets the client IP:port to the {@link RequestContext#remoteAddress()}
+     * if the {@link HttpServerAdapter#parseClientIpAndPort default parsing} fails.
+     */
+    @Override
+    public boolean parseClientIpAndPort(RequestLog requestLog, Span span) {
+        if (parseClientIpFromXForwardedFor(requestLog, span)) {
+            return true;
+        }
+        return SpanTags.updateRemoteEndpoint(span, requestLog);
     }
 }
