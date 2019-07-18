@@ -31,6 +31,11 @@ import brave.Span;
 import brave.http.HttpServerAdapter;
 
 public final class ArmeriaHttpServerAdapter extends HttpServerAdapter<RequestLog, RequestLog> {
+    @Override
+    public String method(RequestLog requestLog) {
+        return requestLog.method().name();
+    }
+
     /**
      * Original implementation is calling {@link HttpServerAdapter#url(Object)} which needs
      * {@link RequestLog#scheme()} is not available at {@link RequestLogAvailability#REQUEST_START}.
@@ -41,11 +46,6 @@ public final class ArmeriaHttpServerAdapter extends HttpServerAdapter<RequestLog
     @Override
     public String path(RequestLog requestLog) {
         return requestLog.path();
-    }
-
-    @Override
-    public String method(RequestLog requestLog) {
-        return requestLog.method().name();
     }
 
     @Override

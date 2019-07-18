@@ -29,6 +29,11 @@ import com.linecorp.armeria.internal.brave.SpanTags;
 import brave.http.HttpClientAdapter;
 
 public class ArmeriaHttpClientAdapter extends HttpClientAdapter<RequestLog, RequestLog> {
+    @Override
+    public String method(RequestLog requestLog) {
+        return requestLog.method().name();
+    }
+
     /**
      * Original implementation is calling {@link HttpClientAdapter#url(Object)} which needs
      * {@link RequestLog#scheme()} is not available at {@link RequestLogAvailability#REQUEST_START}.
@@ -39,11 +44,6 @@ public class ArmeriaHttpClientAdapter extends HttpClientAdapter<RequestLog, Requ
     @Override
     public String path(RequestLog requestLog) {
         return requestLog.path();
-    }
-
-    @Override
-    public String method(RequestLog requestLog) {
-        return requestLog.method().name();
     }
 
     @Override

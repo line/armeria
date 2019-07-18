@@ -49,7 +49,7 @@ import brave.sampler.Sampler;
 import brave.test.http.ITHttpServer;
 import zipkin2.Span;
 
-public class BraveServiceIntegrationTest extends ITHttpServer {
+class BraveServiceIntegrationTest extends ITHttpServer {
 
     private Server server;
 
