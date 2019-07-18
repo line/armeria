@@ -63,11 +63,13 @@ public class ArmeriaHttpClientAdapter extends HttpClientAdapter<RequestLog, Requ
     @Override
     @Nullable
     public Integer statusCode(RequestLog requestLog) {
-        final HttpStatus status = requestLog.status();
-        if (status == HttpStatus.UNKNOWN) {
-            return null;
-        }
-        return status.code();
+        final int result = statusCodeAsInt(requestLog);
+        return result != 0 ? result : null;
+    }
+
+    @Override
+    public int statusCodeAsInt(RequestLog requestLog) {
+        return requestLog.status().code();
     }
 
     /**
