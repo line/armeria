@@ -22,7 +22,10 @@ import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import org.junit.AssumptionViolatedException;
+import org.junit.Before;
 import org.junit.Test;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientDecorationBuilder;
 import com.linecorp.armeria.client.ClientFactory;
@@ -47,19 +50,25 @@ import brave.http.HttpClientParser;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.StrictScopeDecorator;
 import brave.sampler.Sampler;
-import brave.test.http.ITHttpClient;
+import brave.test.http.ITHttpAsyncClient;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
+import okhttp3.Protocol;
 import okhttp3.mockwebserver.MockResponse;
 import zipkin2.Span;
 
-public class BraveClientIntegrationTest extends ITHttpClient<HttpClient> {
+public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
 
     // // Hide currentTraceContext in ITHttpClient
     private CurrentTraceContext currentTraceContext =
             RequestContextCurrentTraceContext.builder()
                                              .addScopeDecorator(StrictScopeDecorator.create())
                                              .build();
+
+    @Before
+    public void setupServer() {
+        server.setProtocols(ImmutableList.of(Protocol.H2_PRIOR_KNOWLEDGE));
+    }
 
     @Override
     protected Builder tracingBuilder(Sampler sampler) {
@@ -68,7 +77,7 @@ public class BraveClientIntegrationTest extends ITHttpClient<HttpClient> {
 
     @Override
     protected HttpClient newClient(int port) {
-        return HttpClient.of("h1c://127.0.0.1:" + port, ClientOptions.of(
+        return HttpClient.of("h2c://127.0.0.1:" + port, ClientOptions.of(
                 ClientOption.DECORATION.newValue(
                         new ClientDecorationBuilder()
                                 .add(BraveClient.newDecorator(httpTracing))
@@ -104,8 +113,11 @@ public class BraveClientIntegrationTest extends ITHttpClient<HttpClient> {
 
     @Override
     @Test
-    public void addsErrorTagOnTransportException() throws Exception {
-        throw new AssumptionViolatedException("Armeria won't record exception in this case.");
+    public void usesParentFromInvocationTime() throws Exception {
+        new DummyRequestContext().makeContextAware(() -> {
+            super.usesParentFromInvocationTime();
+            return null;
+        }).call();
     }
 
     @Override
@@ -176,6 +188,11 @@ public class BraveClientIntegrationTest extends ITHttpClient<HttpClient> {
     @Override
     protected void post(HttpClient client, String pathIncludingQuery, String body) {
         client.post(pathIncludingQuery, body).aggregate().join();
+    }
+
+    @Override
+    protected void getAsync(HttpClient client, String pathIncludingQuery) throws Exception {
+        client.get(pathIncludingQuery);
     }
 
     private class DummyRequestContext extends NonWrappingRequestContext {

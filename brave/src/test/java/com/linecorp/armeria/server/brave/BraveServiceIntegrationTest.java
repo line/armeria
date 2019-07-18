@@ -128,7 +128,7 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
     @Override
     @Test
     public void notFound() {
-        throw new AssumptionViolatedException("Armeria cannot decorate a non-existing path mapping.");
+        throw new AssumptionViolatedException("Armeria cannot decorate a non-existent path mapping.");
     }
 
     @After
