@@ -1,20 +1,22 @@
 /*
- * Copyright 2019 LINE Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
- * version 2.0 (the "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at:
+ *  * Copyright 2019 LINE Corporation
+ *  *
+ *  * LINE Corporation licenses this file to you under the Apache License,
+ *  * version 2.0 (the "License"); you may not use this file except in compliance
+ *  * with the License. You may obtain a copy of the License at:
+ *  *
+ *  *   https://www.apache.org/licenses/LICENSE-2.0
+ *  *
+ *  * Unless required by applicable law or agreed to in writing, software
+ *  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ *  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ *  * License for the specific language governing permissions and limitations
+ *  * under the License.
  *
- *   https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
  */
 
-package com.linecorp.armeria.it.brave;
+package com.linecorp.armeria.server.brave;
 
 import static com.linecorp.armeria.common.HttpStatus.BAD_REQUEST;
 import static com.linecorp.armeria.common.HttpStatus.OK;
@@ -35,8 +37,6 @@ import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.brave.ArmeriaHttpServerAdapter;
-import com.linecorp.armeria.server.brave.BraveService;
 
 import brave.SpanCustomizer;
 import brave.Tracing;
@@ -49,7 +49,7 @@ import brave.sampler.Sampler;
 import brave.test.http.ITHttpServer;
 import zipkin2.Span;
 
-public class ArmeriaHttpTracingIntegrationTest extends ITHttpServer {
+public class BraveServiceIntegrationTest extends ITHttpServer {
 
     private Server server;
 
@@ -126,8 +126,9 @@ public class ArmeriaHttpTracingIntegrationTest extends ITHttpServer {
     }
 
     @Override
+    @Test
     public void notFound() {
-        throw new AssumptionViolatedException("Armeria 404 not supported.");
+        throw new AssumptionViolatedException("Armeria cannot decorate a non-existing path mapping.");
     }
 
     @After
