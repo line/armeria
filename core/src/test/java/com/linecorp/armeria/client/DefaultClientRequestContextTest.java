@@ -19,7 +19,7 @@ package com.linecorp.armeria.client;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -37,8 +37,9 @@ public class DefaultClientRequestContextTest {
     public void deriveContext() {
         final DefaultClientRequestContext originalCtx = new DefaultClientRequestContext(
                 mock(EventLoop.class), NoopMeterRegistry.get(), SessionProtocol.H2C,
-                Endpoint.of("example.com", 8080), HttpMethod.POST, "/foo", null, null,
+                HttpMethod.POST, "/foo", null, null,
                 ClientOptions.DEFAULT, mock(Request.class));
+        originalCtx.init(Endpoint.of("example.com", 8080));
 
         setAdditionalHeaders(originalCtx);
 

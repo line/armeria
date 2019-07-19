@@ -29,6 +29,8 @@ import com.linecorp.armeria.client.Endpoint;
  */
 public final class StaticEndpointGroup implements EndpointGroup {
 
+    static final StaticEndpointGroup EMPTY = new StaticEndpointGroup();
+
     private final List<Endpoint> endpoints;
 
     /**
@@ -56,13 +58,6 @@ public final class StaticEndpointGroup implements EndpointGroup {
 
     @Override
     public String toString() {
-        final StringBuilder buf = new StringBuilder();
-        buf.append("StaticEndpointGroup(");
-        for (Endpoint endpoint : endpoints) {
-            buf.append(endpoint).append(',');
-        }
-        buf.setCharAt(buf.length() - 1, ')');
-
-        return buf.toString();
+        return getClass().getSimpleName() + endpoints;
     }
 }

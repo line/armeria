@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.internal.ClientUtil.executeWithFallback;
+import static com.linecorp.armeria.internal.ClientUtil.initContextAndExecuteWithFallback;
 
 import java.net.URI;
 import java.util.function.BiFunction;
@@ -143,19 +143,18 @@ public abstract class UserClient<I extends Request, O extends Response> implemen
     protected final O execute(@Nullable EventLoop eventLoop,
                               HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
                               I req, BiFunction<ClientRequestContext, Throwable, O> fallback) {
-
-        final ClientRequestContext ctx;
+        final DefaultClientRequestContext ctx;
         if (eventLoop == null) {
             final ReleasableHolder<EventLoop> releasableEventLoop = factory().acquireEventLoop(endpoint);
             ctx = new DefaultClientRequestContext(
-                    releasableEventLoop.get(), meterRegistry, sessionProtocol, endpoint,
+                    releasableEventLoop.get(), meterRegistry, sessionProtocol,
                     method, path, query, fragment, options(), req);
             ctx.log().addListener(log -> releasableEventLoop.release(), RequestLogAvailability.COMPLETE);
         } else {
-            ctx = new DefaultClientRequestContext(eventLoop, meterRegistry, sessionProtocol, endpoint,
+            ctx = new DefaultClientRequestContext(eventLoop, meterRegistry, sessionProtocol,
                                                   method, path, query, fragment, options(), req);
         }
 
-        return executeWithFallback(delegate(), ctx, req, fallback);
+        return initContextAndExecuteWithFallback(delegate(), ctx, endpoint, fallback);
     }
 }

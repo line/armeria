@@ -19,7 +19,6 @@ import static com.linecorp.armeria.internal.ClientUtil.executeWithFallback;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.Client;
@@ -102,17 +101,16 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
             return;
         }
 
-        final ClientRequestContext derivedCtx = ctx.newDerivedContext(req);
+        final ClientRequestContext derivedCtx = newDerivedContext(ctx, req);
         ctx.logBuilder().addChild(derivedCtx.log());
-        final BiFunction<ClientRequestContext, Throwable, RpcResponse> fallback =
-                (context, cause) -> new DefaultRpcResponse(cause);
 
         final int totalAttempts = getTotalAttempts(ctx);
         if (totalAttempts > 1) {
             derivedCtx.setAdditionalRequestHeader(ARMERIA_RETRY_COUNT, Integer.toString(totalAttempts - 1));
         }
 
-        final RpcResponse res = executeWithFallback(delegate(), derivedCtx, req, fallback);
+        final RpcResponse res = executeWithFallback(delegate(), derivedCtx,
+                                                    (context, cause) -> new DefaultRpcResponse(cause));
 
         res.handle((unused1, unused2) -> {
             retryStrategyWithContent().shouldRetry(derivedCtx, res).handle((backoff, unused3) -> {

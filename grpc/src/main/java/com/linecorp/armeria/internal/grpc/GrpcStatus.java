@@ -39,6 +39,7 @@ import java.nio.channels.ClosedChannelException;
 
 import com.google.common.base.Strings;
 
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.grpc.StackTraceElementProto;
@@ -88,7 +89,7 @@ public final class GrpcStatus {
             // instead.
             return Status.UNKNOWN.withCause(t);
         }
-        if (t instanceof IOException) {
+        if (t instanceof UnprocessedRequestException || t instanceof IOException) {
             return Status.UNAVAILABLE.withCause(t);
         }
         if (t instanceof Http2Exception) {

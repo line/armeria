@@ -19,6 +19,7 @@ package com.linecorp.armeria.client;
 import java.time.Duration;
 import java.util.Map.Entry;
 
+import com.linecorp.armeria.client.endpoint.EndpointSelector;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContextWrapper;
@@ -44,6 +45,16 @@ public class ClientRequestContextWrapper
     @Override
     public ClientRequestContext newDerivedContext(Request request) {
         return delegate().newDerivedContext(request);
+    }
+
+    @Override
+    public ClientRequestContext newDerivedContext(Request request, Endpoint endpoint) {
+        return delegate().newDerivedContext(request, endpoint);
+    }
+
+    @Override
+    public EndpointSelector endpointSelector() {
+        return delegate().endpointSelector();
     }
 
     @Override

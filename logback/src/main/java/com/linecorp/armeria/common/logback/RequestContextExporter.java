@@ -267,7 +267,9 @@ final class RequestContextExporter {
         } else {
             final ClientRequestContext cCtx = (ClientRequestContext) ctx;
             final Endpoint endpoint = cCtx.endpoint();
-            if (endpoint.isGroup()) {
+            if (endpoint == null) {
+                authority = "UNKNOWN";
+            } else if (endpoint.isGroup()) {
                 authority = endpoint.authority();
             } else {
                 final int defaultPort = cCtx.sessionProtocol().defaultPort();

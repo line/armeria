@@ -18,7 +18,7 @@ package com.linecorp.armeria.client.circuitbreaker;
 import static com.linecorp.armeria.client.circuitbreaker.KeyedCircuitBreakerMapping.KeySelector.HOST;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextBuilder;
@@ -29,7 +29,6 @@ import com.linecorp.armeria.common.HttpRequest;
 public class KeyedCircuitBreakerMappingTest {
     @Test
     public void hostSelector() throws Exception {
-        assertThat(HOST.get(context(Endpoint.ofGroup("foo")), null)).isEqualTo("group:foo");
         assertThat(HOST.get(context(Endpoint.of("foo")), null)).isEqualTo("foo");
         assertThat(HOST.get(context(Endpoint.of("foo", 8080)), null)).isEqualTo("foo:8080");
         assertThat(HOST.get(context(Endpoint.of("foo").withIpAddr("1.2.3.4")), null)).isEqualTo("foo/1.2.3.4");

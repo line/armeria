@@ -27,6 +27,7 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.client.endpoint.EndpointSelector;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
@@ -34,6 +35,9 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.logging.RequestLog;
+
+import io.netty.util.Attribute;
 
 /**
  * Provides information about a {@link Request}, its {@link Response} and its related utilities.
@@ -139,8 +143,28 @@ public interface ClientRequestContext extends RequestContext {
     ClientRequestContext newDerivedContext(Request request);
 
     /**
-     * Returns the remote {@link Endpoint} of the current {@link Request}.
+     * Creates a new derived {@link RequestContext} with the specified {@link Request} and {@link Endpoint}
+     * which the {@link RequestLog} is different from the deriving context.
+     * Note that the references of {@link Attribute}s in the {@link #attrs()} are copied as well.
      */
+    ClientRequestContext newDerivedContext(Request request, Endpoint endpoint);
+
+    /**
+     * Returns the {@link EndpointSelector} used for the current {@link Request}.
+     *
+     * @return the {@link EndpointSelector} if a user specified a group {@link Endpoint}
+     *         {@code null} if a user specified a host {@link Endpoint}.
+     */
+    @Nullable
+    EndpointSelector endpointSelector();
+
+    /**
+     * Returns the remote {@link Endpoint} of the current {@link Request}.
+     *
+     * @return the remote {@link Endpoint}. {@code null} if the {@link Request} has failed
+     *         before its remote {@link Endpoint} is determined.
+     */
+    @Nullable
     Endpoint endpoint();
 
     /**

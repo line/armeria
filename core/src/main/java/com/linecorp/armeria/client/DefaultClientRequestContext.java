@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -26,6 +27,10 @@ import java.util.function.Consumer;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.endpoint.EndpointGroupException;
+import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
+import com.linecorp.armeria.client.endpoint.EndpointSelector;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
@@ -36,6 +41,7 @@ import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.stream.StreamMessage;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
@@ -53,7 +59,10 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     private final EventLoop eventLoop;
     private final ClientOptions options;
-    private final Endpoint endpoint;
+    @Nullable
+    private EndpointSelector endpointSelector;
+    @Nullable
+    private Endpoint endpoint;
     @Nullable
     private final String fragment;
 
@@ -76,8 +85,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      * @param request the request associated with this context
      */
     public DefaultClientRequestContext(
-            EventLoop eventLoop, MeterRegistry meterRegistry,
-            SessionProtocol sessionProtocol, Endpoint endpoint,
+            EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
             ClientOptions options, Request request) {
 
@@ -85,7 +93,6 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
         this.options = requireNonNull(options, "options");
-        this.endpoint = requireNonNull(endpoint, "endpoint");
         this.fragment = fragment;
 
         log = new DefaultRequestLog(this, options.requestContentPreviewerFactory(),
@@ -99,17 +106,46 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         if (!headers.isEmpty()) {
             additionalRequestHeaders = headers;
         }
-
-        runThreadLocalContextCustomizer();
     }
 
-    private HttpHeaders createAdditionalHeadersIfAbsent() {
-        final HttpHeaders additionalRequestHeaders = this.additionalRequestHeaders;
-        if (additionalRequestHeaders == null) {
-            return this.additionalRequestHeaders = HttpHeaders.of();
-        } else {
-            return additionalRequestHeaders;
+    /**
+     * Initializes this context with the specified {@link Endpoint}.
+     * This method must be invoked to finish the construction of this context.
+     *
+     * @return {@code true} if the initialization has succeeded.
+     *         {@code false} if the initialization has failed and this context's {@link RequestLog} has been
+     *         completed with the cause of the failure.
+     */
+    public boolean init(Endpoint endpoint) {
+        assert this.endpoint == null : this.endpoint;
+        try {
+            if (endpoint.isGroup()) {
+                final String groupName = endpoint.groupName();
+                final EndpointSelector endpointSelector =
+                        EndpointGroupRegistry.getNodeSelector(groupName);
+                if (endpointSelector == null) {
+                    throw new EndpointGroupException(
+                            "non-existent " + EndpointGroup.class.getSimpleName() + ": " + groupName);
+                }
+
+                this.endpointSelector = endpointSelector;
+                // Note: thread-local customizer must be run before EndpointSelector.select()
+                //       so that the customizer can inject the attributes which may be required
+                //       by the EndpointSelector.
+                runThreadLocalContextCustomizer();
+                this.endpoint = endpointSelector.select(this);
+            } else {
+                endpointSelector = null;
+                this.endpoint = endpoint;
+                runThreadLocalContextCustomizer();
+            }
+
+            return true;
+        } catch (Exception e) {
+            failEarly(e);
         }
+
+        return false;
     }
 
     private void runThreadLocalContextCustomizer() {
@@ -119,16 +155,25 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         }
     }
 
-    private DefaultClientRequestContext(DefaultClientRequestContext ctx) {
-        this(ctx, ctx.request());
+    private void failEarly(Exception cause) {
+        final RequestLogBuilder logBuilder = logBuilder();
+        final UnprocessedRequestException wrapped = new UnprocessedRequestException(cause);
+        logBuilder.endRequest(wrapped);
+        logBuilder.endResponse(wrapped);
+
+        final Request req = request();
+        if (req instanceof StreamMessage) {
+            ((StreamMessage<?>) req).abort();
+        }
     }
 
-    private DefaultClientRequestContext(DefaultClientRequestContext ctx, Request request) {
+    private DefaultClientRequestContext(DefaultClientRequestContext ctx, Request request, Endpoint endpoint) {
         super(ctx.meterRegistry(), ctx.sessionProtocol(), ctx.method(), ctx.path(), ctx.query(), request);
 
         eventLoop = ctx.eventLoop();
         options = ctx.options();
-        endpoint = ctx.endpoint();
+        endpointSelector = ctx.endpointSelector();
+        this.endpoint = requireNonNull(endpoint, "endpoint");
         fragment = ctx.fragment();
 
         log = new DefaultRequestLog(this, options.requestContentPreviewerFactory(),
@@ -157,12 +202,18 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     @Override
     public ClientRequestContext newDerivedContext() {
-        return new DefaultClientRequestContext(this);
+        return newDerivedContext(request());
     }
 
     @Override
     public ClientRequestContext newDerivedContext(Request request) {
-        return new DefaultClientRequestContext(this, request);
+        checkState(endpoint != null, "endpoint not available");
+        return newDerivedContext(request, endpoint);
+    }
+
+    @Override
+    public ClientRequestContext newDerivedContext(Request request, Endpoint endpoint) {
+        return new DefaultClientRequestContext(this, request, endpoint);
     }
 
     @Override
@@ -193,6 +244,11 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     @Override
     public ClientOptions options() {
         return options;
+    }
+
+    @Override
+    public EndpointSelector endpointSelector() {
+        return endpointSelector;
     }
 
     @Override
@@ -289,6 +345,15 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         additionalRequestHeaders = createAdditionalHeadersIfAbsent().toBuilder().addObject(headers).build();
     }
 
+    private HttpHeaders createAdditionalHeadersIfAbsent() {
+        final HttpHeaders additionalRequestHeaders = this.additionalRequestHeaders;
+        if (additionalRequestHeaders == null) {
+            return this.additionalRequestHeaders = HttpHeaders.of();
+        } else {
+            return additionalRequestHeaders;
+        }
+    }
+
     @Override
     public boolean removeAdditionalRequestHeader(CharSequence name) {
         requireNonNull(name, "name");
@@ -332,7 +397,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         buf.append('[')
            .append(sessionProtocol().uriText())
            .append("://")
-           .append(endpoint.authority())
+           .append(endpoint != null ? endpoint.authority() : "<unknown>")
            .append(path())
            .append('#')
            .append(method())
