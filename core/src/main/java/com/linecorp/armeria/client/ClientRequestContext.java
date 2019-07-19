@@ -139,9 +139,15 @@ public interface ClientRequestContext extends RequestContext {
     ClientRequestContext newDerivedContext(Request request);
 
     /**
-     * Returns the remote {@link Endpoint} of the current {@link Request}.
+     * Returns the remote {@link Endpoint} where the current {@link Request} will be sent to.
      */
     Endpoint endpoint();
+
+    /**
+     * Sets the {@link Endpoint} where the current {@link Request} will be sent to.
+     * This method is useful to a decorator that manipulates the target host of the {@link Request}.
+     */
+    void setEndpoint(Endpoint endpoint);
 
     /**
      * Returns the {@link ClientOptions} of the current {@link Request}.

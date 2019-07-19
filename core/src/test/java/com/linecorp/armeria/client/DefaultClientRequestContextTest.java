@@ -21,6 +21,10 @@ import static org.mockito.Mockito.mock;
 
 import org.junit.Test;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
+import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -87,5 +91,28 @@ public class DefaultClientRequestContextTest {
         originalCtx.addAdditionalRequestHeader(HttpHeaderNames.of("my-header#4"), "value#4");
         // Remove the first one.
         originalCtx.removeAdditionalRequestHeader(HttpHeaderNames.of("my-header#1"));
+    }
+
+    @Test
+    public void setEndpoint() {
+        final EndpointGroup group = new StaticEndpointGroup(Endpoint.of("foo.com"));
+        EndpointGroupRegistry.register("set_endpoint", group, EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN);
+        try {
+            // Start with an endpoint group.
+            final Endpoint endpoint = Endpoint.ofGroup("set_endpoint");
+            final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
+                    mock(EventLoop.class), NoopMeterRegistry.get(), SessionProtocol.H2C,
+                    endpoint, HttpMethod.POST, "/foo", null, null,
+                    ClientOptions.DEFAULT, mock(Request.class));
+            assertThat(ctx.endpoint()).isSameAs(endpoint);
+
+            // Set the new endpoint and check if it is set as expected.
+            final Endpoint selectedEndpoint = EndpointGroupRegistry.selectNode(ctx, endpoint.groupName());
+            ctx.setEndpoint(selectedEndpoint);
+            assertThat(ctx.endpoint()).isSameAs(selectedEndpoint);
+            assertThat(ctx.endpoint().authority()).isEqualTo("foo.com");
+        } finally {
+            EndpointGroupRegistry.unregister("set_endpoint");
+        }
     }
 }

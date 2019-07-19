@@ -52,6 +52,11 @@ public class ClientRequestContextWrapper
     }
 
     @Override
+    public void setEndpoint(Endpoint endpoint) {
+        delegate().setEndpoint(endpoint);
+    }
+
+    @Override
     public String fragment() {
         return delegate().fragment();
     }

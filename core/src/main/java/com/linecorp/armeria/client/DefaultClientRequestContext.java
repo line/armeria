@@ -53,7 +53,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     private final EventLoop eventLoop;
     private final ClientOptions options;
-    private final Endpoint endpoint;
+    private Endpoint endpoint;
     @Nullable
     private final String fragment;
 
@@ -198,6 +198,11 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     @Override
     public Endpoint endpoint() {
         return endpoint;
+    }
+
+    @Override
+    public void setEndpoint(Endpoint endpoint) {
+        this.endpoint = requireNonNull(endpoint, "endpoint");
     }
 
     @Override
