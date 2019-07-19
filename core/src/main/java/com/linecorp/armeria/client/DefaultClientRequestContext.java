@@ -53,7 +53,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     private final EventLoop eventLoop;
     private final ClientOptions options;
-    private Endpoint endpoint;
+    private volatile Endpoint endpoint;
     @Nullable
     private final String fragment;
 
