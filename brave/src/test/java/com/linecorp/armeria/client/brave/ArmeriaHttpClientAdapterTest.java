@@ -18,14 +18,11 @@
 package com.linecorp.armeria.client.brave;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
-import javax.annotation.Nullable;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
@@ -35,6 +32,7 @@ import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 
 class ArmeriaHttpClientAdapterTest {
 
@@ -57,6 +55,8 @@ class ArmeriaHttpClientAdapterTest {
 
     @Test
     public void url() {
+        when(requestLog.isAvailable(RequestLogAvailability.SCHEME)).thenReturn(true);
+        when(requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)).thenReturn(true);
         when(requestLog.scheme()).thenReturn(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP));
         when(requestLog.authority()).thenReturn("example.com");
         when(requestLog.path()).thenReturn("/foo");
@@ -66,6 +66,7 @@ class ArmeriaHttpClientAdapterTest {
 
     @Test
     public void statusCode() {
+        when(requestLog.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)).thenReturn(true);
         when(requestLog.status()).thenReturn(HttpStatus.OK);
         assertThat(adapter.statusCode(requestLog)).isEqualTo(200);
         assertThat(adapter.statusCodeAsInt(requestLog)).isEqualTo(200);
@@ -76,28 +77,38 @@ class ArmeriaHttpClientAdapterTest {
     }
 
     @Test
+    public void statusCode_notAvailable() {
+        when(requestLog.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)).thenReturn(false);
+        assertThat(adapter.statusCode(requestLog)).isNull();
+        assertThat(adapter.statusCodeAsInt(requestLog)).isEqualTo(0);
+    }
+
+    @Test
     public void authority() {
+        when(requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)).thenReturn(true);
         when(requestLog.authority()).thenReturn("example.com");
         assertThat(adapter.authority(requestLog)).isEqualTo("example.com");
     }
 
     @Test
     public void protocol() {
+        when(requestLog.isAvailable(RequestLogAvailability.SCHEME)).thenReturn(true);
         when(requestLog.scheme()).thenReturn(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP));
         assertThat(adapter.protocol(requestLog)).isEqualTo("http");
     }
 
     @Test
     public void serializationFormat() {
+        when(requestLog.isAvailable(RequestLogAvailability.SCHEME)).thenReturn(true);
         when(requestLog.scheme()).thenReturn(Scheme.of(SerializationFormat.of("tjson"), SessionProtocol.HTTP));
         assertThat(adapter.serializationFormat(requestLog)).isEqualTo("tjson");
-
         when(requestLog.scheme()).thenReturn(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP));
         assertThat(adapter.serializationFormat(requestLog)).isNull();
     }
 
     @Test
     public void rpcMethod() {
+        when(requestLog.isAvailable(RequestLogAvailability.REQUEST_CONTENT)).thenReturn(true);
         assertThat(adapter.rpcMethod(requestLog)).isNull();
 
         final RpcRequest rpcRequest = mock(RpcRequest.class);
@@ -108,6 +119,7 @@ class ArmeriaHttpClientAdapterTest {
 
     @Test
     public void requestHeader() {
+        when(requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)).thenReturn(true);
         final RequestHeaders requestHeaders = mock(RequestHeaders.class);
         when(requestLog.requestHeaders()).thenReturn(requestHeaders);
         when(requestHeaders.get("foo")).thenReturn("bar");

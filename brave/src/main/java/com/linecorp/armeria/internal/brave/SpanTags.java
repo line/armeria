@@ -20,11 +20,14 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 
 import brave.Span;
 
@@ -92,7 +95,16 @@ public final class SpanTags {
         }
     }
 
+    /**
+     * Url needs {@link RequestLogAvailability#SCHEME} and {@link RequestLogAvailability#REQUEST_HEADERS}.
+     * Return null if this property is not available yet.
+     */
+    @Nullable
     public static String generateUrl(RequestLog requestLog) {
+        if (!requestLog.isAvailable(RequestLogAvailability.SCHEME) ||
+            !requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)) {
+            return null;
+        }
         final Scheme scheme = requestLog.scheme();
         final String authority = requestLog.authority();
         final String path = requestLog.path();

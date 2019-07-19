@@ -47,6 +47,7 @@ public class ArmeriaHttpClientAdapter extends HttpClientAdapter<RequestLog, Requ
     }
 
     @Override
+    @Nullable
     public String url(RequestLog requestLog) {
         return SpanTags.generateUrl(requestLog);
     }
@@ -54,6 +55,9 @@ public class ArmeriaHttpClientAdapter extends HttpClientAdapter<RequestLog, Requ
     @Override
     @Nullable
     public String requestHeader(RequestLog requestLog, String name) {
+        if (!requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)) {
+            return null;
+        }
         return requestLog.requestHeaders().get(name);
     }
 
@@ -66,20 +70,31 @@ public class ArmeriaHttpClientAdapter extends HttpClientAdapter<RequestLog, Requ
 
     @Override
     public int statusCodeAsInt(RequestLog requestLog) {
+        if (!requestLog.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
+            return 0;
+        }
         return requestLog.status().code();
     }
 
     /**
      * Returns the authority of the {@link Request}.
      */
+    @Nullable
     public String authority(RequestLog requestLog) {
+        if (!requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)) {
+            return null;
+        }
         return requestLog.authority();
     }
 
     /**
      * Returns the {@link SessionProtocol#uriText()} of the {@link Request}.
      */
+    @Nullable
     public String protocol(RequestLog requestLog) {
+        if (!requestLog.isAvailable(RequestLogAvailability.SCHEME)) {
+            return null;
+        }
         return requestLog.scheme().sessionProtocol().uriText();
     }
 
@@ -88,6 +103,9 @@ public class ArmeriaHttpClientAdapter extends HttpClientAdapter<RequestLog, Requ
      */
     @Nullable
     public String serializationFormat(RequestLog requestLog) {
+        if (!requestLog.isAvailable(RequestLogAvailability.SCHEME)) {
+            return null;
+        }
         final SerializationFormat serFmt = requestLog.scheme().serializationFormat();
         return serFmt == SerializationFormat.NONE ? null : serFmt.uriText();
     }
@@ -97,6 +115,9 @@ public class ArmeriaHttpClientAdapter extends HttpClientAdapter<RequestLog, Requ
      */
     @Nullable
     public String rpcMethod(RequestLog requestLog) {
+        if (!requestLog.isAvailable(RequestLogAvailability.REQUEST_CONTENT)) {
+            return null;
+        }
         final Object requestContent = requestLog.requestContent();
         return requestContent instanceof RpcRequest ? ((RpcRequest) requestContent).method() : null;
     }

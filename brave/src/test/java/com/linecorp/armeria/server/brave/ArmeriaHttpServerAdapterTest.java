@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 
 import brave.Span;
 
@@ -60,6 +61,8 @@ class ArmeriaHttpServerAdapterTest {
 
     @Test
     public void url() {
+        when(requestLog.isAvailable(RequestLogAvailability.SCHEME)).thenReturn(true);
+        when(requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)).thenReturn(true);
         when(requestLog.scheme()).thenReturn(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP));
         when(requestLog.authority()).thenReturn("example.com");
         when(requestLog.path()).thenReturn("/foo");
@@ -69,6 +72,7 @@ class ArmeriaHttpServerAdapterTest {
 
     @Test
     public void statusCode() {
+        when(requestLog.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)).thenReturn(true);
         when(requestLog.status()).thenReturn(HttpStatus.OK);
         assertThat(adapter.statusCode(requestLog)).isEqualTo(200);
         assertThat(adapter.statusCodeAsInt(requestLog)).isEqualTo(200);
@@ -79,19 +83,29 @@ class ArmeriaHttpServerAdapterTest {
     }
 
     @Test
+    public void statusCode_notAvailable() {
+        when(requestLog.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)).thenReturn(false);
+        assertThat(adapter.statusCode(requestLog)).isNull();
+        assertThat(adapter.statusCodeAsInt(requestLog)).isEqualTo(0);
+    }
+
+    @Test
     public void authority() {
+        when(requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)).thenReturn(true);
         when(requestLog.authority()).thenReturn("example.com");
         assertThat(adapter.authority(requestLog)).isEqualTo("example.com");
     }
 
     @Test
     public void protocol() {
+        when(requestLog.isAvailable(RequestLogAvailability.SCHEME)).thenReturn(true);
         when(requestLog.scheme()).thenReturn(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP));
         assertThat(adapter.protocol(requestLog)).isEqualTo("http");
     }
 
     @Test
     public void serializationFormat() {
+        when(requestLog.isAvailable(RequestLogAvailability.SCHEME)).thenReturn(true);
         when(requestLog.scheme()).thenReturn(Scheme.of(SerializationFormat.of("tjson"), SessionProtocol.HTTP));
         assertThat(adapter.serializationFormat(requestLog)).isEqualTo("tjson");
 
@@ -101,6 +115,7 @@ class ArmeriaHttpServerAdapterTest {
 
     @Test
     public void rpcMethod() {
+        when(requestLog.isAvailable(RequestLogAvailability.REQUEST_CONTENT)).thenReturn(true);
         assertThat(adapter.rpcMethod(requestLog)).isNull();
 
         final RpcRequest rpcRequest = mock(RpcRequest.class);
@@ -111,6 +126,7 @@ class ArmeriaHttpServerAdapterTest {
 
     @Test
     public void requestHeader() {
+        when(requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)).thenReturn(true);
         final RequestHeaders requestHeaders = mock(RequestHeaders.class);
         when(requestLog.requestHeaders()).thenReturn(requestHeaders);
         when(requestHeaders.get("foo")).thenReturn("bar");
@@ -119,6 +135,7 @@ class ArmeriaHttpServerAdapterTest {
 
     @Test
     public void parseClientIpAndPort() throws Exception {
+        when(requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)).thenReturn(true);
         final RequestHeaders requestHeaders = mock(RequestHeaders.class);
         when(requestLog.requestHeaders()).thenReturn(requestHeaders);
 
