@@ -20,33 +20,30 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.impl.conn.InMemoryDnsResolver;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.testing.internal.MockAddressResolverGroup;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
-
-import io.netty.util.NetUtil;
 
 public class ServerBuilderTest {
 
-    private static final InMemoryDnsResolver dnsResolver = new InMemoryDnsResolver();
+    private static ClientFactory clientFactory;
     @ClassRule
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            dnsResolver.add("test.example.com", NetUtil.LOCALHOST4);
             sb.service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
               .service("/test", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
               .decorator((delegate, ctx, req) -> {
@@ -62,6 +59,17 @@ public class ServerBuilderTest {
               .build();
         }
     };
+
+    @BeforeClass
+    public static void init() {
+        clientFactory = new ClientFactoryBuilder()
+                .addressResolverGroupFactory(eventLoopGroup -> MockAddressResolverGroup.localhost())
+                .build();
+    }
+    @AfterClass
+    public static void destroy() {
+        clientFactory.close();
+    }
 
     @Test
     public void acceptDuplicatePort() throws Exception {
@@ -208,18 +216,18 @@ public class ServerBuilderTest {
      */
     @Test
     public void decoratorTest() throws Exception {
-        final HttpClient c = HttpClient.of(server.uri("/"));
-        final AggregatedHttpResponse res = c.get("/").aggregate().get();
+        final HttpClient client = HttpClient.of(server.uri("/"));
+        final AggregatedHttpResponse res = client.get("/").aggregate().get();
         assertThat(res.headers().get("global_decorator")).isEqualTo("true");
         assertThat(res.headers().contains("virtualhost_decorator")).isEqualTo(false);
-        final AggregatedHttpResponse res2 = c.get("/test").aggregate().get();
+        final AggregatedHttpResponse res2 = client.get("/test").aggregate().get();
         assertThat(res2.headers().get("global_decorator")).isEqualTo("true");
         assertThat(res2.headers().contains("virtualhost_decorator")).isEqualTo(false);
-        final CloseableHttpClient client = HttpClients.custom().setDnsResolver(dnsResolver).build();
-        try (CloseableHttpResponse res3 = client.execute(
-                new HttpGet("http://test.example.com:" + server.httpPort()))) {
-            assertThat(res3.getFirstHeader("global_decorator").getValue()).isEqualTo("true");
-            assertThat(res3.getFirstHeader("virtualhost_decorator").getValue()).isEqualTo("true");
-        }
+
+        final HttpClient vhostClient = HttpClient.of(clientFactory, "http://test.example.com:" + server.httpPort());
+        final AggregatedHttpResponse res3 = vhostClient.get("/").aggregate().get();
+        assertThat(res3.headers().get("global_decorator")).isEqualTo("true");
+        assertThat(res3.headers().get("virtualhost_decorator")).isEqualTo("true");
+
     }
 }

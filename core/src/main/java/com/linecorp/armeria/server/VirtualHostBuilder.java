@@ -589,7 +589,7 @@ public final class VirtualHostBuilder {
     }
 
     /**
-     * Decorates all {@link Service}s with the specified {@code decoratingServiceFunction}.
+     * Decorates all {@link Service}s with the specified {@link DecoratingServiceFunction}.
      *
      * @param decoratingServiceFunction the {@link DecoratingServiceFunction} that decorates a {@link Service}.
      */
