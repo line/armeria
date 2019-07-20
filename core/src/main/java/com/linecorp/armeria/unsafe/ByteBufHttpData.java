@@ -160,13 +160,13 @@ public class ByteBufHttpData extends AbstractHttpData implements ByteBufHolder {
     }
 
     @Override
-    public InputStream toInputStream() {
-        return new ByteBufInputStream(buf, true);
-    }
-
-    @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("buf", buf.toString()).toString();
+    }
+
+    @Override
+    public InputStream toInputStream() {
+        return new ByteBufInputStream(buf, true);
     }
 }
