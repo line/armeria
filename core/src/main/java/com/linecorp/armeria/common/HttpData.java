@@ -32,6 +32,7 @@ import java.util.Locale;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import it.unimi.dsi.fastutil.io.FastByteArrayInputStream;
 
@@ -386,6 +387,10 @@ public interface HttpData extends HttpObject {
 
     /**
      * Returns a new {@link InputStream} that is sourced from this data.
+     *
+     * <p>Note, if this {@link HttpData} is pooled (e.g., it is the result of a call to
+     * {@link HttpResponse#aggregateWithPooledObjects(ByteBufAllocator)}), then this {@link InputStream} will
+     * release the underlying buffer back to the pool when closed.
      */
     default InputStream toInputStream() {
         return new FastByteArrayInputStream(array());
