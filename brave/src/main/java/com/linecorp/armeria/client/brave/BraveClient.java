@@ -17,8 +17,6 @@
 package com.linecorp.armeria.client.brave;
 
 import static com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext.ensureScopeUsesRequestContext;
-import static com.linecorp.armeria.internal.brave.SpanTags.WIRE_RECEIVE_ANNOTATION;
-import static com.linecorp.armeria.internal.brave.SpanTags.WIRE_SEND_ANNOTATION;
 
 import java.util.function.Function;
 

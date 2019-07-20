@@ -18,12 +18,17 @@ package com.linecorp.armeria.client.brave;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
+
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
 import org.junit.AssumptionViolatedException;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 import com.google.common.collect.ImmutableList;
 
@@ -57,17 +62,35 @@ import okhttp3.Protocol;
 import okhttp3.mockwebserver.MockResponse;
 import zipkin2.Span;
 
+@RunWith(Parameterized.class)
 public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
 
+    @Parameters
+    public static List<SessionProtocol> sessionProtocols() {
+        return ImmutableList.of(SessionProtocol.H1C, SessionProtocol.H2C);
+    }
+
     // // Hide currentTraceContext in ITHttpClient
-    private CurrentTraceContext currentTraceContext =
+    private final CurrentTraceContext currentTraceContext =
             RequestContextCurrentTraceContext.builder()
                                              .addScopeDecorator(StrictScopeDecorator.create())
                                              .build();
 
+    private final List<Protocol> protocols;
+    private final SessionProtocol sessionProtocol;
+
+    public BraveClientIntegrationTest(SessionProtocol sessionProtocol) {
+        this.sessionProtocol = sessionProtocol;
+        if (sessionProtocol == SessionProtocol.H2C) {
+            protocols = ImmutableList.of(Protocol.H2_PRIOR_KNOWLEDGE);
+        } else {
+            protocols = ImmutableList.of(Protocol.HTTP_1_1, Protocol.HTTP_2);
+        }
+    }
+
     @Before
     public void setupServer() {
-        server.setProtocols(ImmutableList.of(Protocol.H2_PRIOR_KNOWLEDGE));
+        server.setProtocols(protocols);
     }
 
     @Override
@@ -77,11 +100,11 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
 
     @Override
     protected HttpClient newClient(int port) {
-        return HttpClient.of("h2c://127.0.0.1:" + port, ClientOptions.of(
-                ClientOption.DECORATION.newValue(
-                        new ClientDecorationBuilder()
-                                .add(BraveClient.newDecorator(httpTracing))
-                                .build())));
+        return HttpClient.of(sessionProtocol.uriText() + "://127.0.0.1:" + port,
+                             ClientOptions.of(ClientOption.DECORATION.newValue(
+                                     new ClientDecorationBuilder()
+                                             .add(BraveClient.newDecorator(httpTracing))
+                                             .build())));
     }
 
     @Override
@@ -124,6 +147,16 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
     @Test
     public void redirect() throws Exception {
         throw new AssumptionViolatedException("Armeria does not support client redirect.");
+    }
+
+    @Override
+    @Test
+    public void addsErrorTagOnTransportException() throws Exception {
+        if (sessionProtocol == SessionProtocol.H1C) {
+            // TODO https://github.com/line/armeria/issues/1914
+            throw new AssumptionViolatedException("Armeria does not preserve the error in HTTP/1.1.");
+        }
+        super.addsErrorTagOnTransportException();
     }
 
     @Override
