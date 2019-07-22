@@ -390,7 +390,8 @@ public interface HttpData extends HttpObject {
      *
      * <p>Note, if this {@link HttpData} is pooled (e.g., it is the result of a call to
      * {@link HttpResponse#aggregateWithPooledObjects(ByteBufAllocator)}), then this {@link InputStream} will
-     * release the underlying buffer back to the pool when closed.
+     * increase the reference count of the underlying buffer. Make sure to call {@link InputStream#close()},
+     * usually using a try-with-resources invocation, to release this extra reference.
      */
     default InputStream toInputStream() {
         return new FastByteArrayInputStream(array());
