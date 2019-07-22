@@ -137,7 +137,10 @@ public class HttpTracingClient extends SimpleDecoratingClient<HttpRequest, HttpR
         ctx.onChild(RequestContextCurrentTraceContext::copy);
 
         ctx.log().addListener(log -> {
-            SpanTags.logWireSend(span, log.requestFirstBytesTransferredTimeNanos(), log);
+            // The request might have failed even before it's sent, e.g. validation failure, connection error.
+            if (log.isAvailable(RequestLogAvailability.REQUEST_FIRST_BYTES_TRANSFERRED)) {
+                SpanTags.logWireSend(span, log.requestFirstBytesTransferredTimeNanos(), log);
+            }
 
             // If the client timed-out the request, we will have never received any response data at all.
             if (log.isAvailable(RequestLogAvailability.RESPONSE_FIRST_BYTES_TRANSFERRED)) {
