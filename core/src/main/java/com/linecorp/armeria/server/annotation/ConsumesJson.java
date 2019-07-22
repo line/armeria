@@ -21,10 +21,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * An alias for {@code @Consumes("application/json; charset=utf-8")}.
+ * An alias for {@code @Consumes("application/json")}.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.TYPE, ElementType.METHOD })
-@Consumes("application/json; charset=utf-8")
+@Consumes("application/json")
 public @interface ConsumesJson {
 }
