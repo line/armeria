@@ -1135,6 +1135,17 @@ public final class ServerBuilder {
     }
 
     /**
+     * Decorates all {@link Service}s with the specified {@link DecoratingServiceFunction}.
+     *
+     * @param decoratingServiceFunction the {@link DecoratingServiceFunction} that decorates a {@link Service}.
+     */
+    public ServerBuilder decorator(
+            DecoratingServiceFunction<HttpRequest, HttpResponse> decoratingServiceFunction) {
+        requireNonNull(decoratingServiceFunction, "decoratingServiceFunction");
+        return decorator(delegate -> new FunctionalDecoratingService<>(delegate, decoratingServiceFunction));
+    }
+
+    /**
      * Sets a list of {@link ClientAddressSource}s which are used to determine where to look for the
      * client address, in the order of preference. {@code Forwarded} header, {@code X-Forwarded-For} header
      * and the source address of a PROXY protocol header will be used by default.

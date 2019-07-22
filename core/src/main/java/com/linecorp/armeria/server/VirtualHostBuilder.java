@@ -589,6 +589,17 @@ public final class VirtualHostBuilder {
     }
 
     /**
+     * Decorates all {@link Service}s with the specified {@link DecoratingServiceFunction}.
+     *
+     * @param decoratingServiceFunction the {@link DecoratingServiceFunction} that decorates a {@link Service}.
+     */
+    public VirtualHostBuilder decorator(
+            DecoratingServiceFunction<HttpRequest, HttpResponse> decoratingServiceFunction) {
+        requireNonNull(decoratingServiceFunction, "decoratingServiceFunction");
+        return decorator(delegate -> new FunctionalDecoratingService<>(delegate, decoratingServiceFunction));
+    }
+
+    /**
      * Sets the access logger mapper of this {@link VirtualHost}.
      */
     public VirtualHostBuilder accessLogger(Function<VirtualHost, Logger> mapper) {
