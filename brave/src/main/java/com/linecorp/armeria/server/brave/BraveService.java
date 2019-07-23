@@ -55,7 +55,7 @@ public final class BraveService extends SimpleDecoratingService<HttpRequest, Htt
     public static Function<Service<HttpRequest, HttpResponse>, BraveService>
     newDecorator(Tracing tracing) {
         return newDecorator(HttpTracing.newBuilder(tracing)
-                                       .serverParser(new ArmeriaHttpServerParser())
+                                       .serverParser(ArmeriaHttpServerParser.get())
                                        .build());
     }
 
@@ -83,7 +83,7 @@ public final class BraveService extends SimpleDecoratingService<HttpRequest, Htt
         currentTraceContext = httpTracing.tracing().currentTraceContext();
         tracer = httpTracing.tracing().tracer();
         serverParser = httpTracing.serverParser();
-        adapter = new ArmeriaHttpServerAdapter();
+        adapter = ArmeriaHttpServerAdapter.get();
         handler = HttpServerHandler.create(httpTracing, adapter);
         extractor = httpTracing.tracing().propagationFactory()
                                .create(AsciiStringKeyFactory.INSTANCE)
@@ -107,10 +107,7 @@ public final class BraveService extends SimpleDecoratingService<HttpRequest, Htt
                               RequestLogAvailability.REQUEST_START);
 
         ctx.log().addListener(log -> {
-            // The request might have failed even before it's sent, e.g. validation failure, connection error.
-            if (log.isAvailable(RequestLogAvailability.REQUEST_FIRST_BYTES_TRANSFERRED)) {
-                SpanTags.logWireReceive(span, log.requestFirstBytesTransferredTimeNanos(), log);
-            }
+            SpanTags.logWireReceive(span, log.requestFirstBytesTransferredTimeNanos(), log);
             // If the client timed-out the request, we will have never sent any response data at all.
             if (log.isAvailable(RequestLogAvailability.RESPONSE_FIRST_BYTES_TRANSFERRED)) {
                 SpanTags.logWireSend(span, log.responseFirstBytesTransferredTimeNanos(), log);

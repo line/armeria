@@ -71,7 +71,7 @@ public final class BraveClient extends SimpleDecoratingClient<HttpRequest, HttpR
     public static Function<Client<HttpRequest, HttpResponse>, BraveClient> newDecorator(
             Tracing tracing, @Nullable String remoteServiceName) {
         HttpTracing httpTracing = HttpTracing.newBuilder(tracing)
-                                             .clientParser(new ArmeriaHttpClientParser())
+                                             .clientParser(ArmeriaHttpClientParser.get())
                                              .build();
         if (remoteServiceName != null) {
             httpTracing = httpTracing.clientOf(remoteServiceName);
@@ -109,7 +109,7 @@ public final class BraveClient extends SimpleDecoratingClient<HttpRequest, HttpR
         currentTraceContext = httpTracing.tracing().currentTraceContext();
         tracer = httpTracing.tracing().tracer();
         clientParser = httpTracing.clientParser();
-        adapter = new ArmeriaHttpClientAdapter();
+        adapter = ArmeriaHttpClientAdapter.get();
         handler = HttpClientHandler.create(httpTracing, adapter);
         injector = httpTracing.tracing().propagationFactory().create(AsciiStringKeyFactory.INSTANCE)
                               .injector(RequestHeadersBuilder::set);

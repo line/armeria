@@ -241,8 +241,8 @@ public class BraveIntegrationTest {
                                              .spanReporter(spanReporter)
                                              .sampler(Sampler.ALWAYS_SAMPLE)
                                              .build())
-                          .clientParser(new ArmeriaHttpClientParser())
-                          .serverParser(new ArmeriaHttpServerParser())
+                          .clientParser(ArmeriaHttpClientParser.get())
+                          .serverParser(ArmeriaHttpServerParser.get())
                           .build();
     }
 

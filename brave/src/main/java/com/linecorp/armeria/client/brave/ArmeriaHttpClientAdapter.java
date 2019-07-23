@@ -28,7 +28,17 @@ import com.linecorp.armeria.internal.brave.SpanTags;
 
 import brave.http.HttpClientAdapter;
 
-public class ArmeriaHttpClientAdapter extends HttpClientAdapter<RequestLog, RequestLog> {
+public final class ArmeriaHttpClientAdapter extends HttpClientAdapter<RequestLog, RequestLog> {
+
+    private static final ArmeriaHttpClientAdapter INSTANCE = new ArmeriaHttpClientAdapter();
+
+    public static ArmeriaHttpClientAdapter get() {
+        return INSTANCE;
+    }
+
+    private ArmeriaHttpClientAdapter() {
+    }
+
     @Override
     public String method(RequestLog requestLog) {
         return requestLog.method().name();

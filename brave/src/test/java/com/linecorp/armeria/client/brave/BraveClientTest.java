@@ -199,7 +199,7 @@ class BraveClientTest {
             throws Exception {
 
         HttpTracing httpTracing = HttpTracing.newBuilder(tracing)
-                                             .clientParser(new ArmeriaHttpClientParser())
+                                             .clientParser(ArmeriaHttpClientParser.get())
                                              .build();
         if (remoteServiceName != null) {
             httpTracing = httpTracing.clientOf(remoteServiceName);

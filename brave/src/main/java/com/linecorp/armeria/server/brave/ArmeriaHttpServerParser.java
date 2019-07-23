@@ -41,7 +41,17 @@ import brave.http.HttpServerParser;
  * </ul>
  * User can extend this class or implement own {@link HttpServerParser}.
  */
-public class ArmeriaHttpServerParser extends HttpServerParser {
+public final class ArmeriaHttpServerParser extends HttpServerParser {
+
+    private static final ArmeriaHttpServerParser INSTANCE = new ArmeriaHttpServerParser();
+
+    public static ArmeriaHttpServerParser get() {
+        return INSTANCE;
+    }
+
+    private ArmeriaHttpServerParser() {
+    }
+
     @Override
     public <T> void response(HttpAdapter<?, T> rawAdapter, T res, Throwable error, SpanCustomizer customizer) {
         super.response(rawAdapter, res, error, customizer);

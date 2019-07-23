@@ -39,18 +39,16 @@ class ArmeriaHttpClientAdapterTest {
     @Mock
     private RequestLog requestLog;
 
-    private final ArmeriaHttpClientAdapter adapter = new ArmeriaHttpClientAdapter();
-
     @Test
     public void path() {
         when(requestLog.path()).thenReturn("/foo");
-        assertThat(adapter.path(requestLog)).isEqualTo("/foo");
+        assertThat(ArmeriaHttpClientAdapter.get().path(requestLog)).isEqualTo("/foo");
     }
 
     @Test
     public void method() {
         when(requestLog.method()).thenReturn(HttpMethod.GET);
-        assertThat(adapter.method(requestLog)).isEqualTo("GET");
+        assertThat(ArmeriaHttpClientAdapter.get().method(requestLog)).isEqualTo("GET");
     }
 
     @Test
@@ -61,60 +59,60 @@ class ArmeriaHttpClientAdapterTest {
         when(requestLog.authority()).thenReturn("example.com");
         when(requestLog.path()).thenReturn("/foo");
         when(requestLog.query()).thenReturn("name=hoge");
-        assertThat(adapter.url(requestLog)).isEqualTo("http://example.com/foo?name=hoge");
+        assertThat(ArmeriaHttpClientAdapter.get().url(requestLog)).isEqualTo("http://example.com/foo?name=hoge");
     }
 
     @Test
     public void statusCode() {
         when(requestLog.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)).thenReturn(true);
         when(requestLog.status()).thenReturn(HttpStatus.OK);
-        assertThat(adapter.statusCode(requestLog)).isEqualTo(200);
-        assertThat(adapter.statusCodeAsInt(requestLog)).isEqualTo(200);
+        assertThat(ArmeriaHttpClientAdapter.get().statusCode(requestLog)).isEqualTo(200);
+        assertThat(ArmeriaHttpClientAdapter.get().statusCodeAsInt(requestLog)).isEqualTo(200);
 
         when(requestLog.status()).thenReturn(HttpStatus.UNKNOWN);
-        assertThat(adapter.statusCode(requestLog)).isNull();
-        assertThat(adapter.statusCodeAsInt(requestLog)).isEqualTo(0);
+        assertThat(ArmeriaHttpClientAdapter.get().statusCode(requestLog)).isNull();
+        assertThat(ArmeriaHttpClientAdapter.get().statusCodeAsInt(requestLog)).isEqualTo(0);
     }
 
     @Test
     public void statusCode_notAvailable() {
         when(requestLog.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)).thenReturn(false);
-        assertThat(adapter.statusCode(requestLog)).isNull();
-        assertThat(adapter.statusCodeAsInt(requestLog)).isEqualTo(0);
+        assertThat(ArmeriaHttpClientAdapter.get().statusCode(requestLog)).isNull();
+        assertThat(ArmeriaHttpClientAdapter.get().statusCodeAsInt(requestLog)).isEqualTo(0);
     }
 
     @Test
     public void authority() {
         when(requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)).thenReturn(true);
         when(requestLog.authority()).thenReturn("example.com");
-        assertThat(adapter.authority(requestLog)).isEqualTo("example.com");
+        assertThat(ArmeriaHttpClientAdapter.get().authority(requestLog)).isEqualTo("example.com");
     }
 
     @Test
     public void protocol() {
         when(requestLog.isAvailable(RequestLogAvailability.SCHEME)).thenReturn(true);
         when(requestLog.scheme()).thenReturn(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP));
-        assertThat(adapter.protocol(requestLog)).isEqualTo("http");
+        assertThat(ArmeriaHttpClientAdapter.get().protocol(requestLog)).isEqualTo("http");
     }
 
     @Test
     public void serializationFormat() {
         when(requestLog.isAvailable(RequestLogAvailability.SCHEME)).thenReturn(true);
         when(requestLog.scheme()).thenReturn(Scheme.of(SerializationFormat.of("tjson"), SessionProtocol.HTTP));
-        assertThat(adapter.serializationFormat(requestLog)).isEqualTo("tjson");
+        assertThat(ArmeriaHttpClientAdapter.get().serializationFormat(requestLog)).isEqualTo("tjson");
         when(requestLog.scheme()).thenReturn(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP));
-        assertThat(adapter.serializationFormat(requestLog)).isNull();
+        assertThat(ArmeriaHttpClientAdapter.get().serializationFormat(requestLog)).isNull();
     }
 
     @Test
     public void rpcMethod() {
         when(requestLog.isAvailable(RequestLogAvailability.REQUEST_CONTENT)).thenReturn(true);
-        assertThat(adapter.rpcMethod(requestLog)).isNull();
+        assertThat(ArmeriaHttpClientAdapter.get().rpcMethod(requestLog)).isNull();
 
         final RpcRequest rpcRequest = mock(RpcRequest.class);
         when(requestLog.requestContent()).thenReturn(rpcRequest);
         when(rpcRequest.method()).thenReturn("foo");
-        assertThat(adapter.rpcMethod(requestLog)).isEqualTo("foo");
+        assertThat(ArmeriaHttpClientAdapter.get().rpcMethod(requestLog)).isEqualTo("foo");
     }
 
     @Test
@@ -123,6 +121,6 @@ class ArmeriaHttpClientAdapterTest {
         final RequestHeaders requestHeaders = mock(RequestHeaders.class);
         when(requestLog.requestHeaders()).thenReturn(requestHeaders);
         when(requestHeaders.get("foo")).thenReturn("bar");
-        assertThat(adapter.requestHeader(requestLog, "foo")).isEqualTo("bar");
+        assertThat(ArmeriaHttpClientAdapter.get().requestHeader(requestLog, "foo")).isEqualTo("bar");
     }
 }

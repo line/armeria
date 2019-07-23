@@ -31,6 +31,16 @@ import brave.Span;
 import brave.http.HttpServerAdapter;
 
 public final class ArmeriaHttpServerAdapter extends HttpServerAdapter<RequestLog, RequestLog> {
+
+    private static final ArmeriaHttpServerAdapter INSTANCE = new ArmeriaHttpServerAdapter();
+
+    public static ArmeriaHttpServerAdapter get() {
+        return INSTANCE;
+    }
+
+    private ArmeriaHttpServerAdapter() {
+    }
+
     @Override
     public String method(RequestLog requestLog) {
         return requestLog.method().name();
