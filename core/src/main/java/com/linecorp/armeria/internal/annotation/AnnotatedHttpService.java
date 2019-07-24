@@ -67,7 +67,7 @@ import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.SimpleDecoratingService;
+import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.annotation.ByteArrayResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
@@ -362,8 +362,7 @@ public class AnnotatedHttpService implements HttpService {
      * {@link Exception} to be handled by {@link ExceptionHandlerFunction}s even if the exception is raised
      * from a decorator.
      */
-    private class ExceptionFilteredHttpResponseDecorator
-            extends SimpleDecoratingService<HttpRequest, HttpResponse> {
+    private class ExceptionFilteredHttpResponseDecorator extends SimpleDecoratingHttpService {
 
         ExceptionFilteredHttpResponseDecorator(Service<HttpRequest, HttpResponse> delegate) {
             super(delegate);

@@ -30,7 +30,7 @@ import com.linecorp.armeria.internal.brave.SpanTags;
 import com.linecorp.armeria.internal.brave.TraceContextUtil;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.SimpleDecoratingService;
+import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 
 import brave.Span;
 import brave.Span.Kind;
@@ -44,7 +44,7 @@ import brave.propagation.TraceContextOrSamplingFlags;
  * Decorates a {@link Service} to trace inbound {@link HttpRequest}s using
  * <a href="https://github.com/openzipkin/brave">Brave</a>.
  */
-public final class BraveService extends SimpleDecoratingService<HttpRequest, HttpResponse> {
+public final class BraveService extends SimpleDecoratingHttpService {
 
     // TODO(minwoox) Add the variant which takes HttpTracing.
 

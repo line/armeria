@@ -52,14 +52,14 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.SimpleDecoratingService;
+import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.auth.Authorizer;
 
 /**
  * A decorator which initiates an authentication request to the remote identity provider if the request is
  * not authenticated.
  */
-final class SamlDecorator extends SimpleDecoratingService<HttpRequest, HttpResponse> {
+final class SamlDecorator extends SimpleDecoratingHttpService {
     private static final Logger logger = LoggerFactory.getLogger(SamlDecorator.class);
 
     private final SamlServiceProvider sp;

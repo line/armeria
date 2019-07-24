@@ -36,7 +36,7 @@ import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.Deco
 import com.linecorp.armeria.server.DecoratingServiceFunction;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.SimpleDecoratingService;
+import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.DecoratorFactory;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
@@ -184,7 +184,7 @@ public class AnnotatedHttpServiceFactoryTest {
         public Function<Service<HttpRequest, HttpResponse>,
                 ? extends Service<HttpRequest, HttpResponse>> newDecorator(
                 UserDefinedRepeatableDecorator parameter) {
-            return service -> new SimpleDecoratingService<HttpRequest, HttpResponse>(service) {
+            return service -> new SimpleDecoratingHttpService(service) {
                 @Override
                 public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                     return service.serve(ctx, req);

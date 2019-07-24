@@ -47,7 +47,7 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceWithRoutes;
-import com.linecorp.armeria.server.SimpleDecoratingService;
+import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
@@ -59,7 +59,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 
 /**
- * A {@link SimpleDecoratingService} which allows {@link GrpcService} to serve requests without the framing
+ * A {@link SimpleDecoratingHttpService} which allows {@link GrpcService} to serve requests without the framing
  * specified by the gRPC wire protocol. This can be useful for serving both legacy systems and gRPC clients with
  * the same business logic.
  *
@@ -73,7 +73,7 @@ import io.netty.buffer.ByteBufHolder;
  *     </li>
  * </ul>
  */
-class UnframedGrpcService extends SimpleDecoratingService<HttpRequest, HttpResponse>
+class UnframedGrpcService extends SimpleDecoratingHttpService
         implements ServiceWithRoutes<HttpRequest, HttpResponse> {
 
     private static final char LINE_SEPARATOR = '\n';

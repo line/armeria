@@ -1,5 +1,5 @@
 /*
- *  Copyright 2017 LINE Corporation
+ *  Copyright 2019 LINE Corporation
  *
  *  LINE Corporation licenses this file to you under the Apache License,
  *  version 2.0 (the "License"); you may not use this file except in compliance
@@ -18,21 +18,19 @@ package com.linecorp.armeria.client;
 
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
 
 /**
- * Decorates a {@link Client}. Use {@link DecoratingClient} if your {@link Client} has different
+ * Decorates an RPC {@link Client}. Use {@link DecoratingClient} if your {@link Client} has different
  * {@link Request} or {@link Response} type from the {@link Client} being decorated.
- *
- * @param <I> the {@link Request} type of the {@link Client} being decorated
- * @param <O> the {@link Response} type of the {@link Client} being decorated
  */
-public abstract class SimpleDecoratingClient<I extends Request, O extends Response>
-        extends DecoratingClient<I, O, I, O> {
+public abstract class SimpleDecoratingRpcClient extends SimpleDecoratingClient<RpcRequest, RpcResponse> {
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    protected SimpleDecoratingClient(Client<I, O> delegate) {
+    protected SimpleDecoratingRpcClient(Client<RpcRequest, RpcResponse> delegate) {
         super(delegate);
     }
 }

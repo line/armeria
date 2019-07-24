@@ -31,7 +31,7 @@ import com.linecorp.armeria.internal.brave.SpanContextUtil;
 import com.linecorp.armeria.internal.brave.SpanTags;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.SimpleDecoratingService;
+import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.brave.BraveService;
 
 import brave.Span;
@@ -52,7 +52,7 @@ import brave.propagation.TraceContextOrSamplingFlags;
  * @deprecated Use {@link BraveService}.
  */
 @Deprecated
-public class HttpTracingService extends SimpleDecoratingService<HttpRequest, HttpResponse> {
+public class HttpTracingService extends SimpleDecoratingHttpService {
 
     /**
      * Creates a new tracing {@link Service} decorator using the specified {@link Tracing} instance.

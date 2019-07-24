@@ -35,7 +35,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.SimpleDecoratingService;
+import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 
 /**
  * Decorates an HTTP {@link Service} to add the
@@ -44,7 +44,7 @@ import com.linecorp.armeria.server.SimpleDecoratingService;
  *
  * @see CorsServiceBuilder
  */
-public final class CorsService extends SimpleDecoratingService<HttpRequest, HttpResponse> {
+public final class CorsService extends SimpleDecoratingHttpService {
 
     private static final Logger logger = LoggerFactory.getLogger(CorsService.class);
 
