@@ -9,7 +9,7 @@ failing or taking more time than others in a distributed environment. Armeria su
 `Brave <https://github.com/openzipkin/brave/>`_, which is a Java tracing library compatible with
 `Zipkin <https://zipkin.io/>`_. Let's find out how to use it to trace requests.
 
-First, you need to create the ``Tracing``:
+First, you need to create the ``HttpTracing``:
 
 .. code-block:: java
 
@@ -24,6 +24,7 @@ First, you need to create the ``Tracing``:
                              .currentTraceContext(RequestContextCurrentTraceContext.ofDefault())
                              .spanReporter(myReporter)
                              .build();
+    HttpTracing httpTracing = HttpTracing.create(tracing);
 
 Please note that we specified :api:`RequestContextCurrentTraceContext`. It stores the trace context into a
 :api:`RequestContext` and loads the trace context from the :api:`RequestContext` automatically. Because of that,
@@ -33,7 +34,7 @@ For more information about the ``spanReporter``, please refer to
 `Zipkin reporter <https://github.com/openzipkin/zipkin-reporter-java>`_ or
 `the fully working example <https://github.com/openzipkin-contrib/zipkin-armeria-example>`_.
 
-Now, you can specify :api:`BraveService` using :ref:`server-decorator` with the ``Tracing`` you just built:
+Now, you can specify :api:`BraveService` using :ref:`server-decorator` with the ``HttpTracing`` you just built:
 
 .. code-block:: java
 
@@ -45,7 +46,7 @@ Now, you can specify :api:`BraveService` using :ref:`server-decorator` with the 
     Tracing tracing = ...
     Server server = new ServerBuilder().http(8081)
                                        .service("/", (ctx, res) -> HttpResponse.of(200))
-                                       .decorator(BraveService.newDecorator(tracing))
+                                       .decorator(BraveService.newDecorator(httpTracing))
                                        .build();
 
 If the requests come to Armeria server and go to another backend, you can trace them using
@@ -60,16 +61,17 @@ If the requests come to Armeria server and go to another backend, you can trace 
 
     Tracing tracing = ...
     HttpClient client = new HttpClientBuilder("https://myBackend.com")
-            .decorator(BraveClient.newDecorator(tracing, "myBackend"))
+            .decorator(BraveClient.newDecorator(httpTracing.clientOf("myBackend")))
             .build();
 
     Server server = new ServerBuilder().http(8081)
                                        .service("/", (ctx, res) -> client.get("/api"))
-                                       .decorator(BraveService.newDecorator(tracing))
+                                       .decorator(BraveService.newDecorator(httpTracing))
                                        .build();
 
-Please note that we used the same ``Tracing`` instance when we create :api:`BraveClient` and
-:api:`BraveService`. Otherwise, there might be problems if the instances are not configured exactly the same.
+Please note that our ``HttpTracing`` instance used the same ``Tracing`` instance when we
+create :api:`BraveClient` and :api:`BraveService`. Otherwise, there might be problems if the instances are not
+configured exactly the same.
 In the same manner, you can use the ``Tracing`` instance with any
 `Brave instrumentation libraries <https://github.com/openzipkin/brave/tree/master/instrumentation>`_.
 For example, you can use it with `Kafka <https://kafka.apache.org/>`_ producer:
