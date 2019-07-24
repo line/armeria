@@ -30,7 +30,7 @@ import com.linecorp.armeria.internal.brave.SpanTags;
 import brave.Span;
 import brave.http.HttpServerAdapter;
 
-public final class ArmeriaHttpServerAdapter extends HttpServerAdapter<RequestLog, RequestLog> {
+final class ArmeriaHttpServerAdapter extends HttpServerAdapter<RequestLog, RequestLog> {
 
     private static final ArmeriaHttpServerAdapter INSTANCE = new ArmeriaHttpServerAdapter();
 
