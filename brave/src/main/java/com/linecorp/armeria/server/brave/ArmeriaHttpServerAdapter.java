@@ -26,6 +26,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.brave.SpanTags;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import brave.Span;
@@ -95,8 +96,21 @@ final class ArmeriaHttpServerAdapter extends HttpServerAdapter<RequestLog, Reque
     }
 
     @Override
+    @Nullable
     public String route(RequestLog response) {
-        return ((ServiceRequestContext) response.context()).route().meterTag();
+        assert response.context() instanceof ServiceRequestContext;
+        final Route route = ((ServiceRequestContext) response.context()).route();
+        switch (route.pathType()) {
+            case EXACT:
+            case PREFIX:
+            case PARAMETERIZED:
+                return route.paths().get(1);
+            case REGEX:
+                return route.paths().get(0);
+            case REGEX_WITH_PREFIX:
+                return route.paths().get(0) + route.paths().get(1);
+        }
+        return null;
     }
 
     /**

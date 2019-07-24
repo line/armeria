@@ -37,6 +37,8 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import brave.Span;
 
@@ -65,7 +67,8 @@ class ArmeriaHttpServerAdapterTest {
         when(requestLog.authority()).thenReturn("example.com");
         when(requestLog.path()).thenReturn("/foo");
         when(requestLog.query()).thenReturn("name=hoge");
-        assertThat(ArmeriaHttpServerAdapter.get().url(requestLog)).isEqualTo("http://example.com/foo?name=hoge");
+        assertThat(ArmeriaHttpServerAdapter.get().url(requestLog)).isEqualTo(
+                "http://example.com/foo?name=hoge");
     }
 
     @Test
@@ -145,5 +148,21 @@ class ArmeriaHttpServerAdapterTest {
         final Span span = mock(Span.class);
         when(span.remoteIpAndPort("127.0.0.1", 1234)).thenReturn(true);
         assertThat(ArmeriaHttpServerAdapter.get().parseClientIpAndPort(requestLog, span)).isTrue();
+    }
+
+    @Test
+    public void route() {
+        final ServiceRequestContext context = mock(ServiceRequestContext.class);
+        when(requestLog.context()).thenReturn(context);
+        when(context.route()).thenReturn(Route.builder().path("/foo/:bar/hoge").build());
+        assertThat(ArmeriaHttpServerAdapter.get().route(requestLog)).isEqualTo("/foo/:/hoge");
+    }
+
+    @Test
+    public void route_prefix() {
+        final ServiceRequestContext context = mock(ServiceRequestContext.class);
+        when(requestLog.context()).thenReturn(context);
+        when(context.route()).thenReturn(Route.builder().path("exact:/foo").build());
+        assertThat(ArmeriaHttpServerAdapter.get().route(requestLog)).isEqualTo("/foo");
     }
 }
