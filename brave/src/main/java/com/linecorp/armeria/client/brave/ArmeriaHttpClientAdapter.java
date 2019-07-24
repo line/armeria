@@ -32,7 +32,7 @@ final class ArmeriaHttpClientAdapter extends HttpClientAdapter<RequestLog, Reque
 
     private static final ArmeriaHttpClientAdapter INSTANCE = new ArmeriaHttpClientAdapter();
 
-    public static ArmeriaHttpClientAdapter get() {
+    static ArmeriaHttpClientAdapter get() {
         return INSTANCE;
     }
 

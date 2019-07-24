@@ -45,7 +45,7 @@ final class ArmeriaHttpServerParser extends HttpServerParser {
 
     private static final ArmeriaHttpServerParser INSTANCE = new ArmeriaHttpServerParser();
 
-    public static ArmeriaHttpServerParser get() {
+    static ArmeriaHttpServerParser get() {
         return INSTANCE;
     }
 
