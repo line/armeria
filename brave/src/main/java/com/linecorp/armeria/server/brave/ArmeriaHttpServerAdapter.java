@@ -26,6 +26,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.brave.SpanTags;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import brave.Span;
 import brave.http.HttpServerAdapter;
@@ -86,6 +87,16 @@ final class ArmeriaHttpServerAdapter extends HttpServerAdapter<RequestLog, Reque
             return 0;
         }
         return requestLog.status().code();
+    }
+
+    @Override
+    public String methodFromResponse(RequestLog requestLog) {
+        return requestLog.method().name();
+    }
+
+    @Override
+    public String route(RequestLog response) {
+        return ((ServiceRequestContext) response.context()).route().meterTag();
     }
 
     /**

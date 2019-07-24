@@ -26,6 +26,7 @@ import org.junit.After;
 import org.junit.AssumptionViolatedException;
 import org.junit.Test;
 
+import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -47,12 +48,12 @@ import brave.sampler.Sampler;
 import brave.test.http.ITHttpServer;
 import zipkin2.Span;
 
-class BraveServiceIntegrationTest extends ITHttpServer {
+public class BraveServiceIntegrationTest extends ITHttpServer {
 
     private Server server;
 
     // Hide currentTraceContext in ITHttpServer
-    private CurrentTraceContext currentTraceContext =
+    private final CurrentTraceContext currentTraceContext =
             RequestContextCurrentTraceContext.builder()
                                              .addScopeDecorator(StrictScopeDecorator.create())
                                              .build();
@@ -107,7 +108,7 @@ class BraveServiceIntegrationTest extends ITHttpServer {
                                      SpanCustomizer customizer) {
                 super.response(adapter, res, error, customizer);
                 customizer.tag("response_customizer.is_span", String.valueOf(customizer instanceof brave.Span));
-                customizer.tag("http.url", ((ArmeriaHttpServerAdapter) adapter).url(((RequestLog) res)));
+                customizer.tag("http.url", ((ArmeriaHttpServerAdapter) adapter).url((RequestLog) res));
             }
         }).build();
         init();
@@ -121,6 +122,24 @@ class BraveServiceIntegrationTest extends ITHttpServer {
                 .containsEntry("context.visible", "true")
                 .containsEntry("request_customizer.is_span", "false")
                 .containsEntry("response_customizer.is_span", "false");
+    }
+
+    @Override
+    @Test
+    public void options() throws Exception {
+        assertThat(HttpClient.of(url("/")).options("/").aggregate().join().status()).isEqualTo(OK);
+        final Span span = takeSpan();
+        assertThat(span.tags()).containsEntry("http.method", "OPTIONS")
+                               .containsEntry("http.path", "/");
+        assertThat(span.name()).isEqualTo("options exact:/");
+    }
+
+    @Override
+    @Test
+    public void defaultSpanNameIsMethodNameOrRoute() throws Exception {
+        get("/foo");
+        final Span span = takeSpan();
+        assertThat(span.name()).isEqualTo("get exact:/foo");
     }
 
     @Override
