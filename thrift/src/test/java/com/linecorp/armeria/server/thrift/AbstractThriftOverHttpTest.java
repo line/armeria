@@ -53,7 +53,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.SimpleDecoratingService;
+import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.AsyncIface;
@@ -138,7 +138,7 @@ public abstract class AbstractThriftOverHttpTest {
 
             final Function<Service<HttpRequest, HttpResponse>,
                     Service<HttpRequest, HttpResponse>> logCollectingDecorator =
-                    s -> new SimpleDecoratingService<HttpRequest, HttpResponse>(s) {
+                    s -> new SimpleDecoratingHttpService(s) {
                         @Override
                         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                             if (recordMessageLogs) {

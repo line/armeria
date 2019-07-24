@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.when;
@@ -304,6 +305,19 @@ public class RequestContextTest {
         } finally {
             shutdownAndAwaitTermination(executor);
         }
+    }
+
+    @Test
+    public void makeContextAwareCompletableFutureWithDifferentContext() {
+        final RequestContext context1 = createContext();
+        final CompletableFuture<Void> originalFuture = CompletableFuture.completedFuture(null);
+        final CompletableFuture<Void> future1 = context1.makeContextAware(originalFuture);
+
+        final RequestContext context2 = createContext();
+        final CompletableFuture<Void> future2 = context2.makeContextAware(future1);
+
+        assertThat(future2).isCompletedExceptionally();
+        assertThatThrownBy(future2::join).hasCauseInstanceOf(IllegalStateException.class);
     }
 
     @Test

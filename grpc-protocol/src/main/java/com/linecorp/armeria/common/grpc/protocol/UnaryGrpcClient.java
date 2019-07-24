@@ -24,7 +24,7 @@ import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.SimpleDecoratingClient;
+import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -104,7 +104,7 @@ public class UnaryGrpcClient {
                          });
     }
 
-    private static final class GrpcFramingDecorator extends SimpleDecoratingClient<HttpRequest, HttpResponse> {
+    private static final class GrpcFramingDecorator extends SimpleDecoratingHttpClient {
 
         private GrpcFramingDecorator(Client<HttpRequest, HttpResponse> delegate) {
             super(delegate);

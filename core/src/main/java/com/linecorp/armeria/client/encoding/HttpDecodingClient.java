@@ -27,7 +27,7 @@ import com.google.common.collect.Streams;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DecoratingClient;
-import com.linecorp.armeria.client.SimpleDecoratingClient;
+import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -36,7 +36,7 @@ import com.linecorp.armeria.common.HttpResponse;
  * A {@link DecoratingClient} that requests and decodes HTTP encoding (e.g., gzip) that has been applied to the
  * content of a {@link HttpResponse}.
  */
-public final class HttpDecodingClient extends SimpleDecoratingClient<HttpRequest, HttpResponse> {
+public final class HttpDecodingClient extends SimpleDecoratingHttpClient {
 
     /**
      * Creates a new {@link HttpDecodingClient} decorator with the default encodings of 'gzip' and 'deflate'.

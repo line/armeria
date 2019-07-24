@@ -18,6 +18,7 @@ package com.linecorp.armeria.unsafe;
 
 import static java.util.Objects.requireNonNull;
 
+import java.io.InputStream;
 import java.nio.charset.Charset;
 
 import com.google.common.base.MoreObjects;
@@ -27,6 +28,7 @@ import com.linecorp.armeria.common.HttpData;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 
@@ -161,5 +163,10 @@ public class ByteBufHttpData extends AbstractHttpData implements ByteBufHolder {
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("buf", buf.toString()).toString();
+    }
+
+    @Override
+    public InputStream toInputStream() {
+        return new ByteBufInputStream(buf.retainedDuplicate(), true);
     }
 }

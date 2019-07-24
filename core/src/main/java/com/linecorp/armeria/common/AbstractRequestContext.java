@@ -133,6 +133,8 @@ public abstract class AbstractRequestContext implements RequestContext {
                 } else {
                     future.complete(result);
                 }
+            } catch (Throwable t) {
+                future.completeExceptionally(t);
             }
             return null;
         });

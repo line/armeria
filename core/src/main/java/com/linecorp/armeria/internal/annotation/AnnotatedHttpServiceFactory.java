@@ -86,7 +86,7 @@ import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.SimpleDecoratingService;
+import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.annotation.AdditionalHeader;
 import com.linecorp.armeria.server.annotation.AdditionalTrailer;
 import com.linecorp.armeria.server.annotation.ConsumeType;
@@ -362,7 +362,7 @@ public final class AnnotatedHttpServiceFactory {
         if (methods.contains(HttpMethod.OPTIONS)) {
             initialDecorator = Function.identity();
         } else {
-            initialDecorator = delegate -> new SimpleDecoratingService<HttpRequest, HttpResponse>(delegate) {
+            initialDecorator = delegate -> new SimpleDecoratingHttpService(delegate) {
                 @Override
                 public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                     if (req.method() == HttpMethod.OPTIONS) {
