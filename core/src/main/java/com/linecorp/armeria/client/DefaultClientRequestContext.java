@@ -367,7 +367,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         requireNonNull(name, "name");
         for (;;) {
             final HttpHeaders oldValue = additionalRequestHeaders;
-            if (oldValue.isEmpty() || oldValue.contains(name)) {
+            if (oldValue.isEmpty() || !oldValue.contains(name)) {
                 return false;
             }
 

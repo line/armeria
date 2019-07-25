@@ -473,7 +473,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         requireNonNull(name, "name");
         for (;;) {
             final HttpHeaders oldValue = additionalResponseHeaders;
-            if (oldValue.isEmpty() || oldValue.contains(name)) {
+            if (oldValue.isEmpty() || !oldValue.contains(name)) {
                 return false;
             }
 
@@ -544,7 +544,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         requireNonNull(name, "name");
         for (;;) {
             final HttpHeaders oldValue = additionalResponseTrailers;
-            if (oldValue.isEmpty() || oldValue.contains(name)) {
+            if (oldValue.isEmpty() || !oldValue.contains(name)) {
                 return false;
             }
 
