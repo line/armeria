@@ -26,6 +26,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -552,6 +553,14 @@ public final class Clients {
      *     }
      * }
      * }</pre>
+     * Note that certain properties of {@link ClientRequestContext}, such as:
+     * <ul>
+     *   <li>{@link ClientRequestContext#endpoint()}</li>
+     *   <li>{@link ClientRequestContext#localAddress()}</li>
+     *   <li>{@link ClientRequestContext#remoteAddress()}</li>
+     * </ul>
+     * may be {@code null} while the customizer function runs, because the target host of the {@link Request}
+     * is not determined yet.
      *
      * @see #withHttpHeaders(Function)
      */

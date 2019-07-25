@@ -136,23 +136,31 @@ public interface ClientRequestContext extends RequestContext {
         return ClientRequestContextBuilder.of(request, uri).build();
     }
 
+    /**
+     * Creates a new {@link ClientRequestContext} whose properties and {@link Attribute}s are copied from this
+     * {@link ClientRequestContext}, except having its own {@link RequestLog}.
+     */
     @Override
     ClientRequestContext newDerivedContext();
 
+    /**
+     * Creates a new {@link ClientRequestContext} whose properties and {@link Attribute}s are copied from this
+     * {@link ClientRequestContext}, except having a different {@link Request} and its own {@link RequestLog}.
+     */
     @Override
     ClientRequestContext newDerivedContext(Request request);
 
     /**
-     * Creates a new derived {@link RequestContext} with the specified {@link Request} and {@link Endpoint}
-     * which the {@link RequestLog} is different from the deriving context.
-     * Note that the references of {@link Attribute}s in the {@link #attrs()} are copied as well.
+     * Creates a new {@link ClientRequestContext} whose properties and {@link Attribute}s are copied from this
+     * {@link ClientRequestContext}, except having different {@link Request}, {@link Endpoint} and its own
+     * {@link RequestLog}.
      */
     ClientRequestContext newDerivedContext(Request request, Endpoint endpoint);
 
     /**
      * Returns the {@link EndpointSelector} used for the current {@link Request}.
      *
-     * @return the {@link EndpointSelector} if a user specified a group {@link Endpoint}
+     * @return the {@link EndpointSelector} if a user specified a group {@link Endpoint}.
      *         {@code null} if a user specified a host {@link Endpoint}.
      */
     @Nullable
@@ -162,7 +170,7 @@ public interface ClientRequestContext extends RequestContext {
      * Returns the remote {@link Endpoint} of the current {@link Request}.
      *
      * @return the remote {@link Endpoint}. {@code null} if the {@link Request} has failed
-     *         before its remote {@link Endpoint} is determined.
+     *         because its remote {@link Endpoint} couldn't be determined.
      */
     @Nullable
     Endpoint endpoint();

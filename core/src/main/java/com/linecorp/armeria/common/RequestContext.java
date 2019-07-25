@@ -629,16 +629,14 @@ public interface RequestContext extends AttributeMap {
     }
 
     /**
-     * Creates a new derived {@link RequestContext} which only the {@link RequestLog}
-     * is different from the deriving context. Note that the references of {@link Attribute}s
-     * in the {@link #attrs()} are copied as well.
+     * Creates a new {@link RequestContext} whose properties and {@link Attribute}s are copied from this
+     * {@link RequestContext}, except having its own {@link RequestLog}.
      */
     RequestContext newDerivedContext();
 
     /**
-     * Creates a new derived {@link RequestContext} with the specified {@link Request} which the
-     * {@link RequestLog} is different from the deriving context.
-     * Note that the references of {@link Attribute}s in the {@link #attrs()} are copied as well.
+     * Creates a new {@link RequestContext} whose properties and {@link Attribute}s are copied from this
+     * {@link RequestContext}, except having a different {@link Request} and its own {@link RequestLog}.
      */
     RequestContext newDerivedContext(Request request);
 }

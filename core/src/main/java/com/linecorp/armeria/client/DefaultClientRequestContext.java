@@ -72,14 +72,14 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     private long responseTimeoutMillis;
     private long maxResponseLength;
 
+    private volatile HttpHeaders additionalRequestHeaders = HttpHeaders.of();
+
     @Nullable
     private String strVal;
 
-    @Nullable
-    private volatile HttpHeaders additionalRequestHeaders;
-
     /**
-     * Creates a new instance.
+     * Creates a new instance. Note that {@link #init(Endpoint)} method must be invoked to finish
+     * the construction of this context.
      *
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
      * @param request the request associated with this context
@@ -312,10 +312,6 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     @Override
     public HttpHeaders additionalRequestHeaders() {
-        final HttpHeaders additionalRequestHeaders = this.additionalRequestHeaders;
-        if (additionalRequestHeaders == null) {
-            return HttpHeaders.of();
-        }
         return additionalRequestHeaders;
     }
 
@@ -323,42 +319,33 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     public void setAdditionalRequestHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        additionalRequestHeaders = createAdditionalHeadersIfAbsent().toBuilder().setObject(name, value).build();
+        additionalRequestHeaders = additionalRequestHeaders.toBuilder().setObject(name, value).build();
     }
 
     @Override
     public void setAdditionalRequestHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        additionalRequestHeaders = createAdditionalHeadersIfAbsent().toBuilder().setObject(headers).build();
+        additionalRequestHeaders = additionalRequestHeaders.toBuilder().setObject(headers).build();
     }
 
     @Override
     public void addAdditionalRequestHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        additionalRequestHeaders = createAdditionalHeadersIfAbsent().toBuilder().addObject(name, value).build();
+        additionalRequestHeaders = additionalRequestHeaders.toBuilder().addObject(name, value).build();
     }
 
     @Override
     public void addAdditionalRequestHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        additionalRequestHeaders = createAdditionalHeadersIfAbsent().toBuilder().addObject(headers).build();
-    }
-
-    private HttpHeaders createAdditionalHeadersIfAbsent() {
-        final HttpHeaders additionalRequestHeaders = this.additionalRequestHeaders;
-        if (additionalRequestHeaders == null) {
-            return this.additionalRequestHeaders = HttpHeaders.of();
-        } else {
-            return additionalRequestHeaders;
-        }
+        additionalRequestHeaders = additionalRequestHeaders.toBuilder().addObject(headers).build();
     }
 
     @Override
     public boolean removeAdditionalRequestHeader(CharSequence name) {
         requireNonNull(name, "name");
         final HttpHeaders additionalRequestHeaders = this.additionalRequestHeaders;
-        if (additionalRequestHeaders == null || additionalRequestHeaders.isEmpty()) {
+        if (additionalRequestHeaders.isEmpty()) {
             return false;
         }
 

@@ -174,7 +174,6 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         final HttpResponse res = initContextAndExecuteWithFallback(
                 httpClient, ctx, endpoint,
                 (unused, cause) -> HttpResponse.ofFailure(GrpcStatus.fromThrowable(cause)
-                                                                    .withCause(cause)
                                                                     .withDescription(cause.getMessage())
                                                                     .asRuntimeException()));
 
