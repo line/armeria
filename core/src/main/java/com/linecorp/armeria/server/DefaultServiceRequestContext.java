@@ -67,7 +67,6 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
             additionalResponseTrailersUpdater = AtomicReferenceFieldUpdater.newUpdater(
             DefaultServiceRequestContext.class, HttpHeaders.class, "additionalResponseTrailers");
 
-
     private final Channel ch;
     private final ServiceConfig cfg;
     private final RoutingContext routingContext;
