@@ -19,7 +19,11 @@ import path from 'path';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
 import { Configuration, DefinePlugin } from 'webpack';
 
-const isDev = !!process.env.WEBPACK_SERVE;
+import { docServiceDebug } from './src/lib/header-provider';
+
+const armeriaPort = process.env.ARMERIA_PORT || '8080';
+
+const isDev = !!process.env.WEBPACK_DEV;
 
 const config: Configuration = {
   mode: isDev ? 'development' : 'production',
@@ -91,9 +95,27 @@ const config: Configuration = {
       template: './src/index.html',
     }),
     new DefinePlugin({
-      'process.env.WEBPACK_SERVE': JSON.stringify(process.env.WEBPACK_SERVE),
+      'process.env.WEBPACK_DEV': JSON.stringify(process.env.WEBPACK_DEV),
     }),
   ],
+  devServer: {
+    historyApiFallback: true,
+    hot: true,
+    open: true,
+    openPage: 'docs/',
+    port: 3000,
+    proxy: [
+      {
+        path: '/',
+        context: (pathname, req) =>
+          !!req.headers[docServiceDebug] ||
+          pathname.endsWith('specification.json') ||
+          pathname.endsWith('injected.js'),
+        target: `http://127.0.0.1:${armeriaPort}`,
+        changeOrigin: true,
+      },
+    ],
+  },
 };
 
 export default config;

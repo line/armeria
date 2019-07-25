@@ -6,7 +6,7 @@
     "prebuild": "yarn run check",
     "build": "cross-env TS_NODE_PROJECT=\"tsconfig-webpack.json\" webpack",
     "check": "tsc --project . && tslint --project .",
-    "start": "cross-env TS_NODE_PROJECT=\"tsconfig-webpack.json\" ts-node ./scripts/serve"
+    "start": "cross-env TS_NODE_PROJECT=\"tsconfig-webpack.json\" WEBPACK_DEV=true webpack-dev-server"
   },
   "dependencies": {
     "@material-ui/core": "^3.3.2",
@@ -41,7 +41,7 @@
     "@types/react-select": "^2.0.19",
     "@types/react-syntax-highlighter": "^0.0.8",
     "@types/webpack": "^4.4.17",
-    "@types/webpack-serve": "^2.0.0",
+    "@types/webpack-dev-server": "^3.1.7",
     "babel-loader": "^8.0.4",
     "cross-env": "^5.2.0",
     "css-loader": "^1.0.1",
@@ -62,6 +62,6 @@
     "typescript": "^3.2.2",
     "webpack": "^4.24.0",
     "webpack-cli": "^3.1.2",
-    "webpack-serve": "^2.0.2"
+    "webpack-dev-server": "^3.7.2"
   }
 }
