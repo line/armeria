@@ -26,9 +26,9 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 
-public class KeyedCircuitBreakerMappingTest {
+class KeyedCircuitBreakerMappingTest {
     @Test
-    public void hostSelector() throws Exception {
+    void hostSelector() throws Exception {
         assertThat(HOST.get(context(Endpoint.of("foo")), null)).isEqualTo("foo");
         assertThat(HOST.get(context(Endpoint.of("foo", 8080)), null)).isEqualTo("foo:8080");
         assertThat(HOST.get(context(Endpoint.of("foo").withIpAddr("1.2.3.4")), null)).isEqualTo("foo/1.2.3.4");
