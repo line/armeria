@@ -453,7 +453,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     private void updateAdditionalResponseHeaders(
             AtomicReferenceFieldUpdater<DefaultServiceRequestContext, HttpHeaders> atomicUpdater,
             Function<HttpHeadersBuilder, HttpHeadersBuilder> valueUpdater) {
-        for (; ; ) {
+        for (;;) {
             final HttpHeaders oldValue = atomicUpdater.get(this);
             final HttpHeaders newValue = valueUpdater.apply(oldValue.toBuilder()).build();
             if (atomicUpdater.compareAndSet(this, oldValue, newValue)) {
