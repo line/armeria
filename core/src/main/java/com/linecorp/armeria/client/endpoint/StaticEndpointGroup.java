@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.client.endpoint;
 
 import static java.util.Objects.requireNonNull;
@@ -58,6 +57,6 @@ public final class StaticEndpointGroup implements EndpointGroup {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + endpoints;
+        return StaticEndpointGroup.class.getSimpleName() + endpoints;
     }
 }
