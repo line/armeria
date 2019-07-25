@@ -28,6 +28,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.Function;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -37,6 +38,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
@@ -422,47 +424,39 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     public void setAdditionalResponseHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        for (;;) {
-            final HttpHeaders oldValue = additionalResponseHeaders;
-            final HttpHeaders newValue = oldValue.toBuilder().setObject(name, value).build();
-            if (additionalResponseHeadersUpdater.compareAndSet(this, oldValue, newValue)) {
-                return;
-            }
-        }
+        updateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
+                                       builder -> builder.setObject(name, value));
     }
 
     @Override
     public void setAdditionalResponseHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        for (;;) {
-            final HttpHeaders oldValue = additionalResponseHeaders;
-            final HttpHeaders newValue = oldValue.toBuilder().setObject(headers).build();
-            if (additionalResponseHeadersUpdater.compareAndSet(this, oldValue, newValue)) {
-                return;
-            }
-        }
+        updateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
+                                       builder -> builder.setObject(headers));
     }
 
     @Override
     public void addAdditionalResponseHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        for (;;) {
-            final HttpHeaders oldValue = additionalResponseHeaders;
-            final HttpHeaders newValue = oldValue.toBuilder().addObject(name, value).build();
-            if (additionalResponseHeadersUpdater.compareAndSet(this, oldValue, newValue)) {
-                return;
-            }
-        }
+        updateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
+                                       builder -> builder.addObject(name, value));
     }
 
     @Override
     public void addAdditionalResponseHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        for (;;) {
-            final HttpHeaders oldValue = additionalResponseHeaders;
-            final HttpHeaders newValue = oldValue.toBuilder().addObject(headers).build();
-            if (additionalResponseHeadersUpdater.compareAndSet(this, oldValue, newValue)) {
+        updateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
+                                       builder -> builder.addObject(headers));
+    }
+
+    private void updateAdditionalResponseHeaders(
+            AtomicReferenceFieldUpdater<DefaultServiceRequestContext, HttpHeaders> atomicUpdater,
+            Function<HttpHeadersBuilder, HttpHeadersBuilder> valueUpdater) {
+        for (; ; ) {
+            final HttpHeaders oldValue = atomicUpdater.get(this);
+            final HttpHeaders newValue = valueUpdater.apply(oldValue.toBuilder()).build();
+            if (atomicUpdater.compareAndSet(this, oldValue, newValue)) {
                 return;
             }
         }
@@ -470,15 +464,21 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
     @Override
     public boolean removeAdditionalResponseHeader(CharSequence name) {
+        return removeAdditionalResponseHeader(additionalResponseHeadersUpdater, name);
+    }
+
+    private boolean removeAdditionalResponseHeader(
+            AtomicReferenceFieldUpdater<DefaultServiceRequestContext, HttpHeaders> atomicUpdater,
+            CharSequence name) {
         requireNonNull(name, "name");
         for (;;) {
-            final HttpHeaders oldValue = additionalResponseHeaders;
+            final HttpHeaders oldValue = atomicUpdater.get(this);
             if (oldValue.isEmpty() || !oldValue.contains(name)) {
                 return false;
             }
 
             final HttpHeaders newValue = oldValue.toBuilder().removeAndThen(name).build();
-            if (additionalResponseHeadersUpdater.compareAndSet(this, oldValue, newValue)) {
+            if (atomicUpdater.compareAndSet(this, oldValue, newValue)) {
                 return true;
             }
         }
@@ -493,66 +493,35 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     public void setAdditionalResponseTrailer(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        for (;;) {
-            final HttpHeaders oldValue = additionalResponseTrailers;
-            final HttpHeaders newValue = oldValue.toBuilder().setObject(name, value).build();
-            if (additionalResponseTrailersUpdater.compareAndSet(this, oldValue, newValue)) {
-                return;
-            }
-        }
+        updateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
+                                       builder -> builder.setObject(name, value));
     }
 
     @Override
     public void setAdditionalResponseTrailers(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        for (;;) {
-            final HttpHeaders oldValue = additionalResponseTrailers;
-            final HttpHeaders newValue = oldValue.toBuilder().setObject(headers).build();
-            if (additionalResponseTrailersUpdater.compareAndSet(this, oldValue, newValue)) {
-                return;
-            }
-        }
+        updateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
+                                       builder -> builder.setObject(headers));
     }
 
     @Override
     public void addAdditionalResponseTrailer(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        for (;;) {
-            final HttpHeaders oldValue = additionalResponseTrailers;
-            final HttpHeaders newValue = oldValue.toBuilder().addObject(name, value).build();
-            if (additionalResponseTrailersUpdater.compareAndSet(this, oldValue, newValue)) {
-                return;
-            }
-        }
+        updateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
+                                       builder -> builder.addObject(name, value));
     }
 
     @Override
     public void addAdditionalResponseTrailers(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        for (;;) {
-            final HttpHeaders oldValue = additionalResponseTrailers;
-            final HttpHeaders newValue = oldValue.toBuilder().addObject(headers).build();
-            if (additionalResponseTrailersUpdater.compareAndSet(this, oldValue, newValue)) {
-                return;
-            }
-        }
+        updateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
+                                       builder -> builder.addObject(headers));
     }
 
     @Override
     public boolean removeAdditionalResponseTrailer(CharSequence name) {
-        requireNonNull(name, "name");
-        for (;;) {
-            final HttpHeaders oldValue = additionalResponseTrailers;
-            if (oldValue.isEmpty() || !oldValue.contains(name)) {
-                return false;
-            }
-
-            final HttpHeaders newValue = oldValue.toBuilder().removeAndThen(name).build();
-            if (additionalResponseTrailersUpdater.compareAndSet(this, oldValue, newValue)) {
-                return true;
-            }
-        }
+        return removeAdditionalResponseHeader(additionalResponseTrailersUpdater, name);
     }
 
     @Nullable

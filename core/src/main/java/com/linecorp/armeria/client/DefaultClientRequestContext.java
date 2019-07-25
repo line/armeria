@@ -24,6 +24,7 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
@@ -33,6 +34,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroupException;
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.client.endpoint.EndpointSelector;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.Request;
@@ -316,46 +318,32 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     public void setAdditionalRequestHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        for (;;) {
-            final HttpHeaders oldValue = additionalRequestHeaders;
-            final HttpHeaders newValue = oldValue.toBuilder().setObject(name, value).build();
-            if (additionalRequestHeadersUpdater.compareAndSet(this, oldValue, newValue)) {
-                return;
-            }
-        }
+        updateAdditionalRequestHeaders(builder -> builder.setObject(name, value));
     }
 
     @Override
     public void setAdditionalRequestHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        for (;;) {
-            final HttpHeaders oldValue = additionalRequestHeaders;
-            final HttpHeaders newValue = oldValue.toBuilder().setObject(headers).build();
-            if (additionalRequestHeadersUpdater.compareAndSet(this, oldValue, newValue)) {
-                return;
-            }
-        }
+        updateAdditionalRequestHeaders(builder -> builder.setObject(headers));
     }
 
     @Override
     public void addAdditionalRequestHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        for (;;) {
-            final HttpHeaders oldValue = additionalRequestHeaders;
-            final HttpHeaders newValue = oldValue.toBuilder().addObject(name, value).build();
-            if (additionalRequestHeadersUpdater.compareAndSet(this, oldValue, newValue)) {
-                return;
-            }
-        }
+        updateAdditionalRequestHeaders(builder -> builder.addObject(name, value));
     }
 
     @Override
     public void addAdditionalRequestHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
+        updateAdditionalRequestHeaders(builder -> builder.addObject(headers));
+    }
+
+    private void updateAdditionalRequestHeaders(Function<HttpHeadersBuilder, HttpHeadersBuilder> updater) {
         for (;;) {
             final HttpHeaders oldValue = additionalRequestHeaders;
-            final HttpHeaders newValue = oldValue.toBuilder().addObject(headers).build();
+            final HttpHeaders newValue = updater.apply(oldValue.toBuilder()).build();
             if (additionalRequestHeadersUpdater.compareAndSet(this, oldValue, newValue)) {
                 return;
             }
@@ -407,7 +395,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         buf.append('[')
            .append(sessionProtocol().uriText())
            .append("://")
-           .append(endpoint != null ? endpoint.authority() : "<unknown>")
+           .append(endpoint != null ? endpoint.authority() : "UNKNOWN")
            .append(path())
            .append('#')
            .append(method())
