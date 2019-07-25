@@ -108,7 +108,7 @@ final class ArmeriaHttpServerAdapter extends HttpServerAdapter<RequestLog, Reque
             case REGEX:
                 return route.paths().get(0);
             case REGEX_WITH_PREFIX:
-                return route.paths().get(0) + route.paths().get(1);
+                return route.paths().get(1) + ' ' + route.paths().get(0);
         }
         return null;
     }

@@ -92,8 +92,8 @@ public interface Route {
      *
      * {@link RoutePathType#REGEX} has only one path that represents it. e.g, {@code [ "^/(?<foo>.*)$" ]}
      *
-     * <p>{@link RoutePathType#REGEX_WITH_PREFIX} has two paths. The first one is the prefix and the second
-     * one is the regex. e.g, {@code [ "/bar/", "^/(?<foo>.*)$" ]}
+     * <p>{@link RoutePathType#REGEX_WITH_PREFIX} has two paths. The first one is the regex and the second
+     * one is the path. e.g, {@code [ "^/(?<foo>.*)$", "/bar/" ]}
      */
     List<String> paths();
 

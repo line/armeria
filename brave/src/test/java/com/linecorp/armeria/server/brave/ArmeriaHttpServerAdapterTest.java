@@ -165,4 +165,12 @@ class ArmeriaHttpServerAdapterTest {
         when(context.route()).thenReturn(Route.builder().path("exact:/foo").build());
         assertThat(ArmeriaHttpServerAdapter.get().route(requestLog)).isEqualTo("/foo");
     }
+
+    @Test
+    public void route_pathWithPrefix() {
+        final ServiceRequestContext context = mock(ServiceRequestContext.class);
+        when(requestLog.context()).thenReturn(context);
+        when(context.route()).thenReturn(Route.builder().pathWithPrefix("/foo/", "glob:bar").build());
+        assertThat(ArmeriaHttpServerAdapter.get().route(requestLog)).isEqualTo("/foo/ ^/(?:.+/)?bar$");
+    }
 }
