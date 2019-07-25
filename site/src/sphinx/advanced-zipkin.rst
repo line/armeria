@@ -16,6 +16,7 @@ First, you need to create the ``HttpTracing``:
     import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 
     import brave.Tracing;
+    import brave.http.HttpTracing;
     import zipkin2.reporter.Reporter;
 
     Reporter<Span> myReporter = ...
