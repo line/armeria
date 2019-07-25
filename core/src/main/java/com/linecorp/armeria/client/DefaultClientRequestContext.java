@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
@@ -32,7 +33,6 @@ import com.linecorp.armeria.client.endpoint.EndpointGroupException;
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.client.endpoint.EndpointSelector;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.Request;
@@ -57,6 +57,10 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     static final ThreadLocal<Consumer<ClientRequestContext>> THREAD_LOCAL_CONTEXT_CUSTOMIZER =
             new ThreadLocal<>();
 
+    private static final AtomicReferenceFieldUpdater<DefaultClientRequestContext, HttpHeaders>
+            additionalRequestHeadersUpdater = AtomicReferenceFieldUpdater.newUpdater(
+                    DefaultClientRequestContext.class, HttpHeaders.class, "additionalRequestHeaders");
+
     private final EventLoop eventLoop;
     private final ClientOptions options;
     @Nullable
@@ -72,7 +76,8 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     private long responseTimeoutMillis;
     private long maxResponseLength;
 
-    private volatile HttpHeaders additionalRequestHeaders = HttpHeaders.of();
+    @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalRequestHeadersUpdater`
+    private volatile HttpHeaders additionalRequestHeaders;
 
     @Nullable
     private String strVal;
@@ -101,11 +106,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         writeTimeoutMillis = options.writeTimeoutMillis();
         responseTimeoutMillis = options.responseTimeoutMillis();
         maxResponseLength = options.maxResponseLength();
-
-        final HttpHeaders headers = options.getOrElse(ClientOption.HTTP_HEADERS, HttpHeaders.of());
-        if (!headers.isEmpty()) {
-            additionalRequestHeaders = headers;
-        }
+        additionalRequestHeaders = options.getOrElse(ClientOption.HTTP_HEADERS, HttpHeaders.of());
     }
 
     /**
@@ -182,11 +183,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         responseTimeoutMillis = ctx.responseTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
-
-        final HttpHeaders additionalHeaders = ctx.additionalRequestHeaders();
-        if (!additionalHeaders.isEmpty()) {
-            additionalRequestHeaders = additionalHeaders;
-        }
+        additionalRequestHeaders = ctx.additionalRequestHeaders();
 
         for (final Iterator<Attribute<?>> i = ctx.attrs(); i.hasNext();) {
             addAttr(i.next());
@@ -319,40 +316,66 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     public void setAdditionalRequestHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        additionalRequestHeaders = additionalRequestHeaders.toBuilder().setObject(name, value).build();
+        for (;;) {
+            final HttpHeaders oldValue = additionalRequestHeaders;
+            final HttpHeaders newValue = oldValue.toBuilder().setObject(name, value).build();
+            if (additionalRequestHeadersUpdater.compareAndSet(this, oldValue, newValue)) {
+                return;
+            }
+        }
     }
 
     @Override
     public void setAdditionalRequestHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        additionalRequestHeaders = additionalRequestHeaders.toBuilder().setObject(headers).build();
+        for (;;) {
+            final HttpHeaders oldValue = additionalRequestHeaders;
+            final HttpHeaders newValue = oldValue.toBuilder().setObject(headers).build();
+            if (additionalRequestHeadersUpdater.compareAndSet(this, oldValue, newValue)) {
+                return;
+            }
+        }
     }
 
     @Override
     public void addAdditionalRequestHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        additionalRequestHeaders = additionalRequestHeaders.toBuilder().addObject(name, value).build();
+        for (;;) {
+            final HttpHeaders oldValue = additionalRequestHeaders;
+            final HttpHeaders newValue = oldValue.toBuilder().addObject(name, value).build();
+            if (additionalRequestHeadersUpdater.compareAndSet(this, oldValue, newValue)) {
+                return;
+            }
+        }
     }
 
     @Override
     public void addAdditionalRequestHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        additionalRequestHeaders = additionalRequestHeaders.toBuilder().addObject(headers).build();
+        for (;;) {
+            final HttpHeaders oldValue = additionalRequestHeaders;
+            final HttpHeaders newValue = oldValue.toBuilder().addObject(headers).build();
+            if (additionalRequestHeadersUpdater.compareAndSet(this, oldValue, newValue)) {
+                return;
+            }
+        }
     }
 
     @Override
     public boolean removeAdditionalRequestHeader(CharSequence name) {
         requireNonNull(name, "name");
-        final HttpHeaders additionalRequestHeaders = this.additionalRequestHeaders;
-        if (additionalRequestHeaders.isEmpty()) {
-            return false;
-        }
+        for (;;) {
+            final HttpHeaders oldValue = additionalRequestHeaders;
+            if (oldValue.isEmpty() || oldValue.contains(name)) {
+                return false;
+            }
 
-        final HttpHeadersBuilder builder = additionalRequestHeaders.toBuilder();
-        final boolean removed = builder.remove(name);
-        this.additionalRequestHeaders = builder.build();
-        return removed;
+            final HttpHeaders newValue = oldValue.toBuilder().removeAndThen(name).build();
+            if (additionalRequestHeadersUpdater.compareAndSet(this, oldValue, newValue)) {
+                return true;
+            }
+        }
     }
 
     @Override
