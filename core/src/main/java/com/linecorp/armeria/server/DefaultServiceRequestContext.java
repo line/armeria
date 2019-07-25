@@ -425,14 +425,14 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         requireNonNull(name, "name");
         requireNonNull(value, "value");
         updateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
-                                       builder -> builder.setObject(name, value));
+                                        builder -> builder.setObject(name, value));
     }
 
     @Override
     public void setAdditionalResponseHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
         updateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
-                                       builder -> builder.setObject(headers));
+                                        builder -> builder.setObject(headers));
     }
 
     @Override
@@ -440,14 +440,14 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         requireNonNull(name, "name");
         requireNonNull(value, "value");
         updateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
-                                       builder -> builder.addObject(name, value));
+                                        builder -> builder.addObject(name, value));
     }
 
     @Override
     public void addAdditionalResponseHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
         updateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
-                                       builder -> builder.addObject(headers));
+                                        builder -> builder.addObject(headers));
     }
 
     private void updateAdditionalResponseHeaders(
@@ -494,14 +494,14 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         requireNonNull(name, "name");
         requireNonNull(value, "value");
         updateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
-                                       builder -> builder.setObject(name, value));
+                                        builder -> builder.setObject(name, value));
     }
 
     @Override
     public void setAdditionalResponseTrailers(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
         updateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
-                                       builder -> builder.setObject(headers));
+                                        builder -> builder.setObject(headers));
     }
 
     @Override
@@ -509,14 +509,14 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         requireNonNull(name, "name");
         requireNonNull(value, "value");
         updateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
-                                       builder -> builder.addObject(name, value));
+                                        builder -> builder.addObject(name, value));
     }
 
     @Override
     public void addAdditionalResponseTrailers(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
         updateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
-                                       builder -> builder.addObject(headers));
+                                        builder -> builder.addObject(headers));
     }
 
     @Override
