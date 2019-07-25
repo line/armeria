@@ -257,10 +257,15 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
                 // Not a second value.
             }
 
-            @SuppressWarnings("UseOfObsoleteDateTimeApi")
-            final Date date = DateFormatter.parseHttpDate(value);
-            if (date != null) {
-                return date.getTime() - System.currentTimeMillis();
+            try {
+                @SuppressWarnings("UseOfObsoleteDateTimeApi")
+                final Date date = DateFormatter.parseHttpDate(value);
+                if (date != null) {
+                    return date.getTime() - System.currentTimeMillis();
+                }
+            } catch (Exception ignored) {
+                // `parseHttpDate()` can raise an exception rather than returning `null`
+                // when the given value has more than 64 characters.
             }
 
             logger.debug("The retryAfter: {}, from the server is neither an HTTP date nor a second.",

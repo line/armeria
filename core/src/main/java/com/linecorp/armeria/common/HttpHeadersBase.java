@@ -931,7 +931,9 @@ class HttpHeadersBase implements HttpHeaderGetters {
             @SuppressWarnings("UseOfObsoleteDateTimeApi")
             final Date date = DateFormatter.parseHttpDate(v);
             return date != null ? date.getTime() : null;
-        } catch (RuntimeException ignore) {
+        } catch (Exception ignore) {
+            // `parseHttpDate()` can raise an exception rather than returning `null`
+            // when the given value has more than 64 characters.
             return null;
         }
     }
