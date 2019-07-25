@@ -27,7 +27,6 @@ import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptions;
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -99,12 +98,13 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
         final HttpRequestWriter req = HttpRequest.streaming(
                 RequestHeaders.of(HttpMethod.POST, uri().getPath() + method.getFullMethodName(),
                                   HttpHeaderNames.CONTENT_TYPE, serializationFormat.mediaType()));
-        final ClientRequestContext ctx = newContext(HttpMethod.POST, req);
+        final DefaultClientRequestContext ctx = newContext(HttpMethod.POST, req);
         ctx.logBuilder().serializationFormat(serializationFormat);
         ctx.logBuilder().deferRequestContent();
         ctx.logBuilder().deferResponseContent();
         return new ArmeriaClientCall<>(
                 ctx,
+                endpoint,
                 httpClient,
                 req,
                 method,
@@ -149,19 +149,19 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
         return params.options();
     }
 
-    private ClientRequestContext newContext(HttpMethod method, HttpRequest req) {
+    private DefaultClientRequestContext newContext(HttpMethod method, HttpRequest req) {
         final ReleasableHolder<EventLoop> eventLoop = factory().acquireEventLoop(endpoint);
-        final ClientRequestContext ctx = new DefaultClientRequestContext(
+        final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
                 eventLoop.get(),
                 meterRegistry,
                 sessionProtocol,
-                endpoint,
                 method,
                 uri().getRawPath(),
                 uri().getRawQuery(),
                 null,
                 options(),
                 req);
+
         ctx.log().addListener(log -> eventLoop.release(), RequestLogAvailability.COMPLETE);
         return ctx;
     }

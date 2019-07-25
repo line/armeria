@@ -28,6 +28,14 @@ import com.linecorp.armeria.common.util.SafeCloseable;
  */
 @FunctionalInterface
 public interface EndpointGroup extends Listenable<List<Endpoint>>, SafeCloseable {
+
+    /**
+     * Returns a singleton {@link EndpointGroup} which does not contain any {@link Endpoint}s.
+     */
+    static EndpointGroup empty() {
+        return StaticEndpointGroup.EMPTY;
+    }
+
     /**
      * Return the endpoints held by this {@link EndpointGroup}.
      */

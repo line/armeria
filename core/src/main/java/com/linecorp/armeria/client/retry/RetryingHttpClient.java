@@ -22,6 +22,7 @@ import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.linecorp.armeria.internal.ClientUtil.executeWithFallback;
 
 import java.time.Duration;
+import java.util.Date;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -48,6 +49,8 @@ import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
+
+import io.netty.handler.codec.DateFormatter;
 
 /**
  * A {@link Client} decorator that handles failures of an invocation and retries HTTP requests.
@@ -169,19 +172,11 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
             duplicateReq = rootReqDuplicator.duplicateStream(newHeaders.build());
         }
 
-        final ClientRequestContext derivedCtx = ctx.newDerivedContext(duplicateReq);
+        final ClientRequestContext derivedCtx = newDerivedContext(ctx, duplicateReq);
         ctx.logBuilder().addChild(derivedCtx.log());
 
-        final BiFunction<ClientRequestContext, Throwable, HttpResponse> fallback = (context, cause) -> {
-            if (context != null && !context.log().isAvailable(RequestLogAvailability.REQUEST_START)) {
-                // An exception is raised even before sending a request, so abort the request to
-                // release the elements.
-                duplicateReq.abort();
-            }
-            return HttpResponse.ofFailure(cause);
-        };
-
-        final HttpResponse response = executeWithFallback(delegate(), derivedCtx, duplicateReq, fallback);
+        final HttpResponse response = executeWithFallback(delegate(), derivedCtx,
+                                                          (context, cause) -> HttpResponse.ofFailure(cause));
 
         derivedCtx.log().addListener(log -> {
             if (needsContentInStrategy) {
@@ -254,24 +249,30 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
 
     private static long getRetryAfterMillis(ClientRequestContext ctx) {
         final HttpHeaders headers = firstNonNull(ctx.log().responseHeaders(), HttpHeaders.of());
-        long millisAfter = -1;
         final String value = headers.get(HttpHeaderNames.RETRY_AFTER);
         if (value != null) {
             try {
-                millisAfter = Duration.ofSeconds(Integer.parseInt(value)).toMillis();
-                return millisAfter;
+                return Duration.ofSeconds(Integer.parseInt(value)).toMillis();
             } catch (Exception ignored) {
                 // Not a second value.
             }
+
             try {
-                final Long later = headers.getTimeMillis(HttpHeaderNames.RETRY_AFTER);
-                millisAfter = later - System.currentTimeMillis();
+                @SuppressWarnings("UseOfObsoleteDateTimeApi")
+                final Date date = DateFormatter.parseHttpDate(value);
+                if (date != null) {
+                    return date.getTime() - System.currentTimeMillis();
+                }
             } catch (Exception ignored) {
-                logger.debug("The retryAfter: {}, from the server is neither an HTTP date nor a second.",
-                             value);
+                // `parseHttpDate()` can raise an exception rather than returning `null`
+                // when the given value has more than 64 characters.
             }
+
+            logger.debug("The retryAfter: {}, from the server is neither an HTTP date nor a second.",
+                         value);
         }
-        return millisAfter;
+
+        return -1;
     }
 
     private static class ContentPreviewResponse extends FilteredHttpResponse {

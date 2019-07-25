@@ -85,7 +85,9 @@ public class KeyedCircuitBreakerMapping<K> implements CircuitBreakerMapping {
         KeySelector<String> HOST =
                 (ctx, req) -> {
                     final Endpoint endpoint = ctx.endpoint();
-                    if (endpoint.isGroup()) {
+                    if (endpoint == null) {
+                        return "UNKNOWN";
+                    } else if (endpoint.isGroup()) {
                         return endpoint.authority();
                     } else {
                         final String ipAddr = endpoint.ipAddr();

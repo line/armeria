@@ -114,10 +114,17 @@ public final class EndpointGroupRegistry {
         groupName = normalizeGroupName(groupName);
         final EndpointSelector endpointSelector = getNodeSelector(groupName);
         if (endpointSelector == null) {
-            throw new EndpointGroupException("non-existent EndpointGroup: " + groupName);
+            throw new EndpointGroupException("non-existent " + EndpointGroup.class.getSimpleName() + ": " +
+                                             groupName);
         }
 
-        return endpointSelector.select(ctx);
+        final Endpoint endpoint = endpointSelector.select(ctx);
+        if (endpoint.isGroup()) {
+            throw new EndpointGroupException(EndpointSelector.class.getSimpleName() +
+                                             "returned a group " + Endpoint.class.getSimpleName() + ": " +
+                                             endpointSelector + ", " + endpoint);
+        }
+        return endpoint;
     }
 
     private static String normalizeGroupName(String groupName) {

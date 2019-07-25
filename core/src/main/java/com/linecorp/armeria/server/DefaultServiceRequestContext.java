@@ -28,6 +28,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.Function;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -90,14 +91,13 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     private Runnable requestTimeoutHandler;
     private long maxRequestLength;
 
+    @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalResponseHeadersUpdater`
+    private volatile HttpHeaders additionalResponseHeaders;
+    @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalResponseTrailersUpdater`
+    private volatile HttpHeaders additionalResponseTrailers;
+
     @Nullable
     private volatile RequestTimeoutChangeListener requestTimeoutChangeListener;
-    @Nullable
-    @SuppressWarnings("unused")
-    private volatile HttpHeaders additionalResponseHeaders; // set only via additionalResponseHeadersUpdater
-    @Nullable
-    @SuppressWarnings("unused")
-    private volatile HttpHeaders additionalResponseTrailers; // set only via additionalResponseTrailersUpdater
 
     @Nullable
     private String strVal;
@@ -189,6 +189,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
         requestTimeoutMillis = cfg.requestTimeoutMillis();
         maxRequestLength = cfg.maxRequestLength();
+        additionalResponseHeaders = HttpHeaders.of();
+        additionalResponseTrailers = HttpHeaders.of();
     }
 
     private RequestContextAwareLogger newLogger(ServiceConfig cfg) {
@@ -257,38 +259,6 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
             ctx.addAttr(i.next());
         }
         return ctx;
-    }
-
-    private HttpHeaders createAdditionalHeadersIfAbsent() {
-        final HttpHeaders additionalResponseHeaders = this.additionalResponseHeaders;
-        if (additionalResponseHeaders == null) {
-            final HttpHeaders newHeaders = HttpHeaders.of();
-            if (additionalResponseHeadersUpdater.compareAndSet(this, null, newHeaders)) {
-                return newHeaders;
-            } else {
-                final HttpHeaders additionalResponseHeadersSetByOtherThread = this.additionalResponseHeaders;
-                assert additionalResponseHeadersSetByOtherThread != null;
-                return additionalResponseHeadersSetByOtherThread;
-            }
-        } else {
-            return additionalResponseHeaders;
-        }
-    }
-
-    private HttpHeaders createAdditionalTrailersIfAbsent() {
-        final HttpHeaders additionalResponseTrailers = this.additionalResponseTrailers;
-        if (additionalResponseTrailers == null) {
-            final HttpHeaders newTrailers = HttpHeaders.of();
-            if (additionalResponseTrailersUpdater.compareAndSet(this, null, newTrailers)) {
-                return newTrailers;
-            } else {
-                final HttpHeaders additionalResponseTrailersSetByOtherThread = this.additionalResponseTrailers;
-                assert additionalResponseTrailersSetByOtherThread != null;
-                return additionalResponseTrailersSetByOtherThread;
-            }
-        } else {
-            return additionalResponseTrailers;
-        }
     }
 
     @SuppressWarnings("unchecked")
@@ -447,10 +417,6 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
     @Override
     public HttpHeaders additionalResponseHeaders() {
-        final HttpHeaders additionalResponseHeaders = this.additionalResponseHeaders;
-        if (additionalResponseHeaders == null) {
-            return HttpHeaders.of();
-        }
         return additionalResponseHeaders;
     }
 
@@ -458,50 +424,68 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     public void setAdditionalResponseHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        additionalResponseHeaders = createAdditionalHeadersIfAbsent().toBuilder()
-                                                                     .setObject(name, value).build();
+        updateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
+                                        builder -> builder.setObject(name, value));
     }
 
     @Override
     public void setAdditionalResponseHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        additionalResponseHeaders = createAdditionalHeadersIfAbsent().toBuilder().setObject(headers).build();
+        updateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
+                                        builder -> builder.setObject(headers));
     }
 
     @Override
     public void addAdditionalResponseHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        additionalResponseHeaders = createAdditionalHeadersIfAbsent().toBuilder()
-                                                                     .addObject(name, value).build();
+        updateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
+                                        builder -> builder.addObject(name, value));
     }
 
     @Override
     public void addAdditionalResponseHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        additionalResponseHeaders = createAdditionalHeadersIfAbsent().toBuilder().addObject(headers).build();
+        updateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
+                                        builder -> builder.addObject(headers));
+    }
+
+    private void updateAdditionalResponseHeaders(
+            AtomicReferenceFieldUpdater<DefaultServiceRequestContext, HttpHeaders> atomicUpdater,
+            Function<HttpHeadersBuilder, HttpHeadersBuilder> valueUpdater) {
+        for (;;) {
+            final HttpHeaders oldValue = atomicUpdater.get(this);
+            final HttpHeaders newValue = valueUpdater.apply(oldValue.toBuilder()).build();
+            if (atomicUpdater.compareAndSet(this, oldValue, newValue)) {
+                return;
+            }
+        }
     }
 
     @Override
     public boolean removeAdditionalResponseHeader(CharSequence name) {
-        requireNonNull(name, "name");
-        final HttpHeaders additionalResponseHeaders = this.additionalResponseHeaders;
-        if (additionalResponseHeaders == null || additionalResponseHeaders.isEmpty()) {
-            return false;
-        }
+        return removeAdditionalResponseHeader(additionalResponseHeadersUpdater, name);
+    }
 
-        final HttpHeadersBuilder builder = createAdditionalHeadersIfAbsent().toBuilder();
-        final boolean removed = builder.remove(name);
-        this.additionalResponseHeaders = builder.build();
-        return removed;
+    private boolean removeAdditionalResponseHeader(
+            AtomicReferenceFieldUpdater<DefaultServiceRequestContext, HttpHeaders> atomicUpdater,
+            CharSequence name) {
+        requireNonNull(name, "name");
+        for (;;) {
+            final HttpHeaders oldValue = atomicUpdater.get(this);
+            if (oldValue.isEmpty() || !oldValue.contains(name)) {
+                return false;
+            }
+
+            final HttpHeaders newValue = oldValue.toBuilder().removeAndThen(name).build();
+            if (atomicUpdater.compareAndSet(this, oldValue, newValue)) {
+                return true;
+            }
+        }
     }
 
     @Override
     public HttpHeaders additionalResponseTrailers() {
-        final HttpHeaders additionalResponseTrailers = this.additionalResponseTrailers;
-        if (additionalResponseTrailers == null) {
-            return HttpHeaders.of();
-        }
         return additionalResponseTrailers;
     }
 
@@ -509,42 +493,35 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     public void setAdditionalResponseTrailer(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        additionalResponseTrailers = createAdditionalTrailersIfAbsent().toBuilder()
-                                                                       .setObject(name, value).build();
+        updateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
+                                        builder -> builder.setObject(name, value));
     }
 
     @Override
     public void setAdditionalResponseTrailers(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        additionalResponseTrailers = createAdditionalTrailersIfAbsent().toBuilder().setObject(headers).build();
+        updateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
+                                        builder -> builder.setObject(headers));
     }
 
     @Override
     public void addAdditionalResponseTrailer(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        additionalResponseTrailers = createAdditionalTrailersIfAbsent().toBuilder()
-                                                                       .addObject(name, value).build();
+        updateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
+                                        builder -> builder.addObject(name, value));
     }
 
     @Override
     public void addAdditionalResponseTrailers(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        additionalResponseTrailers = createAdditionalTrailersIfAbsent().toBuilder().addObject(headers).build();
+        updateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
+                                        builder -> builder.addObject(headers));
     }
 
     @Override
     public boolean removeAdditionalResponseTrailer(CharSequence name) {
-        requireNonNull(name, "name");
-        final HttpHeaders additionalResponseTrailers = this.additionalResponseTrailers;
-        if (additionalResponseTrailers == null || additionalResponseTrailers.isEmpty()) {
-            return false;
-        }
-
-        final HttpHeadersBuilder builder = createAdditionalTrailersIfAbsent().toBuilder();
-        final boolean removed = builder.remove(name);
-        this.additionalResponseTrailers = builder.build();
-        return removed;
+        return removeAdditionalResponseHeader(additionalResponseTrailersUpdater, name);
     }
 
     @Nullable

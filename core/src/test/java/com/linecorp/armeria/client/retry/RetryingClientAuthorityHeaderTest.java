@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 public class RetryingClientAuthorityHeaderTest {
@@ -53,6 +54,7 @@ public class RetryingClientAuthorityHeaderTest {
                     return HttpResponse.of(SERVICE_UNAVAILABLE);
                 }
             });
+            sb.decorator(LoggingService.newDecorator());
         }
     };
 
@@ -67,6 +69,7 @@ public class RetryingClientAuthorityHeaderTest {
                     return HttpResponse.of(req.headers().authority());
                 }
             });
+            sb.decorator(LoggingService.newDecorator());
         }
     };
 

@@ -172,7 +172,14 @@ final class StringValueConverter implements ValueConverter<String> {
     @Override
     public long convertToTimeMillis(String value) {
         @SuppressWarnings("UseOfObsoleteDateTimeApi")
-        final Date date = DateFormatter.parseHttpDate(value);
+        Date date = null;
+        try {
+            date = DateFormatter.parseHttpDate(value);
+        } catch (Exception ignored) {
+            // `parseHttpDate()` can raise an exception rather than returning `null`
+            // when the given value has more than 64 characters.
+        }
+
         if (date == null) {
             throw new IllegalArgumentException("not a date: " + value);
         }

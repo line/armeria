@@ -106,8 +106,9 @@ public final class ClientRequestContextBuilder
         }
 
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
-                eventLoop(), meterRegistry(), sessionProtocol(), endpoint,
+                eventLoop(), meterRegistry(), sessionProtocol(),
                 method(), path(), query(), fragment, options, request());
+        ctx.init(endpoint);
 
         if (isRequestStartTimeSet()) {
             ctx.logBuilder().startRequest(fakeChannel(), sessionProtocol(), sslSession(),

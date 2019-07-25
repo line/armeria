@@ -41,6 +41,11 @@ import io.netty.util.concurrent.FutureListener;
 
 final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
 
+    private static final Throwable CONTEXT_INITIALIZATION_FAILED = new Exception(
+            ClientRequestContext.class.getSimpleName() + " initialization failed", null, false, false) {
+        private static final long serialVersionUID = 837901495421033459L;
+    };
+
     private final HttpClientFactory factory;
     private final AddressResolverGroup<InetSocketAddress> addressResolverGroup;
 
@@ -52,47 +57,56 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
+        final Endpoint endpoint = ctx.endpoint();
+        if (endpoint == null) {
+            // Note that this response will be ignored because:
+            // - `ClientRequestContext.endpoint()` returns `null` only when the context initialization failed.
+            // - `ClientUtil.initContextAndExecuteWithFallback()` will use the fallback response rather than
+            //   what we return here.
+            return HttpResponse.ofFailure(CONTEXT_INITIALIZATION_FAILED);
+        }
+
         if (!isValidPath(req)) {
             final IllegalArgumentException cause = new IllegalArgumentException("invalid path: " + req.path());
             handleEarlyRequestException(ctx, req, cause);
             return HttpResponse.ofFailure(cause);
         }
 
-        final Endpoint endpoint = ctx.endpoint().resolve(ctx)
-                                     .withDefaultPort(ctx.sessionProtocol().defaultPort());
+        final Endpoint endpointWithPort = endpoint.withDefaultPort(ctx.sessionProtocol().defaultPort());
         final EventLoop eventLoop = ctx.eventLoop();
         final DecodedHttpResponse res = new DecodedHttpResponse(eventLoop);
 
         final ClientConnectionTimingsBuilder timingsBuilder = new ClientConnectionTimingsBuilder();
 
-        if (endpoint.hasIpAddr()) {
+        if (endpointWithPort.hasIpAddr()) {
             // IP address has been resolved already.
-            acquireConnectionAndExecute(ctx, endpoint, endpoint.ipAddr(), req, res, timingsBuilder);
+            acquireConnectionAndExecute(ctx, endpointWithPort, endpointWithPort.ipAddr(),
+                                        req, res, timingsBuilder);
         } else {
             // IP address has not been resolved yet.
             final Future<InetSocketAddress> resolveFuture =
                     addressResolverGroup.getResolver(eventLoop)
-                                        .resolve(InetSocketAddress.createUnresolved(endpoint.host(),
-                                                                                    endpoint.port()));
+                                        .resolve(InetSocketAddress.createUnresolved(endpointWithPort.host(),
+                                                                                    endpointWithPort.port()));
             if (resolveFuture.isDone()) {
-                finishResolve(ctx, endpoint, resolveFuture, req, res, timingsBuilder);
+                finishResolve(ctx, endpointWithPort, resolveFuture, req, res, timingsBuilder);
             } else {
                 resolveFuture.addListener(
                         (FutureListener<InetSocketAddress>) future ->
-                                finishResolve(ctx, endpoint, future, req, res, timingsBuilder));
+                                finishResolve(ctx, endpointWithPort, future, req, res, timingsBuilder));
             }
         }
 
         return res;
     }
 
-    private void finishResolve(ClientRequestContext ctx, Endpoint endpoint,
+    private void finishResolve(ClientRequestContext ctx, Endpoint endpointWithPort,
                                Future<InetSocketAddress> resolveFuture, HttpRequest req,
                                DecodedHttpResponse res, ClientConnectionTimingsBuilder timingsBuilder) {
         timingsBuilder.dnsResolutionEnd();
         if (resolveFuture.isSuccess()) {
             final String ipAddr = resolveFuture.getNow().getAddress().getHostAddress();
-            acquireConnectionAndExecute(ctx, endpoint, ipAddr, req, res, timingsBuilder);
+            acquireConnectionAndExecute(ctx, endpointWithPort, ipAddr, req, res, timingsBuilder);
         } else {
             timingsBuilder.build().setTo(ctx);
             final Throwable cause = resolveFuture.cause();
@@ -101,18 +115,18 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         }
     }
 
-    private void acquireConnectionAndExecute(ClientRequestContext ctx, Endpoint endpoint, String ipAddr,
-                                             HttpRequest req, DecodedHttpResponse res,
+    private void acquireConnectionAndExecute(ClientRequestContext ctx, Endpoint endpointWithPort,
+                                             String ipAddr, HttpRequest req, DecodedHttpResponse res,
                                              ClientConnectionTimingsBuilder timingsBuilder) {
         final EventLoop eventLoop = ctx.eventLoop();
         if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> acquireConnectionAndExecute(ctx, endpoint, ipAddr,
+            eventLoop.execute(() -> acquireConnectionAndExecute(ctx, endpointWithPort, ipAddr,
                                                                 req, res, timingsBuilder));
             return;
         }
 
-        final String host = extractHost(ctx, req, endpoint);
-        final int port = endpoint.port();
+        final String host = extractHost(ctx, req, endpointWithPort);
+        final int port = endpointWithPort.port();
         final SessionProtocol protocol = ctx.sessionProtocol();
         final HttpChannelPool pool = factory.pool(ctx.eventLoop());
 

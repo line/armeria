@@ -30,7 +30,9 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
+import com.linecorp.armeria.client.endpoint.EndpointSelector;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
@@ -248,6 +250,19 @@ public abstract class RetryingClient<I extends Request, O extends Response>
             return 0;
         }
         return state.totalAttemptNo;
+    }
+
+    /**
+     * Creates a new derived {@link ClientRequestContext}, replacing the {@link Request} with {@code req}.
+     * If {@link ClientRequestContext#endpointSelector()} exists, a new {@link Endpoint} will be selected.
+     */
+    protected static ClientRequestContext newDerivedContext(ClientRequestContext ctx, Request req) {
+        final EndpointSelector endpointSelector = ctx.endpointSelector();
+        if (endpointSelector != null) {
+            return ctx.newDerivedContext(req, endpointSelector.select(ctx));
+        } else {
+            return ctx.newDerivedContext(req);
+        }
     }
 
     private static class State {

@@ -16,16 +16,23 @@
 
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.endpoint.EndpointGroupException;
+import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
+import com.linecorp.armeria.client.endpoint.EndpointSelector;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
@@ -36,6 +43,7 @@ import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.stream.StreamMessage;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
@@ -51,9 +59,16 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     static final ThreadLocal<Consumer<ClientRequestContext>> THREAD_LOCAL_CONTEXT_CUSTOMIZER =
             new ThreadLocal<>();
 
+    private static final AtomicReferenceFieldUpdater<DefaultClientRequestContext, HttpHeaders>
+            additionalRequestHeadersUpdater = AtomicReferenceFieldUpdater.newUpdater(
+                    DefaultClientRequestContext.class, HttpHeaders.class, "additionalRequestHeaders");
+
     private final EventLoop eventLoop;
     private final ClientOptions options;
-    private final Endpoint endpoint;
+    @Nullable
+    private EndpointSelector endpointSelector;
+    @Nullable
+    private Endpoint endpoint;
     @Nullable
     private final String fragment;
 
@@ -63,21 +78,21 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     private long responseTimeoutMillis;
     private long maxResponseLength;
 
+    @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalRequestHeadersUpdater`
+    private volatile HttpHeaders additionalRequestHeaders;
+
     @Nullable
     private String strVal;
 
-    @Nullable
-    private volatile HttpHeaders additionalRequestHeaders;
-
     /**
-     * Creates a new instance.
+     * Creates a new instance. Note that {@link #init(Endpoint)} method must be invoked to finish
+     * the construction of this context.
      *
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
      * @param request the request associated with this context
      */
     public DefaultClientRequestContext(
-            EventLoop eventLoop, MeterRegistry meterRegistry,
-            SessionProtocol sessionProtocol, Endpoint endpoint,
+            EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
             ClientOptions options, Request request) {
 
@@ -85,7 +100,6 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
         this.options = requireNonNull(options, "options");
-        this.endpoint = requireNonNull(endpoint, "endpoint");
         this.fragment = fragment;
 
         log = new DefaultRequestLog(this, options.requestContentPreviewerFactory(),
@@ -94,22 +108,47 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         writeTimeoutMillis = options.writeTimeoutMillis();
         responseTimeoutMillis = options.responseTimeoutMillis();
         maxResponseLength = options.maxResponseLength();
-
-        final HttpHeaders headers = options.getOrElse(ClientOption.HTTP_HEADERS, HttpHeaders.of());
-        if (!headers.isEmpty()) {
-            additionalRequestHeaders = headers;
-        }
-
-        runThreadLocalContextCustomizer();
+        additionalRequestHeaders = options.getOrElse(ClientOption.HTTP_HEADERS, HttpHeaders.of());
     }
 
-    private HttpHeaders createAdditionalHeadersIfAbsent() {
-        final HttpHeaders additionalRequestHeaders = this.additionalRequestHeaders;
-        if (additionalRequestHeaders == null) {
-            return this.additionalRequestHeaders = HttpHeaders.of();
-        } else {
-            return additionalRequestHeaders;
+    /**
+     * Initializes this context with the specified {@link Endpoint}.
+     * This method must be invoked to finish the construction of this context.
+     *
+     * @return {@code true} if the initialization has succeeded.
+     *         {@code false} if the initialization has failed and this context's {@link RequestLog} has been
+     *         completed with the cause of the failure.
+     */
+    public boolean init(Endpoint endpoint) {
+        assert this.endpoint == null : this.endpoint;
+        try {
+            if (endpoint.isGroup()) {
+                final String groupName = endpoint.groupName();
+                final EndpointSelector endpointSelector =
+                        EndpointGroupRegistry.getNodeSelector(groupName);
+                if (endpointSelector == null) {
+                    throw new EndpointGroupException(
+                            "non-existent " + EndpointGroup.class.getSimpleName() + ": " + groupName);
+                }
+
+                this.endpointSelector = endpointSelector;
+                // Note: thread-local customizer must be run before EndpointSelector.select()
+                //       so that the customizer can inject the attributes which may be required
+                //       by the EndpointSelector.
+                runThreadLocalContextCustomizer();
+                this.endpoint = endpointSelector.select(this);
+            } else {
+                endpointSelector = null;
+                this.endpoint = endpoint;
+                runThreadLocalContextCustomizer();
+            }
+
+            return true;
+        } catch (Exception e) {
+            failEarly(e);
         }
+
+        return false;
     }
 
     private void runThreadLocalContextCustomizer() {
@@ -119,16 +158,25 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         }
     }
 
-    private DefaultClientRequestContext(DefaultClientRequestContext ctx) {
-        this(ctx, ctx.request());
+    private void failEarly(Exception cause) {
+        final RequestLogBuilder logBuilder = logBuilder();
+        final UnprocessedRequestException wrapped = new UnprocessedRequestException(cause);
+        logBuilder.endRequest(wrapped);
+        logBuilder.endResponse(wrapped);
+
+        final Request req = request();
+        if (req instanceof StreamMessage) {
+            ((StreamMessage<?>) req).abort();
+        }
     }
 
-    private DefaultClientRequestContext(DefaultClientRequestContext ctx, Request request) {
+    private DefaultClientRequestContext(DefaultClientRequestContext ctx, Request request, Endpoint endpoint) {
         super(ctx.meterRegistry(), ctx.sessionProtocol(), ctx.method(), ctx.path(), ctx.query(), request);
 
         eventLoop = ctx.eventLoop();
         options = ctx.options();
-        endpoint = ctx.endpoint();
+        endpointSelector = ctx.endpointSelector();
+        this.endpoint = requireNonNull(endpoint, "endpoint");
         fragment = ctx.fragment();
 
         log = new DefaultRequestLog(this, options.requestContentPreviewerFactory(),
@@ -137,11 +185,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         responseTimeoutMillis = ctx.responseTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
-
-        final HttpHeaders additionalHeaders = ctx.additionalRequestHeaders();
-        if (!additionalHeaders.isEmpty()) {
-            additionalRequestHeaders = additionalHeaders;
-        }
+        additionalRequestHeaders = ctx.additionalRequestHeaders();
 
         for (final Iterator<Attribute<?>> i = ctx.attrs(); i.hasNext();) {
             addAttr(i.next());
@@ -157,12 +201,18 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     @Override
     public ClientRequestContext newDerivedContext() {
-        return new DefaultClientRequestContext(this);
+        return newDerivedContext(request());
     }
 
     @Override
     public ClientRequestContext newDerivedContext(Request request) {
-        return new DefaultClientRequestContext(this, request);
+        checkState(endpoint != null, "endpoint not available");
+        return newDerivedContext(request, endpoint);
+    }
+
+    @Override
+    public ClientRequestContext newDerivedContext(Request request, Endpoint endpoint) {
+        return new DefaultClientRequestContext(this, request, endpoint);
     }
 
     @Override
@@ -193,6 +243,11 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     @Override
     public ClientOptions options() {
         return options;
+    }
+
+    @Override
+    public EndpointSelector endpointSelector() {
+        return endpointSelector;
     }
 
     @Override
@@ -256,10 +311,6 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     @Override
     public HttpHeaders additionalRequestHeaders() {
-        final HttpHeaders additionalRequestHeaders = this.additionalRequestHeaders;
-        if (additionalRequestHeaders == null) {
-            return HttpHeaders.of();
-        }
         return additionalRequestHeaders;
     }
 
@@ -267,40 +318,52 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     public void setAdditionalRequestHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        additionalRequestHeaders = createAdditionalHeadersIfAbsent().toBuilder().setObject(name, value).build();
+        updateAdditionalRequestHeaders(builder -> builder.setObject(name, value));
     }
 
     @Override
     public void setAdditionalRequestHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        additionalRequestHeaders = createAdditionalHeadersIfAbsent().toBuilder().setObject(headers).build();
+        updateAdditionalRequestHeaders(builder -> builder.setObject(headers));
     }
 
     @Override
     public void addAdditionalRequestHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        additionalRequestHeaders = createAdditionalHeadersIfAbsent().toBuilder().addObject(name, value).build();
+        updateAdditionalRequestHeaders(builder -> builder.addObject(name, value));
     }
 
     @Override
     public void addAdditionalRequestHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
-        additionalRequestHeaders = createAdditionalHeadersIfAbsent().toBuilder().addObject(headers).build();
+        updateAdditionalRequestHeaders(builder -> builder.addObject(headers));
+    }
+
+    private void updateAdditionalRequestHeaders(Function<HttpHeadersBuilder, HttpHeadersBuilder> updater) {
+        for (;;) {
+            final HttpHeaders oldValue = additionalRequestHeaders;
+            final HttpHeaders newValue = updater.apply(oldValue.toBuilder()).build();
+            if (additionalRequestHeadersUpdater.compareAndSet(this, oldValue, newValue)) {
+                return;
+            }
+        }
     }
 
     @Override
     public boolean removeAdditionalRequestHeader(CharSequence name) {
         requireNonNull(name, "name");
-        final HttpHeaders additionalRequestHeaders = this.additionalRequestHeaders;
-        if (additionalRequestHeaders == null || additionalRequestHeaders.isEmpty()) {
-            return false;
-        }
+        for (;;) {
+            final HttpHeaders oldValue = additionalRequestHeaders;
+            if (oldValue.isEmpty() || !oldValue.contains(name)) {
+                return false;
+            }
 
-        final HttpHeadersBuilder builder = additionalRequestHeaders.toBuilder();
-        final boolean removed = builder.remove(name);
-        this.additionalRequestHeaders = builder.build();
-        return removed;
+            final HttpHeaders newValue = oldValue.toBuilder().removeAndThen(name).build();
+            if (additionalRequestHeadersUpdater.compareAndSet(this, oldValue, newValue)) {
+                return true;
+            }
+        }
     }
 
     @Override
@@ -332,7 +395,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         buf.append('[')
            .append(sessionProtocol().uriText())
            .append("://")
-           .append(endpoint.authority())
+           .append(endpoint != null ? endpoint.authority() : "UNKNOWN")
            .append(path())
            .append('#')
            .append(method())
