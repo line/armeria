@@ -53,6 +53,15 @@ import {
 
 import GotoSelect from '../../components/GotoSelect';
 
+if (process.env.WEBPACK_DEV === 'true') {
+  // DocService must always be accessed at the URL with a trailing slash. In non-dev mode, the server redirects
+  // automatically but for dev we do it here in Javascript.
+  const path = window.location.pathname;
+  if (!path.endsWith('/')) {
+    window.location.pathname = `${path}/`;
+  }
+}
+
 const styles = (theme: Theme) =>
   createStyles({
     root: {

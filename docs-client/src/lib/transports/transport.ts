@@ -34,7 +34,7 @@ export default abstract class Transport {
       providers.map((provider) => provider()),
     );
     let filledHeaders = {};
-    if (process.env.WEBPACK_SERVE === 'true') {
+    if (process.env.WEBPACK_DEV === 'true') {
       filledHeaders = { [docServiceDebug]: 'true' };
     }
 

@@ -338,7 +338,7 @@ class DebugPage extends React.PureComponent<Props, State> {
       }
 
       headers['content-type'] = transport.getDebugMimeType();
-      if (process.env.WEBPACK_SERVE === 'true') {
+      if (process.env.WEBPACK_DEV === 'true') {
         headers[docServiceDebug] = 'true';
       }
 
