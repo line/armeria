@@ -26,11 +26,11 @@ class PathWithPrefixTest {
     void prefix() {
         Route route = Route.builder().pathWithPrefix("/foo/", "glob:/bar/**").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.REGEX);
-        assertThat(route.paths()).containsExactly("^/foo/bar/(.*)$");
+        assertThat(route.paths()).containsExactly("^/foo/bar/(.*)$", "/foo/bar/**");
 
         route = Route.builder().pathWithPrefix("/foo/", "glob:bar").build();
-        assertThat(route.pathType()).isSameAs(RoutePathType.REGEX_WITH_PREFIX);
-        assertThat(route.paths()).containsExactly("^/(?:.+/)?bar$", "/foo/");
+        assertThat(route.pathType()).isSameAs(RoutePathType.REGEX);
+        assertThat(route.paths()).containsExactly("^/foo/(?:.+/)?bar$", "/foo/**/bar");
     }
 
     @Test
@@ -51,7 +51,7 @@ class PathWithPrefixTest {
         assertThat(route.meterTag()).isEqualTo("glob:/foo/bar/**");
 
         route = Route.builder().pathWithPrefix("/foo/", "glob:bar").build();
-        assertThat(route.meterTag()).isEqualTo("prefix:/foo/,glob:/**/bar");
+        assertThat(route.meterTag()).isEqualTo("glob:/foo/**/bar");
 
         route = Route.builder().pathWithPrefix("/foo/", "regex:/(foo|bar)").build();
         assertThat(route.meterTag()).isEqualTo("prefix:/foo/,regex:/(foo|bar)");

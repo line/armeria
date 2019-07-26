@@ -90,7 +90,11 @@ public interface Route {
      *   <li>PARAMETERIZED: {@code [ "/foo/:", "/foo/:" ]} (The trie path is the same.)</li>
      * </ul>
      *
-     * {@link RoutePathType#REGEX} has only one path that represents it. e.g, {@code [ "^/(?<foo>.*)$" ]}
+     * <p>{@link RoutePathType#REGEX} may have one or two paths. If the {@link Route} was created from a glob
+     * pattern, it will have two paths where the first one is the regular expression and the second one
+     * is the glob pattern, e.g. {@code [ "^/(?(.+)/)?foo$", "/*&#42;/foo" ]}.
+     * If not created from a glob pattern, it will have only one path, which is the regular expression,
+     * e.g, {@code [ "^/(?<foo>.*)$" ]}</p>
      *
      * <p>{@link RoutePathType#REGEX_WITH_PREFIX} has two paths. The first one is the regex and the second
      * one is the path. e.g, {@code [ "^/(?<foo>.*)$", "/bar/" ]}

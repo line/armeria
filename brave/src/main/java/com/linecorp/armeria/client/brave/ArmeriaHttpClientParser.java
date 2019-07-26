@@ -28,7 +28,7 @@ import brave.http.HttpClientParser;
 
 /**
  * Default implementation of {@link HttpClientParser}.
- * This parser add some custom tags and overwrite the name of span if {@link RequestLog#requestContent()}
+ * This parser adds some custom tags and overwrites the name of span if {@link RequestLog#requestContent()}
  * is {@link RpcRequest}.
  * The following tags become available:
  * <ul>
@@ -39,7 +39,6 @@ import brave.http.HttpClientParser;
  *   <li>address.remote</li>
  *   <li>address.local</li>
  * </ul>
- * User can extend this class or implement own {@link HttpClientParser}.
  */
 final class ArmeriaHttpClientParser extends HttpClientParser {
 

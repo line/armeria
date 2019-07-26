@@ -58,12 +58,11 @@ final class GlobPathMapping extends AbstractPathMapping {
     private final String strVal;
     private final List<String> paths;
 
-    GlobPathMapping(String glob) {
-        final PatternAndParamCount patternAndParamCount = globToRegex(glob);
+    GlobPathMapping(String glob, int numGroupsToSkip) {
+        final PatternAndParamCount patternAndParamCount = globToRegex(glob, numGroupsToSkip);
 
         this.glob = glob;
         pattern = patternAndParamCount.pattern;
-        paths = ImmutableList.of(pattern.pattern());
         numParams = patternAndParamCount.numParams;
 
         final ImmutableSet.Builder<String> paramNames = ImmutableSet.builder();
@@ -79,6 +78,7 @@ final class GlobPathMapping extends AbstractPathMapping {
         final String aGlob = glob.startsWith("/") ? glob : "/**/" + glob;
         loggerName = newLoggerName(aGlob);
         meterTag = GLOB + aGlob;
+        paths = ImmutableList.of(pattern.pattern(), aGlob);
     }
 
     @Nullable
@@ -141,14 +141,11 @@ final class GlobPathMapping extends AbstractPathMapping {
         return strVal;
     }
 
-    static PatternAndParamCount globToRegex(String glob) {
-        boolean createGroup;
+    static PatternAndParamCount globToRegex(String glob, int numGroupsToSkip) {
         int numGroups = 0;
         if (glob.charAt(0) != '/') {
             glob = "/**/" + glob;
-            createGroup = false; // Do not capture the prefix a user did not specify.
-        } else {
-            createGroup = true;
+            numGroupsToSkip++; // Do not capture the prefix a user did not specify.
         }
 
         final int pathPatternLen = glob.length();
@@ -170,7 +167,7 @@ final class GlobPathMapping extends AbstractPathMapping {
 
             switch (asterisks) {
                 case 1:
-                    if (createGroup) {
+                    if (numGroupsToSkip <= 0) {
                         buf.append('(');
                         numGroups++;
                     }
@@ -182,10 +179,10 @@ final class GlobPathMapping extends AbstractPathMapping {
                         buf.append("[^/]*");
                     }
 
-                    if (createGroup) {
+                    if (numGroupsToSkip <= 0) {
                         buf.append(')');
                     } else {
-                        createGroup = true;
+                        numGroupsToSkip--;
                     }
                     break;
                 case 2:
@@ -193,34 +190,34 @@ final class GlobPathMapping extends AbstractPathMapping {
                     if (beforeAsterisk == '/' && c == '/') {
                         buf.append("(?:");
 
-                        if (createGroup) {
+                        if (numGroupsToSkip <= 0) {
                             buf.append('(');
                             numGroups++;
                         }
 
                         buf.append(".+");
 
-                        if (createGroup) {
+                        if (numGroupsToSkip <= 0) {
                             buf.append(')');
                         } else {
-                            createGroup = false;
+                            numGroupsToSkip--;
                         }
 
                         buf.append("/)?");
                         asterisks = 0;
                         continue;
                     } else {
-                        if (createGroup) {
+                        if (numGroupsToSkip <= 0) {
                             buf.append('(');
                             numGroups++;
                         }
 
                         buf.append(".*");
 
-                        if (createGroup) {
+                        if (numGroupsToSkip <= 0) {
                             buf.append(')');
                         } else {
-                            createGroup = false;
+                            numGroupsToSkip--;
                         }
                         break;
                     }
@@ -254,7 +251,7 @@ final class GlobPathMapping extends AbstractPathMapping {
         // Handle the case where the pattern ends with asterisk(s).
         switch (asterisks) {
             case 1:
-                if (createGroup) {
+                if (numGroupsToSkip <= 0) {
                     buf.append('(');
                     numGroups++;
                 }
@@ -266,19 +263,19 @@ final class GlobPathMapping extends AbstractPathMapping {
                     buf.append("[^/]*");
                 }
 
-                if (createGroup) {
+                if (numGroupsToSkip <= 0) {
                     buf.append(')');
                 }
                 break;
             case 2:
-                if (createGroup) {
+                if (numGroupsToSkip <= 0) {
                     buf.append('(');
                     numGroups++;
                 }
 
                 buf.append(".*");
 
-                if (createGroup) {
+                if (numGroupsToSkip <= 0) {
                     buf.append(')');
                 }
                 break;
