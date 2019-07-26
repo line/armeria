@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.internal.brave;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
 import javax.annotation.Nullable;
@@ -25,6 +27,7 @@ import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 
 import brave.Span;
 
@@ -39,6 +42,17 @@ public final class SpanTags {
     /** Semi-official annotation for the time the first bytes were received on the wire. */
     private static final String WIRE_RECEIVE_ANNOTATION = "wr";
 
+    public static final String TAG_HTTP_HOST = "http.host";
+    public static final String TAG_HTTP_METHOD = "http.method";
+    public static final String TAG_HTTP_PATH = "http.path";
+    public static final String TAG_HTTP_URL = "http.url";
+    public static final String TAG_HTTP_STATUS_CODE = "http.status_code";
+    public static final String TAG_HTTP_PROTOCOL = "http.protocol";
+    public static final String TAG_HTTP_SERIALIZATION_FORMAT = "http.serfmt";
+    public static final String TAG_ERROR = "error";
+    public static final String TAG_ADDRESS_REMOTE = "address.remote";
+    public static final String TAG_ADDRESS_LOCAL = "address.local";
+
     /**
      * Adds information about the raw HTTP request, RPC request, and endpoint to the span.
      */
@@ -48,31 +62,31 @@ public final class SpanTags {
         final String path = log.path();
 
         assert authority != null;
-        span.tag("http.host", authority)
-            .tag("http.method", log.method().name())
-            .tag("http.path", path)
-            .tag("http.url", generateUrl(scheme, authority, path, log.query()))
-            .tag("http.status_code", log.status().codeAsText())
-            .tag("http.protocol", scheme.sessionProtocol().uriText());
+        span.tag(TAG_HTTP_HOST, authority)
+            .tag(TAG_HTTP_METHOD, log.method().name())
+            .tag(TAG_HTTP_PATH, path)
+            .tag(TAG_HTTP_URL, generateUrl(log))
+            .tag(TAG_HTTP_STATUS_CODE, log.status().codeAsText())
+            .tag(TAG_HTTP_PROTOCOL, scheme.sessionProtocol().uriText());
 
         final SerializationFormat serFmt = scheme.serializationFormat();
         if (serFmt != SerializationFormat.NONE) {
-            span.tag("http.serfmt", serFmt.uriText());
+            span.tag(TAG_HTTP_SERIALIZATION_FORMAT, serFmt.uriText());
         }
 
         final Throwable responseCause = log.responseCause();
         if (responseCause != null) {
-            span.tag("error", responseCause.toString());
+            span.tag(TAG_ERROR, responseCause.toString());
         }
 
         final SocketAddress raddr = log.context().remoteAddress();
         if (raddr != null) {
-            span.tag("address.remote", raddr.toString());
+            span.tag(TAG_ADDRESS_REMOTE, raddr.toString());
         }
 
         final SocketAddress laddr = log.context().localAddress();
         if (laddr != null) {
-            span.tag("address.local", laddr.toString());
+            span.tag(TAG_ADDRESS_LOCAL, laddr.toString());
         }
 
         final Object requestContent = log.requestContent();
@@ -81,7 +95,20 @@ public final class SpanTags {
         }
     }
 
-    private static String generateUrl(Scheme scheme, String authority, String path, @Nullable String query) {
+    /**
+     * Url needs {@link RequestLogAvailability#SCHEME} and {@link RequestLogAvailability#REQUEST_HEADERS}.
+     * Return null if this property is not available yet.
+     */
+    @Nullable
+    public static String generateUrl(RequestLog requestLog) {
+        if (!requestLog.isAvailable(RequestLogAvailability.SCHEME) ||
+            !requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)) {
+            return null;
+        }
+        final Scheme scheme = requestLog.scheme();
+        final String authority = requestLog.authority();
+        final String path = requestLog.path();
+        final String query = requestLog.query();
         final SessionProtocol sessionProtocol = scheme.sessionProtocol();
         final String uriScheme;
         if (SessionProtocol.httpValues().contains(sessionProtocol)) {
@@ -113,6 +140,24 @@ public final class SpanTags {
 
     public static void logWireReceive(Span span, long wireSendTimeNanos, RequestLog requestLog) {
         span.annotate(SpanContextUtil.wallTimeMicros(requestLog, wireSendTimeNanos), WIRE_RECEIVE_ANNOTATION);
+    }
+
+    public static boolean updateRemoteEndpoint(Span span, RequestLog log) {
+        final SocketAddress remoteAddress = log.context().remoteAddress();
+        final InetAddress address;
+        final int port;
+        if (remoteAddress instanceof InetSocketAddress) {
+            final InetSocketAddress socketAddress = (InetSocketAddress) remoteAddress;
+            address = socketAddress.getAddress();
+            port = socketAddress.getPort();
+        } else {
+            address = null;
+            port = 0;
+        }
+        if (address != null) {
+            return span.remoteIpAndPort(address.getHostAddress(), port);
+        }
+        return false;
     }
 
     private SpanTags() {}
