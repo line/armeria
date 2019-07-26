@@ -43,10 +43,10 @@ com.github.ben-manes.caffeine:
       to: com.linecorp.armeria.internal.shaded.caffeine
 
 com.github.jengelman.gradle.plugins:
-  shadow: { version: '5.0.0' }
+  shadow: { version: '5.1.0' }
 
 com.google.api:
-  gax-grpc: { version: '1.47.0' }
+  gax-grpc: { version: '1.47.1' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
@@ -93,7 +93,7 @@ com.google.protobuf:
     version: *PROTOBUF_VERSION
     exclusions:
     - com.google.errorprone:error_prone_annotations
-  protobuf-gradle-plugin: { version: '0.8.9' }
+  protobuf-gradle-plugin: { version: '0.8.10' }
 
 com.moowork.gradle:
   gradle-node-plugin: { version: '1.3.1' }
@@ -128,7 +128,7 @@ io.dropwizard.metrics:
 # Ensure to update the Protobuf version in this file when updating gRPC.
 io.grpc:
   grpc-core:
-    version: &GRPC_VERSION '1.21.0'
+    version: &GRPC_VERSION '1.22.1'
     javadocs:
     - https://grpc.io/grpc-java/javadoc/
     - https://developers.google.com/protocol-buffers/docs/reference/java/
@@ -176,7 +176,7 @@ io.micrometer:
 
 io.netty:
   netty-common:
-    version: &NETTY_VERSION '4.1.37.Final'
+    version: &NETTY_VERSION '4.1.38.Final'
     javadocs:
     - https://netty.io/4.1/api/
   netty-buffer: { version: *NETTY_VERSION }
@@ -245,21 +245,21 @@ junit:
 
 org.junit.jupiter:
   junit-jupiter-api:
-    version: &JUNIT_JUPITER_VERSION '5.5.0'
+    version: &JUNIT_JUPITER_VERSION '5.5.1'
     javadocs:
-    - https://junit.org/junit5/docs/5.4.2/api/
+    - https://junit.org/junit5/docs/5.5.1/api/
   junit-jupiter-engine:
     version: *JUNIT_JUPITER_VERSION
   junit-jupiter-params:
     version: *JUNIT_JUPITER_VERSION
 org.junit.platform:
   junit-platform-commons:
-    version: &JUNIT_PLATFORM_VERSION '1.5.0'
+    version: &JUNIT_PLATFORM_VERSION '1.5.1'
   junit-platform-launcher:
     version: *JUNIT_PLATFORM_VERSION
 org.junit.vintage:
   junit-vintage-engine:
-    version: '5.5.0'
+    version: *JUNIT_JUPITER_VERSION
 
 kr.motd.gradle:
   sphinx-gradle-plugin: { version: '2.5.0' }
@@ -274,7 +274,7 @@ me.champeau.gradle:
   jmh-gradle-plugin: { version: '0.5.0-rc-1' }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION '2.7.0' }
+  json-unit: { version: &JSON_UNIT_VERSION '2.8.0' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 net.sf.proguard:
@@ -323,7 +323,7 @@ org.apache.thrift:
 
 org.apache.tomcat.embed:
   tomcat-embed-core:
-    version: &TOMCAT_VERSION '9.0.21'
+    version: &TOMCAT_VERSION '9.0.22'
     javadocs:
     - https://tomcat.apache.org/tomcat-9.0-doc/api/
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
@@ -398,7 +398,7 @@ org.jsoup:
   jsoup: { version: '1.12.1' }
 
 org.mockito:
-  mockito-core: { version: &MOCKITO_VERSION '2.28.2' }
+  mockito-core: { version: &MOCKITO_VERSION '3.0.0' }
   mockito-junit-jupiter: { version: *MOCKITO_VERSION }
 
 org.mortbay.jetty.alpn:
