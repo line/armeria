@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.brave;
 
+import java.util.List;
+
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.Request;
@@ -100,15 +102,16 @@ final class ArmeriaHttpServerAdapter extends HttpServerAdapter<RequestLog, Reque
     public String route(RequestLog response) {
         assert response.context() instanceof ServiceRequestContext;
         final Route route = ((ServiceRequestContext) response.context()).route();
+        final List<String> paths = route.paths();
         switch (route.pathType()) {
             case EXACT:
             case PREFIX:
             case PARAMETERIZED:
-                return route.paths().get(1);
+                return paths.get(1);
             case REGEX:
-                return route.paths().get(0);
+                return paths.get(paths.size() - 1);
             case REGEX_WITH_PREFIX:
-                return route.paths().get(1) + ' ' + route.paths().get(0);
+                return paths.get(1) + paths.get(0);
         }
         return null;
     }
@@ -161,7 +164,7 @@ final class ArmeriaHttpServerAdapter extends HttpServerAdapter<RequestLog, Reque
 
     /**
      * This sets the client IP:port to the {@link RequestContext#remoteAddress()}
-     * if the {@link HttpServerAdapter#parseClientIpAndPort default parsing} fails.
+     * if the {@linkplain HttpServerAdapter#parseClientIpAndPort default parsing} fails.
      */
     @Override
     public boolean parseClientIpAndPort(RequestLog requestLog, Span span) {

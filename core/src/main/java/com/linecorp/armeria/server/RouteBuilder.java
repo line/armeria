@@ -73,13 +73,13 @@ public class RouteBuilder {
         return pathMapping(getPathMapping(pathPattern));
     }
 
-    private static PathMapping globPathMapping(String glob) {
+    private static PathMapping globPathMapping(String glob, int numGroupsToSkip) {
         if (glob.startsWith("/") && !glob.contains("*")) {
             // Does not have a pattern matcher.
             return new ExactPathMapping(glob);
         }
 
-        return new GlobPathMapping(glob);
+        return new GlobPathMapping(glob, numGroupsToSkip);
     }
 
     RouteBuilder pathMapping(PathMapping pathMapping) {
@@ -138,7 +138,11 @@ public class RouteBuilder {
      * path components recursively.
      */
     public RouteBuilder glob(String glob) {
-        return pathMapping(globPathMapping(requireNonNull(glob, "glob")));
+        return glob(glob, 0);
+    }
+
+    private RouteBuilder glob(String glob, int numGroupsToSkip) {
+        return pathMapping(globPathMapping(requireNonNull(glob, "glob"), numGroupsToSkip));
     }
 
     /**
@@ -195,6 +199,8 @@ public class RouteBuilder {
             final String glob = pathPattern.substring(GLOB.length());
             if (glob.startsWith("/")) {
                 return glob(concatPaths(prefix, glob));
+            } else {
+                return glob(concatPaths(prefix + "**/", glob), 1);
             }
         }
 
@@ -317,7 +323,7 @@ public class RouteBuilder {
         }
         if (pathPattern.startsWith(GLOB)) {
             final String glob = pathPattern.substring(GLOB.length());
-            return globPathMapping(glob);
+            return globPathMapping(glob, 0);
         }
         if (pathPattern.startsWith(REGEX)) {
             return new RegexPathMapping(Pattern.compile(pathPattern.substring(REGEX.length())));
