@@ -81,6 +81,6 @@ tasks.check.dependsOn checkWeb
 
 node {
     version = '10.16.0'
-    yarnVersion = '1.16.0'
+    yarnVersion = '1.17.3'
     download = true
 }
