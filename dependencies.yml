@@ -262,7 +262,7 @@ org.junit.vintage:
     version: *JUNIT_JUPITER_VERSION
 
 kr.motd.gradle:
-  sphinx-gradle-plugin: { version: '2.5.0' }
+  sphinx-gradle-plugin: { version: '2.6.0' }
 
 # We do not depend on log4j. We just need this to stop dependency-management-plugin from
 # complaining about its bad POM.
