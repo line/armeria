@@ -55,7 +55,6 @@ needs_sphinx = '1.0'
 sys.path.append(os.path.abspath('_extensions'))
 extensions = ['sphinx.ext.autodoc', 
               'sphinxcontrib.httpdomain', 
-              'sphinxcontrib.inlinesyntaxhighlight',
               'sphinxcontrib.plantuml',
               'api', 'highlightjs']
 templates_path = ['_templates']
