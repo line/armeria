@@ -19,6 +19,9 @@ package com.linecorp.armeria.testing.junit.server.mockwebserver;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
+/**
+ * A request that has been made to a {@link MockWebServerExtension}.
+ */
 public class RecordedRequest {
 
     private final AggregatedHttpRequest request;
@@ -29,10 +32,17 @@ public class RecordedRequest {
         this.context = context;
     }
 
+    /**
+     * The {@link AggregatedHttpRequest} received by the server.
+     */
     public AggregatedHttpRequest getRequest() {
         return request;
     }
 
+    /**
+     * The {@link ServiceRequestContext} created when handling the request. Can be used to, e.g., check whether
+     * the request uses TLS.
+     */
     public ServiceRequestContext getContext() {
         return context;
     }

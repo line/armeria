@@ -81,16 +81,28 @@ public class MockWebServerExtension extends ServerExtension implements BeforeTes
     private final Queue<MockResponse> mockResponses = new LinkedBlockingQueue<>();
     private final Queue<RecordedRequest> recordedRequests = new LinkedBlockingQueue<>();
 
+    /**
+     * Enqueues the {@link MockResponse} to return to a client of this {@link MockWebServerExtension}. Multiple
+     * calls will return multiple responses in order.
+     */
     public MockWebServerExtension enqueue(MockResponse response) {
         mockResponses.add(response);
         return this;
     }
 
+    /**
+     * Enqueues the {@link AggregatedHttpResponse} to return to a client of this {@link MockWebServerExtension}.
+     * Multiple calls will return multiple responses in order.
+     */
     public MockWebServerExtension enqueue(AggregatedHttpResponse response) {
         mockResponses.add(MockResponse.of(response));
         return this;
     }
 
+    /**
+     * Returns the next {@link RecordedRequest} the server received. Call this method multiple times to retrieve
+     * the requests retrieved, in order. Returns {@code null} if there are no more recorded requests.
+     */
     @Nullable
     public RecordedRequest takeRequest() {
         return recordedRequests.poll();
