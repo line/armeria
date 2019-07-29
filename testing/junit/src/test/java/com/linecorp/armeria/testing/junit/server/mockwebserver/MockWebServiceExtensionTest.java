@@ -44,8 +44,8 @@ class MockWebServiceExtensionTest {
 
     @Test
     void normal() {
-        HttpClient httpClient = HttpClient.of(server.httpUri("/"));
-        HttpClient httpsClient = new HttpClientBuilder(server.httpsUri("/"))
+        final HttpClient httpClient = HttpClient.of(server.httpUri("/"));
+        final HttpClient httpsClient = new HttpClientBuilder(server.httpsUri("/"))
                 .factory(new ClientFactoryBuilder()
                                  .sslContextCustomizer(
                                          ssl -> ssl.trustManager(InsecureTrustManagerFactory.INSTANCE))
@@ -112,7 +112,7 @@ class MockWebServiceExtensionTest {
                                    .trailersDelay(Duration.ofMillis(200))
                                    .build());
 
-        HttpClient client = new HttpClientBuilder(server.httpUri("/"))
+        final HttpClient client = new HttpClientBuilder(server.httpUri("/"))
                 .option(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(50L))
                 .build();
 
