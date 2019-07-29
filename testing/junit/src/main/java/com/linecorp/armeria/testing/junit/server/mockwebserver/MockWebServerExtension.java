@@ -158,9 +158,9 @@ public class MockWebServerExtension extends ServerExtension implements BeforeTes
                     return HttpResponse.of(response);
                 }
 
-                HttpResponseWriter httpResponse = HttpResponse.streaming();
+                final HttpResponseWriter httpResponse = HttpResponse.streaming();
 
-                CompletableFuture<Void> headersWritten = new CompletableFuture<>();
+                final CompletableFuture<Void> headersWritten = new CompletableFuture<>();
                 if (headersDelay.isZero()) {
                     httpResponse.write(response.headers());
                     headersWritten.complete(null);
@@ -170,13 +170,13 @@ public class MockWebServerExtension extends ServerExtension implements BeforeTes
                        .addListener(unused -> headersWritten.complete(null));
                 }
 
-                CompletableFuture<Void> bodyWritten = headersWritten
+                final CompletableFuture<Void> bodyWritten = headersWritten
                         .thenCompose(unused -> {
                             if (contentDelay.isZero()) {
                                 httpResponse.write(response.content());
                                 return completedFuture(null);
                             } else {
-                                CompletableFuture<Void> future = new CompletableFuture<>();
+                                final CompletableFuture<Void> future = new CompletableFuture<>();
                                 ctx.eventLoop().schedule(() -> httpResponse.write(response.content()),
                                                          contentDelay.toNanos(), TimeUnit.NANOSECONDS)
                                    .addListener(unused1 -> future.complete(null));
