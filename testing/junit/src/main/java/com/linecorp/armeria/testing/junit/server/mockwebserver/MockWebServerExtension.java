@@ -16,10 +16,8 @@
 
 package com.linecorp.armeria.testing.junit.server.mockwebserver;
 
-import static java.util.concurrent.CompletableFuture.completedFuture;
-
 import java.time.Duration;
-import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -29,11 +27,13 @@ import javax.annotation.Nullable;
 import org.junit.jupiter.api.extension.BeforeTestExecutionCallback;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
@@ -78,8 +78,10 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
  */
 public class MockWebServerExtension extends ServerExtension implements BeforeTestExecutionCallback {
 
-    private final Queue<MockResponse> mockResponses = new LinkedBlockingQueue<>();
-    private final Queue<RecordedRequest> recordedRequests = new LinkedBlockingQueue<>();
+    private static final Logger logger = LoggerFactory.getLogger(MockWebServerExtension.class);
+
+    private final BlockingQueue<MockResponse> mockResponses = new LinkedBlockingQueue<>();
+    private final BlockingQueue<RecordedRequest> recordedRequests = new LinkedBlockingQueue<>();
 
     /**
      * Enqueues the {@link MockResponse} to return to a client of this {@link MockWebServerExtension}. Multiple
@@ -101,11 +103,17 @@ public class MockWebServerExtension extends ServerExtension implements BeforeTes
 
     /**
      * Returns the next {@link RecordedRequest} the server received. Call this method multiple times to retrieve
-     * the requests retrieved, in order. Returns {@code null} if there are no more recorded requests.
+     * the requests retrieved, in order. Will block up to 10 seconds waiting for a request.
      */
     @Nullable
     public RecordedRequest takeRequest() {
-        return recordedRequests.poll();
+        try {
+            return recordedRequests.poll(10, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            logger.warn("Could not take request.", e);
+            Exceptions.throwUnsafely(e);
+            return null;  // Unreachable.
+        }
     }
 
     @Override
@@ -148,57 +156,18 @@ public class MockWebServerExtension extends ServerExtension implements BeforeTes
                             "No response enqueued. Did you call MockWebServer.enqueue? Request: " + aggReq);
                 }
 
-                final Duration headersDelay = mockResponse.headersDelay();
-                final Duration contentDelay = mockResponse.contentDelay();
-                final Duration trailersDelay = mockResponse.trailersDelay();
+                final Duration delay = mockResponse.delay();
 
                 final AggregatedHttpResponse response = mockResponse.response();
 
-                if (headersDelay.isZero() && contentDelay.isZero() && trailersDelay.isZero()) {
+                if (delay.isZero()) {
                     return HttpResponse.of(response);
-                }
-
-                final HttpResponseWriter httpResponse = HttpResponse.streaming();
-
-                final CompletableFuture<Void> headersWritten = new CompletableFuture<>();
-                if (headersDelay.isZero()) {
-                    httpResponse.write(response.headers());
-                    headersWritten.complete(null);
                 } else {
-                    ctx.eventLoop().schedule(() -> httpResponse.write(response.headers()),
-                                             headersDelay.toNanos(), TimeUnit.NANOSECONDS)
-                       .addListener(unused -> headersWritten.complete(null));
+                    CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+                    ctx.eventLoop().schedule(() -> responseFuture.complete(HttpResponse.of(response)),
+                                             delay.toNanos(), TimeUnit.NANOSECONDS);
+                    return HttpResponse.from(responseFuture);
                 }
-
-                final CompletableFuture<Void> bodyWritten = headersWritten
-                        .thenCompose(unused -> {
-                            if (contentDelay.isZero()) {
-                                httpResponse.write(response.content());
-                                return completedFuture(null);
-                            } else {
-                                final CompletableFuture<Void> future = new CompletableFuture<>();
-                                ctx.eventLoop().schedule(() -> httpResponse.write(response.content()),
-                                                         contentDelay.toNanos(), TimeUnit.NANOSECONDS)
-                                   .addListener(unused1 -> future.complete(null));
-                                return future;
-                            }
-                        });
-
-                bodyWritten.thenAccept(unused -> {
-                    if (trailersDelay.isZero()) {
-                        httpResponse.write(response.trailers());
-                        httpResponse.close();
-                    } else {
-                        ctx.eventLoop().schedule(
-                                () -> {
-                                    httpResponse.write(response.trailers());
-                                    httpResponse.close();
-                                },
-                                trailersDelay.toNanos(), TimeUnit.NANOSECONDS);
-                    }
-                });
-
-                return httpResponse;
             }));
         }
     }

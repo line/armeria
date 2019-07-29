@@ -41,16 +41,11 @@ public class MockResponse {
     }
 
     private final AggregatedHttpResponse response;
-    private final Duration headersDelay;
-    private final Duration contentDelay;
-    private final Duration trailersDelay;
+    private final Duration delay;
 
-    MockResponse(AggregatedHttpResponse response, Duration headersDelay, Duration contentDelay,
-                 Duration trailersDelay) {
+    MockResponse(AggregatedHttpResponse response, Duration delay) {
         this.response = response;
-        this.headersDelay = headersDelay;
-        this.contentDelay = contentDelay;
-        this.trailersDelay = trailersDelay;
+        this.delay = delay;
     }
 
     /**
@@ -61,23 +56,10 @@ public class MockResponse {
     }
 
     /**
-     * Returns the time to wait before returning the headers of this {@link MockResponse}.
+     * Returns the time to wait before returning the {@link AggregatedHttpResponse} of this
+     * {@link MockResponse}.
      */
-    public Duration headersDelay() {
-        return headersDelay;
-    }
-
-    /**
-     * Returns the time to wait before returning the content of this {@link MockResponse}.
-     */
-    public Duration contentDelay() {
-        return contentDelay;
-    }
-
-    /**
-     * Returns the time to wait before returning the trailers of this {@link MockResponse}.
-     */
-    public Duration trailersDelay() {
-        return trailersDelay;
+    public Duration delay() {
+        return delay;
     }
 }

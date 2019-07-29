@@ -103,23 +103,13 @@ class MockWebServiceExtensionTest {
     @Test
     void delay() {
         server.enqueue(MockResponse.builder(AggregatedHttpResponse.of(HttpStatus.OK))
-                                   .headersDelay(Duration.ofMillis(200))
-                                   .build());
-        server.enqueue(MockResponse.builder(AggregatedHttpResponse.of(HttpStatus.OK))
-                                   .contentDelay(Duration.ofMillis(200))
-                                   .build());
-        server.enqueue(MockResponse.builder(AggregatedHttpResponse.of(HttpStatus.OK))
-                                   .trailersDelay(Duration.ofMillis(200))
+                                   .delay(Duration.ofMillis(200))
                                    .build());
 
         final HttpClient client = new HttpClientBuilder(server.httpUri("/"))
                 .option(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(50L))
                 .build();
 
-        assertThatThrownBy(() -> client.get("/").aggregate().join())
-                .hasCauseInstanceOf(ResponseTimeoutException.class);
-        assertThatThrownBy(() -> client.get("/").aggregate().join())
-                .hasCauseInstanceOf(ResponseTimeoutException.class);
         assertThatThrownBy(() -> client.get("/").aggregate().join())
                 .hasCauseInstanceOf(ResponseTimeoutException.class);
     }

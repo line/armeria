@@ -29,67 +29,25 @@ public class MockResponseBuilder {
 
     private final AggregatedHttpResponse response;
 
-    private Duration headersDelay = Duration.ZERO;
-    private Duration bodyDelay = Duration.ZERO;
-    private Duration trailersDelay = Duration.ZERO;
+    private Duration delay = Duration.ZERO;
 
     MockResponseBuilder(AggregatedHttpResponse response) {
         this.response = response;
     }
 
     /**
-     * Sets a time to wait before returning response headers. Can be useful to validate client timeout behavior.
+     * Sets a time to wait before returning the response. Can be useful to validate client timeout behavior.
      */
-    public MockResponseBuilder headersDelay(Duration headersDelay) {
-        this.headersDelay = headersDelay;
+    public MockResponseBuilder delay(Duration headersDelay) {
+        this.delay = headersDelay;
         return this;
     }
 
     /**
-     * Sets a time to wait before returning response headers. Can be useful to validate client timeout behavior.
+     * Sets a time to wait before returning the response. Can be useful to validate client timeout behavior.
      */
-    public MockResponseBuilder headersDelay(int amount, TimeUnit timeUnit) {
-        this.headersDelay = Duration.ofMillis(timeUnit.toMillis(amount));
-        return this;
-    }
-
-    /**
-     * Sets a time to wait before returning response content. Can be useful to validate client timeout behavior.
-     * This value does not affect the time that headers are returned, to set that use
-     * {@link #headersDelay(Duration)}.
-     */
-    public MockResponseBuilder contentDelay(Duration bodyDelay) {
-        this.bodyDelay = bodyDelay;
-        return this;
-    }
-
-    /**
-     * Sets a time to wait before returning response content. Can be useful to validate client timeout behavior.
-     * This value does not affect the time that headers are returned, to set that use
-     * {@link #headersDelay(int, TimeUnit)}.
-     */
-    public MockResponseBuilder contentDelay(int amount, TimeUnit timeUnit) {
-        this.bodyDelay = Duration.ofMillis(timeUnit.toMillis(amount));
-        return this;
-    }
-
-    /**
-     * Sets a time to wait before returning response trailers. Can be useful to validate client timeout
-     * behavior. This value does not affect the time that headers or content are returned, to set those use
-     * {@link #headersDelay(Duration)} or {@link #contentDelay(Duration)}.
-     */
-    public MockResponseBuilder trailersDelay(Duration trailersDelay) {
-        this.trailersDelay = trailersDelay;
-        return this;
-    }
-
-    /**
-     * Sets a time to wait before returning response trailers. Can be useful to validate client timeout
-     * behavior. This value does not affect the time that headers or content are returned, to set those use
-     * {@link #headersDelay(int, TimeUnit)} or {@link #contentDelay(int, TimeUnit)}.
-     */
-    public MockResponseBuilder trailersDelay(int amount, TimeUnit timeUnit) {
-        this.trailersDelay = Duration.ofMillis(timeUnit.toMillis(amount));
+    public MockResponseBuilder delay(int amount, TimeUnit timeUnit) {
+        this.delay = Duration.ofMillis(timeUnit.toMillis(amount));
         return this;
     }
 
@@ -97,6 +55,6 @@ public class MockResponseBuilder {
      * Returns a new {@link MockResponse} with the configured parameters.
      */
     public MockResponse build() {
-        return new MockResponse(response, headersDelay, bodyDelay, trailersDelay);
+        return new MockResponse(response, delay);
     }
 }
