@@ -45,10 +45,16 @@ public final class CompositeEndpointGroup extends AbstractListenable<List<Endpoi
     @SuppressWarnings("FieldMayBeFinal") // Updated via `dirtyUpdater`
     private volatile int dirty;
 
+    /**
+     * Constructs a new {@link CompositeEndpointGroup} that merges all the given {@code endpointGroups}.
+     */
     public CompositeEndpointGroup(EndpointGroup... endpointGroups) {
         this(ImmutableList.copyOf(requireNonNull(endpointGroups, "endpointGroups")));
     }
 
+    /**
+     * Constructs a new {@link CompositeEndpointGroup} that merges all the given {@code endpointGroups}.
+     */
     public CompositeEndpointGroup(Iterable<EndpointGroup> endpointGroups) {
         requireNonNull(endpointGroups, "endpointGroups");
         this.endpointGroups = ImmutableList.copyOf(endpointGroups);
