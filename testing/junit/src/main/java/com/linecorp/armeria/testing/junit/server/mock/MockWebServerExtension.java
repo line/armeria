@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.testing.junit.server.mock;
 
+import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 import java.util.concurrent.BlockingQueue;
@@ -83,6 +84,7 @@ public class MockWebServerExtension extends ServerExtension implements BeforeTes
      * calls will return multiple responses in order.
      */
     public MockWebServerExtension enqueue(HttpResponse response) {
+        requireNonNull(response, "response");
         mockResponses.add(response);
         return this;
     }
@@ -92,6 +94,7 @@ public class MockWebServerExtension extends ServerExtension implements BeforeTes
      * Multiple calls will return multiple responses in order.
      */
     public MockWebServerExtension enqueue(AggregatedHttpResponse response) {
+        requireNonNull(response, "response");
         mockResponses.add(HttpResponse.of(response));
         return this;
     }
@@ -111,6 +114,7 @@ public class MockWebServerExtension extends ServerExtension implements BeforeTes
      */
     @Nullable
     public RecordedRequest takeRequest(int amount, TimeUnit unit) {
+        requireNonNull(unit, "unit");
         boolean interrupted = false;
         try {
             long remainingNanos = unit.toNanos(amount);
