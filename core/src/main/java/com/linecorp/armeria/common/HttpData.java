@@ -34,7 +34,6 @@ import com.linecorp.armeria.unsafe.ByteBufHttpData;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.util.ReferenceCountUtil;
 import it.unimi.dsi.fastutil.io.FastByteArrayInputStream;
 
 /**
@@ -430,7 +429,8 @@ public interface HttpData extends HttpObject, AutoCloseable {
      * A no-op in most cases. This method will only have an effect when using pooled objects, e.g., when using
      * methods like {@link HttpResponse#aggregateWithPooledObjects(ByteBufAllocator)}. If not using pooled
      * objects, you can ignore this method. If you are, please see the documentation at
-     * {@link com.linecorp.armeria.unsafe.ByteBufHttpData}.
+     * {@link com.linecorp.armeria.unsafe.ByteBufHttpData}. {@link #close()} can be called multiple times, only
+     * the first will have an effect.
      */
     @Override
     default void close() {

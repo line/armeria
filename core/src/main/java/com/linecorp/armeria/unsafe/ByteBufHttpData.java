@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import com.google.common.base.MoreObjects;
 
@@ -35,8 +36,10 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 
 /**
- * A {@link HttpData} that is backed by a {@link ByteBuf} for optimizing certain internal use cases. Not for
- * general use.
+ * A {@link HttpData} that is backed by a pooled {@link ByteBuf} for optimizing certain internal use cases. Not
+ * for general use.
+ *
+ * <h3>What are pooled buffers?</h3>
  *
  * <p>The buffer backing a {@link ByteBufHttpData} is a pooled buffer - this means that it does not use normal
  * Java garbage collection, and instead uses manual memory management using a reference count, similar to
@@ -48,40 +51,48 @@ import io.netty.buffer.Unpooled;
  * {@link com.linecorp.armeria.common.HttpResponse#aggregateWithPooledObjects(ByteBufAllocator)}. If you don't
  * use such methods, you will never see a {@link ByteBufHttpData} and don't need to read further.
  *
+ * <h3>Impact of pooled buffers</h3>
+ *
  * <p>Any time you receive a {@link ByteBufHttpData} it will have a single reference that must be released -
- * failure to release the reference will result in a memory leak and poor performance. You will want to make
- * sure to do this by calling {@link HttpData#close()}, usually in a try-with-resources structure.
+ * failure to release the reference will result in a memory leak and poor performance. You must make sure to do
+ * this by calling {@link HttpData#close()}, usually in a try-with-resources structure to avoid side effects.
  *
  * <p>For example, <pre>{code
  *
  * HttpResponse response = client.get("/");
  * response.aggregateWithPooledObjects(ctx.alloc(), ctx.executor())
  *     .thenApply(aggResp -> {
- *        try (HttpData content = aggResp.content()) {
- *            if (!aggResp.status().equals(HttpStatus.OK)) {
- *                throw new IllegalStateException("Bad response");
- *            }
- *            try {
- *                return OBJECT_MAPPER.readValue(content.toInputStream(), Foo.class);
- *            } catch (IOException e) {
- *                throw new IllegalArgumentException("Bad JSON: " + content.toStringUtf8());
- *            }
- *        }
+ *         // try-with-resources here ensures the content is released if it is a ByteBufHttpData, or otherwise
+ *         // is a no-op if it is not.
+ *         try (HttpData content = aggResp.content()) {
+ *             if (!aggResp.status().equals(HttpStatus.OK)) {
+ *                 throw new IllegalStateException("Bad response");
+ *             }
+ *             try {
+ *                 return OBJECT_MAPPER.readValue(content.toInputStream(), Foo.class);
+ *             } catch (IOException e) {
+ *                 throw new IllegalArgumentException("Bad JSON: " + content.toStringUtf8());
+ *             }
+ *         }
  *     });
  *
  * }</pre>
  *
  * <p>In this example, it is the initial {@code try (HttpData content = ...} that ensures the data is released.
  * Calls to methods on {@link HttpData} will all work and can be called any number of times within this block.
- * If called after the block, or a manual call to {@link HttpData#close}, these methods will either fail or
- * corrupt data.
+ * If called after the block, or a manual call to {@link HttpData#close}, these methods will fail or corrupt
+ * data.
+ *
+ * <h3>Writing code compatible with both pooled and unpooled objects</h3>
  *
  * <p>When requesting pooled objects, it is not guaranteed that all {@link HttpData} are actually pooled, e.g.,
  * a decorator may not understand pooled objects at which points objects will be copied to the Java heap. Code
- * should still be able to operate on either type of {@link HttpData} as long as it calls
+ * will still be able to operate on any type of {@link HttpData} as long as it calls
  * {@link HttpData#close()} and uses methods like {@link HttpData#toInputStream()},
  * {@link HttpData#toByteBuffer()}, or {@link HttpData#toStringUtf8()} to access the content. The above example
  * works well regardless of whether the {@link HttpData} is pooled or not.
+ *
+ * <h3>Even more advanced usage</h3>
  *
  * <p>In some cases, you may want to access the {@link ByteBuf} held by this {@link ByteBufHttpData}. This will
  * generally be used with a fallback to wrapping an unpooled {@link HttpData}, e.g., <pre>{@code
@@ -103,9 +114,15 @@ import io.netty.buffer.Unpooled;
  */
 public class ByteBufHttpData extends AbstractHttpData implements ByteBufHolder {
 
+    private static final AtomicIntegerFieldUpdater<ByteBufHttpData> closedUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(ByteBufHttpData.class, "closed");
+
     private final ByteBuf buf;
     private final boolean endOfStream;
     private final int length;
+
+    @SuppressWarnings("FieldMayBeFinal") // Updated via `closedUpdater`
+    private volatile int closed;
 
     /**
      * Constructs a new {@link ByteBufHttpData}. Ownership of {@code buf} is taken by this
@@ -242,6 +259,9 @@ public class ByteBufHttpData extends AbstractHttpData implements ByteBufHolder {
 
     @Override
     public void close() {
+        if (!closedUpdater.compareAndSet(this, 0, 1)) {
+            return;
+        }
         release();
     }
 }

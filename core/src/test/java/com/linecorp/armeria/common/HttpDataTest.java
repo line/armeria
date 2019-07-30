@@ -27,6 +27,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.unsafe.ByteBufHttpData;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
@@ -116,6 +118,17 @@ class HttpDataTest {
             payload.setByte(1, 5);
             assertThat(ByteBufUtil.getBytes(payload)).containsExactly(1, 5, 3, 4);
             assertThat(data.array()).containsExactly(1, 2, 3, 4);
+        }
+
+        @Test
+        void close() {
+            final ByteBufHttpData data = new ByteBufHttpData(payload, false);
+            assertThat(data.refCnt()).isOne();
+            data.close();
+            assertThat(data.refCnt()).isZero();
+            // Can call close multiple times.
+            data.close();
+            assertThat(data.refCnt()).isZero();
         }
     }
 
