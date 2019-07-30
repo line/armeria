@@ -388,12 +388,6 @@ public interface HttpData extends HttpObject, AutoCloseable {
 
     /**
      * Returns a new {@link InputStream} that is sourced from this data.
-     *
-     * <p>Note, if this {@link HttpData} is pooled (e.g., it is the result of a call to
-     * {@link HttpResponse#aggregateWithPooledObjects(ByteBufAllocator)}), then this {@link InputStream} will
-     * increase the reference count of the underlying buffer. Make sure to call {@link InputStream#close()},
-     * usually using a try-with-resources invocation, to release this extra reference. And as usual, don't
-     * forget to call {@link ReferenceCountUtil#release(Object)} on this {@link HttpData} itself too.
      */
     default InputStream toInputStream() {
         return new FastByteArrayInputStream(array());
