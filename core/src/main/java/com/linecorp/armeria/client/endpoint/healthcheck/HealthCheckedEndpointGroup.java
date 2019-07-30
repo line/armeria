@@ -91,6 +91,10 @@ public abstract class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     protected void init() {
         checkState(scheduledCheck == null, "init() must only be called once.");
 
+        if (delegate instanceof DynamicEndpointGroup) {
+            ((DynamicEndpointGroup) delegate).initialEndpointsFuture().join();
+        }
+
         checkAndUpdateHealthyServers().join();
         scheduleCheckAndUpdateHealthyServers();
     }

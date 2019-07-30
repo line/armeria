@@ -19,6 +19,9 @@ package com.linecorp.armeria.client.endpoint.healthcheck;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import java.util.concurrent.TimeUnit;
+
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -27,6 +30,8 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
+import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup;
+import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
@@ -262,5 +267,24 @@ class HttpHealthCheckedEndpointGroupTest {
                     .containsEntry("armeria.client.endpointGroup.healthy#value" +
                                    "{authority=foo:" + port + ",ip=127.0.0.1,name=qux}", 1.0);
         });
+    }
+
+    // Make sure we don't start health checking before a delegate has a chance to resolve endpoints, otherwise
+    // we're guaranteed to always wait at least the retry interval (3s) before being ready, which at least can
+    // slow down tests if not production server startup when waiting on many clients to resolve initial
+    // endpoints.
+    @Test
+    void initialHealthCheckCanHaveEndpoints() throws Exception {
+        serverOne.start();
+
+        // even localhost usually takes long enough to resolve that this test would never work if the initial
+        // health check didn't wait for localhost's DNS resolution.
+        final int port = serverOne.httpPort();
+        final HealthCheckedEndpointGroup endpointGroup = new HttpHealthCheckedEndpointGroupBuilder(
+                DnsAddressEndpointGroup.of("localhost", port), HEALTH_CHECK_PATH)
+                .retryBackoff(Backoff.fixed(TimeUnit.HOURS.toMillis(1)))
+                .build();
+
+        assertThat(endpointGroup.initialEndpointsFuture().get(10, TimeUnit.SECONDS)).hasSize(1);
     }
 }
