@@ -18,6 +18,6 @@
  * A mock server for use when testing clients.
  */
 @NonNullByDefault
-package com.linecorp.armeria.testing.junit.server.mockwebserver;
+package com.linecorp.armeria.testing.junit.server.mock;
 
 import com.linecorp.armeria.common.util.NonNullByDefault;

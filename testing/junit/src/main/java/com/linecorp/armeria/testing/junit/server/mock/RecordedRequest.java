@@ -14,7 +14,13 @@
  * under the License.
  */
 
-package com.linecorp.armeria.testing.junit.server.mockwebserver;
+package com.linecorp.armeria.testing.junit.server.mock;
+
+import java.util.Objects;
+
+import javax.annotation.Nullable;
+
+import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -22,7 +28,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 /**
  * A request that has been made to a {@link MockWebServerExtension}.
  */
-public class RecordedRequest {
+public final class RecordedRequest {
 
     private final AggregatedHttpRequest request;
     private final ServiceRequestContext context;
@@ -35,7 +41,7 @@ public class RecordedRequest {
     /**
      * The {@link AggregatedHttpRequest} received by the server.
      */
-    public AggregatedHttpRequest getRequest() {
+    public AggregatedHttpRequest request() {
         return request;
     }
 
@@ -43,7 +49,36 @@ public class RecordedRequest {
      * The {@link ServiceRequestContext} created when handling the request. Can be used to, e.g., check whether
      * the request uses TLS.
      */
-    public ServiceRequestContext getContext() {
+    public ServiceRequestContext context() {
         return context;
+    }
+
+    @Override
+    public boolean equals(@Nullable Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof RecordedRequest)) {
+            return false;
+        }
+
+        RecordedRequest that = (RecordedRequest) o;
+        return request.equals(that.request) &&
+               context.equals(that.context);
+    }
+
+    @Override
+    public int hashCode() {
+        // Simple hash since only used in tests.
+        return Objects.hash(request, context);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("request", request)
+                          .add("context", context)
+                          .toString();
     }
 }

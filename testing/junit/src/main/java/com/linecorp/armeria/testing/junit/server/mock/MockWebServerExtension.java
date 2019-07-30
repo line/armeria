@@ -14,7 +14,9 @@
  * under the License.
  */
 
-package com.linecorp.armeria.testing.junit.server.mockwebserver;
+package com.linecorp.armeria.testing.junit.server.mock;
+
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 import java.time.Duration;
 import java.util.concurrent.BlockingQueue;
@@ -33,7 +35,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
@@ -54,26 +55,26 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
  *
  * <p>For example, <pre>{@code
  *
- * class MyTest {
- *
- * {@literal @}RegisterExtension
- * static MockWebServerExtension server = new MockWebServerExtension();
- *
- * {@literal @}Test
- * void checkSomething() {
- *     HttpClient client = HttpClient.of(server.httpUri("/"));
- *
- *     server.enqueue(AggregatedHttpResponse.of(HttpStatus.OK));
- *     server.enqueue(AggregatedHttpResponse.of(HttpStatus.FORBIDDEN));
- *
- *     assertThat(client.get("/").aggregate().join().status()).isEqualTo(HttpStatus.OK);
- *     assertThat(client.get("/bad").aggregate().join().status()).isEqualTo(HttpStatus.FORBIDDEN);
- *
- *     assertThat(server.takeRequest().path()).isEqualTo("/");
- *     assertThat(server.takeRequest().path()).isEqualTo("/bad");
- * }
- *
- * }
+ * > class MyTest {
+ * >
+ * >   @RegisterExtension
+ * >   static MockWebServerExtension server = new MockWebServerExtension();
+ * >
+ * >   @Test
+ * >   void checkSomething() {
+ * >       HttpClient client = HttpClient.of(server.httpUri("/"));
+ * >
+ * >       server.enqueue(AggregatedHttpResponse.of(HttpStatus.OK));
+ * >       server.enqueue(AggregatedHttpResponse.of(HttpStatus.FORBIDDEN));
+ * >
+ * >       assertThat(client.get("/").aggregate().join().status()).isEqualTo(HttpStatus.OK);
+ * >       assertThat(client.get("/bad").aggregate().join().status()).isEqualTo(HttpStatus.FORBIDDEN);
+ * >
+ * >       assertThat(server.takeRequest().path()).isEqualTo("/");
+ * >       assertThat(server.takeRequest().path()).isEqualTo("/bad");
+ * >   }
+ * >
+ * > }
  * }</pre>
  */
 public class MockWebServerExtension extends ServerExtension implements BeforeTestExecutionCallback {
@@ -103,16 +104,37 @@ public class MockWebServerExtension extends ServerExtension implements BeforeTes
 
     /**
      * Returns the next {@link RecordedRequest} the server received. Call this method multiple times to retrieve
-     * the requests retrieved, in order. Will block up to 10 seconds waiting for a request.
+     * the requests, in order. Will block up to 10 seconds waiting for a request.
      */
     @Nullable
     public RecordedRequest takeRequest() {
+        return takeRequest(10, TimeUnit.SECONDS);
+    }
+
+    /**
+     * Returns the next {@link RecordedRequest} the server received. Call this method multiple times to retrieve
+     * the requests, in order. Will block the given amount of time waiting for a request.
+     */
+    @Nullable
+    public RecordedRequest takeRequest(int amount, TimeUnit unit) {
+        boolean interrupted = false;
         try {
-            return recordedRequests.poll(10, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            logger.warn("Could not take request.", e);
-            Exceptions.throwUnsafely(e);
-            return null;  // Unreachable.
+            long remainingNanos = unit.toNanos(amount);
+            long end = System.nanoTime() + remainingNanos;
+
+            while (true) {
+                try {
+                    // BlockingQueue treats negative timeouts just like zero.
+                    return recordedRequests.poll(remainingNanos, NANOSECONDS);
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                    remainingNanos = end - System.nanoTime();
+                }
+            }
+        } finally {
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
 
@@ -132,7 +154,7 @@ public class MockWebServerExtension extends ServerExtension implements BeforeTes
      * handling enqueued responses. Override this method to configure advanced behavior such as client
      * authentication and timeouts. Don't call any of the {@code service*} methods, even if you do they will be
      * ignored as {@link MockWebServerExtension} can only serve responses registered with
-     * {@link MockWebService#enqueue(MockResponse)}.
+     * {@link MockWebServerExtension#enqueue(MockResponse)}.
      */
     protected void configureServer(ServerBuilder sb) throws Exception {
         // Do nothing by default.
@@ -163,7 +185,7 @@ public class MockWebServerExtension extends ServerExtension implements BeforeTes
                 if (delay.isZero()) {
                     return HttpResponse.of(response);
                 } else {
-                    CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+                    final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
                     ctx.eventLoop().schedule(() -> responseFuture.complete(HttpResponse.of(response)),
                                              delay.toNanos(), TimeUnit.NANOSECONDS);
                     return HttpResponse.from(responseFuture);

@@ -14,12 +14,13 @@
  * under the License.
  */
 
-package com.linecorp.armeria.testing.junit.server.mockwebserver;
+package com.linecorp.armeria.testing.junit.server.mock;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -73,31 +74,31 @@ class MockWebServiceExtensionTest {
         });
 
         assertThat(server.takeRequest()).satisfies(request -> {
-            assertThat(request.getRequest().method()).isEqualTo(HttpMethod.GET);
-            assertThat(request.getRequest().path()).isEqualTo("/");
-            assertThat(request.getContext().sslSession()).isNull();
+            assertThat(request.request().method()).isEqualTo(HttpMethod.GET);
+            assertThat(request.request().path()).isEqualTo("/");
+            assertThat(request.context().sslSession()).isNull();
         });
 
         assertThat(server.takeRequest()).satisfies(request -> {
-            assertThat(request.getRequest().method()).isEqualTo(HttpMethod.POST);
-            assertThat(request.getRequest().path()).isEqualTo("/upload");
-            assertThat(request.getRequest().contentUtf8()).isEqualTo("world");
-            assertThat(request.getContext().sslSession()).isNull();
+            assertThat(request.request().method()).isEqualTo(HttpMethod.POST);
+            assertThat(request.request().path()).isEqualTo("/upload");
+            assertThat(request.request().contentUtf8()).isEqualTo("world");
+            assertThat(request.context().sslSession()).isNull();
         });
 
         assertThat(server.takeRequest()).satisfies(request -> {
-            assertThat(request.getRequest().method()).isEqualTo(HttpMethod.GET);
-            assertThat(request.getRequest().path()).isEqualTo("/secure");
-            assertThat(request.getContext().sslSession()).isNotNull();
+            assertThat(request.request().method()).isEqualTo(HttpMethod.GET);
+            assertThat(request.request().path()).isEqualTo("/secure");
+            assertThat(request.context().sslSession()).isNotNull();
         });
 
         assertThat(server.takeRequest()).satisfies(request -> {
-            assertThat(request.getRequest().method()).isEqualTo(HttpMethod.GET);
-            assertThat(request.getRequest().path()).isEqualTo("/not-queued");
-            assertThat(request.getContext().sslSession()).isNull();
+            assertThat(request.request().method()).isEqualTo(HttpMethod.GET);
+            assertThat(request.request().path()).isEqualTo("/not-queued");
+            assertThat(request.context().sslSession()).isNull();
         });
 
-        assertThat(server.takeRequest()).isNull();
+        assertThat(server.takeRequest(0, TimeUnit.SECONDS)).isNull();
     }
 
     @Test
@@ -105,11 +106,16 @@ class MockWebServiceExtensionTest {
         server.enqueue(MockResponse.builder(AggregatedHttpResponse.of(HttpStatus.OK))
                                    .delay(Duration.ofMillis(200))
                                    .build());
+        server.enqueue(MockResponse.builder(AggregatedHttpResponse.of(HttpStatus.OK))
+                                   .delayMillis(300)
+                                   .build());
 
         final HttpClient client = new HttpClientBuilder(server.httpUri("/"))
                 .option(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(50L))
                 .build();
 
+        assertThatThrownBy(() -> client.get("/").aggregate().join())
+                .hasCauseInstanceOf(ResponseTimeoutException.class);
         assertThatThrownBy(() -> client.get("/").aggregate().join())
                 .hasCauseInstanceOf(ResponseTimeoutException.class);
     }
@@ -136,6 +142,6 @@ class MockWebServiceExtensionTest {
                 .isEqualTo(HttpStatus.OK);
 
         // leavesState did not take the /whoami request, but it's gone now.
-        assertThat(server.takeRequest().getRequest().path()).isEqualTo("/");
+        assertThat(server.takeRequest().request().path()).isEqualTo("/");
     }
 }

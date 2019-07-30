@@ -14,10 +14,9 @@
  * under the License.
  */
 
-package com.linecorp.armeria.testing.junit.server.mockwebserver;
+package com.linecorp.armeria.testing.junit.server.mock;
 
 import java.time.Duration;
-import java.util.concurrent.TimeUnit;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 
@@ -46,8 +45,8 @@ public class MockResponseBuilder {
     /**
      * Sets a time to wait before returning the response. Can be useful to validate client timeout behavior.
      */
-    public MockResponseBuilder delay(int amount, TimeUnit timeUnit) {
-        this.delay = Duration.ofMillis(timeUnit.toMillis(amount));
+    public MockResponseBuilder delayMillis(int delay) {
+        this.delay = Duration.ofMillis(delay);
         return this;
     }
 

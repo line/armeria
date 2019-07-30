@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.testing.junit.server.mockwebserver;
+package com.linecorp.armeria.testing.junit.server.mock;
 
 import java.time.Duration;
 
