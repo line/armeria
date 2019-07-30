@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.common.HttpResponseUtil.delegateWhenStageComplete;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isContentAlwaysEmpty;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.setOrRemoveContentLength;
 import static java.util.Objects.requireNonNull;
@@ -29,13 +30,13 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.FixedHttpResponse.OneElementFixedHttpResponse;
 import com.linecorp.armeria.common.FixedHttpResponse.RegularFixedHttpResponse;
 import com.linecorp.armeria.common.FixedHttpResponse.TwoElementFixedHttpResponse;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
-import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
@@ -61,20 +62,30 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * Creates a new HTTP response that delegates to the {@link HttpResponse} produced by the specified
      * {@link CompletionStage}. If the specified {@link CompletionStage} fails, the returned response will be
      * closed with the same cause as well.
+     *
+     * @param stage the {@link CompletionStage} which will produce the actual {@link HttpResponse}
      */
     static HttpResponse from(CompletionStage<? extends HttpResponse> stage) {
-        requireNonNull(stage, "stage");
         final DeferredHttpResponse res = new DeferredHttpResponse();
-        stage.handle((delegate, thrown) -> {
-            if (thrown != null) {
-                res.close(Exceptions.peel(thrown));
-            } else if (delegate == null) {
-                res.close(new NullPointerException("delegate stage produced a null response: " + stage));
-            } else {
-                res.delegate(delegate);
-            }
-            return null;
-        });
+        delegateWhenStageComplete(stage, res);
+        return res;
+    }
+
+    /**
+     * Creates a new HTTP response that delegates to the {@link HttpResponse} produced by the specified
+     * {@link CompletionStage}. If the specified {@link CompletionStage} fails, the returned response will be
+     * closed with the same cause as well.
+     *
+     * @param stage the {@link CompletionStage} which will produce the actual {@link HttpResponse}
+     * @param defaultSubscriberExecutor the {@link EventExecutor} which will be used when a user subscribes
+     *                                  the returned {@link HttpResponse} using {@link #subscribe(Subscriber)}
+     *                                  or {@link #subscribe(Subscriber, SubscriptionOption...)}.
+     */
+    static HttpResponse from(CompletionStage<? extends HttpResponse> stage,
+                             EventExecutor defaultSubscriberExecutor) {
+        requireNonNull(defaultSubscriberExecutor, "defaultSubscriberExecutor");
+        final DeferredHttpResponse res = new DeferredHttpResponse(defaultSubscriberExecutor);
+        delegateWhenStageComplete(stage, res);
         return res;
     }
 

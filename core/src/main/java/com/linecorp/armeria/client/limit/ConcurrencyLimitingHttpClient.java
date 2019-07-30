@@ -69,7 +69,7 @@ public final class ConcurrencyLimitingHttpClient extends ConcurrencyLimitingClie
     protected Deferred<HttpResponse> defer(ClientRequestContext ctx, HttpRequest req) throws Exception {
         return new Deferred<HttpResponse>() {
             private final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-            private final HttpResponse res = HttpResponse.from(responseFuture);
+            private final HttpResponse res = HttpResponse.from(responseFuture, ctx.eventLoop());
 
             @Override
             public HttpResponse response() {
