@@ -33,6 +33,7 @@ import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 
@@ -53,7 +54,7 @@ class MockWebServiceExtensionTest {
                                  .build())
                 .build();
         server.enqueue(AggregatedHttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "hello"));
-        server.enqueue(MockResponse.of(AggregatedHttpResponse.of(HttpStatus.FORBIDDEN)));
+        server.enqueue(HttpResponse.of(AggregatedHttpResponse.of(HttpStatus.FORBIDDEN)));
         server.enqueue(AggregatedHttpResponse.of(HttpStatus.FOUND));
 
         assertThat(httpClient.get("/").aggregate().join()).satisfies(response -> {
@@ -103,19 +104,13 @@ class MockWebServiceExtensionTest {
 
     @Test
     void delay() {
-        server.enqueue(MockResponse.builder(AggregatedHttpResponse.of(HttpStatus.OK))
-                                   .delay(Duration.ofMillis(200))
-                                   .build());
-        server.enqueue(MockResponse.builder(AggregatedHttpResponse.of(HttpStatus.OK))
-                                   .delayMillis(300)
-                                   .build());
+        server.enqueue(HttpResponse.delayed(HttpResponse.of(AggregatedHttpResponse.of(HttpStatus.OK)),
+                                            Duration.ofMillis(200)));
 
         final HttpClient client = new HttpClientBuilder(server.httpUri("/"))
                 .option(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(50L))
                 .build();
 
-        assertThatThrownBy(() -> client.get("/").aggregate().join())
-                .hasCauseInstanceOf(ResponseTimeoutException.class);
         assertThatThrownBy(() -> client.get("/").aggregate().join())
                 .hasCauseInstanceOf(ResponseTimeoutException.class);
     }

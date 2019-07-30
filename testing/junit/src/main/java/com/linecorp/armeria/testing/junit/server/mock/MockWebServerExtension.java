@@ -18,9 +18,7 @@ package com.linecorp.armeria.testing.junit.server.mock;
 
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
-import java.time.Duration;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -29,8 +27,6 @@ import javax.annotation.Nullable;
 import org.junit.jupiter.api.extension.BeforeTestExecutionCallback;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
@@ -44,7 +40,7 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
 /**
  * An {@link Extension} primarily for testing clients. {@link MockWebServerExtension} will start and stop a
  * {@link Server} at the beginning and end of a test class. Call
- * {@link MockWebServerExtension#enqueue(MockResponse)} as many times as you will make requests
+ * {@link MockWebServerExtension#enqueue(HttpResponse)} as many times as you will make requests
  * within the test. The enqueued responses will be returned in order for each of these requests. Later, call
  * {@link MockWebServerExtension#takeRequest()} to retrieve requests in the order the server received them to
  * validate the request parameters.
@@ -79,16 +75,14 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
  */
 public class MockWebServerExtension extends ServerExtension implements BeforeTestExecutionCallback {
 
-    private static final Logger logger = LoggerFactory.getLogger(MockWebServerExtension.class);
-
-    private final BlockingQueue<MockResponse> mockResponses = new LinkedBlockingQueue<>();
+    private final BlockingQueue<HttpResponse> mockResponses = new LinkedBlockingQueue<>();
     private final BlockingQueue<RecordedRequest> recordedRequests = new LinkedBlockingQueue<>();
 
     /**
-     * Enqueues the {@link MockResponse} to return to a client of this {@link MockWebServerExtension}. Multiple
+     * Enqueues the {@link HttpResponse} to return to a client of this {@link MockWebServerExtension}. Multiple
      * calls will return multiple responses in order.
      */
-    public MockWebServerExtension enqueue(MockResponse response) {
+    public MockWebServerExtension enqueue(HttpResponse response) {
         mockResponses.add(response);
         return this;
     }
@@ -98,7 +92,7 @@ public class MockWebServerExtension extends ServerExtension implements BeforeTes
      * Multiple calls will return multiple responses in order.
      */
     public MockWebServerExtension enqueue(AggregatedHttpResponse response) {
-        mockResponses.add(MockResponse.of(response));
+        mockResponses.add(HttpResponse.of(response));
         return this;
     }
 
@@ -154,7 +148,7 @@ public class MockWebServerExtension extends ServerExtension implements BeforeTes
      * handling enqueued responses. Override this method to configure advanced behavior such as client
      * authentication and timeouts. Don't call any of the {@code service*} methods, even if you do they will be
      * ignored as {@link MockWebServerExtension} can only serve responses registered with
-     * {@link MockWebServerExtension#enqueue(MockResponse)}.
+     * {@link MockWebServerExtension#enqueue(HttpResponse)}.
      */
     protected void configureServer(ServerBuilder sb) throws Exception {
         // Do nothing by default.
@@ -172,24 +166,13 @@ public class MockWebServerExtension extends ServerExtension implements BeforeTes
             return HttpResponse.from(req.aggregate().thenApply(aggReq -> {
                 recordedRequests.add(new RecordedRequest(aggReq, ctx));
 
-                final MockResponse mockResponse = mockResponses.poll();
-                if (mockResponse == null) {
+                final HttpResponse response = mockResponses.poll();
+                if (response == null) {
                     throw new IllegalStateException(
                             "No response enqueued. Did you call MockWebServer.enqueue? Request: " + aggReq);
                 }
 
-                final Duration delay = mockResponse.delay();
-
-                final AggregatedHttpResponse response = mockResponse.response();
-
-                if (delay.isZero()) {
-                    return HttpResponse.of(response);
-                } else {
-                    final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-                    ctx.eventLoop().schedule(() -> responseFuture.complete(HttpResponse.of(response)),
-                                             delay.toNanos(), TimeUnit.NANOSECONDS);
-                    return HttpResponse.from(responseFuture);
-                }
+                return response;
             }));
         }
     }

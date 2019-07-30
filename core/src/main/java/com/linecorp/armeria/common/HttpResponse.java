@@ -22,11 +22,13 @@ import static com.linecorp.armeria.internal.ArmeriaHttpUtil.setOrRemoveContentLe
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Formatter;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.TimeUnit;
 
 import org.reactivestreams.Publisher;
 
@@ -75,6 +77,29 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
             }
             return null;
         });
+        return res;
+    }
+
+    /**
+     * Creates a new HTTP response that delegates to the provided {@link HttpResponse}, beginning publishing
+     * after {@code delay} has passed from a random {@link EventExecutor}.
+     */
+    static HttpResponse delayed(HttpResponse response, Duration delay) {
+        requireNonNull(response, "response");
+        requireNonNull(delay, "delay");
+        return delayed(response, delay, CommonPools.workerGroup().next());
+    }
+
+    /**
+     * Creates a new HTTP response that delegates to the provided {@link HttpResponse}, beginning publishing
+     * after {@code delay} has passed from the provided {@link EventExecutor}.
+     */
+    static HttpResponse delayed(HttpResponse response, Duration delay, EventExecutor executor) {
+        requireNonNull(response, "response");
+        requireNonNull(delay, "delay");
+        requireNonNull(executor, "executor");
+        final DeferredHttpResponse res = new DeferredHttpResponse();
+        executor.schedule(() -> res.delegate(response), delay.toNanos(), TimeUnit.NANOSECONDS);
         return res;
     }
 
