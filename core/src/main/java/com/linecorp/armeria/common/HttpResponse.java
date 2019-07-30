@@ -77,14 +77,14 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * closed with the same cause as well.
      *
      * @param stage the {@link CompletionStage} which will produce the actual {@link HttpResponse}
-     * @param defaultSubscriberExecutor the {@link EventExecutor} which will be used when a user subscribes
-     *                                  the returned {@link HttpResponse} using {@link #subscribe(Subscriber)}
-     *                                  or {@link #subscribe(Subscriber, SubscriptionOption...)}.
+     * @param subscriberExecutor the {@link EventExecutor} which will be used when a user subscribes
+     *                           the returned {@link HttpResponse} using {@link #subscribe(Subscriber)}
+     *                           or {@link #subscribe(Subscriber, SubscriptionOption...)}.
      */
     static HttpResponse from(CompletionStage<? extends HttpResponse> stage,
-                             EventExecutor defaultSubscriberExecutor) {
-        requireNonNull(defaultSubscriberExecutor, "defaultSubscriberExecutor");
-        final DeferredHttpResponse res = new DeferredHttpResponse(defaultSubscriberExecutor);
+                             EventExecutor subscriberExecutor) {
+        requireNonNull(subscriberExecutor, "subscriberExecutor");
+        final DeferredHttpResponse res = new DeferredHttpResponse(subscriberExecutor);
         delegateWhenStageComplete(stage, res);
         return res;
     }
