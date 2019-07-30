@@ -57,7 +57,7 @@ import io.netty.buffer.Unpooled;
  * failure to release the reference will result in a memory leak and poor performance. You must make sure to do
  * this by calling {@link HttpData#close()}, usually in a try-with-resources structure to avoid side effects.
  *
- * <p>For example, <pre>{code
+ * <p>For example, <pre>{@code
  *
  * HttpResponse response = client.get("/");
  * response.aggregateWithPooledObjects(ctx.alloc(), ctx.executor())
