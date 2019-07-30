@@ -86,7 +86,7 @@ import io.netty.buffer.Unpooled;
  * <h3>Writing code compatible with both pooled and unpooled objects</h3>
  *
  * <p>When requesting pooled objects, it is not guaranteed that all {@link HttpData} are actually pooled, e.g.,
- * a decorator may not understand pooled objects at which points objects will be copied to the Java heap. Code
+ * a decorator may not understand pooled objects, so it will copy objects onto the Java heap. Code
  * will still be able to operate on any type of {@link HttpData} as long as it calls
  * {@link HttpData#close()} and uses methods like {@link HttpData#toInputStream()},
  * {@link HttpData#toByteBuffer()}, or {@link HttpData#toStringUtf8()} to access the content. The above example
