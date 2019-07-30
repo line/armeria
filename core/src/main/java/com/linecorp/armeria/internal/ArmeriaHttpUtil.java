@@ -868,7 +868,7 @@ public final class ArmeriaHttpUtil {
                 final AsciiString name = entry.getKey();
                 final String value = entry.getValue();
                 final AsciiString translatedName = translations.get(name);
-                if (translatedName != null) {
+                if (translatedName != null && !inputHeaders.contains(translatedName)) {
                     outputHeaders.add(translatedName, value);
                     continue;
                 }
