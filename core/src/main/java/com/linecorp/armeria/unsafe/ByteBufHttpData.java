@@ -19,6 +19,7 @@ package com.linecorp.armeria.unsafe;
 import static java.util.Objects.requireNonNull;
 
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
 import com.google.common.base.MoreObjects;
@@ -27,6 +28,7 @@ import com.linecorp.armeria.common.AbstractHttpData;
 import com.linecorp.armeria.common.HttpData;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufUtil;
@@ -35,6 +37,69 @@ import io.netty.buffer.Unpooled;
 /**
  * A {@link HttpData} that is backed by a {@link ByteBuf} for optimizing certain internal use cases. Not for
  * general use.
+ *
+ * <p>The buffer backing a {@link ByteBufHttpData} is a pooled buffer - this means that it does not use normal
+ * Java garbage collection, and instead uses manual memory management using a reference count, similar to
+ * some constructs in languages like C++. Manual memory management is more fragile and not idiomatic in Java -
+ * you should only use this class in performance-sensitive situations and after being ready to deal with these
+ * very hard-to-debug issues.
+ *
+ * <p>You may interact with {@link ByteBufHttpData} when using methods that return pooled objects, such as
+ * {@link com.linecorp.armeria.common.HttpResponse#aggregateWithPooledObjects(ByteBufAllocator)}. If you don't
+ * use such methods, you will never see a {@link ByteBufHttpData} and don't need to read further.
+ *
+ * <p>Any time you receive a {@link ByteBufHttpData} it will have a single reference that must be released -
+ * failure to release the reference will result in a memory leak and poor performance. You will want to make
+ * sure to do this by calling {@link HttpData#close()}, usually in a try-with-resources structure.
+ *
+ * <p>For example, <pre>{code
+ *
+ * HttpResponse response = client.get("/");
+ * response.aggregateWithPooledObjects(ctx.alloc(), ctx.executor())
+ *     .thenApply(aggResp -> {
+ *        try (HttpData content = aggResp.content()) {
+ *            if (!aggResp.status().equals(HttpStatus.OK)) {
+ *                throw new IllegalStateException("Bad response");
+ *            }
+ *            try {
+ *                return OBJECT_MAPPER.readValue(content.toInputStream(), Foo.class);
+ *            } catch (IOException e) {
+ *                throw new IllegalArgumentException("Bad JSON: " + content.toStringUtf8());
+ *            }
+ *        }
+ *     });
+ *
+ * }</pre>
+ *
+ * <p>In this example, it is the initial {@code try (HttpData content = ...} that ensures the data is released.
+ * Calls to methods on {@link HttpData} will all work and can be called any number of times within this block.
+ * If called after the block, or a manual call to {@link HttpData#close}, these methods will either fail or
+ * corrupt data.
+ *
+ * <p>When requesting pooled objects, it is not guaranteed that all {@link HttpData} are actually pooled, e.g.,
+ * a decorator may not understand pooled objects at which points objects will be copied to the Java heap. Code
+ * should still be able to operate on either type of {@link HttpData} as long as it calls
+ * {@link HttpData#close()} and uses methods like {@link HttpData#toInputStream()},
+ * {@link HttpData#toByteBuffer()}, or {@link HttpData#toStringUtf8()} to access the content. The above example
+ * works well regardless of whether the {@link HttpData} is pooled or not.
+ *
+ * <p>In some cases, you may want to access the {@link ByteBuf} held by this {@link ByteBufHttpData}. This will
+ * generally be used with a fallback to wrapping an unpooled {@link HttpData}, e.g., <pre>{@code
+ *
+ * final ByteBuf buf;
+ * if (data instanceof ByteBufHolder) {
+ *     buf = ((ByteBufHolder) data).content();
+ * } else {
+ *     buf = Unpooled.wrappedBuffer(data.array());
+ * }
+ *
+ * }</pre>
+ *
+ * <p>Using a {@link ByteBuf} directly is very advanced and can open up much more complicated management of
+ * reference count. You should only ever do this if you are very comfortable with Netty.
+ *
+ * <p>It is recommended to also read through <a href="https://netty.io/wiki/reference-counted-objects.html">
+ * Reference counted objects</a> for more information on pooled objects.
  */
 public class ByteBufHttpData extends AbstractHttpData implements ByteBufHolder {
 
@@ -167,6 +232,16 @@ public class ByteBufHttpData extends AbstractHttpData implements ByteBufHolder {
 
     @Override
     public InputStream toInputStream() {
-        return new ByteBufInputStream(buf.retainedDuplicate(), true);
+        return new ByteBufInputStream(buf.duplicate(), false);
+    }
+
+    @Override
+    public ByteBuffer toByteBuffer() {
+        return buf.nioBuffer();
+    }
+
+    @Override
+    public void close() {
+        release();
     }
 }

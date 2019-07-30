@@ -44,7 +44,7 @@ import it.unimi.dsi.fastutil.io.FastByteArrayInputStream;
  * <p>Implementations should generally extend {@link AbstractHttpData} to interact with other {@link HttpData}
  * implementations.
  */
-public interface HttpData extends HttpObject {
+public interface HttpData extends HttpObject, AutoCloseable {
 
     /**
      * Empty HTTP/2 data.
@@ -422,5 +422,24 @@ public interface HttpData extends HttpObject {
      */
     default Reader toReaderAscii() {
         return toReader(StandardCharsets.US_ASCII);
+    }
+
+    /**
+     * Returns a new {@link ByteBuffer} that wraps this data. Mutations to the {@link ByteBuffer} will be
+     * reflected in this {@link HttpData} and vice versa.
+     */
+    default ByteBuffer toByteBuffer() {
+        return ByteBuffer.wrap(array());
+    }
+
+    /**
+     * A no-op in most cases. This method will only have an effect when using pooled objects, e.g., when using
+     * methods like {@link HttpResponse#aggregateWithPooledObjects(ByteBufAllocator)}. If not using pooled
+     * objects, you can ignore this method. If you are, please see the documentation at
+     * {@link com.linecorp.armeria.unsafe.ByteBufHttpData}.
+     */
+    @Override
+    default void close() {
+        // No-op
     }
 }

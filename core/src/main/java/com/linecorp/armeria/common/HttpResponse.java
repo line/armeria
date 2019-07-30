@@ -372,7 +372,8 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the response are received fully. {@link AggregatedHttpResponse#content()} will
      * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
-     * use {@link #aggregate()}.
+     * use {@link #aggregate()}. If you are considering using this method, please read through the documentation
+     * at {@link com.linecorp.armeria.unsafe.ByteBufHttpData} first.
      */
     default CompletableFuture<AggregatedHttpResponse> aggregateWithPooledObjects(ByteBufAllocator alloc) {
         requireNonNull(alloc, "alloc");
@@ -386,7 +387,8 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the request is received fully. {@link AggregatedHttpResponse#content()} will
      * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
-     * use {@link #aggregate()}.
+     * use {@link #aggregate()}. If you are considering using this method, please read through the documentation
+     * at {@link com.linecorp.armeria.unsafe.ByteBufHttpData} first.
      */
     default CompletableFuture<AggregatedHttpResponse> aggregateWithPooledObjects(
             EventExecutor executor, ByteBufAllocator alloc) {

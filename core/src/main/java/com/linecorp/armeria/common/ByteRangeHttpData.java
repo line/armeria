@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 /**
@@ -49,6 +50,11 @@ class ByteRangeHttpData extends AbstractHttpData {
     @Override
     public int length() {
         return length;
+    }
+
+    @Override
+    public ByteBuffer toByteBuffer() {
+        return ByteBuffer.wrap(array, offset, length);
     }
 
     @Override

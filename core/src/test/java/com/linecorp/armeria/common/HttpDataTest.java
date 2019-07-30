@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.InputStream;
 import java.io.Reader;
+import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
 
@@ -135,30 +136,68 @@ class HttpDataTest {
         assertThat(in2.read()).isEqualTo(-1);
 
         final ByteBuf buf = Unpooled.copiedBuffer(new byte[] { 1, 2, 3, 4 });
-        try {
+        assertThat(buf.refCnt()).isOne();
+        try (HttpData data = HttpData.wrap(buf)) {
+            InputStream in3 = data.toInputStream();
             assertThat(buf.refCnt()).isOne();
-            final HttpData data = HttpData.wrap(buf);
-            try (InputStream in3 = data.toInputStream()) {
-                assertThat(buf.refCnt()).isEqualTo(2);
-                assertThat(in3.read()).isOne();
-                assertThat(in3.read()).isEqualTo(2);
-                assertThat(in3.read()).isEqualTo(3);
-                assertThat(in3.read()).isEqualTo(4);
-                assertThat(in3.read()).isEqualTo(-1);
-            }
+            assertThat(in3.read()).isOne();
+            assertThat(in3.read()).isEqualTo(2);
+            assertThat(in3.read()).isEqualTo(3);
+            assertThat(in3.read()).isEqualTo(4);
+            assertThat(in3.read()).isEqualTo(-1);
             assertThat(buf.refCnt()).isOne();
-            // Can call toInputstream again
-            try (InputStream in3 = data.toInputStream()) {
-                assertThat(buf.refCnt()).isEqualTo(2);
-                assertThat(in3.read()).isOne();
-                assertThat(in3.read()).isEqualTo(2);
-                assertThat(in3.read()).isEqualTo(3);
-                assertThat(in3.read()).isEqualTo(4);
-                assertThat(in3.read()).isEqualTo(-1);
+
+            // Can call toInputstream again. Using try-with-resources has no effect.
+            try (InputStream in4 = data.toInputStream()) {
+                assertThat(buf.refCnt()).isOne();
+                assertThat(in4.read()).isOne();
+                assertThat(in4.read()).isEqualTo(2);
+                assertThat(in4.read()).isEqualTo(3);
+                assertThat(in4.read()).isEqualTo(4);
+                assertThat(in4.read()).isEqualTo(-1);
             }
-        } finally {
-            buf.release();
         }
+        assertThat(buf.refCnt()).isZero();
+    }
+
+    @Test
+    void toByteBuffer() {
+        assertThat(HttpData.EMPTY_DATA.toByteBuffer().remaining()).isZero();
+
+        final ByteBuffer buf1 = HttpData.wrap(new byte[] { 1, 2, 3, 4 }).toByteBuffer();
+        assertThat(buf1.get()).isOne();
+        assertThat(buf1.get()).isEqualTo((byte) 2);
+        assertThat(buf1.get()).isEqualTo((byte) 3);
+        assertThat(buf1.get()).isEqualTo((byte) 4);
+        assertThat(buf1.remaining()).isZero();
+
+        final ByteBuffer buf2 = HttpData.wrap(new byte[] { 1, 2, 3, 4 }, 1, 2).toByteBuffer();
+        assertThat(buf2.get()).isEqualTo((byte) 2);
+        assertThat(buf2.get()).isEqualTo((byte) 3);
+        assertThat(buf2.remaining()).isZero();
+
+        final ByteBuf buf = Unpooled.copiedBuffer(new byte[] { 1, 2, 3, 4 });
+        assertThat(buf.refCnt()).isOne();
+        try (HttpData data = HttpData.wrap(buf)) {
+            final ByteBuffer buf3 = data.toByteBuffer();
+            assertThat(buf.refCnt()).isOne();
+            assertThat(buf3.get()).isOne();
+            assertThat(buf3.get()).isEqualTo((byte) 2);
+            assertThat(buf3.get()).isEqualTo((byte) 3);
+            assertThat(buf3.get()).isEqualTo((byte) 4);
+            assertThat(buf3.remaining()).isZero();
+
+            assertThat(buf.refCnt()).isOne();
+            // Can call toByteBuffer again
+            ByteBuffer buf4 = data.toByteBuffer();
+            assertThat(buf.refCnt()).isOne();
+            assertThat(buf4.get()).isOne();
+            assertThat(buf4.get()).isEqualTo((byte) 2);
+            assertThat(buf4.get()).isEqualTo((byte) 3);
+            assertThat(buf4.get()).isEqualTo((byte) 4);
+            assertThat(buf4.remaining()).isZero();
+        }
+        assertThat(buf.refCnt()).isZero();
     }
 
     @Test

@@ -34,6 +34,8 @@ public enum SubscriptionOption {
     /**
      * To receive the pooled {@link ByteBuf} and {@link ByteBufHolder} as is, without making a copy.
      * If you don't know what this means, do not specify this when you subscribe the {@link StreamMessage}.
+     * If you are considering using this option, please read through the documentation at
+     * {@link com.linecorp.armeria.unsafe.ByteBufHttpData} first.
      */
     WITH_POOLED_OBJECTS,
 
