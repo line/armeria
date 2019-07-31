@@ -214,7 +214,9 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
-     * Translations from HTTP/2 header name to the HTTP/1.x equivalent.
+     * Translations from HTTP/2 header name to the HTTP/1.x equivalent. Currently, we expect these headers to
+     * only allow a single value in the request. If adding headers that can potentially have multiple values,
+     * please check the usage in code accordingly.
      */
     private static final CharSequenceMap REQUEST_HEADER_TRANSLATIONS = new CharSequenceMap();
     private static final CharSequenceMap RESPONSE_HEADER_TRANSLATIONS = new CharSequenceMap();
