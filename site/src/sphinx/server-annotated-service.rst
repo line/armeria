@@ -193,7 +193,7 @@ option. In this case the variable name is used as the value.
         <!-- Maven -->
         <project>
           <build>
-            <pluigins>
+            <plugins>
               <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
