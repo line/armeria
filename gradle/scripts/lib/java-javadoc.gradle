@@ -28,6 +28,11 @@ allprojects {
                 l.rel = "noopener";
               }
             }
+            // Fix the 404 errors caused by getURLPrefix() returning undefined in search.js.
+            // See: https://stackoverflow.com/a/57284322/55808
+            if (typeof useModuleDirectories !== 'undefined') {
+              useModuleDirectories = false;
+            }
             </script>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/highlight.min.js"></script>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/languages/gradle.min.js"></script>
