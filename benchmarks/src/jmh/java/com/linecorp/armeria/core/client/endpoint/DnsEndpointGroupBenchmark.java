@@ -68,18 +68,4 @@ public class DnsEndpointGroupBenchmark {
     public Object resolveLocalhost() throws Exception {
         return endpointGroup.awaitInitialEndpoints();
     }
-
-//    public static void main(String[] args) throws Exception {
-//        DnsEndpointGroupBenchmark benchmark = new DnsEndpointGroupBenchmark();
-//        benchmark.startServer();
-//        for (int i = 0; i < 100; i++) {
-//            benchmark.setUp();
-//            long currentTime = System.nanoTime();
-//            benchmark.resolveLocalhost();
-//            System.out.println(
-//                    "Took " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - currentTime) + " ms");
-//            benchmark.tearDown();
-//        }
-//        benchmark.stopServer();
-//    }
 }
