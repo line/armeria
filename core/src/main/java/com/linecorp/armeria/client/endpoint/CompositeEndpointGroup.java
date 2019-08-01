@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import com.google.common.base.MoreObjects;
@@ -33,12 +34,14 @@ import com.linecorp.armeria.common.util.AbstractListenable;
 /**
  * An {@link EndpointGroup} that merges the result of any number of other {@link EndpointGroup}s.
  */
-public final class CompositeEndpointGroup extends AbstractListenable<List<Endpoint>> implements EndpointGroup {
+final class CompositeEndpointGroup extends AbstractListenable<List<Endpoint>> implements EndpointGroup {
 
     private static final AtomicIntegerFieldUpdater<CompositeEndpointGroup> dirtyUpdater =
             AtomicIntegerFieldUpdater.newUpdater(CompositeEndpointGroup.class, "dirty");
 
     private final List<EndpointGroup> endpointGroups;
+
+    private final CompletableFuture<List<Endpoint>> initialEndpointsFuture;
 
     private volatile List<Endpoint> merged = ImmutableList.of();
 
@@ -48,14 +51,7 @@ public final class CompositeEndpointGroup extends AbstractListenable<List<Endpoi
     /**
      * Constructs a new {@link CompositeEndpointGroup} that merges all the given {@code endpointGroups}.
      */
-    public CompositeEndpointGroup(EndpointGroup... endpointGroups) {
-        this(ImmutableList.copyOf(requireNonNull(endpointGroups, "endpointGroups")));
-    }
-
-    /**
-     * Constructs a new {@link CompositeEndpointGroup} that merges all the given {@code endpointGroups}.
-     */
-    public CompositeEndpointGroup(Iterable<EndpointGroup> endpointGroups) {
+    CompositeEndpointGroup(Iterable<EndpointGroup> endpointGroups) {
         requireNonNull(endpointGroups, "endpointGroups");
         this.endpointGroups = ImmutableList.copyOf(endpointGroups);
         dirty = 1;
@@ -66,6 +62,12 @@ public final class CompositeEndpointGroup extends AbstractListenable<List<Endpoi
                 notifyListeners(endpoints());
             });
         }
+
+        initialEndpointsFuture =
+                CompletableFuture.anyOf(this.endpointGroups.stream()
+                                                           .map(EndpointGroup::initialEndpointsFuture)
+                                                           .toArray(CompletableFuture[]::new))
+                                 .thenApply(unused -> endpoints());
     }
 
     @Override
@@ -86,6 +88,11 @@ public final class CompositeEndpointGroup extends AbstractListenable<List<Endpoi
         }
 
         return merged = newEndpoints.build();
+    }
+
+    @Override
+    public CompletableFuture<List<Endpoint>> initialEndpointsFuture() {
+        return initialEndpointsFuture;
     }
 
     @Override

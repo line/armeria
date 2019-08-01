@@ -16,11 +16,15 @@
 
 package com.linecorp.armeria.client.endpoint;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.util.Listenable;
@@ -36,6 +40,26 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, SafeCloseable
      */
     static EndpointGroup empty() {
         return StaticEndpointGroup.EMPTY;
+    }
+
+    static EndpointGroup of(Endpoint... endpoints) {
+        requireNonNull(endpoints, "endpoints");
+        return of(ImmutableList.copyOf(endpoints));
+    }
+
+    static EndpointGroup of(Iterable<Endpoint> endpoints) {
+        requireNonNull(endpoints, "endpoints");
+        return new StaticEndpointGroup(endpoints);
+    }
+
+    static EndpointGroup ofAll(EndpointGroup... endpointGroups) {
+        requireNonNull(endpointGroups, "endpointGroups");
+        return ofAll(ImmutableList.copyOf(endpointGroups));
+    }
+
+    static EndpointGroup ofAll(Iterable<EndpointGroup> endpointGroups) {
+        requireNonNull(endpointGroups, "endpointGroups");
+        return new CompositeEndpointGroup(endpointGroups);
     }
 
     /**
