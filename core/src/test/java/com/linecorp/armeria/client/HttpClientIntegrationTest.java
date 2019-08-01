@@ -30,11 +30,24 @@ import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntFunction;
 
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -727,6 +740,47 @@ class HttpClientIntegrationTest {
         assertEquals(HttpStatus.OK, response.status());
 
         clientFactory.close();
+    }
+
+    @Nested
+    @TestInstance(Lifecycle.PER_CLASS)
+    class JettyInterop {
+
+        org.eclipse.jetty.server.Server jetty;
+
+        @BeforeAll
+        void startJetty() throws Exception {
+            jetty = new org.eclipse.jetty.server.Server(0);
+            jetty.setHandler(new AbstractHandler() {
+                @Override
+                public void handle(String target, Request baseRequest, HttpServletRequest request,
+                                   HttpServletResponse response) throws IOException, ServletException {
+                    if (Collections.list(request.getHeaders("host")).size() == 1) {
+                        response.setStatus(HttpStatus.OK.code());
+                    } else {
+                        response.sendError(HttpStatus.INTERNAL_SERVER_ERROR.code());
+                    }
+                    baseRequest.setHandled(true);
+                }
+            });
+            jetty.start();
+        }
+
+        @AfterAll
+        void stopJetty() throws Exception {
+            jetty.stop();
+        }
+
+        @Test
+        void http1SendsOneHostHeaderWhenUserSetsIt() {
+            final HttpClient client = HttpClient.of(
+                    "h1c://localhost:" + ((ServerConnector)jetty.getConnectors()[0]).getLocalPort() + '/');
+
+            final AggregatedHttpResponse response = client.execute(
+                    RequestHeaders.of(HttpMethod.GET, "/onlyonehost", HttpHeaderNames.HOST, "foobar")
+            ).aggregate().join();
+            assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        }
     }
 
     private static void checkGetRequest(String path, HttpClient client) throws Exception {

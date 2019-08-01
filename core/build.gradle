@@ -39,6 +39,9 @@ dependencies {
 
     // Bouncy Castle
     compile 'org.bouncycastle:bcprov-jdk15on'
+
+    // Jetty, for testing interoperability with other servers.
+    testCompile 'org.eclipse.jetty:jetty-webapp'
 }
 
 sourceSets {
