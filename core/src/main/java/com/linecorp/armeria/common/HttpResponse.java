@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.reactivestreams.Publisher;
@@ -82,7 +83,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
 
     /**
      * Creates a new HTTP response that delegates to the provided {@link AggregatedHttpResponse}, beginning
-     * publishing after {@code delay} has passed from a random {@link EventExecutor}.
+     * publishing after {@code delay} has passed from a random {@link ScheduledExecutorService}.
      */
     static HttpResponse delayed(AggregatedHttpResponse response, Duration delay) {
         requireNonNull(response, "response");
@@ -92,9 +93,10 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
 
     /**
      * Creates a new HTTP response that delegates to the provided {@link AggregatedHttpResponse}, beginning
-     * publishing after {@code delay} has passed from the provided {@link EventExecutor}.
+     * publishing after {@code delay} has passed from the provided {@link ScheduledExecutorService}.
      */
-    static HttpResponse delayed(AggregatedHttpResponse response, Duration delay, EventExecutor executor) {
+    static HttpResponse delayed(AggregatedHttpResponse response, Duration delay,
+                                ScheduledExecutorService executor) {
         requireNonNull(response, "response");
         requireNonNull(delay, "delay");
         requireNonNull(executor, "executor");
@@ -103,7 +105,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
 
     /**
      * Creates a new HTTP response that delegates to the provided {@link HttpResponse}, beginning publishing
-     * after {@code delay} has passed from a random {@link EventExecutor}.
+     * after {@code delay} has passed from a random {@link ScheduledExecutorService}.
      */
     static HttpResponse delayed(HttpResponse response, Duration delay) {
         requireNonNull(response, "response");
@@ -113,9 +115,9 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
 
     /**
      * Creates a new HTTP response that delegates to the provided {@link HttpResponse}, beginning publishing
-     * after {@code delay} has passed from the provided {@link EventExecutor}.
+     * after {@code delay} has passed from the provided {@link ScheduledExecutorService}.
      */
-    static HttpResponse delayed(HttpResponse response, Duration delay, EventExecutor executor) {
+    static HttpResponse delayed(HttpResponse response, Duration delay, ScheduledExecutorService executor) {
         requireNonNull(response, "response");
         requireNonNull(delay, "delay");
         requireNonNull(executor, "executor");

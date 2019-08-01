@@ -32,9 +32,9 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
@@ -163,7 +163,7 @@ public class MockWebServerExtension extends ServerExtension implements BeforeTes
         recordedRequests.clear();
     }
 
-    private class MockWebService implements Service<HttpRequest, HttpResponse> {
+    private class MockWebService implements HttpService {
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
             return HttpResponse.from(req.aggregate().thenApply(aggReq -> {

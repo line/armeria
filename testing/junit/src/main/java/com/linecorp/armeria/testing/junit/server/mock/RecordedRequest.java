@@ -63,7 +63,7 @@ public final class RecordedRequest {
             return false;
         }
 
-        RecordedRequest that = (RecordedRequest) o;
+        final RecordedRequest that = (RecordedRequest) o;
         return request.equals(that.request) &&
                context.equals(that.context);
     }
