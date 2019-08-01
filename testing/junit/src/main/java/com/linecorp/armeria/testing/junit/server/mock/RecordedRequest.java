@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.testing.junit.server.mock;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Objects;
 
 import javax.annotation.Nullable;
@@ -33,7 +35,7 @@ public final class RecordedRequest {
     private final AggregatedHttpRequest request;
     private final ServiceRequestContext context;
 
-    RecordedRequest(AggregatedHttpRequest request, ServiceRequestContext context) {
+    RecordedRequest(ServiceRequestContext context, AggregatedHttpRequest request) {
         this.request = requireNonNull(request, "request");
         this.context = requireNonNull(context, "context");
     }

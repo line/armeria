@@ -167,7 +167,7 @@ public class MockWebServerExtension extends ServerExtension implements BeforeTes
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
             return HttpResponse.from(req.aggregate().thenApply(aggReq -> {
-                recordedRequests.add(new RecordedRequest(aggReq, ctx));
+                recordedRequests.add(new RecordedRequest(ctx, aggReq));
 
                 final HttpResponse response = mockResponses.poll();
                 if (response == null) {
