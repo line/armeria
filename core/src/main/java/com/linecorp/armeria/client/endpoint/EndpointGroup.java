@@ -52,7 +52,7 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, SafeCloseable
 
     /**
      * Waits until the initial {@link Endpoint}s are ready.
-     *2
+     *
      * @throws java.util.concurrent.CancellationException if {@link #close()} was called before the initial
      * {@link Endpoint}s are set
      */
