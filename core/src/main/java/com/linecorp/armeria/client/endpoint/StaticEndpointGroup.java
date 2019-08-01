@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.endpoint;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import com.google.common.collect.ImmutableList;
 
@@ -32,13 +33,13 @@ public final class StaticEndpointGroup implements EndpointGroup {
 
     private final List<Endpoint> endpoints;
 
+    private final CompletableFuture<List<Endpoint>> initialEndpointsFuture;
+
     /**
      * Creates a new instance.
      */
     public StaticEndpointGroup(Endpoint... endpoints) {
-        requireNonNull(endpoints, "endpoints");
-
-        this.endpoints = ImmutableList.copyOf(endpoints);
+        this(ImmutableList.copyOf(requireNonNull(endpoints, "endpoints")));
     }
 
     /**
@@ -48,11 +49,18 @@ public final class StaticEndpointGroup implements EndpointGroup {
         requireNonNull(endpoints, "endpoints");
 
         this.endpoints = ImmutableList.copyOf(endpoints);
+
+        initialEndpointsFuture = CompletableFuture.completedFuture(this.endpoints);
     }
 
     @Override
     public List<Endpoint> endpoints() {
         return endpoints;
+    }
+
+    @Override
+    public CompletableFuture<List<Endpoint>> initialEndpointsFuture() {
+        return initialEndpointsFuture;
     }
 
     @Override

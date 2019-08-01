@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.endpoint;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.util.AbstractListenable;
@@ -27,11 +28,17 @@ final class OrElseEndpointGroup extends AbstractListenable<List<Endpoint>> imple
     private final EndpointGroup first;
     private final EndpointGroup second;
 
+    private final CompletableFuture<List<Endpoint>> initialEndpointsFuture;
+
     OrElseEndpointGroup(EndpointGroup first, EndpointGroup second) {
         this.first = requireNonNull(first, "first");
         this.second = requireNonNull(second, "second");
         first.addListener(unused -> notifyListeners(endpoints()));
         second.addListener(unused -> notifyListeners(endpoints()));
+
+        initialEndpointsFuture = CompletableFuture
+                .allOf(first.initialEndpointsFuture(), second.initialEndpointsFuture())
+                .thenApply(unused -> endpoints());
     }
 
     @Override
@@ -41,6 +48,11 @@ final class OrElseEndpointGroup extends AbstractListenable<List<Endpoint>> imple
             return endpoints;
         }
         return second.endpoints();
+    }
+
+    @Override
+    public CompletableFuture<List<Endpoint>> initialEndpointsFuture() {
+        return initialEndpointsFuture;
     }
 
     @Override
