@@ -755,10 +755,10 @@ class HttpClientIntegrationTest {
                 @Override
                 public void handle(String target, Request baseRequest, HttpServletRequest request,
                                    HttpServletResponse response) throws IOException, ServletException {
-                    if (Collections.list(request.getHeaders("host")).size() > 1) {
-                        response.sendError(HttpStatus.INTERNAL_SERVER_ERROR.code());
-                    } else {
+                    if (Collections.list(request.getHeaders("host")).size() == 1) {
                         response.setStatus(HttpStatus.OK.code());
+                    } else {
+                        response.sendError(HttpStatus.INTERNAL_SERVER_ERROR.code());
                     }
                     baseRequest.setHandled(true);
                 }
