@@ -18,7 +18,11 @@ package com.linecorp.armeria.common;
 
 import java.util.concurrent.CompletionStage;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.stream.DeferredStreamMessage;
+
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * An {@link HttpResponse} whose stream is published later by another {@link HttpResponse}. It is used when
@@ -29,6 +33,17 @@ import com.linecorp.armeria.common.stream.DeferredStreamMessage;
 @Deprecated
 public class DeferredHttpResponse extends DeferredStreamMessage<HttpObject> implements HttpResponse {
 
+    @Nullable
+    private final EventExecutor executor;
+
+    public DeferredHttpResponse() {
+        this.executor = null;
+    }
+
+    DeferredHttpResponse(EventExecutor executor) {
+        this.executor = executor;
+    }
+
     /**
      * Sets the delegate {@link HttpResponse} which will publish the stream actually.
      *
@@ -37,5 +52,13 @@ public class DeferredHttpResponse extends DeferredStreamMessage<HttpObject> impl
      */
     public void delegate(HttpResponse delegate) {
         super.delegate(delegate);
+    }
+
+    @Override
+    protected EventExecutor defaultSubscriberExecutor() {
+        if (executor != null) {
+            return executor;
+        }
+        return super.defaultSubscriberExecutor();
     }
 }

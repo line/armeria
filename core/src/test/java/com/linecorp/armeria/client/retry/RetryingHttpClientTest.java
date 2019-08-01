@@ -26,9 +26,11 @@ import static org.awaitility.Awaitility.await;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 
 import javax.annotation.Nullable;
@@ -68,6 +70,8 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
+
+import io.netty.channel.EventLoop;
 
 public class RetryingHttpClientTest {
 
@@ -506,6 +510,23 @@ public class RetryingHttpClientTest {
         assertThatThrownBy(() -> client.get("/").aggregate().join())
                 .hasCauseExactlyInstanceOf(AnticipatedException.class);
         assertThat(retryCounter.get()).isEqualTo(5);
+    }
+
+    @Test
+    public void useSameEventLoopWhenAggregate() throws InterruptedException {
+        final CountDownLatch latch = new CountDownLatch(1);
+        final AtomicReference<EventLoop> eventLoop = new AtomicReference<>();
+        final HttpClient client = new HttpClientBuilder(server.uri("/"))
+                .decorator((delegate, ctx, req) -> {
+                    eventLoop.set(ctx.eventLoop());
+                    return delegate.execute(ctx, req);
+                })
+                .decorator(RetryingHttpClient.newDecorator(RetryStrategy.onServerErrorStatus(), 2)).build();
+        client.get("/503-then-success").aggregate().whenComplete((unused, cause) -> {
+            assertThat(eventLoop.get().inEventLoop()).isTrue();
+            latch.countDown();
+        });
+        latch.await();
     }
 
     private HttpClient client(RetryStrategy strategy) {
