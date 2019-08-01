@@ -33,9 +33,9 @@ public final class RecordedRequest {
     private final AggregatedHttpRequest request;
     private final ServiceRequestContext context;
 
-    public RecordedRequest(AggregatedHttpRequest request, ServiceRequestContext context) {
-        this.request = request;
-        this.context = context;
+    RecordedRequest(AggregatedHttpRequest request, ServiceRequestContext context) {
+        this.request = requireNonNull(request, "request");
+        this.context = requireNonNull(context, "context");
     }
 
     /**
