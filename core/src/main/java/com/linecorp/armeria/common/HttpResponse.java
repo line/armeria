@@ -81,6 +81,27 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
     }
 
     /**
+     * Creates a new HTTP response that delegates to the provided {@link AggregatedHttpResponse}, beginning
+     * publishing after {@code delay} has passed from a random {@link EventExecutor}.
+     */
+    static HttpResponse delayed(AggregatedHttpResponse response, Duration delay) {
+        requireNonNull(response, "response");
+        requireNonNull(delay, "delay");
+        return delayed(HttpResponse.of(response), delay);
+    }
+
+    /**
+     * Creates a new HTTP response that delegates to the provided {@link AggregatedHttpResponse}, beginning
+     * publishing after {@code delay} has passed from the provided {@link EventExecutor}.
+     */
+    static HttpResponse delayed(AggregatedHttpResponse response, Duration delay, EventExecutor executor) {
+        requireNonNull(response, "response");
+        requireNonNull(delay, "delay");
+        requireNonNull(executor, "executor");
+        return delayed(HttpResponse.of(response), delay, executor);
+    }
+
+    /**
      * Creates a new HTTP response that delegates to the provided {@link HttpResponse}, beginning publishing
      * after {@code delay} has passed from a random {@link EventExecutor}.
      */

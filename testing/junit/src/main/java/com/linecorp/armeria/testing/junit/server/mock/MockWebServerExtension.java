@@ -70,7 +70,6 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
  * >       assertThat(server.takeRequest().path()).isEqualTo("/");
  * >       assertThat(server.takeRequest().path()).isEqualTo("/bad");
  * >   }
- * >
  * > }
  * }</pre>
  */
