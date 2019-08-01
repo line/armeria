@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.endpoint;
 
 import java.util.List;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -53,8 +54,7 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, SafeCloseable
     /**
      * Waits until the initial {@link Endpoint}s are ready.
      *
-     * @throws java.util.concurrent.CancellationException if {@link #close()} was called before the initial
-     *         {@link Endpoint}s are set
+     * @throws CancellationException if {@link #close()} was called before the initial {@link Endpoint}s are set
      */
     default List<Endpoint> awaitInitialEndpoints() throws InterruptedException {
         try {
@@ -67,8 +67,7 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, SafeCloseable
     /**
      * Waits until the initial {@link Endpoint}s are ready, with timeout.
      *
-     * @throws java.util.concurrent.CancellationException if {@link #close()} was called before the initial
-     *         {@link Endpoint}s are set
+     * @throws CancellationException if {@link #close()} was called before the initial {@link Endpoint}s are set
      * @throws TimeoutException if the initial {@link Endpoint}s are not set until timeout
      */
     default List<Endpoint> awaitInitialEndpoints(long timeout, TimeUnit unit)
