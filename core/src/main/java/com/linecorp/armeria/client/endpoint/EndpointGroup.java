@@ -17,6 +17,9 @@
 package com.linecorp.armeria.client.endpoint;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 
 import com.linecorp.armeria.client.Endpoint;
@@ -26,7 +29,6 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 /**
  * A list of {@link Endpoint}s.
  */
-@FunctionalInterface
 public interface EndpointGroup extends Listenable<List<Endpoint>>, SafeCloseable {
 
     /**
@@ -40,6 +42,25 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, SafeCloseable
      * Return the endpoints held by this {@link EndpointGroup}.
      */
     List<Endpoint> endpoints();
+
+    /**
+     * Returns a {@link CompletableFuture} which is completed when the initial {@link Endpoint}s are ready.
+     */
+    CompletableFuture<List<Endpoint>> initialEndpointsFuture();
+
+    /**
+     * Waits until the initial {@link Endpoint}s are ready.
+     *
+     * @throws java.util.concurrent.CancellationException if {@link #close()} was called before the initial
+     * {@link Endpoint}s are set
+     */
+    default List<Endpoint> awaitInitialEndpoints() throws InterruptedException {
+        try {
+            return initialEndpointsFuture().get();
+        } catch (ExecutionException e) {
+            throw new CompletionException(e.getCause());
+        }
+    }
 
     @Override
     default void addListener(Consumer<? super List<Endpoint>> listener) {}
