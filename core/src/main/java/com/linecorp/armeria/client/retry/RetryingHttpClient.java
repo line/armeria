@@ -136,7 +136,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
     protected HttpResponse doExecute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final boolean hasInitialAuthority = !isNullOrEmpty(req.headers().authority());
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-        final HttpResponse res = HttpResponse.from(responseFuture);
+        final HttpResponse res = HttpResponse.from(responseFuture, ctx.eventLoop());
         final HttpRequestDuplicator reqDuplicator = new HttpRequestDuplicator(req, 0, ctx.eventLoop());
         doExecute0(ctx, reqDuplicator, req, res, responseFuture, hasInitialAuthority);
         return res;

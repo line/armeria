@@ -25,6 +25,8 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 
+import io.netty.channel.EventLoop;
+
 /**
  * A {@link Client} decorator that limits the concurrent number of active HTTP requests.
  *
@@ -67,9 +69,10 @@ public final class ConcurrencyLimitingHttpClient extends ConcurrencyLimitingClie
 
     @Override
     protected Deferred<HttpResponse> defer(ClientRequestContext ctx, HttpRequest req) throws Exception {
+        final EventLoop eventLoop = ctx.eventLoop();
         return new Deferred<HttpResponse>() {
             private final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-            private final HttpResponse res = HttpResponse.from(responseFuture);
+            private final HttpResponse res = HttpResponse.from(responseFuture, eventLoop);
 
             @Override
             public HttpResponse response() {

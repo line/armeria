@@ -174,7 +174,7 @@ public class UnaryGrpcClient {
                                deframer.deframe(msg.content(), true);
                            }
                            return responseFuture;
-                       }));
+                       }), ctx.eventLoop());
         }
     }
 }
