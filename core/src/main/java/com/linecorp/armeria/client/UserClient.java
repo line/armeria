@@ -125,13 +125,14 @@ public abstract class UserClient<I extends Request, O extends Response> implemen
      */
     protected final O execute(HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
                               I req, BiFunction<ClientRequestContext, Throwable, O> fallback) {
-        return execute(null, method, path, query, fragment, req, fallback);
+        return execute(null, endpoint, method, path, query, fragment, req, fallback);
     }
 
     /**
      * Executes the specified {@link Request} via {@link #delegate()}.
      *
      * @param eventLoop the {@link EventLoop} to execute the {@link Request}
+     * @param endpoint the {@link Endpoint} of the {@link Request}
      * @param method the method of the {@link Request}
      * @param path the path part of the {@link Request} URI
      * @param query the query part of the {@link Request} URI
@@ -140,7 +141,7 @@ public abstract class UserClient<I extends Request, O extends Response> implemen
      * @param fallback the fallback response {@link BiFunction} to use when
      *                 {@link Client#execute(ClientRequestContext, Request)} of {@link #delegate()} throws
      */
-    protected final O execute(@Nullable EventLoop eventLoop,
+    protected final O execute(@Nullable EventLoop eventLoop, Endpoint endpoint,
                               HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
                               I req, BiFunction<ClientRequestContext, Throwable, O> fallback) {
         final DefaultClientRequestContext ctx;

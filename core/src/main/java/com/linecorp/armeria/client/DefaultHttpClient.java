@@ -16,13 +16,17 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.client.HttpClientBuilder.UNDEFINED_URI;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
+
+import java.net.URI;
 
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.PathAndQuery;
 
@@ -42,22 +46,38 @@ final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> impl
     }
 
     private HttpResponse execute(@Nullable EventLoop eventLoop, HttpRequest req) {
-        final String originalPath = req.path();
-        final String newPath = concatPaths(uri().getRawPath(), originalPath);
-        final PathAndQuery pathAndQuery = PathAndQuery.parse(newPath);
+        final URI uri = URI.create(req.path());
+        final String authority = uri.getAuthority();
+
+        if (uri() == UNDEFINED_URI && authority == null) {
+            return HttpResponse.ofFailure(new IllegalArgumentException("no authority: " + req.path()));
+        } else if (authority != null) {
+            final Endpoint endpoint = Endpoint.parse(authority);
+            final RequestHeaders newHeaders = req.headers().toBuilder().path(uri.getRawPath()).build();
+            final HttpRequest newReq = HttpRequest.of(req, newHeaders);
+            return execute(eventLoop, endpoint, newReq);
+        } else {
+            final String originalPath = req.path();
+            final String newPath = concatPaths(uri().getRawPath(), originalPath);
+            final HttpRequest newReq;
+            // newPath and originalPath should be the same reference if uri().getRawPath() can be ignorable
+            if (newPath != originalPath) {
+                newReq = HttpRequest.of(req, req.headers().toBuilder().path(newPath).build());
+            } else {
+                newReq = req;
+            }
+            return execute(eventLoop, endpoint(), newReq);
+        }
+    }
+
+    private HttpResponse execute(@Nullable EventLoop eventLoop, Endpoint endpoint, HttpRequest req) {
+        final PathAndQuery pathAndQuery = PathAndQuery.parse(req.path());
         if (pathAndQuery == null) {
             req.abort();
-            return HttpResponse.ofFailure(new IllegalArgumentException("invalid path: " + newPath));
+            return HttpResponse.ofFailure(new IllegalArgumentException("invalid path: " + req.path()));
         }
-
-        final HttpRequest newReq;
-        if (newPath != originalPath) {
-            newReq = HttpRequest.of(req, req.headers().toBuilder().path(newPath).build());
-        } else {
-            newReq = req;
-        }
-
-        return execute(eventLoop, newReq.method(), pathAndQuery.path(), pathAndQuery.query(), null, newReq,
+        return execute(eventLoop, endpoint, req.method(),
+                       pathAndQuery.path(), pathAndQuery.query(), null, req,
                        (ctx, cause) -> HttpResponse.ofFailure(cause));
     }
 

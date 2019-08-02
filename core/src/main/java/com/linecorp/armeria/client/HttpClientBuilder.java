@@ -35,6 +35,11 @@ import com.linecorp.armeria.common.SessionProtocol;
  */
 public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpClientBuilder> {
 
+    /**
+     * An undefined URI to create {@link HttpClient#of()} without specifying URI.
+     */
+    static final URI UNDEFINED_URI = URI.create("none+http://127.0.0.1");
+
     @Nullable
     private final URI uri;
     @Nullable
@@ -62,9 +67,12 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
      *                                  in {@link SessionProtocol}
      */
     public HttpClientBuilder(URI uri) {
-        validateScheme(requireNonNull(uri, "uri").getScheme());
-
-        this.uri = URI.create(SerializationFormat.NONE + "+" + uri);
+        if (uri == UNDEFINED_URI) {
+            this.uri = uri;
+        } else {
+            validateScheme(requireNonNull(uri, "uri").getScheme());
+            this.uri = URI.create(SerializationFormat.NONE + "+" + uri);
+        }
         scheme = null;
         endpoint = null;
     }
