@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.endpoint;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
@@ -45,24 +46,47 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, SafeCloseable
         return StaticEndpointGroup.EMPTY;
     }
 
-    static EndpointGroup of(Endpoint... endpoints) {
-        requireNonNull(endpoints, "endpoints");
-        return of(ImmutableList.copyOf(endpoints));
-    }
-
-    static EndpointGroup of(Iterable<Endpoint> endpoints) {
-        requireNonNull(endpoints, "endpoints");
-        return new StaticEndpointGroup(endpoints);
-    }
-
-    static EndpointGroup ofAll(EndpointGroup... endpointGroups) {
+    /**
+     * Returns an {@link EndpointGroup} that combines all the {@link Endpoint}s of {@code endpointGroups}.
+     * {@code endpointGroups} can be instances of {@link Endpoint} when creating a group out of single
+     * endpoints.
+     */
+    static EndpointGroup of(EndpointGroup... endpointGroups) {
         requireNonNull(endpointGroups, "endpointGroups");
-        return ofAll(ImmutableList.copyOf(endpointGroups));
+        return of(ImmutableList.copyOf(endpointGroups));
     }
 
-    static EndpointGroup ofAll(Iterable<EndpointGroup> endpointGroups) {
+    /**
+     * Returns an {@link EndpointGroup} that combines all the {@link Endpoint}s of {@code endpointGroups}.
+     * {@code endpointGroups} can be instances of {@link Endpoint} when creating a group out of single
+     * endpoints.
+     */
+    static EndpointGroup of(Iterable<EndpointGroup> endpointGroups) {
         requireNonNull(endpointGroups, "endpointGroups");
-        return new CompositeEndpointGroup(endpointGroups);
+
+        List<EndpointGroup> groups = new ArrayList<>();
+        List<Endpoint> staticEndpoints = new ArrayList<>();
+        for (EndpointGroup endpointGroup : endpointGroups) {
+            if (endpointGroup instanceof Endpoint) {
+                staticEndpoints.add((Endpoint) endpointGroup);
+            } else {
+                groups.add(endpointGroup);
+            }
+        }
+
+        if (groups.isEmpty() && staticEndpoints.isEmpty()) {
+            return empty();
+        }
+
+        if (groups.isEmpty()) {
+            return new StaticEndpointGroup(staticEndpoints);
+        }
+
+        if (!staticEndpoints.isEmpty()) {
+            groups.add(new StaticEndpointGroup(staticEndpoints));
+        }
+
+        return new CompositeEndpointGroup(groups);
     }
 
     /**

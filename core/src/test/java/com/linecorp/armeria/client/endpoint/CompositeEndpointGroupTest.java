@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client.endpoint;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -40,7 +39,7 @@ class CompositeEndpointGroupTest {
         DynamicEndpointGroup group2 = new DynamicEndpointGroup();
         group2.setEndpoints(ImmutableList.of(CAT, DOG));
 
-        EndpointGroup composite = EndpointGroup.ofAll(group1, group2);
+        EndpointGroup composite = EndpointGroup.of(group1, group2);
         assertThat(composite.endpoints()).containsExactlyInAnyOrder(FOO, BAR, CAT, DOG);
         // Same instance of endpoints returned unless there are updates.
         assertThat(composite.endpoints()).isSameAs(composite.endpoints());
