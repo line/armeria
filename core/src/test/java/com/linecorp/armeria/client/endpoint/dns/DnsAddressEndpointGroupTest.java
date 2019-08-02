@@ -83,7 +83,7 @@ public class DnsAddressEndpointGroupTest {
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV6_ONLY)
                     .build()) {
 
-                assertThat(group.awaitInitialEndpoints()).containsExactly(
+                assertThat(group.awaitInitialEndpoints(10, TimeUnit.SECONDS)).containsExactly(
                         Endpoint.of("bar.com", 8080).withIpAddr("2404:6800:4004:806::2013"),
                         Endpoint.of("bar.com", 8080).withIpAddr("::1"),
                         Endpoint.of("bar.com", 8080).withIpAddr("::1234:5678:90ab"));

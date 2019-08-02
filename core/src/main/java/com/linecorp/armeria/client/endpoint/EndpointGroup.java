@@ -19,9 +19,12 @@ package com.linecorp.armeria.client.endpoint;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 import com.google.common.collect.ImmutableList;
@@ -75,12 +78,26 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, SafeCloseable
     /**
      * Waits until the initial {@link Endpoint}s are ready.
      *
-     * @throws java.util.concurrent.CancellationException if {@link #close()} was called before the initial
-     * {@link Endpoint}s are set
+     * @throws CancellationException if {@link #close()} was called before the initial {@link Endpoint}s are set
      */
     default List<Endpoint> awaitInitialEndpoints() throws InterruptedException {
         try {
             return initialEndpointsFuture().get();
+        } catch (ExecutionException e) {
+            throw new CompletionException(e.getCause());
+        }
+    }
+
+    /**
+     * Waits until the initial {@link Endpoint}s are ready, with timeout.
+     *
+     * @throws CancellationException if {@link #close()} was called before the initial {@link Endpoint}s are set
+     * @throws TimeoutException if the initial {@link Endpoint}s are not set until timeout
+     */
+    default List<Endpoint> awaitInitialEndpoints(long timeout, TimeUnit unit)
+            throws InterruptedException, TimeoutException {
+        try {
+            return initialEndpointsFuture().get(timeout, unit);
         } catch (ExecutionException e) {
             throw new CompletionException(e.getCause());
         }
