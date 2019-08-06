@@ -148,16 +148,10 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 return;
             }
 
-            // Get the health checkers whose endpoints disappeared.
-            final Map<Endpoint, DefaultHealthCheckerContext> toRemove = new HashMap<>(contexts);
-            for (Endpoint e : candidates) {
-                toRemove.remove(e);
-            }
-
             // Stop the health checkers whose endpoints disappeared.
-            if (!toRemove.isEmpty()) {
-                toRemove.values().forEach(DefaultHealthCheckerContext::destroy);
-            }
+            contexts.entrySet().stream()
+                    .filter(e -> !candidates.contains(e.getKey()))
+                    .forEach(e -> e.getValue().destroy());
 
             // Start the health checkers for newly appeared endpoints.
             for (Endpoint e : candidates) {
