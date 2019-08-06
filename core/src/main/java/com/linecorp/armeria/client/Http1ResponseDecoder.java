@@ -161,8 +161,13 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                             state = State.NEED_DATA_OR_TRAILERS;
                         }
 
-                        res.scheduleTimeout(channel().eventLoop());
-                        res.write(ArmeriaHttpUtil.toArmeria(nettyRes));
+                        // If this tryWrite() returns false, it means the response stream has been closed due to
+                        // disconnection or by the response consumer. We do not need to handle such cases here
+                        // because it will be notified to the response consumer anyway.
+                        if (!res.tryWrite(ArmeriaHttpUtil.toArmeria(nettyRes))) {
+                            // Schedule only when the response stream is still open.
+                            res.scheduleTimeout(ctx.channel().eventLoop());
+                        }
                     } else {
                         failWithUnexpectedMessageType(ctx, msg);
                     }
@@ -192,7 +197,11 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                                 fail(ctx, ContentTooLargeException.get());
                                 return;
                             } else {
-                                res.write(HttpData.wrap(data.retain()));
+                                // If this tryWrite() returns false, it means the response stream has been
+                                // closed due to disconnection or by the response consumer.
+                                // We do not need to handle such cases here because it will be notified
+                                // to the response consumer anyway.
+                                res.tryWrite(HttpData.wrap(data.retain()));
                             }
                         }
 
@@ -206,7 +215,11 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
 
                             final HttpHeaders trailingHeaders = ((LastHttpContent) msg).trailingHeaders();
                             if (!trailingHeaders.isEmpty()) {
-                                res.write(ArmeriaHttpUtil.toArmeria(trailingHeaders));
+                                // If this tryWrite() returns false, it means the response stream has been
+                                // closed due to disconnection or by the response consumer.
+                                // We do not need to handle such cases here because it will be notified
+                                // to the response consumer anyway.
+                                res.tryWrite(ArmeriaHttpUtil.toArmeria(trailingHeaders));
                             }
 
                             res.close();
