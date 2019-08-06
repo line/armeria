@@ -188,6 +188,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
             stopFutures = CompletableFutures.allAsList(contexts.values().stream()
                                                                .map(DefaultHealthCheckerContext::destroy)
                                                                .collect(toImmutableList()));
+            contexts.clear();
         }
 
         super.close();
