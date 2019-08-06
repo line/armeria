@@ -17,6 +17,7 @@ package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import java.net.StandardProtocolFamily;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
@@ -25,7 +26,6 @@ import com.linecorp.armeria.client.ClientOptionsBuilder;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpClientBuilder;
-import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -69,21 +69,20 @@ final class HttpHealthChecker implements AsyncCloseable {
         check();
     }
 
-    private void check() {
-        final CompletableFuture<AggregatedHttpResponse> f;
-        synchronized (this) {
-            f = httpClient.head(path).aggregate();
-            lastCheckFuture = f;
-        }
-
-        f.handle((res, cause) -> {
+    private synchronized void check() {
+        lastCheckFuture = httpClient.head(path).aggregate().handle((res, cause) -> {
             if (res != null && res.status().equals(HttpStatus.OK)) {
                 ctx.updateHealth(1);
             } else {
                 ctx.updateHealth(0);
             }
 
-            ctx.executor().schedule(this::check, ctx.nextDelayMillis(), TimeUnit.MILLISECONDS);
+            try {
+                ctx.executor().schedule(this::check, ctx.nextDelayMillis(), TimeUnit.MILLISECONDS);
+            } catch (RejectedExecutionException ignored) {
+                // Can happen if the Endpoint being checked has been disappeared from
+                // the delegate EndpointGroup. See HealthCheckedEndpointGroupTest.disappearedEndpoint().
+            }
             return null;
         });
     }

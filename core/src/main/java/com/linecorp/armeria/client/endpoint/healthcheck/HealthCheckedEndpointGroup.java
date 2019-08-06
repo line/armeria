@@ -39,6 +39,7 @@ import org.jctools.maps.NonBlockingHashSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.spotify.futures.CompletableFutures;
 
@@ -53,7 +54,7 @@ import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 
 import io.micrometer.core.instrument.binder.MeterBinder;
-import io.netty.util.concurrent.EventExecutorGroup;
+import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.Future;
 
 /**
@@ -97,7 +98,8 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     private final Function<? super HealthCheckerContext, ? extends AsyncCloseable> checker;
 
     private final Map<Endpoint, DefaultHealthCheckerContext> contexts = new HashMap<>();
-    private final Set<Endpoint> healthyEndpoints = new NonBlockingHashSet<>();
+    @VisibleForTesting
+    final Set<Endpoint> healthyEndpoints = new NonBlockingHashSet<>();
     private volatile boolean closed;
 
     /**
@@ -209,22 +211,43 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                           .toString();
     }
 
-    private final class DefaultHealthCheckerContext implements HealthCheckerContext {
+    private final class DefaultHealthCheckerContext
+            extends AbstractExecutorService implements HealthCheckerContext, ScheduledExecutorService {
 
+        private final Object lock = new Object();
         private final Endpoint endpoint;
+        private final Map<Future<?>, Boolean> scheduledFutures = new IdentityHashMap<>();
         @Nullable
         private AsyncCloseable handle;
-        final CancellableExecutor executor;
         final CompletableFuture<?> initialCheckFuture = new CompletableFuture<>();
+        private boolean destroyed;
 
         DefaultHealthCheckerContext(Endpoint endpoint) {
             this.endpoint = endpoint;
-            executor = new CancellableExecutor(clientFactory.eventLoopGroup());
         }
 
         void init(AsyncCloseable handle) {
             assert this.handle == null;
             this.handle = handle;
+        }
+
+        CompletableFuture<?> destroy() {
+            assert handle != null : handle;
+            return handle.closeAsync().handle((unused1, unused2) -> {
+                synchronized (lock) {
+                    if (destroyed) {
+                        return null;
+                    }
+
+                    destroyed = true;
+                    scheduledFutures.keySet().forEach(f -> f.cancel(false));
+                    scheduledFutures.clear();
+                }
+
+                updateHealth(0, true);
+
+                return null;
+            });
         }
 
         @Override
@@ -254,7 +277,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
         @Override
         public ScheduledExecutorService executor() {
-            return executor;
+            return this;
         }
 
         @Override
@@ -271,11 +294,19 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
         @Override
         public void updateHealth(double health) {
+            updateHealth(health, false);
+        }
+
+        private void updateHealth(double health, boolean updateEvenIfDestroyed) {
             final boolean updated;
-            if (health > 0) {
-                updated = healthyEndpoints.add(endpoint);
-            } else {
-                updated = healthyEndpoints.remove(endpoint);
+            synchronized (lock) {
+                if (!updateEvenIfDestroyed && destroyed) {
+                    updated = false;
+                } else if (health > 0) {
+                    updated = healthyEndpoints.add(endpoint);
+                } else {
+                    updated = healthyEndpoints.remove(endpoint);
+                }
             }
 
             if (updated) {
@@ -283,102 +314,52 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 setEndpoints(delegate.endpoints().stream()
                                      .filter(healthyEndpoints::contains)
                                      .collect(toImmutableList()));
+
             }
 
             initialCheckFuture.complete(null);
         }
 
-        CompletableFuture<?> destroy() {
-            assert handle != null : handle;
-            return handle.closeAsync().handle((unused1, unused2) -> {
-                executor.destroy();
-                initialCheckFuture.complete(null);
-                return null;
-            });
-        }
-    }
-
-    private static final class CancellableExecutor
-            extends AbstractExecutorService implements ScheduledExecutorService {
-
-        private final EventExecutorGroup delegate;
-        private final Map<Future<?>, Boolean> scheduledFutures;
-        private boolean destroyed;
-
-        CancellableExecutor(EventExecutorGroup delegate) {
-            this.delegate = delegate;
-            scheduledFutures = new IdentityHashMap<>();
-        }
-
-        void destroy() {
-            synchronized (scheduledFutures) {
-                if (destroyed) {
-                    return;
-                }
-
-                destroyed = true;
-                scheduledFutures.keySet().forEach(f -> f.cancel(false));
-                scheduledFutures.clear();
-            }
-        }
-
         @Override
         public void execute(Runnable command) {
-            synchronized (scheduledFutures) {
+            synchronized (lock) {
                 rejectIfDestroyed(command);
-                add(delegate.submit(command));
+                add(eventLoopGroup().submit(command));
             }
         }
 
         @Override
         public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-            synchronized (scheduledFutures) {
+            synchronized (lock) {
                 rejectIfDestroyed(command);
-                return add(delegate.schedule(command, delay, unit));
+                return add(eventLoopGroup().schedule(command, delay, unit));
             }
         }
 
         @Override
         public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-            synchronized (scheduledFutures) {
+            synchronized (lock) {
                 rejectIfDestroyed(callable);
-                return add(delegate.schedule(callable, delay, unit));
+                return add(eventLoopGroup().schedule(callable, delay, unit));
             }
         }
 
         @Override
         public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period,
                                                       TimeUnit unit) {
-            synchronized (scheduledFutures) {
+            synchronized (lock) {
                 rejectIfDestroyed(command);
-                return add(delegate.scheduleAtFixedRate(command, initialDelay, period, unit));
+                return add(eventLoopGroup().scheduleAtFixedRate(command, initialDelay, period, unit));
             }
         }
 
         @Override
         public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay,
-                                                             TimeUnit unit) {
-            synchronized (scheduledFutures) {
+                                                         TimeUnit unit) {
+            synchronized (lock) {
                 rejectIfDestroyed(command);
-                return add(delegate.scheduleWithFixedDelay(command, initialDelay, delay, unit));
+                return add(eventLoopGroup().scheduleWithFixedDelay(command, initialDelay, delay, unit));
             }
-        }
-
-        private void rejectIfDestroyed(Object command) {
-            if (destroyed) {
-                throw new RejectedExecutionException(
-                        HealthCheckerContext.class.getSimpleName() + " has been destroyed already: " + command);
-            }
-        }
-
-        private <T extends Future<U>, U> T add(T future) {
-            scheduledFutures.put(future, Boolean.TRUE);
-            future.addListener(f -> {
-                synchronized (scheduledFutures) {
-                    scheduledFutures.remove(f);
-                }
-            });
-            return future;
         }
 
         @Override
@@ -393,17 +374,39 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
         @Override
         public boolean isShutdown() {
-            return delegate.isShutdown();
+            return eventLoopGroup().isShutdown();
         }
 
         @Override
         public boolean isTerminated() {
-            return delegate.isTerminated();
+            return eventLoopGroup().isTerminated();
         }
 
         @Override
         public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
-            return delegate.awaitTermination(timeout, unit);
+            return eventLoopGroup().awaitTermination(timeout, unit);
+        }
+
+        private EventLoopGroup eventLoopGroup() {
+            return clientFactory.eventLoopGroup();
+        }
+
+        private void rejectIfDestroyed(Object command) {
+            if (destroyed) {
+                throw new RejectedExecutionException(
+                        HealthCheckerContext.class.getSimpleName() + " for '" + endpoint +
+                        "' has been destroyed already. Task: " + command);
+            }
+        }
+
+        private <T extends Future<U>, U> T add(T future) {
+            scheduledFutures.put(future, Boolean.TRUE);
+            future.addListener(f -> {
+                synchronized (lock) {
+                    scheduledFutures.remove(f);
+                }
+            });
+            return future;
         }
     }
 }
