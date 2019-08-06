@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
-import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
@@ -32,7 +31,6 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -68,9 +66,6 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
     private static final Logger logger = LoggerFactory.getLogger(HealthCheckedEndpointGroup.class);
 
-    private static final AtomicReferenceFieldUpdater<HealthCheckedEndpointGroup, State> stateUpdater =
-            AtomicReferenceFieldUpdater.newUpdater(HealthCheckedEndpointGroup.class, State.class, "state");
-
     /**
      * Returns a newly created {@link HealthCheckedEndpointGroup} that sends HTTP {@code HEAD} health check
      * requests with default options.
@@ -93,12 +88,6 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         return new HealthCheckedEndpointGroupBuilder(delegate, path);
     }
 
-    private enum State {
-        UNINITIALIZED,
-        INITIALIZED,
-        CLOSED
-    }
-
     final EndpointGroup delegate;
     private final ClientFactory clientFactory;
     private final SessionProtocol protocol;
@@ -109,11 +98,10 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
     private final Map<Endpoint, DefaultHealthCheckerContext> contexts = new HashMap<>();
     private final Set<Endpoint> healthyEndpoints = new NonBlockingHashSet<>();
-    @SuppressWarnings("FieldMayBeFinal") // Updated by `stateUpdater`
-    private volatile State state = State.UNINITIALIZED;
+    private volatile boolean closed;
 
     /**
-     * Creates a new instance. Must call {@link #init()} before using.
+     * Creates a new instance.
      */
     HealthCheckedEndpointGroup(EndpointGroup delegate, ClientFactory clientFactory,
                                SessionProtocol protocol, int port, Backoff retryBackoff,
@@ -126,14 +114,6 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         this.retryBackoff = requireNonNull(retryBackoff, "retryBackoff");
         this.clientConfigurator = requireNonNull(clientConfigurator, "clientConfigurator");
         this.checker = requireNonNull(checker, "checker");
-    }
-
-    /**
-     * Update healthy servers and start to schedule health check. Must be called before using.
-     */
-    void init() {
-        checkState(stateUpdater.compareAndSet(this, State.UNINITIALIZED, State.INITIALIZED),
-                   "init() must only be called once at the end of the construction.");
 
         delegate.addListener(this::updateCandidates);
         updateCandidates(delegate.initialEndpointsFuture().join());
@@ -144,7 +124,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
     private void updateCandidates(List<Endpoint> candidates) {
         synchronized (contexts) {
-            if (state == State.CLOSED) {
+            if (closed) {
                 return;
             }
 
@@ -177,10 +157,13 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
     @Override
     public void close() {
-        final State oldState = stateUpdater.getAndSet(this, State.CLOSED);
-        if (oldState == State.CLOSED) {
+        if (closed) {
             return;
         }
+
+        // Note: This method is thread-safe and idempotent as long as
+        //       super.close() and delegate.close() are so.
+        closed = true;
 
         // Stop the health checkers in parallel.
         final CompletableFuture<List<Object>> stopFutures;

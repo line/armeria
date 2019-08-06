@@ -154,9 +154,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
      * Returns a newly created {@link HealthCheckedEndpointGroup} based on the properties set so far.
      */
     public HealthCheckedEndpointGroup build() {
-        final HealthCheckedEndpointGroup group = new HealthCheckedEndpointGroup(
-                delegate, clientFactory, protocol, port, retryBackoff, configurator, checker);
-        group.init();
-        return group;
+        return new HealthCheckedEndpointGroup(delegate, clientFactory, protocol, port,
+                                              retryBackoff, configurator, checker);
     }
 }
