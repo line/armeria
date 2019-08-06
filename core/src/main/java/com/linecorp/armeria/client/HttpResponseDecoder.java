@@ -215,6 +215,13 @@ abstract class HttpResponseDecoder {
             return delegate.isOpen();
         }
 
+        /**
+         * Writes the specified {@link HttpObject} to {@link DecodedHttpResponse}. This method is only called
+         * from {@link Http1ResponseDecoder} and {@link Http2ResponseDecoder}. If this returns {@code false},
+         * it means the response stream has been closed due to disconnection or by the response consumer.
+         * So the caller do not need to handle such cases because it will be notified to the response
+         * consumer anyway.
+         */
         @Override
         public boolean tryWrite(HttpObject o) {
             switch (state) {
