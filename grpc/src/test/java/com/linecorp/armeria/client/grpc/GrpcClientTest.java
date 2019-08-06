@@ -63,6 +63,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.logging.LoggingClientBuilder;
 import com.linecorp.armeria.common.FilteredHttpResponse;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpObject;
@@ -116,6 +117,7 @@ import io.grpc.StatusRuntimeException;
 import io.grpc.stub.MetadataUtils;
 import io.grpc.stub.StreamObserver;
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.HttpHeaderValues;
 
 public class GrpcClientTest {
 
@@ -789,8 +791,12 @@ public class GrpcClientTest {
 
         assertThat(stub.emptyCall(EMPTY)).isNotNull();
 
+        final HttpHeaders clientHeaders = CLIENT_HEADERS_CAPTURE.get();
+        assertThat(clientHeaders.get(HttpHeaderNames.TE))
+                .isEqualTo(HttpHeaderValues.TRAILERS.toString());
+
         // Assert that our side channel object is echoed back in both headers and trailers
-        assertThat(CLIENT_HEADERS_CAPTURE.get().get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("dog");
+        assertThat(clientHeaders.get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("dog");
         assertThat(SERVER_TRAILERS_CAPTURE.get().get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("dog");
 
         assertThat(headers.get()).isNull();
@@ -838,8 +844,12 @@ public class GrpcClientTest {
         assertSuccess(recorder);
         assertThat(recorder.getValues()).hasSize(responseSizes.size() * numRequests);
 
+        final HttpHeaders clientHeaders = CLIENT_HEADERS_CAPTURE.get();
+        assertThat(clientHeaders.get(HttpHeaderNames.TE))
+                .isEqualTo(HttpHeaderValues.TRAILERS.toString());
+
         // Assert that our side channel object is echoed back in both headers and trailers
-        assertThat(CLIENT_HEADERS_CAPTURE.get().get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("dog");
+        assertThat(clientHeaders.get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("dog");
         assertThat(SERVER_TRAILERS_CAPTURE.get().get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("dog");
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {

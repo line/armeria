@@ -39,6 +39,7 @@ import com.linecorp.armeria.unsafe.ByteBufHttpData;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.HttpHeaderValues;
 
 /**
  * A {@link UnaryGrpcClient} can be used to make requests to a gRPC server without depending on gRPC stubs.
@@ -79,7 +80,8 @@ public class UnaryGrpcClient {
     public CompletableFuture<byte[]> execute(String uri, byte[] payload) {
         final HttpRequest request = HttpRequest.of(
                 RequestHeaders.of(HttpMethod.POST, uri,
-                                  HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto"),
+                                  HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto",
+                                  HttpHeaderNames.TE, HttpHeaderValues.TRAILERS),
                 HttpData.wrap(payload));
         return httpClient.execute(request).aggregate()
                          .thenApply(msg -> {

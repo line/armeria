@@ -50,6 +50,7 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.MethodDescriptor;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
+import io.netty.handler.codec.http.HttpHeaderValues;
 
 /**
  * A {@link Channel} backed by an armeria {@link Client}. Stores the {@link ClientBuilderParams} and other
@@ -97,7 +98,8 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
             MethodDescriptor<I, O> method, CallOptions callOptions) {
         final HttpRequestWriter req = HttpRequest.streaming(
                 RequestHeaders.of(HttpMethod.POST, uri().getPath() + method.getFullMethodName(),
-                                  HttpHeaderNames.CONTENT_TYPE, serializationFormat.mediaType()));
+                                  HttpHeaderNames.CONTENT_TYPE, serializationFormat.mediaType(),
+                                  HttpHeaderNames.TE, HttpHeaderValues.TRAILERS));
         final DefaultClientRequestContext ctx = newContext(HttpMethod.POST, req);
         ctx.logBuilder().serializationFormat(serializationFormat);
         ctx.logBuilder().deferRequestContent();
