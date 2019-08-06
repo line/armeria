@@ -1,6 +1,7 @@
 package example.armeria.proxy;
 
 import java.net.InetSocketAddress;
+import java.time.Duration;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
@@ -12,7 +13,6 @@ import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.client.endpoint.dns.DnsServiceEndpointGroup;
 import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroup;
 import com.linecorp.armeria.client.logging.LoggingClient;
-import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpObject;
@@ -58,7 +58,7 @@ public final class ProxyService extends AbstractHttpService {
         final HealthCheckedEndpointGroup healthCheckedGroup =
                 HealthCheckedEndpointGroup.builder(animationGroup, "/internal/l7check")
                                           .protocol(SessionProtocol.HTTP)
-                                          .retryBackoff(Backoff.fixed(10_000).withJitter(0.2))
+                                          .retryInterval(Duration.ofSeconds(10))
                                           .build();
 
         // Wait until the initial health check is finished.

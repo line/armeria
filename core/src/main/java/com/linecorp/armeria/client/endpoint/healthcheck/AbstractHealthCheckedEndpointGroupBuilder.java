@@ -109,16 +109,21 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
 
     /**
      * Sets the interval between health check requests. Must be positive.
-     * @deprecated Use {@link #retryBackoff(Backoff)}.
      */
-    @Deprecated
     public AbstractHealthCheckedEndpointGroupBuilder retryInterval(Duration retryInterval) {
         requireNonNull(retryInterval, "retryInterval");
         checkArgument(!retryInterval.isNegative() && !retryInterval.isZero(),
                       "retryInterval: %s (expected > 0)", retryInterval);
-        retryBackoff = Backoff.fixed(retryInterval.toMillis())
-                              .withJitter(0.2);
-        return this;
+        return retryIntervalMillis(retryInterval.toMillis());
+    }
+
+    /**
+     * Sets the interval between health check requests in milliseconds. Must be positive.
+     */
+    public AbstractHealthCheckedEndpointGroupBuilder retryIntervalMillis(long retryIntervalMillis) {
+        checkArgument(retryIntervalMillis > 0,
+                      "retryIntervalMillis: %s (expected > 0)", retryIntervalMillis);
+        return retryBackoff(Backoff.fixed(retryIntervalMillis).withJitter(0.2));
     }
 
     /**

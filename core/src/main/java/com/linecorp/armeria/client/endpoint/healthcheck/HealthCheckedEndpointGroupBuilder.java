@@ -63,7 +63,6 @@ public class HealthCheckedEndpointGroupBuilder extends AbstractHealthCheckedEndp
     }
 
     @Override
-    @Deprecated
     public HealthCheckedEndpointGroupBuilder retryInterval(Duration retryInterval) {
         return (HealthCheckedEndpointGroupBuilder) super.retryInterval(retryInterval);
     }

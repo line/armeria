@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.endpoint.healthcheck;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
@@ -32,7 +33,6 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup;
 import com.linecorp.armeria.client.logging.LoggingClient;
-import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
@@ -290,7 +290,7 @@ class HealthCheckedEndpointGroupTest {
         try (HealthCheckedEndpointGroup endpointGroup =
                      HealthCheckedEndpointGroup.builder(DnsAddressEndpointGroup.of("localhost", port),
                                                         HEALTH_CHECK_PATH)
-                                               .retryBackoff(Backoff.fixed(TimeUnit.HOURS.toMillis(1)))
+                                               .retryInterval(Duration.ofHours(1))
                                                .withClientOptions(b -> {
                                                    return b.decorator(LoggingClient.newDecorator());
                                                })
