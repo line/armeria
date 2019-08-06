@@ -182,7 +182,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
             return;
         }
 
-        // Stop the health checkers asynchronously.
+        // Stop the health checkers in parallel.
         final CompletableFuture<List<Object>> stopFutures;
         synchronized (contexts) {
             stopFutures = CompletableFutures.allAsList(contexts.values().stream()
