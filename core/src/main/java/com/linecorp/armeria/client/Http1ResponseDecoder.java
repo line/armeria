@@ -161,10 +161,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                             state = State.NEED_DATA_OR_TRAILERS;
                         }
 
-                        res.scheduleTimeout(ctx.channel().eventLoop());
-                        // If this tryWrite() returns false, it means the response stream has been closed due to
-                        // disconnection or by the response consumer. We do not need to handle such cases here
-                        // because it will be notified to the response consumer anyway.
+                        res.scheduleTimeout(channel().eventLoop());
                         res.tryWrite(ArmeriaHttpUtil.toArmeria(nettyRes));
                     } else {
                         failWithUnexpectedMessageType(ctx, msg);
@@ -195,10 +192,6 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                                 fail(ctx, ContentTooLargeException.get());
                                 return;
                             } else {
-                                // If this tryWrite() returns false, it means the response stream has been
-                                // closed due to disconnection or by the response consumer.
-                                // We do not need to handle such cases here because it will be notified
-                                // to the response consumer anyway.
                                 res.tryWrite(HttpData.wrap(data.retain()));
                             }
                         }
@@ -213,10 +206,6 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
 
                             final HttpHeaders trailingHeaders = ((LastHttpContent) msg).trailingHeaders();
                             if (!trailingHeaders.isEmpty()) {
-                                // If this tryWrite() returns false, it means the response stream has been
-                                // closed due to disconnection or by the response consumer.
-                                // We do not need to handle such cases here because it will be notified
-                                // to the response consumer anyway.
                                 res.tryWrite(ArmeriaHttpUtil.toArmeria(trailingHeaders));
                             }
 

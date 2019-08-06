@@ -196,10 +196,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
         final HttpHeaders converted = ArmeriaHttpUtil.toArmeria(headers, false, endOfStream);
         try {
-            res.scheduleTimeout(ctx.channel().eventLoop());
-            // If this tryWrite() returns false, it means the response stream has been closed due to
-            // disconnection or by the response consumer. We do not need to handle such cases here because
-            // it will be notified to the response consumer anyway.
+            res.scheduleTimeout(channel().eventLoop());
             res.tryWrite(converted);
         } catch (Throwable t) {
             res.close(t);
@@ -248,9 +245,6 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         }
 
         try {
-            // If this tryWrite() returns false, it means the response stream has been closed due to
-            // disconnection or by the response consumer. We do not need to handle such cases here because
-            // it will be notified to the response consumer anyway.
             res.tryWrite(new ByteBufHttpData(data.retain(), endOfStream));
         } catch (Throwable t) {
             res.close(t);
