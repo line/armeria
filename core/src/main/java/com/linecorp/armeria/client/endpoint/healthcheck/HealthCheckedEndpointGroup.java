@@ -19,8 +19,8 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Collections;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +28,7 @@ import java.util.Set;
 import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -37,7 +38,6 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import org.jctools.maps.NonBlockingHashSet;
-import org.jctools.maps.NonBlockingIdentityHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -308,7 +308,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         CompletableFuture<?> destroy() {
             assert handle != null : handle;
             return handle.closeAsync().handle((unused1, unused2) -> {
-                executor.cancelScheduledFutures();
+                executor.destroy();
                 initialCheckFuture.complete(null);
                 return null;
             });
@@ -319,50 +319,82 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
             extends AbstractExecutorService implements ScheduledExecutorService {
 
         private final EventExecutorGroup delegate;
-        private final Set<Future<?>> scheduledFutures =
-                Collections.newSetFromMap(new NonBlockingIdentityHashMap<>());
+        private final Map<Future<?>, Boolean> scheduledFutures;
+        private boolean destroyed;
 
         CancellableExecutor(EventExecutorGroup delegate) {
             this.delegate = delegate;
+            scheduledFutures = new IdentityHashMap<>();
         }
 
-        void cancelScheduledFutures() {
-            for (final Iterator<Future<?>> i = scheduledFutures.iterator(); i.hasNext();) {
-                i.next().cancel(false);
-                i.remove();
+        void destroy() {
+            synchronized (scheduledFutures) {
+                if (destroyed) {
+                    return;
+                }
+
+                destroyed = true;
+                scheduledFutures.keySet().forEach(f -> f.cancel(false));
+                scheduledFutures.clear();
             }
         }
 
         @Override
         public void execute(Runnable command) {
-            add(delegate.submit(command));
+            synchronized (scheduledFutures) {
+                rejectIfDestroyed(command);
+                add(delegate.submit(command));
+            }
         }
 
         @Override
         public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-            return add(delegate.schedule(command, delay, unit));
+            synchronized (scheduledFutures) {
+                rejectIfDestroyed(command);
+                return add(delegate.schedule(command, delay, unit));
+            }
         }
 
         @Override
         public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-            return add(delegate.schedule(callable, delay, unit));
+            synchronized (scheduledFutures) {
+                rejectIfDestroyed(callable);
+                return add(delegate.schedule(callable, delay, unit));
+            }
         }
 
         @Override
         public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period,
                                                       TimeUnit unit) {
-            return add(delegate.scheduleAtFixedRate(command, initialDelay, period, unit));
+            synchronized (scheduledFutures) {
+                rejectIfDestroyed(command);
+                return add(delegate.scheduleAtFixedRate(command, initialDelay, period, unit));
+            }
         }
 
         @Override
         public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay,
-                                                         TimeUnit unit) {
-            return add(delegate.scheduleWithFixedDelay(command, initialDelay, delay, unit));
+                                                             TimeUnit unit) {
+            synchronized (scheduledFutures) {
+                rejectIfDestroyed(command);
+                return add(delegate.scheduleWithFixedDelay(command, initialDelay, delay, unit));
+            }
+        }
+
+        private void rejectIfDestroyed(Object command) {
+            if (destroyed) {
+                throw new RejectedExecutionException(
+                        HealthCheckerContext.class.getSimpleName() + " has been destroyed already: " + command);
+            }
         }
 
         private <T extends Future<U>, U> T add(T future) {
-            scheduledFutures.add(future);
-            future.addListener(scheduledFutures::remove);
+            scheduledFutures.put(future, Boolean.TRUE);
+            future.addListener(f -> {
+                synchronized (scheduledFutures) {
+                    scheduledFutures.remove(f);
+                }
+            });
             return future;
         }
 
