@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -159,6 +160,40 @@ public final class Server implements AutoCloseable {
     public Optional<ServerPort> activePort() {
         synchronized (activePorts) {
             return Optional.ofNullable(Iterables.getFirst(activePorts.values(), null));
+        }
+    }
+
+    /**
+     * Returns the local {@link ServerPort} that this {@link Server} is listening to.
+     *
+     * @throws IllegalStateException if there is no active local port available
+     *                               or the server is not started yet
+     */
+    public int activeLocalPort() {
+        return activeLocalPort0(null);
+    }
+
+    /**
+     * Returns the local {@link ServerPort} which serves the given {@link SessionProtocol}.
+     *
+     * @throws IllegalStateException if there is no active local port available for the given
+     *                               {@link SessionProtocol} or the server is not started yet
+     */
+    public int activeLocalPort(SessionProtocol protocol) {
+        return activeLocalPort0(requireNonNull(protocol, "protocol"));
+    }
+
+    private int activeLocalPort0(@Nullable SessionProtocol protocol) {
+        synchronized (activePorts) {
+            return activePorts.values().stream()
+                              .filter(activePort -> isLocalPort(activePort, protocol))
+                              .findFirst()
+                              .orElseThrow(() -> new IllegalStateException(
+                                      (protocol == null ? "no active local ports: "
+                                                        : ("no active local ports for " + protocol + ": ")) +
+                                      activePorts.values()))
+                              .localAddress()
+                              .getPort();
         }
     }
 
@@ -591,8 +626,7 @@ public final class Server implements AutoCloseable {
                 }
 
                 if (logger.isInfoEnabled()) {
-                    if (localAddress.getAddress().isAnyLocalAddress() ||
-                        localAddress.getAddress().isLoopbackAddress()) {
+                    if (isLocalPort(actualPort, null)) {
                         port.protocols().forEach(p -> logger.info(
                                 "Serving {} at {} - {}://127.0.0.1:{}/",
                                 p.name(), localAddress, p.uriText(), localAddress.getPort()));
@@ -616,5 +650,19 @@ public final class Server implements AutoCloseable {
                                          .map(SessionProtocol::uriText)
                                          .collect(Collectors.joining("+"));
         return "armeria-boss-" + protocolNames + '-' + localHostName + ':' + localAddr.getPort();
+    }
+
+    private static boolean isLocalPort(ServerPort serverPort, @Nullable SessionProtocol protocol) {
+        final InetAddress address = serverPort.localAddress().getAddress();
+
+        if (!address.isAnyLocalAddress() && !address.isLoopbackAddress()) {
+            return false;
+        }
+
+        if (protocol == null) {
+            return true;
+        }
+
+        return serverPort.hasProtocol(protocol);
     }
 }

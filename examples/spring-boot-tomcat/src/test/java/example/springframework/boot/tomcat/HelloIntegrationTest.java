@@ -36,7 +36,7 @@ public class HelloIntegrationTest {
     @Before
     public void initClient() {
         if (client == null) {
-            client = HttpClient.of("http://127.0.0.1:" + server.activePort().get().localAddress().getPort());
+            client = HttpClient.of("http://127.0.0.1:" + server.activeLocalPort());
         }
     }
 

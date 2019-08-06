@@ -61,7 +61,7 @@ public class ArmeriaAutoConfigurationWithoutMeterTest {
     private Server server;
 
     private String newUrl(String scheme) {
-        final int port = server.activePort().get().localAddress().getPort();
+        final int port = server.activeLocalPort();
         return scheme + "://127.0.0.1:" + port;
     }
 
