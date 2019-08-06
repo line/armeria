@@ -137,7 +137,11 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
     /**
      * Sets the {@link Function} that customizes a {@link Client} that sends health check requests.
      * <pre>{@code
-     * builder.withClientOptions(op -> op.responseTimeout(Duration.ofSeconds(1)));
+     * builder.withClientOptions(b -> {
+     *     return b.setHttpHeader(HttpHeaders.AUTHORIZATION,
+     *                            "bearer my-access-token")
+     *             .responseTimeout(Duration.ofSeconds(3));
+     * });
      * }</pre>
      */
     public AbstractHealthCheckedEndpointGroupBuilder withClientOptions(
