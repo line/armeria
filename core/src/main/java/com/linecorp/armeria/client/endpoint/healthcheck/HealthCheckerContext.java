@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
@@ -30,7 +31,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 public interface HealthCheckerContext {
 
     /**
-     * Returns the {@link Endpoint} to sent health check requests to.
+     * Returns the {@link Endpoint} to send health check requests to.
      */
     Endpoint endpoint();
 
@@ -46,7 +47,7 @@ public interface HealthCheckerContext {
 
     /**
      * Returns the port where a health check request will be sent instead of the original port number
-     * specified by {@link Endpoint}s.
+     * specified by {@link #endpoint()}.
      *
      * @return {@code 0} to send to the original port, or the alternative port number.
      */
@@ -59,7 +60,9 @@ public interface HealthCheckerContext {
 
     /**
      * Returns the {@link ScheduledExecutorService} which is used for scheduling the tasks related with
-     * sending health check requests.
+     * sending health check requests. Note that the {@link ScheduledExecutorService} returned by this method
+     * cannot be shut down; calling {@link ExecutorService#shutdown()} or {@link ExecutorService#shutdownNow()}
+     * will trigger an {@link UnsupportedOperationException}.
      */
     ScheduledExecutorService executor();
 

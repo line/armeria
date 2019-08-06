@@ -231,12 +231,12 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         private final Endpoint endpoint;
         @Nullable
         private AsyncCloseable handle;
-        final PerEndpointExecutor executor;
+        final CancellableExecutor executor;
         final CompletableFuture<?> initialCheckFuture = new CompletableFuture<>();
 
         DefaultHealthCheckerContext(Endpoint endpoint) {
             this.endpoint = endpoint;
-            executor = new PerEndpointExecutor(clientFactory.eventLoopGroup());
+            executor = new CancellableExecutor(clientFactory.eventLoopGroup());
         }
 
         void init(AsyncCloseable handle) {
@@ -315,14 +315,14 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         }
     }
 
-    private static final class PerEndpointExecutor
+    private static final class CancellableExecutor
             extends AbstractExecutorService implements ScheduledExecutorService {
 
         private final EventExecutorGroup delegate;
         private final Set<Future<?>> scheduledFutures =
                 Collections.newSetFromMap(new NonBlockingIdentityHashMap<>());
 
-        PerEndpointExecutor(EventExecutorGroup delegate) {
+        CancellableExecutor(EventExecutorGroup delegate) {
             this.delegate = delegate;
         }
 
