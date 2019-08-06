@@ -196,13 +196,11 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
         final HttpHeaders converted = ArmeriaHttpUtil.toArmeria(headers, false, endOfStream);
         try {
+            res.scheduleTimeout(ctx.channel().eventLoop());
             // If this tryWrite() returns false, it means the response stream has been closed due to
             // disconnection or by the response consumer. We do not need to handle such cases here because
             // it will be notified to the response consumer anyway.
-            if (!res.tryWrite(converted)) {
-                // Schedule only when the response stream is still open.
-                res.scheduleTimeout(ctx.channel().eventLoop());
-            }
+            res.tryWrite(converted);
         } catch (Throwable t) {
             res.close(t);
             throw connectionError(INTERNAL_ERROR, t, "failed to consume a HEADERS frame");
