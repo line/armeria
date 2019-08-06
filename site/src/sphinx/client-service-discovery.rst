@@ -146,9 +146,9 @@ especially those which updates the :api:`Endpoint` list dynamically, such as ref
     is called *dynamic endpoint group*.
 
 
-Removing unhealthy ``Endpoint`` with ``HttpHealthCheckedEndpointGroup``
------------------------------------------------------------------------
-:api:`HttpHealthCheckedEndpointGroup` decorates an existing :api:`EndpointGroup` to filter out the unhealthy
+Removing unhealthy ``Endpoint`` with ``HealthCheckedEndpointGroup``
+-------------------------------------------------------------------
+:api:`HealthCheckedEndpointGroup` decorates an existing :api:`EndpointGroup` to filter out the unhealthy
 :apiplural:`Endpoint` from it so that a client has less chance of sending its requests to the unhealthy
 :apiplural:`Endpoint`. It determines the healthiness by sending so called 'health check request' to each
 :api:`Endpoint`, which is by default a simple ``GET`` request to a certain path. If an :api:`Endpoint`
@@ -162,13 +162,13 @@ be removed from the list.
         Endpoint.of("192.168.0.1", 80),
         Endpoint.of("192.168.0.2", 80));
 
-    // Decorate the EndpointGroup with HttpHealthCheckedEndpointGroup
+    // Decorate the EndpointGroup with HealthCheckedEndpointGroup
     // that sends HTTP health check requests to '/internal/l7check' every 10 seconds.
-    HttpHealthCheckedEndpointGroup healthCheckedGroup =
-            new HttpHealthCheckedEndpointGroupBuilder(group, "/internal/l7check")
-                    .protocol(SessionProtocol.HTTP)
-                    .retryInterval(Duration.ofSeconds(10))
-                    .build();
+    HealthCheckedEndpointGroup healthCheckedGroup =
+            HealthCheckedEndpointGroup.builder(group, "/internal/l7check")
+                                      .protocol(SessionProtocol.HTTP)
+                                      .retryInterval(Duration.ofSeconds(10))
+                                      .build();
 
     // Wait until the initial health check is finished.
     healthCheckedGroup.awaitInitialEndpoints();
@@ -178,7 +178,7 @@ be removed from the list.
 
 .. note::
 
-    You can decorate *any* :api:`EndpointGroup` implementations with :api:`HttpHealthCheckedEndpointGroup`,
+    You can decorate *any* :api:`EndpointGroup` implementations with :api:`HealthCheckedEndpointGroup`,
     including what we will explain later in this page.
 
 
