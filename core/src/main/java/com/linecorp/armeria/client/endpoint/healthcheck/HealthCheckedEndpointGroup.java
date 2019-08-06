@@ -148,18 +148,29 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 return;
             }
 
-            // Stop the health checkers whose endpoints disappeared.
-            contexts.entrySet().stream()
-                    .filter(e -> !candidates.contains(e.getKey()))
-                    .forEach(e -> e.getValue().destroy());
-
-            // Start the health checkers for newly appeared endpoints.
-            for (Endpoint e : candidates) {
-                if (!contexts.containsKey(e)) {
-                    final DefaultHealthCheckerContext ctx = new DefaultHealthCheckerContext(e);
-                    ctx.init(checker.apply(ctx));
-                    contexts.put(e, ctx);
+            // Stop the health checkers whose endpoints disappeared and destroy their contexts.
+            for (final Iterator<Map.Entry<Endpoint, DefaultHealthCheckerContext>> i = contexts.entrySet()
+                                                                                              .iterator();
+                 i.hasNext();) {
+                final Map.Entry<Endpoint, DefaultHealthCheckerContext> e = i.next();
+                if (candidates.contains(e.getKey())) {
+                    // Not a removed endpoint.
+                    continue;
                 }
+
+                i.remove();
+                e.getValue().destroy();
+            }
+
+            // Start the health checkers with new contexts for newly appeared endpoints.
+            for (Endpoint e : candidates) {
+                if (contexts.containsKey(e)) {
+                    // Not a new endpoint.
+                    continue;
+                }
+                final DefaultHealthCheckerContext ctx = new DefaultHealthCheckerContext(e);
+                ctx.init(checker.apply(ctx));
+                contexts.put(e, ctx);
             }
         }
     }
