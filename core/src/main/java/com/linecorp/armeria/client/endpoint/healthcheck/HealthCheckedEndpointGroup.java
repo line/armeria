@@ -41,6 +41,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.client.ClientFactory;
@@ -240,8 +241,13 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                     }
 
                     destroyed = true;
-                    scheduledFutures.keySet().forEach(f -> f.cancel(false));
-                    scheduledFutures.clear();
+
+                    // Cancel all scheduled tasks.
+                    // Make a copy to avoid a potential ConcurrentModificationException.
+                    if (!scheduledFutures.isEmpty()) {
+                        final ImmutableList<Future<?>> copy = ImmutableList.copyOf(scheduledFutures.keySet());
+                        copy.forEach(f -> f.cancel(false));
+                    }
                 }
 
                 updateHealth(0, true);
@@ -314,7 +320,6 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 setEndpoints(delegate.endpoints().stream()
                                      .filter(healthyEndpoints::contains)
                                      .collect(toImmutableList()));
-
             }
 
             initialCheckFuture.complete(null);
