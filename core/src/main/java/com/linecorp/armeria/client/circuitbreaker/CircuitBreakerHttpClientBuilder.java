@@ -65,7 +65,7 @@ public final class CircuitBreakerHttpClientBuilder
 
     @Override
     public CircuitBreakerHttpClientBuilder circuitBreakerMapping(CircuitBreakerMapping mapping) {
-        return (CircuitBreakerHttpClientBuilder) super.circuitBreakerMapping(mapping);
+        return mapping(mapping);
     }
 
     @Override

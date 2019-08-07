@@ -49,7 +49,7 @@ public final class CircuitBreakerRpcClientBuilder
 
     @Override
     public CircuitBreakerRpcClientBuilder circuitBreakerMapping(CircuitBreakerMapping mapping) {
-        return (CircuitBreakerRpcClientBuilder) super.circuitBreakerMapping(mapping);
+        return mapping(mapping);
     }
 
     @Override
