@@ -186,11 +186,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         delegate.close();
 
         // Wait until the health checkers are fully stopped.
-        try {
-            stopFutures.join();
-        } catch (Exception e) {
-            logger.warn("Failed to stop all health checkers:", e);
-        }
+        stopFutures.join();
     }
 
     /**
