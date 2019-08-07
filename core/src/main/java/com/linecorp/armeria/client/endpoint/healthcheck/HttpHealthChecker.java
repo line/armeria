@@ -55,8 +55,8 @@ final class HttpHealthChecker implements AsyncCloseable {
             } else {
                 builder = new HttpClientBuilder(scheme + "://[" + ipAddr + "]:" + port);
             }
-            builder.setHttpHeader(HttpHeaderNames.AUTHORITY, endpoint.authority());
         }
+        builder.setHttpHeader(HttpHeaderNames.AUTHORITY, endpoint.authority());
 
         this.ctx = ctx;
         httpClient = builder.factory(ctx.clientFactory())

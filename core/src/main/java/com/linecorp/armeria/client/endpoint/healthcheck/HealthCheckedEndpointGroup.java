@@ -171,9 +171,14 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         // Stop the health checkers in parallel.
         final CompletableFuture<List<Object>> stopFutures;
         synchronized (contexts) {
-            stopFutures = CompletableFutures.allAsList(contexts.values().stream()
-                                                               .map(DefaultHealthCheckerContext::destroy)
-                                                               .collect(toImmutableList()));
+            stopFutures = CompletableFutures.allAsList(
+                    contexts.values().stream()
+                            .map(ctx -> ctx.destroy().exceptionally(cause -> {
+                                logger.warn("Failed to stop a health checker for: {}",
+                                            ctx.endpoint(), cause);
+                                return null;
+                            }))
+                            .collect(toImmutableList()));
             contexts.clear();
         }
 
@@ -215,9 +220,14 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     private final class DefaultHealthCheckerContext
             extends AbstractExecutorService implements HealthCheckerContext, ScheduledExecutorService {
 
-        private final Object lock = new Object();
         private final Endpoint endpoint;
+
+        /**
+         * Keeps the {@link Future}s which were scheduled via this {@link ScheduledExecutorService}.
+         * Note that this field is also used as a lock.
+         */
         private final Map<Future<?>, Boolean> scheduledFutures = new IdentityHashMap<>();
+
         @Nullable
         private AsyncCloseable handle;
         final CompletableFuture<?> initialCheckFuture = new CompletableFuture<>();
@@ -235,7 +245,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         CompletableFuture<?> destroy() {
             assert handle != null : handle;
             return handle.closeAsync().handle((unused1, unused2) -> {
-                synchronized (lock) {
+                synchronized (scheduledFutures) {
                     if (destroyed) {
                         return null;
                     }
@@ -290,9 +300,9 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         public long nextDelayMillis() {
             final long delayMillis = retryBackoff.nextDelayMillis(1);
             if (delayMillis < 0) {
-                logger.warn("Health check might have stopped working due to a negative delayMillis ({}) " +
-                            "returned by retryBackOff.nextDelayMillis(0).", delayMillis);
-                return 0;
+                throw new IllegalStateException(
+                        "retryBackoff.nextDelayMillis(1) returned a negative value for " + endpoint +
+                        ": " + delayMillis);
             }
 
             return delayMillis;
@@ -305,7 +315,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
         private void updateHealth(double health, boolean updateEvenIfDestroyed) {
             final boolean updated;
-            synchronized (lock) {
+            synchronized (scheduledFutures) {
                 if (!updateEvenIfDestroyed && destroyed) {
                     updated = false;
                 } else if (health > 0) {
@@ -327,7 +337,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
         @Override
         public void execute(Runnable command) {
-            synchronized (lock) {
+            synchronized (scheduledFutures) {
                 rejectIfDestroyed(command);
                 add(eventLoopGroup().submit(command));
             }
@@ -335,7 +345,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
         @Override
         public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-            synchronized (lock) {
+            synchronized (scheduledFutures) {
                 rejectIfDestroyed(command);
                 return add(eventLoopGroup().schedule(command, delay, unit));
             }
@@ -343,7 +353,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
         @Override
         public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-            synchronized (lock) {
+            synchronized (scheduledFutures) {
                 rejectIfDestroyed(callable);
                 return add(eventLoopGroup().schedule(callable, delay, unit));
             }
@@ -352,7 +362,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         @Override
         public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period,
                                                       TimeUnit unit) {
-            synchronized (lock) {
+            synchronized (scheduledFutures) {
                 rejectIfDestroyed(command);
                 return add(eventLoopGroup().scheduleAtFixedRate(command, initialDelay, period, unit));
             }
@@ -361,7 +371,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         @Override
         public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay,
                                                          TimeUnit unit) {
-            synchronized (lock) {
+            synchronized (scheduledFutures) {
                 rejectIfDestroyed(command);
                 return add(eventLoopGroup().scheduleWithFixedDelay(command, initialDelay, delay, unit));
             }
@@ -407,7 +417,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         private <T extends Future<U>, U> T add(T future) {
             scheduledFutures.put(future, Boolean.TRUE);
             future.addListener(f -> {
-                synchronized (lock) {
+                synchronized (scheduledFutures) {
                     scheduledFutures.remove(f);
                 }
             });
