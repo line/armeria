@@ -18,24 +18,30 @@ package com.linecorp.armeria.server;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.common.AbstractRequestContextBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.SessionProtocol;
+
+import io.micrometer.core.instrument.MeterRegistry;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.EventLoop;
 
 /**
  * Builds a new {@link ServiceRequestContext}. Note that it is not usually required to create a new context by
  * yourself, because Armeria will always provide a context object for you. However, it may be useful in some
  * cases such as unit testing.
  */
-public final class ServiceRequestContextBuilder
-        extends AbstractRequestContextBuilder<ServiceRequestContextBuilder> {
+public final class ServiceRequestContextBuilder extends AbstractRequestContextBuilder {
 
     /**
      * A placeholder service to make {@link ServerBuilder} happy.
@@ -186,5 +192,49 @@ public final class ServiceRequestContextBuilder
         }
 
         throw new Error(); // Never reaches here.
+    }
+
+    // Methods that were overridden to change the return type.
+
+    @Override
+    public ServiceRequestContextBuilder meterRegistry(MeterRegistry meterRegistry) {
+        return (ServiceRequestContextBuilder) super.meterRegistry(meterRegistry);
+    }
+
+    @Override
+    public ServiceRequestContextBuilder eventLoop(EventLoop eventLoop) {
+        return (ServiceRequestContextBuilder) super.eventLoop(eventLoop);
+    }
+
+    @Override
+    public ServiceRequestContextBuilder alloc(ByteBufAllocator alloc) {
+        return (ServiceRequestContextBuilder) super.alloc(alloc);
+    }
+
+    @Override
+    public ServiceRequestContextBuilder sessionProtocol(SessionProtocol sessionProtocol) {
+        return (ServiceRequestContextBuilder) super.sessionProtocol(sessionProtocol);
+    }
+
+    @Override
+    public ServiceRequestContextBuilder remoteAddress(InetSocketAddress remoteAddress) {
+        return (ServiceRequestContextBuilder) super.remoteAddress(remoteAddress);
+    }
+
+    @Override
+    public ServiceRequestContextBuilder localAddress(InetSocketAddress localAddress) {
+        return (ServiceRequestContextBuilder) super.localAddress(localAddress);
+    }
+
+    @Override
+    public ServiceRequestContextBuilder sslSession(SSLSession sslSession) {
+        return (ServiceRequestContextBuilder) super.sslSession(sslSession);
+    }
+
+    @Override
+    public ServiceRequestContextBuilder requestStartTime(long requestStartTimeNanos,
+                                                         long requestStartTimeMicros) {
+        return (ServiceRequestContextBuilder) super.requestStartTime(requestStartTimeNanos,
+                                                                     requestStartTimeMicros);
     }
 }

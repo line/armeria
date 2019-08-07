@@ -25,8 +25,8 @@ import com.linecorp.armeria.common.HttpResponse;
 /**
  * Builds a new {@link CircuitBreakerHttpClient} or its decorator function.
  */
-public final class CircuitBreakerHttpClientBuilder extends CircuitBreakerClientBuilder<
-        CircuitBreakerHttpClientBuilder, CircuitBreakerHttpClient, HttpRequest, HttpResponse> {
+public final class CircuitBreakerHttpClientBuilder
+        extends CircuitBreakerClientBuilder<CircuitBreakerHttpClient, HttpRequest, HttpResponse> {
 
     private final boolean needsContentInStrategy;
 
@@ -50,14 +50,26 @@ public final class CircuitBreakerHttpClientBuilder extends CircuitBreakerClientB
     @Override
     public CircuitBreakerHttpClient build(Client<HttpRequest, HttpResponse> delegate) {
         if (needsContentInStrategy) {
-            return new CircuitBreakerHttpClient(delegate, circuitBreakerMapping(), strategyWithContent());
+            return new CircuitBreakerHttpClient(delegate, mapping(), strategyWithContent());
         }
 
-        return new CircuitBreakerHttpClient(delegate, circuitBreakerMapping(), strategy());
+        return new CircuitBreakerHttpClient(delegate, mapping(), strategy());
     }
 
     @Override
     public Function<Client<HttpRequest, HttpResponse>, CircuitBreakerHttpClient> newDecorator() {
         return this::build;
+    }
+
+    // Methods that were overridden to change the return type.
+
+    @Override
+    public CircuitBreakerHttpClientBuilder circuitBreakerMapping(CircuitBreakerMapping mapping) {
+        return mapping(mapping);
+    }
+
+    @Override
+    public CircuitBreakerHttpClientBuilder mapping(CircuitBreakerMapping mapping) {
+        return (CircuitBreakerHttpClientBuilder) super.mapping(mapping);
     }
 }

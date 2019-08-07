@@ -64,14 +64,12 @@ import com.linecorp.armeria.server.Service;
  * }
  * }</pre>
  *
- * @param <T> the self type
  * @param <I> the {@link Request} type
  * @param <O> the {@link Response} type
  *
  * @see CompositeServiceEntry
  */
-public abstract class AbstractCompositeServiceBuilder<T extends AbstractCompositeServiceBuilder<T, I, O>,
-                                                      I extends Request, O extends Response> {
+public abstract class AbstractCompositeServiceBuilder<I extends Request, O extends Response> {
 
     private final List<CompositeServiceEntry<I, O>> services = new ArrayList<>();
     private final List<CompositeServiceEntry<I, O>> unmodifiableServices =
@@ -81,14 +79,6 @@ public abstract class AbstractCompositeServiceBuilder<T extends AbstractComposit
      * Creates a new instance.
      */
     protected AbstractCompositeServiceBuilder() {}
-
-    /**
-     * Returns {@code this} cast to the type {@code T}.
-     */
-    @SuppressWarnings("unchecked")
-    protected final T self() {
-        return (T) this;
-    }
 
     /**
      * Returns the list of the {@link CompositeServiceEntry}s added via {@link #service(String, Service)},
@@ -105,14 +95,14 @@ public abstract class AbstractCompositeServiceBuilder<T extends AbstractComposit
      * @deprecated Use {@link #service(String, Service)} instead.
      */
     @Deprecated
-    protected T serviceAt(String pathPattern, Service<I, O> service) {
+    protected AbstractCompositeServiceBuilder<I, O> serviceAt(String pathPattern, Service<I, O> service) {
         return service(pathPattern, service);
     }
 
     /**
      * Binds the specified {@link Service} under the specified directory..
      */
-    protected T serviceUnder(String pathPrefix, Service<I, O> service) {
+    protected AbstractCompositeServiceBuilder<I, O> serviceUnder(String pathPrefix, Service<I, O> service) {
         return service(CompositeServiceEntry.ofPrefix(pathPrefix, service));
     }
 
@@ -130,23 +120,23 @@ public abstract class AbstractCompositeServiceBuilder<T extends AbstractComposit
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    protected T service(String pathPattern, Service<I, O> service) {
+    protected AbstractCompositeServiceBuilder<I, O> service(String pathPattern, Service<I, O> service) {
         return service(CompositeServiceEntry.of(pathPattern, service));
     }
 
     /**
      * Binds the specified {@link Service} at the specified {@link Route}.
      */
-    protected T service(Route route, Service<I, O> service) {
+    protected AbstractCompositeServiceBuilder<I, O> service(Route route, Service<I, O> service) {
         return service(CompositeServiceEntry.of(route, service));
     }
 
     /**
      * Binds the specified {@link CompositeServiceEntry}.
      */
-    protected T service(CompositeServiceEntry<I, O> entry) {
+    protected AbstractCompositeServiceBuilder<I, O> service(CompositeServiceEntry<I, O> entry) {
         services.add(requireNonNull(entry, "entry"));
-        return self();
+        return this;
     }
 
     @Override

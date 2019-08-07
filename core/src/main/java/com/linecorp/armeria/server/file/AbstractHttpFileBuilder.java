@@ -32,10 +32,8 @@ import com.linecorp.armeria.common.MediaType;
 
 /**
  * A skeletal builder class which helps easier implementation of an {@link HttpFile} builder.
- *
- * @param <B> the type of {@code this}
  */
-public abstract class AbstractHttpFileBuilder<B extends AbstractHttpFileBuilder<B>> {
+public abstract class AbstractHttpFileBuilder {
 
     private Clock clock = Clock.systemUTC();
     private boolean dateEnabled = true;
@@ -45,14 +43,6 @@ public abstract class AbstractHttpFileBuilder<B extends AbstractHttpFileBuilder<
     private BiFunction<String, HttpFileAttributes, String> entityTagFunction = DefaultEntityTagFunction.get();
     @Nullable
     private HttpHeadersBuilder headers;
-
-    /**
-     * Returns {@code this}.
-     */
-    @SuppressWarnings("unchecked")
-    protected final B self() {
-        return (B) this;
-    }
 
     /**
      * Returns the {@link Clock} that provides the current date and time.
@@ -65,9 +55,9 @@ public abstract class AbstractHttpFileBuilder<B extends AbstractHttpFileBuilder<
      * Sets the {@link Clock} that provides the current date and time. By default, {@link Clock#systemUTC()}
      * is used.
      */
-    public final B clock(Clock clock) {
+    public AbstractHttpFileBuilder clock(Clock clock) {
         this.clock = requireNonNull(clock, "clock");
-        return self();
+        return this;
     }
 
     /**
@@ -81,9 +71,9 @@ public abstract class AbstractHttpFileBuilder<B extends AbstractHttpFileBuilder<
      * Sets whether to set the {@code "date"} header automatically. By default, the {@code "date"} header is
      * set automatically.
      */
-    public final B date(boolean dateEnabled) {
+    public AbstractHttpFileBuilder date(boolean dateEnabled) {
         this.dateEnabled = dateEnabled;
-        return self();
+        return this;
     }
 
     /**
@@ -97,9 +87,9 @@ public abstract class AbstractHttpFileBuilder<B extends AbstractHttpFileBuilder<
      * Sets whether to set the {@code "last-modified"} header automatically. By default,
      * the {@code "last-modified"} is set automatically.
      */
-    public final B lastModified(boolean lastModifiedEnabled) {
+    public AbstractHttpFileBuilder lastModified(boolean lastModifiedEnabled) {
         this.lastModifiedEnabled = lastModifiedEnabled;
-        return self();
+        return this;
     }
 
     /**
@@ -116,9 +106,9 @@ public abstract class AbstractHttpFileBuilder<B extends AbstractHttpFileBuilder<
      * Sets whether to set the {@code "content-type"} header automatically based on the extension of the file.
      * By default, the {@code "content-type"} header is set automatically.
      */
-    public final B autoDetectedContentType(boolean contentTypeAutoDetectionEnabled) {
+    public AbstractHttpFileBuilder autoDetectedContentType(boolean contentTypeAutoDetectionEnabled) {
         this.contentTypeAutoDetectionEnabled = contentTypeAutoDetectionEnabled;
-        return self();
+        return this;
     }
 
     /**
@@ -137,9 +127,9 @@ public abstract class AbstractHttpFileBuilder<B extends AbstractHttpFileBuilder<
      * file. By default, the {@code "etag"} header is set automatically. Use {@link #entityTag(BiFunction)} to
      * customize how an entity tag is generated.
      */
-    public final B entityTag(boolean enabled) {
+    public AbstractHttpFileBuilder entityTag(boolean enabled) {
         entityTagFunction = enabled ? DefaultEntityTagFunction.get() : null;
-        return self();
+        return this;
     }
 
     /**
@@ -149,9 +139,9 @@ public abstract class AbstractHttpFileBuilder<B extends AbstractHttpFileBuilder<
      * @param entityTagFunction the entity tag function that generates the entity tag, or {@code null}
      *                          to disable setting the {@code "etag"} header.
      */
-    public final B entityTag(BiFunction<String, HttpFileAttributes, String> entityTagFunction) {
+    public AbstractHttpFileBuilder entityTag(BiFunction<String, HttpFileAttributes, String> entityTagFunction) {
         this.entityTagFunction = requireNonNull(entityTagFunction, "entityTagFunction");
-        return self();
+        return this;
     }
 
     /**
@@ -172,39 +162,39 @@ public abstract class AbstractHttpFileBuilder<B extends AbstractHttpFileBuilder<
     /**
      * Adds the specified HTTP header.
      */
-    public final B addHeader(CharSequence name, Object value) {
+    public AbstractHttpFileBuilder addHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
         headersBuilder().addObject(HttpHeaderNames.of(name), value);
-        return self();
+        return this;
     }
 
     /**
      * Adds the specified HTTP headers.
      */
-    public final B addHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
+    public AbstractHttpFileBuilder addHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
         headersBuilder().addObject(headers);
-        return self();
+        return this;
     }
 
     /**
      * Sets the specified HTTP header.
      */
-    public final B setHeader(CharSequence name, Object value) {
+    public AbstractHttpFileBuilder setHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
         headersBuilder().setObject(HttpHeaderNames.of(name), value);
-        return self();
+        return this;
     }
 
     /**
      * Sets the specified HTTP headers.
      */
-    public final B setHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
+    public AbstractHttpFileBuilder setHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         requireNonNull(headers, "headers");
         headersBuilder().setObject(headers);
-        return self();
+        return this;
     }
 
     /**
@@ -214,11 +204,11 @@ public abstract class AbstractHttpFileBuilder<B extends AbstractHttpFileBuilder<
      * builder.setHeader(HttpHeaderNames.CONTENT_TYPE, contentType);
      * }</pre>
      */
-    public final B contentType(MediaType contentType) {
+    public AbstractHttpFileBuilder contentType(MediaType contentType) {
         requireNonNull(contentType, "contentType");
         autoDetectedContentType(false);
         headersBuilder().contentType(contentType);
-        return self();
+        return this;
     }
 
     /**
@@ -228,7 +218,7 @@ public abstract class AbstractHttpFileBuilder<B extends AbstractHttpFileBuilder<
      * builder.setHeader(HttpHeaderNames.CONTENT_TYPE, contentType);
      * }</pre>
      */
-    public final B contentType(CharSequence contentType) {
+    public AbstractHttpFileBuilder contentType(CharSequence contentType) {
         requireNonNull(contentType, "contentType");
         autoDetectedContentType(false);
         return setHeader(HttpHeaderNames.CONTENT_TYPE, contentType);
@@ -240,7 +230,7 @@ public abstract class AbstractHttpFileBuilder<B extends AbstractHttpFileBuilder<
      * builder.setHeader(HttpHeaderNames.CACHE_CONTROL, cacheControl);
      * }</pre>
      */
-    public final B cacheControl(CacheControl cacheControl) {
+    public AbstractHttpFileBuilder cacheControl(CacheControl cacheControl) {
         requireNonNull(cacheControl, "cacheControl");
         return setHeader(HttpHeaderNames.CACHE_CONTROL, cacheControl);
     }
@@ -251,7 +241,7 @@ public abstract class AbstractHttpFileBuilder<B extends AbstractHttpFileBuilder<
      * builder.setHeader(HttpHeaderNames.CACHE_CONTROL, cacheControl);
      * }</pre>
      */
-    public final B cacheControl(CharSequence cacheControl) {
+    public AbstractHttpFileBuilder cacheControl(CharSequence cacheControl) {
         requireNonNull(cacheControl, "cacheControl");
         return setHeader(HttpHeaderNames.CACHE_CONTROL, cacheControl);
     }

@@ -154,7 +154,7 @@ public class CircuitBreakerHttpClientTest {
 
         final CircuitBreakerMapping mapping = (ctx, req) -> circuitBreaker;
         final HttpClient client = new HttpClientBuilder(server.uri("/"))
-                .decorator(builder.circuitBreakerMapping(mapping).newDecorator())
+                .decorator(builder.mapping(mapping).newDecorator())
                 .build();
 
         ticker.advance(Duration.ofMillis(1).toNanos());

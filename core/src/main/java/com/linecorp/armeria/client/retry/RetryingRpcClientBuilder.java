@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.retry;
 
+import java.time.Duration;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.Client;
@@ -26,7 +27,7 @@ import com.linecorp.armeria.common.RpcResponse;
  * Builds a new {@link RetryingRpcClient} or its decorator function.
  */
 public class RetryingRpcClientBuilder
-        extends RetryingClientBuilder<RetryingRpcClientBuilder, RetryingRpcClient, RpcRequest, RpcResponse> {
+        extends RetryingClientBuilder<RetryingRpcClient, RpcRequest, RpcResponse> {
 
     /**
      * Creates a new builder with the specified {@link RetryStrategyWithContent}.
@@ -52,5 +53,26 @@ public class RetryingRpcClientBuilder
     @Override
     public Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient> newDecorator() {
         return this::build;
+    }
+
+    // Methods that were overridden to change the return type.
+
+    @Override
+    public RetryingRpcClientBuilder maxTotalAttempts(
+            int maxTotalAttempts) {
+        return (RetryingRpcClientBuilder) super.maxTotalAttempts(maxTotalAttempts);
+    }
+
+    @Override
+    public RetryingRpcClientBuilder responseTimeoutMillisForEachAttempt(
+            long responseTimeoutMillisForEachAttempt) {
+        return (RetryingRpcClientBuilder)
+                super.responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt);
+    }
+
+    @Override
+    public RetryingRpcClientBuilder responseTimeoutForEachAttempt(
+            Duration responseTimeoutForEachAttempt) {
+        return (RetryingRpcClientBuilder) super.responseTimeoutForEachAttempt(responseTimeoutForEachAttempt);
     }
 }
