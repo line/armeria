@@ -372,7 +372,8 @@ public abstract class AbstractRequestContextBuilder {
      * @param requestStartTimeNanos the {@link System#nanoTime()} value when the request started.
      * @param requestStartTimeMicros the number of microseconds since the epoch when the request started.
      */
-    public AbstractRequestContextBuilder requestStartTime(long requestStartTimeNanos, long requestStartTimeMicros) {
+    public AbstractRequestContextBuilder requestStartTime(long requestStartTimeNanos,
+                                                          long requestStartTimeMicros) {
         this.requestStartTimeNanos = requestStartTimeNanos;
         this.requestStartTimeMicros = requestStartTimeMicros;
         requestStartTimeSet = true;

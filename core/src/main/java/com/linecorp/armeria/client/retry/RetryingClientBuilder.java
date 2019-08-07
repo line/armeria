@@ -110,7 +110,8 @@ public abstract class RetryingClientBuilder<T extends RetryingClient<I, O>,
      * @see <a href="https://line.github.io/armeria/advanced-retry.html#per-attempt-timeout">Per-attempt
      *      timeout</a>
      */
-    public RetryingClientBuilder<T, I, O> responseTimeoutMillisForEachAttempt(long responseTimeoutMillisForEachAttempt) {
+    public RetryingClientBuilder<T, I, O> responseTimeoutMillisForEachAttempt(
+            long responseTimeoutMillisForEachAttempt) {
         checkArgument(responseTimeoutMillisForEachAttempt >= 0,
                       "responseTimeoutMillisForEachAttempt: %s (expected: >= 0)",
                       responseTimeoutMillisForEachAttempt);
@@ -131,7 +132,8 @@ public abstract class RetryingClientBuilder<T extends RetryingClient<I, O>,
      * @see <a href="https://line.github.io/armeria/advanced-retry.html#per-attempt-timeout">Per-attempt
      *      timeout</a>
      */
-    public RetryingClientBuilder<T, I, O> responseTimeoutForEachAttempt(Duration responseTimeoutForEachAttempt) {
+    public RetryingClientBuilder<T, I, O> responseTimeoutForEachAttempt(
+            Duration responseTimeoutForEachAttempt) {
         checkArgument(
                 !requireNonNull(responseTimeoutForEachAttempt, "responseTimeoutForEachAttempt").isNegative(),
                 "responseTimeoutForEachAttempt: %s (expected: >= 0)", responseTimeoutForEachAttempt);

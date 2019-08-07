@@ -66,7 +66,8 @@ public class RetryingRpcClientBuilder
     @Override
     public RetryingRpcClientBuilder responseTimeoutMillisForEachAttempt(
             long responseTimeoutMillisForEachAttempt) {
-        return (RetryingRpcClientBuilder) super.responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt);
+        return (RetryingRpcClientBuilder)
+                super.responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt);
     }
 
     @Override
