@@ -151,7 +151,7 @@ Removing unhealthy ``Endpoint`` with ``HealthCheckedEndpointGroup``
 :api:`HealthCheckedEndpointGroup` decorates an existing :api:`EndpointGroup` to filter out the unhealthy
 :apiplural:`Endpoint` from it so that a client has less chance of sending its requests to the unhealthy
 :apiplural:`Endpoint`. It determines the healthiness by sending so called 'health check request' to each
-:api:`Endpoint`, which is by default a simple ``GET`` request to a certain path. If an :api:`Endpoint`
+:api:`Endpoint`, which is by default a simple ``HEAD`` request to a certain path. If an :api:`Endpoint`
 responds with non-200 status code or does not respond in time, it will be marked as unhealthy and thus
 be removed from the list.
 
