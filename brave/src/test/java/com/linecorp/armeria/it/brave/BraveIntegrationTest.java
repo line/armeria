@@ -416,6 +416,25 @@ public class BraveIntegrationTest {
         assertThat(clientSpan.annotations()).hasSize(1);
     }
 
+    @Test(timeout = 10000)
+    public void testNoRequestContextTraceable() throws Exception {
+        RequestContextCurrentTraceContext.setCurrentThreadNotRequestThread(true);
+        try {
+            final Tracing tracing = newTracing("no-request");
+            final ScopedSpan span1 = tracing.tracer().startScopedSpan("span1");
+            final ScopedSpan span2 = tracing.tracer().startScopedSpan("span2");
+
+            assertThat(span2.context().traceId()).isEqualTo(span1.context().traceId());
+
+            span2.finish();
+            span1.finish();
+
+            spanReporter.take(2);
+        } finally {
+            RequestContextCurrentTraceContext.setCurrentThreadNotRequestThread(false);
+        }
+    }
+
     private static Span findSpan(Span[] spans, String serviceName) {
         return Arrays.stream(spans)
                      .filter(s -> serviceName.equals(s.localServiceName()))
