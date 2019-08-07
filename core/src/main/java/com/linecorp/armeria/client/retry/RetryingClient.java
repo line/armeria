@@ -256,9 +256,10 @@ public abstract class RetryingClient<I extends Request, O extends Response>
      * Creates a new derived {@link ClientRequestContext}, replacing the {@link Request} with {@code req}.
      * If {@link ClientRequestContext#endpointSelector()} exists, a new {@link Endpoint} will be selected.
      */
-    protected static ClientRequestContext newDerivedContext(ClientRequestContext ctx, Request req) {
+    protected static ClientRequestContext newDerivedContext(ClientRequestContext ctx,
+                                                            Request req, int totalAttempts) {
         final EndpointSelector endpointSelector = ctx.endpointSelector();
-        if (endpointSelector != null) {
+        if (endpointSelector != null && totalAttempts > 1) {
             return ctx.newDerivedContext(req, endpointSelector.select(ctx));
         } else {
             return ctx.newDerivedContext(req);
