@@ -27,6 +27,16 @@ import com.linecorp.armeria.common.util.Exceptions;
 
 public final class TestUtil {
 
+    private static final boolean isDocServiceDemoMode = "true".equals(
+            System.getProperty("com.linecorp.armeria.docServiceDemo"));
+
+    /**
+     * Indicates doc service tests should be run on fixed ports to be able to demo or develop DocService.
+     */
+    public static boolean isDocServiceDemoMode() {
+        return isDocServiceDemoMode;
+    }
+
     /**
      * Executes {@code r}, timing it out if not done within 10 seconds. The timeout is not enabled if in an IDE
      * debug mode.

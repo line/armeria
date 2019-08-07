@@ -61,6 +61,7 @@ import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.hello_args;
 import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
 import com.linecorp.armeria.service.test.thrift.main.SleepService;
+import com.linecorp.armeria.testing.internal.TestUtil;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 public class ThriftDocServiceTest {
@@ -79,13 +80,11 @@ public class ThriftDocServiceTest {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
-    private static final boolean DEMO_MODE = false;
-
     @ClassRule
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            if (DEMO_MODE) {
+            if (TestUtil.isDocServiceDemoMode()) {
                 sb.http(8080);
             }
             final THttpService helloAndSleepService = THttpService.of(ImmutableMap.of(
@@ -126,7 +125,7 @@ public class ThriftDocServiceTest {
 
     @Test
     public void testOk() throws Exception {
-        if (DEMO_MODE) {
+        if (TestUtil.isDocServiceDemoMode()) {
             Thread.sleep(Long.MAX_VALUE);
         }
         final Set<SerializationFormat> allThriftFormats = ThriftSerializationFormats.values();
