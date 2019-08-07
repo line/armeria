@@ -66,7 +66,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
     // Thread-local for storing TraceContext when invoking callbacks off the request thread.
     private static final ThreadLocal<TraceContext> THREAD_LOCAL_CONTEXT = new ThreadLocal<>();
 
-    private static final ThreadLocal<Boolean> THREAD_NOT_REQUEST_THREAD = ThreadLocal.withInitial(() -> false);
+    private static final ThreadLocal<Boolean> THREAD_NOT_REQUEST_THREAD = new ThreadLocal<>();
 
     private static final Scope INITIAL_REQUEST_SCOPE = new Scope() {
         @Override
@@ -250,7 +250,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         @Override
         @Nullable
         public RequestContext get() {
-            if (THREAD_NOT_REQUEST_THREAD.get()) {
+            if (Boolean.TRUE.equals(THREAD_NOT_REQUEST_THREAD.get())) {
                 return null;
             }
             ClassLoaderHack.loadMe();
