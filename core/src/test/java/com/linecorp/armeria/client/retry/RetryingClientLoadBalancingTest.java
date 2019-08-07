@@ -46,6 +46,17 @@ class RetryingClientLoadBalancingTest {
 
     private static final int NUM_PORTS = 5;
 
+    private enum TestMode {
+        SUCCESS("/success"),
+        FAILURE("/failure");
+
+        final String path;
+
+        TestMode(String path) {
+            this.path = path;
+        }
+    }
+
     private final List<Integer> accessedPorts = new CopyOnWriteArrayList<>();
 
     @RegisterExtension
@@ -58,28 +69,17 @@ class RetryingClientLoadBalancingTest {
                 sb.http(0);
             }
 
-            sb.service("/success", (ctx, req) -> {
+            sb.service(TestMode.SUCCESS.path, (ctx, req) -> {
                 accessedPorts.add(((InetSocketAddress) ctx.localAddress()).getPort());
                 return HttpResponse.of(HttpStatus.OK);
             });
 
-            sb.service("/failure", (ctx, req) -> {
+            sb.service(TestMode.FAILURE.path, (ctx, req) -> {
                 accessedPorts.add(((InetSocketAddress) ctx.localAddress()).getPort());
                 return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
             });
         }
     };
-
-    private enum TestMode {
-        SUCCESS("/success"),
-        FAILURE("/failure");
-
-        final String path;
-
-        TestMode(String path) {
-            this.path = path;
-        }
-    }
 
     /**
      * Makes sure that {@link RetryingClient} respects the {@link Endpoint} selection order.
