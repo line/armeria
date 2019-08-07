@@ -56,7 +56,11 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
      * warning when trying to start a trace without having a {@link RequestContext}.
      */
     public static void setCurrentThreadNotRequestThread(boolean value) {
-        THREAD_NOT_REQUEST_THREAD.set(value);
+        if (value) {
+            THREAD_NOT_REQUEST_THREAD.set(true);
+        } else {
+            THREAD_NOT_REQUEST_THREAD.remove();
+        }
     }
 
     private static final CurrentTraceContext DEFAULT = new RequestContextCurrentTraceContext(new Builder());
