@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.client.retry;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -43,7 +42,7 @@ import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-public class RetryingClientLoadBalancingTest {
+class RetryingClientLoadBalancingTest {
 
     private static final int NUM_PORTS = 5;
 
