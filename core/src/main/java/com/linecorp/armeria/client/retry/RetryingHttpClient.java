@@ -172,7 +172,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
             duplicateReq = rootReqDuplicator.duplicateStream(newHeaders.build());
         }
 
-        final ClientRequestContext derivedCtx = newDerivedContext(ctx, duplicateReq);
+        final ClientRequestContext derivedCtx = newDerivedContext(ctx, duplicateReq, totalAttempts);
         ctx.logBuilder().addChild(derivedCtx.log());
 
         final HttpResponse response = executeWithFallback(delegate(), derivedCtx,
