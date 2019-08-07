@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.retry;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
+import java.time.Duration;
 import java.util.function.Function;
 
 import com.google.common.base.MoreObjects.ToStringHelper;
@@ -30,8 +31,8 @@ import com.linecorp.armeria.common.HttpResponse;
 /**
  * Builds a new {@link RetryingHttpClient} or its decorator function.
  */
-public class RetryingHttpClientBuilder extends RetryingClientBuilder<
-        RetryingHttpClientBuilder, RetryingHttpClient, HttpRequest, HttpResponse> {
+public class RetryingHttpClientBuilder
+        extends RetryingClientBuilder<RetryingHttpClient, HttpRequest, HttpResponse> {
 
     private static final int DEFAULT_CONTENT_PREVIEW_LENGTH = Integer.MAX_VALUE;
 
@@ -69,7 +70,7 @@ public class RetryingHttpClientBuilder extends RetryingClientBuilder<
      */
     public RetryingHttpClientBuilder useRetryAfter(boolean useRetryAfter) {
         this.useRetryAfter = useRetryAfter;
-        return self();
+        return this;
     }
 
     /**
@@ -94,7 +95,7 @@ public class RetryingHttpClientBuilder extends RetryingClientBuilder<
         checkArgument(contentPreviewLength > 0,
                       "contentPreviewLength: %s (expected: > 0)", contentPreviewLength);
         this.contentPreviewLength = contentPreviewLength;
-        return self();
+        return this;
     }
 
     /**
@@ -128,5 +129,24 @@ public class RetryingHttpClientBuilder extends RetryingClientBuilder<
             stringHelper.add("contentPreviewLength", contentPreviewLength);
         }
         return stringHelper.toString();
+    }
+
+    // Methods that were overridden to change the return type.
+
+    @Override
+    public RetryingHttpClientBuilder maxTotalAttempts(int maxTotalAttempts) {
+        return (RetryingHttpClientBuilder) super.maxTotalAttempts(maxTotalAttempts);
+    }
+
+    @Override
+    public RetryingHttpClientBuilder responseTimeoutMillisForEachAttempt(
+            long responseTimeoutMillisForEachAttempt) {
+        return (RetryingHttpClientBuilder)
+                super.responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt);
+    }
+
+    @Override
+    public RetryingHttpClientBuilder responseTimeoutForEachAttempt(Duration responseTimeoutForEachAttempt) {
+        return (RetryingHttpClientBuilder) super.responseTimeoutForEachAttempt(responseTimeoutForEachAttempt);
     }
 }

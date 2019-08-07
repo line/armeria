@@ -36,13 +36,11 @@ import com.linecorp.armeria.common.Response;
 /**
  * Builds a new {@link RetryingClient} or its decorator function.
  *
- * @param <T> the type of {@link RetryingClientBuilder}
- * @param <U> the type of the {@link Client} that this builder builds or decorates
+ * @param <T> the type of the {@link Client} that this builder builds or decorates
  * @param <I> the type of outgoing {@link Request} of the {@link Client}
  * @param <O> the type of incoming {@link Response} of the {@link Client}
  */
-public abstract class RetryingClientBuilder<
-        T extends RetryingClientBuilder<T, U, I, O>, U extends RetryingClient<I, O>,
+public abstract class RetryingClientBuilder<T extends RetryingClient<I, O>,
         I extends Request, O extends Response> {
 
     @Nullable
@@ -74,11 +72,6 @@ public abstract class RetryingClientBuilder<
         this.retryStrategyWithContent = retryStrategyWithContent;
     }
 
-    @SuppressWarnings("unchecked")
-    final T self() {
-        return (T) this;
-    }
-
     RetryStrategy retryStrategy() {
         checkState(retryStrategy != null, "retryStrategy is not set.");
         return retryStrategy;
@@ -93,13 +86,13 @@ public abstract class RetryingClientBuilder<
      * Sets the maximum number of total attempts. If unspecified, the value from
      * {@link Flags#defaultMaxTotalAttempts()} will be used.
      *
-     * @return {@link T} to support method chaining.
+     * @return {@code this} to support method chaining.
      */
-    public T maxTotalAttempts(int maxTotalAttempts) {
+    public RetryingClientBuilder<T, I, O> maxTotalAttempts(int maxTotalAttempts) {
         checkArgument(maxTotalAttempts > 0,
                       "maxTotalAttempts: %s (expected: > 0)", maxTotalAttempts);
         this.maxTotalAttempts = maxTotalAttempts;
-        return self();
+        return this;
     }
 
     int maxTotalAttempts() {
@@ -112,17 +105,17 @@ public abstract class RetryingClientBuilder<
      * It will be set by the default value in {@link Flags#defaultResponseTimeoutMillis()}, if the client
      * dose not specify.
      *
-     * @return {@link T} to support method chaining.
+     * @return {@code this} to support method chaining.
      *
      * @see <a href="https://line.github.io/armeria/advanced-retry.html#per-attempt-timeout">Per-attempt
      *      timeout</a>
      */
-    public T responseTimeoutMillisForEachAttempt(long responseTimeoutMillisForEachAttempt) {
+    public RetryingClientBuilder<T, I, O> responseTimeoutMillisForEachAttempt(long responseTimeoutMillisForEachAttempt) {
         checkArgument(responseTimeoutMillisForEachAttempt >= 0,
                       "responseTimeoutMillisForEachAttempt: %s (expected: >= 0)",
                       responseTimeoutMillisForEachAttempt);
         this.responseTimeoutMillisForEachAttempt = responseTimeoutMillisForEachAttempt;
-        return self();
+        return this;
     }
 
     long responseTimeoutMillisForEachAttempt() {
@@ -133,12 +126,12 @@ public abstract class RetryingClientBuilder<
      * Sets the response timeout for each attempt. When requests in {@link RetryingClient} are made,
      * corresponding responses are timed out by this value. {@code 0} disables the timeout.
      *
-     * @return {@link T} to support method chaining.
+     * @return {@code this} to support method chaining.
      *
      * @see <a href="https://line.github.io/armeria/advanced-retry.html#per-attempt-timeout">Per-attempt
      *      timeout</a>
      */
-    public T responseTimeoutForEachAttempt(Duration responseTimeoutForEachAttempt) {
+    public RetryingClientBuilder<T, I, O> responseTimeoutForEachAttempt(Duration responseTimeoutForEachAttempt) {
         checkArgument(
                 !requireNonNull(responseTimeoutForEachAttempt, "responseTimeoutForEachAttempt").isNegative(),
                 "responseTimeoutForEachAttempt: %s (expected: >= 0)", responseTimeoutForEachAttempt);
@@ -148,13 +141,13 @@ public abstract class RetryingClientBuilder<
     /**
      * Returns a newly-created {@link RetryingClient} based on the properties of this builder.
      */
-    abstract U build(Client<I, O> delegate);
+    public abstract T build(Client<I, O> delegate);
 
     /**
      * Returns a newly-created decorator that decorates a {@link Client} with a new {@link RetryingClient}
      * based on the properties of this builder.
      */
-    abstract Function<Client<I, O>, U> newDecorator();
+    public abstract Function<Client<I, O>, T> newDecorator();
 
     @Override
     public String toString() {

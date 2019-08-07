@@ -29,30 +29,26 @@ import com.linecorp.armeria.server.Service;
  * @param <O> the {@link Response} type
  */
 public final class SimpleCompositeServiceBuilder<I extends Request, O extends Response>
-        extends AbstractCompositeServiceBuilder<SimpleCompositeServiceBuilder<I, O>, I, O> {
+        extends AbstractCompositeServiceBuilder<I, O> {
 
     @Override
-    public SimpleCompositeServiceBuilder<I, O> serviceAt(
-            String pathPattern, Service<I, O> service) {
-        return super.service(pathPattern, service);
+    public SimpleCompositeServiceBuilder<I, O> serviceAt(String pathPattern, Service<I, O> service) {
+        return (SimpleCompositeServiceBuilder<I, O>) super.service(pathPattern, service);
     }
 
     @Override
-    public SimpleCompositeServiceBuilder<I, O> serviceUnder(
-            String pathPrefix, Service<I, O>  service) {
-        return super.serviceUnder(pathPrefix, service);
+    public SimpleCompositeServiceBuilder<I, O> serviceUnder(String pathPrefix, Service<I, O>  service) {
+        return (SimpleCompositeServiceBuilder<I, O>) super.serviceUnder(pathPrefix, service);
     }
 
     @Override
-    public SimpleCompositeServiceBuilder<I, O> service(
-            String pathPattern, Service<I, O> service) {
-        return super.service(pathPattern, service);
+    public SimpleCompositeServiceBuilder<I, O> service(String pathPattern, Service<I, O> service) {
+        return (SimpleCompositeServiceBuilder<I, O>) super.service(pathPattern, service);
     }
 
     @Override
-    public SimpleCompositeServiceBuilder<I, O> service(
-            Route route, Service<I, O>  service) {
-        return super.service(route, service);
+    public SimpleCompositeServiceBuilder<I, O> service(Route route, Service<I, O>  service) {
+        return (SimpleCompositeServiceBuilder<I, O>) super.service(route, service);
     }
 
     /**

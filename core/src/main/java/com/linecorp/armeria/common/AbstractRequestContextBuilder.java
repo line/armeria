@@ -52,11 +52,10 @@ import io.netty.util.NetUtil;
 /**
  * Provides the information required for building a {@link RequestContext}.
  *
- * @param <B> the self type.
  * @see ServiceRequestContextBuilder
  * @see ClientRequestContextBuilder
  */
-public abstract class AbstractRequestContextBuilder<B extends AbstractRequestContextBuilder<B>> {
+public abstract class AbstractRequestContextBuilder {
 
     private static final String FALLBACK_AUTHORITY = "127.0.0.1";
 
@@ -96,9 +95,7 @@ public abstract class AbstractRequestContextBuilder<B extends AbstractRequestCon
         this.request = requireNonNull(request, "request");
         sessionProtocol = SessionProtocol.H2C;
 
-        final HttpMethod method = request.headers().method();
-        checkArgument(method != null, "request.method is not valid: %s", request);
-        this.method = method;
+        method = request.headers().method();
         authority = firstNonNull(request.headers().authority(), FALLBACK_AUTHORITY);
 
         final String pathAndQueryStr = request.headers().path();
@@ -145,11 +142,6 @@ public abstract class AbstractRequestContextBuilder<B extends AbstractRequestCon
         query = pathAndQuery.query();
     }
 
-    @SuppressWarnings("unchecked")
-    private B self() {
-        return (B) this;
-    }
-
     /**
      * Returns the {@link MeterRegistry}.
      */
@@ -160,9 +152,9 @@ public abstract class AbstractRequestContextBuilder<B extends AbstractRequestCon
     /**
      * Sets the {@link MeterRegistry}. If not set, {@link NoopMeterRegistry} is used.
      */
-    public final B meterRegistry(MeterRegistry meterRegistry) {
+    public AbstractRequestContextBuilder meterRegistry(MeterRegistry meterRegistry) {
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
-        return self();
+        return this;
     }
 
     /**
@@ -179,9 +171,9 @@ public abstract class AbstractRequestContextBuilder<B extends AbstractRequestCon
      * Sets the {@link EventLoop} that handles the request.
      * If not set, one of the {@link CommonPools#workerGroup()} is used.
      */
-    public final B eventLoop(EventLoop eventLoop) {
+    public AbstractRequestContextBuilder eventLoop(EventLoop eventLoop) {
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
-        return self();
+        return this;
     }
 
     /**
@@ -194,9 +186,9 @@ public abstract class AbstractRequestContextBuilder<B extends AbstractRequestCon
     /**
      * Sets the {@link ByteBufAllocator}. If not set, {@link ByteBufAllocator#DEFAULT} is used.
      */
-    public final B alloc(ByteBufAllocator alloc) {
+    public AbstractRequestContextBuilder alloc(ByteBufAllocator alloc) {
         this.alloc = requireNonNull(alloc, "alloc");
-        return self();
+        return this;
     }
 
     /**
@@ -222,7 +214,7 @@ public abstract class AbstractRequestContextBuilder<B extends AbstractRequestCon
      *                                  For example, you cannot specify {@link SessionProtocol#H2C} if you
      *                                  created this builder with {@code h1c://example.com/}.
      */
-    public final B sessionProtocol(SessionProtocol sessionProtocol) {
+    public AbstractRequestContextBuilder sessionProtocol(SessionProtocol sessionProtocol) {
         requireNonNull(sessionProtocol, "sessionProtocol");
         if (request instanceof RpcRequest) {
             checkArgument(sessionProtocol == this.sessionProtocol,
@@ -231,7 +223,7 @@ public abstract class AbstractRequestContextBuilder<B extends AbstractRequestCon
         } else {
             this.sessionProtocol = sessionProtocol;
         }
-        return self();
+        return this;
     }
 
     /**
@@ -253,9 +245,9 @@ public abstract class AbstractRequestContextBuilder<B extends AbstractRequestCon
      * Sets the remote socket address of the connection. If not set, it is auto-generated with the localhost
      * IP address (e.g. {@code "127.0.0.1"} or {@code "::1"}).
      */
-    public final B remoteAddress(InetSocketAddress remoteAddress) {
+    public AbstractRequestContextBuilder remoteAddress(InetSocketAddress remoteAddress) {
         this.remoteAddress = requireNonNull(remoteAddress, "remoteAddress");
-        return self();
+        return this;
     }
 
     /**
@@ -277,9 +269,9 @@ public abstract class AbstractRequestContextBuilder<B extends AbstractRequestCon
      * Sets the local socket address of the connection. If not set, it is auto-generated with the localhost
      * IP address (e.g. {@code "127.0.0.1"} or {@code "::1"}).
      */
-    public final B localAddress(InetSocketAddress localAddress) {
+    public AbstractRequestContextBuilder localAddress(InetSocketAddress localAddress) {
         this.localAddress = requireNonNull(localAddress, "localAddress");
-        return self();
+        return this;
     }
 
     private static int guessServerPort(SessionProtocol sessionProtocol, @Nullable String authority) {
@@ -329,7 +321,7 @@ public abstract class AbstractRequestContextBuilder<B extends AbstractRequestCon
      * Note that upgrading the current {@link SessionProtocol} may trigger an {@link IllegalArgumentException},
      * as described in {@link #sessionProtocol(SessionProtocol)}.
      */
-    public final B sslSession(SSLSession sslSession) {
+    public AbstractRequestContextBuilder sslSession(SSLSession sslSession) {
         this.sslSession = requireNonNull(sslSession, "sslSession");
         switch (sessionProtocol) {
             case HTTP:
@@ -342,7 +334,7 @@ public abstract class AbstractRequestContextBuilder<B extends AbstractRequestCon
                 sessionProtocol(SessionProtocol.H2);
                 break;
         }
-        return self();
+        return this;
     }
 
     /**
@@ -380,11 +372,11 @@ public abstract class AbstractRequestContextBuilder<B extends AbstractRequestCon
      * @param requestStartTimeNanos the {@link System#nanoTime()} value when the request started.
      * @param requestStartTimeMicros the number of microseconds since the epoch when the request started.
      */
-    public final B requestStartTime(long requestStartTimeNanos, long requestStartTimeMicros) {
+    public AbstractRequestContextBuilder requestStartTime(long requestStartTimeNanos, long requestStartTimeMicros) {
         this.requestStartTimeNanos = requestStartTimeNanos;
         this.requestStartTimeMicros = requestStartTimeMicros;
         requestStartTimeSet = true;
-        return self();
+        return this;
     }
 
     /**
@@ -402,7 +394,7 @@ public abstract class AbstractRequestContextBuilder<B extends AbstractRequestCon
      *                                  creating this builder. This exception is not thrown if you
      *                                  created a builder with an {@link RpcRequest}.
      */
-    protected B method(HttpMethod method) {
+    protected AbstractRequestContextBuilder method(HttpMethod method) {
         requireNonNull(method, "method");
         if (request instanceof HttpRequest) {
             checkArgument(method == ((HttpRequest) request).method(),
@@ -410,7 +402,7 @@ public abstract class AbstractRequestContextBuilder<B extends AbstractRequestCon
         } else {
             this.method = method;
         }
-        return self();
+        return this;
     }
 
     /**

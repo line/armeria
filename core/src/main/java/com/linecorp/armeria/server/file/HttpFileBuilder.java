@@ -21,8 +21,13 @@ import java.io.File;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Path;
+import java.time.Clock;
+import java.util.Map.Entry;
+import java.util.function.BiFunction;
 
+import com.linecorp.armeria.common.CacheControl;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.MediaType;
 
 /**
  * Builds an {@link HttpFile} from a file, a classpath resource or an {@link HttpData}.
@@ -45,7 +50,7 @@ import com.linecorp.armeria.common.HttpData;
  *                        .build();
  * }</pre>
  */
-public abstract class HttpFileBuilder extends AbstractHttpFileBuilder<HttpFileBuilder> {
+public abstract class HttpFileBuilder extends AbstractHttpFileBuilder {
 
     /**
      * Returns a new {@link HttpFileBuilder} that builds an {@link HttpFile} from the specified {@link File}.
@@ -147,6 +152,80 @@ public abstract class HttpFileBuilder extends AbstractHttpFileBuilder<HttpFileBu
      * an {@link AggregatedHttpFile}.
      */
     public abstract HttpFile build();
+
+    // Methods from the supertype that are overridden to change the return type.
+
+    @Override
+    public HttpFileBuilder clock(Clock clock) {
+        return (HttpFileBuilder) super.clock(clock);
+    }
+
+    @Override
+    public HttpFileBuilder date(boolean dateEnabled) {
+        return (HttpFileBuilder) super.date(dateEnabled);
+    }
+
+    @Override
+    public HttpFileBuilder lastModified(boolean lastModifiedEnabled) {
+        return (HttpFileBuilder) super.lastModified(lastModifiedEnabled);
+    }
+
+    @Override
+    public HttpFileBuilder autoDetectedContentType(boolean contentTypeAutoDetectionEnabled) {
+        return (HttpFileBuilder) super.autoDetectedContentType(contentTypeAutoDetectionEnabled);
+    }
+
+    @Override
+    public HttpFileBuilder entityTag(boolean enabled) {
+        return (HttpFileBuilder) super.entityTag(enabled);
+    }
+
+    @Override
+    public HttpFileBuilder entityTag(BiFunction<String, HttpFileAttributes, String> entityTagFunction) {
+        return (HttpFileBuilder) super.entityTag(entityTagFunction);
+    }
+
+    @Override
+    public HttpFileBuilder addHeader(CharSequence name, Object value) {
+        return (HttpFileBuilder) super.addHeader(name, value);
+    }
+
+    @Override
+    public HttpFileBuilder addHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
+        return (HttpFileBuilder) super.addHeaders(headers);
+    }
+
+    @Override
+    public HttpFileBuilder setHeader(CharSequence name, Object value) {
+        return (HttpFileBuilder) super.setHeader(name, value);
+    }
+
+    @Override
+    public HttpFileBuilder setHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
+        return (HttpFileBuilder) super.setHeaders(headers);
+    }
+
+    @Override
+    public HttpFileBuilder contentType(MediaType contentType) {
+        return (HttpFileBuilder) super.contentType(contentType);
+    }
+
+    @Override
+    public HttpFileBuilder contentType(CharSequence contentType) {
+        return (HttpFileBuilder) super.contentType(contentType);
+    }
+
+    @Override
+    public HttpFileBuilder cacheControl(CacheControl cacheControl) {
+        return (HttpFileBuilder) super.cacheControl(cacheControl);
+    }
+
+    @Override
+    public HttpFileBuilder cacheControl(CharSequence cacheControl) {
+        return (HttpFileBuilder) super.cacheControl(cacheControl);
+    }
+
+    // Builder implementations
 
     private static final class FileSystemHttpFileBuilder extends HttpFileBuilder {
 

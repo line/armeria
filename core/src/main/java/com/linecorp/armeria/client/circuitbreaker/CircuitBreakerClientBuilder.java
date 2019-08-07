@@ -30,15 +30,13 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
 /**
- * Builds a new {@link CircuitBreakerClient} or its decorator function.
+ * A skeletal builder implementation that builds a new {@link CircuitBreakerClient} or its decorator function.
  *
- * @param <T> the type of {@link CircuitBreakerClientBuilder}
- * @param <U> the type of the {@link Client} that this builder builds or decorates
+ * @param <T> the type of the {@link Client} that this builder builds or decorates
  * @param <I> the type of outgoing {@link Request} of the {@link Client}
  * @param <O> the type of incoming {@link Response} of the {@link Client}
  */
-public abstract class CircuitBreakerClientBuilder<
-        T extends CircuitBreakerClientBuilder<T, U, I, O>, U extends CircuitBreakerClient<I, O>,
+public abstract class CircuitBreakerClientBuilder<T extends CircuitBreakerClient<I, O>,
         I extends Request, O extends Response> {
 
     @Nullable
@@ -69,11 +67,6 @@ public abstract class CircuitBreakerClientBuilder<
         this.strategyWithContent = strategyWithContent;
     }
 
-    @SuppressWarnings("unchecked")
-    final T self() {
-        return (T) this;
-    }
-
     CircuitBreakerStrategy strategy() {
         checkState(strategy != null, "strategy is not set.");
         return strategy;
@@ -88,27 +81,40 @@ public abstract class CircuitBreakerClientBuilder<
      * Sets the {@link CircuitBreakerMapping}. If unspecified, {@link CircuitBreakerMapping#ofDefault()}
      * will be used.
      *
-     * @return {@link T} to support method chaining.
+     * @return {@code this} to support method chaining.
+     *
+     * @deprecated Use {@link #mapping(CircuitBreakerMapping)}.
      */
-    public T circuitBreakerMapping(CircuitBreakerMapping mapping) {
-        this.mapping = requireNonNull(mapping, "mapping");
-        return self();
+    @Deprecated
+    public CircuitBreakerClientBuilder<T, I, O> circuitBreakerMapping(CircuitBreakerMapping mapping) {
+        return mapping(mapping);
     }
 
-    CircuitBreakerMapping circuitBreakerMapping() {
+    /**
+     * Sets the {@link CircuitBreakerMapping}. If unspecified, {@link CircuitBreakerMapping#ofDefault()}
+     * will be used.
+     *
+     * @return {@code this} to support method chaining.
+     */
+    public CircuitBreakerClientBuilder<T, I, O> mapping(CircuitBreakerMapping mapping) {
+        this.mapping = requireNonNull(mapping, "mapping");
+        return this;
+    }
+
+    CircuitBreakerMapping mapping() {
         return mapping;
     }
 
     /**
      * Returns a newly-created {@link CircuitBreakerClient} based on the properties of this builder.
      */
-    abstract U build(Client<I, O> delegate);
+    public abstract T build(Client<I, O> delegate);
 
     /**
      * Returns a newly-created decorator that decorates a {@link Client} with a new {@link CircuitBreakerClient}
      * based on the properties of this builder.
      */
-    abstract Function<Client<I, O>, U> newDecorator();
+    public abstract Function<Client<I, O>, T> newDecorator();
 
     @Override
     public String toString() {
