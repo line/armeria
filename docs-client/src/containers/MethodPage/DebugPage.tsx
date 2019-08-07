@@ -26,7 +26,9 @@ import FileCopyIcon from '@material-ui/icons/FileCopy';
 import React, { ChangeEvent } from 'react';
 import { Option } from 'react-dropdown';
 import SyntaxHighlighter from 'react-syntax-highlighter';
-import githubGist from 'react-syntax-highlighter/styles/hljs/github-gist';
+// react-syntax-highlighter type definitions are out of date.
+// @ts-ignore
+import githubGist from 'react-syntax-highlighter/dist/esm/styles/hljs/github-gist';
 
 import jsonMinify from 'jsonminify';
 import { RouteComponentProps } from 'react-router';
@@ -121,10 +123,10 @@ class DebugPage extends React.PureComponent<Props, State> {
   public render() {
     return (
       <Section>
-        <Typography variant="body1" paragraph />
-        <Grid container spacing={16}>
+        <Typography variant="body2" paragraph />
+        <Grid container spacing={2}>
           <Grid item xs={12} sm={6}>
-            <Typography variant="title" paragraph>
+            <Typography variant="h6" paragraph>
               Debug
             </Typography>
             {this.props.isAnnotatedHttpService &&
@@ -165,7 +167,7 @@ class DebugPage extends React.PureComponent<Props, State> {
                 />
               </>
             )}
-            <Typography variant="body1" paragraph />
+            <Typography variant="body2" paragraph />
             <Button variant="contained" color="primary" onClick={this.onSubmit}>
               Submit
             </Button>
@@ -175,20 +177,24 @@ class DebugPage extends React.PureComponent<Props, State> {
           </Grid>
           <Grid item xs={12} sm={6}>
             <Tooltip title="Copy response">
-              <IconButton
-                onClick={this.onCopy}
-                disabled={this.state.debugResponse.length === 0}
-              >
-                <FileCopyIcon />
-              </IconButton>
+              <div>
+                <IconButton
+                  onClick={this.onCopy}
+                  disabled={this.state.debugResponse.length === 0}
+                >
+                  <FileCopyIcon />
+                </IconButton>
+              </div>
             </Tooltip>
             <Tooltip title="Clear response">
-              <IconButton
-                onClick={this.onClear}
-                disabled={this.state.debugResponse.length === 0}
-              >
-                <DeleteSweepIcon />
-              </IconButton>
+              <div>
+                <IconButton
+                  onClick={this.onClear}
+                  disabled={this.state.debugResponse.length === 0}
+                >
+                  <DeleteSweepIcon />
+                </IconButton>
+              </div>
             </Tooltip>
             <SyntaxHighlighter
               language="json"

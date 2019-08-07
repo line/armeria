@@ -31,11 +31,11 @@ interface Props {
 const HttpQueryString: React.SFC<Props> = (props) => {
   return (
     <>
-      <Typography variant="body1" paragraph />
+      <Typography variant="body2" paragraph />
       <Button color="secondary" onClick={props.onEditHttpQueriesClick}>
         HTTP query string
       </Button>
-      <Typography variant="body1" paragraph />
+      <Typography variant="body2" paragraph />
       {props.additionalQueriesOpen && (
         <>
           <TextField

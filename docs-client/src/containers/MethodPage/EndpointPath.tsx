@@ -31,11 +31,11 @@ interface Props {
 const EndpointPath: React.SFC<Props> = (props) => {
   return (
     <>
-      <Typography variant="body1" paragraph />
+      <Typography variant="body2" paragraph />
       <Button color="secondary" onClick={props.onEditEndpointPathClick}>
         Endpoint path
       </Button>
-      <Typography variant="body1" paragraph />
+      <Typography variant="body2" paragraph />
       {props.endpointPathOpen && (
         <>
           <TextField

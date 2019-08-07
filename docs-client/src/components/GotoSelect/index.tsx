@@ -27,17 +27,14 @@ import { emphasize } from '@material-ui/core/styles/colorManipulator';
 import TextField, { BaseTextFieldProps } from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import React, { CSSProperties, HTMLAttributes } from 'react';
-// Ignore importing of `react-select/async` because react-select@3.0.4 is not fully compatible with TypeScript
-// see https://github.com/JedWatson/react-select/issues/3592
-// @ts-ignore
 import Async from 'react-select/async';
-import { ValueContainerProps } from 'react-select/lib/components/containers';
-import { ControlProps } from 'react-select/lib/components/Control';
-import { MenuProps, NoticeProps } from 'react-select/lib/components/Menu';
-import { OptionProps } from 'react-select/lib/components/Option';
-import { PlaceholderProps } from 'react-select/lib/components/Placeholder';
-import { SingleValueProps } from 'react-select/lib/components/SingleValue';
-import { ValueType } from 'react-select/lib/types';
+import { ValueContainerProps } from 'react-select/src/components/containers';
+import { ControlProps } from 'react-select/src/components/Control';
+import { MenuProps, NoticeProps } from 'react-select/src/components/Menu';
+import { OptionProps } from 'react-select/src/components/Option';
+import { PlaceholderProps } from 'react-select/src/components/Placeholder';
+import { SingleValueProps } from 'react-select/src/components/SingleValue';
+import { ValueType } from 'react-select/src/types';
 import { Specification } from '../../lib/specification';
 
 interface OptionType {
@@ -45,26 +42,21 @@ interface OptionType {
   value: string;
 }
 
-interface GroupType {
-  label: string;
-  options: OptionType[];
-}
-
 const styles = (theme: Theme) =>
   createStyles({
     root: {
       position: 'relative',
-      margin: `${theme.spacing.unit}px`,
-      marginLeft: `${theme.spacing.unit * 3}px`,
+      margin: `${theme.spacing(1)}px`,
+      marginLeft: `${theme.spacing(3)}px`,
       minWidth: 300,
       width: 800,
       backgroundColor: theme.palette.primary.light,
-      borderRadius: `${theme.spacing.unit * 2}px`,
+      borderRadius: `${theme.spacing(2)}px`,
     },
     input: {
       display: 'flex',
       padding: 0,
-      marginLeft: `${theme.spacing.unit}px`,
+      marginLeft: `${theme.spacing(1)}px`,
     },
     valueContainer: {
       display: 'flex',
@@ -73,7 +65,7 @@ const styles = (theme: Theme) =>
       alignItems: 'center',
     },
     chip: {
-      margin: `${theme.spacing.unit / 2}px ${theme.spacing.unit / 4}px`,
+      margin: `${theme.spacing(1 / 2)}px ${theme.spacing(1 / 4)}px`,
     },
     chipFocused: {
       backgroundColor: emphasize(
@@ -84,7 +76,7 @@ const styles = (theme: Theme) =>
       ),
     },
     noOptionsMessage: {
-      padding: `${theme.spacing.unit}px ${theme.spacing.unit * 2}px`,
+      padding: `${theme.spacing(1)}px ${theme.spacing(2)}px`,
     },
     singleValue: {
       position: 'relative',
@@ -92,19 +84,19 @@ const styles = (theme: Theme) =>
     },
     placeholder: {
       position: 'absolute',
-      marginLeft: `${theme.spacing.unit}px`,
+      marginLeft: `${theme.spacing(1)}px`,
       left: 2,
     },
     paper: {
       position: 'absolute',
       zIndex: 1,
-      marginTop: theme.spacing.unit,
+      marginTop: theme.spacing(1),
       left: 0,
       right: 0,
       flex: 1,
     },
     divider: {
-      height: theme.spacing.unit * 2,
+      height: theme.spacing(2),
     },
   });
 
@@ -235,8 +227,8 @@ function makeSuggestions(
   specification: Specification,
   limit: number,
   predicate: (n: string) => boolean,
-): GroupType[] {
-  const suggestions: GroupType[] = [];
+): OptionType[] {
+  const suggestions: OptionType[] = [];
   let remain = limit;
 
   function predicateWithLimit(option: OptionType) {
@@ -248,9 +240,8 @@ function makeSuggestions(
   }
 
   if (specification.getServices().length > 0 && remain > 0) {
-    suggestions.push({
-      label: 'Services',
-      options: specification.getServices().flatMap((service) => {
+    suggestions.push(
+      ...specification.getServices().flatMap((service) => {
         return service.methods
           .map((method) => {
             return {
@@ -260,13 +251,12 @@ function makeSuggestions(
           })
           .filter(predicateWithLimit);
       }),
-    });
+    );
   }
 
   if (specification.getEnums().length > 0 && remain > 0) {
-    suggestions.push({
-      label: 'Enums',
-      options: specification
+    suggestions.push(
+      ...specification
         .getEnums()
         .map((enm) => {
           return {
@@ -275,13 +265,12 @@ function makeSuggestions(
           };
         })
         .filter(predicateWithLimit),
-    });
+    );
   }
 
   if (specification.getStructs().length > 0 && remain > 0) {
-    suggestions.push({
-      label: 'Structs',
-      options: specification
+    suggestions.push(
+      ...specification
         .getStructs()
         .map((struct) => {
           return {
@@ -290,13 +279,12 @@ function makeSuggestions(
           };
         })
         .filter(predicateWithLimit),
-    });
+    );
   }
 
   if (specification.getExceptions().length > 0 && remain > 0) {
-    suggestions.push({
-      label: 'Exceptions',
-      options: specification
+    suggestions.push(
+      ...specification
         .getExceptions()
         .map((exception) => {
           return {
@@ -305,7 +293,7 @@ function makeSuggestions(
           };
         })
         .filter(predicateWithLimit),
-    });
+    );
   }
 
   return suggestions;
@@ -341,7 +329,7 @@ class GotoSelect extends React.Component<GotoSelectProps> {
 
     function filterSuggestion(
       inputValue: string,
-      callback: (n: GroupType[]) => void,
+      callback: (n: OptionType[]) => void,
     ): void {
       callback(
         makeSuggestions(specification, FILTERED_SUGGESTION_SIZE, (suggestion) =>

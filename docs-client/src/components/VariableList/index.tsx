@@ -54,7 +54,7 @@ export default function({
   );
   return (
     <>
-      <Typography variant="title">{title}</Typography>
+      <Typography variant="h6">{title}</Typography>
       <Table>
         <TableHead>
           <TableRow>
@@ -78,7 +78,7 @@ export default function({
           />
         </TableBody>
       </Table>
-      <Typography variant="body1" paragraph />
+      <Typography variant="body2" paragraph />
     </>
   );
 }
@@ -170,11 +170,8 @@ class FieldInfos extends React.Component<FieldInfosProps, State> {
       <>
         {!this.state.isEmpty ? (
           this.props.variables.map((variable, index) => (
-            <>
-              <TableRow
-                key={FieldInfos.generateKey(variable.name)}
-                onClick={() => this.handleCollapse(index)}
-              >
+            <React.Fragment key={FieldInfos.generateKey(variable.name)}>
+              <TableRow onClick={() => this.handleCollapse(index)}>
                 <TableCell>
                   <code>
                     {FieldInfos.indentString(this.props.indent, variable.name)}
@@ -210,7 +207,7 @@ class FieldInfos extends React.Component<FieldInfosProps, State> {
                   setChildStateInParent={this.setChildStateInParent}
                 />
               )}
-            </>
+            </React.Fragment>
           ))
         ) : (
           <TableRow>

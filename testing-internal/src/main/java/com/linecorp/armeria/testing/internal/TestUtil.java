@@ -27,8 +27,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 
 public final class TestUtil {
 
-    private static final boolean isDocServiceDemoMode = "true".equals(
-            System.getProperty("com.linecorp.armeria.docServiceDemo"));
+    private static final boolean isDocServiceDemoMode = "true".equals(System.getenv("DOC_SERVICE_DEMO"));
 
     /**
      * Indicates doc service tests should be run on fixed ports to be able to demo or develop DocService.

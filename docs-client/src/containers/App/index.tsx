@@ -88,14 +88,14 @@ const styles = (theme: Theme) =>
       height: '100vh',
       minWidth: 0, // So the Typography noWrap works,
       overflowY: 'auto',
-      padding: theme.spacing.unit * 2,
+      padding: theme.spacing(2),
     },
     methodHeader: {
       backgroundColor: theme.palette.background.paper,
     },
     title: {
       [theme.breakpoints.up('md')]: {
-        marginLeft: theme.spacing.unit * 3,
+        marginLeft: theme.spacing(3),
       },
     },
     toolbar: theme.mixins.toolbar,
@@ -176,7 +176,7 @@ function AppDrawer({
         <>
           <ListItem button onClick={() => handleCollapse('services')}>
             <ListItemText disableTypography>
-              <Typography variant="headline">Services</Typography>
+              <Typography variant="h5">Services</Typography>
             </ListItemText>
             {servicesSectionOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
@@ -188,7 +188,7 @@ function AppDrawer({
                   onClick={() => handleServiceCollapse(service.name)}
                 >
                   <ListItemText>
-                    <Typography variant="subheading">
+                    <Typography variant="subtitle1">
                       <code>{simpleName(service.name)}</code>
                     </Typography>
                   </ListItemText>
@@ -216,7 +216,7 @@ function AppDrawer({
                       <ListItemText
                         inset
                         primaryTypographyProps={{
-                          variant: 'body1',
+                          variant: 'body2',
                         }}
                       >
                         <code>{`${method.name}()`}</code>
@@ -233,7 +233,7 @@ function AppDrawer({
         <>
           <ListItem button onClick={() => handleCollapse('enums')}>
             <ListItemText disableTypography>
-              <Typography variant="headline">Enums</Typography>
+              <Typography variant="h5">Enums</Typography>
             </ListItemText>
             {enumsSectionOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
@@ -248,7 +248,7 @@ function AppDrawer({
                 <ListItemText
                   inset
                   primaryTypographyProps={{
-                    variant: 'body1',
+                    variant: 'body2',
                   }}
                 >
                   <code>{simpleName(enm.name)}</code>
@@ -262,7 +262,7 @@ function AppDrawer({
         <>
           <ListItem button onClick={() => handleCollapse('structs')}>
             <ListItemText disableTypography>
-              <Typography variant="headline">Structs</Typography>
+              <Typography variant="h5">Structs</Typography>
             </ListItemText>
             {structsSectionOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
@@ -277,7 +277,7 @@ function AppDrawer({
                 <ListItemText
                   inset
                   primaryTypographyProps={{
-                    variant: 'body1',
+                    variant: 'body2',
                   }}
                 >
                   <code>{simpleName(struct.name)}</code>
@@ -291,7 +291,7 @@ function AppDrawer({
         <>
           <ListItem button onClick={() => handleCollapse('exceptions')}>
             <ListItemText disableTypography>
-              <Typography variant="headline">Exceptions</Typography>
+              <Typography variant="h5">Exceptions</Typography>
             </ListItemText>
             {exceptionsOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
@@ -306,7 +306,7 @@ function AppDrawer({
                 <ListItemText
                   inset
                   primaryTypographyProps={{
-                    variant: 'body1',
+                    variant: 'body2',
                   }}
                 >
                   <code>{simpleName(struct.name)}</code>
@@ -375,7 +375,7 @@ class App extends React.PureComponent<Props, State> {
             </Hidden>
             <Typography
               className={classes.title}
-              variant="title"
+              variant="h6"
               color="inherit"
               noWrap
             >

@@ -73,10 +73,10 @@ const MethodPage: React.SFC<Props> = (props) => {
 
   return (
     <>
-      <Typography variant="headline" paragraph>
+      <Typography variant="h5" paragraph>
         <code>{`${simpleName(service.name)}.${method.name}()`}</code>
       </Typography>
-      <Typography variant="body1" paragraph>
+      <Typography variant="body2" paragraph>
         {method.docString}
       </Typography>
       <Section>
@@ -89,7 +89,7 @@ const MethodPage: React.SFC<Props> = (props) => {
         />
       </Section>
       <Section>
-        <Typography variant="title">Return Type</Typography>
+        <Typography variant="h6">Return Type</Typography>
         <Table>
           <TableBody>
             <TableRow>

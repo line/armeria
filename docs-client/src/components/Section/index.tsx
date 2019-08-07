@@ -26,9 +26,9 @@ import React from 'react';
 const styles = (theme: Theme) =>
   createStyles({
     section: {
-      padding: theme.spacing.unit * 3,
-      marginBottom: theme.spacing.unit,
-      marginTop: theme.spacing.unit,
+      padding: theme.spacing(3),
+      marginBottom: theme.spacing(1),
+      marginTop: theme.spacing(1),
     },
   });
 
