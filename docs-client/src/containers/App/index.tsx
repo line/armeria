@@ -37,7 +37,7 @@ import MenuIcon from '@material-ui/icons/Menu';
 import update from 'immutability-helper';
 import React from 'react';
 import Helmet from 'react-helmet';
-import { hot } from 'react-hot-loader';
+import { hot } from 'react-hot-loader/root';
 import { Route, RouteComponentProps, withRouter } from 'react-router-dom';
 
 import EnumPage from '../EnumPage';
@@ -554,4 +554,4 @@ class App extends React.PureComponent<Props, State> {
   };
 }
 
-export default hot(module)(withRouter(withStyles(styles)(App)));
+export default withRouter(withStyles(styles)(hot(App)));
