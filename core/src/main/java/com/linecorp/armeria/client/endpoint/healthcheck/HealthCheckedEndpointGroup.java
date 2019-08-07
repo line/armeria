@@ -248,8 +248,9 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
                     destroyed = true;
 
-                    // Cancel all scheduled tasks.
-                    // Make a copy to avoid a potential ConcurrentModificationException.
+                    // Cancel all scheduled tasks. Make a copy to prevent ConcurrentModificationException
+                    // when the future's handler removes it from scheduledFutures as a result of
+                    // the cancellation, which may happen on this thread.
                     if (!scheduledFutures.isEmpty()) {
                         final ImmutableList<Future<?>> copy = ImmutableList.copyOf(scheduledFutures.keySet());
                         copy.forEach(f -> f.cancel(false));
