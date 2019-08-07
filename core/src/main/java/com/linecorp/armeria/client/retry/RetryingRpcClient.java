@@ -101,10 +101,10 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
             return;
         }
 
-        final ClientRequestContext derivedCtx = newDerivedContext(ctx, req);
+        final int totalAttempts = getTotalAttempts(ctx);
+        final ClientRequestContext derivedCtx = newDerivedContext(ctx, req, totalAttempts);
         ctx.logBuilder().addChild(derivedCtx.log());
 
-        final int totalAttempts = getTotalAttempts(ctx);
         if (totalAttempts > 1) {
             derivedCtx.setAdditionalRequestHeader(ARMERIA_RETRY_COUNT, Integer.toString(totalAttempts - 1));
         }
