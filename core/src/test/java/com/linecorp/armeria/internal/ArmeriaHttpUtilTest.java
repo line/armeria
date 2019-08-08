@@ -476,9 +476,9 @@ class ArmeriaHttpUtilTest {
     }
 
     @Test
-    void isAbsolutePath() {
+    void isAbsoluteUri() {
         final String good = "none+http://a.com";
-        assertThat(ArmeriaHttpUtil.isAbsolutePath(good)).isTrue();
+        assertThat(ArmeriaHttpUtil.isAbsoluteUri(good)).isTrue();
         final List<String> bad = Arrays.asList(
                 "none+http:/a",
                 "//a",
@@ -488,7 +488,7 @@ class ArmeriaHttpUtilTest {
                 "://",
                 "",
                 null);
-        bad.forEach(path -> assertThat(ArmeriaHttpUtil.isAbsolutePath(path)).isFalse());
+        bad.forEach(path -> assertThat(ArmeriaHttpUtil.isAbsoluteUri(path)).isFalse());
     }
 
     private static ServerConfig serverConfig() {

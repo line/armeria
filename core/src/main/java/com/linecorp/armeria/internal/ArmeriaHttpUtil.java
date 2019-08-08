@@ -337,20 +337,20 @@ public final class ArmeriaHttpUtil {
     /**
      * Returns {@code true} if the specified {@code path} is an absolute {@code URI}.
      */
-    public static boolean isAbsolutePath(@Nullable String path) {
-        if (path == null) {
+    public static boolean isAbsoluteUri(@Nullable String maybeUri) {
+        if (maybeUri == null) {
             return false;
         }
-        final int firstColonIdx = path.indexOf(':');
-        if (firstColonIdx <= 0 || firstColonIdx + 3 >= path.length()) {
+        final int firstColonIdx = maybeUri.indexOf(':');
+        if (firstColonIdx <= 0 || firstColonIdx + 3 >= maybeUri.length()) {
             return false;
         }
-        final int firstSlashIdx = path.indexOf('/');
+        final int firstSlashIdx = maybeUri.indexOf('/');
         if (firstSlashIdx <= 0 || firstSlashIdx < firstColonIdx) {
             return false;
         }
 
-        return path.charAt(firstColonIdx + 1) == '/' && path.charAt(firstColonIdx + 2) == '/';
+        return maybeUri.charAt(firstColonIdx + 1) == '/' && maybeUri.charAt(firstColonIdx + 2) == '/';
     }
 
     /**
