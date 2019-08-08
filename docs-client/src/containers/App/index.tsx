@@ -18,6 +18,7 @@ import AppBar from '@material-ui/core/AppBar';
 import Collapse from '@material-ui/core/Collapse';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import Drawer from '@material-ui/core/Drawer';
+import Grid from '@material-ui/core/Grid';
 import Hidden from '@material-ui/core/Hidden';
 import IconButton from '@material-ui/core/IconButton';
 import List from '@material-ui/core/List';
@@ -103,6 +104,7 @@ const styles = (theme: Theme) =>
       borderRadius: 3,
       border: 0,
       color: 'white',
+      fontSize: theme.typography.body2.fontSize,
       height: 20,
       width: 80,
       textAlign: 'center',
@@ -206,21 +208,24 @@ function AppDrawer({
                         )
                       }
                     >
-                      {method.httpMethod && (
-                        <Typography
-                          className={httpMethodClass(method.httpMethod)}
-                        >
-                          {method.httpMethod}
-                        </Typography>
-                      )}
-                      <ListItemText
-                        inset
-                        primaryTypographyProps={{
-                          variant: 'body2',
-                        }}
-                      >
-                        <code>{`${method.name}()`}</code>
-                      </ListItemText>
+                      <Grid container alignItems="center">
+                        <Grid item xs={4}>
+                          <Typography
+                            className={httpMethodClass(method.httpMethod)}
+                          >
+                            {method.httpMethod}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={8}>
+                          <ListItemText
+                            primaryTypographyProps={{
+                              variant: 'body2',
+                            }}
+                          >
+                            <code>{`${method.name}()`}</code>
+                          </ListItemText>
+                        </Grid>
+                      </Grid>
                     </ListItem>
                   ))}
                 </Collapse>

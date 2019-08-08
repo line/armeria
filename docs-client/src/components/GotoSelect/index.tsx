@@ -42,6 +42,11 @@ interface OptionType {
   value: string;
 }
 
+interface GroupType {
+  label: string;
+  options: OptionType[];
+}
+
 const styles = (theme: Theme) =>
   createStyles({
     root: {
@@ -55,7 +60,6 @@ const styles = (theme: Theme) =>
     },
     input: {
       display: 'flex',
-      padding: 0,
       marginLeft: `${theme.spacing(1)}px`,
     },
     valueContainer: {
@@ -227,8 +231,8 @@ function makeSuggestions(
   specification: Specification,
   limit: number,
   predicate: (n: string) => boolean,
-): OptionType[] {
-  const suggestions: OptionType[] = [];
+): GroupType[] {
+  const suggestions: GroupType[] = [];
   let remain = limit;
 
   function predicateWithLimit(option: OptionType) {
@@ -240,8 +244,9 @@ function makeSuggestions(
   }
 
   if (specification.getServices().length > 0 && remain > 0) {
-    suggestions.push(
-      ...specification.getServices().flatMap((service) => {
+    suggestions.push({
+      label: 'Services',
+      options: specification.getServices().flatMap((service) => {
         return service.methods
           .map((method) => {
             return {
@@ -251,12 +256,13 @@ function makeSuggestions(
           })
           .filter(predicateWithLimit);
       }),
-    );
+    });
   }
 
   if (specification.getEnums().length > 0 && remain > 0) {
-    suggestions.push(
-      ...specification
+    suggestions.push({
+      label: 'Enums',
+      options: specification
         .getEnums()
         .map((enm) => {
           return {
@@ -265,12 +271,13 @@ function makeSuggestions(
           };
         })
         .filter(predicateWithLimit),
-    );
+    });
   }
 
   if (specification.getStructs().length > 0 && remain > 0) {
-    suggestions.push(
-      ...specification
+    suggestions.push({
+      label: 'Structs',
+      options: specification
         .getStructs()
         .map((struct) => {
           return {
@@ -279,12 +286,13 @@ function makeSuggestions(
           };
         })
         .filter(predicateWithLimit),
-    );
+    });
   }
 
   if (specification.getExceptions().length > 0 && remain > 0) {
-    suggestions.push(
-      ...specification
+    suggestions.push({
+      label: 'Exceptions',
+      options: specification
         .getExceptions()
         .map((exception) => {
           return {
@@ -293,7 +301,7 @@ function makeSuggestions(
           };
         })
         .filter(predicateWithLimit),
-    );
+    });
   }
 
   return suggestions;
@@ -329,7 +337,7 @@ class GotoSelect extends React.Component<GotoSelectProps> {
 
     function filterSuggestion(
       inputValue: string,
-      callback: (n: OptionType[]) => void,
+      callback: (n: GroupType[]) => void,
     ): void {
       callback(
         makeSuggestions(specification, FILTERED_SUGGESTION_SIZE, (suggestion) =>
@@ -346,11 +354,15 @@ class GotoSelect extends React.Component<GotoSelectProps> {
             classes={classes}
             styles={selectStyles}
             inputId="go-to-select"
+            // The type parameter of Async seems to incorrectly use the same type for options and onChange
+            // @ts-ignore
             defaultOptions={makeSuggestions(
               specification,
               DEFAULT_SUGGESTION_SIZE,
               () => true,
             )}
+            // The type parameter of Async seems to incorrectly use the same type for options and onChange
+            // @ts-ignore
             loadOptions={filterSuggestion}
             components={components}
             onChange={handleSelection}
