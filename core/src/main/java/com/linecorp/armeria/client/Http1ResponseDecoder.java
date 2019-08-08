@@ -89,7 +89,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
 
     private void onWrapperCompleted(HttpResponseWrapper resWrapper, @Nullable Throwable cause) {
         // Cancel timeout future and abort the request if it exists.
-        resWrapper.onSubscriptionCancelled();
+        resWrapper.onSubscriptionCancelled(cause);
 
         if (cause != null) {
             // Disconnect when the response has been closed with an exception because there's no way
