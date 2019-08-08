@@ -55,6 +55,7 @@ final class HttpHealthChecker implements AsyncCloseable {
     private long maxLongPollingSeconds;
     @Nullable
     private HttpResponse lastResponse;
+    private boolean closed;
 
     HttpHealthChecker(HealthCheckerContext ctx, String path) {
 
@@ -87,6 +88,10 @@ final class HttpHealthChecker implements AsyncCloseable {
     }
 
     private synchronized void check() {
+        if (closed) {
+            return;
+        }
+
         final RequestHeaders headers;
         final RequestHeadersBuilder builder =
                 RequestHeaders.builder(HttpMethod.HEAD, path)
@@ -101,6 +106,10 @@ final class HttpHealthChecker implements AsyncCloseable {
 
         lastResponse = httpClient.execute(headers);
         lastResponse.aggregate().handle((res, cause) -> {
+            if (closed) {
+                return null;
+            }
+
             boolean isHealthy = false;
             if (res != null) {
                 maxLongPollingSeconds = Math.max(0, res.headers().getLong(ARMERIA_LPHC, 0));
@@ -132,7 +141,10 @@ final class HttpHealthChecker implements AsyncCloseable {
     @Override
     public synchronized CompletableFuture<?> closeAsync() {
         if (lastResponse != null) {
-            lastResponse.abort();
+            if (!closed) {
+                closed = true;
+                lastResponse.abort();
+            }
             return lastResponse.completionFuture().handle((unused1, unused2) -> null);
         } else {
             return CompletableFuture.completedFuture(null);
