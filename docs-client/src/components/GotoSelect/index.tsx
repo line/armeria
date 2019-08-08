@@ -28,8 +28,12 @@ import TextField, { BaseTextFieldProps } from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import React, { CSSProperties, HTMLAttributes } from 'react';
 import Async from 'react-select/async';
-import { ValueContainerProps } from 'react-select/src/components/containers';
+import {
+  IndicatorContainerProps,
+  ValueContainerProps,
+} from 'react-select/src/components/containers';
 import { ControlProps } from 'react-select/src/components/Control';
+import { IndicatorProps } from 'react-select/src/components/indicators';
 import { MenuProps, NoticeProps } from 'react-select/src/components/Menu';
 import { OptionProps } from 'react-select/src/components/Option';
 import { PlaceholderProps } from 'react-select/src/components/Placeholder';
@@ -61,12 +65,12 @@ const styles = (theme: Theme) =>
     input: {
       display: 'flex',
       marginLeft: `${theme.spacing(1)}px`,
+      paddingBottom: `${theme.spacing(1.4)}px`,
     },
     valueContainer: {
       display: 'flex',
       flexWrap: 'wrap',
       flex: 1,
-      alignItems: 'center',
     },
     chip: {
       margin: `${theme.spacing(1 / 2)}px ${theme.spacing(1 / 4)}px`,
@@ -84,12 +88,25 @@ const styles = (theme: Theme) =>
     },
     singleValue: {
       position: 'relative',
+      paddingTop: `${theme.spacing(1 / 5)}px`,
       fontSize: 16,
     },
     placeholder: {
       position: 'absolute',
       marginLeft: `${theme.spacing(1)}px`,
+      paddingTop: `${theme.spacing(1 / 6)}px`,
       left: 2,
+    },
+    indicatorsContainer: {
+      marginBottom: 0,
+      marginTop: `${theme.spacing(0.5)}px`,
+      alignItems: 'center',
+      display: 'flex',
+    },
+    indicatorSeparator: {
+      alignSelf: 'stretch',
+      width: 1,
+      backgroundColor: 'hsl(0,0%,80%)',
     },
     paper: {
       position: 'absolute',
@@ -198,6 +215,22 @@ function ValueContainer(props: ValueContainerProps<OptionType>) {
   );
 }
 
+function IndicatorsContainer(props: IndicatorContainerProps<OptionType>) {
+  return (
+    <div className={props.selectProps.classes.indicatorsContainer}>
+      {props.children}
+    </div>
+  );
+}
+
+function IndicatorSeparator(props: IndicatorProps<OptionType>) {
+  return (
+    <div className={props.selectProps.classes.indicatorSeparator}>
+      {props.children}
+    </div>
+  );
+}
+
 function Menu(props: MenuProps<OptionType>) {
   return (
     <Paper
@@ -218,6 +251,8 @@ const components = {
   Placeholder,
   SingleValue,
   ValueContainer,
+  IndicatorsContainer,
+  IndicatorSeparator,
 };
 
 /**
