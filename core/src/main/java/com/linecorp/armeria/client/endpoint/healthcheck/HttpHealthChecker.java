@@ -32,11 +32,11 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -112,23 +112,34 @@ final class HttpHealthChecker implements AsyncCloseable {
 
             boolean isHealthy = false;
             if (res != null) {
-                maxLongPollingSeconds = Math.max(0, res.headers().getLong(ARMERIA_LPHC, 0));
-                if (res.status().equals(HttpStatus.OK)) {
-                    isHealthy = true;
+                switch (res.status().codeClass()) {
+                    case SUCCESS:
+                        maxLongPollingSeconds = getMaxLongPollingSeconds(res);
+                        isHealthy = true;
+                        break;
+                    case SERVER_ERROR:
+                        maxLongPollingSeconds = getMaxLongPollingSeconds(res);
+                        break;
+                    default:
+                        // Do not use long polling on an unexpected status for safety.
+                        maxLongPollingSeconds = 0;
                 }
             } else {
                 maxLongPollingSeconds = 0;
             }
+
             ctx.updateHealth(isHealthy ? 1 : 0);
             wasHealthy = isHealthy;
 
+            final ScheduledExecutorService executor = ctx.executor();
             try {
-                final ScheduledExecutorService executor = ctx.executor();
-                final long nextDelayMillis = ctx.nextDelayMillis();
-                if (res != null && maxLongPollingSeconds > 0) {
+                // Send a long polling check immediately if:
+                // - Server has long polling enabled.
+                // - Server responded with 2xx or 5xx.
+                if (maxLongPollingSeconds > 0 && res != null) {
                     executor.execute(this::check);
                 } else {
-                    executor.schedule(this::check, nextDelayMillis, TimeUnit.MILLISECONDS);
+                    executor.schedule(this::check, ctx.nextDelayMillis(), TimeUnit.MILLISECONDS);
                 }
             } catch (RejectedExecutionException ignored) {
                 // Can happen if the Endpoint being checked has been disappeared from
@@ -136,6 +147,10 @@ final class HttpHealthChecker implements AsyncCloseable {
             }
             return null;
         });
+    }
+
+    private static long getMaxLongPollingSeconds(AggregatedHttpResponse res) {
+        return Math.max(0, res.headers().getLong(ARMERIA_LPHC, 0));
     }
 
     @Override
