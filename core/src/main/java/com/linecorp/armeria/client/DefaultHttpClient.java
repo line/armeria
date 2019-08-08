@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.client.HttpClientBuilder.UNDEFINED_URI;
+import static com.linecorp.armeria.client.HttpClientBuilder.isUndefinedUri;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
 
 import java.net.URI;
@@ -49,7 +49,7 @@ final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> impl
         final URI uri = URI.create(req.path());
         final String authority = uri.getAuthority();
 
-        if (uri() == UNDEFINED_URI && authority == null) {
+        if (isUndefinedUri(uri()) && authority == null) {
             return HttpResponse.ofFailure(new IllegalArgumentException("no authority: " + req.path()));
         } else if (authority != null) {
             final Endpoint endpoint = Endpoint.parse(authority);
