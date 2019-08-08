@@ -40,7 +40,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 
 import io.netty.util.AsciiString;
@@ -155,11 +154,6 @@ final class HttpHealthChecker implements AsyncCloseable {
                             TimeUnit.SECONDS.toMillis(maxLongPollingSeconds));
                     ctx.setResponseTimeoutMillis(newResponseTimeoutMillis);
                 }
-                ctx.log().addListener(log -> {
-                    if (log.responseHeaders().status().code() == 0) {
-                        System.err.println("?");
-                    }
-                }, RequestLogAvailability.COMPLETE);
             }
             return delegate().execute(ctx, req);
         }
