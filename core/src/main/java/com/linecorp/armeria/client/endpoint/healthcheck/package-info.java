@@ -15,7 +15,8 @@
  */
 
 /**
- * {@link com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroup} groups.
+ * Filters out unhealthy {@link com.linecorp.armeria.client.Endpoint}s from an existing
+ * {@link com.linecorp.armeria.client.endpoint.EndpointGroup} by sending health check requests.
  */
 @NonNullByDefault
 package com.linecorp.armeria.client.endpoint.healthcheck;

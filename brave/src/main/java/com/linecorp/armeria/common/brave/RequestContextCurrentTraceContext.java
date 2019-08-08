@@ -49,6 +49,20 @@ import io.netty.util.Attribute;
  */
 public final class RequestContextCurrentTraceContext extends CurrentTraceContext {
 
+    /**
+     * Sets whether the current thread is not a request thread, meaning it is never executed in the scope of a
+     * server or client request and will never have a {@link RequestContext} available. This can be called from
+     * background threads, such as the thread that reports traced spans to storage, to prevent logging a
+     * warning when trying to start a trace without having a {@link RequestContext}.
+     */
+    public static void setCurrentThreadNotRequestThread(boolean value) {
+        if (value) {
+            THREAD_NOT_REQUEST_THREAD.set(true);
+        } else {
+            THREAD_NOT_REQUEST_THREAD.remove();
+        }
+    }
+
     private static final CurrentTraceContext DEFAULT = new RequestContextCurrentTraceContext(new Builder());
 
     private static final Logger logger = LoggerFactory.getLogger(RequestContextCurrentTraceContext.class);
@@ -56,16 +70,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
     // Thread-local for storing TraceContext when invoking callbacks off the request thread.
     private static final ThreadLocal<TraceContext> THREAD_LOCAL_CONTEXT = new ThreadLocal<>();
 
-    private static final Scope INCOMPLETE_CONFIGURATION_SCOPE = new Scope() {
-        @Override
-        public void close() {
-        }
-
-        @Override
-        public String toString() {
-            return "IncompleteConfigurationScope";
-        }
-    };
+    private static final ThreadLocal<Boolean> THREAD_NOT_REQUEST_THREAD = new ThreadLocal<>();
 
     private static final Scope INITIAL_REQUEST_SCOPE = new Scope() {
         @Override
@@ -142,8 +147,9 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
     public TraceContext get() {
         final RequestContext ctx = getRequestContextOrWarnOnce();
         if (ctx == null) {
-            return null;
+            return THREAD_LOCAL_CONTEXT.get();
         }
+
         if (ctx.eventLoop().inEventLoop()) {
             return getTraceContextAttribute(ctx).get();
         } else {
@@ -164,11 +170,8 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         }
 
         final RequestContext ctx = getRequestContextOrWarnOnce();
-        if (ctx == null) {
-            return INCOMPLETE_CONFIGURATION_SCOPE;
-        }
 
-        if (ctx.eventLoop().inEventLoop()) {
+        if (ctx != null && ctx.eventLoop().inEventLoop()) {
             return createScopeForRequestThread(ctx, currentSpan);
         } else {
             // The RequestContext is the canonical thread-local storage for the thread processing the request.
@@ -251,6 +254,9 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         @Override
         @Nullable
         public RequestContext get() {
+            if (Boolean.TRUE.equals(THREAD_NOT_REQUEST_THREAD.get())) {
+                return null;
+            }
             ClassLoaderHack.loadMe();
             return null;
         }

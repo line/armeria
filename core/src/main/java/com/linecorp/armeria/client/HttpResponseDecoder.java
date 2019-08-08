@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.InboundTrafficController;
@@ -265,8 +266,8 @@ abstract class HttpResponseDecoder {
             return delegate.onDemand(task);
         }
 
-        void onSubscriptionCancelled() {
-            close(null, this::cancelAction);
+        void onSubscriptionCancelled(@Nullable Throwable cause) {
+            close(cause, this::cancelAction);
         }
 
         @Override
@@ -306,7 +307,11 @@ abstract class HttpResponseDecoder {
         }
 
         private void cancelAction(@Nullable Throwable cause) {
-            logBuilder.endResponse();
+            if (cause != null && !(cause instanceof CancelledSubscriptionException)) {
+                logBuilder.endResponse(cause);
+            } else {
+                logBuilder.endResponse();
+            }
         }
 
         @Override

@@ -33,6 +33,13 @@ import com.linecorp.armeria.common.SessionProtocol;
 public interface HttpClient extends ClientBuilderParams {
 
     /**
+     * Creates a new HTTP client using the {@link ClientFactory#DEFAULT} and the {@link ClientOptions#DEFAULT}.
+     */
+    static HttpClient of() {
+        return new HttpClientBuilder().options(ClientOptions.DEFAULT).build();
+    }
+
+    /**
      * Creates a new HTTP client that connects to the specified {@code uri} using the default
      * {@link ClientFactory}.
      *

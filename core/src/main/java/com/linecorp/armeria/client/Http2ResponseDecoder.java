@@ -88,7 +88,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
     private void onWrapperCompleted(HttpResponseWrapper resWrapper, int id, @Nullable Throwable cause) {
         // Cancel timeout future and abort the request if it exists.
-        resWrapper.onSubscriptionCancelled();
+        resWrapper.onSubscriptionCancelled(cause);
 
         if (cause != null) {
             // We are not closing the connection but just send a RST_STREAM,

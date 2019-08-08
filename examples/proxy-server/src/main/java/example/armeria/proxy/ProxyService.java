@@ -11,8 +11,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.client.endpoint.dns.DnsServiceEndpointGroup;
-import com.linecorp.armeria.client.endpoint.healthcheck.HttpHealthCheckedEndpointGroup;
-import com.linecorp.armeria.client.endpoint.healthcheck.HttpHealthCheckedEndpointGroupBuilder;
+import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroup;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -56,11 +55,11 @@ public final class ProxyService extends AbstractHttpService {
 
     private static HttpClient newLoadBalancingClient() throws InterruptedException {
         // Send HTTP health check requests to '/internal/l7check' every 10 seconds.
-        final HttpHealthCheckedEndpointGroup healthCheckedGroup =
-                new HttpHealthCheckedEndpointGroupBuilder(animationGroup, "/internal/l7check")
-                        .protocol(SessionProtocol.HTTP)
-                        .retryInterval(Duration.ofSeconds(10))
-                        .build();
+        final HealthCheckedEndpointGroup healthCheckedGroup =
+                HealthCheckedEndpointGroup.builder(animationGroup, "/internal/l7check")
+                                          .protocol(SessionProtocol.HTTP)
+                                          .retryInterval(Duration.ofSeconds(10))
+                                          .build();
 
         // Wait until the initial health check is finished.
         healthCheckedGroup.awaitInitialEndpoints();

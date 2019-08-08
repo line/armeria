@@ -24,7 +24,7 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 
 import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup;
-import com.linecorp.armeria.client.endpoint.healthcheck.HttpHealthCheckedEndpointGroup;
+import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroup;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -37,7 +37,7 @@ public class DnsEndpointGroupBenchmark {
     private static final AggregatedHttpResponse OK = AggregatedHttpResponse.of(HttpStatus.OK);
 
     private Server server;
-    private HttpHealthCheckedEndpointGroup endpointGroup;
+    private HealthCheckedEndpointGroup endpointGroup;
 
     @Setup(Level.Trial)
     public void startServer() {
@@ -54,7 +54,7 @@ public class DnsEndpointGroupBenchmark {
 
     @Setup(Level.Invocation)
     public void setUp() {
-        endpointGroup = HttpHealthCheckedEndpointGroup.of(
+        endpointGroup = HealthCheckedEndpointGroup.of(
                 DnsAddressEndpointGroup.of("localhost",
                                            server.activePort().get().localAddress().getPort()), "/health");
     }

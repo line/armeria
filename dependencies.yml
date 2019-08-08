@@ -33,11 +33,11 @@ com.fasterxml.jackson.core:
 
 com.github.ben-manes.caffeine:
   caffeine:
-    version: '2.7.0'
+    version: '2.8.0'
     exclusions:
     - com.google.errorprone:error_prone_annotations
     javadocs:
-    - https://static.javadoc.io/com.github.ben-manes.caffeine/caffeine/2.7.0/
+    - https://static.javadoc.io/com.github.ben-manes.caffeine/caffeine/2.8.0/
     relocations:
     - from: com.github.benmanes.caffeine
       to: com.linecorp.armeria.internal.shaded.caffeine
@@ -99,7 +99,7 @@ com.moowork.gradle:
   gradle-node-plugin: { version: '1.3.1' }
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.22' }
+  checkstyle: { version: '8.23' }
 
 com.spotify:
   completable-futures:
@@ -110,7 +110,7 @@ com.spotify:
 
 com.squareup.retrofit2:
   retrofit:
-    version: &RETROFIT2_VERSION '2.6.0'
+    version: &RETROFIT2_VERSION '2.6.1'
     javadocs:
     - https://square.github.io/retrofit/2.x/retrofit/
   converter-jackson: { version: *RETROFIT2_VERSION }
@@ -195,7 +195,7 @@ io.netty:
 
 io.projectreactor:
   reactor-core:
-    version: &REACTOR_VERSION '3.2.10.RELEASE'
+    version: &REACTOR_VERSION '3.2.11.RELEASE'
     javadocs:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }
@@ -208,7 +208,7 @@ io.prometheus:
 
 io.reactivex.rxjava2:
   rxjava:
-    version: '2.2.10'
+    version: '2.2.11'
     javadocs:
     - http://reactivex.io/RxJava/2.x/javadoc/
 
@@ -223,7 +223,7 @@ io.zipkin.brave:
 
 it.unimi.dsi:
   fastutil:
-    version: '8.2.3'
+    version: '8.3.0'
     relocations:
     - from: it.unimi.dsi.fastutil
       to: com.linecorp.armeria.internal.shaded.fastutil
@@ -338,7 +338,7 @@ org.apache.zookeeper:
     - org.slf4j:slf4j-log4j12
 
 org.assertj:
-  assertj-core: { version: '3.12.2' }
+  assertj-core: { version: '3.13.2' }
 
 org.awaitility:
   awaitility: { version: '3.1.6' }
@@ -432,7 +432,7 @@ org.reflections:
       to: com.linecorp.armeria.internal.shaded.reflections
 
 org.slf4j:
-  jcl-over-slf4j: { version: &SLF4J_VERSION '1.7.26' }
+  jcl-over-slf4j: { version: &SLF4J_VERSION '1.7.27' }
   jul-to-slf4j: { version: *SLF4J_VERSION }
   log4j-over-slf4j: { version: *SLF4J_VERSION }
   slf4j-api:
@@ -443,7 +443,7 @@ org.slf4j:
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.1.6.RELEASE'
+    version: &SPRING_BOOT_VERSION '2.1.7.RELEASE'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }
