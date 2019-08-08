@@ -97,10 +97,10 @@ public class RequestContextCurrentTraceContextTest {
     }
 
     @Test
-    public void newScope_doesNothingWhenNoCurrentRequestContext() {
+    public void newScope_appliesWhenNoCurrentRequestContext() {
         try (Scope traceContextScope = currentTraceContext.newScope(traceContext)) {
-            assertThat(traceContextScope).hasToString("IncompleteConfigurationScope");
-            assertThat(currentTraceContext.get()).isNull();
+            assertThat(traceContextScope).hasToString("ThreadLocalScope");
+            assertThat(currentTraceContext.get()).isEqualTo(traceContext);
         }
     }
 
