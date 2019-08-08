@@ -35,6 +35,18 @@ import com.linecorp.armeria.common.SessionProtocol;
  */
 public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpClientBuilder> {
 
+    /**
+     * An undefined {@link URI} to create {@link HttpClient} without specifying {@link URI}.
+     */
+    private static final URI UNDEFINED_URI = URI.create("none+http://undefined");
+
+    /**
+     * Returns {@code true} if the specified {@code uri} is an undefined {@link URI}.
+     */
+    static boolean isUndefinedUri(URI uri) {
+        return UNDEFINED_URI == uri;
+    }
+
     @Nullable
     private final URI uri;
     @Nullable
@@ -44,6 +56,15 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
     @Nullable
     private String path;
     private ClientFactory factory = ClientFactory.DEFAULT;
+
+    /**
+     * Creates a new instance.
+     */
+    public HttpClientBuilder() {
+        uri = UNDEFINED_URI;
+        scheme = null;
+        endpoint = null;
+    }
 
     /**
      * Creates a new instance.
@@ -62,9 +83,12 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
      *                                  in {@link SessionProtocol}
      */
     public HttpClientBuilder(URI uri) {
-        validateScheme(requireNonNull(uri, "uri").getScheme());
-
-        this.uri = URI.create(SerializationFormat.NONE + "+" + uri);
+        if (isUndefinedUri(uri)) {
+            this.uri = uri;
+        } else {
+            validateScheme(requireNonNull(uri, "uri").getScheme());
+            this.uri = URI.create(SerializationFormat.NONE + "+" + uri);
+        }
         scheme = null;
         endpoint = null;
     }

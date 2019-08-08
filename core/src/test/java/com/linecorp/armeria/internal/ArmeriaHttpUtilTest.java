@@ -29,7 +29,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 
@@ -58,9 +60,9 @@ import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
 
-public class ArmeriaHttpUtilTest {
+class ArmeriaHttpUtilTest {
     @Test
-    public void testConcatPaths() throws Exception {
+    void testConcatPaths() throws Exception {
         assertThat(concatPaths(null, "a")).isEqualTo("/a");
         assertThat(concatPaths(null, "/a")).isEqualTo("/a");
 
@@ -76,7 +78,7 @@ public class ArmeriaHttpUtilTest {
     }
 
     @Test
-    public void testDecodePath() throws Exception {
+    void testDecodePath() throws Exception {
         // Fast path
         final String pathThatDoesNotNeedDecode = "/foo_bar_baz";
         assertThat(decodePath(pathThatDoesNotNeedDecode)).isSameAs(pathThatDoesNotNeedDecode);
@@ -93,7 +95,7 @@ public class ArmeriaHttpUtilTest {
     }
 
     @Test
-    public void testParseDirectives() {
+    void testParseDirectives() {
         final Map<String, String> values = new LinkedHashMap<>();
         final BiConsumer<String, String> cb = (name, value) -> assertThat(values.put(name, value)).isNull();
 
@@ -147,7 +149,7 @@ public class ArmeriaHttpUtilTest {
     }
 
     @Test
-    public void outboundCookiesMustBeMergedForHttp1() throws Http2Exception {
+    void outboundCookiesMustBeMergedForHttp1() throws Http2Exception {
         final HttpHeaders in = HttpHeaders.builder()
                                           .add(HttpHeaderNames.COOKIE, "a=b; c=d")
                                           .add(HttpHeaderNames.COOKIE, "e=f;g=h")
@@ -165,7 +167,7 @@ public class ArmeriaHttpUtilTest {
     }
 
     @Test
-    public void outboundCookiesMustBeSplitForHttp2() {
+    void outboundCookiesMustBeSplitForHttp2() {
         final HttpHeaders in = HttpHeaders.builder()
                                           .add(HttpHeaderNames.COOKIE, "a=b; c=d")
                                           .add(HttpHeaderNames.COOKIE, "e=f;g=h")
@@ -180,7 +182,7 @@ public class ArmeriaHttpUtilTest {
     }
 
     @Test
-    public void inboundCookiesMustBeMergedForHttp1() {
+    void inboundCookiesMustBeMergedForHttp1() {
         final io.netty.handler.codec.http.HttpHeaders in = new DefaultHttpHeaders();
         in.add(HttpHeaderNames.COOKIE, "a=b; c=d");
         in.add(HttpHeaderNames.COOKIE, "e=f;g=h");
@@ -196,7 +198,7 @@ public class ArmeriaHttpUtilTest {
     }
 
     @Test
-    public void endOfStreamSet() {
+    void endOfStreamSet() {
         final Http2Headers in = new DefaultHttp2Headers();
         in.setInt(HttpHeaderNames.CONTENT_LENGTH, 0);
         final HttpHeaders out = toArmeria(in, true, true);
@@ -207,7 +209,7 @@ public class ArmeriaHttpUtilTest {
     }
 
     @Test
-    public void endOfStreamSetEmpty() {
+    void endOfStreamSetEmpty() {
         final Http2Headers in = new DefaultHttp2Headers();
         final HttpHeaders out = toArmeria(in, true, true);
         assertThat(out.isEndOfStream()).isTrue();
@@ -217,7 +219,7 @@ public class ArmeriaHttpUtilTest {
     }
 
     @Test
-    public void inboundCookiesMustBeMergedForHttp2() {
+    void inboundCookiesMustBeMergedForHttp2() {
         final Http2Headers in = new DefaultHttp2Headers();
 
         in.add(HttpHeaderNames.COOKIE, "a=b; c=d");
@@ -233,7 +235,7 @@ public class ArmeriaHttpUtilTest {
     }
 
     @Test
-    public void addHttp2AuthorityWithoutUserInfo() {
+    void addHttp2AuthorityWithoutUserInfo() {
         final RequestHeadersBuilder headers = RequestHeaders.builder();
 
         addHttp2Authority("foo", headers);
@@ -241,7 +243,7 @@ public class ArmeriaHttpUtilTest {
     }
 
     @Test
-    public void addHttp2AuthorityWithUserInfo() {
+    void addHttp2AuthorityWithUserInfo() {
         final RequestHeadersBuilder headers = RequestHeaders.builder();
 
         addHttp2Authority("info@foo", headers);
@@ -254,7 +256,7 @@ public class ArmeriaHttpUtilTest {
     }
 
     @Test
-    public void addHttp2AuthorityNullOrEmpty() {
+    void addHttp2AuthorityNullOrEmpty() {
         final RequestHeadersBuilder headers = RequestHeaders.builder();
 
         addHttp2Authority(null, headers);
@@ -265,13 +267,13 @@ public class ArmeriaHttpUtilTest {
     }
 
     @Test
-    public void addHttp2AuthorityWithEmptyAuthority() {
+    void addHttp2AuthorityWithEmptyAuthority() {
         assertThatThrownBy(() -> addHttp2Authority("info@", RequestHeaders.builder()))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    public void stripTEHeaders() {
+    void stripTEHeaders() {
         final io.netty.handler.codec.http.HttpHeaders in = new DefaultHttpHeaders();
         in.add(HttpHeaderNames.TE, HttpHeaderValues.GZIP);
         final HttpHeadersBuilder out = HttpHeaders.builder();
@@ -280,7 +282,7 @@ public class ArmeriaHttpUtilTest {
     }
 
     @Test
-    public void stripTEHeadersExcludingTrailers() {
+    void stripTEHeadersExcludingTrailers() {
         final io.netty.handler.codec.http.HttpHeaders in = new DefaultHttpHeaders();
         in.add(HttpHeaderNames.TE, HttpHeaderValues.GZIP);
         in.add(HttpHeaderNames.TE, HttpHeaderValues.TRAILERS);
@@ -290,7 +292,7 @@ public class ArmeriaHttpUtilTest {
     }
 
     @Test
-    public void stripTEHeadersCsvSeparatedExcludingTrailers() {
+    void stripTEHeadersCsvSeparatedExcludingTrailers() {
         final io.netty.handler.codec.http.HttpHeaders in = new DefaultHttpHeaders();
         in.add(HttpHeaderNames.TE, HttpHeaderValues.GZIP + "," + HttpHeaderValues.TRAILERS);
         final HttpHeadersBuilder out = HttpHeaders.builder();
@@ -299,7 +301,7 @@ public class ArmeriaHttpUtilTest {
     }
 
     @Test
-    public void stripTEHeadersCsvSeparatedAccountsForValueSimilarToTrailers() {
+    void stripTEHeadersCsvSeparatedAccountsForValueSimilarToTrailers() {
         final io.netty.handler.codec.http.HttpHeaders in = new DefaultHttpHeaders();
         in.add(HttpHeaderNames.TE, HttpHeaderValues.GZIP + "," + HttpHeaderValues.TRAILERS + "foo");
         final HttpHeadersBuilder out = HttpHeaders.builder();
@@ -308,7 +310,7 @@ public class ArmeriaHttpUtilTest {
     }
 
     @Test
-    public void stripTEHeadersAccountsForValueSimilarToTrailers() {
+    void stripTEHeadersAccountsForValueSimilarToTrailers() {
         final io.netty.handler.codec.http.HttpHeaders in = new DefaultHttpHeaders();
         in.add(HttpHeaderNames.TE, HttpHeaderValues.TRAILERS + "foo");
         final HttpHeadersBuilder out = HttpHeaders.builder();
@@ -317,7 +319,7 @@ public class ArmeriaHttpUtilTest {
     }
 
     @Test
-    public void stripTEHeadersAccountsForOWS() {
+    void stripTEHeadersAccountsForOWS() {
         final io.netty.handler.codec.http.HttpHeaders in = new DefaultHttpHeaders();
         in.add(HttpHeaderNames.TE, " " + HttpHeaderValues.TRAILERS + ' ');
         final HttpHeadersBuilder out = HttpHeaders.builder();
@@ -326,7 +328,7 @@ public class ArmeriaHttpUtilTest {
     }
 
     @Test
-    public void stripConnectionHeadersAndNominees() {
+    void stripConnectionHeadersAndNominees() {
         final io.netty.handler.codec.http.HttpHeaders in = new DefaultHttpHeaders();
         in.add(HttpHeaderNames.CONNECTION, "foo");
         in.add("foo", "bar");
@@ -336,7 +338,7 @@ public class ArmeriaHttpUtilTest {
     }
 
     @Test
-    public void stripConnectionNomineesWithCsv() {
+    void stripConnectionNomineesWithCsv() {
         final io.netty.handler.codec.http.HttpHeaders in = new DefaultHttpHeaders();
         in.add(HttpHeaderNames.CONNECTION, "foo,  bar");
         in.add("foo", "baz");
@@ -349,7 +351,7 @@ public class ArmeriaHttpUtilTest {
     }
 
     @Test
-    public void excludeBlacklistHeadersWhileHttp2ToHttp1() throws Http2Exception {
+    void excludeBlacklistHeadersWhileHttp2ToHttp1() throws Http2Exception {
         final HttpHeaders in = HttpHeaders.builder()
                                           .add(HttpHeaderNames.TRAILER, "foo")
                                           .add(HttpHeaderNames.AUTHORITY, "bar") // Translated to host
@@ -373,7 +375,7 @@ public class ArmeriaHttpUtilTest {
     }
 
     @Test
-    public void excludeBlacklistInTrailers() throws Http2Exception {
+    void excludeBlacklistInTrailers() throws Http2Exception {
         final HttpHeaders in = HttpHeaders.builder()
                                           .add(HttpHeaderNames.of("foo"), "bar")
                                           .add(HttpHeaderNames.TRANSFER_ENCODING, "dummy")
@@ -411,7 +413,7 @@ public class ArmeriaHttpUtilTest {
     }
 
     @Test
-    public void convertedHeaderTypes() {
+    void convertedHeaderTypes() {
         final Http2Headers in = new DefaultHttp2Headers().set("a", "b");
 
         // Request headers without pseudo headers.
@@ -454,7 +456,7 @@ public class ArmeriaHttpUtilTest {
     }
 
     @Test
-    public void toArmeriaRequestHeaders() {
+    void toArmeriaRequestHeaders() {
         final Http2Headers in = new DefaultHttp2Headers().set("a", "b");
 
         final InetSocketAddress socketAddress = new InetSocketAddress(36462);
@@ -471,6 +473,22 @@ public class ArmeriaHttpUtilTest {
                 ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, in, false, "https", serverConfig());
         assertThat(headers.scheme()).isEqualTo("https");
         assertThat(headers.authority()).isEqualTo("foo:36462");
+    }
+
+    @Test
+    void isAbsoluteUri() {
+        final String good = "none+http://a.com";
+        assertThat(ArmeriaHttpUtil.isAbsoluteUri(good)).isTrue();
+        final List<String> bad = Arrays.asList(
+                "none+http:/a",
+                "//a",
+                "://a",
+                "a/b://c",
+                "http://",
+                "://",
+                "",
+                null);
+        bad.forEach(path -> assertThat(ArmeriaHttpUtil.isAbsoluteUri(path)).isFalse());
     }
 
     private static ServerConfig serverConfig() {
