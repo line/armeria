@@ -83,7 +83,7 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
      *                                  in {@link SessionProtocol}
      */
     public HttpClientBuilder(URI uri) {
-        if (uri == UNDEFINED_URI) {
+        if (isUndefinedUri(uri)) {
             this.uri = uri;
         } else {
             validateScheme(requireNonNull(uri, "uri").getScheme());
