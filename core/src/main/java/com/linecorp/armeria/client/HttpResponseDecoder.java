@@ -265,8 +265,8 @@ abstract class HttpResponseDecoder {
             return delegate.onDemand(task);
         }
 
-        void onSubscriptionCancelled() {
-            close(null, this::cancelAction);
+        void onSubscriptionCancelled(@Nullable Throwable cause) {
+            close(cause, this::cancelAction);
         }
 
         @Override
@@ -306,7 +306,11 @@ abstract class HttpResponseDecoder {
         }
 
         private void cancelAction(@Nullable Throwable cause) {
-            logBuilder.endResponse();
+            if (cause != null) {
+                logBuilder.endResponse(cause);
+            } else {
+                logBuilder.endResponse();
+            }
         }
 
         @Override

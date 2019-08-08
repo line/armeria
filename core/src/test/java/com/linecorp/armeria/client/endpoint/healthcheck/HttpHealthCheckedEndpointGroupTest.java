@@ -58,7 +58,7 @@ class HttpHealthCheckedEndpointGroupTest {
             sb.http(0);
             sb.https(0);
             sb.tlsSelfSigned();
-            sb.service(HEALTH_CHECK_PATH, HealthCheckService.of());
+            sb.service(HEALTH_CHECK_PATH, HealthCheckService.builder().longPolling(0).build());
         }
     }
 
