@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.client.HttpClientBuilder.undefinedUri;
-
 import java.net.URI;
 import java.nio.charset.Charset;
 
@@ -38,7 +36,7 @@ public interface HttpClient extends ClientBuilderParams {
      * Creates a new HTTP client using the {@link ClientFactory#DEFAULT} and the {@link ClientOptions#DEFAULT}.
      */
     static HttpClient of() {
-        return of(ClientFactory.DEFAULT, undefinedUri(), ClientOptions.DEFAULT);
+        return new HttpClientBuilder().options(ClientOptions.DEFAULT).build();
     }
 
     /**

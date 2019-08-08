@@ -335,6 +335,25 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
+     * Returns {@code true} if the specified {@code path} is an absolute {@code URI}.
+     */
+    public static boolean isAbsolutePath(@Nullable String path) {
+        if (path == null) {
+            return false;
+        }
+        final int firstColonIdx = path.indexOf(':');
+        if (firstColonIdx <= 0 || firstColonIdx + 3 >= path.length()) {
+            return false;
+        }
+        final int firstSlashIdx = path.indexOf('/');
+        if (firstSlashIdx <= 0 || firstSlashIdx < firstColonIdx) {
+            return false;
+        }
+
+        return path.charAt(firstColonIdx + 1) == '/' && path.charAt(firstColonIdx + 2) == '/';
+    }
+
+    /**
      * Returns {@code true} if the specified HTTP status string represents an informational status.
      */
     public static boolean isInformational(@Nullable String statusText) {

@@ -38,15 +38,14 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-class SimpleHttpClientTest {
+class HttpClientRequestPathTest {
 
     @RegisterExtension
     @Order(10)
     static final ServerExtension server1 = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.http(0)
-              .service("/new-location", (ctx, req) -> HttpResponse.of(OK));
+            sb.service("/new-location", (ctx, req) -> HttpResponse.of(OK));
         }
     };
 
@@ -55,8 +54,7 @@ class SimpleHttpClientTest {
     static final ServerExtension server2 = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.http(0)
-              .service("/simple-client", (ctx, req) -> HttpResponse.of(OK))
+            sb.service("/simple-client", (ctx, req) -> HttpResponse.of(OK))
               .service("/redirect", (ctx, req) -> {
                   final HttpHeaders headers = ResponseHeaders.of(HttpStatus.TEMPORARY_REDIRECT,
                                                                  LOCATION, server1.uri("/new-location"));

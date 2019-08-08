@@ -18,10 +18,14 @@ package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.client.HttpClientBuilder.isUndefinedUri;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
+import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isAbsolutePath;
 
 import java.net.URI;
 
 import javax.annotation.Nullable;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
@@ -35,6 +39,8 @@ import io.netty.channel.EventLoop;
 
 final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> implements HttpClient {
 
+    private static final Logger logger = LoggerFactory.getLogger(DefaultHttpClient.class);
+
     DefaultHttpClient(ClientBuilderParams params, Client<HttpRequest, HttpResponse> delegate,
                       MeterRegistry meterRegistry, SessionProtocol sessionProtocol, Endpoint endpoint) {
         super(params, delegate, meterRegistry, sessionProtocol, endpoint);
@@ -46,27 +52,40 @@ final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> impl
     }
 
     private HttpResponse execute(@Nullable EventLoop eventLoop, HttpRequest req) {
-        final URI uri = URI.create(req.path());
-        final String authority = uri.getAuthority();
+        URI uri;
 
-        if (isUndefinedUri(uri()) && authority == null) {
-            return HttpResponse.ofFailure(new IllegalArgumentException("no authority: " + req.path()));
-        } else if (authority != null) {
-            final Endpoint endpoint = Endpoint.parse(authority);
+        if (isAbsolutePath(req.path())) {
+            try {
+                uri = URI.create(req.path());
+            } catch (Exception ex) {
+                logger.warn("Failed to create URI: {}", req.path(), ex);
+                uri = null;
+            }
+        } else {
+            uri = null;
+        }
+
+        if (uri == null) {
+            if (isUndefinedUri(uri())) {
+                req.abort();
+                return HttpResponse.ofFailure(new IllegalArgumentException("no authority: " + req.path()));
+            } else {
+                final String originalPath = req.path();
+                final String newPath = concatPaths(uri().getRawPath(), originalPath);
+                final HttpRequest newReq;
+                // newPath and originalPath should be the same reference if uri().getRawPath() can be ignorable
+                if (newPath != originalPath) {
+                    newReq = HttpRequest.of(req, req.headers().toBuilder().path(newPath).build());
+                } else {
+                    newReq = req;
+                }
+                return execute(eventLoop, endpoint(), newReq);
+            }
+        } else {
+            final Endpoint endpoint = Endpoint.parse(uri.getAuthority());
             final RequestHeaders newHeaders = req.headers().toBuilder().path(uri.getRawPath()).build();
             final HttpRequest newReq = HttpRequest.of(req, newHeaders);
             return execute(eventLoop, endpoint, newReq);
-        } else {
-            final String originalPath = req.path();
-            final String newPath = concatPaths(uri().getRawPath(), originalPath);
-            final HttpRequest newReq;
-            // newPath and originalPath should be the same reference if uri().getRawPath() can be ignorable
-            if (newPath != originalPath) {
-                newReq = HttpRequest.of(req, req.headers().toBuilder().path(newPath).build());
-            } else {
-                newReq = req;
-            }
-            return execute(eventLoop, endpoint(), newReq);
         }
     }
 

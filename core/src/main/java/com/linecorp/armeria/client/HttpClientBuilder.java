@@ -38,14 +38,7 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
     /**
      * An undefined {@link URI} to create {@link HttpClient} without specifying {@link URI}.
      */
-    private static final URI UNDEFINED_URI = URI.create("none+http://127.0.0.1");
-
-    /**
-     * Returns an undefined {@link URI}.
-     */
-    static URI undefinedUri() {
-        return UNDEFINED_URI;
-    }
+    private static final URI UNDEFINED_URI = URI.create("none+http://undefined");
 
     /**
      * Returns {@code true} if the specified {@code uri} is an undefined {@link URI}.
@@ -63,6 +56,15 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
     @Nullable
     private String path;
     private ClientFactory factory = ClientFactory.DEFAULT;
+
+    /**
+     * Creates a new instance.
+     */
+    public HttpClientBuilder() {
+        uri = UNDEFINED_URI;
+        scheme = null;
+        endpoint = null;
+    }
 
     /**
      * Creates a new instance.
