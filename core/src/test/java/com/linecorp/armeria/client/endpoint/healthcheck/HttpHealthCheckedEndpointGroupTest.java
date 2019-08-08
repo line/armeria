@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.endpoint.healthcheck;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
@@ -31,12 +32,12 @@ import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup;
-import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.healthcheck.HttpHealthCheckService;
+import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -57,7 +58,7 @@ class HttpHealthCheckedEndpointGroupTest {
             sb.http(0);
             sb.https(0);
             sb.tlsSelfSigned();
-            sb.service(HEALTH_CHECK_PATH, new HttpHealthCheckService());
+            sb.service(HEALTH_CHECK_PATH, HealthCheckService.of());
         }
     }
 
@@ -74,54 +75,56 @@ class HttpHealthCheckedEndpointGroupTest {
             .build();
 
     @ParameterizedTest
-    @EnumSource(value = SessionProtocol.class, names = {"HTTP", "HTTPS"})
+    @EnumSource(value = SessionProtocol.class, names = { "HTTP", "HTTPS" })
     void endpoints(SessionProtocol protocol) throws Exception {
         serverOne.start();
         serverTwo.start();
 
         final int portOne = serverOne.port(protocol);
         final int portTwo = serverTwo.port(protocol);
-        final HealthCheckedEndpointGroup endpointGroup = new HttpHealthCheckedEndpointGroupBuilder(
-                new StaticEndpointGroup(Endpoint.of("127.0.0.1", portOne),
-                                        Endpoint.of("127.0.0.1", portTwo)),
-                HEALTH_CHECK_PATH)
-                .protocol(protocol)
-                .clientFactory(clientFactory)
-                .build();
+        try (HealthCheckedEndpointGroup endpointGroup = build(
+                HealthCheckedEndpointGroup.builder(
+                        new StaticEndpointGroup(Endpoint.of("127.0.0.1", portOne),
+                                                Endpoint.of("127.0.0.1", portTwo)),
+                        HEALTH_CHECK_PATH),
+                protocol)) {
 
-        endpointGroup.newMeterBinder("foo").bindTo(registry);
+            endpointGroup.newMeterBinder("foo").bindTo(registry);
 
-        await().untilAsserted(() -> {
-            assertThat(endpointGroup.endpoints()).containsExactlyInAnyOrder(
-                    Endpoint.of("127.0.0.1", portOne),
-                    Endpoint.of("127.0.0.1", portTwo));
+            await().untilAsserted(() -> {
+                assertThat(endpointGroup.endpoints()).containsExactlyInAnyOrder(
+                        Endpoint.of("127.0.0.1", portOne),
+                        Endpoint.of("127.0.0.1", portTwo));
 
-            assertThat(MoreMeters.measureAll(registry))
-                    .containsEntry("armeria.client.endpointGroup.count#value{name=foo,state=healthy}", 2.0)
-                    .containsEntry("armeria.client.endpointGroup.count#value{name=foo,state=unhealthy}", 0.0)
-                    .containsEntry("armeria.client.endpointGroup.healthy#value" +
-                                   "{authority=127.0.0.1:" + portOne + ",ip=127.0.0.1,name=foo}", 1.0)
-                    .containsEntry("armeria.client.endpointGroup.healthy#value" +
-                                   "{authority=127.0.0.1:" + portTwo + ",ip=127.0.0.1,name=foo}", 1.0);
-        });
+                assertThat(MoreMeters.measureAll(registry))
+                        .containsEntry("armeria.client.endpointGroup.count#value{name=foo,state=healthy}", 2.0)
+                        .containsEntry("armeria.client.endpointGroup.count#value{name=foo,state=unhealthy}",
+                                       0.0)
+                        .containsEntry("armeria.client.endpointGroup.healthy#value" +
+                                       "{authority=127.0.0.1:" + portOne + ",ip=127.0.0.1,name=foo}", 1.0)
+                        .containsEntry("armeria.client.endpointGroup.healthy#value" +
+                                       "{authority=127.0.0.1:" + portTwo + ",ip=127.0.0.1,name=foo}", 1.0);
+            });
 
-        serverTwo.stop().get();
-        await().untilAsserted(() -> {
-            assertThat(endpointGroup.endpoints()).containsExactly(
-                    Endpoint.of("127.0.0.1", portOne));
+            serverTwo.stop().get();
+            await().untilAsserted(() -> {
+                assertThat(endpointGroup.endpoints()).containsExactly(
+                        Endpoint.of("127.0.0.1", portOne));
 
-            assertThat(MoreMeters.measureAll(registry))
-                    .containsEntry("armeria.client.endpointGroup.count#value{name=foo,state=healthy}", 1.0)
-                    .containsEntry("armeria.client.endpointGroup.count#value{name=foo,state=unhealthy}", 1.0)
-                    .containsEntry("armeria.client.endpointGroup.healthy#value" +
-                                   "{authority=127.0.0.1:" + portOne + ",ip=127.0.0.1,name=foo}", 1.0)
-                    .containsEntry("armeria.client.endpointGroup.healthy#value" +
-                                   "{authority=127.0.0.1:" + portTwo + ",ip=127.0.0.1,name=foo}", 0.0);
-        });
+                assertThat(MoreMeters.measureAll(registry))
+                        .containsEntry("armeria.client.endpointGroup.count#value{name=foo,state=healthy}", 1.0)
+                        .containsEntry("armeria.client.endpointGroup.count#value{name=foo,state=unhealthy}",
+                                       1.0)
+                        .containsEntry("armeria.client.endpointGroup.healthy#value" +
+                                       "{authority=127.0.0.1:" + portOne + ",ip=127.0.0.1,name=foo}", 1.0)
+                        .containsEntry("armeria.client.endpointGroup.healthy#value" +
+                                       "{authority=127.0.0.1:" + portTwo + ",ip=127.0.0.1,name=foo}", 0.0);
+            });
+        }
     }
 
     @ParameterizedTest
-    @EnumSource(value = SessionProtocol.class, names = {"HTTP", "HTTPS"})
+    @EnumSource(value = SessionProtocol.class, names = { "HTTP", "HTTPS" })
     void endpoints_withIpAndNoIp(SessionProtocol protocol) throws Exception {
         serverOne.start();
         serverTwo.start();
@@ -129,110 +132,113 @@ class HttpHealthCheckedEndpointGroupTest {
         final int portOne = serverOne.port(protocol);
         final int portTwo = serverTwo.port(protocol);
 
-        new HttpHealthCheckedEndpointGroupBuilder(
-                new StaticEndpointGroup(Endpoint.of("127.0.0.1", portOne)),
-                HEALTH_CHECK_PATH)
-                .protocol(protocol)
-                .clientFactory(clientFactory)
-                .build().newMeterBinder("foo").bindTo(registry);
+        try (HealthCheckedEndpointGroup groupFoo = build(
+                HealthCheckedEndpointGroup.builder(
+                        new StaticEndpointGroup(Endpoint.of("127.0.0.1", portOne)),
+                        HEALTH_CHECK_PATH),
+                protocol);
+             HealthCheckedEndpointGroup groupBar = build(
+                     HealthCheckedEndpointGroup.builder(
+                             new StaticEndpointGroup(Endpoint.of("localhost", portTwo)),
+                             HEALTH_CHECK_PATH),
+                     protocol)) {
 
-        new HttpHealthCheckedEndpointGroupBuilder(
-                new StaticEndpointGroup(Endpoint.of("localhost", portTwo)),
-                HEALTH_CHECK_PATH)
-                .protocol(protocol)
-                .clientFactory(clientFactory)
-                .build().newMeterBinder("bar").bindTo(registry);
+            groupFoo.newMeterBinder("foo").bindTo(registry);
+            groupBar.newMeterBinder("bar").bindTo(registry);
 
-        await().untilAsserted(() -> {
-            assertThat(MoreMeters.measureAll(registry))
-                    .containsEntry("armeria.client.endpointGroup.count#value{name=foo,state=healthy}", 1.0)
-                    .containsEntry("armeria.client.endpointGroup.count#value{name=bar,state=healthy}", 1.0)
-                    .containsEntry("armeria.client.endpointGroup.healthy#value" +
-                                   "{authority=127.0.0.1:" + portOne + ",ip=127.0.0.1,name=foo}", 1.0)
-                    .containsEntry("armeria.client.endpointGroup.healthy#value" +
-                                   "{authority=localhost:" + portTwo + ",ip=,name=bar}", 1.0);
-        });
+            await().untilAsserted(() -> {
+                assertThat(MoreMeters.measureAll(registry))
+                        .containsEntry("armeria.client.endpointGroup.count#value{name=foo,state=healthy}", 1.0)
+                        .containsEntry("armeria.client.endpointGroup.count#value{name=bar,state=healthy}", 1.0)
+                        .containsEntry("armeria.client.endpointGroup.healthy#value" +
+                                       "{authority=127.0.0.1:" + portOne + ",ip=127.0.0.1,name=foo}", 1.0)
+                        .containsEntry("armeria.client.endpointGroup.healthy#value" +
+                                       "{authority=localhost:" + portTwo + ",ip=,name=bar}", 1.0);
+            });
+        }
     }
 
     @ParameterizedTest
-    @EnumSource(value = SessionProtocol.class, names = {"HTTP", "HTTPS"})
+    @EnumSource(value = SessionProtocol.class, names = { "HTTP", "HTTPS" })
     void endpoints_customPort(SessionProtocol protocol) throws Exception {
         serverOne.start();
         serverTwo.start();
         final int portOne = serverOne.port(protocol);
         final int portTwo = serverTwo.port(protocol);
 
-        final HealthCheckedEndpointGroup endpointGroup = new HttpHealthCheckedEndpointGroupBuilder(
-                new StaticEndpointGroup(Endpoint.of("127.0.0.1", portOne)),
-                HEALTH_CHECK_PATH)
-                .healthCheckPort(portOne)
-                .protocol(protocol)
-                .clientFactory(clientFactory)
-                .build();
-        await().untilAsserted(
-                () -> assertThat(endpointGroup.endpoints()).containsOnly(Endpoint.of("127.0.0.1", portOne)));
+        try (HealthCheckedEndpointGroup endpointGroup = build(
+                HealthCheckedEndpointGroup.builder(
+                        new StaticEndpointGroup(Endpoint.of("127.0.0.1", portOne)),
+                        HEALTH_CHECK_PATH).port(portOne),
+                protocol)) {
+            await().untilAsserted(() -> {
+                assertThat(endpointGroup.endpoints()).containsOnly(Endpoint.of("127.0.0.1", portOne));
+            });
+        }
     }
 
     @ParameterizedTest
-    @EnumSource(value = SessionProtocol.class, names = {"HTTP", "HTTPS"})
+    @EnumSource(value = SessionProtocol.class, names = { "HTTP", "HTTPS" })
     void endpoints_containsUnhealthyServer(SessionProtocol protocol) throws Exception {
         serverOne.start();
 
         final int portOne = serverOne.port(protocol);
-        final int portTwo = 65535;
-        final HealthCheckedEndpointGroup endpointGroup = new HttpHealthCheckedEndpointGroupBuilder(
-                new StaticEndpointGroup(Endpoint.of("127.0.0.1", portOne),
-                                        Endpoint.of("127.0.0.1", portTwo)),
-                HEALTH_CHECK_PATH)
-                .protocol(protocol)
-                .clientFactory(clientFactory)
-                .build();
+        final int portTwo = 1;
+        try (HealthCheckedEndpointGroup endpointGroup = build(
+                HealthCheckedEndpointGroup.builder(
+                        new StaticEndpointGroup(Endpoint.of("127.0.0.1", portOne),
+                                                Endpoint.of("127.0.0.1", portTwo)),
+                        HEALTH_CHECK_PATH),
+                protocol)) {
 
-        endpointGroup.newMeterBinder("bar").bindTo(registry);
+            endpointGroup.newMeterBinder("bar").bindTo(registry);
 
-        await().untilAsserted(() -> {
-            assertThat(endpointGroup.endpoints())
-                    .containsOnly(Endpoint.of("127.0.0.1", portOne));
+            await().untilAsserted(() -> {
+                assertThat(endpointGroup.endpoints())
+                        .containsOnly(Endpoint.of("127.0.0.1", portOne));
 
-            assertThat(MoreMeters.measureAll(registry))
-                    .containsEntry("armeria.client.endpointGroup.count#value{name=bar,state=healthy}", 1.0)
-                    .containsEntry("armeria.client.endpointGroup.count#value{name=bar,state=unhealthy}", 1.0)
-                    .containsEntry("armeria.client.endpointGroup.healthy#value" +
-                                   "{authority=127.0.0.1:" + portOne + ",ip=127.0.0.1,name=bar}", 1.0)
-                    .containsEntry("armeria.client.endpointGroup.healthy#value" +
-                                   "{authority=127.0.0.1:" + portTwo + ",ip=127.0.0.1,name=bar}", 0.0);
-        });
+                assertThat(MoreMeters.measureAll(registry))
+                        .containsEntry("armeria.client.endpointGroup.count#value{name=bar,state=healthy}", 1.0)
+                        .containsEntry("armeria.client.endpointGroup.count#value{name=bar,state=unhealthy}",
+                                       1.0)
+                        .containsEntry("armeria.client.endpointGroup.healthy#value" +
+                                       "{authority=127.0.0.1:" + portOne + ",ip=127.0.0.1,name=bar}", 1.0)
+                        .containsEntry("armeria.client.endpointGroup.healthy#value" +
+                                       "{authority=127.0.0.1:" + portTwo + ",ip=127.0.0.1,name=bar}", 0.0);
+            });
+        }
     }
 
     @ParameterizedTest
-    @EnumSource(value = SessionProtocol.class, names = {"HTTP", "HTTPS"})
+    @EnumSource(value = SessionProtocol.class, names = { "HTTP", "HTTPS" })
     void endpoints_duplicateEntries(SessionProtocol protocol) throws Exception {
         serverOne.start();
 
         final int portOne = serverOne.port(protocol);
-        final HealthCheckedEndpointGroup endpointGroup = new HttpHealthCheckedEndpointGroupBuilder(
-                new StaticEndpointGroup(Endpoint.of("127.0.0.1", portOne),
-                                        Endpoint.of("127.0.0.1", portOne),
-                                        Endpoint.of("127.0.0.1", portOne)),
-                HEALTH_CHECK_PATH)
-                .protocol(protocol)
-                .clientFactory(clientFactory)
-                .build();
+        try (HealthCheckedEndpointGroup endpointGroup = build(
+                HealthCheckedEndpointGroup.builder(
+                        new StaticEndpointGroup(Endpoint.of("127.0.0.1", portOne),
+                                                Endpoint.of("127.0.0.1", portOne),
+                                                Endpoint.of("127.0.0.1", portOne)),
+                        HEALTH_CHECK_PATH),
+                protocol)) {
 
-        endpointGroup.newMeterBinder("baz").bindTo(registry);
+            endpointGroup.newMeterBinder("baz").bindTo(registry);
 
-        await().untilAsserted(() -> {
-            assertThat(endpointGroup.endpoints())
-                    .containsOnly(Endpoint.of("127.0.0.1", portOne));
+            await().untilAsserted(() -> {
+                assertThat(endpointGroup.endpoints())
+                        .containsOnly(Endpoint.of("127.0.0.1", portOne));
 
-            assertThat(MoreMeters.measureAll(registry))
-                    .containsEntry("armeria.client.endpointGroup.count#value{name=baz,state=healthy}", 3.0)
-                    .containsEntry("armeria.client.endpointGroup.count#value{name=baz,state=unhealthy}", 0.0)
-                    .containsEntry("armeria.client.endpointGroup.healthy#value" +
-                                   "{authority=127.0.0.1:" + portOne + ",ip=127.0.0.1,name=baz}", 1.0);
-        });
-        serverOne.stop();
-        await().untilAsserted(() -> assertThat(endpointGroup.endpoints()).isEmpty());
+                assertThat(MoreMeters.measureAll(registry))
+                        .containsEntry("armeria.client.endpointGroup.count#value{name=baz,state=healthy}", 3.0)
+                        .containsEntry("armeria.client.endpointGroup.count#value{name=baz,state=unhealthy}",
+                                       0.0)
+                        .containsEntry("armeria.client.endpointGroup.healthy#value" +
+                                       "{authority=127.0.0.1:" + portOne + ",ip=127.0.0.1,name=baz}", 1.0);
+            });
+            serverOne.stop();
+            await().untilAsserted(() -> assertThat(endpointGroup.endpoints()).isEmpty());
+        }
     }
 
     /**
@@ -241,32 +247,33 @@ class HttpHealthCheckedEndpointGroupTest {
      * if there are more than one IP addresses assigned to the host name.
      */
     @ParameterizedTest
-    @EnumSource(value = SessionProtocol.class, names = {"HTTP", "HTTPS"})
+    @EnumSource(value = SessionProtocol.class, names = { "HTTP", "HTTPS" })
     void endpoints_customAuthority(SessionProtocol protocol) throws Exception {
         serverOne.start();
 
         // This test case will fail if the health check does not use an IP address
         // because the host name 'foo' does not really exist.
         final int port = serverOne.port(protocol);
-        final HealthCheckedEndpointGroup endpointGroup = new HttpHealthCheckedEndpointGroupBuilder(
-                new StaticEndpointGroup(Endpoint.of("foo", port).withIpAddr("127.0.0.1")),
-                HEALTH_CHECK_PATH)
-                .protocol(protocol)
-                .clientFactory(clientFactory)
-                .build();
+        try (HealthCheckedEndpointGroup endpointGroup = build(
+                HealthCheckedEndpointGroup.builder(
+                        new StaticEndpointGroup(Endpoint.of("foo", port).withIpAddr("127.0.0.1")),
+                        HEALTH_CHECK_PATH),
+                protocol)) {
 
-        endpointGroup.newMeterBinder("qux").bindTo(registry);
+            endpointGroup.newMeterBinder("qux").bindTo(registry);
 
-        await().untilAsserted(() -> {
-            assertThat(endpointGroup.endpoints())
-                    .containsOnly(Endpoint.of("foo", port).withIpAddr("127.0.0.1"));
+            await().untilAsserted(() -> {
+                assertThat(endpointGroup.endpoints())
+                        .containsOnly(Endpoint.of("foo", port).withIpAddr("127.0.0.1"));
 
-            assertThat(MoreMeters.measureAll(registry))
-                    .containsEntry("armeria.client.endpointGroup.count#value{name=qux,state=healthy}", 1.0)
-                    .containsEntry("armeria.client.endpointGroup.count#value{name=qux,state=unhealthy}", 0.0)
-                    .containsEntry("armeria.client.endpointGroup.healthy#value" +
-                                   "{authority=foo:" + port + ",ip=127.0.0.1,name=qux}", 1.0);
-        });
+                assertThat(MoreMeters.measureAll(registry))
+                        .containsEntry("armeria.client.endpointGroup.count#value{name=qux,state=healthy}", 1.0)
+                        .containsEntry("armeria.client.endpointGroup.count#value{name=qux,state=unhealthy}",
+                                       0.0)
+                        .containsEntry("armeria.client.endpointGroup.healthy#value" +
+                                       "{authority=foo:" + port + ",ip=127.0.0.1,name=qux}", 1.0);
+            });
+        }
     }
 
     // Make sure we don't start health checking before a delegate has a chance to resolve endpoints, otherwise
@@ -280,11 +287,24 @@ class HttpHealthCheckedEndpointGroupTest {
         // even localhost usually takes long enough to resolve that this test would never work if the initial
         // health check didn't wait for localhost's DNS resolution.
         final int port = serverOne.httpPort();
-        final HealthCheckedEndpointGroup endpointGroup = new HttpHealthCheckedEndpointGroupBuilder(
-                DnsAddressEndpointGroup.of("localhost", port), HEALTH_CHECK_PATH)
-                .retryBackoff(Backoff.fixed(TimeUnit.HOURS.toMillis(1)))
-                .build();
+        try (HealthCheckedEndpointGroup endpointGroup =
+                     HealthCheckedEndpointGroup.builder(DnsAddressEndpointGroup.of("localhost", port),
+                                                        HEALTH_CHECK_PATH)
+                                               .retryInterval(Duration.ofHours(1))
+                                               .withClientOptions(b -> {
+                                                   return b.decorator(LoggingClient.newDecorator());
+                                               })
+                                               .build()) {
 
-        assertThat(endpointGroup.initialEndpointsFuture().get(10, TimeUnit.SECONDS)).hasSize(1);
+            assertThat(endpointGroup.initialEndpointsFuture().get(10, TimeUnit.SECONDS)).hasSize(1);
+        }
+    }
+
+    private HealthCheckedEndpointGroup build(HealthCheckedEndpointGroupBuilder builder,
+                                             SessionProtocol protocol) {
+        return builder.protocol(protocol)
+                      .clientFactory(clientFactory)
+                      .withClientOptions(b -> b.decorator(LoggingClient.newDecorator()))
+                      .build();
     }
 }

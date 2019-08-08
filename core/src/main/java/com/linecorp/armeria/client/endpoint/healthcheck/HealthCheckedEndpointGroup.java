@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,159 +15,179 @@
  */
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
-import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
 
-import java.time.Duration;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.AbstractExecutorService;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
+import org.jctools.maps.NonBlockingHashSet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientOptionsBuilder;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.util.AsyncCloseable;
 
 import io.micrometer.core.instrument.binder.MeterBinder;
+import io.netty.channel.EventLoopGroup;
+import io.netty.util.concurrent.Future;
 
 /**
- * An {@link EndpointGroup} decorator that only provides healthy {@link Endpoint}s.
+ * An {@link EndpointGroup} that filters out unhealthy {@link Endpoint}s from an existing {@link EndpointGroup},
+ * by sending periodic health check requests.
  */
-public abstract class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
-    static final Backoff DEFAULT_HEALTHCHECK_RETRY_BACKOFF = Backoff.fixed(3000).withJitter(0.2);
+public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
-    private final ClientFactory clientFactory;
-    private final EndpointGroup delegate;
-    private final Backoff retryBackoff;
+    static final Backoff DEFAULT_HEALTH_CHECK_RETRY_BACKOFF = Backoff.fixed(3000).withJitter(0.2);
 
-    @Nullable
-    private volatile ScheduledFuture<?> scheduledCheck;
-
-    volatile List<ServerConnection> allServers = ImmutableList.of();
+    private static final Logger logger = LoggerFactory.getLogger(HealthCheckedEndpointGroup.class);
 
     /**
-     * Creates a new instance.
-     * A subclass being initialized with this constructor must call {@link #init()} before start being used.
+     * Returns a newly created {@link HealthCheckedEndpointGroup} that sends HTTP {@code HEAD} health check
+     * requests with default options.
      *
-     * @deprecated Use {@link #HealthCheckedEndpointGroup(ClientFactory, EndpointGroup, Backoff)}.
+     * @param delegate the {@link EndpointGroup} that provides the candidate {@link Endpoint}s
+     * @param path     the HTTP request path, e.g. {@code "/internal/l7check"}
      */
-    @Deprecated
-    protected HealthCheckedEndpointGroup(ClientFactory clientFactory,
-                                         EndpointGroup delegate,
-                                         Duration retryInterval) {
-        this(clientFactory, delegate,
-             Backoff.fixed(requireNonNull(retryInterval, "retryInterval").toMillis())
-                    .withJitter(0.2));
+    public static HealthCheckedEndpointGroup of(EndpointGroup delegate, String path) {
+        return builder(delegate, path).build();
     }
+
+    /**
+     * Returns a newly created {@link HealthCheckedEndpointGroupBuilder} that builds
+     * a {@link HealthCheckedEndpointGroup} which sends HTTP {@code HEAD} health check requests.
+     *
+     * @param delegate the {@link EndpointGroup} that provides the candidate {@link Endpoint}s
+     * @param path     the HTTP request path, e.g. {@code "/internal/l7check"}
+     */
+    public static HealthCheckedEndpointGroupBuilder builder(EndpointGroup delegate, String path) {
+        return new HealthCheckedEndpointGroupBuilder(delegate, path);
+    }
+
+    final EndpointGroup delegate;
+    private final ClientFactory clientFactory;
+    private final SessionProtocol protocol;
+    private final int port;
+    private final Backoff retryBackoff;
+    private final Function<? super ClientOptionsBuilder, ClientOptionsBuilder> clientConfigurator;
+    private final Function<? super HealthCheckerContext, ? extends AsyncCloseable> checker;
+
+    private final Map<Endpoint, DefaultHealthCheckerContext> contexts = new HashMap<>();
+    @VisibleForTesting
+    final Set<Endpoint> healthyEndpoints = new NonBlockingHashSet<>();
+    private volatile boolean closed;
 
     /**
      * Creates a new instance.
-     * A subclass being initialized with this constructor must call {@link #init()} before start being used.
      */
-    protected HealthCheckedEndpointGroup(ClientFactory clientFactory,
-                                         EndpointGroup delegate,
-                                         Backoff retryBackoff) {
-        this.clientFactory = requireNonNull(clientFactory, "clientFactory");
+    HealthCheckedEndpointGroup(EndpointGroup delegate, ClientFactory clientFactory,
+                               SessionProtocol protocol, int port, Backoff retryBackoff,
+                               Function<? super ClientOptionsBuilder, ClientOptionsBuilder> clientConfigurator,
+                               Function<? super HealthCheckerContext, ? extends AsyncCloseable> checker) {
         this.delegate = requireNonNull(delegate, "delegate");
+        this.clientFactory = requireNonNull(clientFactory, "clientFactory");
+        this.protocol = requireNonNull(protocol, "protocol");
+        this.port = port;
         this.retryBackoff = requireNonNull(retryBackoff, "retryBackoff");
+        this.clientConfigurator = requireNonNull(clientConfigurator, "clientConfigurator");
+        this.checker = requireNonNull(checker, "checker");
+
+        delegate.addListener(this::updateCandidates);
+        updateCandidates(delegate.initialEndpointsFuture().join());
+
+        // Wait until the initial health of all endpoints are determined.
+        contexts.values().forEach(ctx -> ctx.initialCheckFuture.join());
     }
 
-    /**
-     * Update healthy servers and start to schedule healthcheck.
-     * A subclass being initialized with this constructor must call {@link #init()} before start being used.
-     */
-    protected void init() {
-        checkState(scheduledCheck == null, "init() must only be called once.");
+    private void updateCandidates(List<Endpoint> candidates) {
+        synchronized (contexts) {
+            if (closed) {
+                return;
+            }
 
-        delegate.initialEndpointsFuture().join();
+            // Stop the health checkers whose endpoints disappeared and destroy their contexts.
+            for (final Iterator<Map.Entry<Endpoint, DefaultHealthCheckerContext>> i = contexts.entrySet()
+                                                                                              .iterator();
+                 i.hasNext();) {
+                final Map.Entry<Endpoint, DefaultHealthCheckerContext> e = i.next();
+                if (candidates.contains(e.getKey())) {
+                    // Not a removed endpoint.
+                    continue;
+                }
 
-        checkAndUpdateHealthyServers().join();
-        scheduleCheckAndUpdateHealthyServers();
+                i.remove();
+                e.getValue().destroy();
+            }
+
+            // Start the health checkers with new contexts for newly appeared endpoints.
+            for (Endpoint e : candidates) {
+                if (contexts.containsKey(e)) {
+                    // Not a new endpoint.
+                    continue;
+                }
+                final DefaultHealthCheckerContext ctx = new DefaultHealthCheckerContext(e);
+                ctx.init(checker.apply(ctx));
+                contexts.put(e, ctx);
+            }
+        }
     }
 
     @Override
     public void close() {
+        if (closed) {
+            return;
+        }
+
+        // Note: This method is thread-safe and idempotent as long as
+        //       super.close() and delegate.close() are so.
+        closed = true;
+
+        // Stop the health checkers in parallel.
+        final CompletableFuture<List<Object>> stopFutures;
+        synchronized (contexts) {
+            stopFutures = CompletableFutures.allAsList(
+                    contexts.values().stream()
+                            .map(ctx -> ctx.destroy().exceptionally(cause -> {
+                                logger.warn("Failed to stop a health checker for: {}",
+                                            ctx.endpoint(), cause);
+                                return null;
+                            }))
+                            .collect(toImmutableList()));
+            contexts.clear();
+        }
+
         super.close();
         delegate.close();
 
-        ScheduledFuture<?> scheduledCheck = this.scheduledCheck;
-        if (scheduledCheck != null) {
-            scheduledCheck.cancel(true);
-            this.scheduledCheck = null;
-        }
+        // Wait until the health checkers are fully stopped.
+        stopFutures.join();
     }
-
-    /**
-     * Returns the {@link ClientFactory} that will process {@link EndpointHealthChecker}'s healthcheck requests.
-     */
-    protected final ClientFactory clientFactory() {
-        return clientFactory;
-    }
-
-    private void scheduleCheckAndUpdateHealthyServers() {
-        scheduledCheck = clientFactory.eventLoopGroup().schedule(
-                () -> checkAndUpdateHealthyServers().thenRun(this::scheduleCheckAndUpdateHealthyServers),
-                retryBackoff.nextDelayMillis(1), TimeUnit.MILLISECONDS);
-    }
-
-    private CompletableFuture<Void> checkAndUpdateHealthyServers() {
-        final List<ServerConnection> checkedServers = updateServerList();
-
-        final CompletableFuture<List<Boolean>> healthCheckResults = CompletableFutures.successfulAsList(
-                checkedServers.stream()
-                              .map(connection -> connection.healthChecker.isHealthy(connection.endpoint()))
-                              .collect(toImmutableList()),
-                t -> false);
-        return healthCheckResults.handle((result, thrown) -> {
-            final ImmutableList.Builder<Endpoint> newHealthyEndpoints = ImmutableList.builder();
-            for (int i = 0; i < result.size(); i++) {
-                if (result.get(i)) {
-                    newHealthyEndpoints.add(checkedServers.get(i).endpoint());
-                }
-            }
-            setEndpoints(newHealthyEndpoints.build());
-            return null;
-        });
-    }
-
-    /**
-     * Update the servers this health checker client talks to.
-     */
-    private List<ServerConnection> updateServerList() {
-        final Map<Endpoint, ServerConnection> allServersByEndpoint = allServers
-                .stream()
-                .collect(toImmutableMap(ServerConnection::endpoint,
-                                        Function.identity(),
-                                        (l, r) -> l));
-        return allServers = delegate
-                .endpoints()
-                .stream()
-                .map(endpoint -> {
-                    ServerConnection connection = allServersByEndpoint.get(endpoint);
-                    if (connection != null) {
-                        return connection;
-                    }
-                    return new ServerConnection(endpoint, createEndpointHealthChecker(endpoint));
-                })
-                .collect(toImmutableList());
-    }
-
-    /**
-     * Creates a new {@link EndpointHealthChecker} instance that will check {@code endpoint} healthiness.
-     */
-    protected abstract EndpointHealthChecker createEndpointHealthChecker(Endpoint endpoint);
 
     /**
      * Returns a newly-created {@link MeterBinder} which binds the stats about this
@@ -187,40 +207,218 @@ public abstract class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
     @Override
     public String toString() {
-        final StringBuilder buf = new StringBuilder();
-        buf.append("HealthCheckedEndpointGroup(all:[");
-        for (ServerConnection connection : allServers) {
-            buf.append(connection.endpoint).append(',');
-        }
-        buf.setCharAt(buf.length() - 1, ']');
-        buf.append(", healthy:[");
-        for (Endpoint endpoint : endpoints()) {
-            buf.append(endpoint).append(',');
-        }
-        buf.setCharAt(buf.length() - 1, ']');
-        buf.append(')');
-        return buf.toString();
+        return MoreObjects.toStringHelper(this)
+                          .add("chosen", endpoints())
+                          .add("candidates", delegate.endpoints())
+                          .toString();
     }
 
-    /**
-     * Returns whether an {@link Endpoint} is healthy or not.
-     */
-    @FunctionalInterface
-    public interface EndpointHealthChecker {
-        CompletableFuture<Boolean> isHealthy(Endpoint endpoint);
-    }
+    private final class DefaultHealthCheckerContext
+            extends AbstractExecutorService implements HealthCheckerContext, ScheduledExecutorService {
 
-    static final class ServerConnection {
         private final Endpoint endpoint;
-        private final EndpointHealthChecker healthChecker;
 
-        private ServerConnection(Endpoint endpoint, EndpointHealthChecker healthChecker) {
+        /**
+         * Keeps the {@link Future}s which were scheduled via this {@link ScheduledExecutorService}.
+         * Note that this field is also used as a lock.
+         */
+        private final Map<Future<?>, Boolean> scheduledFutures = new IdentityHashMap<>();
+
+        @Nullable
+        private AsyncCloseable handle;
+        final CompletableFuture<?> initialCheckFuture = new CompletableFuture<>();
+        private boolean destroyed;
+
+        DefaultHealthCheckerContext(Endpoint endpoint) {
             this.endpoint = endpoint;
-            this.healthChecker = healthChecker;
         }
 
-        Endpoint endpoint() {
+        void init(AsyncCloseable handle) {
+            assert this.handle == null;
+            this.handle = handle;
+        }
+
+        CompletableFuture<?> destroy() {
+            assert handle != null : handle;
+            return handle.closeAsync().handle((unused1, unused2) -> {
+                synchronized (scheduledFutures) {
+                    if (destroyed) {
+                        return null;
+                    }
+
+                    destroyed = true;
+
+                    // Cancel all scheduled tasks. Make a copy to prevent ConcurrentModificationException
+                    // when the future's handler removes it from scheduledFutures as a result of
+                    // the cancellation, which may happen on this thread.
+                    if (!scheduledFutures.isEmpty()) {
+                        final ImmutableList<Future<?>> copy = ImmutableList.copyOf(scheduledFutures.keySet());
+                        copy.forEach(f -> f.cancel(false));
+                    }
+                }
+
+                updateHealth(0, true);
+
+                return null;
+            });
+        }
+
+        @Override
+        public Endpoint endpoint() {
             return endpoint;
+        }
+
+        @Override
+        public ClientFactory clientFactory() {
+            return clientFactory;
+        }
+
+        @Override
+        public SessionProtocol protocol() {
+            return protocol;
+        }
+
+        @Override
+        public int port() {
+            return port;
+        }
+
+        @Override
+        public Function<? super ClientOptionsBuilder, ClientOptionsBuilder> clientConfigurator() {
+            return clientConfigurator;
+        }
+
+        @Override
+        public ScheduledExecutorService executor() {
+            return this;
+        }
+
+        @Override
+        public long nextDelayMillis() {
+            final long delayMillis = retryBackoff.nextDelayMillis(1);
+            if (delayMillis < 0) {
+                throw new IllegalStateException(
+                        "retryBackoff.nextDelayMillis(1) returned a negative value for " + endpoint +
+                        ": " + delayMillis);
+            }
+
+            return delayMillis;
+        }
+
+        @Override
+        public void updateHealth(double health) {
+            updateHealth(health, false);
+        }
+
+        private void updateHealth(double health, boolean updateEvenIfDestroyed) {
+            final boolean updated;
+            synchronized (scheduledFutures) {
+                if (!updateEvenIfDestroyed && destroyed) {
+                    updated = false;
+                } else if (health > 0) {
+                    updated = healthyEndpoints.add(endpoint);
+                } else {
+                    updated = healthyEndpoints.remove(endpoint);
+                }
+            }
+
+            if (updated) {
+                // Rebuild the endpoint list and notify.
+                setEndpoints(delegate.endpoints().stream()
+                                     .filter(healthyEndpoints::contains)
+                                     .collect(toImmutableList()));
+            }
+
+            initialCheckFuture.complete(null);
+        }
+
+        @Override
+        public void execute(Runnable command) {
+            synchronized (scheduledFutures) {
+                rejectIfDestroyed(command);
+                add(eventLoopGroup().submit(command));
+            }
+        }
+
+        @Override
+        public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
+            synchronized (scheduledFutures) {
+                rejectIfDestroyed(command);
+                return add(eventLoopGroup().schedule(command, delay, unit));
+            }
+        }
+
+        @Override
+        public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
+            synchronized (scheduledFutures) {
+                rejectIfDestroyed(callable);
+                return add(eventLoopGroup().schedule(callable, delay, unit));
+            }
+        }
+
+        @Override
+        public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period,
+                                                      TimeUnit unit) {
+            synchronized (scheduledFutures) {
+                rejectIfDestroyed(command);
+                return add(eventLoopGroup().scheduleAtFixedRate(command, initialDelay, period, unit));
+            }
+        }
+
+        @Override
+        public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay,
+                                                         TimeUnit unit) {
+            synchronized (scheduledFutures) {
+                rejectIfDestroyed(command);
+                return add(eventLoopGroup().scheduleWithFixedDelay(command, initialDelay, delay, unit));
+            }
+        }
+
+        @Override
+        public void shutdown() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public List<Runnable> shutdownNow() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean isShutdown() {
+            return eventLoopGroup().isShutdown();
+        }
+
+        @Override
+        public boolean isTerminated() {
+            return eventLoopGroup().isTerminated();
+        }
+
+        @Override
+        public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+            return eventLoopGroup().awaitTermination(timeout, unit);
+        }
+
+        private EventLoopGroup eventLoopGroup() {
+            return clientFactory.eventLoopGroup();
+        }
+
+        private void rejectIfDestroyed(Object command) {
+            if (destroyed) {
+                throw new RejectedExecutionException(
+                        HealthCheckerContext.class.getSimpleName() + " for '" + endpoint +
+                        "' has been destroyed already. Task: " + command);
+            }
+        }
+
+        private <T extends Future<U>, U> T add(T future) {
+            scheduledFutures.put(future, Boolean.TRUE);
+            future.addListener(f -> {
+                synchronized (scheduledFutures) {
+                    scheduledFutures.remove(f);
+                }
+            });
+            return future;
         }
     }
 }

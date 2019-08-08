@@ -35,7 +35,7 @@ import io.micrometer.core.instrument.binder.MeterBinder;
 /**
  * {@link MeterBinder} for a {@link HealthCheckedEndpointGroup}.
  */
-class HealthCheckedEndpointGroupMetrics implements MeterBinder {
+final class HealthCheckedEndpointGroupMetrics implements MeterBinder {
 
     private final HealthCheckedEndpointGroup endpointGroup;
     private final MeterIdPrefix idPrefix;
@@ -51,7 +51,7 @@ class HealthCheckedEndpointGroupMetrics implements MeterBinder {
         registry.gauge(count, idPrefix.tags("state", "healthy"), endpointGroup,
                        unused -> endpointGroup.endpoints().size());
         registry.gauge(count, idPrefix.tags("state", "unhealthy"), endpointGroup,
-                       unused -> endpointGroup.allServers.size() - endpointGroup.endpoints().size());
+                       unused -> endpointGroup.delegate.endpoints().size() - endpointGroup.endpoints().size());
 
         final ListenerImpl listener = new ListenerImpl(registry, idPrefix.append("healthy"));
         listener.accept(endpointGroup.endpoints());
@@ -73,8 +73,8 @@ class HealthCheckedEndpointGroupMetrics implements MeterBinder {
         public void accept(List<Endpoint> endpoints) {
             final Map<Endpoint, Boolean> endpointsToUpdate = new HashMap<>();
             endpoints.forEach(e -> endpointsToUpdate.put(e, true));
-            endpointGroup.allServers.forEach(
-                    conn -> endpointsToUpdate.putIfAbsent(conn.endpoint(), false));
+            endpointGroup.delegate.endpoints().forEach(
+                    e -> endpointsToUpdate.putIfAbsent(e, false));
 
             // Update the previously appeared endpoints.
             healthMap.entrySet().forEach(e -> {

@@ -22,6 +22,7 @@ dependencies {
     compile project(':thrift')
 
     compile 'com.squareup.retrofit2:converter-jackson'
+    compile 'org.awaitility:awaitility'
 
     jmh 'pl.project13.scala:sbt-jmh-extras'
 }
