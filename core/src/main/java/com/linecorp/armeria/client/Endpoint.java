@@ -327,7 +327,8 @@ public final class Endpoint implements Comparable<Endpoint> {
      * @throws IllegalStateException if this endpoint is not a host but a group
      */
     public boolean hasPort() {
-        return port(0) != 0;
+        ensureSingle();
+        return port != 0;
     }
 
     /**
