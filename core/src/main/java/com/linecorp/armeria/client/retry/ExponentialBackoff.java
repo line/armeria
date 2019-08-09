@@ -42,7 +42,7 @@ final class ExponentialBackoff extends AbstractBackoff {
         this.maxDelayMillis = maxDelayMillis;
         this.multiplier = multiplier;
 
-        if (saturatedMultiply(initialDelayMillis, Math.pow(multiplier, 30)) > maxDelayMillis) {
+        if (computeNextDelayMillis(30) > maxDelayMillis) {
             // We'll only have a maximum of 30 different delays, so may as well precompute them.
             List<Long> precomputed = new ArrayList<>();
             long delay = initialDelayMillis;
@@ -71,6 +71,10 @@ final class ExponentialBackoff extends AbstractBackoff {
             }
         }
 
+        return computeNextDelayMillis(numAttemptsSoFar);
+    }
+
+    private long computeNextDelayMillis(int numAttemptsSoFar) {
         if (numAttemptsSoFar == 1) {
             return initialDelayMillis;
         }
