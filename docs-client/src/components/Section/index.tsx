@@ -16,7 +16,7 @@
 
 import Paper from '@material-ui/core/Paper';
 import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
-import React from 'react';
+import React, { ReactNode } from 'react';
 
 const useStyles = makeStyles((theme: Theme) =>
   createStyles({
@@ -28,7 +28,9 @@ const useStyles = makeStyles((theme: Theme) =>
   }),
 );
 
-const Section: React.FunctionComponent = ({ children }) => {
+const Section: React.FunctionComponent<{ children?: ReactNode }> = ({
+  children,
+}) => {
   const classes = useStyles();
   return <Paper className={classes.section}>{children}</Paper>;
 };
