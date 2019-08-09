@@ -16,13 +16,14 @@
 package com.linecorp.armeria.client.retry;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class FibonacciBackoffTest {
 
     @Test
-    public void testNextDelay() {
+    void testNextDelay() {
         final Backoff backoff = new FibonacciBackoff(10, 120);
         assertThat(backoff.nextDelayMillis(1)).isEqualTo(10);
         assertThat(backoff.nextDelayMillis(2)).isEqualTo(10);
@@ -32,7 +33,7 @@ public class FibonacciBackoffTest {
     }
 
     @Test
-    public void testOverflow() {
+    void testOverflow() {
         final Backoff backoff = new FibonacciBackoff(Long.MAX_VALUE / 3, Long.MAX_VALUE);
         assertThat(backoff.nextDelayMillis(1)).isEqualTo(Long.MAX_VALUE / 3);
         assertThat(backoff.nextDelayMillis(2)).isEqualTo(Long.MAX_VALUE / 3);
@@ -41,13 +42,15 @@ public class FibonacciBackoffTest {
         assertThat(backoff.nextDelayMillis(5)).isEqualTo(Long.MAX_VALUE);
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testContraintInitialDelay() {
-        new FibonacciBackoff(-5, 120);
+    @Test
+    void testContraintInitialDelay() {
+        assertThatThrownBy(() -> new FibonacciBackoff(-5, 120))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testConstraintMaxDelay() {
-        new FibonacciBackoff(10, 0);
+    @Test
+    void testConstraintMaxDelay() {
+        assertThatThrownBy(() -> new FibonacciBackoff(10, 0))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

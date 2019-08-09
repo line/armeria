@@ -57,6 +57,7 @@ final class BackoffSpec {
 
     private enum BaseOption {
         exponential, // exponential backoff will be used to build when none of the base options are set
+        fibonacci,
         fixed,
         random
     }
@@ -119,6 +120,9 @@ final class BackoffSpec {
             case "exponential":
                 exponential(key, values);
                 return;
+            case "fibonacci":
+                fibonacci(key, values);
+                return;
             case "fixed":
                 fixed(key, values);
                 return;
@@ -168,6 +172,26 @@ final class BackoffSpec {
     private static void checkNegative(String key, long value, String ordinal) {
         checkArgument(value >= 0, "%s parameter for %s must be a positive value. input: %s",
                       ordinal, key, value);
+    }
+
+    private void fibonacci(String key, String fibonacciValues) {
+        checkBaseBackoffConfigured();
+        baseOption = BaseOption.fibonacci;
+
+        final List<String> values = VALUE_SPLITTER.splitToList(fibonacciValues);
+        checkArgument(values.size() == 2,
+                      "the number of values for '%s' should be 2. input '%s'", key, fibonacciValues);
+
+        initialDelayMillis = parseLong(key, values.get(0), ORDINALS.get(0));
+        checkNegative(key, initialDelayMillis, ORDINALS.get(0));
+        maxDelayMillis = parseLong(key, values.get(1), ORDINALS.get(1));
+        checkNegative(key, maxDelayMillis, ORDINALS.get(1));
+
+        if (initialDelayMillis > maxDelayMillis) {
+            final long temp = initialDelayMillis;
+            initialDelayMillis = maxDelayMillis;
+            maxDelayMillis = temp;
+        }
     }
 
     private void fixed(String key, String value) {
@@ -275,6 +299,8 @@ final class BackoffSpec {
             backoff = Backoff.fixed(fixedDelayMillis);
         } else if (baseOption == BaseOption.random) {
             backoff = Backoff.random(randomMinDelayMillis, randomMaxDelayMillis);
+        } else if (baseOption == BaseOption.fibonacci) {
+            backoff = Backoff.fibonacci(randomMinDelayMillis, randomMaxDelayMillis);
         } else {
             backoff = Backoff.exponential(initialDelayMillis, maxDelayMillis, multiplier);
         }
