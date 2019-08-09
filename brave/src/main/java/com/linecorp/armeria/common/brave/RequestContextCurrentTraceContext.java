@@ -55,7 +55,8 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
      * background threads, such as the thread that reports traced spans to storage, to prevent logging a
      * warning when trying to start a trace without having a {@link RequestContext}.
      *
-     * <p>For example, to prevent warnings from an administrative thread controlled by a thread factory:
+     * <p>For example, you could prevent warnings from the administrative threads controlled by
+     * a {@link java.util.concurrent.ThreadFactory} like the following:
      * <pre>{@code
      * > ThreadFactory factory = (runnable) -> new Thread(new Runnable() {
      * >     @Override public void run() {
