@@ -65,11 +65,7 @@ final class ExponentialBackoff extends AbstractBackoff {
     protected long doNextDelayMillis(int numAttemptsSoFar) {
         if (precomputedDelays != null) {
             int index = numAttemptsSoFar - 1;
-            if (index >= precomputedDelays.length) {
-                return precomputedDelays[precomputedDelays.length - 1];
-            } else {
-                return precomputedDelays[index];
-            }
+            return precomputedDelays[Math.min(index, precomputedDelays.length - 1)];
         }
 
         return computeNextDelayMillis(numAttemptsSoFar);
