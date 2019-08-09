@@ -125,6 +125,7 @@ public final class HealthCheckService implements HttpService, TransientService<H
     private final Set<HealthChecker> healthCheckers;
     private final AggregatedHttpResponse healthyResponse;
     private final AggregatedHttpResponse unhealthyResponse;
+    private final AggregatedHttpResponse stoppingResponse;
     private final ResponseHeaders notModifiedHeaders;
     private final long maxLongPollingTimeoutMillis;
     private final double longPollingTimeoutJitterRate;
@@ -139,13 +140,15 @@ public final class HealthCheckService implements HttpService, TransientService<H
 
     @Nullable
     private Server server;
+    private boolean serverStopping;
 
     HealthCheckService(Iterable<HealthChecker> healthCheckers,
                        AggregatedHttpResponse healthyResponse, AggregatedHttpResponse unhealthyResponse,
                        long maxLongPollingTimeoutMillis, double longPollingTimeoutJitterRate,
                        @Nullable HealthCheckUpdateHandler updateHandler) {
         serverHealth = new SettableHealthChecker(false);
-        this.healthCheckers = ImmutableSet.copyOf(healthCheckers);
+        this.healthCheckers = ImmutableSet.<HealthChecker>builder()
+                .add(serverHealth).addAll(healthCheckers).build();
         this.updateHandler = updateHandler;
 
         if (maxLongPollingTimeoutMillis > 0 &&
@@ -171,6 +174,8 @@ public final class HealthCheckService implements HttpService, TransientService<H
 
         this.healthyResponse = addCommonHeaders(healthyResponse);
         this.unhealthyResponse = addCommonHeaders(unhealthyResponse);
+        stoppingResponse = isLongPollingEnabled() ? addCommonHeaders(unhealthyResponse, 0)
+                                                  : this.unhealthyResponse;
         notModifiedHeaders = ResponseHeaders.builder()
                                             .add(this.unhealthyResponse.headers())
                                             .status(HttpStatus.NOT_MODIFIED)
@@ -179,13 +184,18 @@ public final class HealthCheckService implements HttpService, TransientService<H
     }
 
     private AggregatedHttpResponse addCommonHeaders(AggregatedHttpResponse res) {
-        final String maxLongPollingTimeoutSeconds =
-                isLongPollingEnabled() ? String.valueOf(Math.max(1, maxLongPollingTimeoutMillis / 1000))
-                                       : "0";
+        final long maxLongPollingTimeoutSeconds =
+                isLongPollingEnabled() ? Math.max(1, maxLongPollingTimeoutMillis / 1000)
+                                       : 0;
 
+        return addCommonHeaders(res, maxLongPollingTimeoutSeconds);
+    }
+
+    private static AggregatedHttpResponse addCommonHeaders(AggregatedHttpResponse res,
+                                                           long maxLongPollingTimeoutSeconds) {
         return AggregatedHttpResponse.of(res.informationals(),
                                          res.headers().toBuilder()
-                                            .set(ARMERIA_LPHC, maxLongPollingTimeoutSeconds)
+                                            .setLong(ARMERIA_LPHC, maxLongPollingTimeoutSeconds)
                                             .build(),
                                          res.content(),
                                          res.trailers().toBuilder()
@@ -207,6 +217,7 @@ public final class HealthCheckService implements HttpService, TransientService<H
         server.addListener(new ServerListenerAdapter() {
             @Override
             public void serverStarting(Server server) throws Exception {
+                serverStopping = false;
                 if (healthCheckerListener != null) {
                     healthCheckers.stream().map(ListenableHealthChecker.class::cast).forEach(c -> {
                         c.addListener(healthCheckerListener);
@@ -221,6 +232,7 @@ public final class HealthCheckService implements HttpService, TransientService<H
 
             @Override
             public void serverStopping(Server server) {
+                serverStopping = true;
                 serverHealth.setHealthy(false);
             }
 
@@ -333,7 +345,7 @@ public final class HealthCheckService implements HttpService, TransientService<H
                 return false;
             }
         }
-        return serverHealth.isHealthy();
+        return true;
     }
 
     private long getLongPollingTimeoutMillis(HttpRequest req) {
@@ -384,7 +396,15 @@ public final class HealthCheckService implements HttpService, TransientService<H
     }
 
     private HttpResponse newResponse(HttpMethod method, boolean isHealthy) {
-        final AggregatedHttpResponse aRes = isHealthy ? healthyResponse : unhealthyResponse;
+        final AggregatedHttpResponse aRes;
+        if (isHealthy) {
+            aRes = healthyResponse;
+        } else if (serverStopping) {
+            aRes = stoppingResponse;
+        } else {
+            aRes = unhealthyResponse;
+        }
+
         if (method == HttpMethod.HEAD) {
             return HttpResponse.of(aRes.headers());
         } else {

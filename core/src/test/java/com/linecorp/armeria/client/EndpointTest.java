@@ -20,16 +20,16 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.net.StandardProtocolFamily;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 
-public class EndpointTest {
+class EndpointTest {
 
     @Test
-    public void parse() {
+    void parse() {
         final Endpoint foo = Endpoint.parse("foo");
         assertThat(foo).isEqualTo(Endpoint.of("foo"));
         assertThatThrownBy(foo::port).isInstanceOf(IllegalStateException.class);
@@ -37,6 +37,7 @@ public class EndpointTest {
         assertThat(foo.ipAddr()).isNull();
         assertThat(foo.ipFamily()).isNull();
         assertThat(foo.hasIpAddr()).isFalse();
+        assertThat(foo.hasPort()).isFalse();
         assertThat(foo.toUri("none+http").toString()).isEqualTo("none+http://foo");
 
         final Endpoint bar = Endpoint.parse("bar:80");
@@ -46,13 +47,14 @@ public class EndpointTest {
         assertThat(bar.ipAddr()).isNull();
         assertThat(bar.ipFamily()).isNull();
         assertThat(bar.hasIpAddr()).isFalse();
+        assertThat(bar.hasPort()).isTrue();
         assertThat(bar.toUri("none+http").toString()).isEqualTo("none+http://bar:80");
 
         assertThat(Endpoint.parse("group:foo")).isEqualTo(Endpoint.ofGroup("foo"));
     }
 
     @Test
-    public void group() {
+    void group() {
         final Endpoint foo = Endpoint.ofGroup("foo");
         assertThat(foo.isGroup()).isTrue();
         assertThat(foo.groupName()).isEqualTo("foo");
@@ -64,10 +66,11 @@ public class EndpointTest {
         assertThatThrownBy(foo::ipFamily).isInstanceOf(IllegalStateException.class);
         assertThatThrownBy(foo::hasIpAddr).isInstanceOf(IllegalStateException.class);
         assertThatThrownBy(foo::port).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(foo::hasPort).isInstanceOf(IllegalStateException.class);
     }
 
     @Test
-    public void hostWithoutPort() {
+    void hostWithoutPort() {
         final Endpoint foo = Endpoint.of("foo.com");
         assertThat(foo.isGroup()).isFalse();
         assertThat(foo.host()).isEqualTo("foo.com");
@@ -75,6 +78,7 @@ public class EndpointTest {
         assertThat(foo.ipFamily()).isNull();
         assertThat(foo.hasIpAddr()).isFalse();
         assertThat(foo.port(42)).isEqualTo(42);
+        assertThat(foo.hasPort()).isFalse();
         assertThat(foo.withDefaultPort(42).port()).isEqualTo(42);
         assertThat(foo.weight()).isEqualTo(1000);
         assertThat(foo.authority()).isEqualTo("foo.com");
@@ -87,7 +91,7 @@ public class EndpointTest {
     }
 
     @Test
-    public void hostWithPort() {
+    void hostWithPort() {
         final Endpoint foo = Endpoint.of("foo.com", 80);
         assertThat(foo.isGroup()).isFalse();
         assertThat(foo.host()).isEqualTo("foo.com");
@@ -96,6 +100,7 @@ public class EndpointTest {
         assertThat(foo.hasIpAddr()).isFalse();
         assertThat(foo.port()).isEqualTo(80);
         assertThat(foo.port(42)).isEqualTo(80);
+        assertThat(foo.hasPort()).isTrue();
         assertThat(foo.withDefaultPort(42)).isSameAs(foo);
         assertThat(foo.weight()).isEqualTo(1000);
         assertThat(foo.authority()).isEqualTo("foo.com:80");
@@ -105,7 +110,7 @@ public class EndpointTest {
     }
 
     @Test
-    public void hostWithWeight() {
+    void hostWithWeight() {
         final Endpoint foo = Endpoint.of("foo.com", 80).withWeight(500);
         assertThat(foo.weight()).isEqualTo(500);
         assertThat(foo.withWeight(750).weight()).isEqualTo(750);
@@ -116,7 +121,7 @@ public class EndpointTest {
     }
 
     @Test
-    public void hostWithIpAddr() {
+    void hostWithIpAddr() {
         final Endpoint foo = Endpoint.of("foo.com").withIpAddr("192.168.0.1");
         assertThat(foo.authority()).isEqualTo("foo.com");
         assertThat(foo.ipAddr()).isEqualTo("192.168.0.1");
@@ -142,7 +147,7 @@ public class EndpointTest {
     }
 
     @Test
-    public void badHost() {
+    void badHost() {
         // Should not accept the host name followed by a port.
         assertThatThrownBy(() -> Endpoint.of("foo:80")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> Endpoint.of("127.0.0.1:80")).isInstanceOf(IllegalArgumentException.class);
@@ -150,7 +155,7 @@ public class EndpointTest {
     }
 
     @Test
-    public void ipV4() {
+    void ipV4() {
         final Endpoint a = Endpoint.of("192.168.0.1");
         assertThat(a.host()).isEqualTo("192.168.0.1");
         assertThat(a.ipAddr()).isEqualTo("192.168.0.1");
@@ -166,7 +171,7 @@ public class EndpointTest {
     }
 
     @Test
-    public void ipV4Parse() {
+    void ipV4Parse() {
         final Endpoint a = Endpoint.parse("192.168.0.1:80");
         assertThat(a.host()).isEqualTo("192.168.0.1");
         assertThat(a.ipAddr()).isEqualTo("192.168.0.1");
@@ -178,7 +183,7 @@ public class EndpointTest {
     }
 
     @Test
-    public void ipV6() {
+    void ipV6() {
         final Endpoint a = Endpoint.of("::1");
         assertThat(a.host()).isEqualTo("::1");
         assertThat(a.ipAddr()).isEqualTo("::1");
@@ -226,7 +231,7 @@ public class EndpointTest {
     }
 
     @Test
-    public void ipV6Parse() {
+    void ipV6Parse() {
         final Endpoint a = Endpoint.parse("[::1]:80");
         assertThat(a.host()).isEqualTo("::1");
         assertThat(a.ipAddr()).isEqualTo("::1");
@@ -238,7 +243,7 @@ public class EndpointTest {
     }
 
     @Test
-    public void authorityCache() {
+    void authorityCache() {
         final Endpoint foo = Endpoint.of("foo.com", 80);
         final String authority1 = foo.authority();
         final String authority2 = foo.authority();
@@ -246,7 +251,46 @@ public class EndpointTest {
     }
 
     @Test
-    public void toUri() {
+    void withPort() {
+        final Endpoint foo = Endpoint.of("foo");
+        final Endpoint foo80 = Endpoint.of("foo", 80);
+        assertThat(foo.withPort(80)).isEqualTo(foo80);
+        assertThat(foo80.withPort(80)).isSameAs(foo80);
+        assertThatThrownBy(() -> foo.withPort(0)).isInstanceOf(IllegalArgumentException.class)
+                                                 .hasMessageContaining("port");
+    }
+
+    @Test
+    void withoutPort() {
+        final Endpoint foo = Endpoint.of("foo");
+        final Endpoint foo80 = Endpoint.of("foo", 80);
+        assertThat(foo.withoutPort()).isSameAs(foo);
+        assertThat(foo80.withoutPort()).isEqualTo(foo);
+    }
+
+    @Test
+    void withDefaultPort() {
+        final Endpoint foo = Endpoint.of("foo");
+        final Endpoint foo80 = Endpoint.of("foo", 80);
+        assertThat(foo.withDefaultPort(80)).isEqualTo(foo80);
+        assertThat(foo80.withDefaultPort(80)).isSameAs(foo80);
+        assertThatThrownBy(() -> foo.withDefaultPort(0)).isInstanceOf(IllegalArgumentException.class)
+                                                        .hasMessageContaining("defaultPort");
+    }
+
+    @Test
+    void withoutDefaultPort() {
+        final Endpoint foo = Endpoint.of("foo");
+        final Endpoint foo80 = Endpoint.of("foo", 80);
+        assertThat(foo.withoutDefaultPort(80)).isSameAs(foo);
+        assertThat(foo80.withoutDefaultPort(80)).isEqualTo(foo);
+        assertThat(foo80.withoutDefaultPort(8080)).isSameAs(foo80);
+        assertThatThrownBy(() -> foo.withoutDefaultPort(0)).isInstanceOf(IllegalArgumentException.class)
+                                                           .hasMessageContaining("defaultPort");
+    }
+
+    @Test
+    void toUri() {
         final Endpoint group = Endpoint.ofGroup("a");
         assertThat(group.toUri("http").toString())
                 .isEqualTo("http://group:a");
@@ -293,7 +337,7 @@ public class EndpointTest {
     }
 
     @Test
-    public void equals() {
+    void equals() {
         final Endpoint a1 = Endpoint.of("a");
         final Endpoint a2 = Endpoint.of("a");
         final Endpoint groupA1 = Endpoint.ofGroup("a");
@@ -309,7 +353,7 @@ public class EndpointTest {
     }
 
     @Test
-    public void portEquals() {
+    void portEquals() {
         final Endpoint a = Endpoint.of("a");
         final Endpoint b = Endpoint.of("a", 80);
         final Endpoint c = Endpoint.of("a", 80);
@@ -326,7 +370,7 @@ public class EndpointTest {
     }
 
     @Test
-    public void ipAddrEquals() {
+    void ipAddrEquals() {
         final Endpoint a = Endpoint.of("a");
         final Endpoint b = Endpoint.of("a").withIpAddr("::1");
         final Endpoint c = Endpoint.of("a").withIpAddr("::1");
@@ -343,7 +387,7 @@ public class EndpointTest {
     }
 
     @Test
-    public void testHashCode() {
+    void testHashCode() {
         assertThat(Endpoint.of("a").hashCode()).isNotZero();
         assertThat(Endpoint.of("a", 80).hashCode()).isNotZero();
         assertThat(Endpoint.of("a").withIpAddr("::1").hashCode()).isNotZero();
@@ -356,7 +400,7 @@ public class EndpointTest {
     }
 
     @Test
-    public void testToString() {
+    void testToString() {
         assertThat(Endpoint.ofGroup("g").toString()).isEqualTo("Endpoint{group:g}");
         assertThat(Endpoint.of("a").toString()).isEqualTo("Endpoint{a, weight=1000}");
         assertThat(Endpoint.of("a", 80).toString()).isEqualTo("Endpoint{a:80, weight=1000}");
@@ -369,7 +413,7 @@ public class EndpointTest {
     }
 
     @Test
-    public void comparison() {
+    void comparison() {
         assertThat(Endpoint.ofGroup("a")).isEqualByComparingTo(Endpoint.ofGroup("a"));
         assertThat(Endpoint.ofGroup("a")).isLessThan(Endpoint.ofGroup("b"));
         assertThat(Endpoint.ofGroup("a")).isLessThan(Endpoint.of("a"));

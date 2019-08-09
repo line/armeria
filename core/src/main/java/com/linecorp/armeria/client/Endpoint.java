@@ -321,8 +321,55 @@ public final class Endpoint implements Comparable<Endpoint> {
     }
 
     /**
+     * Returns whether this endpoint has a port number specified.
+     *
+     * @return {@code true} if and only if this endpoint has a port number.
+     * @throws IllegalStateException if this endpoint is not a host but a group
+     */
+    public boolean hasPort() {
+        ensureSingle();
+        return port != 0;
+    }
+
+    /**
+     * Returns a new host endpoint with the specified port number.
+     *
+     * @param port the new port number
+     * @return the new endpoint with the specified port number if this endpoint does not have a port or
+     *         it has a different port number than what's specified.
+     *         {@code this} if this endpoint has the same port number with the specified one.
+     *
+     * @throws IllegalStateException if this endpoint is not a host but a group
+     */
+    public Endpoint withPort(int port) {
+        ensureSingle();
+        validatePort("port", port);
+        if (this.port == port) {
+            return this;
+        }
+        return new Endpoint(host, ipAddr, port, weight, hostType);
+    }
+
+    /**
+     * Returns a new host endpoint with its port number unspecified.
+     *
+     * @return the new endpoint whose port is unspecified if this endpoint has its port.
+     *         {@code this} if this endpoint does not have a port already.
+     *
+     * @throws IllegalStateException if this endpoint is not a host but a group
+     */
+    public Endpoint withoutPort() {
+        ensureSingle();
+        if (port == 0) {
+            return this;
+        }
+        return new Endpoint(host, ipAddr, 0, weight, hostType);
+    }
+
+    /**
      * Returns a new host endpoint with the specified default port number.
      *
+     * @param defaultPort the default port number
      * @return the new endpoint whose port is {@code defaultPort} if this endpoint does not have its port
      *         specified. {@code this} if this endpoint already has its port specified.
      *
@@ -336,7 +383,27 @@ public final class Endpoint implements Comparable<Endpoint> {
             return this;
         }
 
-        return new Endpoint(host(), ipAddr(), defaultPort, weight(), hostType);
+        return new Endpoint(host, ipAddr, defaultPort, weight, hostType);
+    }
+
+    /**
+     * Returns a new host endpoint with the default port number removed.
+     *
+     * @param defaultPort the default port number
+     * @return the new endpoint without a port number if this endpoint had the same port number
+     *         with the specified default port number. {@code this} if this endpoint had a different
+     *         port number than the specified default port number or this endpoint already does not have
+     *         a port number.
+     *
+     * @throws IllegalStateException if this endpoint is not a host but a group
+     */
+    public Endpoint withoutDefaultPort(int defaultPort) {
+        ensureSingle();
+        validatePort("defaultPort", defaultPort);
+        if (port == defaultPort) {
+            return new Endpoint(host, ipAddr, 0, weight, hostType);
+        }
+        return this;
     }
 
     /**

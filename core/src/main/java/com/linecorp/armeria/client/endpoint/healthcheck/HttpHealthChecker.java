@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
-import java.net.StandardProtocolFamily;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
@@ -39,7 +38,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 
 import io.netty.util.AsciiString;
@@ -50,37 +48,26 @@ final class HttpHealthChecker implements AsyncCloseable {
 
     private final HealthCheckerContext ctx;
     private final HttpClient httpClient;
+    private final String authority;
     private final String path;
+    private final boolean useGet;
     private boolean wasHealthy;
     private long maxLongPollingSeconds;
     @Nullable
     private HttpResponse lastResponse;
     private boolean closed;
 
-    HttpHealthChecker(HealthCheckerContext ctx, String path) {
-
+    HttpHealthChecker(HealthCheckerContext ctx, String path, boolean useGet) {
         final Endpoint endpoint = ctx.endpoint();
-        final SessionProtocol protocol = ctx.protocol();
-        final String scheme = protocol.uriText();
-        final String ipAddr = endpoint.ipAddr();
-        final HttpClientBuilder builder;
-        if (ipAddr == null) {
-            builder = new HttpClientBuilder(scheme + "://" + endpoint.authority());
-        } else {
-            final int port = ctx.port() > 0 ? ctx.port() : endpoint.port(protocol.defaultPort());
-            if (endpoint.ipFamily() == StandardProtocolFamily.INET) {
-                builder = new HttpClientBuilder(scheme + "://" + ipAddr + ':' + port);
-            } else {
-                builder = new HttpClientBuilder(scheme + "://[" + ipAddr + "]:" + port);
-            }
-        }
-
         this.ctx = ctx;
-        httpClient = builder.factory(ctx.clientFactory())
-                            .options(ctx.clientConfigurator().apply(new ClientOptionsBuilder()).build())
-                            .decorator(ResponseTimeoutUpdater::new)
-                            .build();
+        httpClient = new HttpClientBuilder(ctx.protocol(), endpoint)
+                .factory(ctx.clientFactory())
+                .options(ctx.clientConfigurator().apply(new ClientOptionsBuilder()).build())
+                .decorator(ResponseTimeoutUpdater::new)
+                .build();
+        authority = endpoint.authority();
         this.path = path;
+        this.useGet = useGet;
     }
 
     void start() {
@@ -94,8 +81,8 @@ final class HttpHealthChecker implements AsyncCloseable {
 
         final RequestHeaders headers;
         final RequestHeadersBuilder builder =
-                RequestHeaders.builder(HttpMethod.HEAD, path)
-                              .add(HttpHeaderNames.AUTHORITY, ctx.endpoint().authority());
+                RequestHeaders.builder(useGet ? HttpMethod.GET : HttpMethod.HEAD, path)
+                              .add(HttpHeaderNames.AUTHORITY, authority);
         if (maxLongPollingSeconds > 0) {
             headers = builder.add(HttpHeaderNames.IF_NONE_MATCH, wasHealthy ? "\"healthy\"" : "\"unhealthy\"")
                              .add(HttpHeaderNames.PREFER, "wait=" + maxLongPollingSeconds)

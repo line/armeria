@@ -26,19 +26,29 @@ import com.linecorp.armeria.client.ClientOptionsBuilder;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.AsyncCloseable;
 
 /**
  * A builder for creating a new {@link HealthCheckedEndpointGroup} that sends HTTP health check requests.
  */
 public class HealthCheckedEndpointGroupBuilder extends AbstractHealthCheckedEndpointGroupBuilder {
 
+    private final String path;
+    private boolean useGet;
+
     HealthCheckedEndpointGroupBuilder(EndpointGroup delegate, String path) {
-        super(delegate, ctx -> {
-            final HttpHealthChecker checker = new HttpHealthChecker(ctx, path);
-            checker.start();
-            return checker;
-        });
-        requireNonNull(path, "path");
+        super(delegate);
+        this.path = requireNonNull(path, "path");
+    }
+
+    /**
+     * Sets whether to use HTTP {@code GET} method instead of {@code HEAD} when sending a health check request.
+     * By default, {@code HEAD} method is used. This can be useful when the health check requests are failing
+     * due to a bad request or an authorization failure and you want to learn why.
+     */
+    public HealthCheckedEndpointGroupBuilder useGet(boolean useGet) {
+        this.useGet = useGet;
+        return this;
     }
 
     @Override
@@ -53,7 +63,7 @@ public class HealthCheckedEndpointGroupBuilder extends AbstractHealthCheckedEndp
 
     @Override
     public HealthCheckedEndpointGroupBuilder healthCheckPort(int port) {
-        return (HealthCheckedEndpointGroupBuilder) super.healthCheckPort(port);
+        return port(port);
     }
 
     @Override
@@ -75,5 +85,28 @@ public class HealthCheckedEndpointGroupBuilder extends AbstractHealthCheckedEndp
     public HealthCheckedEndpointGroupBuilder withClientOptions(
             Function<? super ClientOptionsBuilder, ClientOptionsBuilder> configurator) {
         return (HealthCheckedEndpointGroupBuilder) super.withClientOptions(configurator);
+    }
+
+    @Override
+    protected Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory() {
+        return new HttpHealthCheckerFactory(path, useGet);
+    }
+
+    private static class HttpHealthCheckerFactory implements Function<HealthCheckerContext, AsyncCloseable> {
+
+        private final String path;
+        private final boolean useGet;
+
+        HttpHealthCheckerFactory(String path, boolean useGet) {
+            this.path = path;
+            this.useGet = useGet;
+        }
+
+        @Override
+        public AsyncCloseable apply(HealthCheckerContext ctx) {
+            final HttpHealthChecker checker = new HttpHealthChecker(ctx, path, useGet);
+            checker.start();
+            return checker;
+        }
     }
 }

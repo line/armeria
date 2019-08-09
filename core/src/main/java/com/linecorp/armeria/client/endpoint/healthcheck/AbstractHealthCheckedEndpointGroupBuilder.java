@@ -38,7 +38,6 @@ import com.linecorp.armeria.common.util.AsyncCloseable;
 public abstract class AbstractHealthCheckedEndpointGroupBuilder {
 
     private final EndpointGroup delegate;
-    private final Function<? super HealthCheckerContext, ? extends AsyncCloseable> checker;
 
     private SessionProtocol protocol = SessionProtocol.HTTP;
     private Backoff retryBackoff = DEFAULT_HEALTH_CHECK_RETRY_BACKOFF;
@@ -50,19 +49,9 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
      * Creates a new {@link AbstractHealthCheckedEndpointGroupBuilder}.
      *
      * @param delegate the {@link EndpointGroup} which provides the candidate {@link Endpoint}s
-     * @param checker the {@link Function} that starts to send health check requests to the {@link Endpoint}
-     *                specified in a given {@link HealthCheckerContext} when invoked.
-     *                The {@link Function} must update the health of the {@link Endpoint} with a value
-     *                between [0, 1] via {@link HealthCheckerContext#updateHealth(double)}.
-     *                {@link HealthCheckedEndpointGroup} will call {@link AsyncCloseable#closeAsync()} on
-     *                the {@link AsyncCloseable} returned by the {@link Function} when it needs to stop sending
-     *                health check requests.
      */
-    protected AbstractHealthCheckedEndpointGroupBuilder(
-            EndpointGroup delegate,
-            Function<? super HealthCheckerContext, ? extends AsyncCloseable> checker) {
+    protected AbstractHealthCheckedEndpointGroupBuilder(EndpointGroup delegate) {
         this.delegate = requireNonNull(delegate, "delegate");
-        this.checker = requireNonNull(checker, "checker");
     }
 
     /**
@@ -155,6 +144,16 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
      */
     public HealthCheckedEndpointGroup build() {
         return new HealthCheckedEndpointGroup(delegate, clientFactory, protocol, port,
-                                              retryBackoff, configurator, checker);
+                                              retryBackoff, configurator, newCheckerFactory());
     }
+
+    /**
+     * Returns the {@link Function} that starts to send health check requests to the {@link Endpoint}
+     * specified in a given {@link HealthCheckerContext} when invoked. The {@link Function} must update
+     * the health of the {@link Endpoint} with a value between [0, 1] via
+     * {@link HealthCheckerContext#updateHealth(double)}. {@link HealthCheckedEndpointGroup} will call
+     * {@link AsyncCloseable#closeAsync()} on the {@link AsyncCloseable} returned by the {@link Function}
+     * when it needs to stop sending health check requests.
+     */
+    protected abstract Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory();
 }
