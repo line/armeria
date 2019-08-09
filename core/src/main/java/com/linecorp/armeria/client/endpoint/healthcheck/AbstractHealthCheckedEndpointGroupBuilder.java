@@ -152,7 +152,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
      * specified in a given {@link HealthCheckerContext} when invoked. The {@link Function} must update
      * the health of the {@link Endpoint} with a value between [0, 1] via
      * {@link HealthCheckerContext#updateHealth(double)}. {@link HealthCheckedEndpointGroup} will call
-     * {@link AsyncCloseable#closeAsync()}on the {@link AsyncCloseable} returned by the {@link Function}
+     * {@link AsyncCloseable#closeAsync()} on the {@link AsyncCloseable} returned by the {@link Function}
      * when it needs to stop sending health check requests.
      */
     protected abstract Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory();
