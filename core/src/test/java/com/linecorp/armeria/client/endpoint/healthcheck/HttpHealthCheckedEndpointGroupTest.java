@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 
 import com.linecorp.armeria.client.ClientFactory;
@@ -75,8 +76,8 @@ class HttpHealthCheckedEndpointGroupTest {
             .build();
 
     @ParameterizedTest
-    @EnumSource(value = SessionProtocol.class, names = { "HTTP", "HTTPS" })
-    void endpoints(SessionProtocol protocol) throws Exception {
+    @CsvSource({ "HTTP, false", "HTTP, true", "HTTPS, false", "HTTPS, true" })
+    void endpoints(SessionProtocol protocol, boolean useGet) throws Exception {
         serverOne.start();
         serverTwo.start();
 
@@ -86,7 +87,7 @@ class HttpHealthCheckedEndpointGroupTest {
                 HealthCheckedEndpointGroup.builder(
                         new StaticEndpointGroup(Endpoint.of("127.0.0.1", portOne),
                                                 Endpoint.of("127.0.0.1", portTwo)),
-                        HEALTH_CHECK_PATH),
+                        HEALTH_CHECK_PATH).useGet(useGet),
                 protocol)) {
 
             endpointGroup.newMeterBinder("foo").bindTo(registry);

@@ -50,29 +50,55 @@ final class HttpHealthChecker implements AsyncCloseable {
 
     private final HealthCheckerContext ctx;
     private final HttpClient httpClient;
+    private final String authority;
     private final String path;
+    private final boolean useGet;
     private boolean wasHealthy;
     private long maxLongPollingSeconds;
     @Nullable
     private HttpResponse lastResponse;
     private boolean closed;
 
-    HttpHealthChecker(HealthCheckerContext ctx, String path) {
+    HttpHealthChecker(HealthCheckerContext ctx, String path, boolean useGet) {
 
         final Endpoint endpoint = ctx.endpoint();
         final SessionProtocol protocol = ctx.protocol();
         final String scheme = protocol.uriText();
         final String ipAddr = endpoint.ipAddr();
+        final String authority = endpoint.authority();
+        final int port = ctx.port() != 0 ? ctx.port() : endpoint.port(protocol.defaultPort());
         final HttpClientBuilder builder;
         if (ipAddr == null) {
-            builder = new HttpClientBuilder(scheme + "://" + endpoint.authority());
+            this.authority = port == protocol.defaultPort() ? endpoint.host()
+                                                            : (endpoint.host() + ':' + port);
+            builder = new HttpClientBuilder(scheme + "://" + this.authority);
         } else {
-            final int port = ctx.port() > 0 ? ctx.port() : endpoint.port(protocol.defaultPort());
+            final StringBuilder uriBuf = new StringBuilder(authority.length() + 10 /* "none+https" */);
+            final StringBuilder authorityBuf = new StringBuilder(authority.length());
+            uriBuf.append(scheme);
             if (endpoint.ipFamily() == StandardProtocolFamily.INET) {
-                builder = new HttpClientBuilder(scheme + "://" + ipAddr + ':' + port);
+                uriBuf.append("://").append(ipAddr);
+                if (endpoint.isIpAddrOnly()) {
+                    authorityBuf.append(ipAddr);
+                } else {
+                    authorityBuf.append(endpoint.host());
+                }
             } else {
-                builder = new HttpClientBuilder(scheme + "://[" + ipAddr + "]:" + port);
+                uriBuf.append("://[").append(ipAddr).append(']');
+                if (endpoint.isIpAddrOnly()) {
+                    authorityBuf.append('[').append(ipAddr).append(']');
+                } else {
+                    authorityBuf.append(endpoint.host());
+                }
             }
+
+            if (port != protocol.defaultPort()) {
+                uriBuf.append(':').append(port);
+                authorityBuf.append(':').append(port);
+            }
+
+            builder = new HttpClientBuilder(uriBuf.toString());
+            this.authority = authorityBuf.toString();
         }
 
         this.ctx = ctx;
@@ -81,6 +107,7 @@ final class HttpHealthChecker implements AsyncCloseable {
                             .decorator(ResponseTimeoutUpdater::new)
                             .build();
         this.path = path;
+        this.useGet = useGet;
     }
 
     void start() {
@@ -94,8 +121,8 @@ final class HttpHealthChecker implements AsyncCloseable {
 
         final RequestHeaders headers;
         final RequestHeadersBuilder builder =
-                RequestHeaders.builder(HttpMethod.HEAD, path)
-                              .add(HttpHeaderNames.AUTHORITY, ctx.endpoint().authority());
+                RequestHeaders.builder(useGet ? HttpMethod.GET : HttpMethod.HEAD, path)
+                              .add(HttpHeaderNames.AUTHORITY, authority);
         if (maxLongPollingSeconds > 0) {
             headers = builder.add(HttpHeaderNames.IF_NONE_MATCH, wasHealthy ? "\"healthy\"" : "\"unhealthy\"")
                              .add(HttpHeaderNames.PREFER, "wait=" + maxLongPollingSeconds)

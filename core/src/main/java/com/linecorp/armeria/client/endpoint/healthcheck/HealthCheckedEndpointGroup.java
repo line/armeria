@@ -96,7 +96,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     private final int port;
     private final Backoff retryBackoff;
     private final Function<? super ClientOptionsBuilder, ClientOptionsBuilder> clientConfigurator;
-    private final Function<? super HealthCheckerContext, ? extends AsyncCloseable> checker;
+    private final Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkerFactory;
 
     private final Map<Endpoint, DefaultHealthCheckerContext> contexts = new HashMap<>();
     @VisibleForTesting
@@ -106,17 +106,18 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     /**
      * Creates a new instance.
      */
-    HealthCheckedEndpointGroup(EndpointGroup delegate, ClientFactory clientFactory,
-                               SessionProtocol protocol, int port, Backoff retryBackoff,
-                               Function<? super ClientOptionsBuilder, ClientOptionsBuilder> clientConfigurator,
-                               Function<? super HealthCheckerContext, ? extends AsyncCloseable> checker) {
+    HealthCheckedEndpointGroup(
+            EndpointGroup delegate, ClientFactory clientFactory,
+            SessionProtocol protocol, int port, Backoff retryBackoff,
+            Function<? super ClientOptionsBuilder, ClientOptionsBuilder> clientConfigurator,
+            Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkerFactory) {
         this.delegate = requireNonNull(delegate, "delegate");
         this.clientFactory = requireNonNull(clientFactory, "clientFactory");
         this.protocol = requireNonNull(protocol, "protocol");
         this.port = port;
         this.retryBackoff = requireNonNull(retryBackoff, "retryBackoff");
         this.clientConfigurator = requireNonNull(clientConfigurator, "clientConfigurator");
-        this.checker = requireNonNull(checker, "checker");
+        this.checkerFactory = requireNonNull(checkerFactory, "checkerFactory");
 
         delegate.addListener(this::updateCandidates);
         updateCandidates(delegate.initialEndpointsFuture().join());
@@ -152,7 +153,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                     continue;
                 }
                 final DefaultHealthCheckerContext ctx = new DefaultHealthCheckerContext(e);
-                ctx.init(checker.apply(ctx));
+                ctx.init(checkerFactory.apply(ctx));
                 contexts.put(e, ctx);
             }
         }

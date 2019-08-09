@@ -23,6 +23,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 
@@ -30,6 +31,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
+import com.linecorp.armeria.common.util.AsyncCloseable;
 
 class HealthCheckedEndpointGroupTest {
     @Test
@@ -39,12 +41,16 @@ class HealthCheckedEndpointGroupTest {
         delegate.set(Endpoint.of("foo"));
         final AtomicReference<HealthCheckerContext> ctxCapture = new AtomicReference<>();
 
-        try (HealthCheckedEndpointGroup group = new AbstractHealthCheckedEndpointGroupBuilder(
-                delegate, ctx -> {
+        try (HealthCheckedEndpointGroup group = new AbstractHealthCheckedEndpointGroupBuilder(delegate) {
+            @Override
+            protected Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory() {
+                return ctx -> {
                     ctxCapture.set(ctx);
                     ctx.updateHealth(1);
                     return () -> CompletableFuture.completedFuture(null);
-                }) {}.build()) {
+                };
+            }
+        }.build()) {
 
             // Check the initial state.
             final HealthCheckerContext ctx = ctxCapture.get();
