@@ -21,14 +21,14 @@ export default class HomePage extends React.PureComponent {
   public render() {
     return (
       <>
-        <Typography variant="title" paragraph>
+        <Typography variant="h6" paragraph>
           Welcome to the Armeria documentation service
         </Typography>
-        <Typography variant="body1">
+        <Typography variant="body2">
           This page provides the information about the RPC services and its
           related data types in this server.
         </Typography>
-        <Typography variant="body1">
+        <Typography variant="body2">
           Please start to navigate via the sidebar on the left or the menu
           button on the top right.
         </Typography>

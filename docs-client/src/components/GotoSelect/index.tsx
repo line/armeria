@@ -27,17 +27,18 @@ import { emphasize } from '@material-ui/core/styles/colorManipulator';
 import TextField, { BaseTextFieldProps } from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
 import React, { CSSProperties, HTMLAttributes } from 'react';
-// Ignore importing of `react-select/async` because react-select@3.0.4 is not fully compatible with TypeScript
-// see https://github.com/JedWatson/react-select/issues/3592
-// @ts-ignore
 import Async from 'react-select/async';
-import { ValueContainerProps } from 'react-select/lib/components/containers';
-import { ControlProps } from 'react-select/lib/components/Control';
-import { MenuProps, NoticeProps } from 'react-select/lib/components/Menu';
-import { OptionProps } from 'react-select/lib/components/Option';
-import { PlaceholderProps } from 'react-select/lib/components/Placeholder';
-import { SingleValueProps } from 'react-select/lib/components/SingleValue';
-import { ValueType } from 'react-select/lib/types';
+import {
+  IndicatorContainerProps,
+  ValueContainerProps,
+} from 'react-select/src/components/containers';
+import { ControlProps } from 'react-select/src/components/Control';
+import { IndicatorProps } from 'react-select/src/components/indicators';
+import { MenuProps, NoticeProps } from 'react-select/src/components/Menu';
+import { OptionProps } from 'react-select/src/components/Option';
+import { PlaceholderProps } from 'react-select/src/components/Placeholder';
+import { SingleValueProps } from 'react-select/src/components/SingleValue';
+import { ValueType } from 'react-select/src/types';
 import { Specification } from '../../lib/specification';
 
 interface OptionType {
@@ -54,26 +55,25 @@ const styles = (theme: Theme) =>
   createStyles({
     root: {
       position: 'relative',
-      margin: `${theme.spacing.unit}px`,
-      marginLeft: `${theme.spacing.unit * 3}px`,
+      margin: `${theme.spacing(1)}px`,
+      marginLeft: `${theme.spacing(3)}px`,
       minWidth: 300,
       width: 800,
       backgroundColor: theme.palette.primary.light,
-      borderRadius: `${theme.spacing.unit * 2}px`,
+      borderRadius: `${theme.spacing(2)}px`,
     },
     input: {
       display: 'flex',
-      padding: 0,
-      marginLeft: `${theme.spacing.unit}px`,
+      marginLeft: `${theme.spacing(1)}px`,
+      paddingBottom: `${theme.spacing(1.4)}px`,
     },
     valueContainer: {
       display: 'flex',
       flexWrap: 'wrap',
       flex: 1,
-      alignItems: 'center',
     },
     chip: {
-      margin: `${theme.spacing.unit / 2}px ${theme.spacing.unit / 4}px`,
+      margin: `${theme.spacing(1 / 2)}px ${theme.spacing(1 / 4)}px`,
     },
     chipFocused: {
       backgroundColor: emphasize(
@@ -84,27 +84,41 @@ const styles = (theme: Theme) =>
       ),
     },
     noOptionsMessage: {
-      padding: `${theme.spacing.unit}px ${theme.spacing.unit * 2}px`,
+      padding: `${theme.spacing(1)}px ${theme.spacing(2)}px`,
     },
     singleValue: {
       position: 'relative',
+      paddingTop: `${theme.spacing(1 / 5)}px`,
       fontSize: 16,
+      color: 'rgba(0, 0, 0, 0.62)',
     },
     placeholder: {
       position: 'absolute',
-      marginLeft: `${theme.spacing.unit}px`,
+      marginLeft: `${theme.spacing(1)}px`,
+      paddingTop: `${theme.spacing(1 / 6)}px`,
       left: 2,
+    },
+    indicatorsContainer: {
+      marginBottom: 0,
+      marginTop: `${theme.spacing(0.5)}px`,
+      alignItems: 'center',
+      display: 'flex',
+    },
+    indicatorSeparator: {
+      alignSelf: 'stretch',
+      width: 1,
+      backgroundColor: 'hsl(0,0%,80%)',
     },
     paper: {
       position: 'absolute',
       zIndex: 1,
-      marginTop: theme.spacing.unit,
+      marginTop: theme.spacing(1),
       left: 0,
       right: 0,
       flex: 1,
     },
     divider: {
-      height: theme.spacing.unit * 2,
+      height: theme.spacing(2),
     },
   });
 
@@ -202,6 +216,22 @@ function ValueContainer(props: ValueContainerProps<OptionType>) {
   );
 }
 
+function IndicatorsContainer(props: IndicatorContainerProps<OptionType>) {
+  return (
+    <div className={props.selectProps.classes.indicatorsContainer}>
+      {props.children}
+    </div>
+  );
+}
+
+function IndicatorSeparator(props: IndicatorProps<OptionType>) {
+  return (
+    <div className={props.selectProps.classes.indicatorSeparator}>
+      {props.children}
+    </div>
+  );
+}
+
 function Menu(props: MenuProps<OptionType>) {
   return (
     <Paper
@@ -222,6 +252,8 @@ const components = {
   Placeholder,
   SingleValue,
   ValueContainer,
+  IndicatorsContainer,
+  IndicatorSeparator,
 };
 
 /**
@@ -358,11 +390,15 @@ class GotoSelect extends React.Component<GotoSelectProps> {
             classes={classes}
             styles={selectStyles}
             inputId="go-to-select"
+            // The type parameter of Async seems to incorrectly use the same type for options and onChange
+            // @ts-ignore
             defaultOptions={makeSuggestions(
               specification,
               DEFAULT_SUGGESTION_SIZE,
               () => true,
             )}
+            // The type parameter of Async seems to incorrectly use the same type for options and onChange
+            // @ts-ignore
             loadOptions={filterSuggestion}
             components={components}
             onChange={handleSelection}

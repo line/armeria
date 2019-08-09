@@ -29,7 +29,7 @@ const config: Configuration = {
   mode: isDev ? 'development' : 'production',
   devtool: isDev ? 'eval-source-map' : undefined,
   entry: {
-    main: './src/index.tsx',
+    main: ['react-hot-loader/patch', './src/index.tsx'],
   },
   output: {
     path: path.resolve(process.cwd(), './build/web'),

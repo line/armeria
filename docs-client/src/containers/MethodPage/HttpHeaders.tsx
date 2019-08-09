@@ -40,7 +40,7 @@ interface Props {
 const HttpHeaders: React.SFC<Props> = (props) => {
   return (
     <>
-      <Typography variant="body1" paragraph />
+      <Typography variant="body2" paragraph />
       <Button color="secondary" onClick={props.onEditHttpHeadersClick}>
         HTTP headers
       </Button>
@@ -48,7 +48,7 @@ const HttpHeaders: React.SFC<Props> = (props) => {
         <>
           {props.exampleHeaders.length > 0 && (
             <>
-              <Typography variant="body1" paragraph />
+              <Typography variant="body2" paragraph />
               <Dropdown
                 placeholder="Select an example headers..."
                 options={props.exampleHeaders}
@@ -56,7 +56,7 @@ const HttpHeaders: React.SFC<Props> = (props) => {
               />
             </>
           )}
-          <Typography variant="body1" paragraph />
+          <Typography variant="body2" paragraph />
           <TextField
             multiline
             fullWidth
@@ -68,7 +68,7 @@ const HttpHeaders: React.SFC<Props> = (props) => {
               className: 'code',
             }}
           />
-          <Typography variant="body1" paragraph />
+          <Typography variant="body2" paragraph />
           <FormControlLabel
             control={
               <Checkbox

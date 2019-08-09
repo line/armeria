@@ -85,6 +85,7 @@ import com.linecorp.armeria.server.docs.FieldLocation;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.TypeSignature;
+import com.linecorp.armeria.testing.internal.TestUtil;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 public class AnnotatedHttpDocServiceTest {
@@ -95,13 +96,11 @@ public class AnnotatedHttpDocServiceTest {
     private static final HttpHeaders EXAMPLE_HEADERS_SERVICE = HttpHeaders.of(HttpHeaderNames.of("c"), "d");
     private static final HttpHeaders EXAMPLE_HEADERS_METHOD = HttpHeaders.of(HttpHeaderNames.of("e"), "f");
 
-    private static final boolean DEMO_MODE = false;
-
     @ClassRule
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            if (DEMO_MODE) {
+            if (TestUtil.isDocServiceDemoMode()) {
                 sb.http(8080);
             }
             sb.annotatedService("/service", new MyService());
@@ -123,7 +122,7 @@ public class AnnotatedHttpDocServiceTest {
 
     @Test
     public void jsonSpecification() throws InterruptedException {
-        if (DEMO_MODE) {
+        if (TestUtil.isDocServiceDemoMode()) {
             Thread.sleep(Long.MAX_VALUE);
         }
         final Map<Class<?>, Set<MethodInfo>> methodInfos = new HashMap<>();

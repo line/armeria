@@ -57,13 +57,12 @@ import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.grpc.GrpcDocServicePlugin.ServiceEntry;
 import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.testing.internal.TestUtil;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.grpc.stub.StreamObserver;
 
 public class GrpcDocServiceTest {
-
-    private static final boolean DEMO_MODE = false;
 
     private static final ServiceDescriptor TEST_SERVICE_DESCRIPTOR =
             com.linecorp.armeria.grpc.testing.Test.getDescriptor()
@@ -102,7 +101,7 @@ public class GrpcDocServiceTest {
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            if (DEMO_MODE) {
+            if (TestUtil.isDocServiceDemoMode()) {
                 sb.http(8080);
             }
             sb.serviceUnder("/test", new GrpcServiceBuilder()
@@ -137,7 +136,7 @@ public class GrpcDocServiceTest {
 
     @Test
     public void testOk() throws Exception {
-        if (DEMO_MODE) {
+        if (TestUtil.isDocServiceDemoMode()) {
             Thread.sleep(Long.MAX_VALUE);
         }
         final List<ServiceEntry> entries = ImmutableList.of(

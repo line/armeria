@@ -272,10 +272,10 @@ export class Specification {
     item.docString = (
       <>
         {lines.map((line, i) => (
-          <>
+          <React.Fragment key={`${line}-${i}`}>
             {line}
             {i < lines.length - 1 ? <br /> : null}
-          </>
+          </React.Fragment>
         ))}
       </>
     );

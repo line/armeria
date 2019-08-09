@@ -33,13 +33,13 @@ interface Props {
 const RequestBody: React.SFC<Props> = (props) => {
   return (
     <>
-      <Typography variant="body1" paragraph />
+      <Typography variant="body2" paragraph />
       <Button color="secondary" onClick={props.onEditRequestBodyClick}>
         Request body
       </Button>
       {props.requestBodyOpen && (
         <>
-          <Typography variant="body1" paragraph />
+          <Typography variant="body2" paragraph />
           <TextField
             multiline
             fullWidth

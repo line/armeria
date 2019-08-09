@@ -35,7 +35,7 @@ interface Props {
 const Endpoints: React.SFC<Props> = (props) => {
   return (
     <Section>
-      <Typography variant="title">Endpoints</Typography>
+      <Typography variant="h6">Endpoints</Typography>
       <Table>
         <TableHead>
           <TableRow>

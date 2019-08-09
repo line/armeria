@@ -18,6 +18,7 @@ import AppBar from '@material-ui/core/AppBar';
 import Collapse from '@material-ui/core/Collapse';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import Drawer from '@material-ui/core/Drawer';
+import Grid from '@material-ui/core/Grid';
 import Hidden from '@material-ui/core/Hidden';
 import IconButton from '@material-ui/core/IconButton';
 import List from '@material-ui/core/List';
@@ -37,7 +38,7 @@ import MenuIcon from '@material-ui/icons/Menu';
 import update from 'immutability-helper';
 import React from 'react';
 import Helmet from 'react-helmet';
-import { hot } from 'react-hot-loader';
+import { hot } from 'react-hot-loader/root';
 import { Route, RouteComponentProps, withRouter } from 'react-router-dom';
 
 import EnumPage from '../EnumPage';
@@ -88,14 +89,14 @@ const styles = (theme: Theme) =>
       height: '100vh',
       minWidth: 0, // So the Typography noWrap works,
       overflowY: 'auto',
-      padding: theme.spacing.unit * 2,
+      padding: theme.spacing(2),
     },
     methodHeader: {
       backgroundColor: theme.palette.background.paper,
     },
     title: {
       [theme.breakpoints.up('md')]: {
-        marginLeft: theme.spacing.unit * 3,
+        marginLeft: theme.spacing(3),
       },
     },
     toolbar: theme.mixins.toolbar,
@@ -103,6 +104,7 @@ const styles = (theme: Theme) =>
       borderRadius: 3,
       border: 0,
       color: 'white',
+      fontSize: theme.typography.body2.fontSize,
       height: 20,
       width: 80,
       textAlign: 'center',
@@ -176,7 +178,7 @@ function AppDrawer({
         <>
           <ListItem button onClick={() => handleCollapse('services')}>
             <ListItemText disableTypography>
-              <Typography variant="headline">Services</Typography>
+              <Typography variant="h5">Services</Typography>
             </ListItemText>
             {servicesSectionOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
@@ -188,7 +190,7 @@ function AppDrawer({
                   onClick={() => handleServiceCollapse(service.name)}
                 >
                   <ListItemText>
-                    <Typography variant="subheading">
+                    <Typography variant="subtitle1">
                       <code>{simpleName(service.name)}</code>
                     </Typography>
                   </ListItemText>
@@ -206,21 +208,24 @@ function AppDrawer({
                         )
                       }
                     >
-                      {method.httpMethod && (
-                        <Typography
-                          className={httpMethodClass(method.httpMethod)}
-                        >
-                          {method.httpMethod}
-                        </Typography>
-                      )}
-                      <ListItemText
-                        inset
-                        primaryTypographyProps={{
-                          variant: 'body1',
-                        }}
-                      >
-                        <code>{`${method.name}()`}</code>
-                      </ListItemText>
+                      <Grid container alignItems="center" spacing={5}>
+                        <Grid item xs={4}>
+                          <Typography
+                            className={httpMethodClass(method.httpMethod)}
+                          >
+                            {method.httpMethod}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={8}>
+                          <ListItemText
+                            primaryTypographyProps={{
+                              variant: 'body2',
+                            }}
+                          >
+                            <code>{`${method.name}()`}</code>
+                          </ListItemText>
+                        </Grid>
+                      </Grid>
                     </ListItem>
                   ))}
                 </Collapse>
@@ -233,7 +238,7 @@ function AppDrawer({
         <>
           <ListItem button onClick={() => handleCollapse('enums')}>
             <ListItemText disableTypography>
-              <Typography variant="headline">Enums</Typography>
+              <Typography variant="h5">Enums</Typography>
             </ListItemText>
             {enumsSectionOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
@@ -248,7 +253,7 @@ function AppDrawer({
                 <ListItemText
                   inset
                   primaryTypographyProps={{
-                    variant: 'body1',
+                    variant: 'body2',
                   }}
                 >
                   <code>{simpleName(enm.name)}</code>
@@ -262,7 +267,7 @@ function AppDrawer({
         <>
           <ListItem button onClick={() => handleCollapse('structs')}>
             <ListItemText disableTypography>
-              <Typography variant="headline">Structs</Typography>
+              <Typography variant="h5">Structs</Typography>
             </ListItemText>
             {structsSectionOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
@@ -277,7 +282,7 @@ function AppDrawer({
                 <ListItemText
                   inset
                   primaryTypographyProps={{
-                    variant: 'body1',
+                    variant: 'body2',
                   }}
                 >
                   <code>{simpleName(struct.name)}</code>
@@ -291,7 +296,7 @@ function AppDrawer({
         <>
           <ListItem button onClick={() => handleCollapse('exceptions')}>
             <ListItemText disableTypography>
-              <Typography variant="headline">Exceptions</Typography>
+              <Typography variant="h5">Exceptions</Typography>
             </ListItemText>
             {exceptionsOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
@@ -306,7 +311,7 @@ function AppDrawer({
                 <ListItemText
                   inset
                   primaryTypographyProps={{
-                    variant: 'body1',
+                    variant: 'body2',
                   }}
                 >
                   <code>{simpleName(struct.name)}</code>
@@ -375,7 +380,7 @@ class App extends React.PureComponent<Props, State> {
             </Hidden>
             <Typography
               className={classes.title}
-              variant="title"
+              variant="h6"
               color="inherit"
               noWrap
             >
@@ -554,4 +559,4 @@ class App extends React.PureComponent<Props, State> {
   };
 }
 
-export default hot(module)(withRouter(withStyles(styles)(App)));
+export default withRouter(withStyles(styles)(hot(App)));

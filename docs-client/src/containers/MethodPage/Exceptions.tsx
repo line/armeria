@@ -32,7 +32,7 @@ interface Props {
 const Exceptions: React.SFC<Props> = (props) => {
   return (
     <Section>
-      <Typography variant="title">Exceptions</Typography>
+      <Typography variant="h6">Exceptions</Typography>
       <Table>
         <TableBody>
           {props.method.exceptionTypeSignatures.length > 0 ? (
