@@ -28,7 +28,7 @@ public class BackoffBenchmark {
 
     private static final Backoff EXPONENTIAL_BACKOFF = Backoff.exponential(100, 5000, 2.0);
 
-    @Param({ "1", "2", "3", "4", "5" })
+    @Param({ "1", "2", "3", "4", "5", "10", "20" })
     private int numAttemptsSoFar;
 
     @Benchmark
