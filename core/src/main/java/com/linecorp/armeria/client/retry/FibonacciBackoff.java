@@ -16,12 +16,18 @@
 package com.linecorp.armeria.client.retry;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.math.LongMath.saturatedAdd;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import com.google.common.base.MoreObjects;
 
 final class FibonacciBackoff extends AbstractBackoff {
     private final long initialDelayMillis;
     private final long maxDelayMillis;
+
+    private final long[] precomputedDelays;
 
     FibonacciBackoff(long initialDelayMillis, long maxDelayMillis) {
         checkArgument(initialDelayMillis >= 0,
@@ -30,28 +36,45 @@ final class FibonacciBackoff extends AbstractBackoff {
                       maxDelayMillis, initialDelayMillis);
         this.initialDelayMillis = initialDelayMillis;
         this.maxDelayMillis = maxDelayMillis;
+
+        final List<Long> precomputed = new ArrayList<>();
+        precomputed.add(initialDelayMillis);
+        precomputed.add(initialDelayMillis);
+
+        for (int i = 2; i <= 30; i++) {
+            final long delay = saturatedAdd(precomputed.get(i - 2), precomputed.get(i - 1));
+            if (delay < maxDelayMillis) {
+                precomputed.add(delay);
+            } else {
+                precomputed.add(maxDelayMillis);
+            }
+        }
+
+        precomputedDelays = precomputed.stream().mapToLong(l -> l).toArray();
     }
 
     @Override
     protected long doNextDelayMillis(int numAttemptsSoFar) {
-        final long nextDelay = saturatedMultiply(initialDelayMillis, fib(numAttemptsSoFar));
+        final long nextDelay = fibDelay(numAttemptsSoFar);
         return Math.min(nextDelay, maxDelayMillis);
     }
 
-    private static int fib(int n) {
-        int a = 1;
-        int b = 1;
-        int c;
-        for (int i = 0; i <= n - 2; i++) {
-            c = a;
-            a = b;
-            b += c;
+    private long fibDelay(int n) {
+        final int length = precomputedDelays.length;
+        //we already know the first 30 delays, so we can look them up
+        if (n < length) {
+            return precomputedDelays[n - 1];
+        } else {
+            long a = precomputedDelays[length - 2];
+            long b = precomputedDelays[length - 1];
+            long c;
+            for (int i = 0; i <= n - length; i++) {
+                c = a;
+                a = b;
+                b += c;
+            }
+            return a;
         }
-        return a;
-    }
-
-    private static long saturatedMultiply(long left, int right) {
-        return Long.MAX_VALUE / right < left ? Long.MAX_VALUE : left * right;
     }
 
     @Override

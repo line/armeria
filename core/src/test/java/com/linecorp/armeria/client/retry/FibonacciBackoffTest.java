@@ -33,6 +33,14 @@ public class FibonacciBackoffTest {
     }
 
     @Test
+    void testLargeNumberOfRetries() {
+        final Backoff backoff = new FibonacciBackoff(1, Long.MAX_VALUE);
+        assertThat(backoff.nextDelayMillis(30)).isEqualTo(832040);
+        assertThat(backoff.nextDelayMillis(31)).isEqualTo(1346269);
+        assertThat(backoff.nextDelayMillis(32)).isEqualTo(2178309);
+    }
+
+    @Test
     void testOverflow() {
         final Backoff backoff = new FibonacciBackoff(Long.MAX_VALUE / 3, Long.MAX_VALUE);
         assertThat(backoff.nextDelayMillis(1)).isEqualTo(Long.MAX_VALUE / 3);
