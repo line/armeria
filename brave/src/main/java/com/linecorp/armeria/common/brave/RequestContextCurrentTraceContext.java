@@ -59,12 +59,14 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
      * a {@link java.util.concurrent.ThreadFactory} like the following:
      * <pre>{@code
      * > ThreadFactory factory = (runnable) -> new Thread(new Runnable() {
-     * >     @Override public void run() {
+     * >     @Override
+     * >     public void run() {
      * >         RequestContextCurrentTraceContext.setCurrentThreadNotRequestThread(true);
      * >         runnable.run();
      * >     }
      * >
-     * >     @Override public String toString() {
+     * >     @Override
+     * >     public String toString() {
      * >         return runnable.toString();
      * >     }
      * > });
