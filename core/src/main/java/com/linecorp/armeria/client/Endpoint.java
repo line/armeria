@@ -399,11 +399,10 @@ public final class Endpoint implements Comparable<Endpoint> {
     public Endpoint withoutDefaultPort(int defaultPort) {
         ensureSingle();
         validatePort("defaultPort", defaultPort);
-        if (port == 0 || port != defaultPort) {
-            return this;
+        if (port == defaultPort) {
+            return new Endpoint(host, ipAddr, 0, weight, hostType);
         }
-
-        return new Endpoint(host, ipAddr, 0, weight, hostType);
+        return this;
     }
 
     /**
