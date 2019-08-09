@@ -17,12 +17,12 @@ package com.linecorp.armeria.client.retry;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class ExponentialBackoffTest {
+class ExponentialBackoffTest {
 
     @Test
-    public void normal() {
+    void normal() {
         final Backoff backoff = new ExponentialBackoff(10, 120, 3.0);
         assertThat(backoff.nextDelayMillis(1)).isEqualTo(10);
         assertThat(backoff.nextDelayMillis(2)).isEqualTo(30);
@@ -34,7 +34,7 @@ public class ExponentialBackoffTest {
     }
 
     @Test
-    public void testOverflow() {
+    void testOverflow() {
         final Backoff backoff = new ExponentialBackoff(Long.MAX_VALUE / 3, Long.MAX_VALUE, 2.0);
         assertThat(backoff.nextDelayMillis(1)).isEqualTo(Long.MAX_VALUE / 3);
         assertThat(backoff.nextDelayMillis(2)).isEqualTo((long) (Long.MAX_VALUE / 3 * 2.0));
