@@ -15,27 +15,22 @@
  */
 
 import Paper from '@material-ui/core/Paper';
-import {
-  createStyles,
-  Theme,
-  withStyles,
-  WithStyles,
-} from '@material-ui/core/styles';
+import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
 import React from 'react';
 
-const styles = (theme: Theme) =>
+const useStyles = makeStyles((theme: Theme) =>
   createStyles({
     section: {
       padding: theme.spacing(3),
       marginBottom: theme.spacing(1),
       marginTop: theme.spacing(1),
     },
-  });
-
-type Props = WithStyles<typeof styles>;
-
-const Section: React.SFC<Props> = ({ children, classes }) => (
-  <Paper className={classes.section}>{children}</Paper>
+  }),
 );
 
-export default withStyles(styles)(Section);
+const Section: React.FunctionComponent = ({ children }) => {
+  const classes = useStyles();
+  return <Paper className={classes.section}>{children}</Paper>;
+};
+
+export default React.memo(Section);

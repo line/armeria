@@ -19,9 +19,9 @@ import NoSsr from '@material-ui/core/NoSsr';
 import Paper from '@material-ui/core/Paper';
 import {
   createStyles,
+  makeStyles,
   Theme,
-  withStyles,
-  WithStyles,
+  useTheme,
 } from '@material-ui/core/styles';
 import { emphasize } from '@material-ui/core/styles/colorManipulator';
 import TextField, { BaseTextFieldProps } from '@material-ui/core/TextField';
@@ -51,7 +51,7 @@ interface GroupType {
   options: OptionType[];
 }
 
-const styles = (theme: Theme) =>
+const useStyles = makeStyles((theme: Theme) =>
   createStyles({
     root: {
       position: 'relative',
@@ -120,7 +120,8 @@ const styles = (theme: Theme) =>
     divider: {
       height: theme.spacing(2),
     },
-  });
+  }),
+);
 
 function NoOptionsMessage(props: NoticeProps<OptionType>) {
   return (
@@ -343,7 +344,7 @@ function makeSuggestions(
   return suggestions;
 }
 
-interface GotoSelectProps extends WithStyles<typeof styles, true> {
+interface GotoSelectProps {
   specification: Specification;
   navigateTo: (url: string) => void;
 }
@@ -351,62 +352,64 @@ interface GotoSelectProps extends WithStyles<typeof styles, true> {
 const DEFAULT_SUGGESTION_SIZE = 100;
 const FILTERED_SUGGESTION_SIZE = 20;
 
-class GotoSelect extends React.Component<GotoSelectProps> {
-  public render() {
-    const { classes, theme, specification, navigateTo } = this.props;
+const GotoSelect: React.FunctionComponent<GotoSelectProps> = ({
+  specification,
+  navigateTo,
+}) => {
+  const classes = useStyles();
+  const theme = useTheme();
 
-    const selectStyles = {
-      input: (base: CSSProperties) => ({
-        ...base,
-        color: theme.palette.text.secondary,
-        '& input': {
-          font: 'inherit',
-        },
-      }),
-    };
+  const selectStyles = {
+    input: (base: CSSProperties) => ({
+      ...base,
+      color: theme.palette.text.secondary,
+      '& input': {
+        font: 'inherit',
+      },
+    }),
+  };
 
-    function handleSelection(option: ValueType<OptionType>): void {
-      if (option) {
-        navigateTo((option as OptionType).value);
-      }
+  function handleSelection(option: ValueType<OptionType>): void {
+    if (option) {
+      navigateTo((option as OptionType).value);
     }
+  }
 
-    function filterSuggestion(
-      inputValue: string,
-      callback: (n: GroupType[]) => void,
-    ): void {
-      callback(
-        makeSuggestions(specification, FILTERED_SUGGESTION_SIZE, (suggestion) =>
-          suggestion.toLowerCase().includes(inputValue.toLowerCase()),
-        ),
-      );
-    }
-
-    return (
-      <div className={classes.root}>
-        <NoSsr>
-          <Async
-            autoFocus={true}
-            classes={classes}
-            styles={selectStyles}
-            inputId="go-to-select"
-            // The type parameter of Async seems to incorrectly use the same type for options and onChange
-            // @ts-ignore
-            defaultOptions={makeSuggestions(
-              specification,
-              DEFAULT_SUGGESTION_SIZE,
-              () => true,
-            )}
-            // The type parameter of Async seems to incorrectly use the same type for options and onChange
-            // @ts-ignore
-            loadOptions={filterSuggestion}
-            components={components}
-            onChange={handleSelection}
-          />
-        </NoSsr>
-      </div>
+  function filterSuggestion(
+    inputValue: string,
+    callback: (n: GroupType[]) => void,
+  ): void {
+    callback(
+      makeSuggestions(specification, FILTERED_SUGGESTION_SIZE, (suggestion) =>
+        suggestion.toLowerCase().includes(inputValue.toLowerCase()),
+      ),
     );
   }
-}
 
-export default withStyles(styles, { withTheme: true })(GotoSelect);
+  return (
+    <div className={classes.root}>
+      <NoSsr>
+        <Async
+          autoFocus={true}
+          classes={classes}
+          styles={selectStyles}
+          inputId="go-to-select"
+          // The type parameter of Async seems to incorrectly use the same type for options and onChange
+          // @ts-ignore
+          defaultOptions={makeSuggestions(
+            specification,
+            DEFAULT_SUGGESTION_SIZE,
+            () => true,
+          )}
+          // The type parameter of Async seems to incorrectly use the same type for options and onChange
+          // @ts-ignore
+          loadOptions={filterSuggestion}
+          components={components}
+          onChange={handleSelection}
+        />
+      </NoSsr>
+    </div>
+  );
+};
+
+export default React.memo(GotoSelect);

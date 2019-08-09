@@ -42,47 +42,6 @@ interface Props {
   specification: Specification;
 }
 
-export default function({
-  title,
-  variables,
-  hasLocation,
-  specification,
-}: Props) {
-  const hasBean = variables.some(
-    (variable) =>
-      !!variable.childFieldInfos && variable.childFieldInfos.length > 0,
-  );
-  return (
-    <>
-      <Typography variant="h6">{title}</Typography>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Name</TableCell>
-            {hasLocation && <TableCell>Location</TableCell>}
-            <TableCell>Required</TableCell>
-            <TableCell>Type</TableCell>
-            <TableCell>Description</TableCell>
-            {hasBean && <TableCell />}
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          <FieldInfos
-            indent={0}
-            title={title}
-            hasLocation={hasLocation}
-            variables={variables}
-            specification={specification}
-            hasBean={hasBean}
-            childIndex={0}
-          />
-        </TableBody>
-      </Table>
-      <Typography variant="body2" paragraph />
-    </>
-  );
-}
-
 interface State {
   isEmpty: boolean;
   isBeans: boolean[];
@@ -248,3 +207,46 @@ class FieldInfos extends React.Component<FieldInfosProps, State> {
     }
   };
 }
+
+const VariableList: React.FunctionComponent<Props> = ({
+  title,
+  variables,
+  hasLocation,
+  specification,
+}) => {
+  const hasBean = variables.some(
+    (variable) =>
+      !!variable.childFieldInfos && variable.childFieldInfos.length > 0,
+  );
+  return (
+    <>
+      <Typography variant="h6">{title}</Typography>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>Name</TableCell>
+            {hasLocation && <TableCell>Location</TableCell>}
+            <TableCell>Required</TableCell>
+            <TableCell>Type</TableCell>
+            <TableCell>Description</TableCell>
+            {hasBean && <TableCell />}
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          <FieldInfos
+            indent={0}
+            title={title}
+            hasLocation={hasLocation}
+            variables={variables}
+            specification={specification}
+            hasBean={hasBean}
+            childIndex={0}
+          />
+        </TableBody>
+      </Table>
+      <Typography variant="body2" paragraph />
+    </>
+  );
+};
+
+export default React.memo(VariableList);

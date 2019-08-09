@@ -52,13 +52,14 @@ type Props = OwnProps &
     httpMethod: string;
   }>;
 
-const MethodPage: React.SFC<Props> = (props) => {
+const MethodPage: React.FunctionComponent<Props> = (props) => {
   const service = props.specification.getServiceByName(
     props.match.params.serviceName,
   );
   if (!service) {
     return <>Not found.</>;
   }
+
   const method = service.methods.find(
     (m) => m.name === props.match.params.methodName,
   );
@@ -176,4 +177,4 @@ function useRequestBody(httpMethod: string) {
   return httpMethod === 'POST' || httpMethod === 'PUT';
 }
 
-export default MethodPage;
+export default React.memo(MethodPage);

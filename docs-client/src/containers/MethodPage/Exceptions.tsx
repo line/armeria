@@ -29,31 +29,29 @@ interface Props {
   specification: Specification;
 }
 
-const Exceptions: React.SFC<Props> = (props) => {
-  return (
-    <Section>
-      <Typography variant="h6">Exceptions</Typography>
-      <Table>
-        <TableBody>
-          {props.method.exceptionTypeSignatures.length > 0 ? (
-            props.method.exceptionTypeSignatures.map((exception) => (
-              <TableRow key={exception}>
-                <TableCell>
-                  <code>
-                    {props.specification.getTypeSignatureHtml(exception)}
-                  </code>
-                </TableCell>
-              </TableRow>
-            ))
-          ) : (
-            <TableRow key="empty exception">
-              <TableCell>There are no exceptions</TableCell>
+const Exceptions: React.FunctionComponent<Props> = (props) => (
+  <Section>
+    <Typography variant="h6">Exceptions</Typography>
+    <Table>
+      <TableBody>
+        {props.method.exceptionTypeSignatures.length > 0 ? (
+          props.method.exceptionTypeSignatures.map((exception) => (
+            <TableRow key={exception}>
+              <TableCell>
+                <code>
+                  {props.specification.getTypeSignatureHtml(exception)}
+                </code>
+              </TableCell>
             </TableRow>
-          )}
-        </TableBody>
-      </Table>
-    </Section>
-  );
-};
+          ))
+        ) : (
+          <TableRow key="empty exception">
+            <TableCell>There are no exceptions</TableCell>
+          </TableRow>
+        )}
+      </TableBody>
+    </Table>
+  </Section>
+);
 
-export default Exceptions;
+export default React.memo(Exceptions);
