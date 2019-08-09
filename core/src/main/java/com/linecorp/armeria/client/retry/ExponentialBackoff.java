@@ -17,12 +17,20 @@ package com.linecorp.armeria.client.retry;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.annotation.Nullable;
+
 import com.google.common.base.MoreObjects;
 
 final class ExponentialBackoff extends AbstractBackoff {
     private final long initialDelayMillis;
     private final long maxDelayMillis;
     private final double multiplier;
+
+    @Nullable
+    private final long[] precomputedDelays;
 
     ExponentialBackoff(long initialDelayMillis, long maxDelayMillis, double multiplier) {
         checkArgument(multiplier > 1.0, "multiplier: %s (expected: > 1.0)", multiplier);
@@ -33,10 +41,36 @@ final class ExponentialBackoff extends AbstractBackoff {
         this.initialDelayMillis = initialDelayMillis;
         this.maxDelayMillis = maxDelayMillis;
         this.multiplier = multiplier;
+
+        if (saturatedMultiply(initialDelayMillis, Math.pow(multiplier, 30)) > maxDelayMillis) {
+            // We'll only have a maximum of 30 different delays, so may as well precompute them.
+            List<Long> precomputed = new ArrayList<>();
+            long delay = initialDelayMillis;
+            while (delay < maxDelayMillis) {
+                precomputed.add(delay);
+                delay *= multiplier;
+            }
+            if (delay != maxDelayMillis) {
+                precomputed.add(maxDelayMillis);
+            }
+            precomputedDelays = precomputed.stream().mapToLong(l -> l).toArray();
+
+        } else {
+            precomputedDelays = null;
+        }
     }
 
     @Override
     protected long doNextDelayMillis(int numAttemptsSoFar) {
+        if (precomputedDelays != null) {
+            int index = numAttemptsSoFar - 1;
+            if (index >= precomputedDelays.length) {
+                return precomputedDelays[precomputedDelays.length - 1];
+            } else {
+                return precomputedDelays[index];
+            }
+        }
+
         if (numAttemptsSoFar == 1) {
             return initialDelayMillis;
         }

@@ -22,12 +22,15 @@ import org.junit.Test;
 public class ExponentialBackoffTest {
 
     @Test
-    public void test() {
+    public void normal() {
         final Backoff backoff = new ExponentialBackoff(10, 120, 3.0);
         assertThat(backoff.nextDelayMillis(1)).isEqualTo(10);
         assertThat(backoff.nextDelayMillis(2)).isEqualTo(30);
         assertThat(backoff.nextDelayMillis(3)).isEqualTo(90);
         assertThat(backoff.nextDelayMillis(4)).isEqualTo(120);
+        assertThat(backoff.nextDelayMillis(5)).isEqualTo(120);
+        assertThat(backoff.nextDelayMillis(6)).isEqualTo(120);
+        assertThat(backoff.nextDelayMillis(7)).isEqualTo(120);
     }
 
     @Test
