@@ -163,17 +163,15 @@ class HttpHealthCheckedEndpointGroupTest {
     @EnumSource(value = SessionProtocol.class, names = { "HTTP", "HTTPS" })
     void endpoints_customPort(SessionProtocol protocol) throws Exception {
         serverOne.start();
-        serverTwo.start();
         final int portOne = serverOne.port(protocol);
-        final int portTwo = serverTwo.port(protocol);
 
         try (HealthCheckedEndpointGroup endpointGroup = build(
                 HealthCheckedEndpointGroup.builder(
-                        new StaticEndpointGroup(Endpoint.of("127.0.0.1", portOne)),
+                        new StaticEndpointGroup(Endpoint.of("127.0.0.1", 1)),
                         HEALTH_CHECK_PATH).port(portOne),
                 protocol)) {
             await().untilAsserted(() -> {
-                assertThat(endpointGroup.endpoints()).containsOnly(Endpoint.of("127.0.0.1", portOne));
+                assertThat(endpointGroup.endpoints()).containsOnly(Endpoint.of("127.0.0.1", 1));
             });
         }
     }

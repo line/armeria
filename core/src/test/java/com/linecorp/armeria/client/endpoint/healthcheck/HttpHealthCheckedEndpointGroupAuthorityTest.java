@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
+import java.util.function.Consumer;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Timeout;
@@ -81,7 +82,31 @@ class HttpHealthCheckedEndpointGroupAuthorityTest {
         }
     }
 
+    @ParameterizedTest
+    @CsvSource({
+            "127.0.0.1, 80, 127.0.0.1",
+            "127.0.0.1, 8080, 127.0.0.1:8080",
+            "127.0.0.1:80, 80, 127.0.0.1",
+            "127.0.0.1:80, 8080, 127.0.0.1:8080",
+            "127.0.0.1:8080, 80, 127.0.0.1",
+            "127.0.0.1:8080, 8080, 127.0.0.1:8080"
+    })
+    @Timeout(10)
+    void alternativePort(String endpoint, int altPort, String expectedAuthority) throws Exception {
+        try (HealthCheckedEndpointGroup ignored = build(Endpoint.parse(endpoint),
+                                                        builder -> builder.port(altPort))) {
+            final RequestHeaders log = logs.take();
+            assertThat(log.authority()).isEqualTo(expectedAuthority);
+        }
+    }
+
     private HealthCheckedEndpointGroup build(Endpoint endpoint) {
+        return build(endpoint, builder -> {});
+    }
+
+    private HealthCheckedEndpointGroup build(Endpoint endpoint,
+                                             Consumer<HealthCheckedEndpointGroupBuilder> customizer) {
+
         final HealthCheckedEndpointGroupBuilder builder = HealthCheckedEndpointGroup.builder(
                 new StaticEndpointGroup(endpoint), HEALTH_CHECK_PATH);
         builder.withClientOptions(b -> {
@@ -93,6 +118,7 @@ class HttpHealthCheckedEndpointGroupAuthorityTest {
             });
             return b;
         });
+        customizer.accept(builder);
         return builder.build();
     }
 }

@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
-import java.net.StandardProtocolFamily;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
@@ -39,7 +38,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 
 import io.netty.util.AsciiString;
@@ -60,52 +58,14 @@ final class HttpHealthChecker implements AsyncCloseable {
     private boolean closed;
 
     HttpHealthChecker(HealthCheckerContext ctx, String path, boolean useGet) {
-
         final Endpoint endpoint = ctx.endpoint();
-        final SessionProtocol protocol = ctx.protocol();
-        final String scheme = protocol.uriText();
-        final String ipAddr = endpoint.ipAddr();
-        final String authority = endpoint.authority();
-        final int port = ctx.port() != 0 ? ctx.port() : endpoint.port(protocol.defaultPort());
-        final HttpClientBuilder builder;
-        if (ipAddr == null) {
-            this.authority = port == protocol.defaultPort() ? endpoint.host()
-                                                            : (endpoint.host() + ':' + port);
-            builder = new HttpClientBuilder(scheme + "://" + this.authority);
-        } else {
-            final StringBuilder uriBuf = new StringBuilder(authority.length() + 10 /* "none+https" */);
-            final StringBuilder authorityBuf = new StringBuilder(authority.length());
-            uriBuf.append(scheme);
-            if (endpoint.ipFamily() == StandardProtocolFamily.INET) {
-                uriBuf.append("://").append(ipAddr);
-                if (endpoint.isIpAddrOnly()) {
-                    authorityBuf.append(ipAddr);
-                } else {
-                    authorityBuf.append(endpoint.host());
-                }
-            } else {
-                uriBuf.append("://[").append(ipAddr).append(']');
-                if (endpoint.isIpAddrOnly()) {
-                    authorityBuf.append('[').append(ipAddr).append(']');
-                } else {
-                    authorityBuf.append(endpoint.host());
-                }
-            }
-
-            if (port != protocol.defaultPort()) {
-                uriBuf.append(':').append(port);
-                authorityBuf.append(':').append(port);
-            }
-
-            builder = new HttpClientBuilder(uriBuf.toString());
-            this.authority = authorityBuf.toString();
-        }
-
         this.ctx = ctx;
-        httpClient = builder.factory(ctx.clientFactory())
-                            .options(ctx.clientConfigurator().apply(new ClientOptionsBuilder()).build())
-                            .decorator(ResponseTimeoutUpdater::new)
-                            .build();
+        httpClient = new HttpClientBuilder(ctx.protocol(), endpoint)
+                .factory(ctx.clientFactory())
+                .options(ctx.clientConfigurator().apply(new ClientOptionsBuilder()).build())
+                .decorator(ResponseTimeoutUpdater::new)
+                .build();
+        authority = endpoint.authority();
         this.path = path;
         this.useGet = useGet;
     }
