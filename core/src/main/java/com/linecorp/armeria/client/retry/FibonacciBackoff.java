@@ -47,6 +47,7 @@ final class FibonacciBackoff extends AbstractBackoff {
                 precomputed.add(delay);
             } else {
                 precomputed.add(maxDelayMillis);
+                break;
             }
         }
 
@@ -61,9 +62,13 @@ final class FibonacciBackoff extends AbstractBackoff {
 
     private long fibDelay(int n) {
         final int length = precomputedDelays.length;
-        //we already know the first 30 delays, so we can look them up
+        //we already know the first not-repeating delays, so we can look them up
         if (n < length) {
             return precomputedDelays[n - 1];
+        //we know that we have reached the maxDelay already, no additional calculations required
+        } else if (precomputedDelays[length - 1] == maxDelayMillis) {
+            return maxDelayMillis;
+        //we have to generate new delays
         } else {
             long a = precomputedDelays[length - 2];
             long b = precomputedDelays[length - 1];
