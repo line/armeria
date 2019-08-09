@@ -45,13 +45,14 @@ final class ExponentialBackoff extends AbstractBackoff {
         if (computeNextDelayMillis(30) > maxDelayMillis) {
             // We'll only have a maximum of 30 different delays, so may as well precompute them.
             List<Long> precomputed = new ArrayList<>();
-            long delay = initialDelayMillis;
-            while (delay < maxDelayMillis) {
-                precomputed.add(delay);
-                delay *= multiplier;
-            }
-            if (delay != maxDelayMillis) {
-                precomputed.add(maxDelayMillis);
+            for (int i = 1; i <= 30; i++) {
+                long delay = computeNextDelayMillis(i);
+                if (delay < maxDelayMillis) {
+                    precomputed.add(delay);
+                } else {
+                    precomputed.add(maxDelayMillis);
+                    break;
+                }
             }
             precomputedDelays = precomputed.stream().mapToLong(l -> l).toArray();
 
