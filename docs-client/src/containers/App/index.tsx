@@ -208,7 +208,7 @@ function AppDrawer({
                         )
                       }
                     >
-                      <Grid container alignItems="center">
+                      <Grid container alignItems="center" spacing={5}>
                         <Grid item xs={4}>
                           <Typography
                             className={httpMethodClass(method.httpMethod)}

@@ -90,6 +90,7 @@ const styles = (theme: Theme) =>
       position: 'relative',
       paddingTop: `${theme.spacing(1 / 5)}px`,
       fontSize: 16,
+      color: 'rgba(0, 0, 0, 0.62)',
     },
     placeholder: {
       position: 'absolute',
