@@ -54,6 +54,20 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
      * server or client request and will never have a {@link RequestContext} available. This can be called from
      * background threads, such as the thread that reports traced spans to storage, to prevent logging a
      * warning when trying to start a trace without having a {@link RequestContext}.
+     *
+     * Ex. To prevent warnings from an administrative thread controlled by a thread factory:
+     * <pre>{@code
+     * threadFactory = (runnable) -> new Thread(new Runnable() {
+     *   @Override public void run() {
+     *     RequestContextCurrentTraceContext.setCurrentThreadNotRequestThread(true);
+     *     runnable.run();
+     *   }
+     *
+     *   @Override public String toString() {
+     *     return runnable.toString();
+     *   }
+     * });
+     * }</pre>
      */
     public static void setCurrentThreadNotRequestThread(boolean value) {
         if (value) {
