@@ -35,7 +35,7 @@ After importing the project, import the IDE settings as well.
 #### IntelliJ IDEA
 
 - [`settings.jar`](https://raw.githubusercontent.com/line/armeria/master/settings/intellij_idea/settings.jar) -
-  See [Importing settings from a JAR archive](https://www.jetbrains.com/help/idea/sharing-your-ide-settings.html#23c8afba).
+  See [Import settings from a ZIP archive](https://www.jetbrains.com/help/idea/sharing-your-ide-settings.html#23c8afba).
 - Make sure to use 'LINE OSS' code style and inspection profile.
   - Go to `Preferences` > `Editors` > `Code Style` and set `Scheme` option to `LINE OSS`.
   - Go to `Preferences` > `Editors` > `Inspections` and set `Profile` option to `LINE OSS`.
