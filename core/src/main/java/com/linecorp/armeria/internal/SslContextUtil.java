@@ -21,13 +21,18 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.Flags;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
@@ -38,12 +43,13 @@ import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
+import io.netty.util.ReferenceCountUtil;
 
 /**
  * Utilities for configuring {@link SslContextBuilder}.
  */
 public final class SslContextUtil {
-
+    private static final Logger LOGGER = LoggerFactory.getLogger(SslContextUtil.class);
     private static final ApplicationProtocolConfig ALPN_CONFIG = new ApplicationProtocolConfig(
             Protocol.ALPN,
             // NO_ADVERTISE is currently the only mode supported by both OpenSsl and JDK providers.
@@ -82,13 +88,27 @@ public final class SslContextUtil {
 
         if (Flags.useOpenSsl()) {
             builder.sslProvider(SslProvider.OPENSSL)
-                   .protocols(DEFAULT_PROTOCOLS.toArray(new String[0]));
-            builder.ciphers(DEFAULT_CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
+                   .protocols(DEFAULT_PROTOCOLS.toArray(new String[0]))
+                   .ciphers(DEFAULT_CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
         } else {
-            //Netty's JdkSslContext does not support TLSv1.3 by default. In future when it does, we will update.
-            builder.sslProvider(SslProvider.JDK)
-                   .protocols(DEFAULT_JDKENGINE_PROTOCOLS.toArray(new String[0]));
-            builder.ciphers(DEFAULT_JDKENGINE_CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
+            try {
+                // use this to determine actual supported protocols.
+                final SslContextBuilder jdkBuilder = sslContextSupplier.get();
+                final SSLEngine jdkEngine = jdkBuilder.build().newEngine(ByteBufAllocator.DEFAULT);
+                builder.sslProvider(SslProvider.JDK)
+                       .protocols(jdkEngine.getSupportedProtocols())
+                       .ciphers(DEFAULT_CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
+                ReferenceCountUtil.release(jdkEngine);
+            } catch (SSLException e) {
+                LOGGER.debug(
+                        "Unable to determine complete list of supported protocol and ciphers. " +
+                        "Will disable TLSv1.3.", e);
+                // Incase of any error, disable TLSv1.3
+                // Netty's JdkSslContext does not support TLSv1.3 by default. Need JDK 11+ for TLS v1.3
+                builder.sslProvider(SslProvider.JDK)
+                       .protocols(DEFAULT_JDKENGINE_PROTOCOLS.toArray(new String[0]))
+                       .ciphers(DEFAULT_JDKENGINE_CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
+            }
         }
         userCustomizer.accept(builder);
 
