@@ -72,8 +72,8 @@ public final class SslContextUtil {
     private static final List<String> DEFAULT_JDKENGINE_PROTOCOLS = ImmutableList.of("TLSv1.2");
 
     /**
-     * Creates a {@link SslContext} with Armeria's defaults, enabling support for HTTP/2, TLSv1.3 (if supported), and
-     * TLSv1.2.
+     * Creates a {@link SslContext} with Armeria's defaults, enabling support for HTTP/2,
+     * TLSv1.3 (if supported), and TLSv1.2.
      */
     public static SslContext createSslContext(Supplier<SslContextBuilder> sslContextSupplier,
                                               boolean forceHttp1,
