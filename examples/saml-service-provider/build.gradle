@@ -1,3 +1,7 @@
+plugins {
+    id 'application'
+}
+
 dependencies {
     compile project(':logback')
     compile project(':saml')
@@ -6,4 +10,8 @@ dependencies {
     testCompile 'junit:junit'
     testCompile 'net.javacrumbs.json-unit:json-unit-fluent'
     testCompile 'org.assertj:assertj-core'
+}
+
+application {
+    mainClassName = 'example.armeria.server.saml.sp.Main'
 }

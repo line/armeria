@@ -10,7 +10,7 @@ buildscript {
 apply plugin: 'org.springframework.boot'
 
 springBoot {
-    mainClassName = 'example.springframework.boot.armeria.Main'
+    mainClassName = 'example.springframework.boot.minimal.Main'
 }
 
 dependencies {
