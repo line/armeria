@@ -65,8 +65,14 @@ public final class SslContextUtil {
 
     public static final List<String> DEFAULT_PROTOCOLS = ImmutableList.of("TLSv1.3", "TLSv1.2");
 
+    private static final List<String> DEFAULT_JDKENGINE_CIPHERS = ImmutableList.<String>builder()
+            .addAll(Http2SecurityUtil.CIPHERS)
+            .build();
+
+    private static final List<String> DEFAULT_JDKENGINE_PROTOCOLS = ImmutableList.of("TLSv1.2");
+
     /**
-     * Creates a {@link SslContext} with Armeria's defaults, enabling support for HTTP/2, TLSv1.3, and
+     * Creates a {@link SslContext} with Armeria's defaults, enabling support for HTTP/2, TLSv1.3 (if supported), and
      * TLSv1.2.
      */
     public static SslContext createSslContext(Supplier<SslContextBuilder> sslContextSupplier,
@@ -74,11 +80,16 @@ public final class SslContextUtil {
                                               Consumer<? super SslContextBuilder> userCustomizer) {
         final SslContextBuilder builder = sslContextSupplier.get();
 
-        builder.sslProvider(Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK)
-                  .protocols(DEFAULT_PROTOCOLS.toArray(new String[0]));
-
-        builder.ciphers(DEFAULT_CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
-
+        if (Flags.useOpenSsl()) {
+            builder.sslProvider(SslProvider.OPENSSL)
+                   .protocols(DEFAULT_PROTOCOLS.toArray(new String[0]));
+            builder.ciphers(DEFAULT_CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
+        } else {
+            //Netty's JdkSslContext does not support TLSv1.3 by default. In future when it does, we will update.
+            builder.sslProvider(SslProvider.JDK)
+                   .protocols(DEFAULT_JDKENGINE_PROTOCOLS.toArray(new String[0]));
+            builder.ciphers(DEFAULT_JDKENGINE_CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
+        }
         userCustomizer.accept(builder);
 
         // We called user customization logic before setting ALPN to make sure they don't break
