@@ -19,8 +19,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -34,6 +38,43 @@ import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 
 class HealthCheckedEndpointGroupTest {
+
+    @Test
+    void delegateUpdateCandidatesWhileCreatingHealthCheckedEndpointGroup() {
+        final MockEndpointGroup delegate = new MockEndpointGroup();
+        final CompletableFuture<List<Endpoint>> future = delegate.initialEndpointsFuture();
+        future.complete(ImmutableList.of(Endpoint.of("127.0.0.1", 8080), Endpoint.of("127.0.0.1", 8081)));
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        // Schedule the task which update the endpoint one second later to ensure that the change is happening
+        // while creating the HealthCheckedEndpointGroup.
+        Executors.newSingleThreadScheduledExecutor().schedule(
+                () -> {
+                    delegate.set(Endpoint.of("127.0.0.1", 8082));
+                    latch.countDown();
+                }, 1, TimeUnit.SECONDS);
+
+        new AbstractHealthCheckedEndpointGroupBuilder(delegate) {
+            @Override
+            protected Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory() {
+                return (Function<HealthCheckerContext, AsyncCloseable>) ctx -> {
+                    // Call updateHealth after the endpoint is changed so that
+                    // snapshot.forEach(ctx -> ctx.initialCheckFuture.join()); performs the next action.
+                    Executors.newSingleThreadExecutor().submit(() -> {
+                        try {
+                            latch.await();
+                        } catch (InterruptedException e) {
+                            // Ignore
+                        }
+                        ctx.updateHealth(1);
+                    });
+                    return CompletableFuture::new;
+                };
+            }
+        }.build();
+    }
+
     @Test
     void disappearedEndpoint() {
         // Start with an endpoint group that has healthy 'foo'.
