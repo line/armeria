@@ -66,6 +66,45 @@ After importing the project, import the IDE settings as well.
   - Click the 'Find unresolved properties' button. It will find the `checkstyleConfigDir` property.
     Choose 'Yes' to add it. Set it to `<project root path>/settings/checkstyle`.
 
+### Configure `-parameters` javac option 
+
+You can configure your build tool and IDE to add `-parameters` javac option as follows.
+  
+#### Gradle
+
+```groovy
+tasks.withType(JavaCompile) {
+    options.compilerArgs += '-parameters'
+}
+```
+
+#### Maven
+
+```xml
+<project>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <compilerArgs>
+            <arg>-parameters</arg>
+          </compilerArgs>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>
+```
+
+#### IntelliJ IDEA 
+
+Go to `Preferences` > `Build, Execution, Deployment` > `Compiler` > `Java Compiler` and add `-parameters` to `Additional command line paramters`.
+<details><summary>Click here to see the screenshot.</summary>
+  <img src="./site/src/sphinx/_images/intellij_javac_parameters.png" />
+</details>
+
 ### Checklist for your pull request
 
 Please use the following checklist to keep your contribution's quality high and

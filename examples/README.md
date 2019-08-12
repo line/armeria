@@ -35,6 +35,55 @@
   - Learn how to serve static files.
   - See [Serving static files](https://line.github.io/armeria/server-http-file.html).
 
+## Configure `-parameters` javac option 
+
+You can omit the value of `@Param` if you compiled your code with `-parameters` javac option. In this case the variable name is used as the value.
+
+```java
+public class MyAnnotatedService {
+    @Get("/hello/{name}")
+    // Use `Param String name` instead of `@Param("name") String name`.
+    public HttpResponse hello1(@Param String name) { ... }
+}
+```
+
+Configure your build tool and IDE to add `-parameters` javac option as follows.
+
+### Gradle
+
+```groovy
+tasks.withType(JavaCompile) {
+    options.compilerArgs += '-parameters'
+}
+```
+
+### Maven
+
+```xml
+<project>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <compilerArgs>
+            <arg>-parameters</arg>
+          </compilerArgs>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>
+```
+
+### IntelliJ IDEA 
+Go to `Preferences` > `Build, Execution, Deployment` > `Compiler` > `Java Compiler` and add `-parameters` to `Additional command line paramters`.
+  
+<details><summary>Click here to see the screenshot.</summary>
+  <img src="./../site/src/sphinx/_images/intellij_javac_parameters.png" />
+</details>
+
 ## License
 
 All files under this directory (`examples`) belong to
