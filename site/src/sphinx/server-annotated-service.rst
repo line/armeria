@@ -168,7 +168,16 @@ one of the following supported types:
 - ``Enum``
 
 Note that you can omit the value of :api:`@Param` if you compiled your code with ``-parameters`` javac
-option. Please refer to :ref:`configure_parameters` for more information.
+option. In this case the variable name is used as the value.
+
+.. code-block:: java
+
+    public class MyAnnotatedService {
+        @Get("/hello/{name}")
+        public HttpResponse hello1(@Param String name) { ... }
+    }
+
+Please refer to :ref:`configure_parameters` for more information.
 
 Injecting a parameter as an ``Enum`` type
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
