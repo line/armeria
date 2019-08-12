@@ -1,0 +1,20 @@
+{% extends "!footer.html" %}
+{% set show_sphinx = False %}
+{% set show_copyright = True %}
+{% block extrafooter %}
+<div id="privacy_policy" role="contentinfo">
+  <p>
+    <a id="privacy_policy_text" href="https://terms.line.me/line_rules?lang=en">Privacy policy</a>
+  </p>
+</div>
+<script>
+  var contentInfoPara = document.querySelector("div[role=contentinfo] > p");
+  if (contentInfoPara && contentInfoPara.id !== 'privacy_policy') {
+    var privacyPolicyDiv = document.getElementById('privacy_policy');
+    var privacyPolicyText = document.getElementById('privacy_policy_text');
+    contentInfoPara.append(' | ');
+    contentInfoPara.append(privacyPolicyText);
+    privacyPolicyDiv.parentNode.removeChild(privacyPolicyDiv);
+  }
+</script>
+{% endblock %}
