@@ -199,6 +199,8 @@ You might want to use the following ``pom.xml`` as a starting point when you set
       </dependencies>
     </project>
 
+.. _configure_parameters:
+
 Configure ``-parameters`` javac option
 ------------------------------------
 You can omit the value of :api:`@Param` if you compiled your code with ``-parameters`` javac
