@@ -23,6 +23,7 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.util.SystemInfo;
 
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
@@ -41,6 +42,10 @@ class SslContextUtilTest {
     void jdkSsl() {
         final Set<String> supportedProtocols = SslContextUtil.supportedProtocols(
                 SslContextBuilder.forClient().sslProvider(SslProvider.JDK));
-        assertThat(supportedProtocols).contains("TLSv1.2");
+        if (SystemInfo.javaVersion() >= 11) {
+            assertThat(supportedProtocols).contains("TLSv1.2", "TLSv1.3");
+        } else {
+            assertThat(supportedProtocols).contains("TLSv1.2");
+        }
     }
 }
