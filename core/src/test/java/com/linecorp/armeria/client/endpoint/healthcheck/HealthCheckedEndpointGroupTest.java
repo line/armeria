@@ -22,7 +22,6 @@ import static org.awaitility.Awaitility.await;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -30,14 +29,19 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.common.util.AsyncCloseable;
+import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
 
 class HealthCheckedEndpointGroupTest {
+
+    @RegisterExtension
+    static final EventLoopExtension eventLoop = new EventLoopExtension();
 
     @Test
     void delegateUpdateCandidatesWhileCreatingHealthCheckedEndpointGroup() {
@@ -49,7 +53,7 @@ class HealthCheckedEndpointGroupTest {
 
         // Schedule the task which update the endpoint one second later to ensure that the change is happening
         // while creating the HealthCheckedEndpointGroup.
-        Executors.newSingleThreadScheduledExecutor().schedule(
+        eventLoop.get().schedule(
                 () -> {
                     delegate.set(Endpoint.of("127.0.0.1", 8082));
                     latch.countDown();
@@ -61,14 +65,14 @@ class HealthCheckedEndpointGroupTest {
                 return (Function<HealthCheckerContext, AsyncCloseable>) ctx -> {
                     // Call updateHealth after the endpoint is changed so that
                     // snapshot.forEach(ctx -> ctx.initialCheckFuture.join()); performs the next action.
-                    Executors.newSingleThreadExecutor().submit(() -> {
+                    eventLoop.get().schedule(() -> {
                         try {
                             latch.await();
                         } catch (InterruptedException e) {
                             // Ignore
                         }
                         ctx.updateHealth(1);
-                    });
+                    }, 2, TimeUnit.SECONDS);
                     return CompletableFuture::new;
                 };
             }
@@ -115,7 +119,8 @@ class HealthCheckedEndpointGroupTest {
             assertThat(group.healthyEndpoints).isEmpty();
 
             // An attempt to schedule a new task for a disappeared endpoint must fail.
-            assertThatThrownBy(() -> ctx.executor().execute(() -> {}))
+            assertThatThrownBy(() -> ctx.executor().execute(() -> {
+            }))
                     .isInstanceOf(RejectedExecutionException.class)
                     .hasMessageContaining("destroyed");
         }
