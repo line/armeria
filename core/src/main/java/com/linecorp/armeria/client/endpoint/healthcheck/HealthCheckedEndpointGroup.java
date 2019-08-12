@@ -123,7 +123,11 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         updateCandidates(delegate.initialEndpointsFuture().join());
 
         // Wait until the initial health of all endpoints are determined.
-        contexts.values().forEach(ctx -> ctx.initialCheckFuture.join());
+        final List<DefaultHealthCheckerContext> snapshot;
+        synchronized (contexts) {
+            snapshot = ImmutableList.copyOf(contexts.values());
+        }
+        snapshot.forEach(ctx -> ctx.initialCheckFuture.join());
     }
 
     private void updateCandidates(List<Endpoint> candidates) {
