@@ -56,7 +56,7 @@ public class DynamicEndpointGroup extends AbstractListenable<List<Endpoint>> imp
         final List<Endpoint> newEndpoints;
         endpointsLock.lock();
         try {
-            List<Endpoint> newEndpointsUnsorted = Lists.newArrayList(endpoints);
+            final List<Endpoint> newEndpointsUnsorted = Lists.newArrayList(endpoints);
             newEndpointsUnsorted.add(e);
             endpoints = newEndpoints = ImmutableList.sortedCopyOf(newEndpointsUnsorted);
         } finally {
