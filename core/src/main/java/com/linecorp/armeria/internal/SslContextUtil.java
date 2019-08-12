@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.internal;
 
+import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -27,12 +30,13 @@ import javax.net.ssl.SSLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.Flags;
 
-import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.handler.codec.http2.Http2SecurityUtil;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
@@ -49,7 +53,9 @@ import io.netty.util.ReferenceCountUtil;
  * Utilities for configuring {@link SslContextBuilder}.
  */
 public final class SslContextUtil {
-    private static final Logger LOGGER = LoggerFactory.getLogger(SslContextUtil.class);
+
+    private static final Logger logger = LoggerFactory.getLogger(SslContextUtil.class);
+
     private static final ApplicationProtocolConfig ALPN_CONFIG = new ApplicationProtocolConfig(
             Protocol.ALPN,
             // NO_ADVERTISE is currently the only mode supported by both OpenSsl and JDK providers.
@@ -71,11 +77,7 @@ public final class SslContextUtil {
 
     public static final List<String> DEFAULT_PROTOCOLS = ImmutableList.of("TLSv1.3", "TLSv1.2");
 
-    private static final List<String> DEFAULT_JDKENGINE_CIPHERS = ImmutableList.<String>builder()
-            .addAll(Http2SecurityUtil.CIPHERS)
-            .build();
-
-    private static final List<String> DEFAULT_JDKENGINE_PROTOCOLS = ImmutableList.of("TLSv1.2");
+    private static boolean warnedUnsupportedProtocols;
 
     /**
      * Creates a {@link SslContext} with Armeria's defaults, enabling support for HTTP/2,
@@ -84,32 +86,32 @@ public final class SslContextUtil {
     public static SslContext createSslContext(Supplier<SslContextBuilder> sslContextSupplier,
                                               boolean forceHttp1,
                                               Consumer<? super SslContextBuilder> userCustomizer) {
-        final SslContextBuilder builder = sslContextSupplier.get();
 
-        if (Flags.useOpenSsl()) {
-            builder.sslProvider(SslProvider.OPENSSL)
-                   .protocols(DEFAULT_PROTOCOLS.toArray(new String[0]))
-                   .ciphers(DEFAULT_CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
-        } else {
-            try {
-                // use this to determine actual supported protocols.
-                final SslContextBuilder jdkBuilder = sslContextSupplier.get();
-                final SSLEngine jdkEngine = jdkBuilder.build().newEngine(ByteBufAllocator.DEFAULT);
-                builder.sslProvider(SslProvider.JDK)
-                       .protocols(jdkEngine.getSupportedProtocols())
-                       .ciphers(DEFAULT_CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
-                ReferenceCountUtil.release(jdkEngine);
-            } catch (SSLException e) {
-                LOGGER.debug(
-                        "Unable to determine complete list of supported protocol and ciphers. " +
-                        "Will disable TLSv1.3.", e);
-                // Incase of any error, disable TLSv1.3
-                // Netty's JdkSslContext does not support TLSv1.3 by default. Need JDK 11+ for TLS v1.3
-                builder.sslProvider(SslProvider.JDK)
-                       .protocols(DEFAULT_JDKENGINE_PROTOCOLS.toArray(new String[0]))
-                       .ciphers(DEFAULT_JDKENGINE_CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
+        final SslProvider provider = Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK;
+        final SslContextBuilder builder = sslContextSupplier.get();
+        builder.sslProvider(provider);
+
+        final Set<String> supportedProtocols = supportedProtocols(builder);
+        final List<String> protocols = DEFAULT_PROTOCOLS.stream()
+                                                        .filter(supportedProtocols::contains)
+                                                        .collect(toImmutableList());
+        if (protocols.isEmpty()) {
+            throw new IllegalStateException(provider + " supports none of " + DEFAULT_PROTOCOLS);
+        }
+
+        if (!warnedUnsupportedProtocols && DEFAULT_PROTOCOLS.size() != protocols.size()) {
+            warnedUnsupportedProtocols = true;
+            if (logger.isDebugEnabled()) {
+                final List<String> missingProtocols = DEFAULT_PROTOCOLS.stream()
+                                                                       .filter(p -> !protocols.contains(p))
+                                                                       .collect(toImmutableList());
+                logger.debug("{} does not support: {}", provider, missingProtocols);
             }
         }
+
+        builder.protocols(protocols.toArray(new String[0]))
+               .ciphers(DEFAULT_CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
+
         userCustomizer.accept(builder);
 
         // We called user customization logic before setting ALPN to make sure they don't break
@@ -118,20 +120,47 @@ public final class SslContextUtil {
             builder.applicationProtocolConfig(ALPN_CONFIG);
         }
 
-        final SslContext sslContext;
+        SslContext sslContext = null;
+        boolean success = false;
         try {
             sslContext = builder.build();
+
+            final Set<String> ciphers = ImmutableSet.copyOf(sslContext.cipherSuites());
+            checkState(!ciphers.isEmpty(), "SSLContext has no cipher suites enabled.");
+
+            if (!forceHttp1) {
+                validateHttp2Ciphers(ciphers);
+            }
+
+            success = true;
+            return sslContext;
         } catch (SSLException e) {
             throw new IllegalStateException("Could not initialize SSL context. Ensure that netty-tcnative is " +
                                             "on the path, this is running on Java 11+, or user customization " +
                                             "of the SSL context is supported by the environment.", e);
+        } finally {
+            if (!success && sslContext != null) {
+                ReferenceCountUtil.release(sslContext);
+            }
         }
+    }
 
-        if (!forceHttp1) {
-            validateHttp2Ciphers(ImmutableSet.copyOf(sslContext.cipherSuites()));
+    @VisibleForTesting
+    static Set<String> supportedProtocols(SslContextBuilder builder) {
+        SslContext ctx = null;
+        SSLEngine engine = null;
+        try {
+            ctx = builder.build();
+            engine = ctx.newEngine(PooledByteBufAllocator.DEFAULT);
+            return ImmutableSet.copyOf(engine.getSupportedProtocols());
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "Failed to get the list of supported protocols from an SSLContext.", e);
         }
-
-        return sslContext;
+        finally {
+            ReferenceCountUtil.release(engine);
+            ReferenceCountUtil.release(ctx);
+        }
     }
 
     private static void validateHttp2Ciphers(Set<String> ciphers) {
