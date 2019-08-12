@@ -68,42 +68,8 @@ After importing the project, import the IDE settings as well.
 
 ### Configure `-parameters` javac option 
 
-You can configure your build tool and IDE to add `-parameters` javac option as follows.
-  
-#### Gradle
-
-```groovy
-tasks.withType(JavaCompile) {
-    options.compilerArgs += '-parameters'
-}
-```
-
-#### Maven
-
-```xml
-<project>
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <configuration>
-          <compilerArgs>
-            <arg>-parameters</arg>
-          </compilerArgs>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
-</project>
-```
-
-#### IntelliJ IDEA 
-
-Go to `Preferences` > `Build, Execution, Deployment` > `Compiler` > `Java Compiler` and add `-parameters` to `Additional command line paramters`.
-<details><summary>Click here to see the screenshot.</summary>
-  <img src="./site/src/sphinx/_images/intellij_javac_parameters.png" />
-</details>
+You can configure your build tool and IDE to add `-parameters` javac option.
+Please refer to [Configure -parameters javac option](http://line.github.io/armeria/setup.html#configure-parameters-javac-option) for more information.
 
 ### Checklist for your pull request
 
