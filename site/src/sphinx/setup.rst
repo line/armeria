@@ -199,6 +199,45 @@ You might want to use the following ``pom.xml`` as a starting point when you set
       </dependencies>
     </project>
 
+.. _configure_parameters:
+
+Configure ``-parameters`` javac option
+--------------------------------------
+
+You can configure your build tool to add ``-parameters`` javac option as follows.
+
+.. code-block:: gradle
+
+    // Gradle:
+    tasks.withType(JavaCompile) {
+        options.compilerArgs += '-parameters'
+    }
+
+.. code-block:: xml
+
+    <!-- Maven -->
+    <project>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <compilerArgs>
+                <arg>-parameters</arg>
+              </compilerArgs>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </project>
+
+IntelliJ IDEA
+^^^^^^^^^^^^^
+Go to ``Preferences`` > ``Build, Execution, Deployment`` > ``Compiler`` > ``Java Compiler`` and add ``-parameters`` to ``Additional command line paramters``.
+
+.. image:: _images/intellij_javac_parameters.png
+
 Using Maven BOM for simpler dependency management
 -------------------------------------------------
 

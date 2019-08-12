@@ -66,6 +66,11 @@ After importing the project, import the IDE settings as well.
   - Click the 'Find unresolved properties' button. It will find the `checkstyleConfigDir` property.
     Choose 'Yes' to add it. Set it to `<project root path>/settings/checkstyle`.
 
+### Configure `-parameters` javac option 
+
+You can configure your build tool and IDE to add `-parameters` javac option.
+Please refer to [Configure `-parameters` javac option](http://line.github.io/armeria/setup.html#configure-parameters-javac-option) for more information.
+
 ### Checklist for your pull request
 
 Please use the following checklist to keep your contribution's quality high and

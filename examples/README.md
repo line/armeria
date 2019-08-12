@@ -35,6 +35,11 @@
   - Learn how to serve static files.
   - See [Serving static files](https://line.github.io/armeria/server-http-file.html).
 
+## Configure `-parameters` javac option 
+
+You can omit the value of `@Param` if you compiled your code with `-parameters` javac option.
+Please refer to [Configure `-parameters` javac option](http://line.github.io/armeria/setup.html#configure-parameters-javac-option) for more information.
+
 ## License
 
 All files under this directory (`examples`) belong to
