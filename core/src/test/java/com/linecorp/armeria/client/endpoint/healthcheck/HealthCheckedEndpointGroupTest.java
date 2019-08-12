@@ -29,19 +29,17 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.util.AsyncCloseable;
-import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
+
+import io.netty.channel.EventLoopGroup;
 
 class HealthCheckedEndpointGroupTest {
-
-    @RegisterExtension
-    static final EventLoopExtension eventLoop = new EventLoopExtension();
 
     @Test
     void delegateUpdateCandidatesWhileCreatingHealthCheckedEndpointGroup() {
@@ -53,7 +51,8 @@ class HealthCheckedEndpointGroupTest {
 
         // Schedule the task which update the endpoint one second later to ensure that the change is happening
         // while creating the HealthCheckedEndpointGroup.
-        eventLoop.get().schedule(
+        final EventLoopGroup executors = CommonPools.workerGroup();
+        executors.schedule(
                 () -> {
                     delegate.set(Endpoint.of("127.0.0.1", 8082));
                     latch.countDown();
@@ -65,7 +64,7 @@ class HealthCheckedEndpointGroupTest {
                 return (Function<HealthCheckerContext, AsyncCloseable>) ctx -> {
                     // Call updateHealth after the endpoint is changed so that
                     // snapshot.forEach(ctx -> ctx.initialCheckFuture.join()); performs the next action.
-                    eventLoop.get().schedule(() -> {
+                    executors.schedule(() -> {
                         try {
                             latch.await();
                         } catch (InterruptedException e) {
