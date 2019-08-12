@@ -42,7 +42,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.client.ClientFactory;
@@ -124,11 +123,11 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         updateCandidates(delegate.initialEndpointsFuture().join());
 
         // Wait until the initial health of all endpoints are determined.
-        final Map<Endpoint, DefaultHealthCheckerContext> copy;
+        final List<DefaultHealthCheckerContext> snapshot;
         synchronized (contexts) {
-            copy = ImmutableMap.copyOf(contexts);
+            snapshot = ImmutableList.copyOf(contexts.values());
         }
-        copy.values().forEach(ctx -> ctx.initialCheckFuture.join());
+        snapshot.forEach(ctx -> ctx.initialCheckFuture.join());
     }
 
     private void updateCandidates(List<Endpoint> candidates) {
