@@ -69,7 +69,7 @@ After importing the project, import the IDE settings as well.
 ### Configure `-parameters` javac option 
 
 You can configure your build tool and IDE to add `-parameters` javac option.
-Please refer to [Configure -parameters javac option](http://line.github.io/armeria/setup.html#configure-parameters-javac-option) for more information.
+Please refer to [Configure `-parameters` javac option](http://line.github.io/armeria/setup.html#configure-parameters-javac-option) for more information.
 
 ### Checklist for your pull request
 

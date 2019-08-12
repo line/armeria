@@ -202,19 +202,8 @@ You might want to use the following ``pom.xml`` as a starting point when you set
 .. _configure_parameters:
 
 Configure ``-parameters`` javac option
-------------------------------------
-You can omit the value of :api:`@Param` if you compiled your code with ``-parameters`` javac
-option. In this case the variable name is used as the value.
+--------------------------------------
 
-.. code-block:: java
-
-    public class MyAnnotatedService {
-        @Get("/hello/{name}")
-        public HttpResponse hello1(@Param String name) { ... }
-    }
-
-Build Tool
-^^^^^^^^^^
 You can configure your build tool to add ``-parameters`` javac option as follows.
 
 .. code-block:: gradle

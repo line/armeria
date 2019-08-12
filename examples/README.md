@@ -38,7 +38,7 @@
 ## Configure `-parameters` javac option 
 
 You can omit the value of `@Param` if you compiled your code with `-parameters` javac option.
-Please refer to [Configure -parameters javac option](http://line.github.io/armeria/setup.html#configure-parameters-javac-option) for more information.
+Please refer to [Configure `-parameters` javac option](http://line.github.io/armeria/setup.html#configure-parameters-javac-option) for more information.
 
 ## License
 
