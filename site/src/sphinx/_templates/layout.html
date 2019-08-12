@@ -3,10 +3,12 @@
 {% set theme_logo_only = True %}
 {% set sticky_navigation = True %}
 {% set extra_css_files = ['_static/overrides.css'] %}
+{% set theme_analytics_id = 'UA-145425527-1' %}
 {% block extrahead %}
   <script src="https://cdn.jsdelivr.net/npm/interactjs@1.4.0/dist/interact.min.js"></script>
   <script src="{{ pathto('_static/center_page.js', 1) }}"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/styles/default.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cookieconsent2/3.1.1/cookieconsent.min.css">
   {{ super() }}
 {% endblock %}
 {% block footer %}
@@ -23,6 +25,28 @@
     document.querySelectorAll('div.hljs > pre').forEach(function(block) {
       hljs.highlightBlock(block);
       hljs.lineNumbersBlock(block);
+    });
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cookieconsent2/3.1.1/cookieconsent.min.js"></script>
+  <script>
+    window.cookieconsent.initialise({
+      "palette": {
+        "popup": {
+          "background": "rgba(58,58,58,0.75)",
+          "text": "#F8F8F8"
+        },
+        "button": {
+          "background": "transparent",
+          "text": "#F8F8F8",
+          "border": "#F8F8F8"
+        }
+      },
+      "content": {
+        "message": "This website uses anonymous cookies to ensure we provide you the best experience. ",
+        "link": "Opt out!",
+        "href": "https://tools.google.com/dlpage/gaoptout/",
+        "target": '_blank'
+      }
     });
   </script>
   {{ super() }}
