@@ -156,8 +156,7 @@ public final class SslContextUtil {
         } catch (Exception e) {
             throw new IllegalStateException(
                     "Failed to get the list of supported protocols from an SSLContext.", e);
-        }
-        finally {
+        } finally {
             ReferenceCountUtil.release(engine);
             ReferenceCountUtil.release(ctx);
         }
