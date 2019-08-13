@@ -66,6 +66,23 @@ const formatRequirement = (s: string) => {
 
 const formatLocation = (s: string) => formatRequirement(s);
 
+interface FieldInfoProps {
+  indent: number;
+  childFields: Variable[];
+}
+
+const FieldInfo: React.FunctionComponent<FieldInfosProps> = (props) => {
+  const [isExpanded, toggleIsExpanded] = useReducer(
+    (current) => !current,
+    false,
+  );
+  return (
+      <>
+
+      </>
+  )
+};
+
 const FieldInfos: React.FunctionComponent<FieldInfosProps> = (props) => {
   const {
     variables,
