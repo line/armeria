@@ -465,9 +465,9 @@ const App: React.FunctionComponent<Props> = (props) => {
             structsSectionOpen={structsOpen}
             exceptionsOpen={exceptionsOpen}
             toggleServicesOpen={toggleServicesOpen}
-            toggleEnumsOpen={toggleEnumsOpen as any}
-            toggleStructsOpen={toggleStructsOpen as any}
-            toggleExceptionsOpen={toggleExceptionsOpen as any}
+            toggleEnumsOpen={toggleEnumsOpen}
+            toggleStructsOpen={toggleStructsOpen}
+            toggleExceptionsOpen={toggleExceptionsOpen}
             handleServiceCollapse={toggleOpenService}
           />
         </Drawer>
@@ -492,9 +492,9 @@ const App: React.FunctionComponent<Props> = (props) => {
             structsSectionOpen={structsOpen}
             exceptionsOpen={exceptionsOpen}
             toggleServicesOpen={toggleServicesOpen}
-            toggleEnumsOpen={toggleEnumsOpen as any}
-            toggleStructsOpen={toggleStructsOpen as any}
-            toggleExceptionsOpen={toggleExceptionsOpen as any}
+            toggleEnumsOpen={toggleEnumsOpen}
+            toggleStructsOpen={toggleStructsOpen}
+            toggleExceptionsOpen={toggleExceptionsOpen}
             handleServiceCollapse={toggleOpenService}
           />
         </Drawer>
