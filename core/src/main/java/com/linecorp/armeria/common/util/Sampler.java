@@ -27,7 +27,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.linecorp.armeria.internal.logging;
+package com.linecorp.armeria.common.util;
+
+import com.linecorp.armeria.internal.logging.CountingSampler;
 
 /**
  * Sampler is responsible for deciding if a particular trace should be "sampled", i.e. whether the

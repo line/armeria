@@ -33,6 +33,8 @@ import java.util.BitSet;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.linecorp.armeria.common.util.Sampler;
+
 /**
  * This sampler is appropriate for low-traffic instrumentation (ex servers that each receive <100K
  * requests), or those who do not provision random trace ids. It is not appropriate for collectors
@@ -46,7 +48,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * <p>Forked from brave-core 5.6.3 at d4cbd86e1df75687339da6ec2964d42ab3a8cf14
  */
-final class CountingSampler extends Sampler {
+public final class CountingSampler extends Sampler {
 
     /**
      * Creates a new instance.

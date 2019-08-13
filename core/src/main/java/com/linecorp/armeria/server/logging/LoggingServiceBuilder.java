@@ -21,7 +21,7 @@ import java.util.function.Function;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.LoggingDecoratorBuilder;
-import com.linecorp.armeria.internal.logging.Sampler;
+import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.server.Service;
 
 /**
