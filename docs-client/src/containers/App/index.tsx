@@ -30,7 +30,6 @@ import Typography from '@material-ui/core/Typography';
 import ExpandLess from '@material-ui/icons/ExpandLess';
 import ExpandMore from '@material-ui/icons/ExpandMore';
 import MenuIcon from '@material-ui/icons/Menu';
-import update from 'immutability-helper';
 import React, { useCallback, useEffect, useReducer, useState } from 'react';
 import Helmet from 'react-helmet';
 import { hot } from 'react-hot-loader/root';
@@ -130,16 +129,6 @@ const useStyles = makeStyles((theme: Theme) =>
     },
   }),
 );
-
-interface State {
-  mobileDrawerOpen: boolean;
-  specification?: Specification;
-  servicesSectionOpen: boolean;
-  openServices: { [key: string]: boolean };
-  enumsSectionOpen: boolean;
-  structsSectionOpen: boolean;
-  exceptionsOpen: boolean;
-}
 
 type Props = RouteComponentProps<{}>;
 
@@ -336,16 +325,16 @@ const App: React.FunctionComponent<Props> = (props) => {
   const [specification, setSpecification] = useState<
     Specification | undefined
   >();
+  const [openServices, toggleOpenService] = useReducer(
+    (current: OpenServices, serviceName: string) => ({
+      ...current,
+      [serviceName]: !current[serviceName],
+    }),
+    {},
+  );
   const [servicesSectionOpen, toggleServicesSectionOpen] = useReducer(
     (open) => !open,
     true,
-  );
-  const [openServices, toggleOpenService] = userReducer<OpenServices>(
-    (current: OpenServices, serviceName) =>
-      update(current, {
-        [serviceName]: { $set: !current[serviceName] },
-      }),
-    {},
   );
   const [enumsSectionOpen, toggleEnumsSectionOpen] = useReducer(
     (open) => !open,
@@ -365,12 +354,10 @@ const App: React.FunctionComponent<Props> = (props) => {
       const httpResponse = await fetch('specification.json');
       const specificationData: SpecificationData = await httpResponse.json();
       const initialSpecification = new Specification(specificationData);
-      let initialOpenServices = {};
       initialSpecification.getServices().forEach((service) => {
-        initialOpenServices = { ...initialOpenServices, [service.name]: true };
+        toggleOpenService(service.name);
       });
       setSpecification(initialSpecification);
-      setOpenServices(initialOpenServices);
     })();
   }, []);
 
@@ -487,11 +474,11 @@ const App: React.FunctionComponent<Props> = (props) => {
             enumsSectionOpen={enumsSectionOpen}
             structsSectionOpen={structsSectionOpen}
             exceptionsOpen={exceptionsOpen}
-            toggleServicesOpen={toggleServicesSectionOpen}
-            toggleEnumsOpen={toggleEnumsSectionOpen}
-            toggleStructsOpen={toggleStructsSectionOpen}
-            toggleExceptionsOpen={toggleExceptionsOpen}
-            handleServiceCollapse={this.handleServiceCollapse}
+            toggleServicesOpen={toggleServicesSectionOpen as any}
+            toggleEnumsOpen={toggleEnumsSectionOpen as any}
+            toggleStructsOpen={toggleStructsSectionOpen as any}
+            toggleExceptionsOpen={toggleExceptionsOpen as any}
+            handleServiceCollapse={toggleOpenService}
           />
         </Drawer>
       </Hidden>
@@ -514,8 +501,11 @@ const App: React.FunctionComponent<Props> = (props) => {
             enumsSectionOpen={enumsSectionOpen}
             structsSectionOpen={structsSectionOpen}
             exceptionsOpen={exceptionsOpen}
-            handleCollapse={this.handleCollapse}
-            handleServiceCollapse={this.handleServiceCollapse}
+            toggleServicesOpen={toggleServicesSectionOpen as any}
+            toggleEnumsOpen={toggleEnumsSectionOpen as any}
+            toggleStructsOpen={toggleStructsSectionOpen as any}
+            toggleExceptionsOpen={toggleExceptionsOpen as any}
+            handleServiceCollapse={toggleOpenService}
           />
         </Drawer>
       </Hidden>
@@ -524,253 +514,19 @@ const App: React.FunctionComponent<Props> = (props) => {
         <Route exact path="/" component={HomePage} />
         <Route
           path="/enums/:name"
-          render={(props) => (
-            <EnumPage {...props} specification={specification} />
-          )}
+          render={(p) => <EnumPage {...p} specification={specification} />}
         />
         <Route
           path="/methods/:serviceName/:methodName/:httpMethod"
-          render={(props) => (
-            <MethodPage {...props} specification={specification} />
-          )}
+          render={(p) => <MethodPage {...p} specification={specification} />}
         />
         <Route
           path="/structs/:name"
-          render={(props) => (
-            <StructPage {...props} specification={specification} />
-          )}
+          render={(p) => <StructPage {...p} specification={specification} />}
         />
       </main>
     </div>
   );
 };
-class App extends React.PureComponent<Props, State> {
-  public state: State = {
-    mobileDrawerOpen: false,
-    specification: undefined,
-    servicesSectionOpen: true,
-    openServices: {},
-    enumsSectionOpen: true,
-    structsSectionOpen: true,
-    exceptionsOpen: true,
-  };
-
-  public componentWillMount() {
-    this.initSpecification();
-  }
-
-  public render() {
-    const classes = useStyles();
-    const { specification } = this.state;
-
-    if (!specification) {
-      return null;
-    }
-
-    const { pathname, search } = props.location;
-    if (pathname.startsWith('/method/')) {
-      const redirectPath = `/methods${pathname.substring(
-        pathname.indexOf('/', 2),
-      )}`;
-      props.history.push(`${redirectPath}${search || ''}`);
-      return null;
-    }
-    if (pathname.startsWith('/namedType')) {
-      const name = pathname.substring(pathname.indexOf('/', 2) + 1);
-      const redirectBase = specification.getStructByName(name)
-        ? '/structs/'
-        : '/enums/';
-      props.history.push(`${redirectBase}${name}${search || ''}`);
-      return null;
-    }
-
-    return (
-      <div className={classes.root}>
-        <Helmet>
-          <script src="injected.js" />
-        </Helmet>
-        <CssBaseline />
-        <AppBar className={classes.appBar}>
-          <Toolbar disableGutters>
-            <Hidden mdUp>
-              <IconButton color="inherit" onClick={this.toggleMobileDrawer}>
-                <MenuIcon />
-              </IconButton>
-            </Hidden>
-            <Typography
-              className={classes.title}
-              variant="h6"
-              color="inherit"
-              noWrap
-            >
-              Armeria documentation service
-            </Typography>
-            <div style={{ flex: 1 }} />
-            <GotoSelect specification={specification} navigateTo={navigateTo} />
-          </Toolbar>
-        </AppBar>
-        <Hidden smDown>
-          <Drawer variant="permanent" classes={{ paper: classes.drawerPaper }}>
-            <div className={classes.toolbar} />
-            <AppDrawer
-              specification={specification}
-              navigateTo={navigateTo}
-              httpMethodClass={this.httpMethodClass}
-              servicesSectionOpen={servicesSectionOpen}
-              openServices={openServices}
-              enumsSectionOpen={enumsSectionOpen}
-              structsSectionOpen={structsSectionOpen}
-              exceptionsOpen={exceptionsOpen}
-              handleCollapse={this.handleCollapse}
-              handleServiceCollapse={this.handleServiceCollapse}
-            />
-          </Drawer>
-        </Hidden>
-        <Hidden mdUp>
-          <Drawer
-            variant="temporary"
-            open={mobileDrawerOpen}
-            onClose={this.toggleMobileDrawer}
-            classes={{ paper: classes.drawerPaper }}
-            ModalProps={{
-              keepMounted: true,
-            }}
-          >
-            <AppDrawer
-              specification={specification}
-              navigateTo={navigateTo}
-              httpMethodClass={this.httpMethodClass}
-              servicesSectionOpen={servicesSectionOpen}
-              openServices={openServices}
-              enumsSectionOpen={enumsSectionOpen}
-              structsSectionOpen={structsSectionOpen}
-              exceptionsOpen={exceptionsOpen}
-              handleCollapse={this.handleCollapse}
-              handleServiceCollapse={this.handleServiceCollapse}
-            />
-          </Drawer>
-        </Hidden>
-        <main className={classes.content}>
-          <div className={classes.toolbar} />
-          <Route exact path="/" component={HomePage} />
-          <Route
-            path="/enums/:name"
-            render={(props) => (
-              <EnumPage {...props} specification={specification} />
-            )}
-          />
-          <Route
-            path="/methods/:serviceName/:methodName/:httpMethod"
-            render={(props) => (
-              <MethodPage {...props} specification={specification} />
-            )}
-          />
-          <Route
-            path="/structs/:name"
-            render={(props) => (
-              <StructPage {...props} specification={specification} />
-            )}
-          />
-        </main>
-      </div>
-    );
-  }
-
-  private navigateTo = (to: string) => {
-    const params = new URLSearchParams(props.location.search);
-    params.delete('args');
-    const url = params.has('http_headers_sticky')
-      ? `${to}?${params.toString()}`
-      : to;
-    props.history.push(url);
-    this.setState({
-      mobileDrawerOpen: false,
-    });
-  };
-
-  private httpMethodClass = (httpMethod: string) => {
-    const classes = useStyles();
-    let httpMethodClass;
-    if (httpMethod === 'OPTIONS') {
-      httpMethodClass = classes.httpMethodOptions;
-    }
-    if (httpMethod === 'GET') {
-      httpMethodClass = classes.httpMethodGet;
-    }
-    if (httpMethod === 'HEAD') {
-      httpMethodClass = classes.httpMethodHead;
-    }
-    if (httpMethod === 'POST') {
-      httpMethodClass = classes.httpMethodPost;
-    }
-    if (httpMethod === 'PUT') {
-      httpMethodClass = classes.httpMethodPut;
-    }
-    if (httpMethod === 'PATCH') {
-      httpMethodClass = classes.httpMethodPatch;
-    }
-    if (httpMethod === 'DELETE') {
-      httpMethodClass = classes.httpMethodDelete;
-    }
-    if (httpMethod === 'TRACE') {
-      httpMethodClass = classes.httpMethodTrace;
-    }
-
-    if (httpMethodClass === undefined) {
-      throw new Error(`unsupported http method: ${httpMethod}`);
-    }
-    return `${classes.httpMethodCommon} ${httpMethodClass}`;
-  };
-
-  private initSpecification = async () => {
-    const httpResponse = await fetch('specification.json');
-    const specificationData: SpecificationData = await httpResponse.json();
-    const specification = new Specification(specificationData);
-    let openServices = {};
-    specification.getServices().forEach((service) => {
-      openServices = { ...openServices, [service.name]: true };
-    });
-    this.setState({ specification, openServices });
-  };
-
-  private toggleMobileDrawer = () => {
-    this.setState({
-      mobileDrawerOpen: !mobileDrawerOpen,
-    });
-  };
-
-  private handleCollapse = (itemName: string) => {
-    switch (itemName) {
-      case 'services':
-        this.setState({
-          servicesSectionOpen: !servicesSectionOpen,
-        });
-        break;
-      case 'enums':
-        this.setState({
-          enumsSectionOpen: !enumsSectionOpen,
-        });
-        break;
-      case 'structs':
-        this.setState({
-          structsSectionOpen: !structsSectionOpen,
-        });
-        break;
-      case 'exceptions':
-        this.setState({
-          exceptionsOpen: !exceptionsOpen,
-        });
-        break;
-    }
-  };
-
-  private handleServiceCollapse = (serviceName: string) => {
-    this.setState({
-      openServices: update(openServices, {
-        [serviceName]: { $set: !openServices[serviceName] },
-      }),
-    });
-  };
-}
 
 export default withRouter(hot(App));
