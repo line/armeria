@@ -300,7 +300,7 @@ final class BackoffSpec {
         } else if (baseOption == BaseOption.random) {
             backoff = Backoff.random(randomMinDelayMillis, randomMaxDelayMillis);
         } else if (baseOption == BaseOption.fibonacci) {
-            backoff = Backoff.fibonacci(randomMinDelayMillis, randomMaxDelayMillis);
+            backoff = Backoff.fibonacci(initialDelayMillis, maxDelayMillis);
         } else {
             backoff = Backoff.exponential(initialDelayMillis, maxDelayMillis, multiplier);
         }

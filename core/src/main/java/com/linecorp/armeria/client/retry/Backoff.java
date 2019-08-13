@@ -95,7 +95,7 @@ public interface Backoff {
     /**
      * Creates a new {@link Backoff} that computes backoff delay using one of
      * {@link #exponential(long, long, double)}, {@link #fibonacci(long, long)}, {@link #fixed(long)}
-     * and {@link #random(long, long)} chainingwith {@link #withJitter(double, double)} and
+     * and {@link #random(long, long)} chaining with {@link #withJitter(double, double)} and
      * {@link #withMaxAttempts(int)} from the {@code specification}.
      * This is the format for the {@code specification}:
      * <ul>
