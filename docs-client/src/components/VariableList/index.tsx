@@ -22,7 +22,7 @@ import TableRow from '@material-ui/core/TableRow';
 import Typography from '@material-ui/core/Typography';
 import ExpandLess from '@material-ui/icons/ExpandLess';
 import ExpandMore from '@material-ui/icons/ExpandMore';
-import React from 'react';
+import React, { useEffect, useReducer, useState } from 'react';
 
 import { Specification } from '../../lib/specification';
 
@@ -42,171 +42,131 @@ interface Props {
   specification: Specification;
 }
 
-interface State {
-  isEmpty: boolean;
-  isBeans: boolean[];
-  openBeans: boolean[];
-  colSpanLength: number;
-  childStates: { [key: number]: State };
-}
-
 interface OwnProps {
   indent: number;
   hasBean: boolean;
-  state?: State;
-  setChildStateInParent?: (index: number, childState: State) => void;
   childIndex: number;
 }
 
 type FieldInfosProps = OwnProps & Props;
 
-class FieldInfos extends React.Component<FieldInfosProps, State> {
-  private static generateKey(pre: string): string {
-    return `${pre}_${new Date().getTime()}`;
+const generateKey = (pre: string) => `${pre}_${new Date().getTime()}`;
+
+const indentString = (indent: number, s: string) =>
+  `${'\xa0'.repeat(indent)}${s}`;
+
+const formatRequirement = (s: string) => {
+  const lowerCase = s.toLowerCase();
+  if ('unspecified' === lowerCase) {
+    return '-';
   }
 
-  private static indentString(indent: number, s: string): string {
-    return `${'\xa0'.repeat(indent)}${s}`;
-  }
+  return lowerCase;
+};
 
-  private static formatLocation(s: string): string {
-    return this.formatRequirement(s);
-  }
+const formatLocation = (s: string) => formatRequirement(s);
 
-  private static formatRequirement(s: string): string {
-    const lowerCase = s.toLowerCase();
-    if ('unspecified' === lowerCase) {
-      return '-';
-    }
+const FieldInfos: React.FunctionComponent<FieldInfosProps> = (props) => {
+  const {
+    variables,
+    hasLocation,
+    hasBean,
+    indent,
+    specification,
+    title,
+  } = props;
 
-    return lowerCase;
-  }
+  const [isEmpty, setIsEmpty] = useState(false);
+  const [isBeans, setIsBeans] = useState<boolean[]>([]);
+  const [openBeans, toggleOpenBean] = useReducer(
+    (current: boolean[], index: number) => {
+      if (!isBeans[index]) {
+        return current;
+      }
+      const newValue = [...current];
+      newValue[index] = !newValue[index];
+      return newValue;
+    },
+    [],
+  );
+  const [colSpanLength, setColSpanLength] = useState(4);
 
-  constructor(props: FieldInfosProps) {
-    super(props);
+  useEffect(() => {
+    const fieldInfos = variables;
 
-    this.setChildStateInParent = this.setChildStateInParent.bind(this);
-
-    if (props.state) {
-      this.state = props.state;
-      return;
-    }
-
-    const fieldInfos = props.variables;
-
-    const isEmpty = fieldInfos.length === 0;
-    let isBeans: boolean[] = [];
-    let openBeans: boolean[] = [];
-    if (!isEmpty) {
-      isBeans = fieldInfos.map(
-        ({ childFieldInfos }) =>
-          !!childFieldInfos && childFieldInfos.length > 0,
+    const initialIsEmpty = fieldInfos.length === 0;
+    setIsEmpty(initialIsEmpty);
+    if (!initialIsEmpty) {
+      setIsBeans(
+        fieldInfos.map(
+          ({ childFieldInfos }) =>
+            !!childFieldInfos && childFieldInfos.length > 0,
+        ),
       );
-
-      openBeans = Array(fieldInfos.length).fill(false);
     }
 
-    let colSpanLength = 4;
-    if (this.props.hasLocation) {
-      colSpanLength += 1;
+    let colSpanLengthDelta = 0;
+    if (hasLocation) {
+      colSpanLengthDelta += 1;
     }
-    if (this.props.hasBean) {
-      colSpanLength += 1;
+    if (hasBean) {
+      colSpanLengthDelta += 1;
     }
+    setColSpanLength(4 + colSpanLengthDelta);
+  }, [variables]);
 
-    const childStates = {};
-    this.state = {
-      isEmpty,
-      isBeans,
-      openBeans,
-      colSpanLength,
-      childStates,
-    };
-  }
-
-  public render() {
-    return (
-      <>
-        {!this.state.isEmpty ? (
-          this.props.variables.map((variable, index) => (
-            <React.Fragment key={FieldInfos.generateKey(variable.name)}>
-              <TableRow onClick={() => this.handleCollapse(index)}>
+  return (
+    <>
+      {!isEmpty ? (
+        variables.map((variable, index) => (
+          <React.Fragment key={generateKey(variable.name)}>
+            <TableRow onClick={() => toggleOpenBean(index)}>
+              <TableCell>
+                <code>{indentString(indent, variable.name)}</code>
+              </TableCell>
+              {hasLocation && variable.location && (
                 <TableCell>
-                  <code>
-                    {FieldInfos.indentString(this.props.indent, variable.name)}
-                  </code>
+                  <code>{formatLocation(variable.location)}</code>
                 </TableCell>
-                {this.props.hasLocation && variable.location && (
-                  <TableCell>
-                    <code>{FieldInfos.formatLocation(variable.location)}</code>
-                  </TableCell>
-                )}
-                <TableCell>
-                  <code>
-                    {FieldInfos.formatRequirement(variable.requirement)}
-                  </code>
-                </TableCell>
-                <TableCell>
-                  <code>
-                    {this.props.specification.getTypeSignatureHtml(
-                      variable.typeSignature,
-                    )}
-                  </code>
-                </TableCell>
-                <TableCell>{variable.docString}</TableCell>
-                {this.props.hasBean && this.showExpandIfBean(index)}
-              </TableRow>
-              {this.state.openBeans[index] && (
-                <FieldInfos
-                  {...this.props}
-                  indent={this.props.indent + 2}
-                  variables={variable.childFieldInfos!}
-                  state={this.state.childStates[index]}
-                  childIndex={index}
-                  setChildStateInParent={this.setChildStateInParent}
-                />
               )}
-            </React.Fragment>
-          ))
-        ) : (
-          <TableRow>
-            <TableCell colSpan={this.state.colSpanLength}>
-              There are no {this.props.title.toLowerCase()}
-            </TableCell>
-          </TableRow>
-        )}
-      </>
-    );
-  }
-
-  private setChildStateInParent(index: number, childState: State) {
-    this.state.childStates[index] = childState;
-  }
-
-  private showExpandIfBean(index: number) {
-    return (
-      <>
-        <TableCell>
-          {this.state.isBeans[index] &&
-            (this.state.openBeans[index] ? <ExpandLess /> : <ExpandMore />)}
-        </TableCell>
-      </>
-    );
-  }
-
-  private handleCollapse = (index: number) => {
-    const state = this.state;
-    if (!state.isBeans[index]) {
-      return;
-    }
-    state.openBeans[index] = !state.openBeans[index];
-    this.setState(state);
-
-    if (this.props.setChildStateInParent) {
-      this.props.setChildStateInParent(this.props.childIndex, state);
-    }
-  };
-}
+              <TableCell>
+                <code>{formatRequirement(variable.requirement)}</code>
+              </TableCell>
+              <TableCell>
+                <code>
+                  {specification.getTypeSignatureHtml(variable.typeSignature)}
+                </code>
+              </TableCell>
+              <TableCell>{variable.docString}</TableCell>
+              {hasBean && (
+                <>
+                  <TableCell>
+                    {isBeans[index] &&
+                      (openBeans[index] ? <ExpandLess /> : <ExpandMore />)}
+                  </TableCell>
+                </>
+              )}
+            </TableRow>
+            {openBeans[index] && (
+              <FieldInfos
+                {...props}
+                indent={indent + 2}
+                variables={variable.childFieldInfos!}
+                childIndex={index}
+              />
+            )}
+          </React.Fragment>
+        ))
+      ) : (
+        <TableRow>
+          <TableCell colSpan={colSpanLength}>
+            There are no {title.toLowerCase()}
+          </TableCell>
+        </TableRow>
+      )}
+    </>
+  );
+};
 
 const VariableList: React.FunctionComponent<Props> = ({
   title,
