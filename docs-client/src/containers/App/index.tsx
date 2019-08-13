@@ -141,10 +141,10 @@ interface AppDrawerProps {
   enumsSectionOpen: boolean;
   structsSectionOpen: boolean;
   exceptionsOpen: boolean;
-  toggleServicesOpen: () => void;
-  toggleEnumsOpen: () => void;
-  toggleStructsOpen: () => void;
-  toggleExceptionsOpen: () => void;
+  toggleServicesOpen: React.Dispatch<unknown>;
+  toggleEnumsOpen: React.Dispatch<unknown>;
+  toggleStructsOpen: React.Dispatch<unknown>;
+  toggleExceptionsOpen: React.Dispatch<unknown>;
   handleServiceCollapse: (serviceName: string) => void;
 }
 
@@ -320,6 +320,8 @@ interface OpenServices {
   [key: string]: boolean;
 }
 
+const toggle = (current: boolean) => !current;
+
 const App: React.FunctionComponent<Props> = (props) => {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [specification, setSpecification] = useState<
@@ -332,22 +334,10 @@ const App: React.FunctionComponent<Props> = (props) => {
     }),
     {},
   );
-  const [servicesSectionOpen, toggleServicesSectionOpen] = useReducer(
-    (open) => !open,
-    true,
-  );
-  const [enumsSectionOpen, toggleEnumsSectionOpen] = useReducer(
-    (open) => !open,
-    true,
-  );
-  const [structsSectionOpen, toggleStructsSectionOpen] = useReducer(
-    (open) => !open,
-    true,
-  );
-  const [exceptionsOpen, toggleExceptionsOpen] = useReducer(
-    (open) => !open,
-    true,
-  );
+  const [servicesOpen, toggleServicesOpen] = useReducer(toggle, true);
+  const [enumsOpen, toggleEnumsOpen] = useReducer(toggle, true);
+  const [structsOpen, toggleStructsOpen] = useReducer(toggle, true);
+  const [exceptionsOpen, toggleExceptionsOpen] = useReducer(toggle, true);
 
   useEffect(() => {
     (async () => {
@@ -373,12 +363,12 @@ const App: React.FunctionComponent<Props> = (props) => {
       props.history.push(url);
       setMobileDrawerOpen(false);
     },
-    [props.location.search, props.history, setMobileDrawerOpen],
+    [props.location.search, props.history],
   );
 
   const toggleMobileDrawer = useCallback(() => {
     setMobileDrawerOpen(!mobileDrawerOpen);
-  }, [mobileDrawerOpen, setMobileDrawerOpen]);
+  }, [mobileDrawerOpen]);
 
   const httpMethodClass = useCallback(
     (httpMethod: string) => {
@@ -469,14 +459,14 @@ const App: React.FunctionComponent<Props> = (props) => {
             specification={specification}
             navigateTo={navigateTo}
             httpMethodClass={httpMethodClass}
-            servicesSectionOpen={servicesSectionOpen}
+            servicesSectionOpen={servicesOpen}
             openServices={openServices}
-            enumsSectionOpen={enumsSectionOpen}
-            structsSectionOpen={structsSectionOpen}
+            enumsSectionOpen={enumsOpen}
+            structsSectionOpen={structsOpen}
             exceptionsOpen={exceptionsOpen}
-            toggleServicesOpen={toggleServicesSectionOpen as any}
-            toggleEnumsOpen={toggleEnumsSectionOpen as any}
-            toggleStructsOpen={toggleStructsSectionOpen as any}
+            toggleServicesOpen={toggleServicesOpen}
+            toggleEnumsOpen={toggleEnumsOpen as any}
+            toggleStructsOpen={toggleStructsOpen as any}
             toggleExceptionsOpen={toggleExceptionsOpen as any}
             handleServiceCollapse={toggleOpenService}
           />
@@ -496,14 +486,14 @@ const App: React.FunctionComponent<Props> = (props) => {
             specification={specification}
             navigateTo={navigateTo}
             httpMethodClass={httpMethodClass}
-            servicesSectionOpen={servicesSectionOpen}
+            servicesSectionOpen={servicesOpen}
             openServices={openServices}
-            enumsSectionOpen={enumsSectionOpen}
-            structsSectionOpen={structsSectionOpen}
+            enumsSectionOpen={enumsOpen}
+            structsSectionOpen={structsOpen}
             exceptionsOpen={exceptionsOpen}
-            toggleServicesOpen={toggleServicesSectionOpen as any}
-            toggleEnumsOpen={toggleEnumsSectionOpen as any}
-            toggleStructsOpen={toggleStructsSectionOpen as any}
+            toggleServicesOpen={toggleServicesOpen}
+            toggleEnumsOpen={toggleEnumsOpen as any}
+            toggleStructsOpen={toggleStructsOpen as any}
             toggleExceptionsOpen={toggleExceptionsOpen as any}
             handleServiceCollapse={toggleOpenService}
           />
