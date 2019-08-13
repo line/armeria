@@ -34,10 +34,22 @@ class ExponentialBackoffTest {
     }
 
     @Test
-    void testOverflow() {
+    void nonPrecomputed() {
+        final Backoff backoff = new ExponentialBackoff(10, Long.MAX_VALUE, 2.0);
+        assertThat(backoff.nextDelayMillis(1)).isEqualTo(10);
+        assertThat(backoff.nextDelayMillis(2)).isEqualTo(20);
+        assertThat(backoff.nextDelayMillis(3)).isEqualTo(40);
+        assertThat(backoff.nextDelayMillis(30)).isEqualTo(5368709120L);
+        // Not precomputed, should fallback to computation and return a correct value.
+        assertThat(backoff.nextDelayMillis(31)).isEqualTo(10737418240L);
+    }
+
+    @Test
+    void overflow() {
         final Backoff backoff = new ExponentialBackoff(Long.MAX_VALUE / 3, Long.MAX_VALUE, 2.0);
         assertThat(backoff.nextDelayMillis(1)).isEqualTo(Long.MAX_VALUE / 3);
         assertThat(backoff.nextDelayMillis(2)).isEqualTo((long) (Long.MAX_VALUE / 3 * 2.0));
         assertThat(backoff.nextDelayMillis(3)).isEqualTo(Long.MAX_VALUE);
+        assertThat(backoff.nextDelayMillis(4)).isEqualTo(Long.MAX_VALUE);
     }
 }

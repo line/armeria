@@ -20,8 +20,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.annotation.Nullable;
-
 import com.google.common.base.MoreObjects;
 
 final class ExponentialBackoff extends AbstractBackoff {
@@ -29,7 +27,6 @@ final class ExponentialBackoff extends AbstractBackoff {
     private final long maxDelayMillis;
     private final double multiplier;
 
-    @Nullable
     private final long[] precomputedDelays;
 
     ExponentialBackoff(long initialDelayMillis, long maxDelayMillis, double multiplier) {
@@ -42,22 +39,19 @@ final class ExponentialBackoff extends AbstractBackoff {
         this.maxDelayMillis = maxDelayMillis;
         this.multiplier = multiplier;
 
-        if (computeNextDelayMillis(30) >= maxDelayMillis) {
-            // We'll only have a maximum of 30 different delays, so may as well precompute them.
-            final List<Long> precomputed = new ArrayList<>();
-            for (int i = 1; i <= 30; i++) {
-                final long delay = computeNextDelayMillis(i);
-                if (delay < maxDelayMillis) {
-                    precomputed.add(delay);
-                } else {
-                    precomputed.add(maxDelayMillis);
-                    break;
-                }
+        // Go ahead and precompute up-to 30 delays to optimize computation for common retries. For many values
+        // of initial and max delay, this will be a much smaller list with all possible delays.
+        final List<Long> precomputed = new ArrayList<>();
+        for (int i = 1; i <= 30; i++) {
+            final long delay = computeNextDelayMillis(i);
+            if (delay < maxDelayMillis) {
+                precomputed.add(delay);
+            } else {
+                precomputed.add(maxDelayMillis);
+                break;
             }
-            precomputedDelays = precomputed.stream().mapToLong(l -> l).toArray();
-        } else {
-            precomputedDelays = null;
         }
+        precomputedDelays = precomputed.stream().mapToLong(l -> l).toArray();
     }
 
     @Override
@@ -66,9 +60,14 @@ final class ExponentialBackoff extends AbstractBackoff {
             return initialDelayMillis;
         }
 
-        if (precomputedDelays != null) {
-            int index = numAttemptsSoFar - 1;
-            return precomputedDelays[Math.min(index, precomputedDelays.length - 1)];
+        int precomputedLength = precomputedDelays.length;
+        int precomputedIndex = numAttemptsSoFar - 1;
+        if (precomputedIndex < precomputedLength) {
+            return precomputedDelays[precomputedIndex];
+        }
+
+        if (precomputedDelays[precomputedLength - 1] == maxDelayMillis) {
+            return maxDelayMillis;
         }
 
         return computeNextDelayMillis(numAttemptsSoFar);
