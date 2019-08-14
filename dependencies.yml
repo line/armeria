@@ -128,7 +128,7 @@ io.dropwizard.metrics:
 # Ensure to update the Protobuf version in this file when updating gRPC.
 io.grpc:
   grpc-core:
-    version: &GRPC_VERSION '1.22.1'
+    version: &GRPC_VERSION '1.22.2'
     javadocs:
     - https://grpc.io/grpc-java/javadoc/
     - https://developers.google.com/protocol-buffers/docs/reference/java/
@@ -176,7 +176,7 @@ io.micrometer:
 
 io.netty:
   netty-common:
-    version: &NETTY_VERSION '4.1.38.Final'
+    version: &NETTY_VERSION '4.1.39.Final'
     javadocs:
     - https://netty.io/4.1/api/
   netty-buffer: { version: *NETTY_VERSION }
@@ -214,7 +214,7 @@ io.reactivex.rxjava2:
 
 io.zipkin.brave:
   brave:
-    version: &BRAVE_VERSION '5.6.9'
+    version: &BRAVE_VERSION '5.6.10'
     # ':site:javadoc' fails when we use a newer version of Javadoc.
     javadocs:
     - https://static.javadoc.io/io.zipkin.brave/brave/5.6.3/
@@ -432,7 +432,7 @@ org.reflections:
       to: com.linecorp.armeria.internal.shaded.reflections
 
 org.slf4j:
-  jcl-over-slf4j: { version: &SLF4J_VERSION '1.7.27' }
+  jcl-over-slf4j: { version: &SLF4J_VERSION '1.7.28' }
   jul-to-slf4j: { version: *SLF4J_VERSION }
   log4j-over-slf4j: { version: *SLF4J_VERSION }
   slf4j-api:
