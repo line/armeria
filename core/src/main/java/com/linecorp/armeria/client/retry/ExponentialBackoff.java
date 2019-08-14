@@ -17,12 +17,17 @@ package com.linecorp.armeria.client.retry;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.google.common.base.MoreObjects;
 
 final class ExponentialBackoff extends AbstractBackoff {
     private final long initialDelayMillis;
     private final long maxDelayMillis;
     private final double multiplier;
+
+    private final long[] precomputedDelays;
 
     ExponentialBackoff(long initialDelayMillis, long maxDelayMillis, double multiplier) {
         checkArgument(multiplier > 1.0, "multiplier: %s (expected: > 1.0)", multiplier);
@@ -33,10 +38,42 @@ final class ExponentialBackoff extends AbstractBackoff {
         this.initialDelayMillis = initialDelayMillis;
         this.maxDelayMillis = maxDelayMillis;
         this.multiplier = multiplier;
+
+        // Go ahead and precompute up-to 30 delays to optimize computation for common retries. For many values
+        // of initial and max delay, this will be a much smaller list with all possible delays.
+        final List<Long> precomputed = new ArrayList<>();
+        for (int i = 1; i <= 30; i++) {
+            final long delay = computeNextDelayMillis(i);
+            if (delay < maxDelayMillis) {
+                precomputed.add(delay);
+            } else {
+                precomputed.add(maxDelayMillis);
+                break;
+            }
+        }
+        precomputedDelays = precomputed.stream().mapToLong(l -> l).toArray();
     }
 
     @Override
     protected long doNextDelayMillis(int numAttemptsSoFar) {
+        if (numAttemptsSoFar == 1) {
+            return initialDelayMillis;
+        }
+
+        int precomputedLength = precomputedDelays.length;
+        int precomputedIndex = numAttemptsSoFar - 1;
+        if (precomputedIndex < precomputedLength) {
+            return precomputedDelays[precomputedIndex];
+        }
+
+        if (precomputedDelays[precomputedLength - 1] == maxDelayMillis) {
+            return maxDelayMillis;
+        }
+
+        return computeNextDelayMillis(numAttemptsSoFar);
+    }
+
+    private long computeNextDelayMillis(int numAttemptsSoFar) {
         if (numAttemptsSoFar == 1) {
             return initialDelayMillis;
         }
