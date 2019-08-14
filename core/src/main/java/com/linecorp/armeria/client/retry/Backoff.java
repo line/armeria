@@ -69,6 +69,14 @@ public interface Backoff {
     }
 
     /**
+     * Returns a {@link Backoff} for which the backoff delay increases in line with the Fibonacci sequence
+     * f(n) = f(n-1) + f(n-2) where f(0) = f(1) = {@code initialDelayMillis}.
+     */
+    static Backoff fibonacci(long initialDelayMillis, long maxDelayMillis) {
+        return new FibonacciBackoff(initialDelayMillis, maxDelayMillis);
+    }
+
+    /**
      * Returns a {@link Backoff} that computes backoff delay which is a random value between
      * {@code minDelayMillis} and {@code maxDelayMillis} chosen by {@link ThreadLocalRandom}.
      */
@@ -86,12 +94,15 @@ public interface Backoff {
 
     /**
      * Creates a new {@link Backoff} that computes backoff delay using one of
-     * {@link #exponential(long, long, double)}, {@link #fixed(long)} and {@link #random(long, long)} chaining
-     * with {@link #withJitter(double, double)} and {@link #withMaxAttempts(int)} from the
-     * {@code specification}. This is the format for the {@code specification}:
+     * {@link #exponential(long, long, double)}, {@link #fibonacci(long, long)}, {@link #fixed(long)}
+     * and {@link #random(long, long)} chaining with {@link #withJitter(double, double)} and
+     * {@link #withMaxAttempts(int)} from the {@code specification}.
+     * This is the format for the {@code specification}:
      * <ul>
      *   <li>{@code exponential=[initialDelayMillis:maxDelayMillis:multiplier]} is for
      *       {@link Backoff#exponential(long, long, double)} (multiplier will be 2.0 if it's omitted)</li>
+     *   <li>{@code fibonacci=[initialDelayMillis:maxDelayMillis]} is for
+     *       {@link Backoff#fibonacci(long, long)}</li>
      *   <li>{@code fixed=[delayMillis]} is for {@link Backoff#fixed(long)}</li>
      *   <li>{@code random=[minDelayMillis:maxDelayMillis]} is for {@link Backoff#random(long, long)}</li>
      *   <li>{@code jitter=[minJitterRate:maxJitterRate]} is for {@link Backoff#withJitter(double, double)}
@@ -105,6 +116,7 @@ public interface Backoff {
      * <ul>
      *   <li>{@code exponential=200:10000:2.0,jitter=0.2} (default)</li>
      *   <li>{@code exponential=200:10000,jitter=0.2,maxAttempts=50} (multiplier omitted)</li>
+     *   <li>{@code fibonacci=200:10000,jitter=0.2,maxAttempts=50}</li>
      *   <li>{@code fixed=100,jitter=-0.5:0.2,maxAttempts=10} (fixed backoff with jitter variation)</li>
      *   <li>{@code random=200:1000} (jitter and maxAttempts will be set by default values)</li>
      * </ul>

@@ -56,6 +56,16 @@ public class BackoffTest {
     }
 
     @Test
+    public void fibonacci() throws Exception {
+        final Backoff backoff = Backoff.fibonacci(10, 120);
+        assertThat(backoff.nextDelayMillis(1)).isEqualTo(10);
+        assertThat(backoff.nextDelayMillis(2)).isEqualTo(10);
+        assertThat(backoff.nextDelayMillis(3)).isEqualTo(20);
+        assertThat(backoff.nextDelayMillis(4)).isEqualTo(30);
+        assertThat(backoff.nextDelayMillis(7)).isEqualTo(120);
+    }
+
+    @Test
     public void withJitter() throws Exception {
         final Random random = new Random(1);
         final Backoff backoff = Backoff.fixed(1000).withJitter(-0.3, 0.3, () -> random);
