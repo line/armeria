@@ -55,18 +55,8 @@ import io.netty.handler.codec.haproxy.HAProxyMessage;
 import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
-import io.netty.handler.codec.http2.DefaultHttp2Connection;
-import io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder;
-import io.netty.handler.codec.http2.DefaultHttp2ConnectionEncoder;
-import io.netty.handler.codec.http2.DefaultHttp2FrameReader;
-import io.netty.handler.codec.http2.DefaultHttp2FrameWriter;
 import io.netty.handler.codec.http2.Http2CodecUtil;
-import io.netty.handler.codec.http2.Http2Connection;
-import io.netty.handler.codec.http2.Http2ConnectionDecoder;
-import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
-import io.netty.handler.codec.http2.Http2FrameReader;
-import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.codec.http2.Http2ServerUpgradeCodec;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.flush.FlushConsolidationHandler;
@@ -176,17 +166,12 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     }
 
     private Http2ConnectionHandler newHttp2ConnectionHandler(ChannelPipeline pipeline, AsciiString scheme) {
-
-        final Http2Connection conn = new DefaultHttp2Connection(true);
-        final Http2FrameReader reader = new DefaultHttp2FrameReader(true);
-        final Http2FrameWriter writer = new DefaultHttp2FrameWriter();
-
-        final Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(conn, writer);
-        final Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(conn, encoder, reader);
-
-        return new Http2ServerConnectionHandler(
-                decoder, encoder, http2Settings(), pipeline.channel(),
-                config, gracefulShutdownSupport, scheme.toString());
+        return new Http2ServerConnectionHandlerBuilder(pipeline.channel(), config,
+                                                       gracefulShutdownSupport,
+                                                       scheme.toString())
+                .server(true)
+                .initialSettings(http2Settings())
+                .build();
     }
 
     private Http2Settings http2Settings() {

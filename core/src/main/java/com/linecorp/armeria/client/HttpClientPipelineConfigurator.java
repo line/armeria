@@ -74,19 +74,10 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
-import io.netty.handler.codec.http2.DefaultHttp2Connection;
-import io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder;
-import io.netty.handler.codec.http2.DefaultHttp2ConnectionEncoder;
-import io.netty.handler.codec.http2.DefaultHttp2FrameReader;
-import io.netty.handler.codec.http2.DefaultHttp2FrameWriter;
 import io.netty.handler.codec.http2.Http2ClientUpgradeCodec;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Connection;
-import io.netty.handler.codec.http2.Http2ConnectionDecoder;
-import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Exception;
-import io.netty.handler.codec.http2.Http2FrameReader;
-import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.flush.FlushConsolidationHandler;
 import io.netty.handler.ssl.ApplicationProtocolNames;
@@ -605,15 +596,11 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     }
 
     private Http2ClientConnectionHandler newHttp2ConnectionHandler(Channel ch) {
-        final boolean validateHeaders = false;
-        final Http2Connection conn = new DefaultHttp2Connection(false);
-        final Http2FrameReader reader = new DefaultHttp2FrameReader(validateHeaders);
-        final Http2FrameWriter writer = new DefaultHttp2FrameWriter();
-
-        final Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(conn, writer);
-        final Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(conn, encoder, reader);
-
-        return new Http2ClientConnectionHandler(decoder, encoder, http2Settings(), ch, clientFactory);
+        return new Http2ClientConnectionHandlerBuilder(ch, clientFactory)
+                .server(false)
+                .validateHeaders(false)
+                .initialSettings(http2Settings())
+                .build();
     }
 
     private Http2Settings http2Settings() {
