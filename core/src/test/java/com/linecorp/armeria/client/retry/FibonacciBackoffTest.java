@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
-public class FibonacciBackoffTest {
+class FibonacciBackoffTest {
 
     @Test
     void testNextDelay() {

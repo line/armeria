@@ -70,7 +70,7 @@ public interface Backoff {
 
     /**
      * Returns a {@link Backoff} for which the backoff delay increases in line with the Fibonacci sequence
-     * f(n) = f(n-1) + f(n-2).
+     * f(n) = f(n-1) + f(n-2) where f(0) = f(1) = {@code initialDelayMillis}.
      */
     static Backoff fibonacci(long initialDelayMillis, long maxDelayMillis) {
         return new FibonacciBackoff(initialDelayMillis, maxDelayMillis);
