@@ -30,7 +30,7 @@ public class HelloApplicationIntegrationTest {
 
     @Before
     public void setup() {
-        client = HttpClient.of("http://localhost:" + server.activePort().get().localAddress().getPort());
+        client = HttpClient.of("http://localhost:" + server.activeLocalPort());
     }
 
     @Test
