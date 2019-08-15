@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.io.OutputStream;
 import java.util.List;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import com.google.common.collect.ImmutableList;
 
@@ -62,6 +63,14 @@ final class CompositeRouter<I, O> implements Router<O> {
         routingCtx.delayedThrowable().ifPresent(Exceptions::throwUnsafely);
 
         return Routed.empty();
+    }
+
+    @Override
+    public Stream<Routed<O>> findAll(RoutingContext routingContext) {
+        return delegates.stream()
+                        .flatMap(delegate -> delegate.findAll(routingContext))
+                        .map(resultMapper)
+                        .distinct();
     }
 
     @Override

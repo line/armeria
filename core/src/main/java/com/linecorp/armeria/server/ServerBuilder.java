@@ -189,8 +189,7 @@ public final class ServerBuilder {
     private ContentPreviewerFactory requestContentPreviewerFactory = ContentPreviewerFactory.disabled();
     private ContentPreviewerFactory responseContentPreviewerFactory = ContentPreviewerFactory.disabled();
 
-    @Nullable
-    private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
+    private final List<RouteDecoratingService> routeDecoratingServices = new ArrayList<>();
 
     private Function<VirtualHost, Logger> accessLoggerMapper = host -> LoggerFactory.getLogger(
             defaultAccessLoggerName(host.hostnamePattern()));
@@ -803,6 +802,13 @@ public final class ServerBuilder {
     }
 
     /**
+     * Returns a {@link DecoratingServiceBindingBuilder} which is for binding a {@code decorator} fluently.
+     */
+    public DecoratingServiceBindingBuilder routeDecorator() {
+        return new DecoratingServiceBindingBuilder(this);
+    }
+
+    /**
      * Binds the specified {@link Service} at the specified path pattern of the default {@link VirtualHost}.
      *
      * @deprecated Use {@link #service(String, Service)} instead.
@@ -993,6 +999,11 @@ public final class ServerBuilder {
         return this;
     }
 
+    ServerBuilder routingDecorator(RouteDecoratingService routeDecoratingService) {
+        routeDecoratingServices.add(routeDecoratingService);
+        return this;
+    }
+
     /**
      * Adds the specified {@link ServerListener}.
      */
@@ -1118,20 +1129,7 @@ public final class ServerBuilder {
      */
     public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
     ServerBuilder decorator(Function<T, R> decorator) {
-
-        requireNonNull(decorator, "decorator");
-
-        @SuppressWarnings("unchecked")
-        final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> castDecorator =
-                (Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>>) decorator;
-
-        if (this.decorator != null) {
-            this.decorator = this.decorator.andThen(castDecorator);
-        } else {
-            this.decorator = castDecorator;
-        }
-
-        return this;
+        return decorator(Route.builder().catchAll().build(), decorator);
     }
 
     /**
@@ -1141,8 +1139,84 @@ public final class ServerBuilder {
      */
     public ServerBuilder decorator(
             DecoratingServiceFunction<HttpRequest, HttpResponse> decoratingServiceFunction) {
+        return decorator(Route.builder().catchAll().build(), decoratingServiceFunction);
+    }
+
+    /**
+     * Decorates {@link Service}s whose {@link Route} matches the specified {@code pathPattern}.
+     *
+     * @param <T> the type of the {@link Service} being decorated
+     * @param <R> the type of the {@link Service} {@code decorator} will produce
+     */
+    public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
+    ServerBuilder decorator(String pathPattern, Function<T, R> decorator) {
+        return decorator(Route.builder().path(pathPattern).build(), decorator);
+    }
+
+    /**
+     * Decorates {@link Service}s whose {@link Route} matches the specified {@code pathPattern}.
+     *
+     * @param decoratingServiceFunction the {@link DecoratingServiceFunction} that decorates a {@link Service}.
+     */
+    public ServerBuilder decorator(
+            String pathPattern,
+            DecoratingServiceFunction<HttpRequest, HttpResponse> decoratingServiceFunction) {
+        return decorator(Route.builder().path(pathPattern).build(), decoratingServiceFunction);
+    }
+
+    /**
+     * Decorates {@link Service}s with the specified {@link Route}.
+     *
+     * @param route the route being decorated
+     * @param decorator the {@link Function} that decorates {@link Service} which matches
+     *                  the specified {@link Route}
+     * @param <T> the type of the {@link Service} being decorated
+     * @param <R> the type of the {@link Service} {@code decorator} will produce
+     */
+    public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
+    ServerBuilder decorator(Route route, Function<T, R> decorator) {
+        requireNonNull(route, "route");
+        requireNonNull(decorator, "decorator");
+        @SuppressWarnings("unchecked")
+        final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> castDecorator =
+                (Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>>) decorator;
+        return routingDecorator(new RouteDecoratingService(route, castDecorator));
+    }
+
+    /**
+     * Decorates {@link Service}s with the specified {@link Route}.
+     *
+     * @param route the route being decorated
+     * @param decoratingServiceFunction the {@link DecoratingServiceFunction} that decorates {@link Service}
+     */
+    public ServerBuilder decorator(
+            Route route,
+            DecoratingServiceFunction<HttpRequest, HttpResponse> decoratingServiceFunction) {
         requireNonNull(decoratingServiceFunction, "decoratingServiceFunction");
-        return decorator(delegate -> new FunctionalDecoratingService<>(delegate, decoratingServiceFunction));
+        return decorator(route,
+                         delegate -> new FunctionalDecoratingService<>(delegate, decoratingServiceFunction));
+    }
+
+    /**
+     * Decorates {@link Service}s under the specified directory.
+     *
+     * @param decoratingServiceFunction the {@link DecoratingServiceFunction} that decorates a {@link Service}
+     */
+    public ServerBuilder decoratorUnder(
+            String prefix,
+            DecoratingServiceFunction<HttpRequest, HttpResponse> decoratingServiceFunction) {
+        return decorator(Route.builder().pathPrefix(prefix).build(), decoratingServiceFunction);
+    }
+
+    /**
+     * Decorates {@link Service}s under the specified directory.
+     *
+     * @param <T> the type of the {@link Service} being decorated
+     * @param <R> the type of the {@link Service} {@code decorator} will produce
+     */
+    public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
+    ServerBuilder decoratorUnder(String prefix, Function<T, R> decorator) {
+        return decorator(Route.builder().pathPrefix(prefix).build(), decorator);
     }
 
     /**
@@ -1429,12 +1503,24 @@ public final class ServerBuilder {
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
-        final VirtualHost defaultVirtualHost = defaultVirtualHostBuilder.build().decorate(decorator);
-        final List<VirtualHost> virtualHosts = virtualHostBuilders.stream()
-                                                                  .map(VirtualHostBuilder::build)
-                                                                  .map(vh -> vh.decorate(decorator))
-                                                                  .collect(toImmutableList());
+        final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
+        if (!routeDecoratingServices.isEmpty()) {
+            decorator = RouteDecoratingService.newDecorator(
+                    Routers.ofRouteDecoratingService(routeDecoratingServices));
+        } else {
+            decorator = null;
+        }
+        final List<VirtualHost> virtualHosts = virtualHostBuilders
+                .stream()
+                .map(vhb -> vhb.routeDecoratingServices(routeDecoratingServices))
+                .map(vhb -> vhb.serviceConfigBuilders(defaultVirtualHostBuilder
+                                                              .serviceConfigBuilders().stream()
+                                                              .map(ServiceConfigBuilder::copyOf)
+                                                              .collect(toImmutableList())))
+                .map(VirtualHostBuilder::build)
+                .collect(toImmutableList());
 
+        final VirtualHost defaultVirtualHost = defaultVirtualHostBuilder.build().decorate(decorator);
         // Pre-populate the domain name mapping for later matching.
         final DomainNameMapping<SslContext> sslContexts;
         final SslContext defaultSslContext = findDefaultSslContext(defaultVirtualHost, virtualHosts);

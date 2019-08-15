@@ -155,8 +155,9 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
 
         if (result.route().pathType() == RoutePathType.PREFIX) {
             assert ctx.route().pathType() == RoutePathType.PREFIX;
-            final Route newRoute = Route.builder().prefix(ctx.route().paths().get(0) +
-                                                          result.route().paths().get(0).substring(1)).build();
+            final Route newRoute = Route.builder()
+                                        .pathPrefix(ctx.route().paths().get(0) +
+                                                    result.route().paths().get(0).substring(1)).build();
 
             final ServiceRequestContext newCtx = new CompositeServiceRequestContext(
                     ctx, newRoute, result.routingResult().path());
