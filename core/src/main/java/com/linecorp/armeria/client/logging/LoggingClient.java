@@ -115,7 +115,7 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
              Function.identity(),
              Function.identity(),
              Function.identity(),
-             Sampler.ALWAYS_SAMPLE);
+             Sampler.always());
     }
 
     /**
@@ -152,7 +152,7 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
 
     @Override
     public O execute(ClientRequestContext ctx, I req) throws Exception {
-        if (sampler.isSampled()) {
+        if (sampler.isSampled(ctx.log())) {
             ctx.log().addListener(log -> logRequest(logger, log, requestLogLevel,
                                                     requestHeadersSanitizer,
                                                     requestContentSanitizer, requestTrailersSanitizer),

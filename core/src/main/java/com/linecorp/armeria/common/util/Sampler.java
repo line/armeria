@@ -30,6 +30,7 @@
 package com.linecorp.armeria.common.util;
 
 import com.linecorp.armeria.internal.logging.CountingSampler;
+import com.linecorp.armeria.internal.logging.RateLimitingSampler;
 
 /**
  * Sampler is responsible for deciding if a particular trace should be "sampled", i.e. whether the
@@ -45,35 +46,8 @@ import com.linecorp.armeria.internal.logging.CountingSampler;
  * <p>Forked from brave-core 5.6.3 at 3be55b5cccf881104bdd80c93e97d2575b83952d
  */
 // abstract for factory-method support on Java language level 7
-public abstract class Sampler {
-
-    public static final Sampler ALWAYS_SAMPLE = new Sampler() {
-        @Override
-        public boolean isSampled() {
-            return true;
-        }
-
-        @Override public String toString() {
-            return "AlwaysSample";
-        }
-    };
-
-    public static final Sampler NEVER_SAMPLE = new Sampler() {
-        @Override
-        public boolean isSampled() {
-            return false;
-        }
-
-        @Override public String toString() {
-            return "NeverSample";
-        }
-    };
-
-    /**
-     *  Returns true if a request should be recorded.
-     */
-    public abstract boolean isSampled();
-
+@FunctionalInterface
+public interface Sampler<T> {
     /**
      * Returns a sampler, given a rate expressed as a percentage.
      *
@@ -82,7 +56,57 @@ public abstract class Sampler {
      *
      * @param rate minimum sample rate is 0.01, or 1% of traces
      */
-    public static Sampler create(float rate) {
+    static Sampler<Object> random(double rate) {
         return CountingSampler.create(rate);
     }
+
+    /**
+     * Returns a sampler, given a rate-limited on a per-second interval.
+     *
+     * @param samplesPerSecond minimum rate-limited is 0 and the max is 2,147,483,647 (max int)
+     */
+    static Sampler<Object> rateLimited(int samplesPerSecond) {
+        return RateLimitingSampler.create(samplesPerSecond);
+    }
+
+    /**
+     * Returns a sampler that always will be sampled.
+     */
+    static Sampler always() {
+        return new Sampler() {
+            @Override
+            public boolean isSampled(Object ignored) {
+                return true;
+            }
+
+            @Override
+            public String toString() {
+                return "AlwaysSample";
+            }
+        };
+    }
+
+    /**
+     * Returns a sampler that never will be sampled.
+     */
+    static Sampler never() {
+        return new Sampler() {
+            @Override
+            public boolean isSampled(Object ignored) {
+                return false;
+            }
+
+            @Override
+            public String toString() {
+                return "NeverSample";
+            }
+        };
+    }
+
+    /**
+     *  Returns true if a request should be recorded.
+     *
+     * @param object The object to be decided on, can be ignored
+     */
+    boolean isSampled(T object);
 }

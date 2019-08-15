@@ -109,7 +109,7 @@ public final class LoggingService<I extends Request, O extends Response> extends
              Function.identity(),
              Function.identity(),
              Function.identity(),
-             Sampler.ALWAYS_SAMPLE);
+             Sampler.always());
     }
 
     /**
@@ -147,7 +147,7 @@ public final class LoggingService<I extends Request, O extends Response> extends
 
     @Override
     public O serve(ServiceRequestContext ctx, I req) throws Exception {
-        if (sampler.isSampled()) {
+        if (sampler.isSampled(ctx.log())) {
             ctx.log().addListener(log -> logRequest(((ServiceRequestContext) log.context()).logger(),
                                                     log, requestLogLevel, requestHeadersSanitizer,
                                                     requestContentSanitizer, requestTrailersSanitizer),

@@ -48,7 +48,7 @@ import com.linecorp.armeria.common.util.Sampler;
  *
  * <p>Forked from brave-core 5.6.3 at d4cbd86e1df75687339da6ec2964d42ab3a8cf14
  */
-public final class CountingSampler extends Sampler {
+public final class CountingSampler implements Sampler {
 
     /**
      * Creates a new instance.
@@ -56,12 +56,12 @@ public final class CountingSampler extends Sampler {
      * @param rate 0 means never sample, 1 means always sample. Otherwise minimum sample rate is 0.01,
      *             or 1% of traces
      */
-    public static Sampler create(final float rate) {
+    public static Sampler create(final double rate) {
         if (rate == 0) {
-            return NEVER_SAMPLE;
+            return Sampler.never();
         }
         if (rate == 1.0) {
-            return ALWAYS_SAMPLE;
+            return Sampler.always();
         }
         if (rate < 0.01f || rate > 1) {
             throw new IllegalArgumentException("rate should be between 0.01 and 1: was " + rate);
@@ -73,22 +73,22 @@ public final class CountingSampler extends Sampler {
     private final BitSet sampleDecisions;
 
     /** Fills a bitset with decisions according to the supplied rate. */
-    CountingSampler(float rate) {
+    CountingSampler(double rate) {
         this(rate, new Random());
     }
 
     /**
      * Fills a bitset with decisions according to the supplied rate with the supplied {@link Random}.
      */
-    CountingSampler(float rate, Random random) {
+    CountingSampler(double rate, Random random) {
         counter = new AtomicInteger();
-        int outOf100 = (int) (rate * 100.0f);
-        this.sampleDecisions = randomBitSet(100, outOf100, random);
+        final int outOf100 = (int) (rate * 100.0f);
+        sampleDecisions = randomBitSet(100, outOf100, random);
     }
 
     /** loops over the pre-canned decisions, resetting to zero when it gets to the end. */
     @Override
-    public boolean isSampled() {
+    public boolean isSampled(Object ignored) {
         return sampleDecisions.get(mod(counter.getAndIncrement(), 100));
     }
 
@@ -101,7 +101,7 @@ public final class CountingSampler extends Sampler {
      * Returns a non-negative mod.
      */
     static int mod(int dividend, int divisor) {
-        int result = dividend % divisor;
+        final int result = dividend % divisor;
         return result >= 0 ? result : divisor + result;
     }
 
@@ -110,15 +110,15 @@ public final class CountingSampler extends Sampler {
      * "http://stackoverflow.com/questions/12817946/generate-a-random-bitset-with-n-1s">Stack Overflow</a>.
      */
     static BitSet randomBitSet(int size, int cardinality, Random rnd) {
-        BitSet result = new BitSet(size);
-        int[] chosen = new int[cardinality];
+        final BitSet result = new BitSet(size);
+        final int[] chosen = new int[cardinality];
         int i;
         for (i = 0; i < cardinality; ++i) {
             chosen[i] = i;
             result.set(i);
         }
         for (; i < size; ++i) {
-            int j = rnd.nextInt(i + 1);
+            final int j = rnd.nextInt(i + 1);
             if (j < cardinality) {
                 result.clear(chosen[j]);
                 result.set(i);

@@ -49,13 +49,13 @@ import com.linecorp.armeria.common.util.Sampler;
  *
  * <p>Forked from brave-core 5.6.9 at b8c00c594cbf75a33788d3dc990f94b9c6f41c01
  */
-public final class RateLimitingSampler extends Sampler {
+public final class RateLimitingSampler implements Sampler {
     public static Sampler create(int tracesPerSecond) {
         if (tracesPerSecond < 0) {
             throw new IllegalArgumentException("tracesPerSecond < 0");
         }
         if (tracesPerSecond == 0) {
-            return Sampler.NEVER_SAMPLE;
+            return Sampler.never();
         }
         return new RateLimitingSampler(tracesPerSecond);
     }
@@ -75,7 +75,7 @@ public final class RateLimitingSampler extends Sampler {
     }
 
     @Override
-    public boolean isSampled() {
+    public boolean isSampled(Object ignored) {
         final long now = System.nanoTime();
         final long updateAt = nextReset.get();
 
@@ -90,7 +90,7 @@ public final class RateLimitingSampler extends Sampler {
 
             // recurse as it is simpler than resetting all the locals.
             // reset happens once per second, this code doesn't take a second, so no infinite recursion.
-            return isSampled();
+            return isSampled(ignored);
         }
 
         // Now, we determine the amount of samples allowed for this interval, and sample accordingly
