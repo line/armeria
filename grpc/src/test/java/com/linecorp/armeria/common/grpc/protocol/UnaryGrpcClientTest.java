@@ -19,6 +19,9 @@ package com.linecorp.armeria.common.grpc.protocol;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.grpc.Status;
+import io.grpc.StatusException;
+import io.grpc.StatusRuntimeException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletionException;
 
@@ -48,8 +51,13 @@ public class UnaryGrpcClientTest {
             final SimpleResponse response = SimpleResponse.newBuilder()
                                                           .setPayload(request.getPayload())
                                                           .build();
-            responseObserver.onNext(response);
-            responseObserver.onCompleted();
+            if (request.getPayload().getBody().toStringUtf8().equals("ice cream")){
+                responseObserver.onNext(response);
+                responseObserver.onError(new StatusException(Status.UNAVAILABLE));
+            } else {
+                responseObserver.onNext(response);
+                responseObserver.onCompleted();
+            }
         }
     }
 
@@ -87,6 +95,22 @@ public class UnaryGrpcClientTest {
                 client.execute("/armeria.grpc.testing.TestService/UnaryCall", request.toByteArray()).join();
         final SimpleResponse response = SimpleResponse.parseFrom(responseBytes);
         assertThat(response.getPayload().getBody().toStringUtf8()).isEqualTo("hello");
+    }
+
+    /** This shows we can handle status that happens in trailers. */
+    @Test
+    public void lateStatusException() {
+        final SimpleRequest request = SimpleRequest.newBuilder()
+            .setPayload(Payload.newBuilder()
+                .setBody(ByteString.copyFromUtf8("ice cream"))
+                .build())
+            .build();
+
+        assertThatThrownBy(
+            () -> client.execute("/armeria.grpc.testing.TestService/UnaryCall",
+                request.toByteArray()).join())
+            .isInstanceOf(CompletionException.class)
+            .hasCauseInstanceOf(ArmeriaStatusException.class);
     }
 
     @Test

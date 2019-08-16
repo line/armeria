@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.grpc.protocol;
 
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.client.Client;
@@ -40,6 +42,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpHeaderValues;
+import javax.annotation.Nullable;
 
 /**
  * A {@link UnaryGrpcClient} can be used to make requests to a gRPC server without depending on gRPC stubs.
@@ -91,19 +94,29 @@ public class UnaryGrpcClient {
                                          "Non-successful HTTP response code: " + msg.status());
                              }
 
-                             final String grpcStatus = msg.headers().get(GrpcHeaderNames.GRPC_STATUS);
-                             if (grpcStatus != null && !"0".equals(grpcStatus)) {
-                                 String grpcMessage = msg.headers().get(GrpcHeaderNames.GRPC_MESSAGE);
-                                 if (grpcMessage != null) {
-                                     grpcMessage = StatusMessageEscaper.unescape(grpcMessage);
-                                 }
-                                 throw new ArmeriaStatusException(
-                                         Integer.parseInt(grpcStatus),
-                                         grpcMessage);
+                             // Status can either be in the headers or trailers depending on error
+                             String grpcStatus = msg.headers().get(GrpcHeaderNames.GRPC_STATUS);
+                             if (grpcStatus != null) {
+                                 checkGrpcStatus(grpcStatus, msg.headers());
+                             } else {
+                                 grpcStatus = msg.trailers().get(GrpcHeaderNames.GRPC_STATUS);
+                                 checkGrpcStatus(grpcStatus, msg.trailers());
                              }
 
                              return msg.content().array();
                          });
+    }
+
+    private void checkGrpcStatus(@Nullable String grpcStatus, HttpHeaders headers) {
+        if (grpcStatus != null && !"0".equals(grpcStatus)) {
+            String grpcMessage = headers.get(GrpcHeaderNames.GRPC_MESSAGE);
+            if (grpcMessage != null) {
+                grpcMessage = StatusMessageEscaper.unescape(grpcMessage);
+            }
+            throw new ArmeriaStatusException(
+                    Integer.parseInt(grpcStatus),
+                    grpcMessage);
+        }
     }
 
     private static final class GrpcFramingDecorator extends SimpleDecoratingHttpClient {
