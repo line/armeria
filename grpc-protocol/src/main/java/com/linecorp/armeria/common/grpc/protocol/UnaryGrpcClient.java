@@ -16,9 +16,8 @@
 
 package com.linecorp.armeria.common.grpc.protocol;
 
-import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.ResponseHeaders;
 import java.util.concurrent.CompletableFuture;
+import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientDecoration;
@@ -28,6 +27,7 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -42,7 +42,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.HttpHeaderValues;
-import javax.annotation.Nullable;
 
 /**
  * A {@link UnaryGrpcClient} can be used to make requests to a gRPC server without depending on gRPC stubs.
