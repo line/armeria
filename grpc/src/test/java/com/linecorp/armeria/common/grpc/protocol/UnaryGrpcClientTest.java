@@ -50,9 +50,16 @@ public class UnaryGrpcClientTest {
             final SimpleResponse response = SimpleResponse.newBuilder()
                                                           .setPayload(request.getPayload())
                                                           .build();
-            if (request.getPayload().getBody().toStringUtf8().equals("ice cream")) {
-                responseObserver.onNext(response);
-                responseObserver.onError(new StatusException(Status.UNAVAILABLE));
+            final String payload = request.getPayload().getBody().toStringUtf8();
+            if ("peanuts".equals(payload)) {
+                responseObserver.onError(
+                    new StatusException(Status.UNAVAILABLE.withDescription("we don't sell peanuts"))
+                );
+            } else if ("ice cream".equals(payload)) {
+                responseObserver.onNext(response); // Note: we error after the response, so trailers
+                responseObserver.onError(
+                    new StatusException(Status.UNAVAILABLE.withDescription("no more ice cream"))
+                );
             } else {
                 responseObserver.onNext(response);
                 responseObserver.onCompleted();
@@ -96,6 +103,23 @@ public class UnaryGrpcClientTest {
         assertThat(response.getPayload().getBody().toStringUtf8()).isEqualTo("hello");
     }
 
+    /** This shows we can handle status that happens in headers. */
+    @Test
+    public void statusException() {
+        final SimpleRequest request = SimpleRequest.newBuilder()
+            .setPayload(Payload.newBuilder()
+                .setBody(ByteString.copyFromUtf8("peanuts"))
+                .build())
+            .build();
+
+        assertThatThrownBy(
+            () -> client.execute("/armeria.grpc.testing.TestService/UnaryCall",
+                request.toByteArray()).join())
+            .isInstanceOf(CompletionException.class)
+            .hasCauseInstanceOf(ArmeriaStatusException.class)
+            .hasMessageContaining("we don't sell peanuts");
+    }
+
     /** This shows we can handle status that happens in trailers. */
     @Test
     public void lateStatusException() {
@@ -109,7 +133,8 @@ public class UnaryGrpcClientTest {
             () -> client.execute("/armeria.grpc.testing.TestService/UnaryCall",
                 request.toByteArray()).join())
             .isInstanceOf(CompletionException.class)
-            .hasCauseInstanceOf(ArmeriaStatusException.class);
+            .hasCauseInstanceOf(ArmeriaStatusException.class)
+            .hasMessageContaining("no more ice cream");
     }
 
     @Test
