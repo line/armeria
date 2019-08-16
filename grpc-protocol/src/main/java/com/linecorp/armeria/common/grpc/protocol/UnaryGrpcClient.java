@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.grpc.protocol;
 
 import java.util.concurrent.CompletableFuture;
+
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.Client;
@@ -27,8 +28,8 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
