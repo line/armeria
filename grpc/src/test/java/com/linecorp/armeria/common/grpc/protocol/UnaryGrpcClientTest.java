@@ -19,9 +19,6 @@ package com.linecorp.armeria.common.grpc.protocol;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import io.grpc.Status;
-import io.grpc.StatusException;
-import io.grpc.StatusRuntimeException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletionException;
 
@@ -39,6 +36,8 @@ import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 
 import io.grpc.Server;
+import io.grpc.Status;
+import io.grpc.StatusException;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.StreamObserver;
 
@@ -51,7 +50,7 @@ public class UnaryGrpcClientTest {
             final SimpleResponse response = SimpleResponse.newBuilder()
                                                           .setPayload(request.getPayload())
                                                           .build();
-            if (request.getPayload().getBody().toStringUtf8().equals("ice cream")){
+            if (request.getPayload().getBody().toStringUtf8().equals("ice cream")) {
                 responseObserver.onNext(response);
                 responseObserver.onError(new StatusException(Status.UNAVAILABLE));
             } else {
