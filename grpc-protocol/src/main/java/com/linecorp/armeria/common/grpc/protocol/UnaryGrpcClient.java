@@ -94,7 +94,7 @@ public class UnaryGrpcClient {
                                          "Non-successful HTTP response code: " + msg.status());
                              }
 
-                             // Status can either be in the headers or trailers depending on errorUnaryGrpcClientTest
+                             // Status can either be in the headers or trailers depending on error
                              String grpcStatus = msg.headers().get(GrpcHeaderNames.GRPC_STATUS);
                              if (grpcStatus != null) {
                                  checkGrpcStatus(grpcStatus, msg.headers());
