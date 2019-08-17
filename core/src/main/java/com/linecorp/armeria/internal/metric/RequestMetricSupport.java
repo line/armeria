@@ -112,20 +112,48 @@ public final class RequestMetricSupport {
             final ServiceRequestMetrics metrics = MicrometerUtil.register(registry, idPrefix,
                                                                           ServiceRequestMetrics.class,
                                                                           DefaultServiceRequestMetrics::new);
-            updateMetrics(log, metrics);
-            if (log.responseCause() instanceof RequestTimeoutException) {
-                metrics.requestTimeouts().increment();
-            }
+            updateServerMetrics(log, metrics);
+        } else {
+            final ClientRequestMetrics metrics = MicrometerUtil.register(registry, idPrefix,
+                                                                         ClientRequestMetrics.class,
+                                                                         DefaultClientRequestMetrics::new);
+            updateClientMetrics(log, metrics);
+        }
+    }
+
+    private static void updateMetrics(RequestLog log, RequestMetrics metrics) {
+        if (log.requestCause() != null) {
+            metrics.failure().increment();
             return;
         }
 
-        final ClientRequestMetrics metrics = MicrometerUtil.register(registry, idPrefix,
-                                                                     ClientRequestMetrics.class,
-                                                                     DefaultClientRequestMetrics::new);
+        metrics.requestDuration().record(log.requestDurationNanos(), TimeUnit.NANOSECONDS);
+        metrics.requestLength().record(log.requestLength());
+        metrics.responseDuration().record(log.responseDurationNanos(), TimeUnit.NANOSECONDS);
+        metrics.responseLength().record(log.responseLength());
+
+        if (isSuccess(log)) {
+            metrics.success().increment();
+        } else {
+            metrics.failure().increment();
+        }
+    }
+
+    private static void updateServerMetrics(RequestLog log, ServiceRequestMetrics metrics) {
+        updateMetrics(log, metrics);
+        metrics.totalDuration().record(log.totalDurationNanos(), TimeUnit.NANOSECONDS);
+
+        if (log.responseCause() instanceof RequestTimeoutException) {
+            metrics.requestTimeouts().increment();
+        }
+    }
+
+    private static void updateClientMetrics(RequestLog log, ClientRequestMetrics metrics) {
         updateMetrics(log, metrics);
         final ClientConnectionTimings timings = ClientConnectionTimings.get(log);
         if (timings != null) {
-            metrics.connectionAcquisitionDuration().record(timings.connectionAcquisitionDurationNanos(),
+            final long connectionAcquisitionDurationNanos = timings.connectionAcquisitionDurationNanos();
+            metrics.connectionAcquisitionDuration().record(connectionAcquisitionDurationNanos,
                                                            TimeUnit.NANOSECONDS);
             final long dnsResolutionDurationNanos = timings.dnsResolutionDurationNanos();
             if (dnsResolutionDurationNanos >= 0) {
@@ -140,7 +168,14 @@ public final class RequestMetricSupport {
                 metrics.pendingAcquisitionDuration().record(pendingAcquisitionDurationNanos,
                                                             TimeUnit.NANOSECONDS);
             }
+            metrics.totalDuration().record(log.totalDurationNanos() + connectionAcquisitionDurationNanos,
+                                           TimeUnit.NANOSECONDS);
+        } else {
+            if (log.requestCause() == null) {
+                metrics.totalDuration().record(log.totalDurationNanos(), TimeUnit.NANOSECONDS);
+            }
         }
+
         if (log.requestCause() != null) {
             if (log.requestCause() instanceof WriteTimeoutException) {
                 metrics.writeTimeouts().increment();
@@ -155,25 +190,6 @@ public final class RequestMetricSupport {
         final int childrenSize = log.children().size();
         if (childrenSize > 0) {
             metrics.actualRequests().increment(childrenSize);
-        }
-    }
-
-    private static void updateMetrics(RequestLog log, RequestMetrics metrics) {
-        if (log.requestCause() != null) {
-            metrics.failure().increment();
-            return;
-        }
-
-        metrics.requestDuration().record(log.requestDurationNanos(), TimeUnit.NANOSECONDS);
-        metrics.requestLength().record(log.requestLength());
-        metrics.responseDuration().record(log.responseDurationNanos(), TimeUnit.NANOSECONDS);
-        metrics.responseLength().record(log.responseLength());
-        metrics.totalDuration().record(log.totalDurationNanos(), TimeUnit.NANOSECONDS);
-
-        if (isSuccess(log)) {
-            metrics.success().increment();
-        } else {
-            metrics.failure().increment();
         }
     }
 
