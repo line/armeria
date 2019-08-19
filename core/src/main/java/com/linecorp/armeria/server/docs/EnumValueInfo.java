@@ -32,6 +32,7 @@ public final class EnumValueInfo {
     private final String name;
     @Nullable
     private final String docString;
+    private final String literalValue;
 
     /**
      * Creates a new instance.
@@ -39,17 +40,29 @@ public final class EnumValueInfo {
      * @param name the name of the enum value
      */
     public EnumValueInfo(String name) {
-        this(name, null);
+        this(name, null, null);
     }
 
     /**
      * Creates a new instance.
      *
      * @param name the name of the enum value
+     * @param literalValue literal value (for example, int value) for the enum value
+     */
+    public EnumValueInfo(String name, String literalValue) {
+        this(name, literalValue, null);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param name the name of the enum value
+     * @param literalValue literal value (for example, int value) for the enum value
      * @param docString the documentation string that describes the enum value
      */
-    public EnumValueInfo(String name, @Nullable String docString) {
+    public EnumValueInfo(String name, String literalValue, @Nullable String docString) {
         this.name = requireNonNull(name, "name");
+        this.literalValue = Strings.emptyToNull(literalValue);
         this.docString = Strings.emptyToNull(docString);
     }
 
@@ -60,6 +73,12 @@ public final class EnumValueInfo {
     public String name() {
         return name;
     }
+
+    /**
+     * Returns the literal value (for example, int value) for the enum value.
+     */
+    @JsonProperty
+    public String literalValue() { return literalValue; }
 
     /**
      * Returns the documentation string that describes the enum value.

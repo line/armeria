@@ -62,6 +62,7 @@ export default class EnumPage extends React.PureComponent<Props> {
             <TableHead>
               <TableRow>
                 <TableCell>Name</TableCell>
+                <TableCell>Literal Value</TableCell>
                 <TableCell>Description</TableCell>
               </TableRow>
             </TableHead>
@@ -72,6 +73,7 @@ export default class EnumPage extends React.PureComponent<Props> {
                     <TableCell>
                       <code>{value.name}</code>
                     </TableCell>
+                    <TableCell>{value.literalValue}</TableCell>
                     <TableCell>{value.docString}</TableCell>
                   </TableRow>
                 ))
