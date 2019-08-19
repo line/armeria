@@ -17,11 +17,14 @@ package com.linecorp.armeria.server.docs;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Objects;
+
 import javax.annotation.Nullable;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 
 /**
@@ -32,6 +35,8 @@ public final class EnumValueInfo {
     private final String name;
     @Nullable
     private final String docString;
+    @Nullable
+    private final Integer intValue;
 
     /**
      * Creates a new instance.
@@ -39,17 +44,29 @@ public final class EnumValueInfo {
      * @param name the name of the enum value
      */
     public EnumValueInfo(String name) {
-        this(name, null);
+        this(name, null, null);
     }
 
     /**
      * Creates a new instance.
      *
      * @param name the name of the enum value
+     * @param intValue the integer value of the enum value
+     */
+    public EnumValueInfo(String name, @Nullable Integer intValue) {
+        this(name, intValue, null);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param name the name of the enum value
+     * @param intValue the integer value of the enum value
      * @param docString the documentation string that describes the enum value
      */
-    public EnumValueInfo(String name, @Nullable String docString) {
+    public EnumValueInfo(String name, @Nullable Integer intValue, @Nullable String docString) {
         this.name = requireNonNull(name, "name");
+        this.intValue = intValue;
         this.docString = Strings.emptyToNull(docString);
     }
 
@@ -59,6 +76,16 @@ public final class EnumValueInfo {
     @JsonProperty
     public String name() {
         return name;
+    }
+
+    /**
+     * Returns the integer value of the enum value.
+     */
+    @JsonProperty
+    @JsonInclude(Include.NON_NULL)
+    @Nullable
+    public Integer intValue() {
+        return intValue;
     }
 
     /**
@@ -73,7 +100,7 @@ public final class EnumValueInfo {
 
     @Override
     public int hashCode() {
-        return name.hashCode();
+        return Objects.hash(name, intValue);
     }
 
     @Override
@@ -85,11 +112,17 @@ public final class EnumValueInfo {
             return false;
         }
 
-        return name.equals(((EnumValueInfo) o).name);
+        final EnumValueInfo that = (EnumValueInfo) o;
+        return name.equals(that.name) && Objects.equals(intValue, that.intValue);
     }
 
     @Override
     public String toString() {
-        return name();
+        return MoreObjects.toStringHelper(this)
+                          .omitNullValues()
+                          .add("name", name)
+                          .add("intValue", intValue)
+                          .add("docString", docString)
+                          .toString();
     }
 }

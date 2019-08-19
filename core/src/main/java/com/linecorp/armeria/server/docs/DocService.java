@@ -245,6 +245,7 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
     private static EnumValueInfo addEnumValueDocString(EnumInfo e, EnumValueInfo v,
                                                        Map<String, String> docStrings) {
         return new EnumValueInfo(v.name(),
+                                 v.intValue(),
                                  docString(e.name() + '/' + v.name(), v.docString(), docStrings));
     }
 
