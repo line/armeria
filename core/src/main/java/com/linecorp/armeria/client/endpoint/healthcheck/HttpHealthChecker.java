@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.util.AsyncCloseable;
@@ -108,6 +109,9 @@ final class HttpHealthChecker implements AsyncCloseable {
                         maxLongPollingSeconds = getMaxLongPollingSeconds(res);
                         break;
                     default:
+                        if (res.status() == HttpStatus.NOT_MODIFIED) {
+                            isHealthy = wasHealthy;
+                        }
                         // Do not use long polling on an unexpected status for safety.
                         maxLongPollingSeconds = 0;
                 }
