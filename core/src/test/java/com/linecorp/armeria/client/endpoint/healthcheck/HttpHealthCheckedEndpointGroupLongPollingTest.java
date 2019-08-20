@@ -77,6 +77,7 @@ class HttpHealthCheckedEndpointGroupLongPollingTest {
     @BeforeEach
     void startServer() {
         server.start();
+        healthCheckRequestLogs = null;
     }
 
     @Test
@@ -137,8 +138,6 @@ class HttpHealthCheckedEndpointGroupLongPollingTest {
             healthCheckRequestLogs.take();
             assertThat(stopwatch.elapsed(TimeUnit.MILLISECONDS))
                     .isGreaterThan(RETRY_INTERVAL.toMillis() * 4 / 5);
-        } finally {
-            this.healthCheckRequestLogs = null;
         }
     }
 
@@ -192,20 +191,16 @@ class HttpHealthCheckedEndpointGroupLongPollingTest {
             Thread.sleep(LONG_POLLING_TIMEOUT.toMillis());
             assertThat(endpointGroup.endpoints()).containsExactly(endpoint);
 
-            // Must receive the '304 Not Modified' response with long polling disabled,
-            // so that the next health check respects the backoff.
+            // Must receive the '304 Not Modified' response with long polling.
             final ResponseHeaders notModifiedResponseHeaders = healthCheckRequestLogs.take().responseHeaders();
             assertThat(notModifiedResponseHeaders.status()).isEqualTo(HttpStatus.NOT_MODIFIED);
-            assertThat(notModifiedResponseHeaders.getLong("armeria-lphc", 1)).isEqualTo(0);
+            assertThat(notModifiedResponseHeaders.getLong("armeria-lphc", 1))
+                    .isEqualTo(LONG_POLLING_TIMEOUT.getSeconds());
 
-            // Check the next check respected backoff, because there's no point of
-            // sending a request immediately if you get a 'not modified'.
             final Stopwatch stopwatch = Stopwatch.createStarted();
             healthCheckRequestLogs.take();
             assertThat(stopwatch.elapsed(TimeUnit.MILLISECONDS))
-                    .isGreaterThan(RETRY_INTERVAL.toMillis() * 4 / 5);
-        } finally {
-            this.healthCheckRequestLogs = null;
+                    .isLessThanOrEqualTo(LONG_POLLING_TIMEOUT.toMillis());
         }
     }
 

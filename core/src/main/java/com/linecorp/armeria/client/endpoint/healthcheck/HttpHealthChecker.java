@@ -110,10 +110,12 @@ final class HttpHealthChecker implements AsyncCloseable {
                         break;
                     default:
                         if (res.status() == HttpStatus.NOT_MODIFIED) {
+                            maxLongPollingSeconds = getMaxLongPollingSeconds(res);
                             isHealthy = wasHealthy;
+                        } else {
+                            // Do not use long polling on an unexpected status for safety.
+                            maxLongPollingSeconds = 0;
                         }
-                        // Do not use long polling on an unexpected status for safety.
-                        maxLongPollingSeconds = 0;
                 }
             } else {
                 maxLongPollingSeconds = 0;
