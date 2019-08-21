@@ -52,12 +52,16 @@ class HttpHealthCheckedEndpointGroupLongPollingTest {
     private static final String HEALTH_CHECK_PATH = "/healthcheck";
 
     private static final SettableHealthChecker health = new SettableHealthChecker();
+    private static final Duration LONG_POLLING_TIMEOUT = Duration.ofSeconds(1);
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.service(HEALTH_CHECK_PATH, HealthCheckService.of(health));
+            sb.service(HEALTH_CHECK_PATH, HealthCheckService.builder()
+                                                            .longPolling(LONG_POLLING_TIMEOUT)
+                                                            .checkers(health)
+                                                            .build());
 
             // Enable graceful shutdown so that the server is given a chance
             // to send a health check response when the server is shutting down.
@@ -73,6 +77,7 @@ class HttpHealthCheckedEndpointGroupLongPollingTest {
     @BeforeEach
     void startServer() {
         server.start();
+        healthCheckRequestLogs = null;
     }
 
     @Test
@@ -133,8 +138,6 @@ class HttpHealthCheckedEndpointGroupLongPollingTest {
             healthCheckRequestLogs.take();
             assertThat(stopwatch.elapsed(TimeUnit.MILLISECONDS))
                     .isGreaterThan(RETRY_INTERVAL.toMillis() * 4 / 5);
-        } finally {
-            this.healthCheckRequestLogs = null;
         }
     }
 
@@ -164,6 +167,40 @@ class HttpHealthCheckedEndpointGroupLongPollingTest {
             }
         } finally {
             this.healthCheckRequestLogs = null;
+        }
+    }
+
+    @Test
+    @Timeout(15)
+    void keepEndpointHealthinessWhenLongPollingTimeout() throws Exception {
+        final BlockingQueue<RequestLog> healthCheckRequestLogs = new LinkedTransferQueue<>();
+        this.healthCheckRequestLogs = healthCheckRequestLogs;
+        final Endpoint endpoint = Endpoint.of("127.0.0.1", server.httpPort());
+        try (HealthCheckedEndpointGroup endpointGroup = build(
+                HealthCheckedEndpointGroup.builder(
+                        new StaticEndpointGroup(endpoint),
+                        HEALTH_CHECK_PATH))) {
+
+            // Check the initial state (healthy).
+            assertThat(endpointGroup.endpoints()).containsExactly(endpoint);
+
+            // Drop the first request.
+            healthCheckRequestLogs.take();
+
+            // Check the endpoint is populated even after long polling timeout.
+            Thread.sleep(LONG_POLLING_TIMEOUT.toMillis());
+            assertThat(endpointGroup.endpoints()).containsExactly(endpoint);
+
+            // Must receive the '304 Not Modified' response with long polling.
+            final ResponseHeaders notModifiedResponseHeaders = healthCheckRequestLogs.take().responseHeaders();
+            assertThat(notModifiedResponseHeaders.status()).isEqualTo(HttpStatus.NOT_MODIFIED);
+            assertThat(notModifiedResponseHeaders.getLong("armeria-lphc", 1))
+                    .isEqualTo(LONG_POLLING_TIMEOUT.getSeconds());
+
+            final Stopwatch stopwatch = Stopwatch.createStarted();
+            healthCheckRequestLogs.take();
+            assertThat(stopwatch.elapsed(TimeUnit.MILLISECONDS))
+                    .isLessThanOrEqualTo(LONG_POLLING_TIMEOUT.toMillis());
         }
     }
 
