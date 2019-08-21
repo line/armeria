@@ -13,9 +13,9 @@ ch.qos.logback:
 
 com.auth0:
   java-jwt:
-    version: '3.8.1'
+    version: '3.8.2'
     javadocs:
-    - https://static.javadoc.io/com.auth0/java-jwt/3.8.1/
+    - https://static.javadoc.io/com.auth0/java-jwt/3.8.2/
 
 com.fasterxml.jackson.core:
   jackson-annotations:
@@ -46,7 +46,7 @@ com.github.jengelman.gradle.plugins:
   shadow: { version: '5.1.0' }
 
 com.google.api:
-  gax-grpc: { version: '1.47.1' }
+  gax-grpc: { version: '1.48.0' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
@@ -365,7 +365,7 @@ org.dmonix.junit:
   zookeeper-junit: { version: '1.2' }
 
 org.eclipse.jetty:
-  apache-jsp: { version: &JETTY_VERSION '9.4.19.v20190610' }
+  apache-jsp: { version: &JETTY_VERSION '9.4.20.v20190813' }
   apache-jstl: { version: *JETTY_VERSION }
   jetty-annotations:
     version: *JETTY_VERSION
