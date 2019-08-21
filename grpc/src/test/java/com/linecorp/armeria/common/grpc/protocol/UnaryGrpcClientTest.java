@@ -36,6 +36,8 @@ import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 
 import io.grpc.Server;
+import io.grpc.Status;
+import io.grpc.StatusException;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.StreamObserver;
 
@@ -48,8 +50,20 @@ public class UnaryGrpcClientTest {
             final SimpleResponse response = SimpleResponse.newBuilder()
                                                           .setPayload(request.getPayload())
                                                           .build();
-            responseObserver.onNext(response);
-            responseObserver.onCompleted();
+            final String payload = request.getPayload().getBody().toStringUtf8();
+            if ("peanuts".equals(payload)) {
+                responseObserver.onError(
+                    new StatusException(Status.UNAVAILABLE.withDescription("we don't sell peanuts"))
+                );
+            } else if ("ice cream".equals(payload)) {
+                responseObserver.onNext(response); // Note: we error after the response, so trailers
+                responseObserver.onError(
+                    new StatusException(Status.UNAVAILABLE.withDescription("no more ice cream"))
+                );
+            } else {
+                responseObserver.onNext(response);
+                responseObserver.onCompleted();
+            }
         }
     }
 
@@ -87,6 +101,40 @@ public class UnaryGrpcClientTest {
                 client.execute("/armeria.grpc.testing.TestService/UnaryCall", request.toByteArray()).join();
         final SimpleResponse response = SimpleResponse.parseFrom(responseBytes);
         assertThat(response.getPayload().getBody().toStringUtf8()).isEqualTo("hello");
+    }
+
+    /** This shows we can handle status that happens in headers. */
+    @Test
+    public void statusException() {
+        final SimpleRequest request = SimpleRequest.newBuilder()
+            .setPayload(Payload.newBuilder()
+                .setBody(ByteString.copyFromUtf8("peanuts"))
+                .build())
+            .build();
+
+        assertThatThrownBy(
+            () -> client.execute("/armeria.grpc.testing.TestService/UnaryCall",
+                request.toByteArray()).join())
+            .isInstanceOf(CompletionException.class)
+            .hasCauseInstanceOf(ArmeriaStatusException.class)
+            .hasMessageContaining("we don't sell peanuts");
+    }
+
+    /** This shows we can handle status that happens in trailers. */
+    @Test
+    public void lateStatusException() {
+        final SimpleRequest request = SimpleRequest.newBuilder()
+            .setPayload(Payload.newBuilder()
+                .setBody(ByteString.copyFromUtf8("ice cream"))
+                .build())
+            .build();
+
+        assertThatThrownBy(
+            () -> client.execute("/armeria.grpc.testing.TestService/UnaryCall",
+                request.toByteArray()).join())
+            .isInstanceOf(CompletionException.class)
+            .hasCauseInstanceOf(ArmeriaStatusException.class)
+            .hasMessageContaining("no more ice cream");
     }
 
     @Test
