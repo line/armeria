@@ -58,19 +58,25 @@ public class ByteArrayResponseConverterFunction implements ResponseConverterFunc
                                          ByteArrayResponseConverterFunction::toHttpData,
                                          ctx.blockingTaskExecutor());
                 }
-                if (result instanceof HttpData) {
-                    return HttpResponse.of(headers, (HttpData) result, trailers);
-                }
-                if (result instanceof byte[]) {
-                    return HttpResponse.of(headers, HttpData.wrap((byte[]) result), trailers);
-                }
-
-                return ResponseConverterFunction.fallthrough();
             }
-        } else if (result instanceof HttpData) {
+
+            if (result instanceof HttpData) {
+                return HttpResponse.of(headers, (HttpData) result, trailers);
+            }
+
+            if (result instanceof byte[]) {
+                return HttpResponse.of(headers, HttpData.wrap((byte[]) result), trailers);
+            }
+
+            return ResponseConverterFunction.fallthrough();
+        }
+
+        if (result instanceof HttpData) {
             return HttpResponse.of(headers.toBuilder().contentType(MediaType.OCTET_STREAM).build(),
                                    (HttpData) result, trailers);
-        } else if (result instanceof byte[]) {
+        }
+
+        if (result instanceof byte[]) {
             return HttpResponse.of(headers.toBuilder().contentType(MediaType.OCTET_STREAM).build(),
                                    HttpData.wrap((byte[]) result), trailers);
         }
