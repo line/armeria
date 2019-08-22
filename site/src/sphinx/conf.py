@@ -45,10 +45,16 @@ for k in properties.keys():
         continue
     rst_epilog += '.. |' + k + '| replace:: ' + v + '\n'
 for groupId in dependencies.keys():
-    for artifactId in dependencies[groupId]:
-        k = groupId + ':' + artifactId + ':version'
-        v = dependencies[groupId][artifactId]['version']
-        rst_epilog += '.. |' + k + '| replace:: ' + v + '\n'
+    if groupId == 'boms':
+        for gav in dependencies['boms']:
+            k = re.sub(':[^:]+$', '', gav, 1) + ':version'
+            v = re.sub('[^:]+:', '', gav, 2)
+            rst_epilog += '.. |' + k + '| replace:: ' + v + '\n'
+    else:
+        for artifactId in dependencies[groupId]:
+            k = groupId + ':' + artifactId + ':version'
+            v = dependencies[groupId][artifactId]['version']
+            rst_epilog += '.. |' + k + '| replace:: ' + v + '\n'
 rst_epilog += '\n'
 
 needs_sphinx = '1.0'
