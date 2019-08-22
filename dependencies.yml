@@ -5,6 +5,8 @@
 boms:
   - com.fasterxml.jackson:jackson-bom:2.9.9.20190807
   - io.zipkin.brave:brave-bom:5.6.11
+  # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
+  - io.netty:netty-bom:4.1.39.Final
 
 cglib:
   cglib: { version: '3.3.0' }
@@ -177,21 +179,21 @@ io.micrometer:
 
 io.netty:
   netty-common:
-    version: &NETTY_VERSION '4.1.39.Final'
     javadocs:
     - https://netty.io/4.1/api/
-  netty-buffer: { version: *NETTY_VERSION }
-  netty-codec: { version: *NETTY_VERSION }
-  netty-codec-dns: { version: *NETTY_VERSION }
-  netty-codec-http: { version: *NETTY_VERSION }
-  netty-codec-http2: { version: *NETTY_VERSION }
-  netty-codec-haproxy: { version: *NETTY_VERSION }
-  netty-handler: { version: *NETTY_VERSION }
-  netty-resolver: { version: *NETTY_VERSION }
-  netty-resolver-dns: { version: *NETTY_VERSION }
-  netty-transport: { version: *NETTY_VERSION }
-  netty-transport-native-epoll: { version: *NETTY_VERSION }
-  netty-transport-native-unix-common: { version: *NETTY_VERSION }
+  netty-buffer: {}
+  netty-codec: {}
+  netty-codec-dns: {}
+  netty-codec-http: {}
+  netty-codec-http2: {}
+  netty-codec-haproxy: {}
+  netty-handler: {}
+  netty-resolver: {}
+  netty-resolver-dns: {}
+  netty-transport: {}
+  netty-transport-native-epoll: {}
+  netty-transport-native-unix-common: {}
+  # TODO: get netty-bom to claim this version!
   netty-tcnative-boringssl-static: { version: '2.0.25.Final' }
 
 io.projectreactor:
