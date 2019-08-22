@@ -181,18 +181,6 @@ io.netty:
   netty-common:
     javadocs:
     - https://netty.io/4.1/api/
-  netty-buffer: {}
-  netty-codec: {}
-  netty-codec-dns: {}
-  netty-codec-http: {}
-  netty-codec-http2: {}
-  netty-codec-haproxy: {}
-  netty-handler: {}
-  netty-resolver: {}
-  netty-resolver-dns: {}
-  netty-transport: {}
-  netty-transport-native-epoll: {}
-  netty-transport-native-unix-common: {}
   # TODO: get netty-bom to claim this version!
   netty-tcnative-boringssl-static: { version: '2.0.25.Final' }
 
@@ -220,8 +208,6 @@ io.zipkin.brave:
     # ':site:javadoc' fails when we use a newer version of Javadoc.
     javadocs:
     - https://static.javadoc.io/io.zipkin.brave/brave/5.6.3/
-  brave-instrumentation-http: {}
-  brave-instrumentation-http-tests: {}
 
 it.unimi.dsi:
   fastutil:
