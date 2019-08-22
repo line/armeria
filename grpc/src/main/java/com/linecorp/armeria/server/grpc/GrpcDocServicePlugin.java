@@ -372,7 +372,7 @@ public class GrpcDocServicePlugin implements DocServicePlugin {
         return new EnumInfo(
                 enumDescriptor.getFullName(),
                 enumDescriptor.getValues().stream()
-                              .map(d -> new EnumValueInfo(d.getName()))
+                              .map(d -> new EnumValueInfo(d.getName(), Integer.toString(d.getNumber())))
                               .collect(toImmutableList()));
     }
 

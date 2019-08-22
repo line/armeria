@@ -129,6 +129,6 @@ public final class EnumInfo implements NamedTypeInfo {
         final Class<?> rawEnumType = requireNonNull(enumType, "enumType");
         @SuppressWarnings({ "unchecked", "rawtypes" })
         final Set<Enum> values = EnumSet.allOf((Class<Enum>) rawEnumType);
-        return values.stream().map(e -> new EnumValueInfo(e.name()))::iterator;
+        return values.stream().map(e -> new EnumValueInfo(e.name(), Integer.toString(e.ordinal())))::iterator;
     }
 }

@@ -78,7 +78,9 @@ public final class EnumValueInfo {
      * Returns the literal value (for example, int value) for the enum value.
      */
     @JsonProperty
-    public String literalValue() { return literalValue; }
+    public String literalValue() {
+        return literalValue;
+    }
 
     /**
      * Returns the documentation string that describes the enum value.
