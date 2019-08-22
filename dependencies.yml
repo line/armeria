@@ -3,6 +3,7 @@
 #
 
 boms:
+  - com.fasterxml.jackson:jackson-bom:2.9.9.20190807
   - io.zipkin.brave:brave-bom:5.6.11
 
 cglib:
@@ -22,15 +23,12 @@ com.auth0:
 
 com.fasterxml.jackson.core:
   jackson-annotations:
-    version: &JACKSON_VERSION '2.9.9'
     javadocs:
     - https://fasterxml.github.io/jackson-annotations/javadoc/2.9/
   jackson-core:
-    version: *JACKSON_VERSION
     javadocs:
     - https://fasterxml.github.io/jackson-core/javadoc/2.9/
   jackson-databind:
-    version: *JACKSON_VERSION
     javadocs:
     - https://fasterxml.github.io/jackson-databind/javadoc/2.9/
 
