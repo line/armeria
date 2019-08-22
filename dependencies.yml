@@ -2,6 +2,9 @@
 # NB: Update NOTICE.txt and add/remove LICENSE.*.txt when adding/removing a dependency.
 #
 
+boms:
+  - io.zipkin.brave:brave-bom:5.6.11
+
 cglib:
   cglib: { version: '3.3.0' }
 
@@ -214,12 +217,11 @@ io.reactivex.rxjava2:
 
 io.zipkin.brave:
   brave:
-    version: &BRAVE_VERSION '5.6.10'
     # ':site:javadoc' fails when we use a newer version of Javadoc.
     javadocs:
     - https://static.javadoc.io/io.zipkin.brave/brave/5.6.3/
-  brave-instrumentation-http: { version: *BRAVE_VERSION }
-  brave-instrumentation-http-tests: { version: *BRAVE_VERSION }
+  brave-instrumentation-http: {}
+  brave-instrumentation-http-tests: {}
 
 it.unimi.dsi:
   fastutil:
