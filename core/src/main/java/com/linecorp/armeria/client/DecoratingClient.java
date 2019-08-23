@@ -18,6 +18,8 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Optional;
+
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
@@ -50,6 +52,12 @@ public abstract class DecoratingClient<T_I extends Request, T_O extends Response
     @SuppressWarnings("unchecked")
     protected final <T extends Client<T_I, T_O>> T delegate() {
         return (T) delegate;
+    }
+
+    @Override
+    public final <T> Optional<T> as(Class<T> clientType) {
+        final Optional<T> result = Client.super.as(clientType);
+        return result.isPresent() ? result : delegate.as(clientType);
     }
 
     @Override
