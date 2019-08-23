@@ -40,7 +40,6 @@ import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import io.netty.util.AttributeKey;
 import okhttp3.Call;
 import okhttp3.Call.Factory;
 import okhttp3.Callback;
@@ -58,9 +57,6 @@ import retrofit2.Invocation;
  * A {@link Factory} that creates a {@link Call} instance for {@link HttpClient}.
  */
 final class ArmeriaCallFactory implements Factory {
-
-    private static final AttributeKey<Invocation> RETROFIT_INVOCATION =
-            AttributeKey.valueOf(ArmeriaCallFactory.class, "RETROFIT_INVOCATION");
 
     static final String GROUP_PREFIX = "group_";
     private static final Pattern GROUP_PREFIX_MATCHER = Pattern.compile(GROUP_PREFIX);
