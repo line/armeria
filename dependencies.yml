@@ -2,6 +2,12 @@
 # NB: Update NOTICE.txt and add/remove LICENSE.*.txt when adding/removing a dependency.
 #
 
+boms:
+  - com.fasterxml.jackson:jackson-bom:2.9.9.20190807
+  - io.zipkin.brave:brave-bom:5.6.11
+  # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
+  - io.netty:netty-bom:4.1.39.Final
+
 cglib:
   cglib: { version: '3.3.0' }
 
@@ -19,15 +25,12 @@ com.auth0:
 
 com.fasterxml.jackson.core:
   jackson-annotations:
-    version: &JACKSON_VERSION '2.9.9'
     javadocs:
     - https://fasterxml.github.io/jackson-annotations/javadoc/2.9/
   jackson-core:
-    version: *JACKSON_VERSION
     javadocs:
     - https://fasterxml.github.io/jackson-core/javadoc/2.9/
   jackson-databind:
-    version: *JACKSON_VERSION
     javadocs:
     - https://fasterxml.github.io/jackson-databind/javadoc/2.9/
 
@@ -176,21 +179,9 @@ io.micrometer:
 
 io.netty:
   netty-common:
-    version: &NETTY_VERSION '4.1.39.Final'
     javadocs:
     - https://netty.io/4.1/api/
-  netty-buffer: { version: *NETTY_VERSION }
-  netty-codec: { version: *NETTY_VERSION }
-  netty-codec-dns: { version: *NETTY_VERSION }
-  netty-codec-http: { version: *NETTY_VERSION }
-  netty-codec-http2: { version: *NETTY_VERSION }
-  netty-codec-haproxy: { version: *NETTY_VERSION }
-  netty-handler: { version: *NETTY_VERSION }
-  netty-resolver: { version: *NETTY_VERSION }
-  netty-resolver-dns: { version: *NETTY_VERSION }
-  netty-transport: { version: *NETTY_VERSION }
-  netty-transport-native-epoll: { version: *NETTY_VERSION }
-  netty-transport-native-unix-common: { version: *NETTY_VERSION }
+  # TODO: get netty-bom to claim this version!
   netty-tcnative-boringssl-static: { version: '2.0.25.Final' }
 
 io.projectreactor:
@@ -214,12 +205,9 @@ io.reactivex.rxjava2:
 
 io.zipkin.brave:
   brave:
-    version: &BRAVE_VERSION '5.6.10'
     # ':site:javadoc' fails when we use a newer version of Javadoc.
     javadocs:
     - https://static.javadoc.io/io.zipkin.brave/brave/5.6.3/
-  brave-instrumentation-http: { version: *BRAVE_VERSION }
-  brave-instrumentation-http-tests: { version: *BRAVE_VERSION }
 
 it.unimi.dsi:
   fastutil:

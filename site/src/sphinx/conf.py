@@ -52,9 +52,10 @@ for groupId in dependencies.keys():
             rst_epilog += '.. |' + k + '| replace:: ' + v + '\n'
     else:
         for artifactId in dependencies[groupId]:
-            k = groupId + ':' + artifactId + ':version'
-            v = dependencies[groupId][artifactId]['version']
-            rst_epilog += '.. |' + k + '| replace:: ' + v + '\n'
+            if 'version' in dependencies[groupId][artifactId]:
+                k = groupId + ':' + artifactId + ':version'
+                v = dependencies[groupId][artifactId]['version']
+                rst_epilog += '.. |' + k + '| replace:: ' + v + '\n'
 rst_epilog += '\n'
 
 needs_sphinx = '1.0'
