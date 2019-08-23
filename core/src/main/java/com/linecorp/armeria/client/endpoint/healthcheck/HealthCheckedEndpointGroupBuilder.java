@@ -22,6 +22,7 @@ import java.time.Duration;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientOptionsBuilder;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.retry.Backoff;
@@ -79,6 +80,11 @@ public class HealthCheckedEndpointGroupBuilder extends AbstractHealthCheckedEndp
     @Override
     public HealthCheckedEndpointGroupBuilder retryBackoff(Backoff retryBackoff) {
         return (HealthCheckedEndpointGroupBuilder) super.retryBackoff(retryBackoff);
+    }
+
+    @Override
+    public HealthCheckedEndpointGroupBuilder clientOptions(ClientOptions options) {
+        return (HealthCheckedEndpointGroupBuilder) super.clientOptions(options);
     }
 
     @Override
