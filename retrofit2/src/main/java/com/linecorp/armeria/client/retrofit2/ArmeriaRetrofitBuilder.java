@@ -27,6 +27,7 @@ import java.util.function.BiFunction;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientOptionsBuilder;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -126,7 +127,33 @@ public final class ArmeriaRetrofitBuilder {
     }
 
     /**
-     * Sets the {@link BiFunction} that is applied to the underlying {@link HttpClient}.
+     * Sets the {@link ClientOptions} that customizes the underlying {@link HttpClient}.
+     * This method can be useful if you already have an Armeria client and want to reuse its configuration,
+     * such as using the same decorators.
+     * <pre>{@code
+     * HttpClient myClient = ...;
+     * // Use the same settings and decorators with `myClient` when sending requests.
+     * builder.clientOptions(myClient.options());
+     * }</pre>
+     */
+    public ArmeriaRetrofitBuilder clientOptions(ClientOptions clientOptions) {
+        requireNonNull(clientOptions, "clientOptions");
+        return withClientOptions((uri, b) -> b.options(clientOptions));
+    }
+
+    /**
+     * Sets the {@link BiFunction} that customizes the underlying {@link HttpClient}.
+     * <pre>{@code
+     * builder.withClientOptions((uri, b) -> {
+     *     if (uri.startsWith("https://foo.com/")) {
+     *         return b.setHttpHeader(HttpHeaders.AUTHORIZATION,
+     *                                "bearer my-access-token")
+     *                 .responseTimeout(Duration.ofSeconds(3));
+     *     } else {
+     *         return b;
+     *     }
+     * });
+     * }</pre>
      *
      * @param configurator a {@link BiFunction} whose first argument is the the URI of the server endpoint and
      *                     whose second argument is the {@link ClientOptionsBuilder} with default options of
