@@ -41,6 +41,7 @@ import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.healthcheck.SettableHealthChecker;
@@ -226,7 +227,7 @@ class HttpHealthCheckedEndpointGroupLongPollingTest {
                 // Record when health check requests were sent.
                 final Queue<RequestLog> healthCheckRequestLogs = this.healthCheckRequestLogs;
                 if (healthCheckRequestLogs != null) {
-                    healthCheckRequestLogs.add(ctx.log());
+                    ctx.log().addListener(healthCheckRequestLogs::add, RequestLogAvailability.COMPLETE);
                 }
                 return delegate.execute(ctx, req);
             });
