@@ -147,6 +147,18 @@ class FieldInfos extends React.Component<FieldInfosProps, State> {
       openBeans = Array(fieldInfos.length).fill(false);
     }
 
+    const childStates = {};
+    this.state = {
+      isEmpty,
+      isBeans,
+      openBeans,
+      childStates,
+    };
+  }
+
+  public render() {
+    const isEmpty = this.props.variables.length === 0;
+
     let colSpanLength = 4;
     if (this.props.hasLocation) {
       colSpanLength += 1;
@@ -155,20 +167,9 @@ class FieldInfos extends React.Component<FieldInfosProps, State> {
       colSpanLength += 1;
     }
 
-    const childStates = {};
-    this.state = {
-      isEmpty,
-      isBeans,
-      openBeans,
-      colSpanLength,
-      childStates,
-    };
-  }
-
-  public render() {
     return (
       <>
-        {!this.state.isEmpty ? (
+        {!isEmpty ? (
           this.props.variables.map((variable, index) => (
             <React.Fragment key={FieldInfos.generateKey(variable.name)}>
               <TableRow onClick={() => this.handleCollapse(index)}>
@@ -211,7 +212,7 @@ class FieldInfos extends React.Component<FieldInfosProps, State> {
           ))
         ) : (
           <TableRow>
-            <TableCell colSpan={this.state.colSpanLength}>
+            <TableCell colSpan={colSpanLength}>
               There are no {this.props.title.toLowerCase()}
             </TableCell>
           </TableRow>
