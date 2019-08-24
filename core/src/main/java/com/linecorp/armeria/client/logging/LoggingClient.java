@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -84,7 +85,7 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
     private final Function<Object, ?> responseContentSanitizer;
     private final Function<? super HttpHeaders, ?> responseTrailersSanitizer;
     private final Function<? super Throwable, ?> responseCauseSanitizer;
-    private final Sampler sampler;
+    private final Sampler<? super RequestLog> sampler;
 
     /**
      * Creates a new instance that logs {@link Request}s and {@link Response}s at {@link LogLevel#INFO}.
@@ -133,7 +134,7 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
                   Function<Object, ?> responseContentSanitizer,
                   Function<? super HttpHeaders, ?> responseTrailersSanitizer,
                   Function<? super Throwable, ?> responseCauseSanitizer,
-                  Sampler sampler) {
+                  Sampler<? super RequestLog> sampler) {
         super(requireNonNull(delegate, "delegate"));
         this.requestLogLevel = requireNonNull(requestLogLevel, "requestLogLevel");
         this.successfulResponseLogLevel = requireNonNull(successfulResponseLogLevel,

@@ -27,13 +27,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.linecorp.armeria.internal.logging;
+package com.linecorp.armeria.common.util;
 
 import java.util.BitSet;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import com.linecorp.armeria.common.util.Sampler;
 
 /**
  * This sampler is appropriate for low-traffic instrumentation (ex servers that each receive <100K
@@ -48,7 +46,7 @@ import com.linecorp.armeria.common.util.Sampler;
  *
  * <p>Forked from brave-core 5.6.3 at d4cbd86e1df75687339da6ec2964d42ab3a8cf14
  */
-public final class CountingSampler implements Sampler {
+final class CountingSampler implements Sampler {
 
     /**
      * Creates a new instance.
@@ -56,7 +54,7 @@ public final class CountingSampler implements Sampler {
      * @param rate 0 means never sample, 1 means always sample. Otherwise minimum sample rate is 0.01,
      *             or 1% of traces
      */
-    public static Sampler create(final double rate) {
+    static Sampler create(final double rate) {
         if (rate == 0) {
             return Sampler.never();
         }

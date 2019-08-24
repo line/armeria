@@ -29,9 +29,6 @@
  */
 package com.linecorp.armeria.common.util;
 
-import com.linecorp.armeria.internal.logging.CountingSampler;
-import com.linecorp.armeria.internal.logging.RateLimitingSampler;
-
 /**
  * Sampler is responsible for deciding if a particular trace should be "sampled", i.e. whether the
  * overhead of tracing will occur and/or if a trace will be reported to the collection tier.
@@ -56,8 +53,10 @@ public interface Sampler<T> {
      *
      * @param rate minimum sample rate is 0.01, or 1% of traces
      */
-    static Sampler<Object> random(double rate) {
-        return CountingSampler.create(rate);
+    static <T> Sampler<T> random(double rate) {
+        @SuppressWarnings("unchecked")
+        final Sampler<T> cast = CountingSampler.create(rate);
+        return cast;
     }
 
     /**
@@ -65,42 +64,28 @@ public interface Sampler<T> {
      *
      * @param samplesPerSecond minimum rate-limited is 0 and the max is 2,147,483,647 (max int)
      */
-    static Sampler<Object> rateLimited(int samplesPerSecond) {
-        return RateLimitingSampler.create(samplesPerSecond);
+    static <T> Sampler<T> rateLimited(int samplesPerSecond) {
+        @SuppressWarnings("unchecked")
+        final Sampler<T> cast = RateLimitingSampler.create(samplesPerSecond);
+        return cast;
     }
 
     /**
      * Returns a sampler that always will be sampled.
      */
-    static Sampler always() {
-        return new Sampler() {
-            @Override
-            public boolean isSampled(Object ignored) {
-                return true;
-            }
-
-            @Override
-            public String toString() {
-                return "AlwaysSample";
-            }
-        };
+    static <T> Sampler<T> always() {
+        @SuppressWarnings("unchecked")
+        final Sampler<T> cast = Samplers.ALWAYS;
+        return cast;
     }
 
     /**
      * Returns a sampler that never will be sampled.
      */
-    static Sampler never() {
-        return new Sampler() {
-            @Override
-            public boolean isSampled(Object ignored) {
-                return false;
-            }
-
-            @Override
-            public String toString() {
-                return "NeverSample";
-            }
-        };
+    static <T> Sampler<T> never() {
+        @SuppressWarnings("unchecked")
+        final Sampler<T> cast = Samplers.NEVER;
+        return cast;
     }
 
     /**
