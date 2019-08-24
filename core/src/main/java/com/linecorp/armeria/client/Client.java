@@ -61,6 +61,6 @@ public interface Client<I extends Request, O extends Response> {
     default <T> Optional<T> as(Class<T> clientType) {
         requireNonNull(clientType, "clientType");
         return clientType.isInstance(this) ? Optional.of(clientType.cast(this))
-                                            : Optional.empty();
+                                              : Optional.empty();
     }
 }
