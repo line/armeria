@@ -35,7 +35,6 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.DecoratingClientFactory;
@@ -47,6 +46,7 @@ import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.internal.grpc.GrpcJsonUtil;
 
 import io.grpc.Channel;
@@ -66,7 +66,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
                                                         .map(f -> Scheme.of(f, p)))
                   .collect(toImmutableSet());
 
-    private static final Consumer<MessageMarshaller.Builder> NO_OP = (unused) -> {};
+    private static final Consumer<MessageMarshaller.Builder> NO_OP = unused -> {};
 
     /**
      * Creates a new instance from the specified {@link ClientFactory} that supports the "none+http" scheme.
@@ -161,15 +161,22 @@ final class GrpcClientFactory extends DecoratingClientFactory {
     }
 
     @Override
-    public <T> Optional<ClientBuilderParams> clientBuilderParams(T client) {
+    public <T> Optional<T> unwrap(Object client, Class<T> type) {
+        final Optional<T> unwrapped = super.unwrap(client, type);
+        if (unwrapped.isPresent()) {
+            return unwrapped;
+        }
+
         if (!(client instanceof AbstractStub)) {
             return Optional.empty();
         }
-        final AbstractStub<?> stub = (AbstractStub<?>) client;
-        if (!(stub.getChannel() instanceof ArmeriaChannel)) {
+
+        final Channel ch = ((AbstractStub<?>) client).getChannel();
+        if (!(ch instanceof Unwrappable)) {
             return Optional.empty();
         }
-        return Optional.of((ClientBuilderParams) stub.getChannel());
+
+        return ((Unwrappable) ch).as(type);
     }
 
     private static List<MethodDescriptor<?, ?>> stubMethods(Class<?> stubClass) {

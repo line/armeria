@@ -100,6 +100,11 @@ public class DecoratingClientFactory extends AbstractClientFactory {
     }
 
     @Override
+    public <T> Optional<T> unwrap(Object client, Class<T> type) {
+        return delegate().unwrap(client, type);
+    }
+
+    @Override
     public void close() {
         delegate().close();
     }

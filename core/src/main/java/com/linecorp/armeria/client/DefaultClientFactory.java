@@ -139,13 +139,19 @@ final class DefaultClientFactory extends AbstractClientFactory {
     }
 
     @Override
-    public <T> Optional<ClientBuilderParams> clientBuilderParams(T client) {
+    public <T> Optional<T> unwrap(Object client, Class<T> type) {
+        final Optional<T> params = super.unwrap(client, type);
+        if (params.isPresent()) {
+            return params;
+        }
+
         for (ClientFactory factory : clientFactories.values()) {
-            final Optional<ClientBuilderParams> params = factory.clientBuilderParams(client);
-            if (params.isPresent()) {
-                return params;
+            final Optional<T> p = factory.unwrap(client, type);
+            if (p.isPresent()) {
+                return p;
             }
         }
+
         return Optional.empty();
     }
 

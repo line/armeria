@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.util.Unwrappable;
 
 /**
  * Handles a {@link Request} received by a {@link Server}.
@@ -38,7 +39,7 @@ import com.linecorp.armeria.common.RpcResponse;
  * @param <O> the type of outgoing {@link Response}. Must be {@link HttpResponse} or {@link RpcResponse}.
  */
 @FunctionalInterface
-public interface Service<I extends Request, O extends Response> {
+public interface Service<I extends Request, O extends Response> extends Unwrappable {
 
     /**
      * Invoked when this {@link Service} has been added to a {@link Server} with the specified configuration.
@@ -58,9 +59,8 @@ public interface Service<I extends Request, O extends Response> {
     O serve(ServiceRequestContext ctx, I req) throws Exception;
 
     /**
-     * Undecorates this {@link Service} to find the {@link Service} which is an instance of the specified
-     * {@code serviceType}. Use this method instead of an explicit downcast since most {@link Service}s are
-     * decorated via {@link #decorate(Function)} and thus cannot be downcast. For example:
+     * Unwraps this {@link Service} into the object of the specified {@code type}.
+     * Use this method instead of an explicit downcast. For example:
      * <pre>{@code
      * Service s = new MyService().decorate(LoggingService.newDecorator())
      *                            .decorate(AuthService.newDecorator());
@@ -69,14 +69,13 @@ public interface Service<I extends Request, O extends Response> {
      * AuthService s3 = s.as(AuthService.class);
      * }</pre>
      *
-     * @param serviceType the type of the desired {@link Service}
-     * @return the {@link Service} which is an instance of {@code serviceType} if this {@link Service}
-     *         decorated such a {@link Service}. {@link Optional#empty()} otherwise.
+     * @param type the type of the object to return
+     * @return the object of the specified {@code type} if found. {@link Optional#empty()} if not found.
      */
-    default <T> Optional<T> as(Class<T> serviceType) {
-        requireNonNull(serviceType, "serviceType");
-        return serviceType.isInstance(this) ? Optional.of(serviceType.cast(this))
-                                            : Optional.empty();
+    @Override
+    default <T> Optional<T> as(Class<T> type) {
+        requireNonNull(type, "type");
+        return Unwrappable.super.as(type);
     }
 
     /**

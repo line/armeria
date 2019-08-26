@@ -18,8 +18,6 @@ package com.linecorp.armeria.client;
 import static com.linecorp.armeria.client.DefaultClientRequestContext.THREAD_LOCAL_CONTEXT_CUSTOMIZER;
 import static java.util.Objects.requireNonNull;
 
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -390,17 +388,6 @@ public final class Clients {
 
     private static ClientBuilderParams builderParams(Object client) {
         requireNonNull(client, "client");
-        if (client instanceof ClientBuilderParams) {
-            return (ClientBuilderParams) client;
-        }
-
-        if (Proxy.isProxyClass(client.getClass())) {
-            final InvocationHandler handler = Proxy.getInvocationHandler(client);
-            if (handler instanceof ClientBuilderParams) {
-                return (ClientBuilderParams) handler;
-            }
-        }
-
         final Optional<ClientBuilderParams> params = ClientFactory.DEFAULT.clientBuilderParams(client);
         if (params.isPresent()) {
             return params.get();

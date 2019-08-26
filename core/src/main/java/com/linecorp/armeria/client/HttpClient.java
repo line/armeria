@@ -26,11 +26,12 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.util.Unwrappable;
 
 /**
  * An HTTP client.
  */
-public interface HttpClient extends ClientBuilderParams {
+public interface HttpClient extends ClientBuilderParams, Unwrappable {
 
     /**
      * Creates a new HTTP client using the {@link ClientFactory#DEFAULT} and the {@link ClientOptions#DEFAULT}.
