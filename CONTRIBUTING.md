@@ -17,7 +17,7 @@ source projects you are aware of. It will be amazing if you could help us by doi
 
 When you are sending a pull request and it's a non-trivial change beyond fixing typos, please sign 
 [the ICLA (individual contributor license agreement)](https://cla-assistant.io/line/armeria). Please
-[contact us](dl_oss_dev@linecorp.com) if you need the CCLA (corporate contributor license agreement).
+[contact us](mailto:dl_oss_dev@linecorp.com) if you need the CCLA (corporate contributor license agreement).
 
 ### Code of conduct
 
