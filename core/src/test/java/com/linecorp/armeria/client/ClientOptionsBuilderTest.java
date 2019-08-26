@@ -147,4 +147,45 @@ public class ClientOptionsBuilderTest {
         assertThat(opts.responseTimeoutMillis()).isEqualTo(2000);
         assertThat(opts.maxResponseLength()).isEqualTo(3000);
     }
+
+    @Test
+    public void testDecoratorDowncast() {
+        final FooClient inner = new FooClient();
+        final FooDecorator outer = new FooDecorator(inner);
+
+        assertThat(outer.as(inner.getClass())).isPresent();
+        assertThat(outer.as(outer.getClass())).isPresent();
+
+        if (outer.as(inner.getClass()).isPresent()) {
+            assertThat(outer.as(inner.getClass()).get() == inner);
+        }
+
+        if (outer.as(outer.getClass()).isPresent()) {
+            assertThat(outer.as(outer.getClass()).get() == outer);
+        }
+
+        assertThat(outer.as(LoggingClient.class).isPresent()).isFalse();
+    }
+
+    private static final class FooClient implements Client<HttpRequest, HttpResponse> {
+        FooClient() { }
+
+        @Override
+        public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
+            // Will never reach here.
+            throw new Error();
+        }
+    }
+
+    private static final class FooDecorator extends SimpleDecoratingClient<HttpRequest, HttpResponse> {
+        FooDecorator(Client<HttpRequest, HttpResponse> delegate) {
+            super(delegate);
+        }
+
+        @Override
+        public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
+            // Will never reach here.
+            throw new Error();
+        }
+    }
 }

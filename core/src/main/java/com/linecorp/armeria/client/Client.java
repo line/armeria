@@ -16,6 +16,10 @@
 
 package com.linecorp.armeria.client;
 
+import static java.util.Objects.requireNonNull;
+
+import java.util.Optional;
+
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
@@ -45,4 +49,18 @@ public interface Client<I extends Request, O extends Response> {
      * @return the {@link Response} to the specified {@link Request}
      */
     O execute(ClientRequestContext ctx, I req) throws Exception;
+
+    /**
+     * Undecorates this {@link Client} to find the {@link Client} which is an instance of the specified
+     * {@code clientType}.
+     *
+     * @param clientType the type of the desired {@link Client}
+     * @return the {@link Client} which is an instance of {@code clientType} if this {@link Client}
+     *         decorated such a {@link Client}. {@link Optional#empty()} otherwise.
+     */
+    default <T> Optional<T> as(Class<T> clientType) {
+        requireNonNull(clientType, "clientType");
+        return clientType.isInstance(this) ? Optional.of(clientType.cast(this))
+                                           : Optional.empty();
+    }
 }
