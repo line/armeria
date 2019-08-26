@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
@@ -246,13 +247,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
      * before {@code channel().remoteAddress()} is called which caches the address in it.
      */
     private SocketAddress remoteAddress(ChannelHandlerContext ctx) {
-        SocketAddress remoteAddress = ctx.channel().remoteAddress();
-        if (remoteAddress == null) {
-            // This is called after connect() method is called so we have the remoteAddress.
-            assert this.remoteAddress != null;
-            remoteAddress = this.remoteAddress;
-        }
-        return remoteAddress;
+        return firstNonNull(ctx.channel().remoteAddress(), remoteAddress);
     }
 
     /**

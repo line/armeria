@@ -108,8 +108,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         this.channelPool = requireNonNull(channelPool, "channelPool");
         this.channel = requireNonNull(channel, "channel");
         final SocketAddress remoteAddress = channel.remoteAddress();
-        assert remoteAddress != null;
-        this.remoteAddress = remoteAddress;
+        this.remoteAddress = requireNonNull(remoteAddress, "remoteAddress");
         this.sessionPromise = requireNonNull(sessionPromise, "sessionPromise");
         this.sessionTimeoutFuture = requireNonNull(sessionTimeoutFuture, "sessionTimeoutFuture");
     }
@@ -308,7 +307,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (needsRetryWithH1C) {
             assert responseDecoder == null || !responseDecoder.hasUnfinishedResponses();
             sessionTimeoutFuture.cancel(false);
-            channelPool.connect(remoteAddress, H1C, sessionPromise);
+            channelPool.connect(channel.remoteAddress(), H1C, sessionPromise);
         } else {
             // Fail all pending responses.
             failUnfinishedResponses(ClosedSessionException.get());

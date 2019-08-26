@@ -213,12 +213,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     public <A extends SocketAddress> A remoteAddress() {
         final Channel ch = channel();
         assert ch != null;
-        final SocketAddress remoteAddress = ch.remoteAddress();
-        if (remoteAddress == null) {
-            return null;
-        }
         @SuppressWarnings("unchecked")
-        final A addr = (A) remoteAddress;
+        final A addr = (A) ch.remoteAddress();
         return addr;
     }
 

@@ -119,11 +119,7 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     @SuppressWarnings("unchecked")
     public <A extends SocketAddress> A remoteAddress() {
         final Channel ch = channel();
-        if (ch == null) {
-            return null;
-        }
-        final SocketAddress remoteAddress = ch.remoteAddress();
-        return remoteAddress != null ? (A) remoteAddress : null;
+        return ch != null ? (A) ch.remoteAddress() : null;
     }
 
     @Nullable
