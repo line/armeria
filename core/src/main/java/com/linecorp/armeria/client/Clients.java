@@ -397,6 +397,33 @@ public final class Clients {
     }
 
     /**
+     * Unwraps the specified client into the object of the specified {@code type}.
+     * Use this method instead of an explicit downcast. For example:
+     * <pre>{@code
+     * HttpClient client = new HttpClientBuilder()
+     *     .decorator(LoggingClient.newDecorator())
+     *     .build();
+     * LoggingClient unwrapped1 = client.as(LoggingClient.class).get();
+     * LoggingClient unwrapped2 = Clients.unwrap(client, LoggingClient.class).get();
+     * assert unwrapped1 == unwrapped2;
+     * }</pre>
+     *
+     * @param type the type of the object to return
+     * @return the object of the specified {@code type} if found. {@link Optional#empty()} if not found.
+     *
+     * @see Client#as(Class)
+     * @see ClientFactory#unwrap(Object, Class)
+     */
+    public static <T> Optional<T> unwrap(Object client, Class<T> type) {
+        final Optional<ClientBuilderParams> params = ClientFactory.DEFAULT.clientBuilderParams(client);
+        if (!params.isPresent()) {
+            return Optional.empty();
+        }
+
+        return params.get().factory().unwrap(client, type);
+    }
+
+    /**
      * Sets the specified HTTP header in a thread-local variable so that the header is sent by the client call
      * made from the current thread. Use the {@code try-with-resources} block with the returned
      * {@link SafeCloseable} to unset the thread-local variable automatically:

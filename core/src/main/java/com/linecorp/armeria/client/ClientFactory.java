@@ -217,13 +217,16 @@ public interface ClientFactory extends AutoCloseable {
      *     .decorator(LoggingClient.newDecorator())
      *     .build();
      * LoggingClient unwrapped1 = client.as(LoggingClient.class);
-     * LoggingClient unwrapped2 = ClientFactory.DEFAULT.unwrap(client, LoggingClient.class);
+     * LoggingClient unwrapped2 = Clients.unwrap(client, LoggingClient.class);
      * assert unwrapped1 == unwrapped2;
      * }</pre>
      *
      * @param client the client object
      * @param type the type of the object to return
      * @return the object of the specified {@code type} if found. {@link Optional#empty()} if not found.
+     *
+     * @see Client#as(Class)
+     * @see Clients#unwrap(Object, Class)
      */
     default <T> Optional<T> unwrap(Object client, Class<T> type) {
         requireNonNull(client, "client");

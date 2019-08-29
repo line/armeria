@@ -59,12 +59,15 @@ public interface Client<I extends Request, O extends Response> extends Unwrappab
      *     .decorator(LoggingClient.newDecorator())
      *     .build();
      * LoggingClient unwrapped1 = client.as(LoggingClient.class).get();
-     * LoggingClient unwrapped2 = ClientFactory.DEFAULT.unwrap(client, LoggingClient.class).get();
+     * LoggingClient unwrapped2 = Clients.unwrap(client, LoggingClient.class).get();
      * assert unwrapped1 == unwrapped2;
      * }</pre>
      *
      * @param type the type of the object to return
      * @return the object of the specified {@code type} if found. {@link Optional#empty()} if not found.
+     *
+     * @see Clients#unwrap(Object, Class)
+     * @see ClientFactory#unwrap(Object, Class)
      */
     @Override
     default <T> Optional<T> as(Class<T> type) {
