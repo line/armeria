@@ -58,8 +58,8 @@ public interface Client<I extends Request, O extends Response> extends Unwrappab
      * HttpClient client = new HttpClientBuilder()
      *     .decorator(LoggingClient.newDecorator())
      *     .build();
-     * LoggingClient unwrapped1 = client.as(LoggingClient.class);
-     * LoggingClient unwrapped2 = ClientFactory.DEFAULT.unwrap(client, LoggingClient.class);
+     * LoggingClient unwrapped1 = client.as(LoggingClient.class).get();
+     * LoggingClient unwrapped2 = ClientFactory.DEFAULT.unwrap(client, LoggingClient.class).get();
      * assert unwrapped1 == unwrapped2;
      * }</pre>
      *

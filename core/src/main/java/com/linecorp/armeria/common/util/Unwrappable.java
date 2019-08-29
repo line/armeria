@@ -42,8 +42,8 @@ public interface Unwrappable {
      * }
      *
      * Qux qux = new Qux(new Bar(new Foo()));
-     * Foo foo = qux.as(Foo.class);
-     * Bar bar = qux.as(Bar.class);
+     * Foo foo = qux.as(Foo.class).get();
+     * Bar bar = qux.as(Bar.class).get();
      * }</pre>
      *
      * @param type the type of the object to return

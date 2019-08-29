@@ -18,18 +18,19 @@ package com.linecorp.armeria.client.retry;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.client.retry.DefaultBackoffHolder.defaultBackoff;
 import static com.linecorp.armeria.client.retry.FixedBackoff.NO_DELAY;
-import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
 
+import com.linecorp.armeria.common.util.Unwrappable;
+
 /**
  * Controls back off between attempts in a single retry operation.
  */
 @FunctionalInterface
-public interface Backoff {
+public interface Backoff extends Unwrappable {
 
     /**
      * Returns the default {@link Backoff}.
@@ -142,16 +143,15 @@ public interface Backoff {
 
     /**
      * Undecorates this {@link Backoff} to find the {@link Backoff} which is an instance of the specified
-     * {@code backoffType}.
+     * {@code type}.
      *
-     * @param backoffType the type of the desired {@link Backoff}
-     * @return the {@link Backoff} which is an instance of {@code backoffType} if this {@link Backoff}
+     * @param type the type of the desired {@link Backoff}
+     * @return the {@link Backoff} which is an instance of {@code type} if this {@link Backoff}
      *         decorated such a {@link Backoff}. {@link Optional#empty()} otherwise.
      */
-    default <T> Optional<T> as(Class<T> backoffType) {
-        requireNonNull(backoffType, "backoffType");
-        return backoffType.isInstance(this) ? Optional.of(backoffType.cast(this))
-                                            : Optional.empty();
+    @Override
+    default <T> Optional<T> as(Class<T> type) {
+        return Unwrappable.super.as(type);
     }
 
     /**

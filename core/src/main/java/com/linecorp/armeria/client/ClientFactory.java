@@ -229,7 +229,6 @@ public interface ClientFactory extends AutoCloseable {
         requireNonNull(client, "client");
         requireNonNull(type, "type");
 
-
         if (type.isInstance(client)) {
             return Optional.of(type.cast(client));
         }
