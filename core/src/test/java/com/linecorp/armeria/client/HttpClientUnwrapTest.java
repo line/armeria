@@ -39,6 +39,10 @@ class HttpClientUnwrapTest {
         assertThat(client.as(RetryingHttpClient.class)).containsInstanceOf(RetryingHttpClient.class);
         assertThat(client.as(LoggingClient.class)).containsInstanceOf(LoggingClient.class);
 
+        // The outermost decorator of the client must be returned,
+        // because the search begins from outside to inside.
+        // In the current setup, the outermost `Unwrappable` and `Client` are
+        // `client` and `RetryingHttpClient` respectively.
         assertThat(client.as(Unwrappable.class)).containsSame(client);
         assertThat(client.as(Client.class)).containsInstanceOf(RetryingHttpClient.class);
 

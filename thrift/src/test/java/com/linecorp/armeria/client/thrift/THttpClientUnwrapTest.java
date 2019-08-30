@@ -45,6 +45,10 @@ class THttpClientUnwrapTest {
         assertThat(Clients.unwrap(client, RetryingRpcClient.class)).containsInstanceOf(RetryingRpcClient.class);
         assertThat(Clients.unwrap(client, LoggingClient.class)).containsInstanceOf(LoggingClient.class);
 
+        // The outermost decorator of the client must be returned,
+        // because the search begins from outside to inside.
+        // In the current setup, the outermost `Unwrappable` and `Client` are
+        // `THttpClientInvocationHandler` and `RetryingRpcClient` respectively.
         assertThat(Clients.unwrap(client, Unwrappable.class))
                 .containsInstanceOf(THttpClientInvocationHandler.class);
         assertThat(Clients.unwrap(client, Client.class)).containsInstanceOf(RetryingRpcClient.class);
