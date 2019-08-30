@@ -259,7 +259,7 @@ public final class ClientFactoryBuilder {
     public ClientFactoryBuilder http2MaxFrameSize(int http2MaxFrameSize) {
         checkArgument(http2MaxFrameSize >= MAX_FRAME_SIZE_LOWER_BOUND &&
                       http2MaxFrameSize <= MAX_FRAME_SIZE_UPPER_BOUND,
-                      "http2MaxFramSize: %s (expected: >= %s and <= %s)",
+                      "http2MaxFrameSize: %s (expected: >= %s and <= %s)",
                       http2MaxFrameSize, MAX_FRAME_SIZE_LOWER_BOUND, MAX_FRAME_SIZE_UPPER_BOUND);
         this.http2MaxFrameSize = http2MaxFrameSize;
         return this;

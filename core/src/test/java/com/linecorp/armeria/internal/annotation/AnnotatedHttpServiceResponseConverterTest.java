@@ -359,7 +359,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
                 public void header() {}
 
                 @Get("/header-overwrite")
-                @AdditionalHeader(name = "header_name_1", value = "header_value_unchaged")
+                @AdditionalHeader(name = "header_name_1", value = "header_value_unchanged")
                 public HttpResponse headerOverwrite() {
                     return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK,
                                                               HttpHeaderNames.of("header_name_1"),
