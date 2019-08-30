@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.encoding.HttpDecodingClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.client.retry.RetryStrategy;
 import com.linecorp.armeria.client.retry.RetryingHttpClient;
@@ -46,6 +47,6 @@ class GrpcClientUnwrapTest {
         assertThat(Clients.unwrap(client, Unwrappable.class)).containsInstanceOf(ArmeriaChannel.class);
         assertThat(Clients.unwrap(client, Client.class)).containsInstanceOf(RetryingHttpClient.class);
 
-        assertThat(Clients.unwrap(client, String.class)).isEmpty();
+        assertThat(Clients.unwrap(client, HttpDecodingClient.class)).isEmpty();
     }
 }

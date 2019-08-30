@@ -20,7 +20,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.Optional;
 
 /**
- * Provides a way to unwrap an object in decorator pattern, as an alternative to down-casting.
+ * Provides a way to unwrap an object in decorator pattern, similar to down-casting in an inheritance pattern.
  */
 public interface Unwrappable {
     /**

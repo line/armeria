@@ -148,6 +148,8 @@ public interface Backoff extends Unwrappable {
      * @param type the type of the desired {@link Backoff}
      * @return the {@link Backoff} which is an instance of {@code type} if this {@link Backoff}
      *         decorated such a {@link Backoff}. {@link Optional#empty()} otherwise.
+     *
+     * @see Unwrappable
      */
     @Override
     default <T> Optional<T> as(Class<T> type) {

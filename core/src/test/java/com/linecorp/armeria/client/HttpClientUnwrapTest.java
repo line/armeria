@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.client.encoding.HttpDecodingClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.client.retry.RetryStrategy;
 import com.linecorp.armeria.client.retry.RetryingHttpClient;
@@ -54,6 +55,6 @@ class HttpClientUnwrapTest {
         assertThat(factory.unwrap(client, Unwrappable.class)).containsSame(client);
         assertThat(factory.unwrap(client, Client.class)).containsInstanceOf(RetryingHttpClient.class);
 
-        assertThat(factory.unwrap(client, String.class)).isEmpty();
+        assertThat(factory.unwrap(client, HttpDecodingClient.class)).isEmpty();
     }
 }

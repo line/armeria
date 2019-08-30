@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRpcClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.util.Unwrappable;
@@ -48,6 +49,6 @@ class THttpClientUnwrapTest {
                 .containsInstanceOf(THttpClientInvocationHandler.class);
         assertThat(Clients.unwrap(client, Client.class)).containsInstanceOf(RetryingRpcClient.class);
 
-        assertThat(Clients.unwrap(client, String.class)).isEmpty();
+        assertThat(Clients.unwrap(client, CircuitBreakerRpcClient.class)).isEmpty();
     }
 }

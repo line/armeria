@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.common.util.Unwrappable;
 
 /**
  * Creates a new client that connects to a specified {@link URI}.
@@ -403,9 +404,11 @@ public final class Clients {
      * HttpClient client = new HttpClientBuilder()
      *     .decorator(LoggingClient.newDecorator())
      *     .build();
-     * LoggingClient unwrapped1 = client.as(LoggingClient.class).get();
-     * LoggingClient unwrapped2 = Clients.unwrap(client, LoggingClient.class).get();
-     * assert unwrapped1 == unwrapped2;
+     *
+     * LoggingClient unwrapped = Clients.unwrap(client, LoggingClient.class).get();
+     *
+     * // If the client implements Unwrappable, you can just use the 'as()' method.
+     * LoggingClient unwrapped2 = client.as(LoggingClient.class).get();
      * }</pre>
      *
      * @param type the type of the object to return
@@ -413,6 +416,7 @@ public final class Clients {
      *
      * @see Client#as(Class)
      * @see ClientFactory#unwrap(Object, Class)
+     * @see Unwrappable
      */
     public static <T> Optional<T> unwrap(Object client, Class<T> type) {
         final Optional<ClientBuilderParams> params = ClientFactory.DEFAULT.clientBuilderParams(client);

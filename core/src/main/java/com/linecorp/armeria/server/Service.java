@@ -71,6 +71,8 @@ public interface Service<I extends Request, O extends Response> extends Unwrappa
      *
      * @param type the type of the object to return
      * @return the object of the specified {@code type} if found. {@link Optional#empty()} if not found.
+     *
+     * @see Unwrappable
      */
     @Override
     default <T> Optional<T> as(Class<T> type) {

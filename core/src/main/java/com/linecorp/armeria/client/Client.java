@@ -58,9 +58,12 @@ public interface Client<I extends Request, O extends Response> extends Unwrappab
      * HttpClient client = new HttpClientBuilder()
      *     .decorator(LoggingClient.newDecorator())
      *     .build();
-     * LoggingClient unwrapped1 = client.as(LoggingClient.class).get();
+     *
+     * LoggingClient unwrapped = client.as(LoggingClient.class).get();
+     *
+     * // You can also use Clients.unwrap(), which is useful especially for
+     * // Thrift and gRPC where the client object does not implement the 'as()' method.
      * LoggingClient unwrapped2 = Clients.unwrap(client, LoggingClient.class).get();
-     * assert unwrapped1 == unwrapped2;
      * }</pre>
      *
      * @param type the type of the object to return
@@ -68,6 +71,7 @@ public interface Client<I extends Request, O extends Response> extends Unwrappab
      *
      * @see Clients#unwrap(Object, Class)
      * @see ClientFactory#unwrap(Object, Class)
+     * @see Unwrappable
      */
     @Override
     default <T> Optional<T> as(Class<T> type) {

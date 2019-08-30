@@ -213,12 +213,16 @@ public interface ClientFactory extends AutoCloseable {
     /**
      * Unwraps the specified {@code client} object into the object of the specified {@code type}. For example,
      * <pre>{@code
+     * ClientFactory clientFactory = ...;
      * HttpClient client = new HttpClientBuilder()
+     *     .factory(clientFactory)
      *     .decorator(LoggingClient.newDecorator())
      *     .build();
-     * LoggingClient unwrapped1 = client.as(LoggingClient.class);
-     * LoggingClient unwrapped2 = Clients.unwrap(client, LoggingClient.class);
-     * assert unwrapped1 == unwrapped2;
+     *
+     * LoggingClient unwrapped = clientFactory.unwrap(client, LoggingClient.class).get();
+     *
+     * // If the client implements Unwrappable, you can just use the 'as()' method.
+     * LoggingClient unwrapped2 = client.as(LoggingClient.class).get();
      * }</pre>
      *
      * @param client the client object
@@ -227,6 +231,7 @@ public interface ClientFactory extends AutoCloseable {
      *
      * @see Client#as(Class)
      * @see Clients#unwrap(Object, Class)
+     * @see Unwrappable
      */
     default <T> Optional<T> unwrap(Object client, Class<T> type) {
         requireNonNull(client, "client");
