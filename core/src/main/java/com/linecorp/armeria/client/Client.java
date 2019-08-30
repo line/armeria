@@ -26,6 +26,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.util.Unwrappable;
 
 /**
  * Sends a {@link Request} to a remote {@link Endpoint}.
@@ -41,7 +42,7 @@ import com.linecorp.armeria.common.RpcResponse;
  * @see UserClient
  */
 @FunctionalInterface
-public interface Client<I extends Request, O extends Response> {
+public interface Client<I extends Request, O extends Response> extends Unwrappable {
     /**
      * Sends a {@link Request} to a remote {@link Endpoint}, as specified in
      * {@link ClientRequestContext#endpoint()}.
@@ -51,16 +52,30 @@ public interface Client<I extends Request, O extends Response> {
     O execute(ClientRequestContext ctx, I req) throws Exception;
 
     /**
-     * Undecorates this {@link Client} to find the {@link Client} which is an instance of the specified
-     * {@code clientType}.
+     * Unwraps this {@link Client} into the object of the specified {@code type}.
+     * Use this method instead of an explicit downcast. For example:
+     * <pre>{@code
+     * HttpClient client = new HttpClientBuilder()
+     *     .decorator(LoggingClient.newDecorator())
+     *     .build();
      *
-     * @param clientType the type of the desired {@link Client}
-     * @return the {@link Client} which is an instance of {@code clientType} if this {@link Client}
-     *         decorated such a {@link Client}. {@link Optional#empty()} otherwise.
+     * LoggingClient unwrapped = client.as(LoggingClient.class).get();
+     *
+     * // You can also use Clients.unwrap(), which is useful especially for
+     * // Thrift and gRPC where the client object does not implement the 'as()' method.
+     * LoggingClient unwrapped2 = Clients.unwrap(client, LoggingClient.class).get();
+     * }</pre>
+     *
+     * @param type the type of the object to return
+     * @return the object of the specified {@code type} if found. {@link Optional#empty()} if not found.
+     *
+     * @see Clients#unwrap(Object, Class)
+     * @see ClientFactory#unwrap(Object, Class)
+     * @see Unwrappable
      */
-    default <T> Optional<T> as(Class<T> clientType) {
-        requireNonNull(clientType, "clientType");
-        return clientType.isInstance(this) ? Optional.of(clientType.cast(this))
-                                           : Optional.empty();
+    @Override
+    default <T> Optional<T> as(Class<T> type) {
+        requireNonNull(type, "type");
+        return Unwrappable.super.as(type);
     }
 }

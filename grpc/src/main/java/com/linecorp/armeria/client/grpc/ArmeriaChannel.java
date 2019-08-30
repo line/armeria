@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.grpc;
 
 import java.net.URI;
+import java.util.Optional;
 
 import javax.annotation.Nullable;
 
@@ -40,6 +41,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.ReleasableHolder;
+import com.linecorp.armeria.common.util.Unwrappable;
 
 import io.grpc.CallOptions;
 import io.grpc.Channel;
@@ -56,7 +58,7 @@ import io.netty.handler.codec.http.HttpHeaderValues;
  * A {@link Channel} backed by an armeria {@link Client}. Stores the {@link ClientBuilderParams} and other
  * {@link Client} params for the associated gRPC stub.
  */
-class ArmeriaChannel extends Channel implements ClientBuilderParams {
+class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwrappable {
 
     /**
      * See {@link ManagedChannelBuilder} for default setting.
@@ -149,6 +151,16 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
     @Override
     public ClientOptions options() {
         return params.options();
+    }
+
+    @Override
+    public <T> Optional<T> as(Class<T> type) {
+        final Optional<T> unwrapped = Unwrappable.super.as(type);
+        if (unwrapped.isPresent()) {
+            return unwrapped;
+        }
+
+        return httpClient.as(type);
     }
 
     private DefaultClientRequestContext newContext(HttpMethod method, HttpRequest req) {

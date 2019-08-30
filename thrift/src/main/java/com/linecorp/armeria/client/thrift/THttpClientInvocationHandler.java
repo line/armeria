@@ -31,22 +31,23 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.thrift.AsyncMethodCallbacks;
+import com.linecorp.armeria.common.util.AbstractUnwrappable;
 import com.linecorp.armeria.common.util.Exceptions;
 
-final class THttpClientInvocationHandler implements InvocationHandler, ClientBuilderParams {
+final class THttpClientInvocationHandler
+        extends AbstractUnwrappable<THttpClient> implements InvocationHandler, ClientBuilderParams {
 
     private static final Object[] NO_ARGS = new Object[0];
 
     private final ClientBuilderParams params;
-    private final THttpClient thriftClient;
     private final String path;
     @Nullable
     private final String fragment;
 
     THttpClientInvocationHandler(ClientBuilderParams params,
                                  THttpClient thriftClient, String path, @Nullable String fragment) {
+        super(thriftClient);
         this.params = params;
-        this.thriftClient = thriftClient;
         this.path = path;
         this.fragment = fragment;
     }
@@ -121,10 +122,10 @@ final class THttpClientInvocationHandler implements InvocationHandler, ClientBui
         try {
             final RpcResponse reply;
             if (fragment != null) {
-                reply = thriftClient.executeMultiplexed(
+                reply = delegate().executeMultiplexed(
                         path, params.clientType(), fragment, method.getName(), args);
             } else {
-                reply = thriftClient.execute(path, params.clientType(), method.getName(), args);
+                reply = delegate().execute(path, params.clientType(), method.getName(), args);
             }
 
             if (callback != null) {

@@ -24,7 +24,6 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
@@ -258,11 +257,6 @@ final class HttpClientFactory extends AbstractClientFactory {
         } else {
             throw new IllegalArgumentException("unsupported client type: " + clientType.getName());
         }
-    }
-
-    @Override
-    public <T> Optional<ClientBuilderParams> clientBuilderParams(T client) {
-        return Optional.empty();
     }
 
     private DefaultHttpClient newHttpClient(URI uri, Scheme scheme, Endpoint endpoint, ClientOptions options,
