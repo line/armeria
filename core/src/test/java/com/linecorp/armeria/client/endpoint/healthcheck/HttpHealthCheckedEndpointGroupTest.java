@@ -30,6 +30,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
+import com.linecorp.armeria.client.ClientOptionsBuilder;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup;
@@ -303,7 +304,7 @@ class HttpHealthCheckedEndpointGroupTest {
                                              SessionProtocol protocol) {
         return builder.protocol(protocol)
                       .clientFactory(clientFactory)
-                      .withClientOptions(b -> b.decorator(LoggingClient.newDecorator()))
+                      .clientOptions(new ClientOptionsBuilder().decorator(LoggingClient.newDecorator()).build())
                       .build();
     }
 }
