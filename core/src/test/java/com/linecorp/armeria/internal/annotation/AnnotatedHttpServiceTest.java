@@ -689,7 +689,7 @@ public class AnnotatedHttpServiceTest {
             testBody(hc, get("/1/path/req/sync/1"), "String[/1/path/req/sync/1]");
 
             // Illegal parameter.
-            testStatusCode(hc, get("/1/int/fourty-two"), 400);
+            testStatusCode(hc, get("/1/int/forty-two"), 400);
             // Without parameter (non-existing url).
             testStatusCode(hc, post("/1/long/"), 404);
             // Not-mapped HTTP method (Post).
@@ -705,7 +705,7 @@ public class AnnotatedHttpServiceTest {
             testBody(hc, get("/2/boolean/true"), "String[true]");
 
             // Illegal parameter.
-            testStatusCode(hc, get("/2/int/fourty-two"), 400);
+            testStatusCode(hc, get("/2/int/forty-two"), 400);
             // Without parameter (non-existing url).
             testStatusCode(hc, post("/2/long/"), 404);
             // Not-mapped HTTP method (Post).
