@@ -42,14 +42,12 @@ package com.linecorp.armeria.common.util;
  *
  * <p>Forked from brave-core 5.6.3 at 3be55b5cccf881104bdd80c93e97d2575b83952d
  */
-// abstract for factory-method support on Java language level 7
 @FunctionalInterface
 public interface Sampler<T> {
     /**
      * Returns a sampler, given a rate expressed as a percentage.
      *
      * <p>The sampler returned is good for low volumes of traffic (<100K requests), as it is precise.
-     * If you have high volumes of traffic, consider {@code BoundarySampler}.
      *
      * @param rate minimum sample rate is 0.01, or 1% of traces
      */
@@ -62,7 +60,7 @@ public interface Sampler<T> {
     /**
      * Returns a sampler, given a rate-limited on a per-second interval.
      *
-     * @param samplesPerSecond minimum rate-limited is 0 and the max is 2,147,483,647 (max int)
+     * @param samplesPerSecond an integer between {@code 0} and {@value Integer#MAX_VALUE}
      */
     static <T> Sampler<T> rateLimited(int samplesPerSecond) {
         @SuppressWarnings("unchecked")
@@ -89,7 +87,7 @@ public interface Sampler<T> {
     }
 
     /**
-     *  Returns true if a request should be recorded.
+     * Returns {@code true} if a request should be recorded.
      *
      * @param object The object to be decided on, can be ignored
      */

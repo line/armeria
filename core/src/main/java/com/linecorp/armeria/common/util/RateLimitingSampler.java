@@ -48,8 +48,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * decisions equally across the second. For example, if the rate is 100, 10 will pass every
  * decisecond as opposed to bunching all pass decisions at the beginning of the second.
  *
- * <p>This sampler is efficient, but not as efficient as the {@code BoundarySampler}.
- * However, this sampler is insensitive to the trace ID and will operate correctly even if they are
+ * <p>However, this sampler is insensitive to the trace ID and will operate correctly even if they are
  * not perfectly random.
  *
  * <h3>Implementation</h3>
