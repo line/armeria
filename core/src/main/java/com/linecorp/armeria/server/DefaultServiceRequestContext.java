@@ -209,6 +209,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         return super.request();
     }
 
+    @Nonnull
     @Override
     public <A extends SocketAddress> A remoteAddress() {
         final Channel ch = channel();
