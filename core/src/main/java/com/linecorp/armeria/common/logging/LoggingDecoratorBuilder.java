@@ -25,6 +25,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.util.Sampler;
 
 /**
  * Builds a new logging decorator.
@@ -33,6 +34,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     private static final Function<HttpHeaders, HttpHeaders> DEFAULT_HEADERS_SANITIZER = Function.identity();
     private static final Function<Object, Object> DEFAULT_CONTENT_SANITIZER = Function.identity();
     private static final Function<Throwable, Throwable> DEFAULT_CAUSE_SANITIZER = Function.identity();
+    private static final Sampler<? super RequestLog> DEFAULT_SAMPLER = Sampler.random(1.0f);
 
     private LogLevel requestLogLevel = LogLevel.TRACE;
     private LogLevel successfulResponseLogLevel = LogLevel.TRACE;
@@ -46,6 +48,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     private Function<? super Throwable, ?> responseCauseSanitizer = DEFAULT_CAUSE_SANITIZER;
     private float samplingRate = 1.0f;
     private Function<? super HttpHeaders, ?> responseTrailersSanitizer = DEFAULT_HEADERS_SANITIZER;
+    private Sampler<? super RequestLog> sampler = DEFAULT_SAMPLER;
 
     /**
      * Sets the {@link LogLevel} to use when logging requests. If unset, will use {@link LogLevel#TRACE}.
@@ -258,6 +261,21 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     }
 
     /**
+     * Sets the {@link Sampler} that to sample requests to log.
+     */
+    public T sampler(Sampler<? super RequestLog> sampler) {
+        this.sampler = sampler;
+        return self();
+    }
+
+    /**
+     * Returns the {@link Sampler} that to sample requests to log.
+     */
+    protected Sampler<? super RequestLog> sampler() {
+        return sampler;
+    }
+
+    /**
      * Sets the rate at which to sample requests to log. Any number between {@code 0.0} and {@code 1.0} will
      * cause a random sample of the requests to be logged. The random sampling is appropriate for low-traffic
      * (ex servers that each receive &lt;100K requests). If unset, all requests will be logged.
@@ -285,7 +303,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
         return toString(this, requestLogLevel, successfulResponseLogLevel, failedResponseLogLevel,
                         requestHeadersSanitizer, requestContentSanitizer, requestTrailersSanitizer,
                         responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer,
-                        samplingRate);
+                        samplingRate, sampler);
     }
 
     private static <T extends LoggingDecoratorBuilder<T>> String toString(
@@ -299,12 +317,14 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
             Function<? super HttpHeaders, ?> responseHeadersSanitizer,
             Function<Object, ?> responseContentSanitizer,
             Function<? super HttpHeaders, ?> responseTrailersSanitizer,
-            float samplingRate) {
+            float samplingRate,
+            Sampler<? super RequestLog> sampler) {
         final ToStringHelper helper = MoreObjects.toStringHelper(self)
                                                  .add("requestLogLevel", requestLogLevel)
                                                  .add("successfulResponseLogLevel", successfulResponseLogLevel)
                                                  .add("failedResponseLogLevel", failureResponseLogLevel)
-                                                 .add("samplingRate", samplingRate);
+                                                 .add("samplingRate", samplingRate)
+                                                 .add("sampler", sampler);
         if (requestHeadersSanitizer != DEFAULT_HEADERS_SANITIZER) {
             helper.add("requestHeadersSanitizer", requestHeadersSanitizer);
         }
