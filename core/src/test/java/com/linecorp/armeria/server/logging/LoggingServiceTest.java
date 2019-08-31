@@ -44,6 +44,7 @@ import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogListener;
+import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
@@ -259,7 +260,7 @@ public class LoggingServiceTest {
         final LoggingService<HttpRequest, HttpResponse> service = new LoggingServiceBuilder()
                 .requestLogLevel(LogLevel.INFO)
                 .successfulResponseLogLevel(LogLevel.INFO)
-                .samplingRate(0.0f)
+                .sampler(Sampler.never())
                 .<HttpRequest, HttpResponse>newDecorator().apply(delegate);
         service.serve(ctx, REQUEST);
         verifyZeroInteractions(logger);

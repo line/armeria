@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.common.logging;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
@@ -46,7 +45,6 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     private Function<? super HttpHeaders, ?> responseHeadersSanitizer = DEFAULT_HEADERS_SANITIZER;
     private Function<Object, ?> responseContentSanitizer = DEFAULT_CONTENT_SANITIZER;
     private Function<? super Throwable, ?> responseCauseSanitizer = DEFAULT_CAUSE_SANITIZER;
-    private float samplingRate = 1.0f;
     private Function<? super HttpHeaders, ?> responseTrailersSanitizer = DEFAULT_HEADERS_SANITIZER;
     private Sampler<? super RequestLog> sampler = DEFAULT_SAMPLER;
 
@@ -275,24 +273,6 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
         return sampler;
     }
 
-    /**
-     * Sets the rate at which to sample requests to log. Any number between {@code 0.0} and {@code 1.0} will
-     * cause a random sample of the requests to be logged. The random sampling is appropriate for low-traffic
-     * (ex servers that each receive &lt;100K requests). If unset, all requests will be logged.
-     */
-    public T samplingRate(float samplingRate) {
-        checkArgument(0.0 <= samplingRate && samplingRate <= 1.0, "samplingRate must be between 0.0 and 1.0");
-        this.samplingRate = samplingRate;
-        return self();
-    }
-
-    /**
-     * Returns the rate at which to sample requests to log.
-     */
-    protected float samplingRate() {
-        return samplingRate;
-    }
-
     @SuppressWarnings("unchecked")
     private T self() {
         return (T) this;
@@ -303,7 +283,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
         return toString(this, requestLogLevel, successfulResponseLogLevel, failedResponseLogLevel,
                         requestHeadersSanitizer, requestContentSanitizer, requestTrailersSanitizer,
                         responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer,
-                        samplingRate, sampler);
+                        sampler);
     }
 
     private static <T extends LoggingDecoratorBuilder<T>> String toString(
@@ -317,13 +297,11 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
             Function<? super HttpHeaders, ?> responseHeadersSanitizer,
             Function<Object, ?> responseContentSanitizer,
             Function<? super HttpHeaders, ?> responseTrailersSanitizer,
-            float samplingRate,
             Sampler<? super RequestLog> sampler) {
         final ToStringHelper helper = MoreObjects.toStringHelper(self)
                                                  .add("requestLogLevel", requestLogLevel)
                                                  .add("successfulResponseLogLevel", successfulResponseLogLevel)
                                                  .add("failedResponseLogLevel", failureResponseLogLevel)
-                                                 .add("samplingRate", samplingRate)
                                                  .add("sampler", sampler);
         if (requestHeadersSanitizer != DEFAULT_HEADERS_SANITIZER) {
             helper.add("requestHeadersSanitizer", requestHeadersSanitizer);
