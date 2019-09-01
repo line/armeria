@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.server.RouteCache.wrapCompositeServiceRouter;
 import static com.linecorp.armeria.server.RouteCache.wrapRouteDecoratingServiceRouter;
 import static com.linecorp.armeria.server.RouteCache.wrapVirtualHostRouter;
@@ -26,12 +28,15 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.stream.StreamSupport;
 
 import javax.annotation.Nullable;
 
@@ -68,9 +73,13 @@ public final class Routers {
                             RejectedRouteHandler.class.getSimpleName(), e);
             }
         };
-
+        final Set<Route> noCacheRoutes =
+                resolveNoCacheRoutes(StreamSupport.stream(configs.spliterator(), false)
+                                                  .map(ServiceConfig::route)
+                                                  .collect(toImmutableList()));
         return wrapVirtualHostRouter(defaultRouter(configs, virtualHost.fallbackServiceConfig(),
-                                                   ServiceConfig::route, rejectionConsumer));
+                                                   ServiceConfig::route, rejectionConsumer),
+                                     noCacheRoutes);
     }
 
     /**
@@ -93,7 +102,9 @@ public final class Routers {
                     throw new IllegalStateException(
                             "Your composite service has path mappings with a conflict: " +
                             a + " vs. " + b);
-                }));
+                }), resolveNoCacheRoutes(entries.stream()
+                                                .map(CompositeServiceEntry::route)
+                                                .collect(toImmutableList())));
 
         return new CompositeRouter<>(delegate, result ->
                 result.isPresent() ? Routed.of(result.route(), result.routingResult(),
@@ -109,7 +120,22 @@ public final class Routers {
         return wrapRouteDecoratingServiceRouter(
                 defaultRouter(routeDecoratingServices, null,
                               RouteDecoratingService::route,
-                              (route1, route2) -> {}));
+                              (route1, route2) -> {/* noop */}),
+                resolveNoCacheRoutes(routeDecoratingServices.stream()
+                                                            .map(RouteDecoratingService::route)
+                                                            .collect(toImmutableList())));
+    }
+
+    /**
+     * Returns {@link Route}s that must not be cached.
+     */
+    private static Set<Route> resolveNoCacheRoutes(List<Route> allRoutes) {
+        final Map<String, List<Route>> dup = new HashMap<>();
+        allRoutes.forEach(route -> dup.computeIfAbsent(route.cacheKey(), unused -> new ArrayList<>())
+                                      .add(route));
+        return dup.values().stream()
+                  .filter(routes -> routes.size() > 1)  // duplicated routes
+                  .flatMap(Collection::stream).collect(toImmutableSet());
     }
 
     /**

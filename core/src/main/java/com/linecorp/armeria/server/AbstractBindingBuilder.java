@@ -42,8 +42,11 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.server.annotation.ConditionalHeader;
+import com.linecorp.armeria.server.annotation.ConditionalParam;
 
 /**
  * An abstract builder class for binding something to a {@link Route} fluently.
@@ -53,6 +56,8 @@ abstract class AbstractBindingBuilder {
     private Set<HttpMethod> methods = ImmutableSet.of();
     private Set<MediaType> consumeTypes = ImmutableSet.of();
     private Set<MediaType> produceTypes = ImmutableSet.of();
+    private Iterable<? extends CharSequence> paramPredicates = ImmutableList.of();
+    private Iterable<? extends CharSequence> headerPredicates = ImmutableList.of();
     private final Map<RouteBuilder, Set<HttpMethod>> routeBuilders = new LinkedHashMap<>();
     private final Set<RouteBuilder> pathBuilders = new LinkedHashSet<>();
 
@@ -290,6 +295,93 @@ abstract class AbstractBindingBuilder {
     }
 
     /**
+     * Sets the {@link Route} to accept a request if it matches all the specified predicates for
+     * HTTP parameters. The predicate can be one of the following forms:
+     * <ul>
+     *     <li>{@code some-param=some-value} which means that the request must have a
+     *     {@code some-param=some-value} parameter</li>
+     *     <li>{@code some-param!=some-value} which means that the request must not have a
+     *     {@code some-param=some-value} parameter</li>
+     *     <li>{@code some-param} which means that the request must contain a {@code some-param} parameter</li>
+     *     <li>{@code !some-param} which means that the request must not contain a {@code some-param}
+     *     parameter</li>
+     * </ul>
+     *
+     * <p>Note that these predicates can be evaluated only with the query string of the request URI.
+     * Also note that each predicate will be evaluated with the decoded value of HTTP parameters,
+     * so do not use percent-encoded value in the predicate.
+     *
+     * @see ConditionalParam
+     */
+    public AbstractBindingBuilder matchesParamPredicates(CharSequence... paramPredicates) {
+        return matchesParamPredicates(ImmutableList.copyOf(requireNonNull(paramPredicates, "paramPredicates")));
+    }
+
+    /**
+     * Sets the {@link Route} to accept a request if it matches all the specified predicates for
+     * HTTP parameters. The predicate can be one of the following forms:
+     * <ul>
+     *     <li>{@code some-param=some-value} which means that the request must have a
+     *     {@code some-param=some-value} parameter</li>
+     *     <li>{@code some-param!=some-value} which means that the request must not have a
+     *     {@code some-param=some-value} parameter</li>
+     *     <li>{@code some-param} which means that the request must contain a {@code some-param} parameter</li>
+     *     <li>{@code !some-param} which means that the request must not contain a {@code some-param}
+     *     parameter</li>
+     * </ul>
+     *
+     * <p>Note that these predicates can be evaluated only with the query string of the request URI.
+     * Also note that each predicate will be evaluated with the decoded value of HTTP parameters,
+     * so do not use percent-encoded value in the predicate.
+     *
+     * @see ConditionalParam
+     */
+    public AbstractBindingBuilder matchesParamPredicates(Iterable<? extends CharSequence> paramPredicates) {
+        this.paramPredicates = ImmutableList.copyOf(requireNonNull(paramPredicates, "paramPredicates"));
+        return this;
+    }
+
+    /**
+     * Sets the {@link Route} to accept a request if it matches all the specified predicates for
+     * {@link HttpHeaders}. The predicate can be one of the following forms:
+     * <ul>
+     *     <li>{@code some-header=some-value} which means that the request must have a
+     *     {@code some-header: some-value} header</li>
+     *     <li>{@code some-header!=some-value} which means that the request must not have a
+     *     {@code some-header: some-value} header</li>
+     *     <li>{@code some-header} which means that the request must contain a {@code some-header} header</li>
+     *     <li>{@code !some-header} which means that the request must not contain a {@code some-header}
+     *     header</li>
+     * </ul>
+     *
+     * @see ConditionalHeader
+     */
+    public AbstractBindingBuilder matchesHeaderPredicates(CharSequence... headerPredicates) {
+        return matchesHeaderPredicates(
+                ImmutableList.copyOf(requireNonNull(headerPredicates, "headerPredicates")));
+    }
+
+    /**
+     * Sets the {@link Route} to accept a request if it matches all the specified predicates for
+     * {@link HttpHeaders}. The predicate can be one of the following forms:
+     * <ul>
+     *     <li>{@code some-header=some-value} which means that the request must have a
+     *     {@code some-header: some-value} header</li>
+     *     <li>{@code some-header!=some-value} which means that the request must not have a
+     *     {@code some-header: some-value} an header</li>
+     *     <li>{@code some-header} which means that the request must contain a {@code some-header} header</li>
+     *     <li>{@code !some-header} which means that the request must not contain a {@code some-header}
+     *     header</li>
+     * </ul>
+     *
+     * @see ConditionalHeader
+     */
+    public AbstractBindingBuilder matchesHeaderPredicates(Iterable<? extends CharSequence> headerPredicates) {
+        this.headerPredicates = ImmutableList.copyOf(requireNonNull(headerPredicates, "headerPredicates"));
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link Route}s based on the properties of this builder.
      */
     final List<Route> buildRouteList() {
@@ -311,6 +403,8 @@ abstract class AbstractBindingBuilder {
             builder.add(routeBuilder.methods(routeMethods)
                                     .consumes(consumeTypes)
                                     .produces(produceTypes)
+                                    .matchesParamPredicates(paramPredicates)
+                                    .matchesHeaderPredicates(headerPredicates)
                                     .build());
         });
 

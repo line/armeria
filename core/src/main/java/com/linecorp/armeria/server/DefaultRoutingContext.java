@@ -36,8 +36,11 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+
+import io.netty.handler.codec.http.QueryStringDecoder;
 
 /**
  * Holds the parameters which are required to find a service available to handle the request.
@@ -64,6 +67,8 @@ final class DefaultRoutingContext implements RoutingContext {
     @Nullable
     private final String query;
     private final List<MediaType> acceptTypes;
+    @Nullable
+    private volatile HttpParameters httpParameters;
     private final boolean isCorsPreflight;
     @Nullable
     private HttpStatusException deferredCause;
@@ -105,6 +110,20 @@ final class DefaultRoutingContext implements RoutingContext {
         return query;
     }
 
+    @Override
+    public HttpParameters httpParameters() {
+        HttpParameters httpParameters = this.httpParameters;
+        if (httpParameters == null) {
+            if (query == null) {
+                httpParameters = HttpParameters.EMPTY_PARAMETERS;
+            } else {
+                httpParameters = HttpParameters.copyOf(new QueryStringDecoder(query, false).parameters());
+            }
+            this.httpParameters = httpParameters.asImmutable();
+        }
+        return httpParameters;
+    }
+
     @Nullable
     @Override
     public MediaType contentType() {
@@ -119,6 +138,11 @@ final class DefaultRoutingContext implements RoutingContext {
     @Override
     public boolean isCorsPreflight() {
         return isCorsPreflight;
+    }
+
+    @Override
+    public HttpHeaders headers() {
+        return headers;
     }
 
     @Override

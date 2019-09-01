@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.OutputStream;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -28,6 +29,7 @@ import javax.annotation.Nullable;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
@@ -65,10 +67,11 @@ final class RouteCache {
      * Returns a {@link Router} which is wrapped with a {@link Cache} layer in order to improve the
      * performance of the {@link ServiceConfig} search.
      */
-    static Router<ServiceConfig> wrapVirtualHostRouter(Router<ServiceConfig> delegate) {
+    static Router<ServiceConfig> wrapVirtualHostRouter(Router<ServiceConfig> delegate,
+                                                       Set<Route> noCacheRoutes) {
         return FIND_CACHE == null ? delegate
                                   : new CachingRouter<>(delegate, ServiceConfig::route,
-                                                        FIND_CACHE, FIND_ALL_CACHE);
+                                                        FIND_CACHE, FIND_ALL_CACHE, noCacheRoutes);
     }
 
     /**
@@ -76,8 +79,7 @@ final class RouteCache {
      * performance of the {@link CompositeServiceEntry} search.
      */
     static <T extends Service<?, ?>> Router<CompositeServiceEntry<T>> wrapCompositeServiceRouter(
-            Router<CompositeServiceEntry<T>> delegate) {
-
+            Router<CompositeServiceEntry<T>> delegate, Set<Route> noCacheRoutes) {
         final Cache<RoutingContext, CompositeServiceEntry<T>> cache =
                 Flags.compositeServiceCacheSpec().map(RouteCache::<CompositeServiceEntry<T>>buildCache)
                      .orElse(null);
@@ -89,7 +91,7 @@ final class RouteCache {
                 Flags.compositeServiceCacheSpec().map(RouteCache::<List<CompositeServiceEntry<T>>>buildCache)
                      .orElse(null);
 
-        return new CachingRouter<>(delegate, CompositeServiceEntry::route, cache, listCache);
+        return new CachingRouter<>(delegate, CompositeServiceEntry::route, cache, listCache, noCacheRoutes);
     }
 
     /**
@@ -97,11 +99,12 @@ final class RouteCache {
      * performance of the {@link RouteDecoratingService} search.
      */
     static Router<RouteDecoratingService> wrapRouteDecoratingServiceRouter(
-            Router<RouteDecoratingService> delegate) {
+            Router<RouteDecoratingService> delegate, Set<Route> noCacheRoutes) {
         return DECORATOR_FIND_CACHE == null ? delegate
                                             : new CachingRouter<>(delegate, RouteDecoratingService::route,
                                                                   DECORATOR_FIND_CACHE,
-                                                                  DECORATOR_FIND_ALL_CACHE);
+                                                                  DECORATOR_FIND_ALL_CACHE,
+                                                                  noCacheRoutes);
     }
 
     private static <T> Cache<RoutingContext, T> buildCache(String spec) {
@@ -119,14 +122,17 @@ final class RouteCache {
         private final Function<V, Route> routeResolver;
         private final Cache<RoutingContext, V> findCache;
         private final Cache<RoutingContext, List<V>> findAllCache;
+        private final Set<Route> noCacheRoutes;
 
         CachingRouter(Router<V> delegate, Function<V, Route> routeResolver,
                       Cache<RoutingContext, V> findCache,
-                      Cache<RoutingContext, List<V>> findAllCache) {
+                      Cache<RoutingContext, List<V>> findAllCache,
+                      Set<Route> noCacheRoutes) {
             this.delegate = requireNonNull(delegate, "delegate");
             this.routeResolver = requireNonNull(routeResolver, "routeResolver");
             this.findCache = requireNonNull(findCache, "findCache");
             this.findAllCache = requireNonNull(findAllCache, "findAllCache");
+            this.noCacheRoutes = ImmutableSet.copyOf(requireNonNull(noCacheRoutes, "noCacheRoutes"));
         }
 
         @Override
@@ -141,7 +147,7 @@ final class RouteCache {
             }
 
             final Routed<V> result = delegate.find(routingCtx);
-            if (result.isPresent()) {
+            if (result.isPresent() && !noCacheRoutes.contains(result.route())) {
                 findCache.put(routingCtx, result.value());
             }
             return result;

@@ -128,4 +128,9 @@ public interface Route {
      * Returns the {@link Set} of {@link MediaType}s that this {@link Route} produces.
      */
     Set<MediaType> produces();
+
+    /**
+     * Returns the cache key which can be used to check whether this {@link Route} is able to be cached.
+     */
+    String cacheKey();
 }

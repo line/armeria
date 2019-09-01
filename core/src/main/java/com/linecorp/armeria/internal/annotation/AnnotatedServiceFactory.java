@@ -69,6 +69,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -87,6 +88,8 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.annotation.AdditionalHeader;
 import com.linecorp.armeria.server.annotation.AdditionalTrailer;
 import com.linecorp.armeria.server.annotation.Blocking;
+import com.linecorp.armeria.server.annotation.ConditionalHeader;
+import com.linecorp.armeria.server.annotation.ConditionalParam;
 import com.linecorp.armeria.server.annotation.ConsumeType;
 import com.linecorp.armeria.server.annotation.Consumes;
 import com.linecorp.armeria.server.annotation.Decorator;
@@ -248,6 +251,12 @@ public final class AnnotatedServiceFactory {
                                                 .methods(httpMethod)
                                                 .consumes(consumableMediaTypes)
                                                 .produces(producibleMediaTypes)
+                                                .matchesParamPredicates(
+                                                        predicates(method, clazz, ConditionalParam.class,
+                                                                   ConditionalParam::value))
+                                                .matchesHeaderPredicates(
+                                                        predicates(method, clazz, ConditionalHeader.class,
+                                                                   ConditionalHeader::value))
                                                 .build());
                 }).collect(toImmutableList());
 
@@ -304,7 +313,7 @@ public final class AnnotatedServiceFactory {
                     decorator(method, clazz));
         }).collect(toImmutableList());
     }
-
+    
     private static List<AnnotatedValueResolver> getAnnotatedValueResolvers(List<RequestConverterFunction> req,
                                                                            Route route, Method method,
                                                                            Class<?> clazz) {
@@ -435,6 +444,19 @@ public final class AnnotatedServiceFactory {
                       })
                       .collect(toImmutableList());
         return listToSet(types, Produces.class);
+    }
+
+    /**
+     * Returns a list of predicates which will be used to evaluate whether a request can be accepted
+     * by a service method.
+     */
+    private static <T extends Annotation> List<String> predicates(Method method, Class<?> clazz,
+                                                                  Class<T> annotationType,
+                                                                  Function<T, String> toStringPredicate) {
+        final List<T> classLevel = findAll(clazz, annotationType);
+        final List<T> methodLevel = findAll(method, annotationType);
+        return Streams.concat(classLevel.stream(), methodLevel.stream())
+                      .map(toStringPredicate).collect(toImmutableList());
     }
 
     /**

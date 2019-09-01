@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.RouteUtil.EXACT;
 import static com.linecorp.armeria.internal.RouteUtil.GLOB;
@@ -26,20 +27,27 @@ import static com.linecorp.armeria.internal.RouteUtil.ensureAbsolutePath;
 import static com.linecorp.armeria.server.HttpHeaderUtil.ensureUniqueMediaTypes;
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.server.annotation.ConditionalHeader;
+import com.linecorp.armeria.server.annotation.ConditionalParam;
 
 /**
  * Builds a new {@link Route}.
@@ -56,6 +64,10 @@ public final class RouteBuilder {
     private Set<MediaType> consumes = ImmutableSet.of();
 
     private Set<MediaType> produces = ImmutableSet.of();
+
+    private List<? extends CharSequence> paramPredicates = ImmutableList.of();
+
+    private List<? extends CharSequence> headerPredicates = ImmutableList.of();
 
     RouteBuilder() {}
 
@@ -321,6 +333,107 @@ public final class RouteBuilder {
     }
 
     /**
+     * Sets the {@link Route} to accept a request if it matches all the specified predicates for
+     * HTTP parameters. The predicate can be one of the following forms:
+     * <ul>
+     *     <li>{@code some-param=some-value} which means that the request must have a
+     *     {@code some-param=some-value} parameter</li>
+     *     <li>{@code some-param!=some-value} which means that the request must not have a
+     *     {@code some-param=some-value} parameter</li>
+     *     <li>{@code some-param} which means that the request must contain a {@code some-param} parameter</li>
+     *     <li>{@code !some-param} which means that the request must not contain a {@code some-param}
+     *     parameter</li>
+     * </ul>
+     *
+     * <p>Note that these predicates can be evaluated only with the query string of the request URI.
+     * Also note that each predicate will be evaluated with the decoded value of HTTP parameters,
+     * so do not use percent-encoded value in the predicate.
+     *
+     * @see ConditionalParam
+     */
+    public RouteBuilder matchesParamPredicates(CharSequence... paramPredicates) {
+        return matchesParamPredicates(ImmutableList.copyOf(requireNonNull(paramPredicates, "paramPredicates")));
+    }
+
+    /**
+     * Sets the {@link Route} to accept a request if it matches all the specified predicates for
+     * HTTP parameters. The predicate can be one of the following forms:
+     * <ul>
+     *     <li>{@code some-param=some-value} which means that the request must have a
+     *     {@code some-param=some-value} parameter</li>
+     *     <li>{@code some-param!=some-value} which means that the request must not have a
+     *     {@code some-param=some-value} parameter</li>
+     *     <li>{@code some-param} which means that the request must contain a {@code some-param} parameter</li>
+     *     <li>{@code !some-param} which means that the request must not contain a {@code some-param}
+     *     parameter</li>
+     * </ul>
+     *
+     * <p>Note that these predicates can be evaluated only with the query string of the request URI.
+     * Also note that each predicate will be evaluated with the decoded value of HTTP parameters,
+     * so do not use percent-encoded value in the predicate.
+     *
+     * @see ConditionalParam
+     */
+    public RouteBuilder matchesParamPredicates(Iterable<? extends CharSequence> paramPredicates) {
+        this.paramPredicates = ImmutableList.copyOf(requireNonNull(paramPredicates, "paramPredicates"));
+        return this;
+    }
+
+    /**
+     * Sets the {@link Route} to accept a request if it matches all the specified predicates for
+     * {@link HttpHeaders}. The predicate can be one of the following forms:
+     * <ul>
+     *     <li>{@code some-header=some-value} which means that the request must have a
+     *     {@code some-header: some-value} header</li>
+     *     <li>{@code some-header!=some-value} which means that the request must not have a
+     *     {@code some-header: some-value} header</li>
+     *     <li>{@code some-header} which means that the request must contain a {@code some-header} header</li>
+     *     <li>{@code !some-header} which means that the request must not contain a {@code some-header}
+     *     header</li>
+     * </ul>
+     *
+     * @see ConditionalHeader
+     */
+    public RouteBuilder matchesHeaderPredicates(CharSequence... headerPredicates) {
+        return matchesHeaderPredicates(
+                ImmutableList.copyOf(requireNonNull(headerPredicates, "headerPredicates")));
+    }
+
+    /**
+     * Sets the {@link Route} to accept a request if it matches all the specified predicates for
+     * {@link HttpHeaders}. The predicate can be one of the following forms:
+     * <ul>
+     *     <li>{@code some-header=some-value} which means that the request must have a
+     *     {@code some-header: some-value} header</li>
+     *     <li>{@code some-header!=some-value} which means that the request must not have a
+     *     {@code some-header: some-value} an header</li>
+     *     <li>{@code some-header} which means that the request must contain a {@code some-header} header</li>
+     *     <li>{@code !some-header} which means that the request must not contain a {@code some-header}
+     *     header</li>
+     * </ul>
+     *
+     * @see ConditionalHeader
+     */
+    public RouteBuilder matchesHeaderPredicates(Iterable<? extends CharSequence> headerPredicates) {
+        this.headerPredicates = ImmutableList.copyOf(requireNonNull(headerPredicates, "headerPredicates"));
+        return this;
+    }
+
+    /**
+     * TODO(hyangtack) Is this useful?.
+     *
+     * @param id the identifier of the specified {@code headersPredicate} which is used for logging or
+     *           metric collection
+     * @param headerPredicate the predicates to be used when accepting a request by a {@link Route}
+     */
+    public RouteBuilder matchesHeaderPredicates(String id, Predicate<HttpHeaders> headerPredicate) {
+        requireNonNull(id, "id");
+        requireNonNull(headerPredicate, "headerPredicate");
+        // FIXME(hyangtack) Not implemented yet.
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link Route} based on the properties of this builder.
      */
     public Route build() {
@@ -329,7 +442,14 @@ public final class RouteBuilder {
             throw new IllegalStateException("Must set methods if consumes or produces is not empty." +
                                             " consumes: " + consumes + ", produces: " + produces);
         }
-        return new DefaultRoute(pathMapping, methods, consumes, produces);
+        final ImmutableList<RoutingPredicate<HttpParameters>> paramPredicateList =
+                paramPredicates.stream().map(RoutingPredicate::ofParams)
+                               .collect(toImmutableList());
+        final ImmutableList<RoutingPredicate<HttpHeaders>> headerPredicateList =
+                headerPredicates.stream().map(RoutingPredicate::ofHeaders)
+                                .collect(toImmutableList());
+        return new DefaultRoute(pathMapping, methods, consumes, produces,
+                                paramPredicateList, headerPredicateList);
     }
 
     @Override
@@ -351,7 +471,9 @@ public final class RouteBuilder {
         return Objects.equals(pathMapping, that.pathMapping) &&
                methods.equals(that.methods) &&
                consumes.equals(that.consumes) &&
-               produces.equals(that.produces);
+               produces.equals(that.produces) &&
+               paramPredicates.equals(that.paramPredicates) &&
+               headerPredicates.equals(that.headerPredicates);
     }
 
     @Override
@@ -361,6 +483,8 @@ public final class RouteBuilder {
                           .add("methods", methods)
                           .add("consumes", consumes)
                           .add("produces", produces)
+                          .add("paramPredicates", paramPredicates)
+                          .add("headerPredicates", headerPredicates)
                           .toString();
     }
 

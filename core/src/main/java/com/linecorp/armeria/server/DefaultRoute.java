@@ -22,14 +22,18 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.StringJoiner;
+import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 
@@ -42,35 +46,58 @@ final class DefaultRoute implements Route {
     private final Set<HttpMethod> methods;
     private final Set<MediaType> consumes;
     private final Set<MediaType> produces;
+    private final List<RoutingPredicate<HttpParameters>> paramPredicates;
+    private final List<Predicate<HttpHeaders>> headerPredicates;
 
     private final String loggerName;
     private final String meterTag;
 
     private final int complexity;
 
+    private final String cacheKey;
+
     DefaultRoute(PathMapping pathMapping, Set<HttpMethod> methods,
-                 Set<MediaType> consumes, Set<MediaType> produces) {
+                 Set<MediaType> consumes, Set<MediaType> produces,
+                 List<RoutingPredicate<HttpParameters>> paramPredicates,
+                 List<RoutingPredicate<HttpHeaders>> headerPredicates) {
         this.pathMapping = requireNonNull(pathMapping, "pathMapping");
         this.methods = Sets.immutableEnumSet(requireNonNull(methods, "methods"));
         this.consumes = ImmutableSet.copyOf(requireNonNull(consumes, "consumes"));
         this.produces = ImmutableSet.copyOf(requireNonNull(produces, "produces"));
+        this.paramPredicates = ImmutableList.copyOf(requireNonNull(paramPredicates, "paramPredicates"));
+        this.headerPredicates = ImmutableList.copyOf(requireNonNull(headerPredicates, "headerPredicates"));
 
-        loggerName = generateLoggerName(pathMapping.loggerName(), methods, consumes, produces);
+        loggerName = generateLoggerName(pathMapping.loggerName(), methods, consumes, produces,
+                                        paramPredicates, headerPredicates);
 
-        meterTag = generateMeterTag(pathMapping.meterTag(), methods, consumes, produces);
+        meterTag = generateMeterTag(pathMapping.meterTag(), methods, consumes, produces,
+                                    paramPredicates, headerPredicates);
 
         int complexity = 0;
         if (!methods.isEmpty()) {
-            complexity++;
+            complexity += 1;
         }
-
         if (!consumes.isEmpty()) {
-            complexity += 2;
+            complexity += 1 << 1;
         }
         if (!produces.isEmpty()) {
-            complexity += 4;
+            complexity += 1 << 2;
+        }
+        if (!paramPredicates.isEmpty()) {
+            complexity += 1 << 3;
+        }
+        if (!headerPredicates.isEmpty()) {
+            complexity += 1 << 4;
         }
         this.complexity = complexity;
+
+        if (paramPredicates.isEmpty() && headerPredicates.isEmpty()) {
+            cacheKey = meterTag;
+        } else {
+            // The predicates make this route dynamically resolved so we cannot use them as a cache key.
+            cacheKey = generateMeterTag(pathMapping.meterTag(), methods, consumes, produces,
+                                        ImmutableList.of(), ImmutableList.of());
+        }
     }
 
     @Override
@@ -120,13 +147,12 @@ final class DefaultRoute implements Route {
             }
             for (MediaType produceType : produces) {
                 if (!isAnyType(produceType)) {
-                    return builder.negotiatedResponseMediaType(produceType).build();
+                    builder.negotiatedResponseMediaType(produceType);
+                    break;
                 }
             }
-            return builder.build();
-        }
-
-        if (!produces.isEmpty()) {
+        } else if (!produces.isEmpty()) {
+            boolean found = false;
             for (MediaType produceType : produces) {
                 for (int i = 0; i < acceptTypes.size(); i++) {
                     final MediaType acceptType = acceptTypes.get(i);
@@ -137,14 +163,29 @@ final class DefaultRoute implements Route {
                         final int score = i == 0 ? HIGHEST_SCORE : -1 * i;
                         builder.score(score);
                         if (!isAnyType(produceType)) {
-                            return builder.negotiatedResponseMediaType(produceType).build();
+                            builder.negotiatedResponseMediaType(produceType);
                         }
-                        return builder.build();
+                        found = true;
+                        break;
                     }
                 }
+                if (found) {
+                    break;
+                }
             }
-            routingCtx.deferStatusException(HttpStatusException.of(HttpStatus.NOT_ACCEPTABLE));
-            return emptyOrCorsPreflightResult(routingCtx, builder);
+            if (!found) {
+                routingCtx.deferStatusException(HttpStatusException.of(HttpStatus.NOT_ACCEPTABLE));
+                return emptyOrCorsPreflightResult(routingCtx, builder);
+            }
+        }
+
+        if (!paramPredicates.isEmpty() &&
+            paramPredicates.stream().noneMatch(p -> p.test(routingCtx.httpParameters()))) {
+            return RoutingResult.empty();
+        }
+        if (!headerPredicates.isEmpty() &&
+            headerPredicates.stream().noneMatch(p -> p.test(routingCtx.headers()))) {
+            return RoutingResult.empty();
         }
 
         return builder.build();
@@ -209,8 +250,15 @@ final class DefaultRoute implements Route {
         return produces;
     }
 
+    @Override
+    public String cacheKey() {
+        return cacheKey;
+    }
+
     private static String generateLoggerName(String prefix, Set<HttpMethod> methods,
-                                             Set<MediaType> consumes, Set<MediaType> produces) {
+                                             Set<MediaType> consumes, Set<MediaType> produces,
+                                             List<RoutingPredicate<HttpParameters>> paramPredicates,
+                                             List<RoutingPredicate<HttpHeaders>> headerPredicates) {
         final StringJoiner name = new StringJoiner(".");
         name.add(prefix);
         if (!methods.isEmpty()) {
@@ -232,11 +280,21 @@ final class DefaultRoute implements Route {
             name.add("produces");
             produces.forEach(e -> name.add(e.type() + '_' + e.subtype()));
         }
+        if (!paramPredicates.isEmpty()) {
+            name.add("params");
+            name.add(loggerNameJoiner.join(paramPredicates.stream().map(RoutingPredicate::id).iterator()));
+        }
+        if (!headerPredicates.isEmpty()) {
+            name.add("headers");
+            name.add(loggerNameJoiner.join(headerPredicates.stream().map(RoutingPredicate::id).iterator()));
+        }
         return name.toString();
     }
 
     private static String generateMeterTag(String parentTag, Set<HttpMethod> methods,
-                                           Set<MediaType> consumes, Set<MediaType> produces) {
+                                           Set<MediaType> consumes, Set<MediaType> produces,
+                                           List<RoutingPredicate<HttpParameters>> paramPredicates,
+                                           List<RoutingPredicate<HttpHeaders>> headerPredicates) {
 
         final StringJoiner name = new StringJoiner(",");
         name.add(parentTag);
@@ -254,6 +312,14 @@ final class DefaultRoute implements Route {
         addMediaTypes(name, "consumes", consumes);
         addMediaTypes(name, "produces", produces);
 
+        if (!paramPredicates.isEmpty()) {
+            name.add("params");
+            name.add(meterTagJoiner.join(paramPredicates.stream().map(RoutingPredicate::id).iterator()));
+        }
+        if (!headerPredicates.isEmpty()) {
+            name.add("headers");
+            name.add(meterTagJoiner.join(headerPredicates.stream().map(RoutingPredicate::id).iterator()));
+        }
         return name.toString();
     }
 
@@ -291,7 +357,9 @@ final class DefaultRoute implements Route {
         return Objects.equals(pathMapping, that.pathMapping) &&
                methods.equals(that.methods) &&
                consumes.equals(that.consumes) &&
-               produces.equals(that.produces);
+               produces.equals(that.produces) &&
+               headerPredicates.equals(that.headerPredicates) &&
+               paramPredicates.equals(that.paramPredicates);
     }
 
     @Override

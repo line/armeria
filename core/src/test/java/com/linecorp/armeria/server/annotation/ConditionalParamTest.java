@@ -1,0 +1,144 @@
+/*
+ * Copyright 2019 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+package com.linecorp.armeria.server.annotation;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+
+import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
+
+class ConditionalParamTest {
+
+    @RegisterExtension
+    public static final ServerExtension extension = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.annotatedService(new Object() {
+                @Get("/matches")
+                @ConditionalParam("my-param=my-value")
+                public String matches() {
+                    return "my-param=my-value";
+                }
+
+                @Get("/matches")
+                public String fallback1() {
+                    return "fallback";
+                }
+
+                @Get("/doesNotMatch")
+                @ConditionalParam("my-param!=my-value")
+                public String doesNotMatch() {
+                    return "my-param!=my-value";
+                }
+
+                @Get("/doesNotMatch")
+                public String fallback2() {
+                    return "fallback";
+                }
+
+                @Get("/contains")
+                @ConditionalParam("my-param")
+                public String contains() {
+                    return "my-param";
+                }
+
+                @Get("/contains")
+                public String fallback3() {
+                    return "fallback";
+                }
+
+                @Get("/doesNotContain")
+                @ConditionalParam("!my-param")
+                public String doesNotContain() {
+                    return "!my-param";
+                }
+
+                @Get("/doesNotContain")
+                public String fallback4() {
+                    return "fallback";
+                }
+
+                @Get("/matches/percentEncoded")
+                @ConditionalParam("my-param=/")
+                public String matchesPercentEncoded1() {
+                    return "my-param=/";
+                }
+
+                @Get("/matches/percentEncoded")
+                @ConditionalParam("my-param=%2F")
+                public String matchesPercentEncoded2() {
+                    return "my-param=%2F";
+                }
+            });
+        }
+    };
+
+    private static HttpClient client;
+
+    @BeforeAll
+    public static void beforeAll() {
+        client = HttpClient.of(extension.uri("/"));
+    }
+
+    @Test
+    void matches() {
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/matches?my-param=my-value"))
+                         .aggregate().join().contentUtf8()).isEqualTo("my-param=my-value");
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/matches?my-param=your-value"))
+                         .aggregate().join().contentUtf8()).isEqualTo("fallback");
+    }
+
+    @Test
+    void doesNotMatch() {
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/doesNotMatch?my-param=your-value"))
+                         .aggregate().join().contentUtf8()).isEqualTo("my-param!=my-value");
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/doesNotMatch?my-param=my-value"))
+                         .aggregate().join().contentUtf8()).isEqualTo("fallback");
+    }
+
+    @Test
+    void contains() {
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/contains?my-param=any-value"))
+                         .aggregate().join().contentUtf8()).isEqualTo("my-param");
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/contains?your-param=your-value"))
+                         .aggregate().join().contentUtf8()).isEqualTo("fallback");
+    }
+
+    @Test
+    void doesNotContain() {
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/doesNotContain?your-param=your-value"))
+                         .aggregate().join().contentUtf8()).isEqualTo("!my-param");
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/doesNotContain?my-param=my-value"))
+                         .aggregate().join().contentUtf8()).isEqualTo("fallback");
+    }
+
+    @Test
+    void percentEncoded() {
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/matches/percentEncoded?my-param=/"))
+                         .aggregate().join().contentUtf8()).isEqualTo("my-param=/");
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/matches/percentEncoded?my-param=%2F"))
+                         .aggregate().join().contentUtf8()).isEqualTo("my-param=/");
+        assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/matches/percentEncoded?my-param=%252F"))
+                         .aggregate().join().contentUtf8()).isEqualTo("my-param=%2F");
+    }
+}

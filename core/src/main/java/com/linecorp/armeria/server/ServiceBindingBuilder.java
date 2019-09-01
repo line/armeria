@@ -160,6 +160,26 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     }
 
     @Override
+    public ServiceBindingBuilder matchesParamPredicates(CharSequence... paramPredicates) {
+        return (ServiceBindingBuilder) super.matchesParamPredicates(paramPredicates);
+    }
+
+    @Override
+    public ServiceBindingBuilder matchesParamPredicates(Iterable<? extends CharSequence> paramPredicates) {
+        return (ServiceBindingBuilder) super.matchesParamPredicates(paramPredicates);
+    }
+
+    @Override
+    public ServiceBindingBuilder matchesHeaderPredicates(CharSequence... headerPredicates) {
+        return (ServiceBindingBuilder) super.matchesHeaderPredicates(headerPredicates);
+    }
+
+    @Override
+    public ServiceBindingBuilder matchesHeaderPredicates(Iterable<? extends CharSequence> headerPredicates) {
+        return (ServiceBindingBuilder) super.matchesHeaderPredicates(headerPredicates);
+    }
+
+    @Override
     public ServiceBindingBuilder requestTimeout(Duration requestTimeout) {
         return (ServiceBindingBuilder) super.requestTimeout(requestTimeout);
     }

@@ -20,7 +20,9 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpParameters;
 import com.linecorp.armeria.common.MediaType;
 
 class RoutingContextWrapper implements RoutingContext {
@@ -57,6 +59,11 @@ class RoutingContextWrapper implements RoutingContext {
         return delegate.query();
     }
 
+    @Override
+    public HttpParameters httpParameters() {
+        return delegate.httpParameters();
+    }
+
     @Nullable
     @Override
     public MediaType contentType() {
@@ -66,6 +73,11 @@ class RoutingContextWrapper implements RoutingContext {
     @Override
     public List<MediaType> acceptTypes() {
         return delegate.acceptTypes();
+    }
+
+    @Override
+    public HttpHeaders headers() {
+        return delegate.headers();
     }
 
     @Override
