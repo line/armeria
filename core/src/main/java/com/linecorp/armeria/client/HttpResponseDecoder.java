@@ -287,9 +287,12 @@ abstract class HttpResponseDecoder {
                 actionOnTimeoutCancelled.accept(cause);
             } else {
                 if (cause != null && logger.isWarnEnabled() && !Exceptions.isExpected(cause)) {
-                    StringBuilder logMsg = new StringBuilder("Unexpected exception while closing");
+                    final StringBuilder logMsg = new StringBuilder("Unexpected exception while closing");
                     if (request != null) {
-                        logMsg.append(" request to ").append(request.authority());
+                        final String authority = request.authority();
+                        if (authority != null) {
+                            logMsg.append(" a request to ").append(authority);
+                        }
                     }
                     if (cause instanceof ResponseTimeoutException) {
                         logMsg.append(" after ").append(responseTimeoutMillis).append("ms");
