@@ -20,7 +20,6 @@ import static com.linecorp.armeria.common.brave.RequestContextCurrentTraceContex
 
 import java.util.function.Function;
 
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -69,7 +68,7 @@ public final class BraveService extends SimpleDecoratingHttpService {
     }
 
     private final Tracer tracer;
-    private final TraceContext.Extractor<HttpHeaders> extractor;
+    private final TraceContext.Extractor<RequestLog> extractor;
     private final HttpServerHandler<RequestLog, RequestLog> handler;
     private final CurrentTraceContext currentTraceContext;
     private final ArmeriaHttpServerAdapter adapter;
@@ -87,12 +86,12 @@ public final class BraveService extends SimpleDecoratingHttpService {
         handler = HttpServerHandler.create(httpTracing, adapter);
         extractor = httpTracing.tracing().propagationFactory()
                                .create(AsciiStringKeyFactory.INSTANCE)
-                               .extractor(HttpHeaders::get);
+                               .extractor((l, k) -> l.requestHeaders().get(k));
     }
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final Span span = handler.handleReceive(extractor, req.headers(), ctx.log());
+        final Span span = handler.handleReceive(extractor, ctx.log());
 
         // Ensure the trace context propagates to children
         ctx.onChild(TraceContextUtil::copy);
