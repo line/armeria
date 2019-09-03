@@ -25,6 +25,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.Sampler;
 
 /**
@@ -34,7 +35,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     private static final Function<HttpHeaders, HttpHeaders> DEFAULT_HEADERS_SANITIZER = Function.identity();
     private static final Function<Object, Object> DEFAULT_CONTENT_SANITIZER = Function.identity();
     private static final Function<Throwable, Throwable> DEFAULT_CAUSE_SANITIZER = Function.identity();
-    private static final Sampler<? super RequestLog> DEFAULT_SAMPLER = Sampler.random(1.0f);
+    private static final Sampler<? super RequestContext> DEFAULT_SAMPLER = Sampler.random(1.0f);
 
     private LogLevel requestLogLevel = LogLevel.TRACE;
     private LogLevel successfulResponseLogLevel = LogLevel.TRACE;
@@ -47,7 +48,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     private Function<Object, ?> responseContentSanitizer = DEFAULT_CONTENT_SANITIZER;
     private Function<? super Throwable, ?> responseCauseSanitizer = DEFAULT_CAUSE_SANITIZER;
     private Function<? super HttpHeaders, ?> responseTrailersSanitizer = DEFAULT_HEADERS_SANITIZER;
-    private Sampler<? super RequestLog> sampler = DEFAULT_SAMPLER;
+    private Sampler<? super RequestContext> sampler = DEFAULT_SAMPLER;
 
     /**
      * Sets the {@link LogLevel} to use when logging requests. If unset, will use {@link LogLevel#TRACE}.
@@ -262,7 +263,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     /**
      * Sets the {@link Sampler} that to sample requests to log.
      */
-    public T sampler(Sampler<? super RequestLog> sampler) {
+    public T sampler(Sampler<? super RequestContext> sampler) {
         this.sampler = sampler;
         return self();
     }
@@ -270,7 +271,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     /**
      * Returns the {@link Sampler} that to sample requests to log.
      */
-    protected Sampler<? super RequestLog> sampler() {
+    protected Sampler<? super RequestContext> sampler() {
         return sampler;
     }
 
@@ -308,7 +309,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
             Function<? super HttpHeaders, ?> responseHeadersSanitizer,
             Function<Object, ?> responseContentSanitizer,
             Function<? super HttpHeaders, ?> responseTrailersSanitizer,
-            Sampler<? super RequestLog> sampler) {
+            Sampler<? super RequestContext> sampler) {
         final ToStringHelper helper = MoreObjects.toStringHelper(self)
                                                  .add("requestLogLevel", requestLogLevel)
                                                  .add("successfulResponseLogLevel", successfulResponseLogLevel)

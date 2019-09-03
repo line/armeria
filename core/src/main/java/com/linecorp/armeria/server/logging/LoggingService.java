@@ -28,7 +28,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
-import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.server.Service;
@@ -80,7 +79,7 @@ public final class LoggingService<I extends Request, O extends Response> extends
     private final Function<Object, ?> responseContentSanitizer;
     private final Function<? super HttpHeaders, ?> responseTrailersSanitizer;
     private final Function<? super Throwable, ?> responseCauseSanitizer;
-    private final Sampler<? super RequestLog> sampler;
+    private final Sampler<? super ServiceRequestContext> sampler;
 
     /**
      * Creates a new instance.
@@ -129,7 +128,7 @@ public final class LoggingService<I extends Request, O extends Response> extends
             Function<Object, ?> responseContentSanitizer,
             Function<? super HttpHeaders, ?> responseTrailersSanitizer,
             Function<? super Throwable, ?> responseCauseSanitizer,
-            Sampler<? super RequestLog> sampler) {
+            Sampler<? super ServiceRequestContext> sampler) {
         super(requireNonNull(delegate, "delegate"));
         this.requestLogLevel = requireNonNull(requestLogLevel, "requestLogLevel");
         this.successfulResponseLogLevel =
@@ -148,7 +147,7 @@ public final class LoggingService<I extends Request, O extends Response> extends
 
     @Override
     public O serve(ServiceRequestContext ctx, I req) throws Exception {
-        if (sampler.isSampled(ctx.log())) {
+        if (sampler.isSampled(ctx)) {
             ctx.log().addListener(log -> logRequest(((ServiceRequestContext) log.context()).logger(),
                                                     log, requestLogLevel, requestHeadersSanitizer,
                                                     requestContentSanitizer, requestTrailersSanitizer),
