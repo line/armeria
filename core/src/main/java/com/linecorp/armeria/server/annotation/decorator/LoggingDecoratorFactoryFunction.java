@@ -19,7 +19,6 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -40,7 +39,7 @@ public final class LoggingDecoratorFactoryFunction implements DecoratorFactoryFu
                 .requestLogLevel(parameter.requestLogLevel())
                 .successfulResponseLogLevel(parameter.successfulResponseLogLevel())
                 .failureResponseLogLevel(parameter.failureResponseLogLevel())
-                .sampler(Sampler.random(parameter.samplingRate()))
+                .samplingRate(parameter.samplingRate())
                 .newDecorator();
     }
 }
