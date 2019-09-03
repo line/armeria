@@ -35,7 +35,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     private static final Function<HttpHeaders, HttpHeaders> DEFAULT_HEADERS_SANITIZER = Function.identity();
     private static final Function<Object, Object> DEFAULT_CONTENT_SANITIZER = Function.identity();
     private static final Function<Throwable, Throwable> DEFAULT_CAUSE_SANITIZER = Function.identity();
-    private static final Sampler<? super RequestContext> DEFAULT_SAMPLER = Sampler.random(1.0f);
+    private static final Sampler<? super RequestContext> DEFAULT_SAMPLER = Sampler.always();
 
     private LogLevel requestLogLevel = LogLevel.TRACE;
     private LogLevel successfulResponseLogLevel = LogLevel.TRACE;
