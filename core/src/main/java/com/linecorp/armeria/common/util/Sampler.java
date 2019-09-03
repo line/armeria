@@ -45,9 +45,7 @@ package com.linecorp.armeria.common.util;
 @FunctionalInterface
 public interface Sampler<T> {
     /**
-     * Returns a sampler, given a rate expressed as a percentage.
-     *
-     * <p>The sampler returned is good for low volumes of traffic (<100K requests), as it is precise.
+     * Returns a sampler, given a rate expressed as a floating point number between {@code 0.0} and {@code 1.0}.
      *
      * @param rate minimum sample rate is 0.01, or 1% of traces
      */
@@ -69,7 +67,7 @@ public interface Sampler<T> {
     }
 
     /**
-     * Returns a sampler that always will be sampled.
+     * Returns a sampler that will always be sampled.
      */
     static <T> Sampler<T> always() {
         @SuppressWarnings("unchecked")
@@ -78,7 +76,7 @@ public interface Sampler<T> {
     }
 
     /**
-     * Returns a sampler that never will be sampled.
+     * Returns a sampler that will never be sampled.
      */
     static <T> Sampler<T> never() {
         @SuppressWarnings("unchecked")

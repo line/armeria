@@ -261,7 +261,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     }
 
     /**
-     * Sets the {@link Sampler} that to sample requests to log.
+     * Sets the {@link Sampler} that determines which request needs logging.
      */
     public T sampler(Sampler<? super RequestContext> sampler) {
         this.sampler = sampler;
@@ -269,7 +269,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     }
 
     /**
-     * Returns the {@link Sampler} that to sample requests to log.
+     * Returns the {@link Sampler} that determines which request needs logging.
      */
     protected Sampler<? super RequestContext> sampler() {
         return sampler;

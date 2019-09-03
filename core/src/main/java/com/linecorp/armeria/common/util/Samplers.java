@@ -24,7 +24,7 @@ final class Samplers {
     private Samplers() {}
 
     /**
-     * A sampler that always will be sampled.
+     * A sampler that will always be sampled.
      */
     static final Sampler ALWAYS = new Sampler() {
         @Override
@@ -39,7 +39,7 @@ final class Samplers {
     };
 
     /**
-     * A sampler that never will be sampled.
+     * A sampler that will never be sampled.
      */
     static final Sampler NEVER = new Sampler() {
         @Override
