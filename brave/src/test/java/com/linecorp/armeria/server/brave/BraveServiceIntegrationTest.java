@@ -35,12 +35,14 @@ import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.internal.brave.SpanTags;
 
 import brave.SpanCustomizer;
 import brave.Tracing;
 import brave.Tracing.Builder;
 import brave.http.HttpAdapter;
 import brave.http.HttpServerParser;
+import brave.http.HttpServerResponse;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.StrictScopeDecorator;
 import brave.sampler.Sampler;
@@ -106,8 +108,15 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
             public <T> void response(HttpAdapter<?, T> adapter, T res, Throwable error,
                                      SpanCustomizer customizer) {
                 super.response(adapter, res, error, customizer);
+                // TODO: is there a way to get the URL visible earlier? Waiting until response is
+                // too late for typical parsing or sampling
+                if (res instanceof HttpServerResponse) {
+                    Object unwrapped = ((HttpServerResponse) res).unwrap();
+                    if (unwrapped instanceof RequestLog) {
+                        customizer.tag("http.url", SpanTags.generateUrl((RequestLog) unwrapped));
+                    }
+                }
                 customizer.tag("response_customizer.is_span", String.valueOf(customizer instanceof brave.Span));
-                customizer.tag("http.url", ((ArmeriaHttpServerAdapter) adapter).url((RequestLog) res));
             }
         }).build();
         init();

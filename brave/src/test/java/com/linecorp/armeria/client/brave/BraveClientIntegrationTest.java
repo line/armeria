@@ -47,11 +47,13 @@ import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
+import com.linecorp.armeria.internal.brave.SpanTags;
 
 import brave.SpanCustomizer;
 import brave.Tracing.Builder;
 import brave.http.HttpAdapter;
 import brave.http.HttpClientParser;
+import brave.http.HttpClientResponse;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.StrictScopeDecorator;
 import brave.sampler.Sampler;
@@ -174,10 +176,16 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
                                                         Throwable error,
                                                         SpanCustomizer customizer) {
                                    super.response(adapter, res, error, customizer);
+                                   // TODO: is there a way to get the URL visible earlier? Waiting until response is
+                                   // too late for typical parsing or sampling
+                                   if (res instanceof HttpClientResponse) {
+                                       Object unwrapped = ((HttpClientResponse) res).unwrap();
+                                       if (unwrapped instanceof RequestLog) {
+                                           customizer.tag("http.url", SpanTags.generateUrl((RequestLog) unwrapped));
+                                       }
+                                   }
                                    customizer.tag("response_customizer.is_span",
                                                   String.valueOf(customizer instanceof brave.Span));
-                                   customizer.tag("http.url",
-                                                  ((ArmeriaHttpClientAdapter) adapter).url((RequestLog) res));
                                }
                            }).build().clientOf("remote-service");
 
