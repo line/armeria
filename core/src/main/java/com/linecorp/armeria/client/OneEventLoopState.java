@@ -23,7 +23,7 @@ import io.netty.channel.EventLoop;
 
 final class OneEventLoopState extends AbstractEventLoopState {
 
-    private final List<EventLoopEntry> entry = new ArrayList<>();
+    private final List<AbstractEventLoopEntry> entry = new ArrayList<>();
 
     private int allActiveRequests;
 
@@ -32,64 +32,64 @@ final class OneEventLoopState extends AbstractEventLoopState {
     }
 
     @Override
-    public synchronized EventLoopEntry acquire() {
+    synchronized AbstractEventLoopEntry acquire() {
         if (entry.isEmpty()) {
             entry.add(new Entry(this, eventLoops().get(scheduler().acquisitionStartIndex(1))));
         }
-        final EventLoopEntry e = entry.get(0);
+        final AbstractEventLoopEntry e = entry.get(0);
         allActiveRequests++;
         return e;
     }
 
     @Override
-    public synchronized void release(EventLoopEntry e) {
+    synchronized void release(AbstractEventLoopEntry e) {
         if (--allActiveRequests == 0) {
             setLastActivityTimeNanos();
         }
     }
 
     @Override
-    public List<EventLoopEntry> entries() {
+    List<AbstractEventLoopEntry> entries() {
         return entry;
     }
 
     @Override
-    public int allActiveRequests() {
+    int allActiveRequests() {
         return allActiveRequests;
     }
 
     private static final class Entry extends AbstractEventLoopEntry {
-        Entry(EventLoopState parent, EventLoop eventLoop) {
+        Entry(AbstractEventLoopState parent, EventLoop eventLoop) {
             super(parent, eventLoop);
         }
 
         @Override
-        public int activeRequests() {
+        int activeRequests() {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public void incrementActiveRequests() {
+        void incrementActiveRequests() {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public void decrementActiveRequests() {
+        void decrementActiveRequests() {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public int id() {
+        int id() {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public int index() {
+        int index() {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public void setIndex(int index) {
+        void setIndex(int index) {
             throw new UnsupportedOperationException();
         }
     }

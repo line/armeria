@@ -28,11 +28,11 @@ final class HeapBasedEventLoopState extends AbstractEventLoopState {
     /**
      * A binary heap of Entry. Ordered by:
      * <ul>
-     *   <li>{@link EventLoopEntry#activeRequests()} (lower is better)</li>
-     *   <li>{@link EventLoopEntry#id()} (lower is better)</li>
+     *   <li>{@link AbstractEventLoopEntry#activeRequests()} (lower is better)</li>
+     *   <li>{@link AbstractEventLoopEntry#id()} (lower is better)</li>
      * </ul>
      */
-    private final List<EventLoopEntry> entries = new ArrayList<>();
+    private final List<AbstractEventLoopEntry> entries = new ArrayList<>();
     private final int maxNumEventLoops;
 
     private int acquisitionStartIndex = -1;
@@ -67,21 +67,21 @@ final class HeapBasedEventLoopState extends AbstractEventLoopState {
     }
 
     @Override
-    public List<EventLoopEntry> entries() {
+    List<AbstractEventLoopEntry> entries() {
         return entries;
     }
 
     @Override
-    public int allActiveRequests() {
+    int allActiveRequests() {
         return allActiveRequests;
     }
 
     @Override
-    public synchronized EventLoopEntry acquire() {
+    synchronized AbstractEventLoopEntry acquire() {
         if (acquisitionStartIndex == -1) {
             init(scheduler().acquisitionStartIndex(maxNumEventLoops));
         }
-        EventLoopEntry e = entries.get(0);
+        AbstractEventLoopEntry e = entries.get(0);
         if (e.activeRequests() > 0) {
             // All event loops are handling connections; try to add an unused event loop.
             if (addUnusedEventLoop()) {
@@ -98,7 +98,7 @@ final class HeapBasedEventLoopState extends AbstractEventLoopState {
     }
 
     @Override
-    public synchronized void release(EventLoopEntry e) {
+    synchronized void release(AbstractEventLoopEntry e) {
         e.decrementActiveRequests();
         bubbleUp(e.index());
         if (--allActiveRequests == 0) {
@@ -170,8 +170,8 @@ final class HeapBasedEventLoopState extends AbstractEventLoopState {
      * Returns {@code true} if the entry at {@code a} is a better choice than the entry at {@code b}.
      */
     private boolean isBetter(int a, int b) {
-        final EventLoopEntry entryA = entries.get(a);
-        final EventLoopEntry entryB = entries.get(b);
+        final AbstractEventLoopEntry entryA = entries.get(a);
+        final AbstractEventLoopEntry entryB = entries.get(b);
         if (entryA.activeRequests() < entryB.activeRequests()) {
             return true;
         }
@@ -195,8 +195,8 @@ final class HeapBasedEventLoopState extends AbstractEventLoopState {
     }
 
     private void swap(int i, int j) {
-        final EventLoopEntry entryI = entries.get(i);
-        final EventLoopEntry entryJ = entries.get(j);
+        final AbstractEventLoopEntry entryI = entries.get(i);
+        final AbstractEventLoopEntry entryJ = entries.get(j);
         entries.set(i, entryJ);
         entries.set(j, entryI);
 
@@ -218,44 +218,44 @@ final class HeapBasedEventLoopState extends AbstractEventLoopState {
          * Index in the binary heap {@link HeapBasedEventLoopState#entries}.
          * Updated by {@link HeapBasedEventLoopState#swap(int, int)} after
          * {@link #activeRequests()} is updated by {@link HeapBasedEventLoopState#acquire()} and
-         * {@link HeapBasedEventLoopState#release(EventLoopEntry)}.
+         * {@link HeapBasedEventLoopState#release(AbstractEventLoopEntry)}.
          */
         private int index;
 
         private int activeRequests;
 
-        Entry(EventLoopState parent, EventLoop eventLoop, int id) {
+        Entry(AbstractEventLoopState parent, EventLoop eventLoop, int id) {
             super(parent, eventLoop);
             this.id = index = id;
         }
 
         @Override
-        public int activeRequests() {
+        int activeRequests() {
             return activeRequests;
         }
 
         @Override
-        public void incrementActiveRequests() {
+        void incrementActiveRequests() {
             activeRequests++;
         }
 
         @Override
-        public void decrementActiveRequests() {
+        void decrementActiveRequests() {
             activeRequests--;
         }
 
         @Override
-        public int id() {
+        int id() {
             return id;
         }
 
         @Override
-        public int index() {
+        int index() {
             return index;
         }
 
         @Override
-        public void setIndex(int index) {
+        void setIndex(int index) {
             this.index = index;
         }
 

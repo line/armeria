@@ -18,15 +18,27 @@ package com.linecorp.armeria.client;
 
 import java.util.List;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import io.netty.channel.EventLoop;
 
-abstract class AbstractEventLoopState implements EventLoopState {
+abstract class AbstractEventLoopState {
+
+    static AbstractEventLoopState of(List<EventLoop> eventLoops, int maxNumEventLoops,
+                                     DefaultEventLoopScheduler scheduler) {
+        if (maxNumEventLoops == 1) {
+            return new OneEventLoopState(eventLoops, scheduler);
+        }
+        // TODO(minwoox) Introduce array based state which is used when the maxNumEventLoops is greater than 1
+        //               and less than N for the performance.
+        return new HeapBasedEventLoopState(eventLoops, maxNumEventLoops, scheduler);
+    }
 
     private final List<EventLoop> eventLoops;
     private final DefaultEventLoopScheduler scheduler;
 
     /**
-     * Updated only when {@link #allActiveRequests()} is 0 by {@link #release(EventLoopEntry)}.
+     * Updated only when {@link #allActiveRequests()} is 0 by {@link #release(AbstractEventLoopEntry)}.
      */
     private long lastActivityTimeNanos = System.nanoTime();
 
@@ -43,12 +55,20 @@ abstract class AbstractEventLoopState implements EventLoopState {
         return scheduler;
     }
 
-    @Override
-    public long lastActivityTimeNanos() {
+    long lastActivityTimeNanos() {
         return lastActivityTimeNanos;
     }
 
     void setLastActivityTimeNanos() {
         lastActivityTimeNanos = System.nanoTime();
     }
+
+    abstract AbstractEventLoopEntry acquire();
+
+    abstract void release(AbstractEventLoopEntry e);
+
+    @VisibleForTesting
+    abstract List<AbstractEventLoopEntry> entries();
+
+    abstract int allActiveRequests();
 }

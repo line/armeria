@@ -16,14 +16,16 @@
 
 package com.linecorp.armeria.client;
 
+import com.linecorp.armeria.common.util.ReleasableHolder;
+
 import io.netty.channel.EventLoop;
 
-abstract class AbstractEventLoopEntry implements EventLoopEntry {
+abstract class AbstractEventLoopEntry implements ReleasableHolder<EventLoop> {
 
-    private final EventLoopState parent;
+    private final AbstractEventLoopState parent;
     private final EventLoop eventLoop;
 
-    AbstractEventLoopEntry(EventLoopState parent, EventLoop eventLoop) {
+    AbstractEventLoopEntry(AbstractEventLoopState parent, EventLoop eventLoop) {
         this.parent = parent;
         this.eventLoop = eventLoop;
     }
@@ -37,4 +39,16 @@ abstract class AbstractEventLoopEntry implements EventLoopEntry {
     public void release() {
         parent.release(this);
     }
+
+    abstract int activeRequests();
+
+    abstract void incrementActiveRequests();
+
+    abstract void decrementActiveRequests();
+
+    abstract int id();
+
+    abstract int index();
+
+    abstract void setIndex(int index);
 }

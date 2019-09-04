@@ -39,8 +39,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.Unwrappable;
 
 import io.grpc.CallOptions;
@@ -51,7 +49,6 @@ import io.grpc.DecompressorRegistry;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.MethodDescriptor;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http.HttpHeaderValues;
 
 /**
@@ -164,9 +161,8 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwrappable
     }
 
     private DefaultClientRequestContext newContext(HttpMethod method, HttpRequest req) {
-        final ReleasableHolder<EventLoop> eventLoop = factory().acquireEventLoop(endpoint, sessionProtocol);
-        final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
-                eventLoop.get(),
+        return new DefaultClientRequestContext(
+                factory(),
                 meterRegistry,
                 sessionProtocol,
                 method,
@@ -175,8 +171,5 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwrappable
                 null,
                 options(),
                 req);
-
-        ctx.log().addListener(log -> eventLoop.release(), RequestLogAvailability.COMPLETE);
-        return ctx;
     }
 }

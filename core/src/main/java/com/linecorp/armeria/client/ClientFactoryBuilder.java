@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.ToIntFunction;
 
 import javax.annotation.Nullable;
 
@@ -55,7 +56,6 @@ import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
 /**
@@ -111,7 +111,8 @@ public final class ClientFactoryBuilder {
     private Function<? super EventLoopGroup, ? extends EventLoopScheduler> eventLoopSchedulerFactory;
     private int maxNumEventLoopsPerEndpoint;
     private int maxNumEventLoopsPerHttp1Endpoint;
-    private final Map<Endpoint, Integer> maxNumEventLoopsMap = new Object2IntOpenHashMap<>();
+    @Nullable
+    private ToIntFunction<Endpoint> maxNumEventLoopsFunction;
     private long idleTimeoutMillis = Flags.defaultClientIdleTimeoutMillis();
     private boolean useHttp2Preface = Flags.defaultUseHttp2Preface();
     private boolean useHttp1Pipelining = Flags.defaultUseHttp1Pipelining();
@@ -146,7 +147,7 @@ public final class ClientFactoryBuilder {
     public ClientFactoryBuilder eventLoopSchedulerFactory(
             Function<? super EventLoopGroup, ? extends EventLoopScheduler> eventLoopSchedulerFactory) {
         checkState(maxNumEventLoopsPerHttp1Endpoint == 0 && maxNumEventLoopsPerEndpoint == 0 &&
-                   maxNumEventLoopsMap.isEmpty(),
+                   maxNumEventLoopsFunction == null,
                    "Cannot set eventLoopSchedulerFactory when maxEventLoop per endpoint is specified.");
         this.eventLoopSchedulerFactory = requireNonNull(eventLoopSchedulerFactory, "eventLoopSchedulerFactory");
         return this;
@@ -154,8 +155,8 @@ public final class ClientFactoryBuilder {
 
     /**
      * Sets the maximum number of {@link EventLoop}s which will be used to handle HTTP/1.1 connections
-     * except the ones specified by {@link #maxNumEventLoopsPerEndpoint(Endpoint, int)} or
-     * {@link #maxNumEventLoopsPerEndpoint(String, int)}.
+     * except the ones specified by {@link #maxNumEventLoopsFunction(ToIntFunction)}.
+     * {@value DefaultEventLoopScheduler#DEFAULT_MAX_NUM_EVENT_LOOPS} is used by default.
      */
     public ClientFactoryBuilder maxNumEventLoopsPerHttp1Endpoint(int maxNumEventLoopsPerEndpoint) {
         validateMaxNumEventLoopsPerEndpoint(maxNumEventLoopsPerEndpoint);
@@ -172,8 +173,8 @@ public final class ClientFactoryBuilder {
 
     /**
      * Sets the maximum number of {@link EventLoop}s which will be used to handle HTTP/2 connections
-     * except the ones specified by {@link #maxNumEventLoopsPerEndpoint(Endpoint, int)} or
-     * {@link #maxNumEventLoopsPerEndpoint(String, int)}.
+     * except the ones specified by {@link #maxNumEventLoopsFunction(ToIntFunction)}.
+     * {@value DefaultEventLoopScheduler#DEFAULT_MAX_NUM_EVENT_LOOPS} is used by default.
      */
     public ClientFactoryBuilder maxNumEventLoopsPerEndpoint(int maxNumEventLoopsPerEndpoint) {
         validateMaxNumEventLoopsPerEndpoint(maxNumEventLoopsPerEndpoint);
@@ -182,29 +183,14 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * Sets the maximum number of {@link EventLoop}s which will be used to handle connections to the specified
-     * {@code authority}.
-     * This method is a shortcut of:
-     * <pre>{@code
-     * String authority = ...;
-     * maxNumEventLoopsPerEndpoint(Endpoint.parse(authority), maxNumEventLoops);
-     * }</pre>
+     * Sets the {@link ToIntFunction} which takes an {@link Endpoint} and produces the maximum number of
+     * {@link EventLoop}s which will be used to handle connections to the specified {@link Endpoint}.
+     * The function should return {@code -1} for the {@link Endpoint}s which it doesn't want to handle.
      */
-    public ClientFactoryBuilder maxNumEventLoopsPerEndpoint(String authority, int maxNumEventLoops) {
-        return maxNumEventLoopsPerEndpoint(Endpoint.parse(authority), maxNumEventLoops);
-    }
-
-    /**
-     * Sets the maximum number of {@link EventLoop}s which will be used to handle connections to the specified
-     * {@link Endpoint}.
-     */
-    public ClientFactoryBuilder maxNumEventLoopsPerEndpoint(Endpoint endpoint, int maxNumEventLoops) {
-        requireNonNull(endpoint, "endpoint");
+    public ClientFactoryBuilder maxNumEventLoopsFunction(ToIntFunction<Endpoint> maxNumEventLoopsFunction) {
         checkState(eventLoopSchedulerFactory == null,
                    "maxNumEventLoopsPerEndpoint() and eventLoopSchedulerFactory() are mutually exclusive.");
-        checkArgument(maxNumEventLoops > 0,
-                      "maxNumEventLoops for '%s': %s (expected: > 0)", endpoint, maxNumEventLoops);
-        maxNumEventLoopsMap.put(endpoint, maxNumEventLoops);
+        this.maxNumEventLoopsFunction = requireNonNull(maxNumEventLoopsFunction, "maxNumEventLoopsFunction");
         return this;
     }
 
@@ -454,7 +440,7 @@ public final class ClientFactoryBuilder {
         } else {
             eventLoopScheduler = new DefaultEventLoopScheduler(workerGroup, maxNumEventLoopsPerEndpoint,
                                                                maxNumEventLoopsPerHttp1Endpoint,
-                                                               maxNumEventLoopsMap);
+                                                               maxNumEventLoopsFunction);
         }
 
         final Function<? super EventLoopGroup,
@@ -501,10 +487,7 @@ public final class ClientFactoryBuilder {
         } else if (maxNumEventLoopsPerEndpoint > 0) {
             helper.add("maxNumEventLoopsPerEndpoint", maxNumEventLoopsPerEndpoint);
         }
-
-        if (!maxNumEventLoopsMap.isEmpty()) {
-            helper.add("maxNumEventLoopsMap", maxNumEventLoopsMap);
-        }
+        helper.add("maxNumEventLoopsFunction", maxNumEventLoopsFunction);
 
         if (connectionPoolListener != DEFAULT_CONNECTION_POOL_LISTENER) {
             helper.add("connectionPoolListener", connectionPoolListener);

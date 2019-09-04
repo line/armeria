@@ -21,12 +21,11 @@ import static com.linecorp.armeria.client.DefaultEventLoopSchedulerTest.acquireE
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
-import java.util.Map;
+import java.util.function.ToIntFunction;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.SessionProtocol;
@@ -40,60 +39,51 @@ class MaxNumEventLoopsPerEndpointTest {
     @Test
     void defaultMaxNumEventLoopsEqualsOne() {
         final EventLoopGroup group = new DefaultEventLoopGroup(7);
-        final DefaultEventLoopScheduler s = new DefaultEventLoopScheduler(group, 0, 0, ImmutableMap.of());
-        final List<EventLoopEntry> entries1 = s.entries(Endpoint.of("a"), SessionProtocol.H1C);
+        final DefaultEventLoopScheduler s = new DefaultEventLoopScheduler(group, 0, 0, unused -> -1);
+        final List<AbstractEventLoopEntry> entries1 = s.entries(Endpoint.of("a"), SessionProtocol.H1C);
         assertThat(entries1).hasSize(0);
         acquireTenEntries(s, Endpoint.of("a"), SessionProtocol.H1C);
         assertThat(entries1).hasSize(1);
-
-        final List<EventLoopEntry> entries2 = s.entries(Endpoint.ofGroup("b"), SessionProtocol.H2C);
-        assertThat(entries2).hasSize(0);
-        acquireTenEntries(s, Endpoint.ofGroup("b"), SessionProtocol.H2C);
-        assertThat(entries2).hasSize(1);
-    }
-
-    @Test
-    void groupMaxNumEventLoops() {
-        final EventLoopGroup group = new DefaultEventLoopGroup(7);
-        final Map<Endpoint, Integer> maxNumEventLoopsMap =
-                ImmutableMap.of(Endpoint.ofGroup("a"), 3);
-        final DefaultEventLoopScheduler s = new DefaultEventLoopScheduler(group, 4, 5, maxNumEventLoopsMap);
-        checkMaxNumEventLoops(s, Endpoint.ofGroup("a"), Endpoint.ofGroup("b"));
     }
 
     @Test
     void singleEndpointMaxNumEventLoops() {
         final EventLoopGroup group = new DefaultEventLoopGroup(7);
-        final Map<Endpoint, Integer> maxNumEventLoopsMap =
-                ImmutableMap.of(Endpoint.of("a"), 3);
-        final DefaultEventLoopScheduler s = new DefaultEventLoopScheduler(group, 4, 5, maxNumEventLoopsMap);
+        final DefaultEventLoopScheduler s = new DefaultEventLoopScheduler(
+                group, 4, 5, endpoint -> {
+            if (endpoint.equals(Endpoint.of("a"))) {
+                return 3;
+            } else {
+                return -1;
+            }
+        });
         checkMaxNumEventLoops(s, Endpoint.of("a"), Endpoint.of("b"));
     }
 
     private static void checkMaxNumEventLoops(DefaultEventLoopScheduler s,
                                               Endpoint preDefined, Endpoint undefined) {
-        final List<EventLoopEntry> entries1 = s.entries(preDefined, SessionProtocol.H1C);
+        final List<AbstractEventLoopEntry> entries1 = s.entries(preDefined, SessionProtocol.H1C);
         assertThat(entries1).hasSize(0);
         acquireTenEntries(s, preDefined, SessionProtocol.H1C);
         assertThat(entries1).hasSize(3);
 
-        final List<EventLoopEntry> entries2 = s.entries(undefined, SessionProtocol.H2);
+        final List<AbstractEventLoopEntry> entries2 = s.entries(undefined, SessionProtocol.H2);
         assertThat(entries2).hasSize(0);
         acquireTenEntries(s, undefined, SessionProtocol.H2);
         assertThat(entries2).hasSize(4);
 
-        final List<EventLoopEntry> entries3 = s.entries(undefined, SessionProtocol.H2C);
+        final List<AbstractEventLoopEntry> entries3 = s.entries(undefined, SessionProtocol.H2C);
         assertThat(entries2).isNotSameAs(entries3);
         assertThat(entries3).hasSize(0);
         acquireTenEntries(s, undefined, SessionProtocol.H2C);
         assertThat(entries3).hasSize(4);
 
-        final List<EventLoopEntry> entries4 = s.entries(undefined, SessionProtocol.H1);
+        final List<AbstractEventLoopEntry> entries4 = s.entries(undefined, SessionProtocol.H1);
         assertThat(entries4).hasSize(0);
         acquireTenEntries(s, undefined, SessionProtocol.H1);
         assertThat(entries4).hasSize(5);
 
-        final List<EventLoopEntry> entries5 = s.entries(undefined, SessionProtocol.H1C);
+        final List<AbstractEventLoopEntry> entries5 = s.entries(undefined, SessionProtocol.H1C);
         assertThat(entries4).isNotSameAs(entries5);
         assertThat(entries5).hasSize(0);
         acquireTenEntries(s, undefined, SessionProtocol.H1C);
@@ -101,63 +91,88 @@ class MaxNumEventLoopsPerEndpointTest {
     }
 
     @Test
-    void maxNumEventLoopsMap() {
+    void maxNumEventLoopsFunction() {
         final EventLoopGroup group = new DefaultEventLoopGroup(7);
 
-        final Map<Endpoint, Integer> maxNumEventLoopsMap =
-                ImmutableMap.of(Endpoint.of("a.com"), 1,
-                                Endpoint.of("a.com", 80), 2,
-                                Endpoint.of("a.com", 36462), 3,
-                                Endpoint.of("b.com", 80), 4,
-                                Endpoint.of("b.com", 443), 5);
-        final DefaultEventLoopScheduler s = new DefaultEventLoopScheduler(group, 7, 7, maxNumEventLoopsMap);
-        final List<EventLoopEntry> entries1 = s.entries(Endpoint.of("a.com"), SessionProtocol.H1C);
+        final ToIntFunction<Endpoint> maxNumEventLoopsFunction = endpoint -> {
+            if (endpoint.host().contains("a.com")) {
+                if (endpoint.hasPort()) {
+                    final int port = endpoint.port();
+                    if (port == 80) {
+                        return 2;
+                    }
+                    if (port == 36462) {
+                        return 3;
+                    }
+                }
+                return 1;
+            }
+
+            if (endpoint.equals(Endpoint.of("b.com", 80))) {
+                return 4;
+            }
+            if (endpoint.equals(Endpoint.of("b.com", 443))) {
+                return 5;
+            }
+            return -1;
+        };
+        final DefaultEventLoopScheduler s = new DefaultEventLoopScheduler(group, 7, 7,
+                                                                          maxNumEventLoopsFunction);
+        final List<AbstractEventLoopEntry> entries1 = s.entries(Endpoint.of("a.com"), SessionProtocol.H1C);
         assertThat(entries1).hasSize(0);
         acquireTenEntries(s, Endpoint.of("a.com"), SessionProtocol.H1C);
-        assertThat(entries1).hasSize(2); // Matched to Endpoint.of("a.com", 80)
+        assertThat(entries1).hasSize(2);
 
-        final List<EventLoopEntry> entries2 = s.entries(Endpoint.of("a.com", 80), SessionProtocol.H1C);
-        assertThat(entries1).isSameAs(entries2);
+        final List<AbstractEventLoopEntry> entries2 = s.entries(Endpoint.of("a.com", 80), SessionProtocol.H1C);
+        assertThat(entries2).hasSize(2);
 
-        final List<EventLoopEntry> entries3 = s.entries(Endpoint.of("a.com", 10000), SessionProtocol.H1C);
+        final List<AbstractEventLoopEntry> entries3 =
+                s.entries(Endpoint.of("a.com", 10000), SessionProtocol.H1C);
         assertThat(entries3).hasSize(0);
         acquireTenEntries(s, Endpoint.of("a.com", 10000), SessionProtocol.H1C);
         assertThat(entries3).hasSize(1); // Fallback to "a.com"
 
-        final List<EventLoopEntry> entries4 = s.entries(Endpoint.of("a.com", 36462), SessionProtocol.H1C);
+        final List<AbstractEventLoopEntry> entries4 =
+                s.entries(Endpoint.of("a.com", 36462), SessionProtocol.H1C);
         assertThat(entries4).hasSize(0);
         acquireTenEntries(s, Endpoint.of("a.com", 36462), SessionProtocol.H1C);
         assertThat(entries4).hasSize(3); // Matched to Endpoint.of("a.com", 36462)
 
         // Clear text SessionProtocols.
 
-        final List<EventLoopEntry> bComClearText = s.entries(Endpoint.of("b.com", 80), SessionProtocol.H1C);
+        final List<AbstractEventLoopEntry> bComClearText =
+                s.entries(Endpoint.of("b.com", 80), SessionProtocol.H1C);
         assertThat(bComClearText).hasSize(0);
         acquireTenEntries(s, Endpoint.of("b.com"), SessionProtocol.H1C);
         assertThat(bComClearText).hasSize(4); // Fallback to "b.com:80"
 
-        final List<EventLoopEntry> entries5 = s.entries(Endpoint.of("b.com"), SessionProtocol.H1C);
+        final List<AbstractEventLoopEntry> entries5 = s.entries(Endpoint.of("b.com"), SessionProtocol.H1C);
         assertThat(bComClearText).isSameAs(entries5);
-        final List<EventLoopEntry> entries6 = s.entries(Endpoint.of("b.com"), SessionProtocol.H2C);
-        assertThat(bComClearText).isSameAs(entries6);
-        final List<EventLoopEntry> entries7 = s.entries(Endpoint.of("b.com"), SessionProtocol.HTTP);
-        assertThat(bComClearText).isSameAs(entries7);
+
+        final List<AbstractEventLoopEntry> entries6 = s.entries(Endpoint.of("b.com"), SessionProtocol.H2C);
+        acquireTenEntries(s, Endpoint.of("b.com"), SessionProtocol.H2C);
+        assertThat(bComClearText).hasSize(4);
+        final List<AbstractEventLoopEntry> entries7 = s.entries(Endpoint.of("b.com"), SessionProtocol.HTTP);
+        assertThat(entries6).isSameAs(entries7);
 
         // TLS SessionProtocols.
 
-        final List<EventLoopEntry> bComTls = s.entries(Endpoint.of("b.com", 443), SessionProtocol.H1);
+        final List<AbstractEventLoopEntry> bComTls = s.entries(Endpoint.of("b.com", 443), SessionProtocol.H1);
         assertThat(bComTls).hasSize(0);
         acquireTenEntries(s, Endpoint.of("b.com"), SessionProtocol.H1);
         assertThat(bComTls).hasSize(5); // Fallback to "b.com:433"
 
-        final List<EventLoopEntry> entries8 = s.entries(Endpoint.of("b.com"), SessionProtocol.H1);
+        final List<AbstractEventLoopEntry> entries8 = s.entries(Endpoint.of("b.com"), SessionProtocol.H1);
         assertThat(bComTls).isSameAs(entries8);
-        final List<EventLoopEntry> entries9 = s.entries(Endpoint.of("b.com"), SessionProtocol.H2);
-        assertThat(bComTls).isSameAs(entries9);
-        final List<EventLoopEntry> entries10 = s.entries(Endpoint.of("b.com"), SessionProtocol.HTTPS);
-        assertThat(bComTls).isSameAs(entries10);
 
-        final List<EventLoopEntry> entries11 = s.entries(Endpoint.of("b.com", 8443), SessionProtocol.H1);
+        final List<AbstractEventLoopEntry> entries9 = s.entries(Endpoint.of("b.com"), SessionProtocol.H2);
+        acquireTenEntries(s, Endpoint.of("b.com"), SessionProtocol.H2);
+        assertThat(entries9).hasSize(5);
+        final List<AbstractEventLoopEntry> entries10 = s.entries(Endpoint.of("b.com"), SessionProtocol.HTTPS);
+        assertThat(entries9).isSameAs(entries10);
+
+        final List<AbstractEventLoopEntry> entries11 =
+                s.entries(Endpoint.of("b.com", 8443), SessionProtocol.H1);
         assertThat(entries11).hasSize(1); // One entry is pushed when eventLoops.size() == maxNumEventLoops
         acquireTenEntries(s, Endpoint.of("b.com", 8443), SessionProtocol.H1);
         assertThat(entries11).hasSize(7); // No match
@@ -181,10 +196,20 @@ class MaxNumEventLoopsPerEndpointTest {
      */
     @Test
     void eventLoopGroupAssignedSequentially() {
-        final Map<Endpoint, Integer> maxNumEventLoopsMap =
-                ImmutableMap.of(Endpoint.of("a"), 2, Endpoint.of("b"), 3, Endpoint.of("c"), 5);
+        final ToIntFunction<Endpoint> maxNumEventLoopsFunction = endpoint -> {
+            if (endpoint.equals(Endpoint.of("a"))) {
+                return 2;
+            }
+            if (endpoint.equals(Endpoint.of("b"))) {
+                return 3;
+            }
+            if (endpoint.equals(Endpoint.of("c"))) {
+                return 5;
+            }
+            return -1;
+        };
         final int maxNumEventLoops = 7;
-        checkEventLoopAssignedSequentially(maxNumEventLoopsMap, maxNumEventLoops);
+        checkEventLoopAssignedSequentially(maxNumEventLoopsFunction, maxNumEventLoops);
     }
 
     /**
@@ -198,13 +223,20 @@ class MaxNumEventLoopsPerEndpointTest {
      */
     @Test
     void eventLoopGroupAssignedSequentiallyWithDefaultMaxNumEventLoops() {
-        final Map<Endpoint, Integer> maxNumEventLoopsMap =
-                ImmutableMap.of(Endpoint.of("a"), 2, Endpoint.of("b"), 3);
+        final ToIntFunction<Endpoint> maxNumEventLoopsFunction = endpoint -> {
+            if (endpoint.equals(Endpoint.of("a"))) {
+                return 2;
+            }
+            if (endpoint.equals(Endpoint.of("b"))) {
+                return 3;
+            }
+            return -1;
+        };
         final int maxNumEventLoops = 5;
-        checkEventLoopAssignedSequentially(maxNumEventLoopsMap, maxNumEventLoops);
+        checkEventLoopAssignedSequentially(maxNumEventLoopsFunction, maxNumEventLoops);
     }
 
-    private static void checkEventLoopAssignedSequentially(Map<Endpoint, Integer> maxNumEventLoopsMap,
+    private static void checkEventLoopAssignedSequentially(ToIntFunction<Endpoint> maxNumEventLoopsFunction,
                                                            int maxNumEventLoops) {
         final EventLoopGroup group = new DefaultEventLoopGroup(7);
         final List<EventLoop> eventLoops = Streams.stream(group)
@@ -212,7 +244,7 @@ class MaxNumEventLoopsPerEndpointTest {
                                                   .collect(toImmutableList());
         final DefaultEventLoopScheduler s = new DefaultEventLoopScheduler(group, maxNumEventLoops,
                                                                           maxNumEventLoops,
-                                                                          maxNumEventLoopsMap);
+                                                                          maxNumEventLoopsFunction);
 
         // endpointA
 
