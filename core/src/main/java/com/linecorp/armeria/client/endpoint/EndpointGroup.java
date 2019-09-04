@@ -79,6 +79,7 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, SafeCloseable
         }
 
         if (groups.isEmpty()) {
+            // Only static endpoints, return an optimized endpoint group.
             return new StaticEndpointGroup(staticEndpoints);
         }
 

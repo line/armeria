@@ -18,20 +18,83 @@ package com.linecorp.armeria.client.endpoint;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Test;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
 
-public class EndpointGroupTest {
+class EndpointGroupTest {
+
+    private static final Endpoint FOO = Endpoint.of("foo");
+    private static final Endpoint BAR = Endpoint.of("bar");
+    private static final Endpoint CAT = Endpoint.of("cat");
+    private static final Endpoint DOG = Endpoint.of("dog");
+
     @Test
-    public void orElse() throws Exception {
-        final EndpointGroup emptyEndpointGroup = new StaticEndpointGroup();
-        final EndpointGroup endpointGroup1 = new StaticEndpointGroup(Endpoint.of("127.0.0.1", 1234));
-        final EndpointGroup endpointGroup2 = new StaticEndpointGroup(Endpoint.of("127.0.0.1", 2345));
+    void orElse() {
+        final EndpointGroup emptyEndpointGroup = EndpointGroup.empty();
+        final EndpointGroup endpointGroup1 = EndpointGroup.of(Endpoint.of("127.0.0.1", 1234));
+        final EndpointGroup endpointGroup2 = EndpointGroup.of(Endpoint.of("127.0.0.1", 2345));
 
         assertThat(emptyEndpointGroup.orElse(endpointGroup2).endpoints())
                 .isEqualTo(endpointGroup2.endpoints());
         assertThat(endpointGroup1.orElse(endpointGroup2).endpoints())
                 .isEqualTo(endpointGroup1.endpoints());
+    }
+
+    @Test
+    void normal() {
+        DynamicEndpointGroup group1 = new DynamicEndpointGroup();
+        group1.setEndpoints(ImmutableList.of(FOO, BAR));
+        DynamicEndpointGroup group2 = new DynamicEndpointGroup();
+        group2.setEndpoints(ImmutableList.of(CAT, DOG));
+
+        EndpointGroup composite = EndpointGroup.of(group1, group2);
+        assertThat(composite.endpoints()).containsExactlyInAnyOrder(FOO, BAR, CAT, DOG);
+        // Same instance of endpoints returned unless there are updates.
+        assertThat(composite.endpoints()).isSameAs(composite.endpoints());
+
+        group1.setEndpoints(ImmutableList.of(FOO));
+        assertThat(composite.endpoints()).containsExactlyInAnyOrder(FOO, CAT, DOG);
+
+        group1.setEndpoints(ImmutableList.of(FOO, BAR));
+        group2.setEndpoints(ImmutableList.of());
+        assertThat(composite.endpoints()).containsExactlyInAnyOrder(FOO, BAR);
+    }
+
+    @Nested
+    class InitialEndpoints {
+        @Test
+        void group1First() throws Exception {
+            DynamicEndpointGroup group1 = new DynamicEndpointGroup();
+            DynamicEndpointGroup group2 = new DynamicEndpointGroup();
+            EndpointGroup composite = EndpointGroup.of(group1, group2);
+            CompletableFuture<List<Endpoint>> initialEndpoints = composite.initialEndpointsFuture();
+            assertThat(initialEndpoints).isNotCompleted();
+
+            group1.setEndpoints(ImmutableList.of(FOO, BAR));
+            group2.setEndpoints(ImmutableList.of(CAT, DOG));
+            assertThat(initialEndpoints).isCompletedWithValue(ImmutableList.of(FOO, BAR));
+            assertThat(composite.awaitInitialEndpoints()).containsExactly(FOO, BAR);
+        }
+
+        @Test
+        void group2First() throws Exception {
+            DynamicEndpointGroup group1 = new DynamicEndpointGroup();
+            DynamicEndpointGroup group2 = new DynamicEndpointGroup();
+            EndpointGroup composite = EndpointGroup.of(group1, group2);
+            CompletableFuture<List<Endpoint>> initialEndpoints = composite.initialEndpointsFuture();
+            assertThat(initialEndpoints).isNotCompleted();
+
+            group1.setEndpoints(ImmutableList.of(FOO, BAR));
+            group2.setEndpoints(ImmutableList.of(CAT, DOG));
+            assertThat(initialEndpoints).isCompletedWithValue(ImmutableList.of(CAT, DOG));
+            assertThat(composite.awaitInitialEndpoints()).containsExactly(CAT, DOG);
+        }
     }
 }

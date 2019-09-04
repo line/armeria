@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
@@ -36,17 +36,13 @@ import com.linecorp.armeria.common.util.AbstractListenable;
  */
 final class CompositeEndpointGroup extends AbstractListenable<List<Endpoint>> implements EndpointGroup {
 
-    private static final AtomicIntegerFieldUpdater<CompositeEndpointGroup> dirtyUpdater =
-            AtomicIntegerFieldUpdater.newUpdater(CompositeEndpointGroup.class, "dirty");
-
     private final List<EndpointGroup> endpointGroups;
 
     private final CompletableFuture<List<Endpoint>> initialEndpointsFuture;
 
     private volatile List<Endpoint> merged = ImmutableList.of();
 
-    @SuppressWarnings("FieldMayBeFinal") // Updated via `dirtyUpdater`
-    private volatile int dirty;
+    private AtomicBoolean dirty;
 
     /**
      * Constructs a new {@link CompositeEndpointGroup} that merges all the given {@code endpointGroups}.
@@ -54,11 +50,11 @@ final class CompositeEndpointGroup extends AbstractListenable<List<Endpoint>> im
     CompositeEndpointGroup(Iterable<EndpointGroup> endpointGroups) {
         requireNonNull(endpointGroups, "endpointGroups");
         this.endpointGroups = ImmutableList.copyOf(endpointGroups);
-        dirty = 1;
+        dirty = new AtomicBoolean(true);
 
         for (EndpointGroup endpointGroup : endpointGroups) {
             endpointGroup.addListener(unused -> {
-                dirtyUpdater.set(this, 1);
+                dirty.set(true);
                 notifyListeners(endpoints());
             });
         }
@@ -72,11 +68,11 @@ final class CompositeEndpointGroup extends AbstractListenable<List<Endpoint>> im
 
     @Override
     public List<Endpoint> endpoints() {
-        if (dirty == 0) {
+        if (!dirty.get()) {
             return merged;
         }
 
-        if (!dirtyUpdater.compareAndSet(this, 1, 0)) {
+        if (!dirty.compareAndSet(true, false)) {
             // Another thread might be updating merged at this time, but endpoint groups are allowed to take a
             // little bit of time to reflect updates.
             return merged;
