@@ -21,12 +21,17 @@ import java.util.function.Function;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.LoggingDecoratorBuilder;
+import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * Builds a new {@link LoggingService}.
  */
 public class LoggingServiceBuilder extends LoggingDecoratorBuilder<LoggingServiceBuilder> {
+    private static final Sampler<? super ServiceRequestContext> DEFAULT_SAMPLER = Sampler.always();
+
+    private Sampler<? super ServiceRequestContext> sampler = DEFAULT_SAMPLER;
 
     /**
      * Returns a newly-created {@link LoggingService} decorating {@code delegate} based on the properties of
@@ -53,5 +58,20 @@ public class LoggingServiceBuilder extends LoggingDecoratorBuilder<LoggingServic
     public <I extends Request, O extends Response> Function<Service<I, O>, LoggingService<I, O>>
     newDecorator() {
         return this::build;
+    }
+
+    /**
+     * Sets the {@link Sampler} that determines which request needs logging.
+     */
+    public LoggingServiceBuilder sampler(Sampler<? super ServiceRequestContext> sampler) {
+        this.sampler = sampler;
+        return this;
+    }
+
+    /**
+     * Returns the {@link Sampler} that determines which request needs logging.
+     */
+    protected Sampler<? super ServiceRequestContext> sampler() {
+        return sampler;
     }
 }
