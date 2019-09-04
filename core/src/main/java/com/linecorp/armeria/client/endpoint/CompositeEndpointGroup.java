@@ -39,10 +39,11 @@ final class CompositeEndpointGroup extends AbstractListenable<List<Endpoint>> im
     private final List<EndpointGroup> endpointGroups;
 
     private final CompletableFuture<List<Endpoint>> initialEndpointsFuture;
+    private final AtomicBoolean dirty;
 
     private volatile List<Endpoint> merged = ImmutableList.of();
 
-    private AtomicBoolean dirty;
+
 
     /**
      * Constructs a new {@link CompositeEndpointGroup} that merges all the given {@code endpointGroups}.
