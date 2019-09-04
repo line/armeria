@@ -47,7 +47,7 @@ public interface Sampler<T> {
     /**
      * Returns a sampler, given a rate expressed as a floating point number between {@code 0.0} and {@code 1.0}.
      *
-     * @param rate minimum sample rate is 0.01, or 1% of traces
+     * @param rate minimum sampling rate is between {@code 0.01} and {@code 1.0}.
      */
     static <T> Sampler<T> random(double rate) {
         @SuppressWarnings("unchecked")

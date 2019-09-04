@@ -51,8 +51,8 @@ final class CountingSampler implements Sampler {
     /**
      * Creates a new instance.
      *
-     * @param rate 0 means never sample, 1 means always sample. Otherwise minimum sample rate is 0.01,
-     *             or 1% of traces
+     * @param rate {@code 0.0} means never sample, {@code 1.0} means always sample. Otherwise minimum sampling
+     *               rate is between {@code 0.01} and {@code 1.0}.
      */
     static Sampler create(final double rate) {
         if (rate == 0) {
