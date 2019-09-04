@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.internal.brave.SpanContextUtil;
 import com.linecorp.armeria.internal.brave.SpanTags;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -32,15 +33,15 @@ import java.util.List;
 import javax.annotation.Nullable;
 
 final class RequestLogAdapter {
-    static brave.http.HttpServerRequest asHttpServerRequest(RequestLog delegate) {
-        return new HttpServerRequest(delegate);
+    static brave.http.HttpServerRequest asHttpServerRequest(RequestLog log) {
+        return new HttpServerRequest(log);
     }
 
     private static final class HttpServerRequest extends brave.http.HttpServerRequest {
-        private final RequestLog delegate;
+        private final RequestLog log;
 
-        HttpServerRequest(RequestLog delegate) {
-            this.delegate = delegate;
+        HttpServerRequest(RequestLog log) {
+            this.log = log;
         }
 
         /**
@@ -49,17 +50,17 @@ final class RequestLogAdapter {
          */
         @Override
         public boolean parseClientIpAndPort(Span span) {
-            return SpanTags.updateRemoteEndpoint(span, delegate);
+            return SpanTags.updateRemoteEndpoint(span, log);
         }
 
         @Override
         public Object unwrap() {
-            return delegate;
+            return log;
         }
 
         @Override
         public String method() {
-            return delegate.method().name();
+            return log.method().name();
         }
 
         /**
@@ -71,59 +72,67 @@ final class RequestLogAdapter {
          */
         @Override
         public String path() {
-            return delegate.path();
+            return log.path();
         }
 
         @Override
         @Nullable
         public String url() {
-            return SpanTags.generateUrl(delegate);
+            return SpanTags.generateUrl(log);
         }
 
         @Override
         @Nullable
         public String header(String name) {
-            if (!delegate.isAvailable(RequestLogAvailability.REQUEST_HEADERS)) {
+            if (!log.isAvailable(RequestLogAvailability.REQUEST_HEADERS)) {
                 return null;
             }
-            return delegate.requestHeaders().get(name);
+            return log.requestHeaders().get(name);
+        }
+
+        @Override
+        public long startTimestamp() {
+            if (!log.isAvailable(RequestLogAvailability.REQUEST_START)) {
+                return 0L;
+            }
+            return log.requestStartTimeMicros();
         }
     }
 
-    static brave.http.HttpServerResponse asHttpServerResponse(RequestLog delegate) {
-        return new HttpServerResponse(delegate);
+    static brave.http.HttpServerResponse asHttpServerResponse(RequestLog log) {
+        return new HttpServerResponse(log);
     }
 
     private static final class HttpServerResponse extends brave.http.HttpServerResponse {
-        private final RequestLog delegate;
+        private final RequestLog log;
 
-        HttpServerResponse(RequestLog delegate) {
-            this.delegate = delegate;
+        HttpServerResponse(RequestLog log) {
+            this.log = log;
         }
 
         @Override
         public Object unwrap() {
-            return delegate;
+            return log;
         }
 
         @Override
         public int statusCode() {
-            if (!delegate.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
+            if (!log.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
                 return 0;
             }
-            return delegate.status().code();
+            return log.status().code();
         }
 
         @Override
         public String method() {
-            return delegate.method().name();
+            return log.method().name();
         }
 
         @Override
         @Nullable
         public String route() {
-            assert delegate.context() instanceof ServiceRequestContext;
-            final Route route = ((ServiceRequestContext) delegate.context()).route();
+            assert log.context() instanceof ServiceRequestContext;
+            final Route route = ((ServiceRequestContext) log.context()).route();
             final List<String> paths = route.paths();
             switch (route.pathType()) {
                 case EXACT:
@@ -136,6 +145,11 @@ final class RequestLogAdapter {
                     return paths.get(1) + paths.get(0);
             }
             return null;
+        }
+
+        @Override
+        public long finishTimestamp() {
+            return SpanContextUtil.wallTimeMicros(log, log.responseEndTimeNanos());
         }
     }
 

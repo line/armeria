@@ -88,6 +88,8 @@ public final class BraveService extends SimpleDecoratingHttpService {
                 return delegate().serve(ctx, req);
             }
         }
+
+        // TODO: see if it makes sense to defer all parsing until here
         ctx.log().addListener(log -> SpanContextUtil.startSpan(span, log),
                               RequestLogAvailability.REQUEST_START);
 
@@ -98,8 +100,7 @@ public final class BraveService extends SimpleDecoratingHttpService {
                 SpanTags.logWireSend(span, log.responseFirstBytesTransferredTimeNanos(), log);
             }
             HttpServerResponse response = RequestLogAdapter.asHttpServerResponse(log);
-            long finishTimestamp = SpanContextUtil.wallTimeMicros(log, log.responseEndTimeNanos());
-            handler.handleSend(response, log.responseCause(), span, finishTimestamp);
+            handler.handleSend(response, log.responseCause(), span);
         }, RequestLogAvailability.COMPLETE);
 
         try (SpanInScope ignored = tracer.withSpanInScope(span)) {

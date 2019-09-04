@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.internal.brave.SpanContextUtil;
 import com.linecorp.armeria.internal.brave.SpanTags;
 import javax.annotation.Nullable;
 
@@ -85,33 +86,46 @@ final class RequestLogAdapter {
         }
 
         @Override
+        public long startTimestamp() {
+            if (!log.isAvailable(RequestLogAvailability.REQUEST_START)) {
+                return 0L;
+            }
+            return log.requestStartTimeMicros();
+        }
+
+        @Override
         public void header(String name, String value) {
             headersBuilder.set(name, value);
         }
     }
 
-    static brave.http.HttpClientResponse asHttpClientResponse(RequestLog delegate) {
-        return new HttpClientResponse(delegate);
+    static brave.http.HttpClientResponse asHttpClientResponse(RequestLog log) {
+        return new HttpClientResponse(log);
     }
 
     private static final class HttpClientResponse extends brave.http.HttpClientResponse {
-        private final RequestLog delegate;
+        private final RequestLog log;
 
-        HttpClientResponse(RequestLog delegate) {
-            this.delegate = delegate;
+        HttpClientResponse(RequestLog log) {
+            this.log = log;
         }
 
         @Override
         public Object unwrap() {
-            return delegate;
+            return log;
         }
 
         @Override
         public int statusCode() {
-            if (!delegate.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
+            if (!log.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
                 return 0;
             }
-            return delegate.status().code();
+            return log.status().code();
+        }
+
+        @Override
+        public long finishTimestamp() {
+            return SpanContextUtil.wallTimeMicros(log, log.responseEndTimeNanos());
         }
     }
 

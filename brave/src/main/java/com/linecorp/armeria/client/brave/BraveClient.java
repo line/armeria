@@ -117,6 +117,7 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
             }
         }
 
+        // TODO: see if it makes sense to defer all parsing until here
         ctx.log().addListener(log -> SpanContextUtil.startSpan(span, log),
                               RequestLogAvailability.REQUEST_START);
 
@@ -130,9 +131,8 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
                 SpanTags.logWireReceive(span, log.responseFirstBytesTransferredTimeNanos(), log);
             }
             SpanTags.updateRemoteEndpoint(span, log);
-            long finishTimestamp = SpanContextUtil.wallTimeMicros(log, log.responseEndTimeNanos());
             HttpClientResponse response = RequestLogAdapter.asHttpClientResponse(log);
-            handler.handleReceive(response, log.responseCause(), span, finishTimestamp);
+            handler.handleReceive(response, log.responseCause(), span);
         }, RequestLogAvailability.COMPLETE);
 
         try (SpanInScope ignored = tracer.withSpanInScope(span)) {
