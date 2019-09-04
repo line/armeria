@@ -21,6 +21,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.linecorp.armeria.common.RequestHeadersBuilder;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 
@@ -34,21 +36,34 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 
-class ArmeriaHttpClientAdapterTest {
+import brave.http.HttpClientRequest;
+import brave.http.HttpClientResponse;
+
+class RequestLogAdapterTest {
 
     @Mock
     private RequestLog requestLog;
+    @Mock
+    private RequestHeadersBuilder headersBuilder;
+    private HttpClientRequest request;
+    private HttpClientResponse response;
+
+    @BeforeEach
+    void setup() {
+        request = RequestLogAdapter.asHttpClientRequest(requestLog, headersBuilder);
+        response = RequestLogAdapter.asHttpClientResponse(requestLog);
+    }
 
     @Test
     void path() {
         when(requestLog.path()).thenReturn("/foo");
-        assertThat(ArmeriaHttpClientAdapter.get().path(requestLog)).isEqualTo("/foo");
+        assertThat(request.path()).isEqualTo("/foo");
     }
 
     @Test
     void method() {
         when(requestLog.method()).thenReturn(HttpMethod.GET);
-        assertThat(ArmeriaHttpClientAdapter.get().method(requestLog)).isEqualTo("GET");
+        assertThat(request.method()).isEqualTo("GET");
     }
 
     @Test
@@ -59,60 +74,57 @@ class ArmeriaHttpClientAdapterTest {
         when(requestLog.authority()).thenReturn("example.com");
         when(requestLog.path()).thenReturn("/foo");
         when(requestLog.query()).thenReturn("name=hoge");
-        assertThat(ArmeriaHttpClientAdapter.get().url(requestLog)).isEqualTo("http://example.com/foo?name=hoge");
+        assertThat(request.url()).isEqualTo("http://example.com/foo?name=hoge");
     }
 
     @Test
     void statusCode() {
         when(requestLog.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)).thenReturn(true);
         when(requestLog.status()).thenReturn(HttpStatus.OK);
-        assertThat(ArmeriaHttpClientAdapter.get().statusCode(requestLog)).isEqualTo(200);
-        assertThat(ArmeriaHttpClientAdapter.get().statusCodeAsInt(requestLog)).isEqualTo(200);
+        assertThat(response.statusCode()).isEqualTo(200);
 
         when(requestLog.status()).thenReturn(HttpStatus.UNKNOWN);
-        assertThat(ArmeriaHttpClientAdapter.get().statusCode(requestLog)).isNull();
-        assertThat(ArmeriaHttpClientAdapter.get().statusCodeAsInt(requestLog)).isEqualTo(0);
+        assertThat(response.statusCode()).isEqualTo(0);
     }
 
     @Test
     void statusCode_notAvailable() {
         when(requestLog.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)).thenReturn(false);
-        assertThat(ArmeriaHttpClientAdapter.get().statusCode(requestLog)).isNull();
-        assertThat(ArmeriaHttpClientAdapter.get().statusCodeAsInt(requestLog)).isEqualTo(0);
+        assertThat(response.statusCode()).isEqualTo(0);
     }
 
     @Test
     void authority() {
         when(requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)).thenReturn(true);
         when(requestLog.authority()).thenReturn("example.com");
-        assertThat(ArmeriaHttpClientAdapter.get().authority(requestLog)).isEqualTo("example.com");
+        assertThat(RequestLogAdapter.authority(requestLog)).isEqualTo("example.com");
     }
 
     @Test
     void protocol() {
         when(requestLog.isAvailable(RequestLogAvailability.SCHEME)).thenReturn(true);
         when(requestLog.scheme()).thenReturn(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP));
-        assertThat(ArmeriaHttpClientAdapter.get().protocol(requestLog)).isEqualTo("http");
+        assertThat(RequestLogAdapter.protocol(requestLog)).isEqualTo("http");
     }
 
     @Test
     void serializationFormat() {
         when(requestLog.isAvailable(RequestLogAvailability.SCHEME)).thenReturn(true);
         when(requestLog.scheme()).thenReturn(Scheme.of(SerializationFormat.of("tjson"), SessionProtocol.HTTP));
-        assertThat(ArmeriaHttpClientAdapter.get().serializationFormat(requestLog)).isEqualTo("tjson");
+        assertThat(RequestLogAdapter.serializationFormat(requestLog)).isEqualTo("tjson");
         when(requestLog.scheme()).thenReturn(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP));
-        assertThat(ArmeriaHttpClientAdapter.get().serializationFormat(requestLog)).isNull();
+        assertThat(RequestLogAdapter.serializationFormat(requestLog)).isNull();
     }
 
     @Test
     void rpcMethod() {
         when(requestLog.isAvailable(RequestLogAvailability.REQUEST_CONTENT)).thenReturn(true);
-        assertThat(ArmeriaHttpClientAdapter.get().rpcMethod(requestLog)).isNull();
+        assertThat(RequestLogAdapter.rpcMethod(requestLog)).isNull();
 
         final RpcRequest rpcRequest = mock(RpcRequest.class);
         when(requestLog.requestContent()).thenReturn(rpcRequest);
         when(rpcRequest.method()).thenReturn("foo");
-        assertThat(ArmeriaHttpClientAdapter.get().rpcMethod(requestLog)).isEqualTo("foo");
+        assertThat(RequestLogAdapter.rpcMethod(requestLog)).isEqualTo("foo");
     }
 
     @Test
@@ -121,6 +133,6 @@ class ArmeriaHttpClientAdapterTest {
         final RequestHeaders requestHeaders = mock(RequestHeaders.class);
         when(requestLog.requestHeaders()).thenReturn(requestHeaders);
         when(requestHeaders.get("foo")).thenReturn("bar");
-        assertThat(ArmeriaHttpClientAdapter.get().requestHeader(requestLog, "foo")).isEqualTo("bar");
+        assertThat(request.header("foo")).isEqualTo("bar");
     }
 }

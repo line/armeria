@@ -18,13 +18,13 @@ package com.linecorp.armeria.server.brave;
 
 import static com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext.ensureScopeUsesRequestContext;
 
+import brave.http.HttpServerRequest;
+import brave.http.HttpServerResponse;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.internal.brave.AsciiStringKeyFactory;
 import com.linecorp.armeria.internal.brave.SpanContextUtil;
 import com.linecorp.armeria.internal.brave.SpanTags;
 import com.linecorp.armeria.internal.brave.TraceContextUtil;
@@ -37,11 +37,7 @@ import brave.Tracer;
 import brave.Tracer.SpanInScope;
 import brave.Tracing;
 import brave.http.HttpServerHandler;
-import brave.http.HttpServerParser;
 import brave.http.HttpTracing;
-import brave.propagation.CurrentTraceContext;
-import brave.propagation.CurrentTraceContext.Scope;
-import brave.propagation.TraceContext;
 
 /**
  * Decorates a {@link Service} to trace inbound {@link HttpRequest}s using
@@ -68,30 +64,20 @@ public final class BraveService extends SimpleDecoratingHttpService {
     }
 
     private final Tracer tracer;
-    private final TraceContext.Extractor<RequestLog> extractor;
-    private final HttpServerHandler<RequestLog, RequestLog> handler;
-    private final CurrentTraceContext currentTraceContext;
-    private final ArmeriaHttpServerAdapter adapter;
-    private final HttpServerParser serverParser;
+    private final HttpServerHandler<HttpServerRequest, HttpServerResponse> handler;
 
     /**
      * Creates a new instance.
      */
     private BraveService(Service<HttpRequest, HttpResponse> delegate, HttpTracing httpTracing) {
         super(delegate);
-        currentTraceContext = httpTracing.tracing().currentTraceContext();
         tracer = httpTracing.tracing().tracer();
-        serverParser = httpTracing.serverParser();
-        adapter = ArmeriaHttpServerAdapter.get();
-        handler = HttpServerHandler.create(httpTracing, adapter);
-        extractor = httpTracing.tracing().propagationFactory()
-                               .create(AsciiStringKeyFactory.INSTANCE)
-                               .extractor((l, k) -> l.requestHeaders().get(k));
+        handler = HttpServerHandler.create(httpTracing);
     }
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final Span span = handler.handleReceive(extractor, ctx.log());
+        final Span span = handler.handleReceive(RequestLogAdapter.asHttpServerRequest(ctx.log()));
 
         // Ensure the trace context propagates to children
         ctx.onChild(TraceContextUtil::copy);
@@ -111,37 +97,13 @@ public final class BraveService extends SimpleDecoratingHttpService {
             if (log.isAvailable(RequestLogAvailability.RESPONSE_FIRST_BYTES_TRANSFERRED)) {
                 SpanTags.logWireSend(span, log.responseFirstBytesTransferredTimeNanos(), log);
             }
-            handleFinish(log, span);
+            HttpServerResponse response = RequestLogAdapter.asHttpServerResponse(log);
+            long finishTimestamp = SpanContextUtil.wallTimeMicros(log, log.responseEndTimeNanos());
+            handler.handleSend(response, log.responseCause(), span, finishTimestamp);
         }, RequestLogAvailability.COMPLETE);
 
         try (SpanInScope ignored = tracer.withSpanInScope(span)) {
             return delegate().serve(ctx, req);
-        }
-    }
-
-    /**
-     * Copy from brave.http.HttpHandler#handleFinish(Object, Throwable, Span)
-     * We need to set timestamp from armeria's clock instead of brave's one. But current implementation
-     * of HttpHandler doesn't allow us to pass in our own timestamp.
-     * https://github.com/openzipkin/brave/issues/946
-     */
-    private void handleFinish(RequestLog requestLog, Span span) {
-        if (span.isNoop()) {
-            return;
-        }
-        try {
-            try (Scope ws = currentTraceContext.maybeScope(span.context())) {
-                serverParser.response(adapter, requestLog, requestLog.responseCause(), span.customizer());
-            }
-            // close the scope before finishing the span
-        } finally {
-            finishInNullScope(span, requestLog);
-        }
-    }
-
-    private void finishInNullScope(Span span, RequestLog requestLog) {
-        try (Scope ws = currentTraceContext.maybeScope(null)) {
-            span.finish(SpanContextUtil.wallTimeMicros(requestLog, requestLog.responseEndTimeNanos()));
         }
     }
 }

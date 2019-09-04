@@ -24,6 +24,7 @@ import static org.mockito.Mockito.when;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 
@@ -41,22 +42,32 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import brave.Span;
+import brave.http.HttpServerRequest;
+import brave.http.HttpServerResponse;
 
-class ArmeriaHttpServerAdapterTest {
+class RequestLogAdapterTest {
 
     @Mock
     private RequestLog requestLog;
+    private HttpServerRequest request;
+    private HttpServerResponse response;
+
+    @BeforeEach
+    void setup() {
+        request = RequestLogAdapter.asHttpServerRequest(requestLog);
+        response = RequestLogAdapter.asHttpServerResponse(requestLog);
+    }
 
     @Test
     void path() {
         when(requestLog.path()).thenReturn("/foo");
-        assertThat(ArmeriaHttpServerAdapter.get().path(requestLog)).isEqualTo("/foo");
+        assertThat(request.path()).isEqualTo("/foo");
     }
 
     @Test
     void method() {
         when(requestLog.method()).thenReturn(HttpMethod.GET);
-        assertThat(ArmeriaHttpServerAdapter.get().method(requestLog)).isEqualTo("GET");
+        assertThat(request.method()).isEqualTo("GET");
     }
 
     @Test
@@ -67,62 +78,58 @@ class ArmeriaHttpServerAdapterTest {
         when(requestLog.authority()).thenReturn("example.com");
         when(requestLog.path()).thenReturn("/foo");
         when(requestLog.query()).thenReturn("name=hoge");
-        assertThat(ArmeriaHttpServerAdapter.get().url(requestLog)).isEqualTo(
-                "http://example.com/foo?name=hoge");
+        assertThat(request.url()).isEqualTo("http://example.com/foo?name=hoge");
     }
 
     @Test
     void statusCode() {
         when(requestLog.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)).thenReturn(true);
         when(requestLog.status()).thenReturn(HttpStatus.OK);
-        assertThat(ArmeriaHttpServerAdapter.get().statusCode(requestLog)).isEqualTo(200);
-        assertThat(ArmeriaHttpServerAdapter.get().statusCodeAsInt(requestLog)).isEqualTo(200);
+        assertThat(response.statusCode()).isEqualTo(200);
 
         when(requestLog.status()).thenReturn(HttpStatus.UNKNOWN);
-        assertThat(ArmeriaHttpServerAdapter.get().statusCode(requestLog)).isNull();
-        assertThat(ArmeriaHttpServerAdapter.get().statusCodeAsInt(requestLog)).isEqualTo(0);
+        assertThat(response.statusCode()).isEqualTo(0);
     }
 
     @Test
     void statusCode_notAvailable() {
         when(requestLog.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)).thenReturn(false);
-        assertThat(ArmeriaHttpServerAdapter.get().statusCode(requestLog)).isNull();
-        assertThat(ArmeriaHttpServerAdapter.get().statusCodeAsInt(requestLog)).isEqualTo(0);
+        assertThat(response.statusCode()).isEqualTo(0);
     }
 
     @Test
     void authority() {
         when(requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)).thenReturn(true);
         when(requestLog.authority()).thenReturn("example.com");
-        assertThat(ArmeriaHttpServerAdapter.get().authority(requestLog)).isEqualTo("example.com");
+        assertThat(RequestLogAdapter.authority(requestLog)).isEqualTo("example.com");
     }
 
     @Test
     void protocol() {
         when(requestLog.isAvailable(RequestLogAvailability.SCHEME)).thenReturn(true);
         when(requestLog.scheme()).thenReturn(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP));
-        assertThat(ArmeriaHttpServerAdapter.get().protocol(requestLog)).isEqualTo("http");
+        assertThat(RequestLogAdapter.protocol(requestLog)).isEqualTo("http");
     }
 
     @Test
     void serializationFormat() {
         when(requestLog.isAvailable(RequestLogAvailability.SCHEME)).thenReturn(true);
         when(requestLog.scheme()).thenReturn(Scheme.of(SerializationFormat.of("tjson"), SessionProtocol.HTTP));
-        assertThat(ArmeriaHttpServerAdapter.get().serializationFormat(requestLog)).isEqualTo("tjson");
+        assertThat(RequestLogAdapter.serializationFormat(requestLog)).isEqualTo("tjson");
 
         when(requestLog.scheme()).thenReturn(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP));
-        assertThat(ArmeriaHttpServerAdapter.get().serializationFormat(requestLog)).isNull();
+        assertThat(RequestLogAdapter.serializationFormat(requestLog)).isNull();
     }
 
     @Test
     void rpcMethod() {
         when(requestLog.isAvailable(RequestLogAvailability.REQUEST_CONTENT)).thenReturn(true);
-        assertThat(ArmeriaHttpServerAdapter.get().rpcMethod(requestLog)).isNull();
+        assertThat(RequestLogAdapter.rpcMethod(requestLog)).isNull();
 
         final RpcRequest rpcRequest = mock(RpcRequest.class);
         when(requestLog.requestContent()).thenReturn(rpcRequest);
         when(rpcRequest.method()).thenReturn("foo");
-        assertThat(ArmeriaHttpServerAdapter.get().rpcMethod(requestLog)).isEqualTo("foo");
+        assertThat(RequestLogAdapter.rpcMethod(requestLog)).isEqualTo("foo");
     }
 
     @Test
@@ -131,7 +138,7 @@ class ArmeriaHttpServerAdapterTest {
         final RequestHeaders requestHeaders = mock(RequestHeaders.class);
         when(requestLog.requestHeaders()).thenReturn(requestHeaders);
         when(requestHeaders.get("foo")).thenReturn("bar");
-        assertThat(ArmeriaHttpServerAdapter.get().requestHeader(requestLog, "foo")).isEqualTo("bar");
+        assertThat(request.header("foo")).isEqualTo("bar");
     }
 
     @Test
@@ -147,7 +154,7 @@ class ArmeriaHttpServerAdapterTest {
                         InetAddress.getByAddress(new byte[] { 127, 0, 0, 1 }), 1234));
         final Span span = mock(Span.class);
         when(span.remoteIpAndPort("127.0.0.1", 1234)).thenReturn(true);
-        assertThat(ArmeriaHttpServerAdapter.get().parseClientIpAndPort(requestLog, span)).isTrue();
+        assertThat(request.parseClientIpAndPort(span)).isTrue();
     }
 
     @Test
@@ -155,7 +162,7 @@ class ArmeriaHttpServerAdapterTest {
         final ServiceRequestContext context = mock(ServiceRequestContext.class);
         when(requestLog.context()).thenReturn(context);
         when(context.route()).thenReturn(Route.builder().path("/foo/:bar/hoge").build());
-        assertThat(ArmeriaHttpServerAdapter.get().route(requestLog)).isEqualTo("/foo/:/hoge");
+        assertThat(response.route()).isEqualTo("/foo/:/hoge");
     }
 
     @Test
@@ -163,7 +170,7 @@ class ArmeriaHttpServerAdapterTest {
         final ServiceRequestContext context = mock(ServiceRequestContext.class);
         when(requestLog.context()).thenReturn(context);
         when(context.route()).thenReturn(Route.builder().path("exact:/foo").build());
-        assertThat(ArmeriaHttpServerAdapter.get().route(requestLog)).isEqualTo("/foo");
+        assertThat(response.route()).isEqualTo("/foo");
     }
 
     @Test
@@ -171,7 +178,7 @@ class ArmeriaHttpServerAdapterTest {
         final ServiceRequestContext context = mock(ServiceRequestContext.class);
         when(requestLog.context()).thenReturn(context);
         when(context.route()).thenReturn(Route.builder().pathWithPrefix("/foo/", "glob:bar").build());
-        assertThat(ArmeriaHttpServerAdapter.get().route(requestLog)).isEqualTo("/foo/**/bar");
+        assertThat(response.route()).isEqualTo("/foo/**/bar");
     }
 
     @Test
@@ -179,6 +186,6 @@ class ArmeriaHttpServerAdapterTest {
         final ServiceRequestContext context = mock(ServiceRequestContext.class);
         when(requestLog.context()).thenReturn(context);
         when(context.route()).thenReturn(Route.builder().pathWithPrefix("/foo/", "regex:(bar|baz)").build());
-        assertThat(ArmeriaHttpServerAdapter.get().route(requestLog)).isEqualTo("/foo/(bar|baz)");
+        assertThat(response.route()).isEqualTo("/foo/(bar|baz)");
     }
 }
