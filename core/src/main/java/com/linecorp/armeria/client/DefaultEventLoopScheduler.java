@@ -120,6 +120,15 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
         return state(endpoint, sessionProtocol).entries();
     }
 
+    /**
+     * Returns the {@link AbstractEventLoopState} in the map whose key is {@link StateKey}. If the IP address
+     * exists in the specified {@link Endpoint}, it's used in the key to find the
+     * {@link AbstractEventLoopState} first. Then {@link Endpoint#host()} is used.
+     * If {@link AbstractEventLoopState} does not exist in the map, the state is created with the maximum
+     * number of {@link EventLoop}s. The number can be produced by the {@code maxNumEventLoopsFunction} or
+     * {@code maxNumEventLoopsPerEndpoint} and {@code maxNumEventLoopsPerHttp1Endpoint} dependent on
+     * the {@link SessionProtocol} when the {@code maxNumEventLoopsFunction} does not produce a value.
+     */
     private AbstractEventLoopState state(Endpoint endpoint, SessionProtocol sessionProtocol) {
         final String firstTryHost;
         final String secondTryHost;
@@ -153,8 +162,10 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
             }
         }
 
+        // Try with the endpoint which has a port first.
         int maxNumEventLoopsCandidate = maxNumEventLoopsFunction.applyAsInt(endpoint.withPort(port));
         if (maxNumEventLoopsCandidate <= 0 && !endpoint.hasPort()) {
+            // // Try without the port second.
             maxNumEventLoopsCandidate = maxNumEventLoopsFunction.applyAsInt(endpoint);
         }
 

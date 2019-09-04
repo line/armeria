@@ -80,6 +80,8 @@ public final class ClientFactoryBuilder {
 
     private static final Consumer<SslContextBuilder> DEFAULT_SSL_CONTEXT_CUSTOMIZER = b -> { /* no-op */ };
 
+    private static final ToIntFunction<Endpoint> DEFAULT_MAX_NUM_EVENT_LOOPS_FUNCTION = unused -> -1;
+
     // Do not accept 1) the options that may break Armeria and 2) the deprecated options.
     @SuppressWarnings("deprecation")
     private static final Set<ChannelOption<?>> PROHIBITED_SOCKET_OPTIONS = ImmutableSet.of(
@@ -111,8 +113,7 @@ public final class ClientFactoryBuilder {
     private Function<? super EventLoopGroup, ? extends EventLoopScheduler> eventLoopSchedulerFactory;
     private int maxNumEventLoopsPerEndpoint;
     private int maxNumEventLoopsPerHttp1Endpoint;
-    @Nullable
-    private ToIntFunction<Endpoint> maxNumEventLoopsFunction;
+    private ToIntFunction<Endpoint> maxNumEventLoopsFunction = DEFAULT_MAX_NUM_EVENT_LOOPS_FUNCTION;
     private long idleTimeoutMillis = Flags.defaultClientIdleTimeoutMillis();
     private boolean useHttp2Preface = Flags.defaultUseHttp2Preface();
     private boolean useHttp1Pipelining = Flags.defaultUseHttp1Pipelining();
@@ -147,7 +148,7 @@ public final class ClientFactoryBuilder {
     public ClientFactoryBuilder eventLoopSchedulerFactory(
             Function<? super EventLoopGroup, ? extends EventLoopScheduler> eventLoopSchedulerFactory) {
         checkState(maxNumEventLoopsPerHttp1Endpoint == 0 && maxNumEventLoopsPerEndpoint == 0 &&
-                   maxNumEventLoopsFunction == null,
+                   maxNumEventLoopsFunction == DEFAULT_MAX_NUM_EVENT_LOOPS_FUNCTION,
                    "Cannot set eventLoopSchedulerFactory when maxEventLoop per endpoint is specified.");
         this.eventLoopSchedulerFactory = requireNonNull(eventLoopSchedulerFactory, "eventLoopSchedulerFactory");
         return this;
@@ -164,13 +165,6 @@ public final class ClientFactoryBuilder {
         return this;
     }
 
-    private void validateMaxNumEventLoopsPerEndpoint(int maxNumEventLoopsPerEndpoint) {
-        checkArgument(maxNumEventLoopsPerEndpoint > 0,
-                      "maxNumEventLoopsPerEndpoint: %s (expected: > 0)", maxNumEventLoopsPerEndpoint);
-        checkState(eventLoopSchedulerFactory == null,
-                   "maxNumEventLoopsPerEndpoint() and eventLoopSchedulerFactory() are mutually exclusive.");
-    }
-
     /**
      * Sets the maximum number of {@link EventLoop}s which will be used to handle HTTP/2 connections
      * except the ones specified by {@link #maxNumEventLoopsFunction(ToIntFunction)}.
@@ -182,10 +176,28 @@ public final class ClientFactoryBuilder {
         return this;
     }
 
+    private void validateMaxNumEventLoopsPerEndpoint(int maxNumEventLoopsPerEndpoint) {
+        checkArgument(maxNumEventLoopsPerEndpoint > 0,
+                      "maxNumEventLoopsPerEndpoint: %s (expected: > 0)", maxNumEventLoopsPerEndpoint);
+        checkState(eventLoopSchedulerFactory == null,
+                   "maxNumEventLoopsPerEndpoint() and eventLoopSchedulerFactory() are mutually exclusive.");
+    }
+
     /**
      * Sets the {@link ToIntFunction} which takes an {@link Endpoint} and produces the maximum number of
      * {@link EventLoop}s which will be used to handle connections to the specified {@link Endpoint}.
      * The function should return {@code -1} for the {@link Endpoint}s which it doesn't want to handle.
+     * For example: <pre>{@code
+     * ToIntFunction<Endpoint> function = endpoint -> {
+     *     if (endpoint.equals(Endpoint.of("foo.com"))) {
+     *         return 5;
+     *     }
+     *     if (endpoint.host().contains("bar.com")) {
+     *         return Integer.MAX_VALUE; // The value will be cut to the size of event loops.
+     *     }
+     *     return -1; // Should return -1 to use the default value.
+     * }
+     * }</pre>
      */
     public ClientFactoryBuilder maxNumEventLoopsFunction(ToIntFunction<Endpoint> maxNumEventLoopsFunction) {
         checkState(eventLoopSchedulerFactory == null,

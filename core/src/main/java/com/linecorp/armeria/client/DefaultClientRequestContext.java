@@ -93,6 +93,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      * Creates a new instance. Note that {@link #init(Endpoint)} method must be invoked to finish
      * the construction of this context.
      *
+     * @param eventLoop the {@link EventLoop} associated with this context
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
      * @param request the request associated with this context
      */
@@ -108,6 +109,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      * Creates a new instance. Note that {@link #init(Endpoint)} method must be invoked to finish
      * the construction of this context.
      *
+     * @param factory the {@link ClientFactory} which is used to acquire an {@link EventLoop}
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
      * @param request the request associated with this context
      */
