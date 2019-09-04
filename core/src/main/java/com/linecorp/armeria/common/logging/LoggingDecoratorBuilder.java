@@ -25,7 +25,6 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.util.Sampler;
 
 /**
  * Builds a new logging decorator.
@@ -44,6 +43,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
 
     private Function<? super HttpHeaders, ?> responseHeadersSanitizer = DEFAULT_HEADERS_SANITIZER;
     private Function<Object, ?> responseContentSanitizer = DEFAULT_CONTENT_SANITIZER;
+    private float samplingRate = 1.0f;
     private Function<? super Throwable, ?> responseCauseSanitizer = DEFAULT_CAUSE_SANITIZER;
     private Function<? super HttpHeaders, ?> responseTrailersSanitizer = DEFAULT_HEADERS_SANITIZER;
 
@@ -264,7 +264,15 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      */
     public T samplingRate(float samplingRate) {
         checkArgument(0.0 <= samplingRate && samplingRate <= 1.0, "samplingRate must be between 0.0 and 1.0");
-        return sampler(Sampler.random(samplingRate));
+        this.samplingRate = samplingRate;
+        return self();
+    }
+
+    /**
+     * Returns the rate at which to sample requests to log.
+     */
+    protected float samplingRate() {
+        return samplingRate;
     }
 
     @SuppressWarnings("unchecked")
@@ -276,7 +284,8 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     public String toString() {
         return toString(this, requestLogLevel, successfulResponseLogLevel, failedResponseLogLevel,
                         requestHeadersSanitizer, requestContentSanitizer, requestTrailersSanitizer,
-                        responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer);
+                        responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer,
+                        samplingRate);
     }
 
     private static <T extends LoggingDecoratorBuilder<T>> String toString(
@@ -289,11 +298,13 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
             Function<? super HttpHeaders, ?> requestTrailersSanitizer,
             Function<? super HttpHeaders, ?> responseHeadersSanitizer,
             Function<Object, ?> responseContentSanitizer,
-            Function<? super HttpHeaders, ?> responseTrailersSanitizer) {
+            Function<? super HttpHeaders, ?> responseTrailersSanitizer,
+            float samplingRate) {
         final ToStringHelper helper = MoreObjects.toStringHelper(self)
                                                  .add("requestLogLevel", requestLogLevel)
                                                  .add("successfulResponseLogLevel", successfulResponseLogLevel)
-                                                 .add("failedResponseLogLevel", failureResponseLogLevel);
+                                                 .add("failedResponseLogLevel", failureResponseLogLevel)
+                                                 .add("samplingRate", samplingRate);
         if (requestHeadersSanitizer != DEFAULT_HEADERS_SANITIZER) {
             helper.add("requestHeadersSanitizer", requestHeadersSanitizer);
         }
