@@ -27,7 +27,7 @@ import com.linecorp.armeria.client.Endpoint;
 /**
  * A static immutable {@link EndpointGroup}.
  *
- * @deprecated use {@link EndpointGroup}
+ * @deprecated Use {@link EndpointGroup#of(EndpointGroup...)}.
  */
 @Deprecated
 public final class StaticEndpointGroup implements EndpointGroup {
