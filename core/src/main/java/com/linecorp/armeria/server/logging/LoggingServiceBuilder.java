@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.logging;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.Request;
@@ -29,9 +31,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * Builds a new {@link LoggingService}.
  */
 public class LoggingServiceBuilder extends LoggingDecoratorBuilder<LoggingServiceBuilder> {
-    private static final Sampler<? super ServiceRequestContext> DEFAULT_SAMPLER = Sampler.always();
-
-    private Sampler<? super ServiceRequestContext> sampler = DEFAULT_SAMPLER;
+    private Sampler<? super ServiceRequestContext> sampler = Sampler.always();
 
     /**
      * Returns a newly-created {@link LoggingService} decorating {@code delegate} based on the properties of
@@ -64,7 +64,7 @@ public class LoggingServiceBuilder extends LoggingDecoratorBuilder<LoggingServic
      * Sets the {@link Sampler} that determines which request needs logging.
      */
     public LoggingServiceBuilder sampler(Sampler<? super ServiceRequestContext> sampler) {
-        this.sampler = sampler;
+        this.sampler = requireNonNull(sampler, "sampler");
         return this;
     }
 

@@ -43,8 +43,8 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
 
     private Function<? super HttpHeaders, ?> responseHeadersSanitizer = DEFAULT_HEADERS_SANITIZER;
     private Function<Object, ?> responseContentSanitizer = DEFAULT_CONTENT_SANITIZER;
-    private float samplingRate = 1.0f;
     private Function<? super Throwable, ?> responseCauseSanitizer = DEFAULT_CAUSE_SANITIZER;
+    private float samplingRate = 1.0f;
     private Function<? super HttpHeaders, ?> responseTrailersSanitizer = DEFAULT_HEADERS_SANITIZER;
 
     /**

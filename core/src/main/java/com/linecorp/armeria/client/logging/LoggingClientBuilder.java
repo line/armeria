@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.logging;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.Client;
@@ -29,9 +31,7 @@ import com.linecorp.armeria.common.util.Sampler;
  * Builds a new {@link LoggingClient}.
  */
 public class LoggingClientBuilder extends LoggingDecoratorBuilder<LoggingClientBuilder> {
-    private static final Sampler<? super ClientRequestContext> DEFAULT_SAMPLER = Sampler.always();
-
-    private Sampler<? super ClientRequestContext> sampler = DEFAULT_SAMPLER;
+    private Sampler<? super ClientRequestContext> sampler = Sampler.always();
 
     /**
      * Returns a newly-created {@link LoggingClient} decorating {@code delegate} based on the properties of
@@ -64,7 +64,7 @@ public class LoggingClientBuilder extends LoggingDecoratorBuilder<LoggingClientB
      * Sets the {@link Sampler} that determines which request needs logging.
      */
     public LoggingClientBuilder sampler(Sampler<? super ClientRequestContext> sampler) {
-        this.sampler = sampler;
+        this.sampler = requireNonNull(sampler, "sampler");
         return this;
     }
 
