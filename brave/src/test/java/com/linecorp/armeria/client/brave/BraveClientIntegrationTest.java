@@ -178,11 +178,8 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
                                    super.response(adapter, res, error, customizer);
                                    // TODO: is there a way to get the URL visible earlier? Waiting until response is
                                    // too late for typical parsing or sampling
-                                   if (res instanceof HttpClientResponse) {
-                                       Object unwrapped = ((HttpClientResponse) res).unwrap();
-                                       if (unwrapped instanceof RequestLog) {
-                                           customizer.tag("http.url", SpanTags.generateUrl((RequestLog) unwrapped));
-                                       }
+                                   if (res instanceof RequestLog) {
+                                       customizer.tag("http.url", SpanTags.generateUrl((RequestLog) res));
                                    }
                                    customizer.tag("response_customizer.is_span",
                                                   String.valueOf(customizer instanceof brave.Span));

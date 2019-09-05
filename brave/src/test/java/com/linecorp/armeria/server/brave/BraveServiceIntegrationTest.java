@@ -42,7 +42,6 @@ import brave.Tracing;
 import brave.Tracing.Builder;
 import brave.http.HttpAdapter;
 import brave.http.HttpServerParser;
-import brave.http.HttpServerResponse;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.StrictScopeDecorator;
 import brave.sampler.Sampler;
@@ -110,11 +109,8 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
                 super.response(adapter, res, error, customizer);
                 // TODO: is there a way to get the URL visible earlier? Waiting until response is
                 // too late for typical parsing or sampling
-                if (res instanceof HttpServerResponse) {
-                    Object unwrapped = ((HttpServerResponse) res).unwrap();
-                    if (unwrapped instanceof RequestLog) {
-                        customizer.tag("http.url", SpanTags.generateUrl((RequestLog) unwrapped));
-                    }
+                if (res instanceof RequestLog) {
+                    customizer.tag("http.url", SpanTags.generateUrl((RequestLog) res));
                 }
                 customizer.tag("response_customizer.is_span", String.valueOf(customizer instanceof brave.Span));
             }
