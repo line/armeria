@@ -78,6 +78,13 @@ class EndpointGroupTest {
         assertThat(composite).isSameAs(GITHUB);
     }
 
+    @Test
+    void oneGroup() {
+        EndpointGroup group = EndpointGroup.of(FOO, BAR);
+        EndpointGroup composite = EndpointGroup.of(group);
+        assertThat(composite.endpoints()).containsExactlyInAnyOrder(FOO, BAR);
+    }
+
     @Nested
     class InitialEndpoints {
         @Test

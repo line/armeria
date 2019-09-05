@@ -95,6 +95,10 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, SafeCloseable
             groups.add(new StaticEndpointGroup(staticEndpoints));
         }
 
+        if (groups.size() == 1) {
+            return groups.get(0);
+        }
+
         return new CompositeEndpointGroup(groups);
     }
 
