@@ -79,8 +79,8 @@ class EndpointGroupTest {
 
             group1.setEndpoints(ImmutableList.of(FOO, BAR));
             group2.setEndpoints(ImmutableList.of(CAT, DOG));
-            assertThat(initialEndpoints).isCompletedWithValue(ImmutableList.of(FOO, BAR));
-            assertThat(composite.awaitInitialEndpoints()).containsExactly(FOO, BAR);
+            assertThat(initialEndpoints.join()).containsExactlyInAnyOrder(FOO, BAR);
+            assertThat(composite.awaitInitialEndpoints()).containsExactlyInAnyOrder(FOO, BAR);
         }
 
         @Test
@@ -91,10 +91,10 @@ class EndpointGroupTest {
             CompletableFuture<List<Endpoint>> initialEndpoints = composite.initialEndpointsFuture();
             assertThat(initialEndpoints).isNotCompleted();
 
-            group1.setEndpoints(ImmutableList.of(FOO, BAR));
             group2.setEndpoints(ImmutableList.of(CAT, DOG));
-            assertThat(initialEndpoints).isCompletedWithValue(ImmutableList.of(CAT, DOG));
-            assertThat(composite.awaitInitialEndpoints()).containsExactly(CAT, DOG);
+            group1.setEndpoints(ImmutableList.of(FOO, BAR));
+            assertThat(initialEndpoints.join()).containsExactlyInAnyOrder(CAT, DOG);
+            assertThat(composite.awaitInitialEndpoints()).containsExactlyInAnyOrder(CAT, DOG);
         }
     }
 }
