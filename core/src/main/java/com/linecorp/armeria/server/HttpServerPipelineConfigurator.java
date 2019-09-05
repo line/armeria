@@ -27,6 +27,7 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLException;
@@ -68,6 +69,7 @@ import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AsciiString;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.NetUtil;
+import io.netty.util.concurrent.ScheduledFuture;
 
 /**
  * Configures Netty {@link ChannelPipeline} to serve HTTP/1 and 2 requests.
@@ -140,7 +142,18 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         }
 
         // More than one protocol were specified. Detect the protocol.
-        p.addLast(new ProtocolDetectionHandler(protocols, proxiedAddresses));
+
+        final ScheduledFuture<?> protocolDetectionTimeoutFuture;
+        if (config.requestTimeoutMillis() > 0) {
+            // Close the connection if the protocol detection is not finished in time.
+            final Channel ch = p.channel();
+            protocolDetectionTimeoutFuture = ch.eventLoop().schedule(
+                    (Runnable) ch::close, config.requestTimeoutMillis(), TimeUnit.MILLISECONDS);
+        } else {
+            protocolDetectionTimeoutFuture = null;
+        }
+
+        p.addLast(new ProtocolDetectionHandler(protocols, proxiedAddresses, protocolDetectionTimeoutFuture));
     }
 
     private void configureHttp(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
@@ -200,8 +213,11 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         private final EnumSet<SessionProtocol> proxiedCandidates;
         @Nullable
         private final ProxiedAddresses proxiedAddresses;
+        @Nullable
+        private final ScheduledFuture<?> timeoutFuture;
 
-        ProtocolDetectionHandler(Set<SessionProtocol> protocols, @Nullable ProxiedAddresses proxiedAddresses) {
+        ProtocolDetectionHandler(Set<SessionProtocol> protocols, @Nullable ProxiedAddresses proxiedAddresses,
+                                 @Nullable ScheduledFuture<?> timeoutFuture) {
             candidates = EnumSet.copyOf(protocols);
             if (protocols.contains(PROXY)) {
                 proxiedCandidates = EnumSet.copyOf(candidates);
@@ -210,6 +226,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                 proxiedCandidates = null;
             }
             this.proxiedAddresses = proxiedAddresses;
+            this.timeoutFuture = timeoutFuture;
         }
 
         @Override
@@ -270,6 +287,10 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                 }
             }
 
+            if (timeoutFuture != null) {
+                timeoutFuture.cancel(false);
+            }
+
             final ChannelPipeline p = ctx.pipeline();
             switch (detected) {
                 case HTTP:
@@ -299,6 +320,14 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                 }
             }
             return true;
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            if (!Exceptions.isExpected(cause)) {
+                logger.warn("{} Unexpected exception while detecting the session protocol.", ctx, cause);
+            }
+            ctx.close();
         }
     }
 
