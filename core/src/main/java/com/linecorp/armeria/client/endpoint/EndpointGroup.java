@@ -67,8 +67,12 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, SafeCloseable
         final List<EndpointGroup> groups = new ArrayList<>();
         final List<Endpoint> staticEndpoints = new ArrayList<>();
         for (EndpointGroup endpointGroup : endpointGroups) {
+            // We merge raw Endpoint and StaticEndpointGroup into one StaticEndpointGroup for a bit of
+            // efficiency.
             if (endpointGroup instanceof Endpoint) {
                 staticEndpoints.add((Endpoint) endpointGroup);
+            } else if (endpointGroup instanceof StaticEndpointGroup) {
+                staticEndpoints.addAll(endpointGroup.endpoints());
             } else {
                 groups.add(endpointGroup);
             }
@@ -79,6 +83,10 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, SafeCloseable
         }
 
         if (groups.isEmpty()) {
+            if (staticEndpoints.size() == 1) {
+                // Only one static endpoint, can return it directly.
+                return staticEndpoints.get(0);
+            }
             // Only static endpoints, return an optimized endpoint group.
             return new StaticEndpointGroup(staticEndpoints);
         }

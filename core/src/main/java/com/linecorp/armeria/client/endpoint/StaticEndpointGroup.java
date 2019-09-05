@@ -41,7 +41,7 @@ public final class StaticEndpointGroup implements EndpointGroup {
     /**
      * Creates a new instance.
      *
-     * @deprecated use {@link EndpointGroup#of(Endpoint...)}
+     * @deprecated Use {@link EndpointGroup#of(EndpointGroup...)}.
      */
     @Deprecated
     public StaticEndpointGroup(Endpoint... endpoints) {
@@ -51,7 +51,7 @@ public final class StaticEndpointGroup implements EndpointGroup {
     /**
      * Creates a new instance.
      *
-     * @deprecated use {@link EndpointGroup#of(Iterable)}
+     * @deprecated Use {@link EndpointGroup#of(Iterable)}.
      */
     @Deprecated
     public StaticEndpointGroup(Iterable<Endpoint> endpoints) {

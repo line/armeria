@@ -34,6 +34,9 @@ class EndpointGroupTest {
     private static final Endpoint BAR = Endpoint.of("bar");
     private static final Endpoint CAT = Endpoint.of("cat");
     private static final Endpoint DOG = Endpoint.of("dog");
+    private static final Endpoint HELLO = Endpoint.of("hello");
+    private static final Endpoint WORLD = Endpoint.of("world");
+    private static final Endpoint GITHUB = Endpoint.of("github");
 
     @Test
     void orElse() {
@@ -53,18 +56,26 @@ class EndpointGroupTest {
         group1.setEndpoints(ImmutableList.of(FOO, BAR));
         DynamicEndpointGroup group2 = new DynamicEndpointGroup();
         group2.setEndpoints(ImmutableList.of(CAT, DOG));
+        StaticEndpointGroup group3 = new StaticEndpointGroup(HELLO, WORLD);
 
-        EndpointGroup composite = EndpointGroup.of(group1, group2);
-        assertThat(composite.endpoints()).containsExactlyInAnyOrder(FOO, BAR, CAT, DOG);
+        EndpointGroup composite = EndpointGroup.of(group1, group2, group3, GITHUB);
+        assertThat(composite.endpoints()).containsExactlyInAnyOrder(FOO, BAR, CAT, DOG, HELLO, WORLD, GITHUB);
         // Same instance of endpoints returned unless there are updates.
         assertThat(composite.endpoints()).isSameAs(composite.endpoints());
 
         group1.setEndpoints(ImmutableList.of(FOO));
-        assertThat(composite.endpoints()).containsExactlyInAnyOrder(FOO, CAT, DOG);
+        assertThat(composite.endpoints()).containsExactlyInAnyOrder(FOO, CAT, DOG, HELLO, WORLD, GITHUB);
 
         group1.setEndpoints(ImmutableList.of(FOO, BAR));
         group2.setEndpoints(ImmutableList.of());
-        assertThat(composite.endpoints()).containsExactlyInAnyOrder(FOO, BAR);
+        assertThat(composite.endpoints()).containsExactlyInAnyOrder(FOO, BAR, HELLO, WORLD, GITHUB);
+    }
+
+    @Test
+    void oneEndpoint() {
+        EndpointGroup composite = EndpointGroup.of(GITHUB);
+        assertThat(composite.endpoints()).containsExactly(GITHUB);
+        assertThat(composite).isSameAs(GITHUB);
     }
 
     @Nested
