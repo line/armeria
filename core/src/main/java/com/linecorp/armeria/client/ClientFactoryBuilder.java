@@ -80,8 +80,6 @@ public final class ClientFactoryBuilder {
 
     private static final Consumer<SslContextBuilder> DEFAULT_SSL_CONTEXT_CUSTOMIZER = b -> { /* no-op */ };
 
-    private static final ToIntFunction<Endpoint> DEFAULT_MAX_NUM_EVENT_LOOPS_FUNCTION = unused -> -1;
-
     // Do not accept 1) the options that may break Armeria and 2) the deprecated options.
     @SuppressWarnings("deprecation")
     private static final Set<ChannelOption<?>> PROHIBITED_SOCKET_OPTIONS = ImmutableSet.of(
@@ -113,7 +111,7 @@ public final class ClientFactoryBuilder {
     private Function<? super EventLoopGroup, ? extends EventLoopScheduler> eventLoopSchedulerFactory;
     private int maxNumEventLoopsPerEndpoint;
     private int maxNumEventLoopsPerHttp1Endpoint;
-    private ToIntFunction<Endpoint> maxNumEventLoopsFunction = DEFAULT_MAX_NUM_EVENT_LOOPS_FUNCTION;
+    private final List<ToIntFunction<Endpoint>> maxNumEventLoopsFunctions = new ArrayList<>();
     private long idleTimeoutMillis = Flags.defaultClientIdleTimeoutMillis();
     private boolean useHttp2Preface = Flags.defaultUseHttp2Preface();
     private boolean useHttp1Pipelining = Flags.defaultUseHttp1Pipelining();
@@ -148,7 +146,7 @@ public final class ClientFactoryBuilder {
     public ClientFactoryBuilder eventLoopSchedulerFactory(
             Function<? super EventLoopGroup, ? extends EventLoopScheduler> eventLoopSchedulerFactory) {
         checkState(maxNumEventLoopsPerHttp1Endpoint == 0 && maxNumEventLoopsPerEndpoint == 0 &&
-                   maxNumEventLoopsFunction == DEFAULT_MAX_NUM_EVENT_LOOPS_FUNCTION,
+                   maxNumEventLoopsFunctions.isEmpty(),
                    "Cannot set eventLoopSchedulerFactory when maxEventLoop per endpoint is specified.");
         this.eventLoopSchedulerFactory = requireNonNull(eventLoopSchedulerFactory, "eventLoopSchedulerFactory");
         return this;
@@ -186,23 +184,23 @@ public final class ClientFactoryBuilder {
     /**
      * Sets the {@link ToIntFunction} which takes an {@link Endpoint} and produces the maximum number of
      * {@link EventLoop}s which will be used to handle connections to the specified {@link Endpoint}.
-     * The function should return {@code -1} for the {@link Endpoint}s which it doesn't want to handle.
-     * For example: <pre>{@code
+     * The function should return {@code 0} or a negative value for the {@link Endpoint}s which it
+     * doesn't want to handle. For example: <pre>{@code
      * ToIntFunction<Endpoint> function = endpoint -> {
      *     if (endpoint.equals(Endpoint.of("foo.com"))) {
      *         return 5;
      *     }
      *     if (endpoint.host().contains("bar.com")) {
-     *         return Integer.MAX_VALUE; // The value will be cut to the size of event loops.
+     *         return Integer.MAX_VALUE; // The value will be clamped at the number of event loops.
      *     }
-     *     return -1; // Should return -1 to use the default value.
+     *     return -1; // Should return 0 or a negative value to use the default value.
      * }
      * }</pre>
      */
     public ClientFactoryBuilder maxNumEventLoopsFunction(ToIntFunction<Endpoint> maxNumEventLoopsFunction) {
         checkState(eventLoopSchedulerFactory == null,
                    "maxNumEventLoopsPerEndpoint() and eventLoopSchedulerFactory() are mutually exclusive.");
-        this.maxNumEventLoopsFunction = requireNonNull(maxNumEventLoopsFunction, "maxNumEventLoopsFunction");
+        maxNumEventLoopsFunctions.add(requireNonNull(maxNumEventLoopsFunction, "maxNumEventLoopsFunction"));
         return this;
     }
 
@@ -452,7 +450,7 @@ public final class ClientFactoryBuilder {
         } else {
             eventLoopScheduler = new DefaultEventLoopScheduler(workerGroup, maxNumEventLoopsPerEndpoint,
                                                                maxNumEventLoopsPerHttp1Endpoint,
-                                                               maxNumEventLoopsFunction);
+                                                               maxNumEventLoopsFunctions);
         }
 
         final Function<? super EventLoopGroup,
@@ -481,7 +479,6 @@ public final class ClientFactoryBuilder {
     public String toString() {
         final ToStringHelper helper = MoreObjects.toStringHelper(this).omitNullValues();
         helper.add("workerGroup", workerGroup + " (shutdownOnClose=" + shutdownWorkerGroupOnClose + ')')
-              .add("eventLoopSchedulerFactory", eventLoopSchedulerFactory)
               .add("channelOptions", channelOptions)
               .add("http2InitialConnectionWindowSize", http2InitialConnectionWindowSize)
               .add("http2InitialStreamWindowSize", http2InitialStreamWindowSize)
@@ -494,12 +491,19 @@ public final class ClientFactoryBuilder {
               .add("useHttp2Preface", useHttp2Preface)
               .add("useHttp1Pipelining", useHttp1Pipelining);
 
-        if (maxNumEventLoopsPerHttp1Endpoint > 0) {
-            helper.add("maxNumEventLoopsPerHttp1Endpoint", maxNumEventLoopsPerHttp1Endpoint);
-        } else if (maxNumEventLoopsPerEndpoint > 0) {
-            helper.add("maxNumEventLoopsPerEndpoint", maxNumEventLoopsPerEndpoint);
+        if (eventLoopSchedulerFactory != null) {
+            helper.add("eventLoopSchedulerFactory", eventLoopSchedulerFactory);
+        } else {
+            if (maxNumEventLoopsPerHttp1Endpoint > 0) {
+                helper.add("maxNumEventLoopsPerHttp1Endpoint", maxNumEventLoopsPerHttp1Endpoint);
+            }
+            if (maxNumEventLoopsPerEndpoint > 0) {
+                helper.add("maxNumEventLoopsPerEndpoint", maxNumEventLoopsPerEndpoint);
+            }
+            if (!maxNumEventLoopsFunctions.isEmpty()) {
+                helper.add("maxNumEventLoopsFunctions", maxNumEventLoopsFunctions);
+            }
         }
-        helper.add("maxNumEventLoopsFunction", maxNumEventLoopsFunction);
 
         if (connectionPoolListener != DEFAULT_CONNECTION_POOL_LISTENER) {
             helper.add("connectionPoolListener", connectionPoolListener);

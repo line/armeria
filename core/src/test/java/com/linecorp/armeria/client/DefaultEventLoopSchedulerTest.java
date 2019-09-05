@@ -28,6 +28,8 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 
@@ -232,7 +234,7 @@ class DefaultEventLoopSchedulerTest {
     void stressTest() {
         final EventLoopGroup group = new DefaultEventLoopGroup(1024);
         final DefaultEventLoopScheduler s = new DefaultEventLoopScheduler(group, GROUP_SIZE, GROUP_SIZE,
-                                                                          unused -> -1);
+                                                                          ImmutableList.of());
         final List<AbstractEventLoopEntry> acquiredEntries = new ArrayList<>();
         stressTest(s, acquiredEntries, 0.8);
         stressTest(s, acquiredEntries, 0.5);
@@ -278,7 +280,7 @@ class DefaultEventLoopSchedulerTest {
     }
 
     private static DefaultEventLoopScheduler defaultEventLoopScheduler() {
-        return new DefaultEventLoopScheduler(group, GROUP_SIZE, GROUP_SIZE, unused -> -1);
+        return new DefaultEventLoopScheduler(group, GROUP_SIZE, GROUP_SIZE, ImmutableList.of());
     }
 
     static AbstractEventLoopEntry acquireEntry(DefaultEventLoopScheduler s, Endpoint endpointA) {

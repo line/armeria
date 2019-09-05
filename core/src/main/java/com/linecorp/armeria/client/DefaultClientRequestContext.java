@@ -269,9 +269,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     @Override
     public EventLoop eventLoop() {
-        if (eventLoop == null) {
-            throw new IllegalStateException("Should call init(endpoint) before invoking this method.");
-        }
+        checkState(eventLoop != null, "Should call init(endpoint) before invoking this method.");
         return eventLoop;
     }
 

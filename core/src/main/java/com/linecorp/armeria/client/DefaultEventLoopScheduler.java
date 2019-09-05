@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.function.ToIntFunction;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.SessionProtocol;
@@ -57,9 +58,9 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
 
     private final Map<StateKey, AbstractEventLoopState> states = new ConcurrentHashMap<>();
 
-    private final ToIntFunction<Endpoint> maxNumEventLoopsFunction;
+    private final List<ToIntFunction<Endpoint>> maxNumEventLoopsFunctions;
 
-    private int cleaupCounter;
+    private int cleanupCounter;
 
     @SuppressWarnings("FieldMayBeFinal")
     private volatile int acquisitionStartIndex;
@@ -69,7 +70,7 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
 
     DefaultEventLoopScheduler(EventLoopGroup eventLoopGroup, int maxNumEventLoopsPerEndpoint,
                               int maxNumEventLoopsPerHttp1Endpoint,
-                              ToIntFunction<Endpoint> maxNumEventLoopsFunction) {
+                              List<ToIntFunction<Endpoint>> maxNumEventLoopsFunctions) {
         eventLoops = Streams.stream(eventLoopGroup)
                             .map(EventLoop.class::cast)
                             .collect(toImmutableList());
@@ -86,7 +87,7 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
             this.maxNumEventLoopsPerHttp1Endpoint =
                     Math.min(maxNumEventLoopsPerHttp1Endpoint, eventLoopSize);
         }
-        this.maxNumEventLoopsFunction = maxNumEventLoopsFunction;
+        this.maxNumEventLoopsFunctions = ImmutableList.copyOf(maxNumEventLoopsFunctions);
     }
 
     /**
@@ -163,10 +164,10 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
         }
 
         // Try with the endpoint which has a port first.
-        int maxNumEventLoopsCandidate = maxNumEventLoopsFunction.applyAsInt(endpoint.withPort(port));
+        int maxNumEventLoopsCandidate = maxNumEventLoopsCandidate(endpoint.withPort(port));
         if (maxNumEventLoopsCandidate <= 0 && !endpoint.hasPort()) {
-            // // Try without the port second.
-            maxNumEventLoopsCandidate = maxNumEventLoopsFunction.applyAsInt(endpoint);
+            // Try without the port second.
+            maxNumEventLoopsCandidate = maxNumEventLoopsCandidate(endpoint);
         }
 
         final int maxNumEventLoops =
@@ -174,6 +175,16 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
                                               : maxNumEventLoops(sessionProtocol);
         return states.computeIfAbsent(firstKey,
                                       unused -> AbstractEventLoopState.of(eventLoops, maxNumEventLoops, this));
+    }
+
+    private int maxNumEventLoopsCandidate(Endpoint endpoint) {
+        for (ToIntFunction<Endpoint> function : maxNumEventLoopsFunctions) {
+            final int maxNumEventLoopsCandidate = function.applyAsInt(endpoint);
+            if (maxNumEventLoopsCandidate > 0) {
+                return maxNumEventLoopsCandidate;
+            }
+        }
+        return 0;
     }
 
     private int maxNumEventLoops(SessionProtocol sessionProtocol) {
@@ -192,7 +203,7 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
      * only when 1) the last clean-up was more than 1 minute ago and 2) the number of acquisitions % 256 is 0.
      */
     private void cleanup() {
-        if ((++cleaupCounter & 0xFF) != 0) { // (++counter % 256) != 0
+        if ((++cleanupCounter & 0xFF) != 0) { // (++counter % 256) != 0
             return;
         }
 
