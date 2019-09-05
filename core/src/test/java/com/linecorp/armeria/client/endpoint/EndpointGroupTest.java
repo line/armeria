@@ -52,13 +52,13 @@ class EndpointGroupTest {
 
     @Test
     void normal() {
-        DynamicEndpointGroup group1 = new DynamicEndpointGroup();
+        final DynamicEndpointGroup group1 = new DynamicEndpointGroup();
         group1.setEndpoints(ImmutableList.of(FOO, BAR));
-        DynamicEndpointGroup group2 = new DynamicEndpointGroup();
+        final DynamicEndpointGroup group2 = new DynamicEndpointGroup();
         group2.setEndpoints(ImmutableList.of(CAT, DOG));
-        StaticEndpointGroup group3 = new StaticEndpointGroup(HELLO, WORLD);
+        final StaticEndpointGroup group3 = new StaticEndpointGroup(HELLO, WORLD);
 
-        EndpointGroup composite = EndpointGroup.of(group1, group2, group3, GITHUB);
+        final EndpointGroup composite = EndpointGroup.of(group1, group2, group3, GITHUB);
         assertThat(composite.endpoints()).containsExactlyInAnyOrder(FOO, BAR, CAT, DOG, HELLO, WORLD, GITHUB);
         // Same instance of endpoints returned unless there are updates.
         assertThat(composite.endpoints()).isSameAs(composite.endpoints());
@@ -73,15 +73,15 @@ class EndpointGroupTest {
 
     @Test
     void oneEndpoint() {
-        EndpointGroup composite = EndpointGroup.of(GITHUB);
+        final EndpointGroup composite = EndpointGroup.of(GITHUB);
         assertThat(composite.endpoints()).containsExactly(GITHUB);
         assertThat(composite).isSameAs(GITHUB);
     }
 
     @Test
     void oneGroup() {
-        EndpointGroup group = EndpointGroup.of(FOO, BAR);
-        EndpointGroup composite = EndpointGroup.of(group);
+        final EndpointGroup group = EndpointGroup.of(FOO, BAR);
+        final EndpointGroup composite = EndpointGroup.of(group);
         assertThat(composite.endpoints()).containsExactlyInAnyOrder(FOO, BAR);
     }
 
@@ -89,10 +89,10 @@ class EndpointGroupTest {
     class InitialEndpoints {
         @Test
         void group1First() throws Exception {
-            DynamicEndpointGroup group1 = new DynamicEndpointGroup();
-            DynamicEndpointGroup group2 = new DynamicEndpointGroup();
-            EndpointGroup composite = EndpointGroup.of(group1, group2);
-            CompletableFuture<List<Endpoint>> initialEndpoints = composite.initialEndpointsFuture();
+            final DynamicEndpointGroup group1 = new DynamicEndpointGroup();
+            final DynamicEndpointGroup group2 = new DynamicEndpointGroup();
+            final EndpointGroup composite = EndpointGroup.of(group1, group2);
+            final CompletableFuture<List<Endpoint>> initialEndpoints = composite.initialEndpointsFuture();
             assertThat(initialEndpoints).isNotCompleted();
 
             group1.setEndpoints(ImmutableList.of(FOO, BAR));
@@ -103,10 +103,10 @@ class EndpointGroupTest {
 
         @Test
         void group2First() throws Exception {
-            DynamicEndpointGroup group1 = new DynamicEndpointGroup();
-            DynamicEndpointGroup group2 = new DynamicEndpointGroup();
-            EndpointGroup composite = EndpointGroup.of(group1, group2);
-            CompletableFuture<List<Endpoint>> initialEndpoints = composite.initialEndpointsFuture();
+            final DynamicEndpointGroup group1 = new DynamicEndpointGroup();
+            final DynamicEndpointGroup group2 = new DynamicEndpointGroup();
+            final EndpointGroup composite = EndpointGroup.of(group1, group2);
+            final CompletableFuture<List<Endpoint>> initialEndpoints = composite.initialEndpointsFuture();
             assertThat(initialEndpoints).isNotCompleted();
 
             group2.setEndpoints(ImmutableList.of(CAT, DOG));
