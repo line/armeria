@@ -76,7 +76,7 @@ public interface Sampler<T> {
     }
 
     /**
-     * Returns a sampler that will always return {@code false}
+     * Returns a sampler that will always return {@code false}.
      */
     static <T> Sampler<T> never() {
         @SuppressWarnings("unchecked")
