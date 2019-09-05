@@ -43,8 +43,6 @@ final class CompositeEndpointGroup extends AbstractListenable<List<Endpoint>> im
 
     private volatile List<Endpoint> merged = ImmutableList.of();
 
-
-
     /**
      * Constructs a new {@link CompositeEndpointGroup} that merges all the given {@code endpointGroups}.
      */
@@ -79,7 +77,7 @@ final class CompositeEndpointGroup extends AbstractListenable<List<Endpoint>> im
             return merged;
         }
 
-        ImmutableList.Builder<Endpoint> newEndpoints = ImmutableList.builder();
+        final ImmutableList.Builder<Endpoint> newEndpoints = ImmutableList.builder();
         for (EndpointGroup endpointGroup : endpointGroups) {
             newEndpoints.addAll(endpointGroup.endpoints());
         }
@@ -94,7 +92,7 @@ final class CompositeEndpointGroup extends AbstractListenable<List<Endpoint>> im
 
     @Override
     public void close() {
-        Closer closer = Closer.create();
+        final Closer closer = Closer.create();
         for (EndpointGroup endpointGroup : endpointGroups) {
             closer.register(endpointGroup::close);
         }

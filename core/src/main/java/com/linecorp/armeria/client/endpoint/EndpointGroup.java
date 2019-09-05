@@ -48,8 +48,8 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, SafeCloseable
 
     /**
      * Returns an {@link EndpointGroup} that combines all the {@link Endpoint}s of {@code endpointGroups}.
-     * {@code endpointGroups} can be instances of {@link Endpoint} when creating a group out of single
-     * endpoints.
+     * {@code endpointGroups} can be instances of {@link Endpoint} as well, any {@link EndpointGroup}s and
+     * {@link Endpoint} will all be combined into a single {@link EndpointGroup} that contains the total set.
      */
     static EndpointGroup of(EndpointGroup... endpointGroups) {
         requireNonNull(endpointGroups, "endpointGroups");
@@ -58,14 +58,14 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, SafeCloseable
 
     /**
      * Returns an {@link EndpointGroup} that combines all the {@link Endpoint}s of {@code endpointGroups}.
-     * {@code endpointGroups} can be instances of {@link Endpoint} when creating a group out of single
-     * endpoints.
+     * {@code endpointGroups} can be instances of {@link Endpoint} as well, any {@link EndpointGroup}s and
+     * {@link Endpoint} will all be combined into a single {@link EndpointGroup} that contains the total set.
      */
     static EndpointGroup of(Iterable<EndpointGroup> endpointGroups) {
         requireNonNull(endpointGroups, "endpointGroups");
 
-        List<EndpointGroup> groups = new ArrayList<>();
-        List<Endpoint> staticEndpoints = new ArrayList<>();
+        final List<EndpointGroup> groups = new ArrayList<>();
+        final List<Endpoint> staticEndpoints = new ArrayList<>();
         for (EndpointGroup endpointGroup : endpointGroups) {
             if (endpointGroup instanceof Endpoint) {
                 staticEndpoints.add((Endpoint) endpointGroup);
