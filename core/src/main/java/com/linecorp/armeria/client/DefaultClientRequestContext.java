@@ -178,7 +178,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
                 final ReleasableHolder<EventLoop> releasableEventLoop =
                         factory.acquireEventLoop(this.endpoint, sessionProtocol());
                 eventLoop = releasableEventLoop.get();
-                log.addListener(log -> releasableEventLoop.release(), RequestLogAvailability.COMPLETE);
+                log.addListener(unused -> releasableEventLoop.release(), RequestLogAvailability.COMPLETE);
             }
 
             return true;
