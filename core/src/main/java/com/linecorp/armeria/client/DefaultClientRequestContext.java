@@ -33,6 +33,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroupException;
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.client.endpoint.EndpointSelector;
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
@@ -44,6 +45,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.util.ReleasableHolder;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
@@ -63,7 +65,10 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
             additionalRequestHeadersUpdater = AtomicReferenceFieldUpdater.newUpdater(
                     DefaultClientRequestContext.class, HttpHeaders.class, "additionalRequestHeaders");
 
-    private final EventLoop eventLoop;
+    @Nullable
+    private ClientFactory factory;
+    @Nullable
+    private EventLoop eventLoop;
     private final ClientOptions options;
     @Nullable
     private EndpointSelector endpointSelector;
@@ -88,6 +93,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      * Creates a new instance. Note that {@link #init(Endpoint)} method must be invoked to finish
      * the construction of this context.
      *
+     * @param eventLoop the {@link EventLoop} associated with this context
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
      * @param request the request associated with this context
      */
@@ -95,10 +101,34 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
             EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
             ClientOptions options, Request request) {
+        this(null, requireNonNull(eventLoop, "eventLoop"), meterRegistry, sessionProtocol,
+             method, path, query, fragment, options, request);
+    }
 
+    /**
+     * Creates a new instance. Note that {@link #init(Endpoint)} method must be invoked to finish
+     * the construction of this context.
+     *
+     * @param factory the {@link ClientFactory} which is used to acquire an {@link EventLoop}
+     * @param sessionProtocol the {@link SessionProtocol} of the invocation
+     * @param request the request associated with this context
+     */
+    public DefaultClientRequestContext(
+            ClientFactory factory, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
+            HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
+            ClientOptions options, Request request) {
+        this(requireNonNull(factory, "factory"), null, meterRegistry, sessionProtocol,
+             method, path, query, fragment, options, request);
+    }
+
+    private DefaultClientRequestContext(
+            @Nullable ClientFactory factory, @Nullable EventLoop eventLoop, MeterRegistry meterRegistry,
+            SessionProtocol sessionProtocol, HttpMethod method, String path, @Nullable String query,
+            @Nullable String fragment, ClientOptions options, Request request) {
         super(meterRegistry, sessionProtocol, method, path, query, request);
 
-        this.eventLoop = requireNonNull(eventLoop, "eventLoop");
+        this.factory = factory;
+        this.eventLoop = eventLoop;
         this.options = requireNonNull(options, "options");
         this.fragment = fragment;
 
@@ -143,8 +173,20 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
                 runThreadLocalContextCustomizer();
             }
 
+            if (eventLoop == null) {
+                assert factory != null;
+                final ReleasableHolder<EventLoop> releasableEventLoop =
+                        factory.acquireEventLoop(this.endpoint, sessionProtocol());
+                eventLoop = releasableEventLoop.get();
+                log.addListener(unused -> releasableEventLoop.release(), RequestLogAvailability.COMPLETE);
+            }
+
             return true;
         } catch (Exception e) {
+            if (eventLoop == null) {
+                // Always set the eventLoop because it can be used in a decorator.
+                eventLoop = CommonPools.workerGroup().next();
+            }
             failEarly(e);
         }
 
@@ -227,6 +269,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     @Override
     public EventLoop eventLoop() {
+        checkState(eventLoop != null, "Should call init(endpoint) before invoking this method.");
         return eventLoop;
     }
 

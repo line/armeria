@@ -27,9 +27,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
-import com.linecorp.armeria.common.util.ReleasableHolder;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
@@ -140,11 +138,8 @@ public abstract class UserClient<I extends Request, O extends Response>
                               I req, BiFunction<ClientRequestContext, Throwable, O> fallback) {
         final DefaultClientRequestContext ctx;
         if (eventLoop == null) {
-            final ReleasableHolder<EventLoop> releasableEventLoop = factory().acquireEventLoop(endpoint);
-            ctx = new DefaultClientRequestContext(
-                    releasableEventLoop.get(), meterRegistry, sessionProtocol,
-                    method, path, query, fragment, options(), req);
-            ctx.log().addListener(log -> releasableEventLoop.release(), RequestLogAvailability.COMPLETE);
+            ctx = new DefaultClientRequestContext(factory(), meterRegistry, sessionProtocol,
+                                                  method, path, query, fragment, options(), req);
         } else {
             ctx = new DefaultClientRequestContext(eventLoop, meterRegistry, sessionProtocol,
                                                   method, path, query, fragment, options(), req);
