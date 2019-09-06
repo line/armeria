@@ -23,6 +23,11 @@
     <property name="eachLine" value="true"/>
   </module>
 
+  <module name="LineLength">
+    <property name="max" value="112"/>
+    <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://"/>
+  </module>
+
   <!-- Copyright headers -->
   <module name="RegexpSingleline">
     <property name="id" value="CopyrightHeader"/>
@@ -256,11 +261,6 @@
       <property name="format" value="^[A-Z][a-zA-Z0-9]+$"/>
       <message key="name.invalidPattern"
                value="Type name ''{0}'' must match pattern ''{1}''."/>
-    </module>
-
-    <module name="LineLength">
-      <property name="max" value="112"/>
-      <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://"/>
     </module>
 
     <module name="EmptyForIteratorPad"/>

@@ -4,7 +4,7 @@
 
 boms:
   - com.fasterxml.jackson:jackson-bom:2.9.9.20190807
-  - io.zipkin.brave:brave-bom:5.6.11
+  - io.zipkin.brave:brave-bom:5.7.0
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
   - io.netty:netty-bom:4.1.39.Final
 
@@ -56,7 +56,7 @@ com.google.code.findbugs:
 
 com.google.guava:
   guava:
-    version: &GUAVA_VERSION '28.0-jre'
+    version: &GUAVA_VERSION '28.1-jre'
     exclusions:
     - com.google.errorprone:error_prone_annotations
     - com.google.j2objc:j2objc-annotations
@@ -102,7 +102,7 @@ com.moowork.gradle:
   gradle-node-plugin: { version: '1.3.1' }
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.23' }
+  checkstyle: { version: '8.24' }
 
 com.spotify:
   completable-futures:
@@ -186,7 +186,7 @@ io.netty:
 
 io.projectreactor:
   reactor-core:
-    version: &REACTOR_VERSION '3.2.11.RELEASE'
+    version: &REACTOR_VERSION '3.2.12.RELEASE'
     javadocs:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }
@@ -199,7 +199,7 @@ io.prometheus:
 
 io.reactivex.rxjava2:
   rxjava:
-    version: '2.2.11'
+    version: '2.2.12'
     javadocs:
     - http://reactivex.io/RxJava/2.x/javadoc/
 
@@ -217,7 +217,7 @@ it.unimi.dsi:
       to: com.linecorp.armeria.internal.shaded.fastutil
 
 jakarta.annotation:
-  jakarta.annotation-api: { version: '1.3.4' }
+  jakarta.annotation-api: { version: '1.3.5' }
 
 javax.inject:
   javax.inject: { version: '1' }
@@ -250,7 +250,7 @@ org.junit.vintage:
     version: *JUNIT_JUPITER_VERSION
 
 kr.motd.gradle:
-  sphinx-gradle-plugin: { version: '2.6.0' }
+  sphinx-gradle-plugin: { version: '2.6.1' }
 
 # We do not depend on log4j. We just need this to stop dependency-management-plugin from
 # complaining about its bad POM.
@@ -269,7 +269,7 @@ net.sf.proguard:
   proguard-gradle: { version: '6.1.1' }
 
 net.shibboleth.utilities:
-  java-support: { version: '7.3.0' }
+  java-support: { version: '7.5.0' }
 
 org.apache.curator:
   curator-recipes:
@@ -397,7 +397,7 @@ org.openjdk.jmh:
   jmh-generator-annprocess: { version: *JMH_VERSION }
 
 org.opensaml:
-  opensaml-core: { version: &OPENSAML_VERSION '3.3.0' }
+  opensaml-core: { version: &OPENSAML_VERSION '3.4.3' }
   opensaml-saml-api: { version: *OPENSAML_VERSION }
   opensaml-saml-impl: { version: *OPENSAML_VERSION }
   opensaml-messaging-api: { version: *OPENSAML_VERSION }
@@ -406,7 +406,7 @@ org.opensaml:
   opensaml-soap-impl: { version: *OPENSAML_VERSION }
 
 org.reactivestreams:
-  reactive-streams: { version: &REACTIVE_STREAMS_VERSION '1.0.2' }
+  reactive-streams: { version: &REACTIVE_STREAMS_VERSION '1.0.3' }
   reactive-streams-tck:
     version: *REACTIVE_STREAMS_VERSION
     exclusions:
@@ -431,7 +431,7 @@ org.slf4j:
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.1.7.RELEASE'
+    version: &SPRING_BOOT_VERSION '2.1.8.RELEASE'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }

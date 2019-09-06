@@ -77,7 +77,7 @@ public class HelloServiceTest {
             }
         }, MoreExecutors.directExecutor());
 
-        await().atLeast(3, TimeUnit.SECONDS).untilTrue(completed);
+        await().untilTrue(completed);
     }
 
     @Test
