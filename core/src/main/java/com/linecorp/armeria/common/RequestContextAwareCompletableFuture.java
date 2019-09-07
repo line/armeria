@@ -23,6 +23,7 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T> {
 
@@ -242,5 +243,14 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
     @Override
     public CompletableFuture<T> exceptionally(Function<Throwable, ? extends T> fn) {
         return ctx.makeContextAware(super.exceptionally(ctx.makeContextAware(fn)));
+    }
+
+    public CompletableFuture<T> completeAsync(Supplier<? extends T> supplier) {
+        return ctx.makeContextAware(super.completeAsync(ctx.makeContextAware(supplier)));
+    }
+
+    public CompletableFuture<T> completeAsync(Supplier<? extends T> supplier,
+                                              Executor executor) {
+        return ctx.makeContextAware(super.completeAsync(ctx.makeContextAware(supplier), executor));
     }
 }

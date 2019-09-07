@@ -39,6 +39,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -165,11 +166,22 @@ public class RequestContextTest {
     @Test
     public void makeContextAwareCallable() throws Exception {
         final RequestContext context = createContext();
-        context.makeContextAware(() -> {
+        context.makeContextAware((Callable<String>) () -> {
             assertCurrentContext(context);
             assertDepth(1);
             return "success";
         }).call();
+        assertDepth(0);
+    }
+
+    @Test
+    public void makeContextAwareSupplier() {
+        final RequestContext context = createContext();
+        context.makeContextAware((Supplier<String>) () -> {
+            assertCurrentContext(context);
+            assertDepth(1);
+            return "success";
+        }).get();
         assertDepth(0);
     }
 

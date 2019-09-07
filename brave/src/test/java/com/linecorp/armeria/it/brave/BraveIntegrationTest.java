@@ -32,6 +32,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -136,7 +137,7 @@ public class BraveIntegrationTest {
 
                     final ListenableFuture<List<Object>> spanAware = allAsList(IntStream.range(1, 3).mapToObj(
                             i -> executorService.submit(
-                                    RequestContext.current().makeContextAware(() -> {
+                                    RequestContext.current().makeContextAware((Callable<String>) () -> {
                                         if (i == 2) {
                                             countDownLatch.countDown();
                                             countDownLatch.await();
@@ -161,7 +162,7 @@ public class BraveIntegrationTest {
                     transformAsync(spanAware,
                                    result -> allAsList(IntStream.range(1, 3).mapToObj(
                                            i -> executorService.submit(
-                                                   RequestContext.current().makeContextAware(() -> {
+                                                   RequestContext.current().makeContextAware((Callable<String>) () -> {
                                                        ScopedSpan span = Tracing.currentTracer()
                                                                                 .startScopedSpan("aloha");
                                                        try {
