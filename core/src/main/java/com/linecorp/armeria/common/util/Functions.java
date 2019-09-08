@@ -18,10 +18,12 @@ package com.linecorp.armeria.common.util;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * Utility methods related with function composition.
@@ -191,6 +193,26 @@ public final class Functions {
         return (a, b) -> {
             consumer.accept(a, b);
             return null;
+        };
+    }
+
+    /**
+     * Converts the specified {@link Supplier} into a {@link Callable}
+     */
+    public static <T> Callable<T> getToCall(Supplier<T> supplier) {
+        return supplier::get;
+    }
+
+    /**
+     * Converts the specified {@link Callable} into a {@link Supplier}
+     */
+    public static <T> Supplier<T> callToGet(Callable<T> callable) {
+        return () -> {
+            try {
+                return callable.call();
+            } catch(Exception e) {
+                throw new RuntimeException("callToGet call exception", e);
+            }
         };
     }
 

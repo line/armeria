@@ -39,7 +39,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -166,22 +165,11 @@ public class RequestContextTest {
     @Test
     public void makeContextAwareCallable() throws Exception {
         final RequestContext context = createContext();
-        context.makeContextAware((Callable<String>) () -> {
+        context.makeContextAware(() -> {
             assertCurrentContext(context);
             assertDepth(1);
             return "success";
         }).call();
-        assertDepth(0);
-    }
-
-    @Test
-    public void makeContextAwareSupplier() {
-        final RequestContext context = createContext();
-        context.makeContextAware((Supplier<String>) () -> {
-            assertCurrentContext(context);
-            assertDepth(1);
-            return "success";
-        }).get();
         assertDepth(0);
     }
 
@@ -235,6 +223,19 @@ public class RequestContextTest {
         originalFuture.complete("success");
         assertDepth(0);
         resultFuture.get(); // this will propagate assertions.
+    }
+
+    @Test
+    public void useContextAwareCompletableFutureWithSupplier() throws Exception {
+        final ExecutorService executor = Executors.newSingleThreadExecutor();
+        final RequestContext context = createContext();
+        final CompletableFuture<String> originalFuture = new CompletableFuture<>();
+        final CompletableFuture<String> contextAwareFuture = context.makeContextAware(originalFuture);
+        final CompletableFuture<String> resultFuture = contextAwareFuture.completeAsync(() -> "success", executor);
+
+        originalFuture.complete("success");
+        assertDepth(1);
+        assertThat(resultFuture.get()).isEqualTo("success");
     }
 
     @Test

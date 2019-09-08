@@ -25,7 +25,6 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.DefaultServiceRequestContext;
@@ -104,15 +103,6 @@ public abstract class AbstractRequestContext implements RequestContext {
         return (t, u) -> {
             try (SafeCloseable ignored = pushIfAbsent()) {
                 action.accept(t, u);
-            }
-        };
-    }
-
-    @Override
-    public final <T> Supplier<T> makeContextAware(Supplier<T> action) {
-        return () -> {
-            try (SafeCloseable ignored = pushIfAbsent()) {
-                return action.get();
             }
         };
     }

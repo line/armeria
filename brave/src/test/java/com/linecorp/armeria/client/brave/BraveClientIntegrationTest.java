@@ -19,7 +19,6 @@ package com.linecorp.armeria.client.brave;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
-import java.util.concurrent.Callable;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
@@ -111,7 +110,7 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
     @Override
     @Test
     public void makesChildOfCurrentSpan() throws Exception {
-        new DummyRequestContext().makeContextAware((Callable<String>) () -> {
+        new DummyRequestContext().makeContextAware(() -> {
             super.makesChildOfCurrentSpan();
             return null;
         }).call();
@@ -120,7 +119,7 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
     @Override
     @Test
     public void propagatesExtra_newTrace() throws Exception {
-        new DummyRequestContext().makeContextAware((Callable<String>) () -> {
+        new DummyRequestContext().makeContextAware(() -> {
             super.propagatesExtra_newTrace();
             return null;
         }).call();
@@ -129,7 +128,7 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
     @Override
     @Test
     public void propagatesExtra_unsampledTrace() throws Exception {
-        new DummyRequestContext().makeContextAware((Callable<String>) () -> {
+        new DummyRequestContext().makeContextAware(() -> {
             super.propagatesExtra_unsampledTrace();
             return null;
         }).call();
@@ -138,7 +137,7 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
     @Override
     @Test
     public void usesParentFromInvocationTime() throws Exception {
-        new DummyRequestContext().makeContextAware((Callable<String>) () -> {
+        new DummyRequestContext().makeContextAware(() -> {
             super.usesParentFromInvocationTime();
             return null;
         }).call();

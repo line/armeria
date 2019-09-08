@@ -409,12 +409,6 @@ public interface RequestContext extends AttributeMap {
     <T, U> BiConsumer<T, U> makeContextAware(BiConsumer<T, U> action);
 
     /**
-     * Returns a {@link Supplier} that makes sure the current {@link RequestContext} is set and then invokes
-     * the input {@code supplier}.
-     */
-    <T> Supplier<T> makeContextAware(Supplier<T> action);
-
-    /**
      * Returns a {@link FutureListener} that makes sure the current {@link RequestContext} is set and then
      * invokes the input {@code listener}.
      *
