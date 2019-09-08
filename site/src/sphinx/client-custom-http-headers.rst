@@ -16,7 +16,7 @@ Using ``Clients.withHttpHeaders()``
 .. code-block:: java
 
     import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
-    import com.linecorp.armeria.common.util.SafeCloseable
+    import com.linecorp.armeria.common.util.SafeCloseable;
     import com.linecorp.armeria.client.Clients;
 
     HelloService.Iface client = Clients.newClient("tbinary+http://example.com/hello",

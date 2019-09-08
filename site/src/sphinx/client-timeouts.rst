@@ -30,7 +30,6 @@ Using ``ClientOptionsBuilder``
 
     import java.time.Duration;
 
-    import com.linecorp.armeria.common.util.SafeCloseable
     import com.linecorp.armeria.client.ClientOptionsBuilder;
     import com.linecorp.armeria.client.Clients;
 
