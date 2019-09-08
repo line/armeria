@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.common;
 
+import com.linecorp.armeria.common.util.Functions;
+
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
@@ -245,12 +248,18 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
         return ctx.makeContextAware(super.exceptionally(ctx.makeContextAware(fn)));
     }
 
+    @SuppressWarnings("unchecked")
     public CompletableFuture<T> completeAsync(Supplier<? extends T> supplier) {
-        return ctx.makeContextAware(super.completeAsync(ctx.makeContextAware(supplier)));
+        final Callable<? extends T> callable = Functions.getToCall(supplier);
+        return (CompletableFuture<T>) ctx.makeContextAware(supplyAsync(
+                Functions.callToGet(ctx.makeContextAware(callable))));
     }
 
+    @SuppressWarnings("unchecked")
     public CompletableFuture<T> completeAsync(Supplier<? extends T> supplier,
                                               Executor executor) {
-        return ctx.makeContextAware(super.completeAsync(ctx.makeContextAware(supplier), executor));
+        final Callable<? extends T> callable = Functions.getToCall(supplier);
+        return (CompletableFuture<T>) ctx.makeContextAware(supplyAsync
+                (Functions.callToGet(ctx.makeContextAware(callable)), executor));
     }
 }
