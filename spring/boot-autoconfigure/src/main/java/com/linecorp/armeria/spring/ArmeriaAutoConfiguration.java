@@ -113,8 +113,10 @@ public class ArmeriaAutoConfiguration {
                               httpServiceRegistrationBeans.orElseGet(Collections::emptyList),
                               meterIdPrefixFuncFactory);
         configureAnnotatedHttpServices(server,
+                                       docServiceBuilder,
                                        annotatedServiceRegistrationBeans.orElseGet(Collections::emptyList),
-                                       meterIdPrefixFuncFactory);
+                                       meterIdPrefixFuncFactory,
+                                       docsPath);
         configureServerWithArmeriaSettings(server, armeriaSettings,
                                            meterRegistry.orElse(Metrics.globalRegistry),
                                            healthCheckers.orElseGet(Collections::emptyList));

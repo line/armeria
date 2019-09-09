@@ -338,9 +338,12 @@ public final class ArmeriaConfigurationUtil {
      * Adds annotated HTTP services to the specified {@link ServerBuilder}.
      */
     public static void configureAnnotatedHttpServices(
-            ServerBuilder server, List<AnnotatedServiceRegistrationBean> beans,
-            @Nullable MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory) {
+            ServerBuilder server, DocServiceBuilder docServiceBuilder,
+            List<AnnotatedServiceRegistrationBean> beans,
+            @Nullable MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory,
+            @Nullable String docsPath) {
         requireNonNull(server, "server");
+        requireNonNull(docServiceBuilder, "docServiceBuilder");
         requireNonNull(beans, "beans");
 
         beans.forEach(bean -> {
@@ -362,6 +365,10 @@ public final class ArmeriaConfigurationUtil {
                                  .build();
             server.annotatedService(bean.getPathPrefix(), bean.getService(), decorator,
                                     exceptionHandlersAndConverters);
+
+            if (!Strings.isNullOrEmpty(docsPath)) {
+                //TODO(heowc): setting docServiceBuilder
+            }
         });
     }
 
