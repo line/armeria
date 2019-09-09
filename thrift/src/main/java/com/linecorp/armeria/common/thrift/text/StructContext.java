@@ -30,15 +30,15 @@
 // =================================================================================================
 package com.linecorp.armeria.common.thrift.text;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Modifier;
+import static com.linecorp.armeria.common.thrift.text.AbstractThriftMessageClassFinder.isTBase;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
-import org.apache.thrift.TApplicationException;
 import org.apache.thrift.TBase;
 import org.apache.thrift.TException;
 import org.apache.thrift.TFieldIdEnum;
@@ -56,7 +56,7 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
-import com.linecorp.armeria.internal.thrift.TApplicationExceptions;
+import com.linecorp.armeria.common.util.SystemInfo;
 
 /**
  * A struct parsing context. Builds a map from field name to TField.
@@ -65,6 +65,21 @@ import com.linecorp.armeria.internal.thrift.TApplicationExceptions;
  */
 class StructContext extends PairContext {
     private static final Logger log = LoggerFactory.getLogger(StructContext.class);
+    private static final Supplier<Class<?>> thriftMessageClassFinder;
+
+    static {
+        Supplier<Class<?>> supplier = null;
+        if (SystemInfo.javaVersion() >= 9) {
+            try {
+                supplier = new StackWalkingThriftMessageClassFinder();
+            } catch (Throwable t) {
+                log.warn("Failed to initialize StackWalkingThriftMessageClassFinder. " +
+                         "Falling back to DefaultThriftMessageClassFinder:", t);
+            }
+        }
+
+        thriftMessageClassFinder = supplier != null ? supplier : new DefaultThriftMessageClassFinder();
+    }
 
     // When processing a given thrift struct, we need certain information
     // for every field in that struct. We store that here, in a map
@@ -132,63 +147,13 @@ class StructContext extends PairContext {
      * TProtocol.writeStructBegin(), rather than relying on the stack trace.
      */
     private static Class<?> getCurrentThriftMessageClass() {
-        final StackTraceElement[] frames =
-                Thread.currentThread().getStackTrace();
+        final Class<?> clazz = thriftMessageClassFinder.get();
 
-        for (StackTraceElement f : frames) {
-            final String className = f.getClassName();
-
-            try {
-                final Class<?> clazz = Class.forName(className);
-
-                // Note, we need to check
-                // if the class is abstract, because abstract class does not have metaDataMap
-                // if the class has no-arg constructor, because FieldMetaData.getStructMetaDataMap
-                //   calls clazz.newInstance
-                if (isTBase(clazz) && !isAbstract(clazz) && hasNoArgConstructor(clazz)) {
-                    return clazz;
-                }
-
-                if (isTApplicationException(clazz)) {
-                    return clazz;
-                }
-
-                if (isTApplicationExceptions(clazz)) {
-                    return TApplicationException.class;
-                }
-            } catch (ClassNotFoundException ex) {
-                log.warn("Can't find class: " + className, ex);
-            }
-        }
-        throw new RuntimeException("Must call (indirectly) from a TBase/TApplicationException object.");
-    }
-
-    private static boolean isTBase(Class<?> clazz) {
-        return TBase.class.isAssignableFrom(clazz);
-    }
-
-    private static boolean isTApplicationException(Class<?> clazz) {
-        return TApplicationException.class.isAssignableFrom(clazz);
-    }
-
-    private static boolean isTApplicationExceptions(Class<?> clazz) {
-        return clazz == TApplicationExceptions.class;
-    }
-
-    private static boolean isAbstract(Class<?> clazz) {
-        return Modifier.isAbstract(clazz.getModifiers());
-    }
-
-    private static boolean hasNoArgConstructor(Class<?> clazz) {
-        final Constructor<?>[] allConstructors = clazz.getConstructors();
-        for (Constructor<?> ctor : allConstructors) {
-            final Class<?>[] pType = ctor.getParameterTypes();
-            if (pType.length == 0) {
-                return true;
-            }
+        if (clazz == null) {
+            throw new RuntimeException("Must call (indirectly) from a TBase/TApplicationException object.");
         }
 
-        return false;
+        return clazz;
     }
 
     /**
