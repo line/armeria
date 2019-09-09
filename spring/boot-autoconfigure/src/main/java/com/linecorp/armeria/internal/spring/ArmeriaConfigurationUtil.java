@@ -84,6 +84,7 @@ import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.server.metric.PrometheusExpositionService;
 import com.linecorp.armeria.spring.AbstractServiceRegistrationBean;
 import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean;
+import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean.AnnotatedServiceExampleRequest;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 import com.linecorp.armeria.spring.GrpcServiceRegistrationBean;
@@ -346,6 +347,7 @@ public final class ArmeriaConfigurationUtil {
         requireNonNull(docServiceBuilder, "docServiceBuilder");
         requireNonNull(beans, "beans");
 
+        final List<AnnotatedServiceExampleRequest> docServiceRequests = new ArrayList<>();
         beans.forEach(bean -> {
             Function<Service<HttpRequest, HttpResponse>,
                     ? extends Service<HttpRequest, HttpResponse>> decorator = Function.identity();
@@ -363,11 +365,18 @@ public final class ArmeriaConfigurationUtil {
                                  .addAll(bean.getRequestConverters())
                                  .addAll(bean.getResponseConverters())
                                  .build();
+            docServiceRequests.addAll(bean.getExampleRequests());
             server.annotatedService(bean.getPathPrefix(), bean.getService(), decorator,
                                     exceptionHandlersAndConverters);
 
             if (!Strings.isNullOrEmpty(docsPath)) {
-                //TODO(heowc): setting docServiceBuilder
+                docServiceRequests.forEach(
+                        exampleReq -> {
+                            final String serviceName = bean.getService().getClass().getName();
+                            docServiceBuilder.exampleRequestForMethod(serviceName,
+                                                                      exampleReq.getMethodName(),
+                                                                      exampleReq.getExampleRequest());
+                        });
             }
         });
     }

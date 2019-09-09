@@ -39,6 +39,9 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientBuilder;
@@ -47,11 +50,13 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.server.Server;
@@ -59,6 +64,9 @@ import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.Post;
+import com.linecorp.armeria.server.annotation.ProducesJson;
+import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.StringRequestConverterFunction;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
@@ -98,7 +106,8 @@ public class ArmeriaAutoConfigurationTest {
                     .setDecorators(LoggingService.newDecorator())
                     .setExceptionHandlers(ImmutableList.of(new IllegalArgumentExceptionHandler()))
                     .setRequestConverters(ImmutableList.of(new StringRequestConverterFunction()))
-                    .setResponseConverters(ImmutableList.of(new StringResponseConverter()));
+                    .setResponseConverters(ImmutableList.of(new StringResponseConverter()))
+                    .addExampleRequest("post", "{\"foo\":\"bar\"}");
         }
 
         @Bean
@@ -159,6 +168,9 @@ public class ArmeriaAutoConfigurationTest {
     }
 
     public static class AnnotatedService {
+
+        private final ObjectMapper objectMapper = new ObjectMapper();
+
         @Get("/get")
         public AggregatedHttpResponse get() {
             return AggregatedHttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "annotated");
@@ -168,6 +180,13 @@ public class ArmeriaAutoConfigurationTest {
         @Get("/get/2")
         public AggregatedHttpResponse getV2() {
             throw new IllegalArgumentException();
+        }
+
+        @Post("/post")
+        @ProducesJson
+        public AggregatedHttpResponse post(@RequestObject JsonNode jsonNode) throws JsonProcessingException {
+            return AggregatedHttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
+                                             objectMapper.writeValueAsString(jsonNode));
         }
     }
 
@@ -218,6 +237,23 @@ public class ArmeriaAutoConfigurationTest {
         res = response.aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentUtf8()).isEqualTo("exception");
+
+        final RequestHeaders postJson = RequestHeaders.of(HttpMethod.POST, "/annotated/post",
+                                                          HttpHeaderNames.CONTENT_TYPE, "application/json");
+        response = client.execute(postJson, "{\"foo\":\"bar\"}");
+        res = response.aggregate().join();
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThatJson(res.contentUtf8()).node("foo").isEqualTo("bar");
+
+        final HttpClient httpClient = HttpClient.of(newUrl("h1c"));
+        response = httpClient.get("/internal/docs/specification.json");
+
+        res = response.aggregate().get();
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThatJson(res.contentUtf8()).node("services[0].name").isStringEqualTo(
+                "com.linecorp.armeria.spring.ArmeriaAutoConfigurationTest$AnnotatedService");
+        assertThatJson(res.contentUtf8())
+                .node("services[0].methods[2].exampleRequests[0]").isStringEqualTo("{\"foo\":\"bar\"}");
     }
 
     @Test

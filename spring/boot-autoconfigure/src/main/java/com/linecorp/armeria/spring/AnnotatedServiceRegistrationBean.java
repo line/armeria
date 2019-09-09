@@ -15,6 +15,9 @@
  */
 package com.linecorp.armeria.spring;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
+
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -25,6 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
+import com.linecorp.armeria.server.docs.DocService;
 
 /**
  * A bean with information for registering an annotated service object.
@@ -45,6 +49,29 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
  */
 public class AnnotatedServiceRegistrationBean
         extends AbstractServiceRegistrationBean<Object, AnnotatedServiceRegistrationBean> {
+
+    public static final class AnnotatedServiceExampleRequest {
+        private final String methodName;
+        private final Object exampleRequest;
+
+        private AnnotatedServiceExampleRequest(String methodName, Object exampleRequest) {
+            this.methodName = methodName;
+            this.exampleRequest = exampleRequest;
+        }
+
+        public String getMethodName() {
+            return methodName;
+        }
+
+        public Object getExampleRequest() {
+            return exampleRequest;
+        }
+
+        public static AnnotatedServiceExampleRequest of(@NotNull String methodName,
+                                                        @NotNull Object exampleRequest) {
+            return new AnnotatedServiceExampleRequest(methodName, exampleRequest);
+        }
+    }
 
     /**
      * The path prefix of the annotated service object.
@@ -69,6 +96,14 @@ public class AnnotatedServiceRegistrationBean
      */
     @NotNull
     private Collection<? extends ResponseConverterFunction> responseConverters = new ArrayList<>();
+
+    /**
+     * Sample requests to populate debug forms in {@link DocService}.
+     * This should be a list of request objects which correspond to methods
+     * in this annotated service.
+     */
+    @NotNull
+    private final Collection<AnnotatedServiceExampleRequest> exampleRequests = new ArrayList<>();
 
     /**
      * Returns the path prefix.
@@ -156,5 +191,24 @@ public class AnnotatedServiceRegistrationBean
     public AnnotatedServiceRegistrationBean setResponseConverters(
             ResponseConverterFunction... responseConverters) {
         return setResponseConverters(ImmutableList.copyOf(responseConverters));
+    }
+
+    /**
+     * Returns sample requests of {@link #getService()}.
+     */
+    @NotNull
+    public Collection<AnnotatedServiceExampleRequest> getExampleRequests() {
+        return exampleRequests;
+    }
+
+    /**
+     * Sets sample requests for {@link #getService()}.
+     */
+    public AnnotatedServiceRegistrationBean addExampleRequest(String methodName, Object exampleRequest) {
+        requireNonNull(methodName, "methodName");
+        checkArgument(!methodName.isEmpty(), "methodName is empty.");
+        requireNonNull(exampleRequest, "exampleRequest");
+        exampleRequests.add(AnnotatedServiceExampleRequest.of(methodName, exampleRequest));
+        return this;
     }
 }
