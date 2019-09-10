@@ -51,7 +51,21 @@ public class GrpcServiceRegistrationBean
         extends AbstractServiceRegistrationBean<ServiceWithRoutes<HttpRequest, HttpResponse>,
         GrpcServiceRegistrationBean> {
 
-    public static final class ExampleRequest {
+    public static final class GrpcExampleRequest extends ExampleRequest {
+
+        private GrpcExampleRequest(String serviceType, String methodName, Object exampleRequest) {
+            super(serviceType, methodName, exampleRequest);
+        }
+
+        public static GrpcExampleRequest of(@NotNull String serviceType,
+                                            @NotNull String methodName,
+                                            @NotNull Object exampleRequest) {
+            return new GrpcExampleRequest(serviceType, methodName, exampleRequest);
+        }
+    }
+
+    @Deprecated
+    public static class ExampleRequest {
         private final String serviceType;
         private final String methodName;
         private final Object exampleRequest;
@@ -87,12 +101,14 @@ public class GrpcServiceRegistrationBean
      * in this gRPC service.
      */
     @NotNull
+    @Deprecated
     private Collection<ExampleRequest> exampleRequests = new ArrayList<>();
 
     /**
      * Returns sample requests of {@link #getService()}.
      */
     @NotNull
+    @Deprecated
     public Collection<ExampleRequest> getExampleRequests() {
         return exampleRequests;
     }
@@ -100,6 +116,7 @@ public class GrpcServiceRegistrationBean
     /**
      * Sets sample requests for {@link #getService()}.
      */
+    @Deprecated
     public GrpcServiceRegistrationBean setExampleRequests(
             @NotNull Collection<ExampleRequest> exampleRequests) {
         this.exampleRequests = exampleRequests;
