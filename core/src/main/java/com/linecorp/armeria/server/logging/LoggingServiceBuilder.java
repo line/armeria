@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.logging;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
@@ -73,5 +74,14 @@ public class LoggingServiceBuilder extends LoggingDecoratorBuilder<LoggingServic
      */
     protected Sampler<? super ServiceRequestContext> sampler() {
         return sampler;
+    }
+
+    /**
+     * Sets the rate at which to sample requests to log. Any number between {@code 0.0} and {@code 1.0} will
+     * cause a random sample of the requests to be logged.
+     */
+    public LoggingServiceBuilder samplingRate(float samplingRate) {
+        checkArgument(0.0 <= samplingRate && samplingRate <= 1.0, "samplingRate must be between 0.0 and 1.0");
+        return sampler(Sampler.random(samplingRate));
     }
 }
