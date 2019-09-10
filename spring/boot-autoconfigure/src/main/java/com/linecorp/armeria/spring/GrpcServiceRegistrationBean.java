@@ -15,6 +15,9 @@
  */
 package com.linecorp.armeria.spring;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
+
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -39,7 +42,7 @@ import com.linecorp.armeria.server.docs.DocService;
  * >                                 .enableUnframedRequests(true)
  * >                                 .build())
  * >             .setDecorators(LoggingService.newDecorator())
- * >             .setExampleRequests(List.of(ExampleRequest.of(HelloServiceGrpc.SERVICE_NAME,
+ * >             .setGrpcExampleRequests(List.of(GrpcExampleRequest.of(HelloServiceGrpc.SERVICE_NAME,
  * >                                                           "Hello",
  * >                                                           HelloRequest.newBuilder()
  * >                                                                       .setName("Armeria")
@@ -64,6 +67,12 @@ public class GrpcServiceRegistrationBean
         }
     }
 
+    /**
+     * This class will be removed.
+     *
+     * @deprecated Use {@link GrpcExampleRequest}.
+     */
+    @SuppressWarnings("checkstyle:FinalClass")
     @Deprecated
     public static class ExampleRequest {
         private final String serviceType;
@@ -99,13 +108,25 @@ public class GrpcServiceRegistrationBean
      * Sample requests to populate debug forms in {@link DocService}.
      * This should be a list of request objects which correspond to methods
      * in this gRPC service.
+     *
+     * @deprecated Use {@link #grpcExampleRequests}.
      */
     @NotNull
     @Deprecated
     private Collection<ExampleRequest> exampleRequests = new ArrayList<>();
 
     /**
+     * Sample requests to populate debug forms in {@link DocService}.
+     * This should be a list of request objects which correspond to methods
+     * in this gRPC service.
+     */
+    @NotNull
+    private Collection<GrpcExampleRequest> grpcExampleRequests = new ArrayList<>();
+
+    /**
      * Returns sample requests of {@link #getService()}.
+     *
+     * @deprecated Use {@link #getGrpcExampleRequests()}.
      */
     @NotNull
     @Deprecated
@@ -115,11 +136,44 @@ public class GrpcServiceRegistrationBean
 
     /**
      * Sets sample requests for {@link #getService()}.
+     *
+     * @deprecated Use {@link #setGrpcExampleRequests(Collection)}.
      */
     @Deprecated
     public GrpcServiceRegistrationBean setExampleRequests(
             @NotNull Collection<ExampleRequest> exampleRequests) {
         this.exampleRequests = exampleRequests;
+        return this;
+    }
+
+    /**
+     * Returns sample requests of {@link #getService()}.
+     */
+    @NotNull
+    public Collection<GrpcExampleRequest> getGrpcExampleRequests() {
+        return grpcExampleRequests;
+    }
+
+    /**
+     * Sets sample requests for {@link #getService()}.
+     */
+    public GrpcServiceRegistrationBean setGrpcExampleRequests(
+            @NotNull Collection<GrpcExampleRequest> grpcExampleRequests) {
+        this.grpcExampleRequests = grpcExampleRequests;
+        return this;
+    }
+
+    /**
+     * Adds sample requests for {@link #getService()}.
+     */
+    public GrpcServiceRegistrationBean addGrpcExampleRequest(String serviceType, String methodName,
+                                                             Object exampleRequest) {
+        requireNonNull(serviceType, "serviceType");
+        checkArgument(!serviceType.isEmpty(), "serviceType is empty.");
+        requireNonNull(methodName, "methodName");
+        checkArgument(!methodName.isEmpty(), "methodName is empty.");
+        requireNonNull(exampleRequest, "exampleRequest");
+        exampleRequests.add(GrpcExampleRequest.of(serviceType, methodName, exampleRequest));
         return this;
     }
 }

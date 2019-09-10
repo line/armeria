@@ -88,7 +88,7 @@ import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean.AnnotatedSer
 import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 import com.linecorp.armeria.spring.GrpcServiceRegistrationBean;
-import com.linecorp.armeria.spring.GrpcServiceRegistrationBean.ExampleRequest;
+import com.linecorp.armeria.spring.GrpcServiceRegistrationBean.GrpcExampleRequest;
 import com.linecorp.armeria.spring.HttpServiceRegistrationBean;
 import com.linecorp.armeria.spring.MeterIdPrefixFunctionFactory;
 import com.linecorp.armeria.spring.Ssl;
@@ -307,11 +307,11 @@ public final class ArmeriaConfigurationUtil {
         requireNonNull(docServiceBuilder, "docServiceBuilder");
         requireNonNull(beans, "beans");
 
-        final List<ExampleRequest> docServiceRequests = new ArrayList<>();
+        final List<GrpcExampleRequest> docServiceRequests = new ArrayList<>();
         beans.forEach(bean -> {
             final ServiceWithRoutes<HttpRequest, HttpResponse> serviceWithRoutes =
                     bean.getService();
-            docServiceRequests.addAll(bean.getExampleRequests());
+            docServiceRequests.addAll(bean.getGrpcExampleRequests());
             serviceWithRoutes.routes().forEach(
                     route -> {
                         Service<HttpRequest, HttpResponse> service = bean.getService();

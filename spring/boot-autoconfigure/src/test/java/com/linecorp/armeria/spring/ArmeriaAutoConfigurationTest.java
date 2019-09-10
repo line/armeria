@@ -73,7 +73,7 @@ import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.spring.ArmeriaAutoConfigurationTest.TestConfiguration;
-import com.linecorp.armeria.spring.GrpcServiceRegistrationBean.ExampleRequest;
+import com.linecorp.armeria.spring.GrpcServiceRegistrationBean.GrpcExampleRequest;
 import com.linecorp.armeria.spring.test.grpc.main.Hello.HelloReply;
 import com.linecorp.armeria.spring.test.grpc.main.Hello.HelloRequest;
 import com.linecorp.armeria.spring.test.grpc.main.HelloServiceGrpc;
@@ -132,11 +132,12 @@ public class ArmeriaAutoConfigurationTest {
                                         .enableUnframedRequests(true)
                                         .build())
                     .setDecorators(LoggingService.newDecorator())
-                    .setExampleRequests(ImmutableList.of(ExampleRequest.of(HelloServiceGrpc.SERVICE_NAME,
-                                                                           "Hello",
-                                                                           HelloRequest.newBuilder()
-                                                                                       .setName("Armeria")
-                                                                                       .build())));
+                    .setGrpcExampleRequests(
+                            ImmutableList.of(GrpcExampleRequest.of(HelloServiceGrpc.SERVICE_NAME,
+                                                                   "Hello",
+                                                                   HelloRequest.newBuilder()
+                                                                               .setName("Armeria")
+                                                                               .build())));
         }
     }
 
