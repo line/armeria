@@ -84,7 +84,7 @@ import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.server.metric.PrometheusExpositionService;
 import com.linecorp.armeria.spring.AbstractServiceRegistrationBean;
 import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean;
-import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean.AnnotatedServiceExampleRequest;
+import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean.AnnotatedExampleRequest;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 import com.linecorp.armeria.spring.GrpcServiceRegistrationBean;
@@ -347,7 +347,7 @@ public final class ArmeriaConfigurationUtil {
         requireNonNull(docServiceBuilder, "docServiceBuilder");
         requireNonNull(beans, "beans");
 
-        final List<AnnotatedServiceExampleRequest> docServiceRequests = new ArrayList<>();
+        final List<AnnotatedExampleRequest> docServiceRequests = new ArrayList<>();
         beans.forEach(bean -> {
             Function<Service<HttpRequest, HttpResponse>,
                     ? extends Service<HttpRequest, HttpResponse>> decorator = Function.identity();

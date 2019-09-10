@@ -43,18 +43,19 @@ import com.linecorp.armeria.server.docs.DocService;
  * >             .setDecorators(LoggingService.newDecorator())
  * >             .setExceptionHandlers(new MyExceptionHandler())
  * >             .setRequestConverters(new MyRequestConverter())
- * >             .setResponseConverters(new MyResponseConverter());
+ * >             .setResponseConverters(new MyResponseConverter())
+ * >             .setExampleRequests(Lists.of(AnnotatedExampleRequest.of("post", "{"foo":"bar"}")));
  * > }
  * }</pre>
  */
 public class AnnotatedServiceRegistrationBean
         extends AbstractServiceRegistrationBean<Object, AnnotatedServiceRegistrationBean> {
 
-    public static final class AnnotatedServiceExampleRequest {
+    public static final class AnnotatedExampleRequest {
         private final String methodName;
         private final Object exampleRequest;
 
-        private AnnotatedServiceExampleRequest(String methodName, Object exampleRequest) {
+        private AnnotatedExampleRequest(String methodName, Object exampleRequest) {
             this.methodName = methodName;
             this.exampleRequest = exampleRequest;
         }
@@ -67,9 +68,9 @@ public class AnnotatedServiceRegistrationBean
             return exampleRequest;
         }
 
-        public static AnnotatedServiceExampleRequest of(@NotNull String methodName,
-                                                        @NotNull Object exampleRequest) {
-            return new AnnotatedServiceExampleRequest(methodName, exampleRequest);
+        public static AnnotatedExampleRequest of(@NotNull String methodName,
+                                                 @NotNull Object exampleRequest) {
+            return new AnnotatedExampleRequest(methodName, exampleRequest);
         }
     }
 
@@ -103,7 +104,7 @@ public class AnnotatedServiceRegistrationBean
      * in this annotated service.
      */
     @NotNull
-    private final Collection<AnnotatedServiceExampleRequest> exampleRequests = new ArrayList<>();
+    private Collection<AnnotatedExampleRequest> exampleRequests = new ArrayList<>();
 
     /**
      * Returns the path prefix.
@@ -197,18 +198,27 @@ public class AnnotatedServiceRegistrationBean
      * Returns sample requests of {@link #getService()}.
      */
     @NotNull
-    public Collection<AnnotatedServiceExampleRequest> getExampleRequests() {
+    public Collection<AnnotatedExampleRequest> getExampleRequests() {
         return exampleRequests;
     }
 
     /**
      * Sets sample requests for {@link #getService()}.
      */
+    public AnnotatedServiceRegistrationBean setExampleRequests(
+            @NotNull Collection<AnnotatedExampleRequest> exampleRequests) {
+        this.exampleRequests = exampleRequests;
+        return this;
+    }
+
+    /**
+     * Adds sample requests for {@link #getService()}.
+     */
     public AnnotatedServiceRegistrationBean addExampleRequest(String methodName, Object exampleRequest) {
         requireNonNull(methodName, "methodName");
         checkArgument(!methodName.isEmpty(), "methodName is empty.");
         requireNonNull(exampleRequest, "exampleRequest");
-        exampleRequests.add(AnnotatedServiceExampleRequest.of(methodName, exampleRequest));
+        exampleRequests.add(AnnotatedExampleRequest.of(methodName, exampleRequest));
         return this;
     }
 }
