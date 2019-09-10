@@ -329,7 +329,7 @@ org.assertj:
   assertj-core: { version: '3.13.2' }
 
 org.awaitility:
-  awaitility: { version: '3.1.6' }
+  awaitility: { version: '4.0.1' }
 
 org.bouncycastle:
   bcprov-jdk15on:
