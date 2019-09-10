@@ -250,16 +250,16 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
 
     @SuppressWarnings("unchecked")
     public CompletableFuture<T> completeAsync(Supplier<? extends T> supplier) {
-        final Callable<? extends T> callable = Functions.getToCall(supplier);
+        final Callable<? extends T> callable = Functions.toCallable(supplier);
         return (CompletableFuture<T>) ctx.makeContextAware(supplyAsync(
-                Functions.callToGet(ctx.makeContextAware(callable))));
+                Functions.fromCallable(ctx.makeContextAware(callable))));
     }
 
     @SuppressWarnings("unchecked")
     public CompletableFuture<T> completeAsync(Supplier<? extends T> supplier,
                                               Executor executor) {
-        final Callable<? extends T> callable = Functions.getToCall(supplier);
+        final Callable<? extends T> callable = Functions.toCallable(supplier);
         return (CompletableFuture<T>) ctx.makeContextAware(supplyAsync
-                (Functions.callToGet(ctx.makeContextAware(callable)), executor));
+                (Functions.fromCallable(ctx.makeContextAware(callable)), executor));
     }
 }
