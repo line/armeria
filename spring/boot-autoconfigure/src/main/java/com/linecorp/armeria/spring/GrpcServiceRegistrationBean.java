@@ -43,10 +43,10 @@ import com.linecorp.armeria.server.docs.DocService;
  * >                                 .build())
  * >             .setDecorators(LoggingService.newDecorator())
  * >             .setGrpcExampleRequests(List.of(GrpcExampleRequest.of(HelloServiceGrpc.SERVICE_NAME,
- * >                                                           "Hello",
- * >                                                           HelloRequest.newBuilder()
- * >                                                                       .setName("Armeria")
- * >                                                                       .build())));
+ * >                                                                   "Hello",
+ * >                                                                   HelloRequest.newBuilder()
+ * >                                                                               .setName("Armeria")
+ * >                                                                               .build())));
  * > }
  * }</pre>
  */
