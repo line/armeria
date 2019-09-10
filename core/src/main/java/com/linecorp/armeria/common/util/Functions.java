@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.util;
 
+import com.google.common.base.Throwables;
+
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.Callable;
@@ -210,7 +212,8 @@ public final class Functions {
         return () -> {
             try {
                 return callable.call();
-            } catch(Exception e) {
+            } catch (Throwable e) {
+                Throwables.throwIfUnchecked(e);
                 throw new RuntimeException("fromCallable call exception", e);
             }
         };
