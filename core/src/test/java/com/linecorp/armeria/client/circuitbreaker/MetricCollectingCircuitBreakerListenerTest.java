@@ -16,14 +16,12 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import org.junit.Test;
-
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
-
 import io.micrometer.core.instrument.MeterRegistry;
+import org.junit.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class MetricCollectingCircuitBreakerListenerTest {
 
@@ -33,7 +31,7 @@ public class MetricCollectingCircuitBreakerListenerTest {
         final CircuitBreakerListener l = new MetricCollectingCircuitBreakerListener(registry, "foo");
 
         // Note: We only use the name of the circuit breaker.
-        final CircuitBreaker cb = new CircuitBreakerBuilder("bar").build();
+        final CircuitBreaker cb = CircuitBreaker.builder("bar").build();
 
         // Trigger the first event so that the metric group is registered.
         l.onEventCountUpdated(cb.name(), new EventCount(1, 2));

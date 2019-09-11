@@ -16,7 +16,8 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import static java.util.Objects.requireNonNull;
+import com.google.common.annotations.VisibleForTesting;
+import com.linecorp.armeria.common.util.Ticker;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -24,9 +25,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import com.google.common.annotations.VisibleForTesting;
-
-import com.linecorp.armeria.common.util.Ticker;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Builds a {@link CircuitBreaker} instance using builder pattern.
@@ -73,6 +72,7 @@ public final class CircuitBreakerBuilder {
      *
      * @param name The name of the circuit breaker.
      */
+    @Deprecated
     public CircuitBreakerBuilder(String name) {
         requireNonNull(name, "name");
         if (name.isEmpty()) {
@@ -84,6 +84,7 @@ public final class CircuitBreakerBuilder {
     /**
      * Creates a new {@link CircuitBreakerBuilder}.
      */
+    @Deprecated
     public CircuitBreakerBuilder() {
         name = Optional.empty();
     }

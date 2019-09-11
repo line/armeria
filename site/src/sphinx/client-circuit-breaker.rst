@@ -319,7 +319,7 @@ If you use :api:`CircuitBreakerBuilder`, you can configure the parameters which 
 
         final MetricCollectingCircuitBreakerListener listener =
                 new MetricCollectingCircuitBreakerListener(Metrics.globalRegistry);
-        final CircuitBreakerBuilder builder = new CircuitBreakerBuilder().listener(listener);
+        final CircuitBreakerBuilder builder = CircuitBreaker.builder().listener(listener);
 
 .. _circuit-breaker-with-non-armeria-client:
 

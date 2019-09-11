@@ -16,16 +16,13 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.*;
 
 class NonBlockingCircuitBreakerTest {
 
@@ -42,7 +39,7 @@ class NonBlockingCircuitBreakerTest {
     private static final CircuitBreakerListener listener = mock(CircuitBreakerListener.class);
 
     private static NonBlockingCircuitBreaker create(long minimumRequestThreshold, double failureRateThreshold) {
-        return (NonBlockingCircuitBreaker) new CircuitBreakerBuilder(remoteServiceName)
+        return (NonBlockingCircuitBreaker) CircuitBreaker.builder(remoteServiceName)
                 .failureRateThreshold(failureRateThreshold)
                 .minimumRequestThreshold(minimumRequestThreshold)
                 .circuitOpenWindow(circuitOpenWindow)

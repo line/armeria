@@ -16,36 +16,23 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.awaitility.Awaitility.await;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import com.linecorp.armeria.client.*;
+import com.linecorp.armeria.common.*;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import org.junit.ClassRule;
+import org.junit.Test;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
-import org.junit.ClassRule;
-import org.junit.Test;
-
-import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.ClientRequestContextBuilder;
-import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.HttpClientBuilder;
-import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.HttpStatusClass;
-import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 public class CircuitBreakerHttpClientTest {
 
@@ -136,7 +123,7 @@ public class CircuitBreakerHttpClientTest {
         final Duration counterSlidingWindow = Duration.ofSeconds(180);
         final Duration counterUpdateInterval = Duration.ofMillis(1);
 
-        final CircuitBreaker circuitBreaker = new CircuitBreakerBuilder(remoteServiceName)
+        final CircuitBreaker circuitBreaker = CircuitBreaker.builder(remoteServiceName)
                 .minimumRequestThreshold(minimumRequestThreshold)
                 .circuitOpenWindow(circuitOpenWindow)
                 .counterSlidingWindow(counterSlidingWindow)
