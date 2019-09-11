@@ -377,6 +377,7 @@ public final class HttpStatus implements Comparable<HttpStatus> {
      * Returns {@code true} if the content of the response for the specified status code is expected to
      * be always empty (1xx, 204, 205 and 304 responses.)
      */
+    @SuppressWarnings("checkstyle:OverloadMethodsDeclarationOrder")
     public static boolean isContentAlwaysEmpty(int statusCode) {
         if (HttpStatusClass.INFORMATIONAL.contains(statusCode)) {
             return true;
