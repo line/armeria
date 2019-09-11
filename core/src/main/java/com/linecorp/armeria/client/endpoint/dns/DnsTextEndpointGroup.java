@@ -16,18 +16,12 @@
 
 package com.linecorp.armeria.client.endpoint.dns;
 
-import java.util.List;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
-
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.EventLoop;
@@ -35,6 +29,10 @@ import io.netty.handler.codec.dns.DnsRawRecord;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
+
+import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * {@link DynamicEndpointGroup} which resolves targets using DNS {@code TXT} records. This is useful for
@@ -53,6 +51,13 @@ public final class DnsTextEndpointGroup extends DnsEndpointGroup {
      */
     public static DnsTextEndpointGroup of(String hostname, Function<byte[], Endpoint> mapping) {
         return new DnsTextEndpointGroupBuilder(hostname, mapping).build();
+    }
+
+    /**
+     * Returns a new {@link DnsTextEndpointGroupBuilder} with the specified hostname and {@link Function} mapping.
+     */
+    public static DnsTextEndpointGroupBuilder builder(String hostname, Function<byte[], Endpoint> mapping){
+        return new DnsTextEndpointGroupBuilder(hostname,mapping);
     }
 
     private final Function<byte[], Endpoint> mapping;

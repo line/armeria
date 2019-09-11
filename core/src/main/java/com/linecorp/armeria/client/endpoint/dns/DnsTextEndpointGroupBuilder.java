@@ -15,11 +15,11 @@
  */
 package com.linecorp.armeria.client.endpoint.dns;
 
-import static java.util.Objects.requireNonNull;
+import com.linecorp.armeria.client.Endpoint;
 
 import java.util.function.Function;
 
-import com.linecorp.armeria.client.Endpoint;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Builds a new {@link DnsTextEndpointGroup} that sources its {@link Endpoint} list from the {@code TXT}
@@ -38,6 +38,8 @@ public final class DnsTextEndpointGroupBuilder
      *                an {@link Endpoint}. The {@link Function} is expected to return {@code null}
      *                if the record contains unsupported content.
      */
+
+    @Deprecated
     public DnsTextEndpointGroupBuilder(String hostname, Function<byte[], Endpoint> mapping) {
         super(hostname);
         this.mapping = requireNonNull(mapping, "mapping");

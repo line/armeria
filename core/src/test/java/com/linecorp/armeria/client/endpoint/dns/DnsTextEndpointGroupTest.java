@@ -16,29 +16,26 @@
 
 package com.linecorp.armeria.client.endpoint.dns;
 
-import static io.netty.handler.codec.dns.DnsRecordType.TXT;
-import static io.netty.handler.codec.dns.DnsSection.ANSWER;
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.TimeUnit;
-
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.DisableOnDebug;
-import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
-
 import com.google.common.collect.ImmutableMap;
-
 import com.linecorp.armeria.client.Endpoint;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
 import io.netty.handler.codec.dns.DefaultDnsRawRecord;
 import io.netty.handler.codec.dns.DefaultDnsResponse;
 import io.netty.handler.codec.dns.DnsRecord;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.DisableOnDebug;
+import org.junit.rules.TestRule;
+import org.junit.rules.Timeout;
+
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.TimeUnit;
+
+import static io.netty.handler.codec.dns.DnsRecordType.TXT;
+import static io.netty.handler.codec.dns.DnsSection.ANSWER;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class DnsTextEndpointGroupTest {
 
@@ -58,7 +55,7 @@ public class DnsTextEndpointGroupTest {
                                          .addRecord(ANSWER, newTxtRecord("foo.com.", "endpoint=group:foo"))
                                          .addRecord(ANSWER, newTxtRecord("foo.com.", "endpoint=b:a:d"))
         ))) {
-            try (DnsTextEndpointGroup group = new DnsTextEndpointGroupBuilder("foo.com", txt -> {
+            try (DnsTextEndpointGroup group = DnsTextEndpointGroup.builder("foo.com", txt -> {
                 final String txtStr = new String(txt, StandardCharsets.US_ASCII);
                 if (txtStr.startsWith("endpoint=")) {
                     return Endpoint.parse(txtStr.substring(9));
