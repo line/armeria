@@ -373,6 +373,24 @@ public final class HttpStatus implements Comparable<HttpStatus> {
         return valueOf(statusCode);
     }
 
+    /**
+     * Returns {@code true} if the content of the response for the specified status code is expected to
+     * be always empty (1xx, 204, 205 and 304 responses.)
+     */
+    public static boolean isContentAlwaysEmpty(int statusCode) {
+        if (HttpStatusClass.INFORMATIONAL.contains(statusCode)) {
+            return true;
+        }
+
+        switch (statusCode) {
+            case /* NO_CONTENT */ 204:
+            case /* RESET_CONTENT */ 205:
+            case /* NOT_MODIFIED */ 304:
+                return true;
+        }
+        return false;
+    }
+
     private final int code;
     private final String codeAsText;
     private final HttpStatusClass codeClass;
@@ -457,6 +475,14 @@ public final class HttpStatus implements Comparable<HttpStatus> {
      */
     public HttpData toHttpData() {
         return httpData;
+    }
+
+    /**
+     * Returns {@code true} if the content of the response for this {@link HttpStatus} is expected to
+     * be always empty (1xx, 204, 205 and 304 responses.)
+     */
+    public boolean isContentAlwaysEmpty() {
+        return isContentAlwaysEmpty(code);
     }
 
     @Override
