@@ -73,7 +73,7 @@ Please refer to [Configure `-parameters` javac option](https://line.github.io/ar
 
 ### Use JUnit 5 instead of JUnit 4 for testing
 
-We support both [JUnit 4](https://junit.org/junit4/) and [JUnit 5](https://junit.org/junit5/) for testing, but we recommend to use JUnit5.
+We support both [JUnit 4](https://junit.org/junit4/) and [JUnit 5](https://junit.org/junit5/) for testing, but we recommend to use JUnit 5.
 
 ```java
 // Imports of JUnit5, Good
