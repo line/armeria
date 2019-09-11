@@ -372,7 +372,9 @@ public class ServerTest {
     public void customStartStopExecutor() {
         final Queue<Thread> threads = new LinkedTransferQueue<>();
         final String prefix = getClass().getName() + "#customStartStopExecutor";
-        final ExecutorService executor = Executors.newSingleThreadExecutor(new EventLoopThreadFactory(prefix));
+        final ExecutorService executor = Executors.newSingleThreadExecutor(
+                EventLoopThreadFactory.builder(prefix)
+                                      .build());
         final Server server = new ServerBuilder()
                 .startStopExecutor(executor)
                 .service("/", (ctx, req) -> HttpResponse.of(200))

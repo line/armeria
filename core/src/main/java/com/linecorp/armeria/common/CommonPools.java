@@ -41,7 +41,9 @@ public final class CommonPools {
         final ThreadPoolExecutor blockingTaskExecutor = new ThreadPoolExecutor(
                 Flags.numCommonBlockingTaskThreads(), Flags.numCommonBlockingTaskThreads(),
                 60, TimeUnit.SECONDS, new LinkedTransferQueue<>(),
-                new EventLoopThreadFactory("armeria-common-blocking-tasks", true));
+                EventLoopThreadFactory.builder("armeria-common-blocking-tasks")
+                                      .daemon(true)
+                                      .build());
 
         blockingTaskExecutor.allowCoreThreadTimeOut(true);
         BLOCKING_TASK_EXECUTOR = blockingTaskExecutor;

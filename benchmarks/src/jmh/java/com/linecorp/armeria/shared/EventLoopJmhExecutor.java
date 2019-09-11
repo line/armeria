@@ -54,7 +54,7 @@ public class EventLoopJmhExecutor extends MultithreadEventLoopGroup {
     }
 
     public EventLoopJmhExecutor(int numThreads, String threadPrefix) {
-        super(numThreads, new EventLoopThreadFactory(threadPrefix));
+        super(numThreads, EventLoopThreadFactory.builder(threadPrefix).build());
     }
 
     @Override
