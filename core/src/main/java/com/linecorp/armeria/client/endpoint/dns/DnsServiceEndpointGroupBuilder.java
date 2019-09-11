@@ -29,6 +29,7 @@ public final class DnsServiceEndpointGroupBuilder
      *
      * @param hostname the hostname to query DNS queries for
      */
+    @Deprecated
     public DnsServiceEndpointGroupBuilder(String hostname) {
         super(hostname);
     }

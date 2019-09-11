@@ -213,7 +213,7 @@ environments that leverage DNS for service discovery such as Kubernetes:
 .. code-block:: java
 
     DnsServiceEndpointGroup group =
-            new DnsServiceEndpointGroupBuilder("_http._tcp.example.com")
+            DnsServiceEndpointGroup.builder("_http._tcp.example.com")
                     // Custom backoff strategy.
                     .backoff(Backoff.exponential(1000, 16000).withJitter(0.3))
                     .build();

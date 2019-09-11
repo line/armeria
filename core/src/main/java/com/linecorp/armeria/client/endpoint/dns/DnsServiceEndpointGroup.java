@@ -16,17 +16,12 @@
 
 package com.linecorp.armeria.client.endpoint.dns;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
-
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.EventLoop;
@@ -35,6 +30,9 @@ import io.netty.handler.codec.dns.DnsRawRecord;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * {@link DynamicEndpointGroup} which resolves targets using DNS
@@ -53,6 +51,13 @@ public final class DnsServiceEndpointGroup extends DnsEndpointGroup {
      */
     public static DnsServiceEndpointGroup of(String hostname) {
         return new DnsServiceEndpointGroupBuilder(hostname).build();
+    }
+
+    /**
+     * Returns a new {@link DnsServiceEndpointGroupBuilder} with the specified hostname.
+     */
+    public static DnsServiceEndpointGroupBuilder builder(String hostname){
+        return new DnsServiceEndpointGroupBuilder(hostname);
     }
 
     DnsServiceEndpointGroup(EventLoop eventLoop, int minTtl, int maxTtl,
