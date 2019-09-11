@@ -247,8 +247,7 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
         @Test
         public void testOptions() throws Exception {
             final AggregatedHttpResponse res = client.options("/internal/actuator/health").aggregate().get();
-            // CORS not enabled by default.
-            assertThat(res.status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+            assertThat(res.status()).isNotEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
         }
     }
 }
