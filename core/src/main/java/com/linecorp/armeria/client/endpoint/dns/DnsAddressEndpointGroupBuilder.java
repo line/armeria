@@ -15,15 +15,13 @@
  */
 package com.linecorp.armeria.client.endpoint.dns;
 
-import static com.google.common.base.Preconditions.checkArgument;
+import com.google.common.annotations.VisibleForTesting;
+import com.linecorp.armeria.client.Endpoint;
+import io.netty.resolver.ResolvedAddressTypes;
 
 import javax.annotation.Nullable;
 
-import com.google.common.annotations.VisibleForTesting;
-
-import com.linecorp.armeria.client.Endpoint;
-
-import io.netty.resolver.ResolvedAddressTypes;
+import static com.google.common.base.Preconditions.checkArgument;
 
 /**
  * Builds a new {@link DnsAddressEndpointGroup} that sources its {@link Endpoint} list from the {@code A} or
@@ -41,6 +39,7 @@ public final class DnsAddressEndpointGroupBuilder
      *
      * @param hostname the hostname to query DNS queries for
      */
+    @Deprecated
     public DnsAddressEndpointGroupBuilder(String hostname) {
         super(hostname);
     }

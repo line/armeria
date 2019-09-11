@@ -197,7 +197,7 @@ They refresh the :api:`Endpoint` list automatically, respecting TTL values, and 
 .. code-block:: java
 
     DnsAddressEndpointGroup group =
-            new DnsAddressEndpointGroupBuilder("www.google.com")
+            DnsAddressEndpointGroup.builder("www.google.com")
                     // Refresh more often than every 10 seconds and
                     // less often than every 60 seconds even if DNS server asks otherwise.
                     .ttl(/* minTtl */ 10, /* maxTtl */ 60)

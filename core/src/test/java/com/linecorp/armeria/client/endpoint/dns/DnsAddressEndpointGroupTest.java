@@ -15,26 +15,9 @@
  */
 package com.linecorp.armeria.client.endpoint.dns;
 
-import static io.netty.handler.codec.dns.DnsRecordType.A;
-import static io.netty.handler.codec.dns.DnsRecordType.AAAA;
-import static io.netty.handler.codec.dns.DnsRecordType.CNAME;
-import static io.netty.handler.codec.dns.DnsSection.ANSWER;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
-
-import java.util.concurrent.TimeUnit;
-
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.DisableOnDebug;
-import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
-
 import com.google.common.collect.ImmutableMap;
-
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.retry.Backoff;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
@@ -43,6 +26,18 @@ import io.netty.handler.codec.dns.DefaultDnsResponse;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.util.NetUtil;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.DisableOnDebug;
+import org.junit.rules.TestRule;
+import org.junit.rules.Timeout;
+
+import java.util.concurrent.TimeUnit;
+
+import static io.netty.handler.codec.dns.DnsRecordType.*;
+import static io.netty.handler.codec.dns.DnsSection.ANSWER;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 public class DnsAddressEndpointGroupTest {
 
@@ -56,7 +51,7 @@ public class DnsAddressEndpointGroupTest {
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1"))
                                          .addRecord(ANSWER, newAddressRecord("unrelated.com", "1.2.3.4"))
         ))) {
-            try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("foo.com")
+            try (DnsAddressEndpointGroup group = DnsAddressEndpointGroup.builder("foo.com")
                     .port(8080)
                     .serverAddresses(server.addr())
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
@@ -77,7 +72,7 @@ public class DnsAddressEndpointGroupTest {
                                          .addRecord(ANSWER, newAddressRecord("bar.com.",
                                                                              "2404:6800:4004:806::2013"))
         ))) {
-            try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("bar.com")
+            try (DnsAddressEndpointGroup group = DnsAddressEndpointGroup.builder("bar.com")
                     .port(8080)
                     .serverAddresses(server.addr())
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV6_ONLY)
@@ -99,7 +94,7 @@ public class DnsAddressEndpointGroupTest {
                 new DefaultDnsQuestion("baz.com.", AAAA),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("baz.com.", "::1"))
         ))) {
-            try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("baz.com")
+            try (DnsAddressEndpointGroup group = DnsAddressEndpointGroup.builder("baz.com")
                     .port(8080)
                     .serverAddresses(server.addr())
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
@@ -120,7 +115,7 @@ public class DnsAddressEndpointGroupTest {
                 new DefaultDnsQuestion("baz.com.", AAAA),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("baz.com.", "::1"))
         ))) {
-            try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("baz.com")
+            try (DnsAddressEndpointGroup group = DnsAddressEndpointGroup.builder("baz.com")
                     .port(8080)
                     .serverAddresses(server.addr())
                     .build()) {
@@ -143,7 +138,7 @@ public class DnsAddressEndpointGroupTest {
                                          .addRecord(ANSWER, newCnameRecord("a.com.", "b.com."))
                                          .addRecord(ANSWER, newAddressRecord("b.com.", "::1"))
         ))) {
-            try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("a.com")
+            try (DnsAddressEndpointGroup group = DnsAddressEndpointGroup.builder("a.com")
                     .port(8080)
                     .serverAddresses(server.addr())
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
@@ -164,7 +159,7 @@ public class DnsAddressEndpointGroupTest {
                 new DefaultDnsQuestion("foo.com.", AAAA),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "::1"))
         ))) {
-            try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("foo.com")
+            try (DnsAddressEndpointGroup group = DnsAddressEndpointGroup.builder("foo.com")
                     .port(8080)
                     .serverAddresses(server.addr())
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
@@ -185,7 +180,7 @@ public class DnsAddressEndpointGroupTest {
                                          .addRecord(ANSWER, newMappedAddressRecord("bar.com.", "1.1.1.1"))
                                          .addRecord(ANSWER, newMappedAddressRecord("bar.com.", "1.1.1.3"))
         ))) {
-            try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("bar.com")
+            try (DnsAddressEndpointGroup group = DnsAddressEndpointGroup.builder("bar.com")
                     .port(8080)
                     .serverAddresses(server.addr())
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV6_ONLY)
@@ -205,7 +200,7 @@ public class DnsAddressEndpointGroupTest {
                 new DefaultDnsQuestion("no-port.com.", A),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("no-port.com", "1.1.1.1"))
         ))) {
-            try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("no-port.com")
+            try (DnsAddressEndpointGroup group = DnsAddressEndpointGroup.builder("no-port.com")
                     .serverAddresses(server.addr())
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
                     .build()) {
@@ -219,7 +214,7 @@ public class DnsAddressEndpointGroupTest {
     @Test
     public void backoff() throws Exception {
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of())) { // Respond nothing.
-            try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("backoff.com")
+            try (DnsAddressEndpointGroup group = DnsAddressEndpointGroup.builder("backoff.com")
                     .serverAddresses(server.addr())
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
                     .backoff(Backoff.fixed(500))
@@ -249,7 +244,7 @@ public class DnsAddressEndpointGroupTest {
                 new DefaultDnsQuestion("empty.com.", A), new DefaultDnsResponse(0),
                 new DefaultDnsQuestion("empty.com.", AAAA), new DefaultDnsResponse(0)
         ))) {
-            try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("empty.com")
+            try (DnsAddressEndpointGroup group = DnsAddressEndpointGroup.builder("empty.com")
                     .serverAddresses(server.addr())
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
                     .backoff(Backoff.fixed(500))
@@ -280,7 +275,7 @@ public class DnsAddressEndpointGroupTest {
                 new DefaultDnsQuestion("partial.com.", A),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("partial.com", "1.1.1.1"))
         ))) {
-            try (DnsAddressEndpointGroup group = new DnsAddressEndpointGroupBuilder("partial.com")
+            try (DnsAddressEndpointGroup group = DnsAddressEndpointGroup.builder("partial.com")
                     .serverAddresses(server.addr())
                     .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
                     .backoff(Backoff.fixed(500))
