@@ -49,6 +49,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.util.StringUtils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -70,8 +71,12 @@ import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 @EnableConfigurationProperties(WebEndpointProperties.class)
 public class ArmeriaSpringActuatorAutoConfiguration {
 
+    @VisibleForTesting
+    static final MediaType ACTUATOR_MEDIA_TYPE = MediaType.parse(ActuatorMediaType.V2_JSON);
+
     private static final List<String> MEDIA_TYPES =
             ImmutableList.of(ActuatorMediaType.V2_JSON, "application/json");
+
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Bean
@@ -128,7 +133,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                             new EndpointLinksResolver(endpoints).resolveLinks(req.path());
                     return HttpResponse.of(
                             HttpStatus.OK,
-                            MediaType.JSON,
+                            ACTUATOR_MEDIA_TYPE,
                             OBJECT_MAPPER.writeValueAsBytes(ImmutableMap.of("_links", links))
                     );
                 });
