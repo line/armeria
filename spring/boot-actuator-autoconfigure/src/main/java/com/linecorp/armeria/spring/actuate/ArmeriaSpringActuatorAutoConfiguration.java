@@ -55,10 +55,13 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.cors.CorsServiceBuilder;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 
 /**
@@ -67,7 +70,7 @@ import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
  */
 @Configuration
 @AutoConfigureAfter(EndpointAutoConfiguration.class)
-@EnableConfigurationProperties(WebEndpointProperties.class)
+@EnableConfigurationProperties({ WebEndpointProperties.class, CorsEndpointProperties.class })
 public class ArmeriaSpringActuatorAutoConfiguration {
 
     private static final List<String> MEDIA_TYPES =
@@ -101,21 +104,60 @@ public class ArmeriaSpringActuatorAutoConfiguration {
     ArmeriaServerConfigurator actuatorServerConfigurator(
             WebEndpointsSupplier endpointsSupplier,
             EndpointMediaTypes mediaTypes,
-            WebEndpointProperties properties) {
+            WebEndpointProperties properties,
+            CorsEndpointProperties corsProperties) {
         final EndpointMapping endpointMapping = new EndpointMapping(properties.getBasePath());
 
         final Collection<ExposableWebEndpoint> endpoints = endpointsSupplier.getEndpoints();
         return sb -> {
+            final CorsServiceBuilder cors;
+            if (!corsProperties.getAllowedOrigins().isEmpty()) {
+                cors = CorsServiceBuilder.forOrigins(
+                        corsProperties.getAllowedOrigins());
+
+                if (!corsProperties.getAllowedMethods().contains("*")) {
+                    if (corsProperties.getAllowedMethods().isEmpty()) {
+                        cors.allowRequestMethods(HttpMethod.GET);
+                    } else {
+                        cors.allowRequestMethods(
+                                corsProperties.getAllowedMethods().stream().map(HttpMethod::valueOf)
+                                        ::iterator);
+                    }
+                }
+
+                if (!corsProperties.getAllowedHeaders().isEmpty() &&
+                    !corsProperties.getAllowedHeaders().contains("*")) {
+                    cors.allowRequestHeaders(corsProperties.getAllowedHeaders());
+                }
+
+                if (!corsProperties.getExposedHeaders().isEmpty()) {
+                    cors.exposeHeaders(corsProperties.getExposedHeaders());
+                }
+
+                if (Boolean.TRUE.equals(corsProperties.getAllowCredentials())) {
+                    cors.allowCredentials();
+                }
+
+                cors.maxAge(corsProperties.getMaxAge());
+            } else {
+                cors = null;
+            }
+
             endpoints.stream()
                      .flatMap(endpoint -> endpoint.getOperations().stream())
                      .forEach(operation -> {
                          final WebOperationRequestPredicate predicate = operation.getRequestPredicate();
-                         sb.service(route(predicate.getHttpMethod().name(),
-                                          endpointMapping.createSubPath(predicate.getPath()),
-                                          predicate.getConsumes(),
-                                          predicate.getProduces()),
-                                    new WebOperationHttpService(operation));
+                         final String path = endpointMapping.createSubPath(predicate.getPath());
+                         final Route route = route(predicate.getHttpMethod().name(),
+                                                   path,
+                                                   predicate.getConsumes(),
+                                                   predicate.getProduces());
+                         sb.service(route, new WebOperationHttpService(operation));
+                         if (cors != null) {
+                             cors.route(path);
+                         }
                      });
+
             if (StringUtils.hasText(endpointMapping.getPath())) {
                 final Route route = route(
                         HttpMethod.GET.name(),
@@ -123,7 +165,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                         ImmutableList.of(),
                         mediaTypes.getProduced()
                 );
-                sb.service(route, (ctx, req) -> {
+                Service<HttpRequest, HttpResponse> linksService = (ctx, req) -> {
                     final Map<String, Link> links =
                             new EndpointLinksResolver(endpoints).resolveLinks(req.path());
                     return HttpResponse.of(
@@ -131,7 +173,14 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                             MediaType.JSON,
                             OBJECT_MAPPER.writeValueAsBytes(ImmutableMap.of("_links", links))
                     );
-                });
+                };
+                sb.service(route, linksService);
+                if (cors != null) {
+                    cors.route(endpointMapping.getPath());
+                }
+            }
+            if (cors != null) {
+                sb.decorator(cors.newDecorator());
             }
         };
     }

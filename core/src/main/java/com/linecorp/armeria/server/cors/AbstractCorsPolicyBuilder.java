@@ -68,15 +68,15 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder<B>>
         origins = Collections.emptySet();
     }
 
-    AbstractCorsPolicyBuilder(String... origins) {
+    AbstractCorsPolicyBuilder(List<String> origins) {
         requireNonNull(origins, "origins");
-        checkArgument(origins.length > 0, "origins is empty.");
-        for (int i = 0; i < origins.length; i++) {
-            if (origins[i] == null) {
+        checkArgument(origins.size() > 0, "origins is empty.");
+        for (int i = 0; i < origins.size(); i++) {
+            if (origins.get(i) == null) {
                 throw new NullPointerException("origins[" + i + ']');
             }
         }
-        this.origins = Arrays.stream(origins).map(Ascii::toLowerCase).collect(toImmutableSet());
+        this.origins = origins.stream().map(Ascii::toLowerCase).collect(toImmutableSet());
     }
 
     @SuppressWarnings("unchecked")
@@ -122,6 +122,7 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder<B>>
      * @throws IllegalArgumentException if the path pattern is not valid
      */
     public B route(String pathPattern) {
+        requireNonNull(pathPattern, "pathPattern");
         routes.add(Route.builder().path(pathPattern).build());
         return self();
     }
@@ -200,14 +201,46 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder<B>>
      */
     public B exposeHeaders(CharSequence... headers) {
         requireNonNull(headers, "headers");
-        checkArgument(headers.length > 0, "headers should not be empty.");
-        for (int i = 0; i < headers.length; i++) {
-            if (headers[i] == null) {
+        return exposeHeaders(ImmutableList.copyOf(headers));
+    }
+
+    /**
+     * Specifies the headers to be exposed to calling clients.
+     *
+     * <p>During a simple CORS request, only certain response headers are made available by the
+     * browser, for example using:
+     * <pre>{@code
+     * xhr.getResponseHeader("Content-Type");
+     * }</pre>
+     *
+     * <p>The headers that are available by default are:
+     * <ul>
+     *   <li>{@code Cache-Control}</li>
+     *   <li>{@code Content-Language}</li>
+     *   <li>{@code Content-Type}</li>
+     *   <li>{@code Expires}</li>
+     *   <li>{@code Last-Modified}</li>
+     *   <li>{@code Pragma}</li>
+     * </ul>
+     *
+     * <p>To expose other headers they need to be specified which is what this method enables by
+     * adding the headers to the CORS {@code "Access-Control-Expose-Headers"} response header.
+     *
+     * @param headers the values to be added to the {@code "Access-Control-Expose-Headers"} response header
+     * @return {@code this} to support method chaining.
+     */
+    public B exposeHeaders(Iterable<? extends CharSequence> headers) {
+        requireNonNull(headers, "headers");
+        final List<CharSequence> copied = new ArrayList<>();
+        Iterables.addAll(copied, headers);
+        checkArgument(!copied.isEmpty(), "headers should not be empty.");
+        for (int i = 0; i < copied.size(); i++) {
+            if (copied.get(i) == null) {
                 throw new NullPointerException("headers[" + i + ']');
             }
         }
 
-        Arrays.stream(headers).map(HttpHeaderNames::of).forEach(exposedHeaders::add);
+        copied.stream().map(HttpHeaderNames::of).forEach(exposedHeaders::add);
         return self();
     }
 
@@ -220,13 +253,27 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder<B>>
      */
     public B allowRequestMethods(HttpMethod... methods) {
         requireNonNull(methods, "methods");
-        checkArgument(methods.length > 0, "methods should not be empty.");
-        for (int i = 0; i < methods.length; i++) {
-            if (methods[i] == null) {
+        return allowRequestMethods(ImmutableList.copyOf(methods));
+    }
+
+    /**
+     * Specifies the allowed set of HTTP request methods that should be returned in the
+     * CORS {@code "Access-Control-Allow-Methods"} response header.
+     *
+     * @param methods the {@link HttpMethod}s that should be allowed.
+     * @return {@code this} to support method chaining.
+     */
+    public B allowRequestMethods(Iterable<HttpMethod> methods) {
+        requireNonNull(methods, "methods");
+        final List<HttpMethod> copied = new ArrayList<>();
+        Iterables.addAll(copied, methods);
+        checkArgument(!copied.isEmpty(), "methods should not be empty.");
+        for (int i = 0; i < copied.size(); i++) {
+            if (copied.get(i) == null) {
                 throw new NullPointerException("methods[" + i + ']');
             }
         }
-        Collections.addAll(allowedRequestMethods, methods);
+        allowedRequestMethods.addAll(copied);
         return self();
     }
 
@@ -249,13 +296,37 @@ abstract class AbstractCorsPolicyBuilder<B extends AbstractCorsPolicyBuilder<B>>
      */
     public B allowRequestHeaders(CharSequence... headers) {
         requireNonNull(headers, "headers");
-        checkArgument(headers.length > 0, "headers should not be empty.");
-        for (int i = 0; i < headers.length; i++) {
-            if (headers[i] == null) {
+        return allowRequestHeaders(ImmutableList.copyOf(headers));
+    }
+
+    /**
+     * Specifies the headers that should be returned in the CORS {@code "Access-Control-Allow-Headers"}
+     * response header.
+     *
+     * <p>If a client specifies headers on the request, for example by calling:
+     * <pre>{@code
+     * xhr.setRequestHeader('My-Custom-Header', 'SomeValue');
+     * }</pre>
+     * The server will receive the above header name in the {@code "Access-Control-Request-Headers"} of the
+     * preflight request. The server will then decide if it allows this header to be sent for the
+     * real request (remember that a preflight is not the real request but a request asking the server
+     * if it allows a request).
+     *
+     * @param headers the headers to be added to
+     *                the preflight {@code "Access-Control-Allow-Headers"} response header.
+     * @return {@code this} to support method chaining.
+     */
+    public B allowRequestHeaders(Iterable<? extends CharSequence> headers) {
+        requireNonNull(headers, "headers");
+        final List<CharSequence> copied = new ArrayList<>();
+        Iterables.addAll(copied, headers);
+        checkArgument(!copied.isEmpty(), "headers should not be empty.");
+        for (int i = 0; i < copied.size(); i++) {
+            if (copied.get(i) == null) {
                 throw new NullPointerException("headers[" + i + ']');
             }
         }
-        Arrays.stream(headers).map(HttpHeaderNames::of).forEach(allowedRequestHeaders::add);
+        copied.stream().map(HttpHeaderNames::of).forEach(allowedRequestHeaders::add);
         return self();
     }
 

@@ -116,6 +116,13 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
     }
 
     @Test
+    public void testOptions() throws Exception {
+        final AggregatedHttpResponse res = client.options("/internal/actuator/health").aggregate().get();
+        // CORS not enabled by default.
+        assertThat(res.status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+    }
+
+    @Test
     public void testLoggers() throws Exception {
         final String loggerPath = "/internal/actuator/loggers/" + TEST_LOGGER_NAME;
         AggregatedHttpResponse res = client.get(loggerPath).aggregate().get();
@@ -206,5 +213,42 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
                                OBJECT_MAPPER.writeValueAsBytes(ImmutableMap.of("configuredLevel", "info")))
                       .aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+    }
+
+    @RunWith(SpringRunner.class)
+    @SpringBootTest(classes = org.springframework.boot.test.context.TestConfiguration.class)
+    @ActiveProfiles({ "local", "autoConfTest", "autoConfTestCors" })
+    @DirtiesContext
+    @EnableAutoConfiguration
+    @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
+    public static class ArmeriaSpringActuatorAutoConfigurationCorsTest {
+
+        @SpringBootApplication
+        public static class TestConfiguration {}
+
+        @Rule
+        public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
+
+        @Inject
+        private Server server;
+
+        private HttpClient client;
+
+        @Before
+        public void setUp() {
+            client = HttpClient.of(newUrl("h2c"));
+        }
+
+        private String newUrl(String scheme) {
+            final int port = server.activeLocalPort();
+            return scheme + "://127.0.0.1:" + port;
+        }
+
+        @Test
+        public void testOptions() throws Exception {
+            final AggregatedHttpResponse res = client.options("/internal/actuator/health").aggregate().get();
+            // CORS not enabled by default.
+            assertThat(res.status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+        }
     }
 }
