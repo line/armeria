@@ -71,9 +71,9 @@ After importing the project, import the IDE settings as well.
 You can configure your build tool and IDE to add `-parameters` javac option.
 Please refer to [Configure `-parameters` javac option](https://line.github.io/armeria/setup.html#configure-parameters-javac-option) for more information.
 
-### Use JUnit5 instead of JUnit4 for test
+### Use JUnit 5 instead of JUnit 4 for testing
 
-We support both [JUnit4](https://junit.org/junit4/) and [JUnit5](https://junit.org/junit5/) for test. but, we recommend to use JUnit5.
+We support both [JUnit 4](https://junit.org/junit4/) and [JUnit 5](https://junit.org/junit5/) for testing, but we recommend to use JUnit5.
 
 ```java
 // Imports of JUnit5, Good
