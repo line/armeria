@@ -35,6 +35,23 @@ public class LoggingServiceBuilder extends LoggingDecoratorBuilder<LoggingServic
     private Sampler<? super ServiceRequestContext> sampler = Sampler.always();
 
     /**
+     * Sets the {@link Sampler} that determines which request needs logging.
+     */
+    public LoggingServiceBuilder sampler(Sampler<? super ServiceRequestContext> sampler) {
+        this.sampler = requireNonNull(sampler, "sampler");
+        return this;
+    }
+
+    /**
+     * Sets the rate at which to sample requests to log. Any number between {@code 0.0} and {@code 1.0} will
+     * cause a random sample of the requests to be logged.
+     */
+    public LoggingServiceBuilder samplingRate(float samplingRate) {
+        checkArgument(0.0 <= samplingRate && samplingRate <= 1.0, "samplingRate must be between 0.0 and 1.0");
+        return sampler(Sampler.random(samplingRate));
+    }
+
+    /**
      * Returns a newly-created {@link LoggingService} decorating {@code delegate} based on the properties of
      * this builder.
      */
@@ -50,7 +67,7 @@ public class LoggingServiceBuilder extends LoggingDecoratorBuilder<LoggingServic
                                     responseContentSanitizer(),
                                     responseTrailersSanitizer(),
                                     responseCauseSanitizer(),
-                                    sampler());
+                                    sampler);
     }
 
     /**
@@ -59,29 +76,5 @@ public class LoggingServiceBuilder extends LoggingDecoratorBuilder<LoggingServic
     public <I extends Request, O extends Response> Function<Service<I, O>, LoggingService<I, O>>
     newDecorator() {
         return this::build;
-    }
-
-    /**
-     * Sets the {@link Sampler} that determines which request needs logging.
-     */
-    public LoggingServiceBuilder sampler(Sampler<? super ServiceRequestContext> sampler) {
-        this.sampler = requireNonNull(sampler, "sampler");
-        return this;
-    }
-
-    /**
-     * Returns the {@link Sampler} that determines which request needs logging.
-     */
-    protected Sampler<? super ServiceRequestContext> sampler() {
-        return sampler;
-    }
-
-    /**
-     * Sets the rate at which to sample requests to log. Any number between {@code 0.0} and {@code 1.0} will
-     * cause a random sample of the requests to be logged.
-     */
-    public LoggingServiceBuilder samplingRate(float samplingRate) {
-        checkArgument(0.0 <= samplingRate && samplingRate <= 1.0, "samplingRate must be between 0.0 and 1.0");
-        return sampler(Sampler.random(samplingRate));
     }
 }
