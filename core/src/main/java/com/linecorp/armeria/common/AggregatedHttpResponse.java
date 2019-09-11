@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.common;
 
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isContentAlwaysEmpty;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.setOrRemoveContentLength;
 import static java.util.Objects.requireNonNull;
 
@@ -51,7 +50,7 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
      */
     static AggregatedHttpResponse of(HttpStatus status) {
         requireNonNull(status, "status");
-        if (isContentAlwaysEmpty(status)) {
+        if (status.isContentAlwaysEmpty()) {
             return of(ResponseHeaders.of(status));
         } else {
             return of(status, MediaType.PLAIN_TEXT_UTF_8, status.toHttpData());

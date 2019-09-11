@@ -70,7 +70,6 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -365,39 +364,13 @@ public final class ArmeriaHttpUtil {
     /**
      * Returns {@code true} if the content of the response with the given {@link HttpStatus} is expected to
      * be always empty (1xx, 204, 205 and 304 responses.)
-     */
-    public static boolean isContentAlwaysEmpty(HttpStatus status) {
-        return isContentAlwaysEmpty(status.code());
-    }
-
-    /**
-     * Returns {@code true} if the content of the response with the given status code is expected to
-     * be always empty (1xx, 204, 205 and 304 responses.)
-     */
-    public static boolean isContentAlwaysEmpty(int statusCode) {
-        if (HttpStatusClass.INFORMATIONAL.contains(statusCode)) {
-            return true;
-        }
-
-        switch (statusCode) {
-            case /* NO_CONTENT */ 204:
-            case /* RESET_CONTENT */ 205:
-            case /* NOT_MODIFIED */ 304:
-                return true;
-        }
-        return false;
-    }
-
-    /**
-     * Returns {@code true} if the content of the response with the given {@link HttpStatus} is expected to
-     * be always empty (1xx, 204, 205 and 304 responses.)
      *
      * @throws IllegalArgumentException if the specified {@code content} or {@code trailers} are
      *                                  non-empty when the content is always empty
      */
     public static boolean isContentAlwaysEmptyWithValidation(
             HttpStatus status, HttpData content, HttpHeaders trailers) {
-        if (!isContentAlwaysEmpty(status)) {
+        if (!status.isContentAlwaysEmpty()) {
             return false;
         }
 

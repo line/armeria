@@ -77,7 +77,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
-import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.DefaultValues;
 import com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.NoParameterException;
 import com.linecorp.armeria.internal.annotation.AnnotationUtil.FindOption;
@@ -348,8 +347,7 @@ public final class AnnotatedHttpServiceFactory {
         setAdditionalHeader(defaultTrailers, method, "trailer", methodAlias, "method",
                             AdditionalTrailer.class, AdditionalTrailer::name, AdditionalTrailer::value);
 
-        if (ArmeriaHttpUtil.isContentAlwaysEmpty(defaultHeaders.status()) &&
-            !defaultTrailers.isEmpty()) {
+        if (defaultHeaders.status().isContentAlwaysEmpty() && !defaultTrailers.isEmpty()) {
             logger.warn("A response with HTTP status code '{}' cannot have a content. " +
                         "Trailers defined at '{}' might be ignored.",
                         defaultHeaders.status().code(), methodAlias);
