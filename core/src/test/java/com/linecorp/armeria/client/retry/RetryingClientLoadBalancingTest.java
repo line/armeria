@@ -101,7 +101,7 @@ class RetryingClientLoadBalancingTest {
         EndpointGroupRegistry.register(groupName, group, EndpointSelectionStrategy.ROUND_ROBIN);
         try {
             final HttpClient c = new HttpClientBuilder("h2c://group:" + groupName)
-                    .decorator(new RetryingHttpClientBuilder((RetryStrategy) (ctx, cause) -> {
+                    .decorator(RetryingHttpClient.builder((RetryStrategy) (ctx, cause) -> {
                         // Get the response status.
                         final HttpStatus status;
                         if (ctx.log().isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {

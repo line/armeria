@@ -16,20 +16,19 @@
 
 package com.linecorp.armeria.client.retry;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import com.linecorp.armeria.common.HttpResponse;
+import org.junit.Test;
 
 import java.util.concurrent.CompletableFuture;
 
-import org.junit.Test;
-
-import com.linecorp.armeria.common.HttpResponse;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class RetryingHttpClientBuilderTest {
 
     @Test
     public void cannotSetContentPreviewLengthWhenRetryStrategyIsUsed() {
         final RetryStrategy strategy = (ctx, cause) -> CompletableFuture.completedFuture(null);
-        assertThatThrownBy(() -> new RetryingHttpClientBuilder(strategy).contentPreviewLength(1024))
+        assertThatThrownBy(() -> RetryingHttpClient.builder(strategy).contentPreviewLength(1024))
                 .isExactlyInstanceOf(IllegalStateException.class);
     }
 
@@ -37,7 +36,7 @@ public class RetryingHttpClientBuilderTest {
     public void contentPreviewLengthCannotBeZero() {
         final RetryStrategyWithContent<HttpResponse> strategy =
                 (ctx, response) -> response.aggregate().handle((unused1, unused2) -> null);
-        assertThatThrownBy(() -> new RetryingHttpClientBuilder(strategy).contentPreviewLength(0))
+        assertThatThrownBy(() -> RetryingHttpClient.builder(strategy).contentPreviewLength(0))
                 .isExactlyInstanceOf(IllegalArgumentException.class);
     }
 }

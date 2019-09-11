@@ -16,17 +16,16 @@
 
 package com.linecorp.armeria.client.retry;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
+import com.google.common.base.MoreObjects.ToStringHelper;
+import com.linecorp.armeria.client.Client;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 
 import java.time.Duration;
 import java.util.function.Function;
 
-import com.google.common.base.MoreObjects.ToStringHelper;
-
-import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Builds a new {@link RetryingHttpClient} or its decorator function.
@@ -44,7 +43,10 @@ public class RetryingHttpClientBuilder
 
     /**
      * Creates a new builder with the specified {@link RetryStrategy}.
+     *
+     * @deprecated Use {@link RetryingHttpClient#builder(RetryStrategy)}.
      */
+    @Deprecated
     public RetryingHttpClientBuilder(RetryStrategy retryStrategy) {
         super(retryStrategy);
         needsContentInStrategy = false;
@@ -52,7 +54,10 @@ public class RetryingHttpClientBuilder
 
     /**
      * Creates a new builder with the specified {@link RetryStrategyWithContent}.
+     *
+     * @deprecated Use {@link RetryingHttpClient#builder(RetryStrategyWithContent)}.
      */
+    @Deprecated
     public RetryingHttpClientBuilder(RetryStrategyWithContent<HttpResponse> retryStrategyWithContent) {
         super(retryStrategyWithContent);
         needsContentInStrategy = true;

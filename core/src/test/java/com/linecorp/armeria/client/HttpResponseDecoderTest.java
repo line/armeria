@@ -15,7 +15,22 @@
  */
 package com.linecorp.armeria.client;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
+import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.client.retry.RetryStrategy;
+import com.linecorp.armeria.client.retry.RetryingHttpClient;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.channels.Channel;
 import java.util.concurrent.CompletableFuture;
@@ -24,23 +39,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
-import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.client.retry.RetryStrategy;
-import com.linecorp.armeria.client.retry.RetryingHttpClientBuilder;
-import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.junit.server.ServerExtension;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class HttpResponseDecoderTest {
     private static final Logger logger = LoggerFactory.getLogger(HttpResponseDecoderTest.class);
@@ -70,7 +69,7 @@ class HttpResponseDecoderTest {
                 // for notifying RESPONSE_END to listeners.
                 .contentPreview(100)
                 // In order to use a different thread to to subscribe to the response.
-                .decorator(new RetryingHttpClientBuilder(strategy).maxTotalAttempts(2).newDecorator())
+                .decorator(RetryingHttpClient.builder(strategy).maxTotalAttempts(2).newDecorator())
                 .decorator((delegate, ctx, req) -> {
                     final AtomicReference<Thread> responseStartedThread = new AtomicReference<>();
                     ctx.log().addListener(log -> {

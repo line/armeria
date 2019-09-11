@@ -169,7 +169,7 @@ using :api:`RetryingHttpClientBuilder`:
 
     // Create an HttpClient with a custom strategy.
     final HttpClient client = new HttpClientBuilder(...)
-            .decorator(new RetryingHttpClientBuilder(strategy).newDecorator())
+            .decorator(RetryingHttpClient.builder(strategy).newDecorator())
             .build();
 
     final AggregatedHttpResponse res = client.execute(...).aggregate().join();
@@ -388,7 +388,7 @@ You might want to use :ref:`client-circuit-breaker` with :api:`RetryingHttpClien
 
     HttpClient client = new HttpClientBuilder(...)
             .decorator(CircuitBreakerHttpClient.builder(cbStrategy).newDecorator())
-            .decorator(new RetryingHttpClientBuilder(myRetryStrategy).newDecorator())
+            .decorator(RetryingHttpClient.builder(myRetryStrategy).newDecorator())
             .build();
 
     final AggregatedHttpResponse res = client.execute(...).aggregate().join();

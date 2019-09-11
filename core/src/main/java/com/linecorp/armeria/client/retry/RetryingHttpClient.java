@@ -16,41 +16,29 @@
 
 package com.linecorp.armeria.client.retry;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Strings.isNullOrEmpty;
-import static com.linecorp.armeria.internal.ClientUtil.executeWithFallback;
+import com.linecorp.armeria.client.Client;
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ResponseTimeoutException;
+import com.linecorp.armeria.common.*;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
+import io.netty.handler.codec.DateFormatter;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.time.Duration;
 import java.util.Date;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.ResponseTimeoutException;
-import com.linecorp.armeria.common.FilteredHttpResponse;
-import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpObject;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpRequestDuplicator;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseDuplicator;
-import com.linecorp.armeria.common.RequestHeadersBuilder;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.common.stream.AbortedStreamException;
-
-import io.netty.handler.codec.DateFormatter;
+import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.linecorp.armeria.internal.ClientUtil.executeWithFallback;
 
 /**
  * A {@link Client} decorator that handles failures of an invocation and retries HTTP requests.
@@ -66,7 +54,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
      */
     public static Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient>
     newDecorator(RetryStrategy retryStrategy) {
-        return new RetryingHttpClientBuilder(retryStrategy).newDecorator();
+        return RetryingHttpClient.builder(retryStrategy).newDecorator();
     }
 
     /**
@@ -77,7 +65,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
      */
     public static Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient>
     newDecorator(RetryStrategy retryStrategy, int maxTotalAttempts) {
-        return new RetryingHttpClientBuilder(retryStrategy)
+        return RetryingHttpClient.builder(retryStrategy)
                 .maxTotalAttempts(maxTotalAttempts)
                 .newDecorator();
     }
@@ -93,10 +81,24 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
     public static Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient>
     newDecorator(RetryStrategy retryStrategy,
                  int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
-        return new RetryingHttpClientBuilder(retryStrategy)
+        return RetryingHttpClient.builder(retryStrategy)
                 .maxTotalAttempts(maxTotalAttempts)
                 .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt)
                 .newDecorator();
+    }
+
+    /**
+     * Returns a new {@link RetryingHttpClientBuilder} with the specified {@link RetryStrategy}.
+     */
+    public static RetryingHttpClientBuilder builder(RetryStrategy retryStrategy) {
+        return new RetryingHttpClientBuilder(retryStrategy);
+    }
+
+    /**
+     * Returns a new {@link RetryingHttpClientBuilder} with the specified {@link RetryStrategyWithContent}.
+     */
+    public static RetryingHttpClientBuilder builder(RetryStrategyWithContent<HttpResponse> retryStrategyWithContent) {
+        return new RetryingHttpClientBuilder(retryStrategyWithContent);
     }
 
     private final boolean useRetryAfter;

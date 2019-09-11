@@ -16,14 +16,13 @@
 
 package com.linecorp.armeria.core.client.retry;
 
-import org.openjdk.jmh.annotations.Scope;
-import org.openjdk.jmh.annotations.State;
-
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.client.retry.RetryStrategyWithContent;
-import com.linecorp.armeria.client.retry.RetryingHttpClientBuilder;
+import com.linecorp.armeria.client.retry.RetryingHttpClient;
 import com.linecorp.armeria.common.HttpResponse;
+import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.State;
 
 @State(Scope.Benchmark)
 public class WithDuplicator extends RetryingHttpClientBase {
@@ -34,7 +33,7 @@ public class WithDuplicator extends RetryingHttpClientBase {
                 (ctx, response) -> response.aggregate().handle((unused1, unused2) -> null);
 
         return new HttpClientBuilder(baseUrl())
-                .decorator(new RetryingHttpClientBuilder(retryStrategy).newDecorator())
+                .decorator(RetryingHttpClient.builder(retryStrategy).newDecorator())
                 .build();
     }
 }

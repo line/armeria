@@ -16,29 +16,8 @@
 
 package com.linecorp.armeria.client.retry;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.awaitility.Awaitility.await;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
-
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-
-import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.HttpClientBuilder;
-import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
-import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.client.*;
+import com.linecorp.armeria.common.*;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogAvailabilityException;
@@ -47,6 +26,18 @@ import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 public class RetryingClientWithLoggingTest {
 
@@ -101,7 +92,7 @@ public class RetryingClientWithLoggingTest {
         successLogIndex = 5;
         final HttpClient client = new HttpClientBuilder(server.uri("/"))
                 .decorator(loggingDecorator())
-                .decorator(new RetryingHttpClientBuilder(
+                .decorator(RetryingHttpClient.builder(
                         (RetryStrategyWithContent<HttpResponse>)
                                 (ctx, response) -> response.aggregate().handle((msg, cause) -> {
                                     if ("hello".equals(msg.contentUtf8())) {
