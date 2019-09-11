@@ -18,8 +18,8 @@ package com.linecorp.armeria.server.annotation;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.internal.FallthroughException;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * An interface for exception handler.
@@ -33,7 +33,7 @@ public interface ExceptionHandlerFunction {
      * Calls {@link ExceptionHandlerFunction#fallthrough()} or throws a {@link FallthroughException} if
      * this handler cannot handle the {@code cause}.
      */
-    HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause);
+    HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause);
 
     /**
      * Throws a {@link FallthroughException} in order to try to handle the {@link Throwable} by the next
