@@ -22,6 +22,12 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -248,6 +254,12 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
         return ctx.makeContextAware(super.exceptionally(ctx.makeContextAware(fn)));
     }
 
+    // support JDK9 functions
+
+    public <U> CompletableFuture<U> newIncompleteFuture() {
+        return ctx.makeContextAware(new CompletableFuture<>());
+    }
+
     @SuppressWarnings("unchecked")
     public CompletableFuture<T> completeAsync(Supplier<? extends T> supplier) {
         final Callable<? extends T> callable = Functions.toCallable(supplier);
@@ -261,5 +273,76 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
         final Callable<? extends T> callable = Functions.toCallable(supplier);
         return (CompletableFuture<T>) ctx.makeContextAware(supplyAsync
                 (Functions.fromCallable(ctx.makeContextAware(callable)), executor));
+    }
+
+    public CompletableFuture<T> orTimeout(long timeout, TimeUnit unit) {
+        if (unit == null)
+            throw new NullPointerException();
+        if (!this.isDone())
+            whenComplete(new Canceller(Delayer.delay(new Timeout(this),
+                    timeout, unit)));
+        return ctx.makeContextAware(this);
+    }
+
+    public CompletableFuture<T> completeOnTimeout(T value, long timeout,
+                                                  TimeUnit unit) {
+        if (unit == null)
+            throw new NullPointerException();
+        if (!this.isDone())
+            whenComplete(new Canceller(Delayer.delay(
+                    new DelayedCompleter<>(this, value),
+                    timeout, unit)));
+        return ctx.makeContextAware(this);
+    }
+
+    static final class Delayer {
+        static ScheduledFuture<?> delay(Runnable command, long delay,
+                                        TimeUnit unit) {
+            return delayer.schedule(command, delay, unit);
+        }
+
+        static final class DaemonThreadFactory implements ThreadFactory {
+            public Thread newThread(Runnable r) {
+                Thread t = new Thread(r);
+                t.setDaemon(true);
+                t.setName("CompletableFutureDelayScheduler");
+                return t;
+            }
+        }
+
+        static final ScheduledThreadPoolExecutor delayer;
+        static {
+            (delayer = new ScheduledThreadPoolExecutor(
+                    1, new DaemonThreadFactory())).
+                    setRemoveOnCancelPolicy(true);
+        }
+    }
+
+    static final class Timeout implements Runnable {
+        final CompletableFuture<?> f;
+        Timeout(CompletableFuture<?> f) { this.f = f; }
+        public void run() {
+            if (f != null && !f.isDone())
+                f.completeExceptionally(new TimeoutException());
+        }
+    }
+
+    static final class DelayedCompleter<U> implements Runnable {
+        final CompletableFuture<U> f;
+        final U u;
+        DelayedCompleter(CompletableFuture<U> f, U u) { this.f = f; this.u = u; }
+        public void run() {
+            if (f != null)
+                f.complete(u);
+        }
+    }
+
+    static final class Canceller implements BiConsumer<Object, Throwable> {
+        final Future<?> f;
+        Canceller(Future<?> f) { this.f = f; }
+        public void accept(Object ignore, Throwable ex) {
+            if (ex == null && f != null && !f.isDone())
+                f.cancel(false);
+        }
     }
 }
