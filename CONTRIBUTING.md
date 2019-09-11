@@ -59,7 +59,7 @@ After importing the project, import the IDE settings as well.
     <img src="https://raw.githubusercontent.com/line/armeria/master/settings/eclipse/save_actions.png">
   </details>
 - Although optional, if you want to run Checkstyle from Eclipse, install the
-  [Eclipse Checkstyle Plugin](http://eclipse-cs.sourceforge.net/), import and activate
+  [Eclipse Checkstyle Plugin](https://eclipse-cs.sourceforge.net/), import and activate
   the rule file at `settings/checkstyle/checkstyle.xml`.
   - Set the 'Type' to 'External Configuration File'.
   - Click the 'Additional properties...' button. A new dialog will show up.
@@ -69,11 +69,11 @@ After importing the project, import the IDE settings as well.
 ### Configure `-parameters` javac option 
 
 You can configure your build tool and IDE to add `-parameters` javac option.
-Please refer to [Configure `-parameters` javac option](http://line.github.io/armeria/setup.html#configure-parameters-javac-option) for more information.
+Please refer to [Configure `-parameters` javac option](https://line.github.io/armeria/setup.html#configure-parameters-javac-option) for more information.
 
 ### Use JUnit5 instead of JUnit4 for test
 
-We support both JUnit4 and JUnit5 for test. but, we recommend to use JUnit5.
+We support both [JUnit4](https://junit.org/junit4/) and [JUnit5](https://junit.org/junit5/) for test. but, we recommend to use JUnit5.
 
 ```java
 // Imports of JUnit5, Good
