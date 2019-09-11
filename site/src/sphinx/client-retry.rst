@@ -387,7 +387,7 @@ You might want to use :ref:`client-circuit-breaker` with :api:`RetryingHttpClien
     RetryStrategy myRetryStrategy = new RetryStrategy() { ... };
 
     HttpClient client = new HttpClientBuilder(...)
-            .decorator(new CircuitBreakerHttpClientBuilder(cbStrategy).newDecorator())
+            .decorator(CircuitBreakerHttpClient.builder(cbStrategy).newDecorator())
             .decorator(new RetryingHttpClientBuilder(myRetryStrategy).newDecorator())
             .build();
 

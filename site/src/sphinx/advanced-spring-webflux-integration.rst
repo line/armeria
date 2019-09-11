@@ -143,7 +143,7 @@ in your configuration as follows:
             return builder -> {
                 // Use a circuit breaker for each remote host.
                 final CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
-                builder.decorator(new CircuitBreakerHttpClientBuilder(strategy).newDecorator());
+                builder.decorator(CircuitBreakerHttpClient.builder(strategy).newDecorator());
 
                 // Set a custom client factory.
                 builder.factory(clientFactory);

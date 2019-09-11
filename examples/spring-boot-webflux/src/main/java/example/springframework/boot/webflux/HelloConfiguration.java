@@ -1,12 +1,9 @@
 package example.springframework.boot.webflux;
 
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
-import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerHttpClientBuilder;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerHttpClient;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerStrategy;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.docs.DocService;
@@ -14,8 +11,9 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.web.reactive.ArmeriaClientConfigurator;
-
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 /**
  * An example of a configuration which provides beans for customizing the server and client.
@@ -68,7 +66,7 @@ public class HelloConfiguration {
         return builder -> {
             // Use a circuit breaker for each remote host.
             final CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
-            builder.decorator(new CircuitBreakerHttpClientBuilder(strategy).newDecorator());
+            builder.decorator(CircuitBreakerHttpClient.builder(strategy).newDecorator());
 
             // Set a custom client factory.
             builder.factory(clientFactory);

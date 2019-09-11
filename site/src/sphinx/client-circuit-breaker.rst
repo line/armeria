@@ -87,7 +87,7 @@ You can use the ``decorator()`` method in :api:`ClientBuilder` to build a :api:`
 
     final CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
     final HttpClient client = new HttpClientBuilder(...)
-            .decorator(new CircuitBreakerHttpClientBuilder(strategy).newDecorator())
+            .decorator(CircuitBreakerHttpClient.builder(strategy).newDecorator())
             .build();
 
     final AggregatedHttpResponse res = client.execute(...).aggregate().join(); // Send requests on and on.
@@ -191,7 +191,7 @@ you should implement :api:`CircuitBreakerStrategyWithContent` and specify it whe
             };
 
     final HttpClient client = new HttpClientBuilder(...)
-            .decorator(new CircuitBreakerHttpClientBuilder(myStrategy).newDecorator()) // Specify the strategy
+            .decorator(CircuitBreakerHttpClient.builder(myStrategy).newDecorator()) // Specify the strategy
             .build();
 
     final AggregatedHttpResponse res = client.execute(...).aggregate().join();

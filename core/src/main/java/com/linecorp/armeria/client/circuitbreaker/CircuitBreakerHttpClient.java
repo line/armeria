@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import java.util.function.Function;
-
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpMethod;
@@ -25,6 +23,8 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
+
+import java.util.function.Function;
 
 /**
  * A {@link Client} decorator that handles failures of HTTP requests based on circuit breaker pattern.
@@ -100,7 +100,23 @@ public final class CircuitBreakerHttpClient extends CircuitBreakerClient<HttpReq
         return newDecorator(CircuitBreakerMapping.perHostAndMethod(factory), strategy);
     }
 
+    /**
+     * Returns a new {@link CircuitBreakerHttpClientBuilder} instance with the specified {@link CircuitBreakerStrategy}.
+     */
+    public static CircuitBreakerHttpClientBuilder builder(CircuitBreakerStrategy strategy) {
+        return new CircuitBreakerHttpClientBuilder(strategy);
+    }
+
+    /**
+     * Returns a new {@link CircuitBreakerHttpClientBuilder} with the specified {@link CircuitBreakerStrategy} and {@link CircuitBreakerStrategyWithContent}.
+     */
+    public static CircuitBreakerHttpClientBuilder builder(CircuitBreakerStrategyWithContent<HttpResponse> strategyWithContent) {
+        return new CircuitBreakerHttpClientBuilder(strategyWithContent);
+    }
+
     private final boolean needsContentInStrategy;
+
+
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
@@ -119,6 +135,8 @@ public final class CircuitBreakerHttpClient extends CircuitBreakerClient<HttpReq
         super(delegate, mapping, strategyWithContent);
         needsContentInStrategy = true;
     }
+
+
 
     @Override
     protected HttpResponse doExecute(ClientRequestContext ctx, HttpRequest req, CircuitBreaker circuitBreaker)

@@ -105,7 +105,7 @@ public class CircuitBreakerHttpClientTest {
     @Test
     public void strategyWithoutContent() {
         final CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
-        circuitBreakerIsOpenOnServerError(new CircuitBreakerHttpClientBuilder(strategy));
+        circuitBreakerIsOpenOnServerError(CircuitBreakerHttpClient.builder(strategy));
     }
 
     @Test
@@ -113,7 +113,7 @@ public class CircuitBreakerHttpClientTest {
         final CircuitBreakerStrategyWithContent<HttpResponse> strategy =
                 (ctx, response) -> response.aggregate().handle(
                         (msg, unused1) -> msg.status().codeClass() != HttpStatusClass.SERVER_ERROR);
-        circuitBreakerIsOpenOnServerError(new CircuitBreakerHttpClientBuilder(strategy));
+        circuitBreakerIsOpenOnServerError(CircuitBreakerHttpClient.builder(strategy));
     }
 
     private static void circuitBreakerIsOpenOnServerError(CircuitBreakerHttpClientBuilder builder) {
