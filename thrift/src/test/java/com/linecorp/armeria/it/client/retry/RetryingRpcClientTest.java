@@ -15,30 +15,6 @@
  */
 package com.linecorp.armeria.it.client.retry;
 
-import static com.linecorp.armeria.client.retry.RetryingClient.ARMERIA_RETRY_COUNT;
-import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.catchThrowable;
-import static org.awaitility.Awaitility.await;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.only;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.apache.thrift.TApplicationException;
-import org.junit.Rule;
-import org.junit.Test;
-
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
@@ -46,7 +22,6 @@ import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryStrategyWithContent;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
-import com.linecorp.armeria.client.retry.RetryingRpcClientBuilder;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -54,6 +29,22 @@ import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.DevNullService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import org.apache.thrift.TApplicationException;
+import org.junit.Rule;
+import org.junit.Test;
+
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static com.linecorp.armeria.client.retry.RetryingClient.ARMERIA_RETRY_COUNT;
+import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
+import static org.assertj.core.api.Assertions.*;
+import static org.awaitility.Awaitility.await;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
 
 public class RetryingRpcClientTest {
 
@@ -136,7 +127,7 @@ public class RetryingRpcClientTest {
     private HelloService.Iface helloClient(RetryStrategyWithContent<RpcResponse> strategy,
                                            int maxAttempts) {
         return new ClientBuilder(server.uri(BINARY, "/thrift"))
-                .rpcDecorator(new RetryingRpcClientBuilder(strategy)
+                .rpcDecorator(RetryingRpcClient.builder(strategy)
                                       .maxTotalAttempts(maxAttempts)
                                       .newDecorator())
                 .build(HelloService.Iface.class);
@@ -170,7 +161,7 @@ public class RetryingRpcClientTest {
         final HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift"))
                 .responseTimeoutMillis(10000)
                 .factory(factory)
-                .rpcDecorator(new RetryingRpcClientBuilder(strategy).newDecorator())
+                .rpcDecorator(RetryingRpcClient.builder(strategy).newDecorator())
                 .build(HelloService.Iface.class);
         when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
 
@@ -201,7 +192,7 @@ public class RetryingRpcClientTest {
     @Test
     public void doNotRetryWhenResponseIsCancelled() throws Exception {
         final HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift"))
-                .rpcDecorator(new RetryingRpcClientBuilder(retryAlways).newDecorator())
+                .rpcDecorator(RetryingRpcClient.builder(retryAlways).newDecorator())
                 .rpcDecorator((delegate, ctx, req) -> {
                     final RpcResponse res = delegate.execute(ctx, req);
                     res.cancel(true);

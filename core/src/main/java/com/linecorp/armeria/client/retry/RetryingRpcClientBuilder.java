@@ -16,12 +16,12 @@
 
 package com.linecorp.armeria.client.retry;
 
-import java.time.Duration;
-import java.util.function.Function;
-
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+
+import java.time.Duration;
+import java.util.function.Function;
 
 /**
  * Builds a new {@link RetryingRpcClient} or its decorator function.
@@ -31,7 +31,10 @@ public class RetryingRpcClientBuilder
 
     /**
      * Creates a new builder with the specified {@link RetryStrategyWithContent}.
+     *
+     * @deprecated Use {@link RetryingRpcClient#builder(RetryStrategyWithContent)}.
      */
+    @Deprecated
     public RetryingRpcClientBuilder(RetryStrategyWithContent<RpcResponse> retryStrategyWithContent) {
         super(retryStrategyWithContent);
     }
