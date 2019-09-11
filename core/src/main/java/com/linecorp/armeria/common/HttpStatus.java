@@ -353,6 +353,8 @@ public final class HttpStatus implements Comparable<HttpStatus> {
      * Returns the {@link HttpStatus} represented by the specified status text.
      *
      * @return the parsed {@link HttpStatus}, or {@link #UNKNOWN} if failed to parse.
+     *
+     * @see #isContentAlwaysEmpty()
      */
     public static HttpStatus valueOf(String statusText) {
         requireNonNull(statusText, "statusText");
@@ -481,7 +483,10 @@ public final class HttpStatus implements Comparable<HttpStatus> {
     /**
      * Returns {@code true} if the content of the response for this {@link HttpStatus} is expected to
      * be always empty (1xx, 204, 205 and 304 responses.)
+     *
+     * @see #isContentAlwaysEmpty(int)
      */
+    @SuppressWarnings("checkstyle:OverloadMethodsDeclarationOrder")
     public boolean isContentAlwaysEmpty() {
         return isContentAlwaysEmpty(code);
     }
