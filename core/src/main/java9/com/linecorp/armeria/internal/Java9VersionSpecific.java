@@ -31,16 +31,4 @@ class Java9VersionSpecific extends Java8VersionSpecific {
         return TimeUnit.SECONDS.toMicros(now.getEpochSecond()) + TimeUnit.NANOSECONDS.toMicros(
                 now.getNano());
     }
-
-    @Override
-    public final int javaVersion() {
-        // Deprecated on 10+, not on 9.
-        return Runtime.version().major();
-    }
-
-    @Override
-    public boolean jettyAlpnOptionalOrAvailable() {
-        // Always optional on 9+.
-        return true;
-    }
 }

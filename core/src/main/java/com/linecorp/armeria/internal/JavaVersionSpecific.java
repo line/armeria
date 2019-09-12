@@ -43,14 +43,4 @@ public abstract class JavaVersionSpecific {
      * Returns the number of microseconds since the epoch (00:00:00, 01-Jan-1970, GMT).
      */
     public abstract long currentTimeMicros();
-
-    /**
-     * Returns the major version of the current Java Virtual Machine.
-     */
-    public abstract int javaVersion();
-
-    /**
-     * Whether the environment either supports ALPN natively or includes Jetty ALPN.
-     */
-    public abstract boolean jettyAlpnOptionalOrAvailable();
 }

@@ -48,6 +48,8 @@ tasks.trimShadedJar.doLast {
     delete copied
 }
 
+tasks.shadedTest.exclude 'META-INF/versions/**'
+
 dependencies {
     // Common to reference classes in main sourceset from Java 9 one (e.g., to return a common interface)
     java9Implementation files(sourceSets.main.output.classesDirs) { builtBy compileJava }
