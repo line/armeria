@@ -49,7 +49,7 @@ public final class EventLoopThreadFactory implements ThreadFactory {
      *
      * @param threadNamePrefix the prefix of the names of the threads created by this factory.
      *
-     * @deprecated Use {@link EventLoopThreadFactoryBuilder}.
+     * @deprecated Use {@link #builder(String)}.
      */
     @Deprecated
     public EventLoopThreadFactory(String threadNamePrefix) {
@@ -62,7 +62,7 @@ public final class EventLoopThreadFactory implements ThreadFactory {
      * @param threadNamePrefix the prefix of the names of the threads created by this factory.
      * @param daemon whether to create a daemon thread.
      *
-     * @deprecated Use {@link EventLoopThreadFactoryBuilder}.
+     * @deprecated Use {@link #builder(String)}.
      */
     @Deprecated
     public EventLoopThreadFactory(String threadNamePrefix, boolean daemon) {
@@ -75,7 +75,7 @@ public final class EventLoopThreadFactory implements ThreadFactory {
      * @param threadNamePrefix the prefix of the names of the threads created by this factory.
      * @param priority the priority of the threads created by this factory.
      *
-     * @deprecated Use {@link EventLoopThreadFactoryBuilder}.
+     * @deprecated Use {@link #builder(String)}.
      */
     @Deprecated
     public EventLoopThreadFactory(String threadNamePrefix, int priority) {
@@ -89,7 +89,7 @@ public final class EventLoopThreadFactory implements ThreadFactory {
      * @param daemon whether to create a daemon thread.
      * @param priority the priority of the threads created by this factory.
      *
-     * @deprecated Use {@link EventLoopThreadFactoryBuilder}.
+     * @deprecated Use {@link #builder(String)}.
      */
     @Deprecated
     public EventLoopThreadFactory(String threadNamePrefix, boolean daemon, int priority) {
@@ -105,7 +105,7 @@ public final class EventLoopThreadFactory implements ThreadFactory {
      * @param priority the priority of the threads created by this factory.
      * @param threadGroup the {@link ThreadGroup}.
      *
-     * @deprecated Use {@link EventLoopThreadFactoryBuilder}.
+     * @deprecated Use {@link #builder(String)}.
      */
     @Deprecated
     public EventLoopThreadFactory(String threadNamePrefix, boolean daemon, int priority,
