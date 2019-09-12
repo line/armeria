@@ -28,10 +28,7 @@ import java.net.InetAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Clock;
-import java.time.Instant;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
@@ -41,6 +38,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Ascii;
 
+import com.linecorp.armeria.internal.JavaVersionSpecific;
+
 /**
  * Provides utilities for accessing the information about the current system and process.
  */
@@ -48,75 +47,11 @@ public final class SystemInfo {
 
     private static final Logger logger = LoggerFactory.getLogger(SystemInfo.class);
 
-    private static final int JAVA_VERSION;
-
-    private static boolean JETTY_ALPN_OPTIONAL_OR_AVAILABLE;
-
-    static {
-        int javaVersion = -1;
-        try {
-            final String spec = System.getProperty("java.specification.version");
-            if (spec != null) {
-                final String[] strValues = spec.split("\\.");
-                final int major;
-                final int minor;
-
-                switch (strValues.length) {
-                    case 0:
-                        major = 0;
-                        minor = 0;
-                        break;
-                    case 1:
-                        major = Integer.parseInt(strValues[0]);
-                        minor = 0;
-                        break;
-                    default:
-                        major = Integer.parseInt(strValues[0]);
-                        minor = Integer.parseInt(strValues[1]);
-                }
-
-                if (major > 1) {
-                    javaVersion = major;
-                } else if (major == 1) {
-                    if (minor == 0) {
-                        javaVersion = 1;
-                    } else if (minor > 0) {
-                        javaVersion = minor;
-                    }
-                }
-            }
-
-            if (javaVersion > 0) {
-                logger.debug("Java version: {}", javaVersion);
-            } else {
-                logger.warn("'java.specification.version' contains an unexpected value: {}", spec);
-            }
-        } catch (Throwable t) {
-            logger.warn("Failed to determine Java version", t);
-        }
-
-        JAVA_VERSION = javaVersion > 0 ? javaVersion : 8;
-
-        // ALPN check from https://github.com/netty/netty/blob/1065e0f26e0d47a67c479b0fad81efab5d9438d9/handler/src/main/java/io/netty/handler/ssl/JettyAlpnSslEngine.java
-        if (JAVA_VERSION >= 9) {
-            JETTY_ALPN_OPTIONAL_OR_AVAILABLE = true;
-        } else {
-            try {
-                // Always use bootstrap class loader.
-                Class.forName("sun.security.ssl.ALPNExtension", true, null);
-                JETTY_ALPN_OPTIONAL_OR_AVAILABLE = true;
-            } catch (Throwable ignore) {
-                // alpn-boot was not loaded.
-                JETTY_ALPN_OPTIONAL_OR_AVAILABLE = false;
-            }
-        }
-    }
-
     /**
      * Returns the major version of the current Java Virtual Machine.
      */
     public static int javaVersion() {
-        return JAVA_VERSION;
+        return JavaVersionSpecific.get().javaVersion();
     }
 
     /**
@@ -130,7 +65,7 @@ public final class SystemInfo {
      * Whether the environment either supports ALPN natively or includes Jetty ALPN.
      */
     public static boolean jettyAlpnOptionalOrAvailable() {
-        return JETTY_ALPN_OPTIONAL_OR_AVAILABLE;
+        return JavaVersionSpecific.get().jettyAlpnOptionalOrAvailable();
     }
 
     /**
@@ -152,14 +87,7 @@ public final class SystemInfo {
      * Java 8.
      */
     public static long currentTimeMicros() {
-        if (javaVersion() == 8) {
-            return TimeUnit.MILLISECONDS.toMicros(System.currentTimeMillis());
-        } else {
-            // Java 9+ support higher precision wall time.
-            final Instant now = Clock.systemUTC().instant();
-            return TimeUnit.SECONDS.toMicros(now.getEpochSecond()) + TimeUnit.NANOSECONDS.toMicros(
-                    now.getNano());
-        }
+        return JavaVersionSpecific.get().currentTimeMicros();
     }
 
     private static boolean isLinux() {
