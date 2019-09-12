@@ -154,6 +154,7 @@ public class HelloServiceTest {
             assertThat(value.getMessage())
                     .isEqualTo("Hello, Armeria! (sequence: " + ++sequence + ')');
         }
+        assertThat(sequence).isEqualTo(5);
     }
 
     @Test
