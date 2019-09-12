@@ -34,6 +34,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import static java.util.Objects.requireNonNull;
+
 final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T> {
 
     private final RequestContext ctx;
@@ -257,7 +259,7 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
     // support JDK9 functions
 
     public <U> CompletableFuture<U> newIncompleteFuture() {
-        return ctx.makeContextAware(new CompletableFuture<>());
+        return new CompletableFuture<>();
     }
 
     @SuppressWarnings("unchecked")
@@ -276,23 +278,21 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
     }
 
     public CompletableFuture<T> orTimeout(long timeout, TimeUnit unit) {
-        if (unit == null)
-            throw new NullPointerException();
-        if (!this.isDone())
+        if (!this.isDone()) {
             whenComplete(new Canceller(Delayer.delay(new Timeout(this),
-                    timeout, unit)));
-        return ctx.makeContextAware(this);
+                    timeout, requireNonNull(unit, "unit"))));
+        }
+        return this;
     }
 
     public CompletableFuture<T> completeOnTimeout(T value, long timeout,
                                                   TimeUnit unit) {
-        if (unit == null)
-            throw new NullPointerException();
-        if (!this.isDone())
+        if (!this.isDone()) {
             whenComplete(new Canceller(Delayer.delay(
                     new DelayedCompleter<>(this, value),
-                    timeout, unit)));
-        return ctx.makeContextAware(this);
+                    timeout, requireNonNull(unit, "unit"))));
+        }
+        return this;
     }
 
     static final class Delayer {
@@ -305,7 +305,7 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
             public Thread newThread(Runnable r) {
                 Thread t = new Thread(r);
                 t.setDaemon(true);
-                t.setName("CompletableFutureDelayScheduler");
+                t.setName("armeria-completableFutureDelayScheduler");
                 return t;
             }
         }
