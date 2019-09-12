@@ -4,6 +4,8 @@ import static example.armeria.grpc.HelloServiceImpl.toMessage;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -116,6 +118,42 @@ public class HelloServiceTest {
                     }
                 });
         await().untilTrue(completed);
+    }
+
+    @Test
+    public void blockForLotsOfReplies() throws Exception {
+        final BlockingQueue<HelloReply> replies = new LinkedBlockingQueue<>();
+        final AtomicBoolean completed = new AtomicBoolean();
+        helloService.lotsOfReplies(
+                HelloRequest.newBuilder().setName("Armeria").build(),
+                new StreamObserver<HelloReply>() {
+
+                    @Override
+                    public void onNext(HelloReply value) {
+                        replies.offer(value);
+                    }
+
+                    @Override
+                    public void onError(Throwable t) {
+                        // Should never reach here.
+                        throw new Error(t);
+                    }
+
+                    @Override
+                    public void onCompleted() {
+                        completed.set(true);
+                    }
+                });
+        int sequence = 0;
+        while (!completed.get() || !replies.isEmpty()) {
+            final HelloReply value = replies.poll(100, TimeUnit.MILLISECONDS);
+            if (value == null) {
+                // Timed out, try again.
+                continue;
+            }
+            assertThat(value.getMessage())
+                    .isEqualTo("Hello, Armeria! (sequence: " + ++sequence + ')');
+        }
     }
 
     @Test
