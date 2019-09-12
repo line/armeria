@@ -16,35 +16,24 @@
 
 package com.linecorp.armeria.common;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.assertj.core.api.Assertions.fail;
-import static org.awaitility.Awaitility.await;
-import static org.mockito.Mockito.when;
-
-import java.util.Collections;
-import java.util.Deque;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
-import javax.annotation.Nullable;
-import javax.net.ssl.SSLSession;
-
+import com.google.common.util.concurrent.MoreExecutors;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.metric.NoopMeterRegistry;
+import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.ChannelUtil;
+import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelPromise;
+import io.netty.channel.EventLoop;
+import io.netty.util.concurrent.DefaultPromise;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.concurrent.ProgressivePromise;
+import io.netty.util.concurrent.Promise;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -57,26 +46,34 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
-import com.google.common.util.concurrent.MoreExecutors;
+import javax.annotation.Nullable;
+import javax.net.ssl.SSLSession;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
-import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.metric.NoopMeterRegistry;
-import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.ChannelUtil;
-import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
-
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultChannelPromise;
-import io.netty.channel.EventLoop;
-import io.netty.util.concurrent.DefaultPromise;
-import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.ImmediateEventExecutor;
-import io.netty.util.concurrent.ProgressivePromise;
-import io.netty.util.concurrent.Promise;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.fail;
+import static org.awaitility.Awaitility.await;
+import static org.mockito.Mockito.when;
 
 public class RequestContextTest {
 
@@ -330,6 +327,28 @@ public class RequestContextTest {
         originalFuture.complete("success");
         assertDepth(1);
         assertThat(resultFuture.get()).isEqualTo("success");
+    }
+
+    @Test(expected = ExecutionException.class)
+    public void makeContextAwareCompletableFutureUsingOrTimeout() throws Exception {
+        final RequestContext context = createContext();
+        final CompletableFuture<String> originalFuture = new CompletableFuture<>();
+
+        context.makeContextAware(originalFuture)
+                .orTimeout(1, TimeUnit.MILLISECONDS)
+                .get();
+    }
+
+    @Test
+    public void makeContextAwareCompletableFutureUsingCompleteOnTimeout() throws Exception {
+        final RequestContext context = createContext();
+        final CompletableFuture<String> originalFuture = new CompletableFuture<>();
+        final String failed = "failed";
+
+        assertThat(context.makeContextAware(originalFuture)
+                .completeOnTimeout(failed, 1, TimeUnit.MILLISECONDS)
+                .get()
+        ).isEqualTo(failed);
     }
 
     @Test
