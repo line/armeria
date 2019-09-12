@@ -131,7 +131,7 @@ public final class EventLoopThreadFactory implements ThreadFactory {
         return delegate.newThread(taskFunction.apply(r));
     }
 
-    static final class EventLoopThreadFactoryImpl extends DefaultThreadFactory {
+    private static final class EventLoopThreadFactoryImpl extends DefaultThreadFactory {
         EventLoopThreadFactoryImpl(String threadNamePrefix) {
             super(threadNamePrefix);
         }
