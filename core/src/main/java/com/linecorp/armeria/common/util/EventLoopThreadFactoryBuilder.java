@@ -20,10 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
-import javax.annotation.Nullable;
-
-import com.linecorp.armeria.common.util.EventLoopThreadFactory.EventLoopThreadFactoryImpl;
-
 /**
  * Builds a new {@link EventLoopThreadFactory}.
  */
@@ -32,12 +28,8 @@ public final class EventLoopThreadFactoryBuilder {
     private String threadNamePrefix;
     private boolean daemon;
     private int priority = Thread.NORM_PRIORITY;
-
-    @Nullable
     private ThreadGroup threadGroup;
-
-    @Nullable
-    private Function<? super Runnable, ? extends Runnable> taskFunction;
+    private Function<? super Runnable, ? extends Runnable> taskFunction = Function.identity();
 
     public EventLoopThreadFactoryBuilder(String threadNamePrefix) {
         this.threadNamePrefix = requireNonNull(threadNamePrefix, "threadNamePrefix");
@@ -55,6 +47,12 @@ public final class EventLoopThreadFactoryBuilder {
      * Sets priority for new threads.
      */
     public EventLoopThreadFactoryBuilder priority(int priority) {
+        if (priority < Thread.MIN_PRIORITY || priority > Thread.MAX_PRIORITY) {
+            throw new IllegalArgumentException(
+                    "priority: " + priority +
+                    " (expected: Thread.MIN_PRIORITY <= priority <= Thread.MAX_PRIORITY)");
+        }
+
         this.priority = priority;
         return this;
     }
@@ -62,8 +60,8 @@ public final class EventLoopThreadFactoryBuilder {
     /**
      * Sets thread group for new threads.
      */
-    public EventLoopThreadFactoryBuilder threadGroup(@Nullable ThreadGroup threadGroup) {
-        this.threadGroup = threadGroup;
+    public EventLoopThreadFactoryBuilder threadGroup(ThreadGroup threadGroup) {
+        this.threadGroup = requireNonNull(threadGroup, "threadGroup");
         return this;
     }
 
@@ -83,8 +81,8 @@ public final class EventLoopThreadFactoryBuilder {
      * }</pre>
      */
     public EventLoopThreadFactoryBuilder taskFunction(
-            @Nullable Function<? super Runnable, ? extends Runnable> taskFunction) {
-        this.taskFunction = taskFunction;
+            Function<? super Runnable, ? extends Runnable> taskFunction) {
+        this.taskFunction = requireNonNull(taskFunction, "taskFunction");
         return this;
     }
 
@@ -92,8 +90,6 @@ public final class EventLoopThreadFactoryBuilder {
      * Returns a new {@link EventLoopThreadFactory}.
      */
     public EventLoopThreadFactory build() {
-        return new EventLoopThreadFactory(new EventLoopThreadFactoryImpl(threadNamePrefix, daemon, priority,
-                                                                         threadGroup),
-                                          taskFunction);
+        return new EventLoopThreadFactory(threadNamePrefix, daemon, priority, threadGroup, taskFunction);
     }
 }

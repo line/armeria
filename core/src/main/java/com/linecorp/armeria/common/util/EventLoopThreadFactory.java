@@ -118,19 +118,17 @@ public final class EventLoopThreadFactory implements ThreadFactory {
         this.delegate = delegate;
     }
 
-    EventLoopThreadFactory(ThreadFactory delegate,
-                           @Nullable Function<? super Runnable, ? extends Runnable> taskFunction) {
-        this.delegate = delegate;
-        this.taskFunction = taskFunction;
+    EventLoopThreadFactory(String threadNamePrefix, boolean daemon, int priority,
+                           @Nullable ThreadGroup threadGroup,
+                           Function<? super Runnable, ? extends Runnable> taskFunction) {
+        this(new EventLoopThreadFactoryImpl(requireNonNull(threadNamePrefix, "threadNamePrefix"),
+                                            daemon, priority, threadGroup));
+        this.taskFunction = requireNonNull(taskFunction, "taskFunction");
     }
 
     @Override
     public Thread newThread(Runnable r) {
-        if (taskFunction != null) {
-            return delegate.newThread(taskFunction.apply(r));
-        } else {
-            return delegate.newThread(r);
-        }
+        return delegate.newThread(taskFunction.apply(r));
     }
 
     static final class EventLoopThreadFactoryImpl extends DefaultThreadFactory {
