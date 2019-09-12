@@ -262,6 +262,14 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
         return new CompletableFuture<>();
     }
 
+    public CompletableFuture<T> copy() {
+        return thenApply(Function.identity());
+    }
+
+    public CompletionStage<T> minimalCompletionStage() {
+        return this;
+    }
+
     @SuppressWarnings("unchecked")
     public CompletableFuture<T> completeAsync(Supplier<? extends T> supplier) {
         final Callable<? extends T> callable = Functions.toCallable(supplier);
