@@ -279,7 +279,7 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
 
     public CompletableFuture<T> orTimeout(long timeout, TimeUnit unit) {
         if (!this.isDone()) {
-            whenComplete(new Canceller(Delayer.delay(new Timeout(this),
+            handle(new Canceller(Delayer.delay(new Timeout(this),
                     timeout, requireNonNull(unit, "unit"))));
         }
         return this;
@@ -288,7 +288,7 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
     public CompletableFuture<T> completeOnTimeout(T value, long timeout,
                                                   TimeUnit unit) {
         if (!this.isDone()) {
-            whenComplete(new Canceller(Delayer.delay(
+            handle(new Canceller(Delayer.delay(
                     new DelayedCompleter<>(this, value),
                     timeout, requireNonNull(unit, "unit"))));
         }
@@ -320,7 +320,9 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
 
     static final class Timeout implements Runnable {
         final CompletableFuture<?> f;
+
         Timeout(CompletableFuture<?> f) { this.f = f; }
+
         public void run() {
             if (f != null && !f.isDone())
                 f.completeExceptionally(new TimeoutException());
@@ -330,19 +332,26 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
     static final class DelayedCompleter<U> implements Runnable {
         final CompletableFuture<U> f;
         final U u;
+
         DelayedCompleter(CompletableFuture<U> f, U u) { this.f = f; this.u = u; }
+
         public void run() {
             if (f != null)
                 f.complete(u);
         }
     }
 
-    static final class Canceller implements BiConsumer<Object, Throwable> {
+    static final class Canceller implements BiFunction<Object, Throwable, Void> {
         final Future<?> f;
+
         Canceller(Future<?> f) { this.f = f; }
-        public void accept(Object ignore, Throwable ex) {
-            if (ex == null && f != null && !f.isDone())
+
+        @Override
+        public Void apply(Object ignore, Throwable throwable) {
+            if (throwable == null && f != null && !f.isDone()) {
                 f.cancel(false);
+            }
+            return null;
         }
     }
 }
