@@ -58,6 +58,12 @@ public class GrpcServiceRegistrationBean
 
     public static final class GrpcExampleRequest {
 
+        public static GrpcExampleRequest of(@NotNull String serviceType,
+                                            @NotNull String methodName,
+                                            @NotNull Object exampleRequest) {
+            return new GrpcExampleRequest(serviceType, methodName, exampleRequest);
+        }
+
         private final String serviceType;
         private final String methodName;
         private final Object exampleRequest;
@@ -78,12 +84,6 @@ public class GrpcServiceRegistrationBean
 
         public Object getExampleRequest() {
             return exampleRequest;
-        }
-
-        public static GrpcExampleRequest of(@NotNull String serviceType,
-                                            @NotNull String methodName,
-                                            @NotNull Object exampleRequest) {
-            return new GrpcExampleRequest(serviceType, methodName, exampleRequest);
         }
 
         @Override

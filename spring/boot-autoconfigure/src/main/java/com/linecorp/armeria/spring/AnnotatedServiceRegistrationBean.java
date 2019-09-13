@@ -53,6 +53,12 @@ public class AnnotatedServiceRegistrationBean
         extends AbstractServiceRegistrationBean<Object, AnnotatedServiceRegistrationBean> {
 
     public static final class AnnotatedExampleRequest {
+
+        public static AnnotatedExampleRequest of(@NotNull String methodName,
+                                                 @NotNull Object exampleRequest) {
+            return new AnnotatedExampleRequest(methodName, exampleRequest);
+        }
+
         private final String methodName;
         private final Object exampleRequest;
 
@@ -67,11 +73,6 @@ public class AnnotatedServiceRegistrationBean
 
         public Object getExampleRequest() {
             return exampleRequest;
-        }
-
-        public static AnnotatedExampleRequest of(@NotNull String methodName,
-                                                 @NotNull Object exampleRequest) {
-            return new AnnotatedExampleRequest(methodName, exampleRequest);
         }
 
         @Override
