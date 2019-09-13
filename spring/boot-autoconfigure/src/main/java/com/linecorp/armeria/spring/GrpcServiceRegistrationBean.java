@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.stream.Collectors;
 
 import javax.validation.constraints.NotNull;
 
@@ -45,11 +44,11 @@ import com.linecorp.armeria.server.docs.DocService;
  * >                                 .enableUnframedRequests(true)
  * >                                 .build())
  * >             .setDecorators(LoggingService.newDecorator())
- * >             .setGrpcExampleRequests(List.of(GrpcExampleRequest.of(HelloServiceGrpc.SERVICE_NAME,
- * >                                                                   "Hello",
- * >                                                                   HelloRequest.newBuilder()
- * >                                                                               .setName("Armeria")
- * >                                                                               .build())));
+ * >             .setExampleRequests(List.of(GrpcExampleRequest.of(HelloServiceGrpc.SERVICE_NAME,
+ * >                                                               "Hello",
+ * >                                                               HelloRequest.newBuilder()
+ * >                                                                           .setName("Armeria")
+ * >                                                       s                    .build())));
  * > }
  * }</pre>
  */
@@ -57,41 +56,13 @@ public class GrpcServiceRegistrationBean
         extends AbstractServiceRegistrationBean<ServiceWithRoutes<HttpRequest, HttpResponse>,
         GrpcServiceRegistrationBean> {
 
-    public static final class GrpcExampleRequest extends ExampleRequest {
+    public static final class GrpcExampleRequest {
 
-        private GrpcExampleRequest(String serviceType, String methodName, Object exampleRequest) {
-            super(serviceType, methodName, exampleRequest);
-        }
-
-        public static GrpcExampleRequest of(@NotNull String serviceType,
-                                            @NotNull String methodName,
-                                            @NotNull Object exampleRequest) {
-            return new GrpcExampleRequest(serviceType, methodName, exampleRequest);
-        }
-
-        @Override
-        public String toString() {
-            return MoreObjects.toStringHelper(this)
-                              .add("serviceType", getServiceType())
-                              .add("methodName", getMethodName())
-                              .add("exampleRequest", getExampleRequest())
-                              .toString();
-        }
-    }
-
-    /**
-     * This class will be removed.
-     *
-     * @deprecated Use {@link GrpcExampleRequest}.
-     */
-    @SuppressWarnings("checkstyle:FinalClass")
-    @Deprecated
-    public static class ExampleRequest {
         private final String serviceType;
         private final String methodName;
         private final Object exampleRequest;
 
-        private ExampleRequest(String serviceType, String methodName, Object exampleRequest) {
+        private GrpcExampleRequest(String serviceType, String methodName, Object exampleRequest) {
             this.serviceType = serviceType;
             this.methodName = methodName;
             this.exampleRequest = exampleRequest;
@@ -109,10 +80,19 @@ public class GrpcServiceRegistrationBean
             return exampleRequest;
         }
 
-        public static ExampleRequest of(@NotNull String serviceType,
-                                        @NotNull String methodName,
-                                        @NotNull Object exampleRequest) {
-            return new ExampleRequest(serviceType, methodName, exampleRequest);
+        public static GrpcExampleRequest of(@NotNull String serviceType,
+                                            @NotNull String methodName,
+                                            @NotNull Object exampleRequest) {
+            return new GrpcExampleRequest(serviceType, methodName, exampleRequest);
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                              .add("serviceType", serviceType)
+                              .add("methodName", methodName)
+                              .add("exampleRequest", exampleRequest)
+                              .toString();
         }
     }
 
@@ -120,63 +100,24 @@ public class GrpcServiceRegistrationBean
      * Sample requests to populate debug forms in {@link DocService}.
      * This should be a list of request objects which correspond to methods
      * in this gRPC service.
-     *
-     * @deprecated Use {@link #grpcExampleRequests}.
      */
     @NotNull
-    @Deprecated
-    private Collection<ExampleRequest> exampleRequests = new ArrayList<>();
-
-    /**
-     * Sample requests to populate debug forms in {@link DocService}.
-     * This should be a list of request objects which correspond to methods
-     * in this gRPC service.
-     */
-    @NotNull
-    private Collection<GrpcExampleRequest> grpcExampleRequests = new ArrayList<>();
+    private Collection<GrpcExampleRequest> exampleRequests = new ArrayList<>();
 
     /**
      * Returns sample requests of {@link #getService()}.
-     *
-     * @deprecated Use {@link #getGrpcExampleRequests()}.
      */
     @NotNull
-    @Deprecated
-    public Collection<ExampleRequest> getExampleRequests() {
+    public Collection<GrpcExampleRequest> getExampleRequests() {
         return exampleRequests;
     }
 
     /**
      * Sets sample requests for {@link #getService()}.
-     *
-     * @deprecated Use {@link #setGrpcExampleRequests(Collection)}.
      */
-    @Deprecated
     public GrpcServiceRegistrationBean setExampleRequests(
-            @NotNull Collection<ExampleRequest> exampleRequests) {
+            @NotNull Collection<GrpcExampleRequest> exampleRequests) {
         this.exampleRequests = exampleRequests;
-        grpcExampleRequests = exampleRequests.stream()
-                                             .map(it -> GrpcExampleRequest.of(it.getServiceType(),
-                                                                              it.getMethodName(),
-                                                                              it.getExampleRequest()))
-                                             .collect(Collectors.toList());
-        return this;
-    }
-
-    /**
-     * Returns sample requests of {@link #getService()}.
-     */
-    @NotNull
-    public Collection<GrpcExampleRequest> getGrpcExampleRequests() {
-        return grpcExampleRequests;
-    }
-
-    /**
-     * Sets sample requests for {@link #getService()}.
-     */
-    public GrpcServiceRegistrationBean setGrpcExampleRequests(
-            @NotNull Collection<GrpcExampleRequest> grpcExampleRequests) {
-        this.grpcExampleRequests = grpcExampleRequests;
         return this;
     }
 

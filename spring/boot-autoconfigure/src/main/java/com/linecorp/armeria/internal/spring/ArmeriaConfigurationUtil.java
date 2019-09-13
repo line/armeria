@@ -311,7 +311,7 @@ public final class ArmeriaConfigurationUtil {
         beans.forEach(bean -> {
             final ServiceWithRoutes<HttpRequest, HttpResponse> serviceWithRoutes =
                     bean.getService();
-            docServiceRequests.addAll(bean.getGrpcExampleRequests());
+            docServiceRequests.addAll(bean.getExampleRequests());
             serviceWithRoutes.routes().forEach(
                     route -> {
                         Service<HttpRequest, HttpResponse> service = bean.getService();

@@ -131,12 +131,11 @@ public class ArmeriaAutoConfigurationTest {
                                         .enableUnframedRequests(true)
                                         .build())
                     .setDecorators(LoggingService.newDecorator())
-                    .setGrpcExampleRequests(
-                            ImmutableList.of(GrpcExampleRequest.of(HelloServiceGrpc.SERVICE_NAME,
-                                                                   "Hello",
-                                                                   HelloRequest.newBuilder()
-                                                                               .setName("Armeria")
-                                                                               .build())));
+                    .setExampleRequests(ImmutableList.of(GrpcExampleRequest.of(HelloServiceGrpc.SERVICE_NAME,
+                                                                               "Hello",
+                                                                               HelloRequest.newBuilder()
+                                                                                           .setName("Armeria")
+                                                                                           .build())));
         }
     }
 
