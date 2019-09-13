@@ -304,10 +304,10 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 } else {
                     GrpcStatus.reportStatus(trailers, responseReader, this);
                 }
-                return;
             } finally {
                 buf.release();
             }
+            return;
         }
         try {
             final O msg = marshaller.deserializeResponse(message);
