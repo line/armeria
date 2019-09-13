@@ -129,6 +129,9 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         }
         snapshot.forEach(ctx -> ctx.initialCheckFuture.join());
 
+        // If all endpoints are unhealthy, we will not have called setEndpoints even once, meaning listeners
+        // aren't notified that we've finished an initial health check. We make sure to refresh endpoints once
+        // on initialization to ensure this happens, even if the endpoints are currently empty.
         refreshEndpoints();
     }
 
