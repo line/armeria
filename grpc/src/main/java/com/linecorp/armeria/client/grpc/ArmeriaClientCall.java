@@ -19,6 +19,7 @@ import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_
 import static com.linecorp.armeria.internal.ClientUtil.initContextAndExecuteWithFallback;
 import static java.util.Objects.requireNonNull;
 
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
@@ -34,13 +35,16 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.ByteBufOrStream;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -66,6 +70,8 @@ import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
 import io.grpc.Status;
 import io.netty.buffer.ByteBuf;
+import io.netty.util.ByteProcessor;
+import io.netty.util.ByteProcessor.IndexOfProcessor;
 
 /**
  * Encapsulates the state of a single client call, writing messages from the client and reading responses
@@ -78,6 +84,8 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     };
 
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaClientCall.class);
+
+    private static final ByteProcessor FIND_COLON = new IndexOfProcessor((byte) ':');
 
     @SuppressWarnings("rawtypes")
     private static final AtomicIntegerFieldUpdater<ArmeriaClientCall> pendingMessagesUpdater =
@@ -97,6 +105,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     @Nullable
     private final Executor executor;
     private final String advertisedEncodingsHeader;
+    private final SerializationFormat serializationFormat;
 
     // Effectively final, only set once during start()
     @Nullable
@@ -132,6 +141,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         this.compressorRegistry = compressorRegistry;
         this.unsafeWrapResponseBuffers = unsafeWrapResponseBuffers;
         this.advertisedEncodingsHeader = advertisedEncodingsHeader;
+        this.serializationFormat = serializationFormat;
         messageFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes);
         marshaller = new GrpcMessageMarshaller<>(
                 ctx.alloc(), serializationFormat, method, jsonMarshaller,
@@ -277,7 +287,28 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     @Override
-    public void messageRead(ByteBufOrStream message) {
+    public void messageRead(DeframedMessage message) {
+        if (GrpcSerializationFormats.isGrpcWeb(serializationFormat) && message.type() >> 7 == 1) {
+            // grpc-web trailers
+            final ByteBuf buf = message.buf();
+            // trailers never compressed
+            assert buf != null;
+            try {
+                HttpHeaders trailers = parseGrpcWebTrailers(buf);
+                if (trailers == null) {
+                    // Malformed trailers.
+                    close(Status.INTERNAL
+                                  .withDescription("grpc-web trailers malformed: " +
+                                                   buf.toString(StandardCharsets.UTF_8)),
+                          new Metadata());
+                } else {
+                    GrpcStatus.reportStatus(trailers, responseReader, this);
+                }
+                return;
+            } finally {
+                buf.release();
+            }
+        }
         try {
             final O msg = marshaller.deserializeResponse(message);
             if (firstResponse == null) {
@@ -353,5 +384,43 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         if (executor != null) {
             executor.execute(NO_OP);
         }
+    }
+
+    @Nullable
+    private HttpHeaders parseGrpcWebTrailers(ByteBuf buf) {
+        HttpHeadersBuilder trailers = HttpHeaders.builder();
+        while (buf.readableBytes() > 0) {
+            int start = buf.forEachByte(ByteProcessor.FIND_NON_LINEAR_WHITESPACE);
+            if (start == -1) {
+                return null;
+            }
+            int endExclusive;
+            if (buf.getByte(start) == ':') {
+                // We need to skip the pseudoheader colon when searching for the separator.
+                buf.skipBytes(1);
+                endExclusive = buf.forEachByte(FIND_COLON);
+                buf.readerIndex(start);
+            } else {
+                endExclusive = buf.forEachByte(FIND_COLON);
+            }
+            if (endExclusive == -1) {
+                return null;
+            }
+            CharSequence name = buf.readCharSequence(endExclusive - start, StandardCharsets.UTF_8);
+            buf.readerIndex(endExclusive + 1);
+            start = buf.forEachByte(ByteProcessor.FIND_NON_LINEAR_WHITESPACE);
+            buf.readerIndex(start);
+            endExclusive = buf.forEachByte(ByteProcessor.FIND_CRLF);
+            CharSequence value = buf.readCharSequence(endExclusive - start, StandardCharsets.UTF_8);
+            trailers.add(name, value.toString());
+            start = buf.forEachByte(ByteProcessor.FIND_NON_CRLF);
+            if (start != -1) {
+                buf.readerIndex(start);
+            } else {
+                // Nothing but CRLF remaining, we're done.
+                buf.readerIndex(buf.writerIndex());
+            }
+        }
+        return trailers.build();
     }
 }

@@ -36,17 +36,26 @@ import static java.util.Objects.requireNonNull;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.nio.channels.ClosedChannelException;
+import java.util.Base64;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Strings;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.grpc.StackTraceElementProto;
 import com.linecorp.armeria.common.grpc.StatusCauseException;
 import com.linecorp.armeria.common.grpc.ThrowableProto;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
+import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
 
+import io.grpc.Metadata;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.netty.handler.codec.http2.Http2Exception;
@@ -56,6 +65,8 @@ import io.netty.handler.codec.http2.Http2Exception.StreamException;
  * Utilities for handling {@link Status} in Armeria.
  */
 public final class GrpcStatus {
+
+    private static final Logger logger = LoggerFactory.getLogger(GrpcStatus.class);
 
     /**
      * Converts the {@link Throwable} to a {@link Status}, taking into account exceptions specific to Armeria as
@@ -204,6 +215,47 @@ public final class GrpcStatus {
             builder.setCause(serializeThrowable(t.getCause()));
         }
         return builder.build();
+    }
+
+    public static void reportStatus(HttpHeaders headers,
+                                    HttpStreamReader reader,
+                                    TransportStatusListener transportStatusListener) {
+        final String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
+        Status status = Status.fromCodeValue(Integer.valueOf(grpcStatus));
+        if (status.getCode() == Status.OK.getCode()) {
+            // Successful response, finish delivering messages before returning the status.
+            reader.closeDeframer();
+        }
+        final String grpcMessage = headers.get(GrpcHeaderNames.GRPC_MESSAGE);
+        if (grpcMessage != null) {
+            status = status.withDescription(StatusMessageEscaper.unescape(grpcMessage));
+        }
+        final String grpcThrowable = headers.get(GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN);
+        if (grpcThrowable != null) {
+            status = addCause(status, grpcThrowable);
+        }
+
+        Metadata metadata = MetadataUtil.copyFromHeaders(headers);
+
+        transportStatusListener.transportReportStatus(status, metadata);
+    }
+
+    private static Status addCause(Status status, String serializedThrowableProto) {
+        final byte[] decoded;
+        try {
+            decoded = Base64.getDecoder().decode(serializedThrowableProto);
+        } catch (IllegalArgumentException e) {
+            logger.warn("Invalid Base64 in status cause proto, ignoring.", e);
+            return status;
+        }
+        final ThrowableProto grpcThrowableProto;
+        try {
+            grpcThrowableProto = ThrowableProto.parseFrom(decoded);
+        } catch (InvalidProtocolBufferException e) {
+            logger.warn("Invalid serialized status cause proto, ignoring.", e);
+            return status;
+        }
+        return status.withCause(new StatusCauseException(grpcThrowableProto));
     }
 
     private static StackTraceElementProto serializeStackTraceElement(StackTraceElement element) {
