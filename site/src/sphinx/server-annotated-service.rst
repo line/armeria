@@ -778,7 +778,7 @@ more response types which can be used in the annotated service.
 
       public class MyAnnotatedService {
           @Get("/users")
-          public HttpResult<User> getUsers(@Param int start) {
+          public HttpResult<List<User>> getUsers(@Param int start) {
               List<User> users = ...;
               ResponseHeaders headers = ResponseHeaders.builder()
                   .status(HttpStatus.OK)
