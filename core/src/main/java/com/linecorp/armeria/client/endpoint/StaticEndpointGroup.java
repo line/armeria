@@ -26,7 +26,10 @@ import com.linecorp.armeria.client.Endpoint;
 
 /**
  * A static immutable {@link EndpointGroup}.
+ *
+ * @deprecated Use {@link EndpointGroup#of(EndpointGroup...)}.
  */
+@Deprecated
 public final class StaticEndpointGroup implements EndpointGroup {
 
     static final StaticEndpointGroup EMPTY = new StaticEndpointGroup();
@@ -37,14 +40,20 @@ public final class StaticEndpointGroup implements EndpointGroup {
 
     /**
      * Creates a new instance.
+     *
+     * @deprecated Use {@link EndpointGroup#of(EndpointGroup...)}.
      */
+    @Deprecated
     public StaticEndpointGroup(Endpoint... endpoints) {
         this(ImmutableList.copyOf(requireNonNull(endpoints, "endpoints")));
     }
 
     /**
      * Creates a new instance.
+     *
+     * @deprecated Use {@link EndpointGroup#of(Iterable)}.
      */
+    @Deprecated
     public StaticEndpointGroup(Iterable<Endpoint> endpoints) {
         requireNonNull(endpoints, "endpoints");
 

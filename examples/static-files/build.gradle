@@ -1,3 +1,7 @@
+plugins {
+    id 'application'
+}
+
 dependencies {
     compile project(':core')
     runtime 'org.slf4j:slf4j-simple'
@@ -5,4 +9,8 @@ dependencies {
     testCompile 'junit:junit'
     testCompile 'net.javacrumbs.json-unit:json-unit-fluent'
     testCompile 'org.assertj:assertj-core'
+}
+
+application {
+    mainClassName = 'example.armeria.server.files.Main'
 }

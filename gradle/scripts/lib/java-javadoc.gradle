@@ -18,7 +18,10 @@ allprojects {
             def title = "${project.ext.projectName} ${project.version} API reference"
             docTitle = title
             windowTitle = title
-            bottom = project.ext.copyrightFooter + '''
+
+            def scriptParts = []
+            // Fixes
+            scriptParts.add('''
             <script>
             // Open an external link in a new tab/window.
             for (var i in document.links) {
@@ -33,13 +36,52 @@ allprojects {
             if (typeof useModuleDirectories !== 'undefined') {
               useModuleDirectories = false;
             }
-            </script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/highlight.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/languages/gradle.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/languages/protobuf.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/languages/thrift.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/languages/yaml.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlightjs-line-numbers.js/2.6.0/highlightjs-line-numbers.min.js"></script>
+            </script>''')
+
+            // Google Analytics
+            if (rootProject.ext.googleAnalyticsId != null) {
+                scriptParts.add('''
+                <script>
+                (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+                (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+                m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+                })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+                ga('create', ''' + "'${rootProject.ext.googleAnalyticsId}'" + ''', 'auto');
+                ga('send', 'pageview');
+                </script>
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cookieconsent2/3.1.1/cookieconsent.min.css">
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/cookieconsent2/3.1.1/cookieconsent.min.js"></script>
+                <script>
+                window.cookieconsent.initialise({
+                  "palette": {
+                    "popup": {
+                      "background": "rgba(58,58,58,0.75)",
+                      "text": "#F8F8F8"
+                    },
+                    "button": {
+                      "background": "transparent",
+                        "text": "#F8F8F8",
+                        "border": "#F8F8F8"
+                      }
+                    },
+                  "content": {
+                    "message": "This website uses anonymous cookies to ensure we provide you the best experience. ",
+                    "link": "Opt out!",
+                    "href": "https://tools.google.com/dlpage/gaoptout/",
+                    "target": '_blank'
+                  }
+                });
+                </script>''')
+            }
+
+            // Highlight.js
+            scriptParts.add('''
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.10/highlight.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.10/languages/gradle.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.10/languages/protobuf.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.10/languages/thrift.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.10/languages/yaml.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlightjs-line-numbers.js/2.7.0/highlightjs-line-numbers.min.js"></script>
             <script>
             // Trim and syntax-highlight the code snippets.
             function trimLines(lines) {
@@ -96,10 +138,13 @@ allprojects {
                 hljs.lineNumbersBlock(child);
               }
             }
-            </script>'''.readLines().stream()
-                    .map({ line -> line.trim() })
-                    .filter({ line -> !line.isEmpty() && !line.startsWith('//') })
-                    .collect().join('')
+            </script>''')
+
+            bottom = project.ext.copyrightFooter +
+                     scriptParts.join('').readLines().stream()
+                                .map({ line -> line.trim() })
+                                .filter({ line -> !line.isEmpty() && !line.startsWith('//') })
+                                .collect().join('')
 
             encoding = 'UTF-8'
             docEncoding = 'UTF-8'

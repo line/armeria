@@ -528,8 +528,8 @@ public class SamlServiceProviderTest {
     }
 
     private AggregatedHttpResponse sendViaHttpPostBindingProtocol(
-            String path, String paramName, SignableSAMLObject sinableObj) throws Exception {
-        final String encoded = toSignedBase64(sinableObj, idpCredential, signatureAlgorithm);
+            String path, String paramName, SignableSAMLObject signableObj) throws Exception {
+        final String encoded = toSignedBase64(signableObj, idpCredential, signatureAlgorithm);
         final QueryStringEncoder encoder = new QueryStringEncoder("/");
         encoder.addParam(paramName, encoded);
 

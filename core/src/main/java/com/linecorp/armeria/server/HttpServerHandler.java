@@ -65,7 +65,6 @@ import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.AbstractHttp2ConnectionHandler;
-import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.ChannelUtil;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.Http2ObjectEncoder;
@@ -529,7 +528,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             return;
         }
 
-        if (reqCtx.method() == HttpMethod.HEAD || ArmeriaHttpUtil.isContentAlwaysEmpty(status)) {
+        if (reqCtx.method() == HttpMethod.HEAD || status.isContentAlwaysEmpty()) {
             resContent = null;
         } else if (resContent == null) {
             resContent = status.toHttpData();
@@ -624,7 +623,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         // https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.4
         // prohibits to send message body for below cases.
         // and in those cases, content should be empty.
-        if (req.method() == HttpMethod.HEAD || ArmeriaHttpUtil.isContentAlwaysEmpty(headers.status())) {
+        if (req.method() == HttpMethod.HEAD || headers.status().isContentAlwaysEmpty()) {
             return;
         }
         headers.setInt(HttpHeaderNames.CONTENT_LENGTH, contentLength);

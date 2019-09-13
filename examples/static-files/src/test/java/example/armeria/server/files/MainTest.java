@@ -21,7 +21,7 @@ public class MainTest {
     public static void beforeClass() throws Exception {
         server = Main.newServer(0, 0);
         server.start().join();
-        client = HttpClient.of("http://127.0.0.1:" + server.activePort().get().localAddress().getPort());
+        client = HttpClient.of("http://127.0.0.1:" + server.activeLocalPort());
     }
 
     @AfterClass

@@ -74,14 +74,30 @@ public class StringResponseConverterFunction implements ResponseConverterFunctio
             // To prevent to convert null value to 'null' string.
             return HttpData.EMPTY_DATA;
         }
-        final Object target;
+
         if (value instanceof Iterable) {
             final StringBuilder sb = new StringBuilder();
-            ((Iterable<?>) value).forEach(sb::append);
-            target = sb;
-        } else {
-            target = value;
+            ((Iterable<?>) value).forEach(v -> {
+                // TODO(trustin): Inefficient double conversion. Time to write HttpDataBuilder?
+                if (v instanceof HttpData) {
+                    sb.append(((HttpData) v).toString(charset));
+                } else if (v instanceof byte[]) {
+                    sb.append(new String((byte[]) v, charset));
+                } else {
+                    sb.append(v);
+                }
+            });
+            return HttpData.of(charset, sb);
         }
-        return HttpData.wrap(String.valueOf(target).getBytes(charset));
+
+        if (value instanceof HttpData) {
+            return (HttpData) value;
+        }
+
+        if (value instanceof byte[]) {
+            return HttpData.wrap((byte[]) value);
+        }
+
+        return HttpData.of(charset, String.valueOf(value));
     }
 }

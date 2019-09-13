@@ -80,6 +80,18 @@ import reactor.test.StepVerifier;
 public class AnnotatedHttpServiceResponseConverterTest {
 
     private static final ObjectMapper mapper = new ObjectMapper();
+    private static final String STRING = "₩";
+    private static final byte[] BYTEARRAY = STRING.getBytes(StandardCharsets.UTF_8);
+    private static final HttpData HTTPDATA = HttpData.wrap(BYTEARRAY);
+    private static final JsonNode JSONNODE;
+
+    static {
+        try {
+            JSONNODE = mapper.readTree("{\"a\":\"₩\"}");
+        } catch (IOException e) {
+            throw new Error(e);
+        }
+    }
 
     @ClassRule
     public static final ServerRule rule = new ServerRule() {
@@ -88,22 +100,22 @@ public class AnnotatedHttpServiceResponseConverterTest {
             sb.annotatedService("/type", new Object() {
                 @Get("/string")
                 public String string() {
-                    return "¥";
+                    return STRING;
                 }
 
                 @Get("/byteArray")
                 public byte[] byteArray() {
-                    return "¥".getBytes();
+                    return BYTEARRAY;
                 }
 
                 @Get("/httpData")
                 public HttpData httpData() {
-                    return HttpData.wrap("¥".getBytes());
+                    return HTTPDATA;
                 }
 
                 @Get("/jsonNode")
                 public JsonNode jsonNode() throws IOException {
-                    return mapper.readTree("{\"a\":\"¥\"}");
+                    return JSONNODE;
                 }
             });
 
@@ -111,25 +123,25 @@ public class AnnotatedHttpServiceResponseConverterTest {
                 @Get("/string")
                 @ProducesText   // Can omit this annotation, but it's not recommended.
                 public Publisher<String> string() {
-                    return Mono.just("¥");
+                    return Mono.just(STRING);
                 }
 
                 @Get("/byteArray")
                 @ProducesOctetStream
                 public Publisher<byte[]> byteArray() {
-                    return new ObjectPublisher<>("¥".getBytes());
+                    return new ObjectPublisher<>(BYTEARRAY);
                 }
 
                 @Get("/httpData")
                 @ProducesOctetStream
                 public Publisher<HttpData> httpData() {
-                    return new ObjectPublisher<>(HttpData.wrap("¥".getBytes()));
+                    return new ObjectPublisher<>(HTTPDATA);
                 }
 
                 @Get("/jsonNode")
                 @ProducesJson   // Can omit this annotation, but it's not recommended.
                 public Publisher<JsonNode> jsonNode() throws IOException {
-                    return Mono.just(mapper.readTree("{\"a\":\"¥\"}"));
+                    return Mono.just(JSONNODE);
                 }
             });
 
@@ -165,13 +177,13 @@ public class AnnotatedHttpServiceResponseConverterTest {
             sb.annotatedService("/publish/http-result", new Object() {
                 @Get("/mono/jsonNode")
                 public HttpResult<Publisher<JsonNode>> monoJsonNode() throws IOException {
-                    return HttpResult.of(Mono.just(mapper.readTree("{\"a\":\"¥\"}")));
+                    return HttpResult.of(Mono.just(JSONNODE));
                 }
 
                 @Get("/jsonNode")
                 @ProducesJson
                 public HttpResult<Publisher<JsonNode>> jsonNode() throws IOException {
-                    return HttpResult.of(new ObjectPublisher<>(mapper.readTree("{\"a\":\"¥\"}")));
+                    return HttpResult.of(new ObjectPublisher<>(JSONNODE));
                 }
 
                 @Get("/defer")
@@ -190,19 +202,43 @@ public class AnnotatedHttpServiceResponseConverterTest {
                 @Get("/byteArray")
                 @UserProduceBinary
                 public byte[] byteArray() {
-                    return "¥".getBytes();
+                    return BYTEARRAY;
                 }
 
                 @Get("/httpData")
                 @Produces("application/octet-stream")
                 public HttpData httpData() {
-                    return HttpData.wrap("¥".getBytes());
+                    return HTTPDATA;
+                }
+
+                @Get("/byteArrayGif")
+                @Produces("image/gif")
+                public byte[] byteArrayGif() {
+                    return BYTEARRAY;
+                }
+
+                @Get("/httpDataPng")
+                @Produces("image/png")
+                public HttpData httpDataPng() {
+                    return HTTPDATA;
+                }
+
+                @Get("/byteArrayTxt")
+                @ProducesText
+                public byte[] byteArrayTxt() {
+                    return BYTEARRAY;
+                }
+
+                @Get("/httpDataTxt")
+                @ProducesText
+                public HttpData httpDataTxt() {
+                    return HTTPDATA;
                 }
 
                 @Get("/jsonNode")
                 @ProducesJson
                 public Map<String, String> jsonNode() throws IOException {
-                    return ImmutableMap.of("a", "¥");
+                    return ImmutableMap.of("a", STRING);
                 }
             });
 
@@ -323,7 +359,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
                 public void header() {}
 
                 @Get("/header-overwrite")
-                @AdditionalHeader(name = "header_name_1", value = "header_value_unchaged")
+                @AdditionalHeader(name = "header_name_1", value = "header_value_unchanged")
                 public HttpResponse headerOverwrite() {
                     return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK,
                                                               HttpHeaderNames.of("header_name_1"),
@@ -418,6 +454,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
     private static class ObjectPublisher<T> implements Publisher<T> {
         private final List<T> objects;
 
+        @SafeVarargs
         ObjectPublisher(T... objects) {
             this.objects = ImmutableList.copyOf(objects);
         }
@@ -503,21 +540,20 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
         res = aggregated(client.get("/string"));
         assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(res.contentUtf8()).isEqualTo("¥");
-        assertThat(res.contentAscii()).isNotEqualTo("¥");
+        assertThat(res.contentUtf8()).isEqualTo(STRING);
+        assertThat(res.contentAscii()).isNotEqualTo(STRING);
 
         res = aggregated(client.get("/byteArray"));
         assertThat(res.contentType()).isEqualTo(MediaType.OCTET_STREAM);
-        assertThat(res.content().array()).isEqualTo("¥".getBytes());
+        assertThat(res.content().array()).isEqualTo(BYTEARRAY);
 
         res = aggregated(client.get("/httpData"));
         assertThat(res.contentType()).isEqualTo(MediaType.OCTET_STREAM);
-        assertThat(res.content().array()).isEqualTo("¥".getBytes());
+        assertThat(res.content().array()).isEqualTo(BYTEARRAY);
 
         res = aggregated(client.get("/jsonNode"));
         assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        final JsonNode expected = mapper.readTree("{\"a\":\"¥\"}");
-        assertThat(res.content().array()).isEqualTo(mapper.writeValueAsBytes(expected));
+        assertThat(res.content().array()).isEqualTo(mapper.writeValueAsBytes(JSONNODE));
     }
 
     @Test
@@ -563,16 +599,31 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
         res = aggregated(client.get("/byteArray"));
         assertThat(res.contentType()).isEqualTo(MediaType.OCTET_STREAM);
-        assertThat(res.content().array()).isEqualTo("¥".getBytes());
+        assertThat(res.content().array()).isEqualTo(BYTEARRAY);
 
         res = aggregated(client.get("/httpData"));
         assertThat(res.contentType()).isEqualTo(MediaType.OCTET_STREAM);
-        assertThat(res.content().array()).isEqualTo("¥".getBytes());
+        assertThat(res.content().array()).isEqualTo(BYTEARRAY);
+
+        res = aggregated(client.get("/byteArrayGif"));
+        assertThat(res.contentType()).isEqualTo(MediaType.GIF);
+        assertThat(res.content().array()).isEqualTo(BYTEARRAY);
+
+        res = aggregated(client.get("/httpDataPng"));
+        assertThat(res.contentType()).isEqualTo(MediaType.PNG);
+        assertThat(res.content().array()).isEqualTo(BYTEARRAY);
+
+        res = aggregated(client.get("/byteArrayTxt"));
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.content().array()).isEqualTo(BYTEARRAY);
+
+        res = aggregated(client.get("/httpDataTxt"));
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.content().array()).isEqualTo(BYTEARRAY);
 
         res = aggregated(client.get("/jsonNode"));
         assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        final JsonNode expected = mapper.readTree("{\"a\":\"¥\"}");
-        assertThat(res.content().array()).isEqualTo(mapper.writeValueAsBytes(expected));
+        assertThat(res.content().array()).isEqualTo(mapper.writeValueAsBytes(JSONNODE));
     }
 
     @Test
@@ -651,12 +702,12 @@ public class AnnotatedHttpServiceResponseConverterTest {
         res = aggregated(client.get("/mono/jsonNode"));
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        assertThatJson(res.contentUtf8()).isEqualTo(ImmutableMap.of("a", "¥"));
+        assertThatJson(res.contentUtf8()).isEqualTo(ImmutableMap.of("a", STRING));
 
         res = aggregated(client.get("/jsonNode"));
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
-        assertThatJson(res.contentUtf8()).isEqualTo(ImmutableList.of(ImmutableMap.of("a", "¥")));
+        assertThatJson(res.contentUtf8()).isEqualTo(ImmutableList.of(ImmutableMap.of("a", STRING)));
 
         res = aggregated(client.get("/defer"));
         assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);

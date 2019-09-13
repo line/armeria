@@ -20,7 +20,7 @@ import io.grpc.Metadata;
 import io.grpc.Status;
 
 /**
- * A listener of gRPC {@link Status}s. Any errors occuring within the armeria will be returned to gRPC business
+ * A listener of gRPC {@link Status}s. Any errors occurring within the armeria will be returned to gRPC business
  * logic through this listener, and for clients the final response {@link Status} is also returned.
  */
 public interface TransportStatusListener {

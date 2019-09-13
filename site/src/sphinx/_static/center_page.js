@@ -30,7 +30,7 @@
     css += "\n";
     css += '.wy-nav-content-wrap { margin-left: ' + (sideWidth + leftMargin) + 'px; }';
     css += "\n";
-    css += '.github-fork-ribbon { margin-right: ' + (leftMargin - scrollbarWidth) + 'px; }';
+    css += '.github-corner > svg { right: ' + (leftMargin - scrollbarWidth) + 'px; }';
     css += "\n";
 
     var newStyle = document.createElement('style');
@@ -47,7 +47,7 @@
 
   centerPage();
   window.addEventListener('resize', centerPage);
-  // Adjust the position of the 'fork me at GitHub' ribbon after document.body is available,
+  // Adjust the position of the GitHub Corners after document.body is available,
   // so that we can calculate the width of the scroll bar correctly.
   window.addEventListener('DOMContentLoaded', centerPage);
 

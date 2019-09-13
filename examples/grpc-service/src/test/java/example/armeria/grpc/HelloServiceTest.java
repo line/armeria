@@ -47,7 +47,7 @@ public class HelloServiceTest {
     }
 
     private static String uri() {
-        return "gproto+http://127.0.0.1:" + server.activePort().get().localAddress().getPort() + '/';
+        return "gproto+http://127.0.0.1:" + server.activeLocalPort() + '/';
     }
 
     @Test
@@ -77,7 +77,7 @@ public class HelloServiceTest {
             }
         }, MoreExecutors.directExecutor());
 
-        await().atLeast(3, TimeUnit.SECONDS).untilTrue(completed);
+        await().untilTrue(completed);
     }
 
     @Test

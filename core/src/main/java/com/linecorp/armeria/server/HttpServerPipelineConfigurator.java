@@ -27,6 +27,7 @@ import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLException;
@@ -55,18 +56,8 @@ import io.netty.handler.codec.haproxy.HAProxyMessage;
 import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.HttpServerUpgradeHandler;
-import io.netty.handler.codec.http2.DefaultHttp2Connection;
-import io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder;
-import io.netty.handler.codec.http2.DefaultHttp2ConnectionEncoder;
-import io.netty.handler.codec.http2.DefaultHttp2FrameReader;
-import io.netty.handler.codec.http2.DefaultHttp2FrameWriter;
 import io.netty.handler.codec.http2.Http2CodecUtil;
-import io.netty.handler.codec.http2.Http2Connection;
-import io.netty.handler.codec.http2.Http2ConnectionDecoder;
-import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
-import io.netty.handler.codec.http2.Http2FrameReader;
-import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.codec.http2.Http2ServerUpgradeCodec;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.flush.FlushConsolidationHandler;
@@ -78,6 +69,7 @@ import io.netty.handler.ssl.SslHandler;
 import io.netty.util.AsciiString;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.NetUtil;
+import io.netty.util.concurrent.ScheduledFuture;
 
 /**
  * Configures Netty {@link ChannelPipeline} to serve HTTP/1 and 2 requests.
@@ -150,7 +142,18 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         }
 
         // More than one protocol were specified. Detect the protocol.
-        p.addLast(new ProtocolDetectionHandler(protocols, proxiedAddresses));
+
+        final ScheduledFuture<?> protocolDetectionTimeoutFuture;
+        if (config.requestTimeoutMillis() > 0) {
+            // Close the connection if the protocol detection is not finished in time.
+            final Channel ch = p.channel();
+            protocolDetectionTimeoutFuture = ch.eventLoop().schedule(
+                    (Runnable) ch::close, config.requestTimeoutMillis(), TimeUnit.MILLISECONDS);
+        } else {
+            protocolDetectionTimeoutFuture = null;
+        }
+
+        p.addLast(new ProtocolDetectionHandler(protocols, proxiedAddresses, protocolDetectionTimeoutFuture));
     }
 
     private void configureHttp(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
@@ -176,17 +179,12 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     }
 
     private Http2ConnectionHandler newHttp2ConnectionHandler(ChannelPipeline pipeline, AsciiString scheme) {
-
-        final Http2Connection conn = new DefaultHttp2Connection(true);
-        final Http2FrameReader reader = new DefaultHttp2FrameReader(true);
-        final Http2FrameWriter writer = new DefaultHttp2FrameWriter();
-
-        final Http2ConnectionEncoder encoder = new DefaultHttp2ConnectionEncoder(conn, writer);
-        final Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(conn, encoder, reader);
-
-        return new Http2ServerConnectionHandler(
-                decoder, encoder, http2Settings(), pipeline.channel(),
-                config, gracefulShutdownSupport, scheme.toString());
+        return new Http2ServerConnectionHandlerBuilder(pipeline.channel(), config,
+                                                       gracefulShutdownSupport,
+                                                       scheme.toString())
+                .server(true)
+                .initialSettings(http2Settings())
+                .build();
     }
 
     private Http2Settings http2Settings() {
@@ -215,8 +213,11 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         private final EnumSet<SessionProtocol> proxiedCandidates;
         @Nullable
         private final ProxiedAddresses proxiedAddresses;
+        @Nullable
+        private final ScheduledFuture<?> timeoutFuture;
 
-        ProtocolDetectionHandler(Set<SessionProtocol> protocols, @Nullable ProxiedAddresses proxiedAddresses) {
+        ProtocolDetectionHandler(Set<SessionProtocol> protocols, @Nullable ProxiedAddresses proxiedAddresses,
+                                 @Nullable ScheduledFuture<?> timeoutFuture) {
             candidates = EnumSet.copyOf(protocols);
             if (protocols.contains(PROXY)) {
                 proxiedCandidates = EnumSet.copyOf(candidates);
@@ -225,6 +226,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                 proxiedCandidates = null;
             }
             this.proxiedAddresses = proxiedAddresses;
+            this.timeoutFuture = timeoutFuture;
         }
 
         @Override
@@ -285,6 +287,10 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                 }
             }
 
+            if (timeoutFuture != null) {
+                timeoutFuture.cancel(false);
+            }
+
             final ChannelPipeline p = ctx.pipeline();
             switch (detected) {
                 case HTTP:
@@ -314,6 +320,14 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                 }
             }
             return true;
+        }
+
+        @Override
+        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+            if (!Exceptions.isExpected(cause)) {
+                logger.warn("{} Unexpected exception while detecting the session protocol.", ctx, cause);
+            }
+            ctx.close();
         }
     }
 

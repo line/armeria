@@ -353,6 +353,8 @@ public final class HttpStatus implements Comparable<HttpStatus> {
      * Returns the {@link HttpStatus} represented by the specified status text.
      *
      * @return the parsed {@link HttpStatus}, or {@link #UNKNOWN} if failed to parse.
+     *
+     * @see #isContentAlwaysEmpty()
      */
     public static HttpStatus valueOf(String statusText) {
         requireNonNull(statusText, "statusText");
@@ -371,6 +373,25 @@ public final class HttpStatus implements Comparable<HttpStatus> {
         }
 
         return valueOf(statusCode);
+    }
+
+    /**
+     * Returns {@code true} if the content of the response for the specified status code is expected to
+     * be always empty (1xx, 204, 205 and 304 responses.)
+     */
+    @SuppressWarnings("checkstyle:OverloadMethodsDeclarationOrder")
+    public static boolean isContentAlwaysEmpty(int statusCode) {
+        if (HttpStatusClass.INFORMATIONAL.contains(statusCode)) {
+            return true;
+        }
+
+        switch (statusCode) {
+            case /* NO_CONTENT */ 204:
+            case /* RESET_CONTENT */ 205:
+            case /* NOT_MODIFIED */ 304:
+                return true;
+        }
+        return false;
     }
 
     private final int code;
@@ -457,6 +478,17 @@ public final class HttpStatus implements Comparable<HttpStatus> {
      */
     public HttpData toHttpData() {
         return httpData;
+    }
+
+    /**
+     * Returns {@code true} if the content of the response for this {@link HttpStatus} is expected to
+     * be always empty (1xx, 204, 205 and 304 responses.)
+     *
+     * @see #isContentAlwaysEmpty(int)
+     */
+    @SuppressWarnings("checkstyle:OverloadMethodsDeclarationOrder")
+    public boolean isContentAlwaysEmpty() {
+        return isContentAlwaysEmpty(code);
     }
 
     @Override

@@ -37,14 +37,28 @@ public class BackoffSpecTest {
 
     @Test
     public void backoffSpecWithString() {
-        final String spec = "exponential=1000:60000:1.2,jitter=-0.4:0.3,maxAttempts=100";
-        final BackoffSpec backoffSpec = BackoffSpec.parse(spec);
-        assertThat(backoffSpec.initialDelayMillis).isEqualTo(1000);
-        assertThat(backoffSpec.maxDelayMillis).isEqualTo(60000);
-        assertThat(backoffSpec.multiplier).isEqualTo(1.2);
-        assertThat(backoffSpec.minJitterRate).isEqualTo(-0.4);
-        assertThat(backoffSpec.maxJitterRate).isEqualTo(0.3);
-        assertThat(backoffSpec.maxAttempts).isEqualTo(100);
+        final String specExp = "exponential=1000:60000:1.2,jitter=-0.4:0.3,maxAttempts=100";
+        final BackoffSpec backoffSpecExp = BackoffSpec.parse(specExp);
+        //set by the spec
+        assertThat(backoffSpecExp.initialDelayMillis).isEqualTo(1000);
+        assertThat(backoffSpecExp.maxDelayMillis).isEqualTo(60000);
+        assertThat(backoffSpecExp.multiplier).isEqualTo(1.2);
+        assertThat(backoffSpecExp.minJitterRate).isEqualTo(-0.4);
+        assertThat(backoffSpecExp.maxJitterRate).isEqualTo(0.3);
+        assertThat(backoffSpecExp.maxAttempts).isEqualTo(100);
+
+        assertThat(Backoff.of(specExp).as(ExponentialBackoff.class).isPresent()).isTrue();
+
+        final String specFib = "fibonacci=1000:60000,jitter=-0.3:0.2,maxAttempts=100";
+        final BackoffSpec backoffSpecFib = BackoffSpec.parse(specFib);
+        //set by the spec
+        assertThat(backoffSpecFib.initialDelayMillis).isEqualTo(1000);
+        assertThat(backoffSpecFib.maxDelayMillis).isEqualTo(60000);
+        assertThat(backoffSpecFib.minJitterRate).isEqualTo(-0.3);
+        assertThat(backoffSpecFib.maxJitterRate).isEqualTo(0.2);
+        assertThat(backoffSpecFib.maxAttempts).isEqualTo(100);
+
+        assertThat(Backoff.of(specFib).as(FibonacciBackoff.class).isPresent()).isTrue();
     }
 
     @Test

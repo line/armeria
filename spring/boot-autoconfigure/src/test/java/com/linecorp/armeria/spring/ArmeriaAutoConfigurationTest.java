@@ -51,7 +51,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.server.Server;
@@ -134,7 +133,7 @@ public class ArmeriaAutoConfigurationTest {
     public static class IllegalArgumentExceptionHandler implements ExceptionHandlerFunction {
 
         @Override
-        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
+        public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
             if (cause instanceof IllegalArgumentException) {
                 return HttpResponse.of("exception");
             }
@@ -189,7 +188,7 @@ public class ArmeriaAutoConfigurationTest {
     private Server server;
 
     private String newUrl(String scheme) {
-        final int port = server.activePort().get().localAddress().getPort();
+        final int port = server.activeLocalPort();
         return scheme + "://127.0.0.1:" + port;
     }
 

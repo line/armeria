@@ -36,7 +36,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.DecoratingServiceFunction;
@@ -195,7 +194,7 @@ public class AnnotatedHttpServiceExceptionHandlerTest {
         static final AtomicInteger counter = new AtomicInteger();
 
         @Override
-        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
+        public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
             // Not accept any exception. But should be called this method.
             counter.incrementAndGet();
             return ExceptionHandlerFunction.fallthrough();
@@ -204,28 +203,28 @@ public class AnnotatedHttpServiceExceptionHandlerTest {
 
     static class AnticipatedExceptionHandler1 implements ExceptionHandlerFunction {
         @Override
-        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
+        public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "handler1");
         }
     }
 
     static class AnticipatedExceptionHandler2 implements ExceptionHandlerFunction {
         @Override
-        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
+        public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "handler2");
         }
     }
 
     static class AnticipatedExceptionHandler3 implements ExceptionHandlerFunction {
         @Override
-        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
+        public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "handler3");
         }
     }
 
     static class BadExceptionHandler1 implements ExceptionHandlerFunction {
         @Override
-        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
+        public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
             final HttpResponseWriter response = HttpResponse.streaming();
             response.write(ResponseHeaders.of(HttpStatus.OK));
             // Timeout may occur before responding.
@@ -236,7 +235,7 @@ public class AnnotatedHttpServiceExceptionHandlerTest {
 
     static class BadExceptionHandler2 implements ExceptionHandlerFunction {
         @Override
-        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
+        public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
             final HttpResponseWriter response = HttpResponse.streaming();
             // Make invalid response.
             response.write(HttpStatus.OK.toHttpData());

@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.thrift;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.util.Unwrappable;
 
 /**
  * A generic Thrift-over-HTTP client.
@@ -36,7 +37,7 @@ import com.linecorp.armeria.common.RpcResponse;
  * client.execute("/foo", FooService.Iface.class, "foo", "arg1", "arg2", ...);
  * }</pre>
  */
-public interface THttpClient extends ClientBuilderParams {
+public interface THttpClient extends Unwrappable, ClientBuilderParams {
     /**
      * Executes the specified Thrift call.
      *

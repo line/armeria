@@ -40,7 +40,6 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
-import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
 
@@ -166,7 +165,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                     break;
                 }
 
-                if (req.method() == HttpMethod.HEAD || ArmeriaHttpUtil.isContentAlwaysEmpty(status)) {
+                if (req.method() == HttpMethod.HEAD || status.isContentAlwaysEmpty()) {
                     // We're done with the response if it is a response to a HEAD request or one of the
                     // no-content response statuses.
                     endOfStream = true;
