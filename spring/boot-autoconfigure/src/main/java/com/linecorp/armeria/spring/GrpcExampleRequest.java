@@ -24,6 +24,10 @@ import com.google.common.base.MoreObjects;
  */
 public final class GrpcExampleRequest {
 
+    /**
+     * Returns a new {@link GrpcExampleRequest} with the specified {@code serviceType}, {@code methodName}
+     * and {@code exampleRequest}.
+     */
     public static GrpcExampleRequest of(@NotNull String serviceType,
                                         @NotNull String methodName,
                                         @NotNull Object exampleRequest) {

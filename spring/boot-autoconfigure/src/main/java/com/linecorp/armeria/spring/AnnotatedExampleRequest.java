@@ -24,6 +24,9 @@ import com.google.common.base.MoreObjects;
  */
 public final class AnnotatedExampleRequest {
 
+    /**
+     * Returns a new {@link AnnotatedExampleRequest} with the specified {@code methodName} and {@code exampleRequest}.
+     */
     public static AnnotatedExampleRequest of(@NotNull String methodName,
                                              @NotNull Object exampleRequest) {
         return new AnnotatedExampleRequest(methodName, exampleRequest);
