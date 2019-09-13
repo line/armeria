@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -61,6 +62,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     }
 
     private final Channel ch;
+    private final InetSocketAddress remoteAddress;
     private final HttpObjectEncoder encoder;
     private final int id;
     private final HttpRequest request;
@@ -77,11 +79,12 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
     private boolean loggedRequestFirstBytesTransferred;
 
-    HttpRequestSubscriber(Channel ch, HttpObjectEncoder encoder,
+    HttpRequestSubscriber(Channel ch, SocketAddress remoteAddress, HttpObjectEncoder encoder,
                           int id, HttpRequest request, HttpResponseWrapper response,
                           ClientRequestContext reqCtx, long timeoutMillis) {
 
         this.ch = ch;
+        this.remoteAddress = (InetSocketAddress) remoteAddress;
         this.encoder = encoder;
         this.id = id;
         this.request = request;
@@ -158,7 +161,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
             return;
         }
 
-        final RequestHeaders firstHeaders = autoFillHeaders(ch);
+        final RequestHeaders firstHeaders = autoFillHeaders();
 
         final SessionProtocol protocol = session.protocol();
         assert protocol != null;
@@ -174,7 +177,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         }
     }
 
-    private RequestHeaders autoFillHeaders(Channel ch) {
+    private RequestHeaders autoFillHeaders() {
         final RequestHeadersBuilder requestHeaders = request.headers().toBuilder();
         final HttpHeaders additionalHeaders = reqCtx.additionalRequestHeaders();
         if (!additionalHeaders.isEmpty()) {
@@ -183,9 +186,8 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
         final SessionProtocol sessionProtocol = reqCtx.sessionProtocol();
         if (requestHeaders.authority() == null) {
-            final InetSocketAddress isa = (InetSocketAddress) ch.remoteAddress();
-            final String hostname = isa.getHostName();
-            final int port = isa.getPort();
+            final String hostname = remoteAddress.getHostName();
+            final int port = remoteAddress.getPort();
 
             final String authority;
             if (port == sessionProtocol.defaultPort()) {

@@ -54,7 +54,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -475,7 +474,7 @@ public class AnnotatedHttpService implements HttpService {
         }
 
         @Override
-        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
+        public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
             final Throwable peeledCause = Exceptions.peel(cause);
 
             if (Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.ALL &&

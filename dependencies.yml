@@ -2,6 +2,12 @@
 # NB: Update NOTICE.txt and add/remove LICENSE.*.txt when adding/removing a dependency.
 #
 
+boms:
+  - com.fasterxml.jackson:jackson-bom:2.9.9.20190807
+  - io.zipkin.brave:brave-bom:5.7.0
+  # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
+  - io.netty:netty-bom:4.1.39.Final
+
 cglib:
   cglib: { version: '3.3.0' }
 
@@ -13,21 +19,18 @@ ch.qos.logback:
 
 com.auth0:
   java-jwt:
-    version: '3.8.1'
+    version: '3.8.2'
     javadocs:
-    - https://static.javadoc.io/com.auth0/java-jwt/3.8.1/
+    - https://static.javadoc.io/com.auth0/java-jwt/3.8.2/
 
 com.fasterxml.jackson.core:
   jackson-annotations:
-    version: &JACKSON_VERSION '2.9.9'
     javadocs:
     - https://fasterxml.github.io/jackson-annotations/javadoc/2.9/
   jackson-core:
-    version: *JACKSON_VERSION
     javadocs:
     - https://fasterxml.github.io/jackson-core/javadoc/2.9/
   jackson-databind:
-    version: *JACKSON_VERSION
     javadocs:
     - https://fasterxml.github.io/jackson-databind/javadoc/2.9/
 
@@ -46,14 +49,14 @@ com.github.jengelman.gradle.plugins:
   shadow: { version: '5.1.0' }
 
 com.google.api:
-  gax-grpc: { version: '1.47.1' }
+  gax-grpc: { version: '1.48.0' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
 
 com.google.guava:
   guava:
-    version: &GUAVA_VERSION '28.0-jre'
+    version: &GUAVA_VERSION '28.1-jre'
     exclusions:
     - com.google.errorprone:error_prone_annotations
     - com.google.j2objc:j2objc-annotations
@@ -99,7 +102,7 @@ com.moowork.gradle:
   gradle-node-plugin: { version: '1.3.1' }
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.23' }
+  checkstyle: { version: '8.24' }
 
 com.spotify:
   completable-futures:
@@ -176,26 +179,14 @@ io.micrometer:
 
 io.netty:
   netty-common:
-    version: &NETTY_VERSION '4.1.39.Final'
     javadocs:
     - https://netty.io/4.1/api/
-  netty-buffer: { version: *NETTY_VERSION }
-  netty-codec: { version: *NETTY_VERSION }
-  netty-codec-dns: { version: *NETTY_VERSION }
-  netty-codec-http: { version: *NETTY_VERSION }
-  netty-codec-http2: { version: *NETTY_VERSION }
-  netty-codec-haproxy: { version: *NETTY_VERSION }
-  netty-handler: { version: *NETTY_VERSION }
-  netty-resolver: { version: *NETTY_VERSION }
-  netty-resolver-dns: { version: *NETTY_VERSION }
-  netty-transport: { version: *NETTY_VERSION }
-  netty-transport-native-epoll: { version: *NETTY_VERSION }
-  netty-transport-native-unix-common: { version: *NETTY_VERSION }
+  # TODO: get netty-bom to claim this version!
   netty-tcnative-boringssl-static: { version: '2.0.25.Final' }
 
 io.projectreactor:
   reactor-core:
-    version: &REACTOR_VERSION '3.2.11.RELEASE'
+    version: &REACTOR_VERSION '3.2.12.RELEASE'
     javadocs:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }
@@ -208,18 +199,15 @@ io.prometheus:
 
 io.reactivex.rxjava2:
   rxjava:
-    version: '2.2.11'
+    version: '2.2.12'
     javadocs:
     - http://reactivex.io/RxJava/2.x/javadoc/
 
 io.zipkin.brave:
   brave:
-    version: &BRAVE_VERSION '5.6.10'
     # ':site:javadoc' fails when we use a newer version of Javadoc.
     javadocs:
     - https://static.javadoc.io/io.zipkin.brave/brave/5.6.3/
-  brave-instrumentation-http: { version: *BRAVE_VERSION }
-  brave-instrumentation-http-tests: { version: *BRAVE_VERSION }
 
 it.unimi.dsi:
   fastutil:
@@ -229,7 +217,7 @@ it.unimi.dsi:
       to: com.linecorp.armeria.internal.shaded.fastutil
 
 jakarta.annotation:
-  jakarta.annotation-api: { version: '1.3.4' }
+  jakarta.annotation-api: { version: '1.3.5' }
 
 javax.inject:
   javax.inject: { version: '1' }
@@ -262,7 +250,7 @@ org.junit.vintage:
     version: *JUNIT_JUPITER_VERSION
 
 kr.motd.gradle:
-  sphinx-gradle-plugin: { version: '2.6.0' }
+  sphinx-gradle-plugin: { version: '2.6.1' }
 
 # We do not depend on log4j. We just need this to stop dependency-management-plugin from
 # complaining about its bad POM.
@@ -281,7 +269,7 @@ net.sf.proguard:
   proguard-gradle: { version: '6.1.1' }
 
 net.shibboleth.utilities:
-  java-support: { version: '7.3.0' }
+  java-support: { version: '7.5.0' }
 
 org.apache.curator:
   curator-recipes:
@@ -323,7 +311,7 @@ org.apache.thrift:
 
 org.apache.tomcat.embed:
   tomcat-embed-core:
-    version: &TOMCAT_VERSION '9.0.22'
+    version: &TOMCAT_VERSION '9.0.24'
     javadocs:
     - https://tomcat.apache.org/tomcat-9.0-doc/api/
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
@@ -341,7 +329,7 @@ org.assertj:
   assertj-core: { version: '3.13.2' }
 
 org.awaitility:
-  awaitility: { version: '3.1.6' }
+  awaitility: { version: '4.0.1' }
 
 org.bouncycastle:
   bcprov-jdk15on:
@@ -365,7 +353,7 @@ org.dmonix.junit:
   zookeeper-junit: { version: '1.2' }
 
 org.eclipse.jetty:
-  apache-jsp: { version: &JETTY_VERSION '9.4.19.v20190610' }
+  apache-jsp: { version: &JETTY_VERSION '9.4.20.v20190813' }
   apache-jstl: { version: *JETTY_VERSION }
   jetty-annotations:
     version: *JETTY_VERSION
@@ -409,7 +397,7 @@ org.openjdk.jmh:
   jmh-generator-annprocess: { version: *JMH_VERSION }
 
 org.opensaml:
-  opensaml-core: { version: &OPENSAML_VERSION '3.3.0' }
+  opensaml-core: { version: &OPENSAML_VERSION '3.4.3' }
   opensaml-saml-api: { version: *OPENSAML_VERSION }
   opensaml-saml-impl: { version: *OPENSAML_VERSION }
   opensaml-messaging-api: { version: *OPENSAML_VERSION }
@@ -418,7 +406,7 @@ org.opensaml:
   opensaml-soap-impl: { version: *OPENSAML_VERSION }
 
 org.reactivestreams:
-  reactive-streams: { version: &REACTIVE_STREAMS_VERSION '1.0.2' }
+  reactive-streams: { version: &REACTIVE_STREAMS_VERSION '1.0.3' }
   reactive-streams-tck:
     version: *REACTIVE_STREAMS_VERSION
     exclusions:
@@ -443,7 +431,7 @@ org.slf4j:
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.1.7.RELEASE'
+    version: &SPRING_BOOT_VERSION '2.1.8.RELEASE'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }

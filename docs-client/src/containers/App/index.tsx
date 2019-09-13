@@ -54,6 +54,12 @@ import {
 
 import GotoSelect from '../../components/GotoSelect';
 
+import {
+  extractSimpleArtifactVersion,
+  Version,
+  Versions,
+} from '../../lib/versions';
+
 if (process.env.WEBPACK_DEV === 'true') {
   // DocService must always be accessed at the URL with a trailing slash. In non-dev mode, the server redirects
   // automatically but for dev we do it here in Javascript.
@@ -133,11 +139,16 @@ const styles = (theme: Theme) =>
     httpMethodTrace: {
       background: '#5d12ec',
     },
+    mainHeader: {
+      textDecoration: 'none',
+      color: 'white',
+    },
   });
 
 interface State {
   mobileDrawerOpen: boolean;
   specification?: Specification;
+  versions?: Versions;
   servicesSectionOpen: boolean;
   openServices: { [key: string]: boolean };
   enumsSectionOpen: boolean;
@@ -329,6 +340,7 @@ class App extends React.PureComponent<Props, State> {
   public state: State = {
     mobileDrawerOpen: false,
     specification: undefined,
+    versions: undefined,
     servicesSectionOpen: true,
     openServices: {},
     enumsSectionOpen: true,
@@ -338,11 +350,13 @@ class App extends React.PureComponent<Props, State> {
 
   public componentWillMount() {
     this.initSpecification();
+    this.initVersion();
   }
 
   public render() {
     const { classes } = this.props;
     const { specification } = this.state;
+    const { versions } = this.state;
 
     if (!specification) {
       return null;
@@ -384,7 +398,14 @@ class App extends React.PureComponent<Props, State> {
               color="inherit"
               noWrap
             >
-              Armeria documentation service
+              <a href="#" className={classes.mainHeader}>
+                Armeria documentation service {''}
+                {versions
+                  ? extractSimpleArtifactVersion(
+                      versions.getArmeriaArtifactVersion(),
+                    )
+                  : ''}
+              </a>
             </Typography>
             <div style={{ flex: 1 }} />
             <GotoSelect
@@ -438,7 +459,11 @@ class App extends React.PureComponent<Props, State> {
         </Hidden>
         <main className={classes.content}>
           <div className={classes.toolbar} />
-          <Route exact path="/" component={HomePage} />
+          <Route
+            exact
+            path="/"
+            render={(props) => <HomePage {...props} versions={versions} />}
+          />
           <Route
             path="/enums/:name"
             render={(props) => (
@@ -517,6 +542,13 @@ class App extends React.PureComponent<Props, State> {
       openServices = { ...openServices, [service.name]: true };
     });
     this.setState({ specification, openServices });
+  };
+
+  private initVersion = async () => {
+    const httpResponse = await fetch('versions.json');
+    const versionsData: Version[] = await httpResponse.json();
+    const versions = new Versions(versionsData);
+    this.setState({ versions });
   };
 
   private toggleMobileDrawer = () => {

@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.grpc;
 
 import java.net.URI;
+import java.util.Optional;
 
 import javax.annotation.Nullable;
 
@@ -38,8 +39,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.common.util.ReleasableHolder;
+import com.linecorp.armeria.common.util.Unwrappable;
 
 import io.grpc.CallOptions;
 import io.grpc.Channel;
@@ -49,14 +49,13 @@ import io.grpc.DecompressorRegistry;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.MethodDescriptor;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http.HttpHeaderValues;
 
 /**
  * A {@link Channel} backed by an armeria {@link Client}. Stores the {@link ClientBuilderParams} and other
  * {@link Client} params for the associated gRPC stub.
  */
-class ArmeriaChannel extends Channel implements ClientBuilderParams {
+class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwrappable {
 
     /**
      * See {@link ManagedChannelBuilder} for default setting.
@@ -151,10 +150,19 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
         return params.options();
     }
 
+    @Override
+    public <T> Optional<T> as(Class<T> type) {
+        final Optional<T> unwrapped = Unwrappable.super.as(type);
+        if (unwrapped.isPresent()) {
+            return unwrapped;
+        }
+
+        return httpClient.as(type);
+    }
+
     private DefaultClientRequestContext newContext(HttpMethod method, HttpRequest req) {
-        final ReleasableHolder<EventLoop> eventLoop = factory().acquireEventLoop(endpoint);
-        final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
-                eventLoop.get(),
+        return new DefaultClientRequestContext(
+                factory(),
                 meterRegistry,
                 sessionProtocol,
                 method,
@@ -163,8 +171,5 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams {
                 null,
                 options(),
                 req);
-
-        ctx.log().addListener(log -> eventLoop.release(), RequestLogAvailability.COMPLETE);
-        return ctx;
     }
 }

@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.common;
 
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isContentAlwaysEmpty;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isContentAlwaysEmptyWithValidation;
 import static java.util.Objects.requireNonNull;
 
@@ -55,7 +54,7 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
         requireNonNull(status, "status");
         if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
             write(ResponseHeaders.of(status));
-        } else if (isContentAlwaysEmpty(status)) {
+        } else if (status.isContentAlwaysEmpty()) {
             write(ResponseHeaders.of(status));
             close();
         } else {

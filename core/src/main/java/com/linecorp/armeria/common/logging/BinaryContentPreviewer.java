@@ -96,7 +96,7 @@ abstract class BinaryContentPreviewer implements ContentPreviewer {
 
     @Override
     public void onData(HttpData data) {
-        assert maxAggregatedLength > 0 : "maxAggreagtedLength() should be called before onData().";
+        assert maxAggregatedLength > 0 : "maxAggregatedLength() should be called before onData().";
         if (data.isEmpty()) {
             return;
         }

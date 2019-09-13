@@ -144,7 +144,7 @@ public class ArmeriaAutoConfigurationTest {
     public static class IllegalArgumentExceptionHandler implements ExceptionHandlerFunction {
 
         @Override
-        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
+        public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
             if (cause instanceof IllegalArgumentException) {
                 return HttpResponse.of("exception");
             }

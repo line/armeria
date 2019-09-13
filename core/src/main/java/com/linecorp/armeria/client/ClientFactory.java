@@ -16,6 +16,10 @@
 
 package com.linecorp.armeria.client;
 
+import static java.util.Objects.requireNonNull;
+
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.util.Optional;
 import java.util.Set;
@@ -26,7 +30,9 @@ import javax.annotation.Nullable;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.ReleasableHolder;
+import com.linecorp.armeria.common.util.Unwrappable;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
@@ -98,7 +104,7 @@ public interface ClientFactory extends AutoCloseable {
      * The caller must release the returned {@link EventLoop} back by calling {@link ReleasableHolder#release()}
      * so that {@link ClientFactory} utilizes {@link EventLoop}s efficiently.
      */
-    ReleasableHolder<EventLoop> acquireEventLoop(Endpoint endpoint);
+    ReleasableHolder<EventLoop> acquireEventLoop(Endpoint endpoint, SessionProtocol sessionProtocol);
 
     /**
      * Returns the {@link MeterRegistry} that collects various stats.
@@ -201,7 +207,58 @@ public interface ClientFactory extends AutoCloseable {
      * {@link ClientFactory} does not know how to handle the {@link ClientBuilderParams} for the provided
      * {@code client}, it should return {@link Optional#empty()}.
      */
-    <T> Optional<ClientBuilderParams> clientBuilderParams(T client);
+    default <T> Optional<ClientBuilderParams> clientBuilderParams(T client) {
+        return unwrap(client, ClientBuilderParams.class);
+    }
+
+    /**
+     * Unwraps the specified {@code client} object into the object of the specified {@code type}. For example,
+     * <pre>{@code
+     * ClientFactory clientFactory = ...;
+     * HttpClient client = new HttpClientBuilder()
+     *     .factory(clientFactory)
+     *     .decorator(LoggingClient.newDecorator())
+     *     .build();
+     *
+     * LoggingClient unwrapped = clientFactory.unwrap(client, LoggingClient.class).get();
+     *
+     * // If the client implements Unwrappable, you can just use the 'as()' method.
+     * LoggingClient unwrapped2 = client.as(LoggingClient.class).get();
+     * }</pre>
+     *
+     * @param client the client object
+     * @param type the type of the object to return
+     * @return the object of the specified {@code type} if found. {@link Optional#empty()} if not found.
+     *
+     * @see Client#as(Class)
+     * @see Clients#unwrap(Object, Class)
+     * @see Unwrappable
+     */
+    default <T> Optional<T> unwrap(Object client, Class<T> type) {
+        requireNonNull(client, "client");
+        requireNonNull(type, "type");
+
+        if (type.isInstance(client)) {
+            return Optional.of(type.cast(client));
+        }
+
+        if (client instanceof Unwrappable) {
+            return ((Unwrappable) client).as(type);
+        }
+
+        if (Proxy.isProxyClass(client.getClass())) {
+            final InvocationHandler handler = Proxy.getInvocationHandler(client);
+            if (type.isInstance(handler)) {
+                return Optional.of(type.cast(handler));
+            }
+
+            if (handler instanceof Unwrappable) {
+                return ((Unwrappable) handler).as(type);
+            }
+        }
+
+        return Optional.empty();
+    }
 
     /**
      * Closes all clients managed by this factory and shuts down the {@link EventLoopGroup}

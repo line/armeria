@@ -15,39 +15,19 @@
  */
 package com.linecorp.armeria.client.retry;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
-import java.util.Optional;
-
-import com.google.common.base.MoreObjects;
+import com.linecorp.armeria.common.util.AbstractUnwrappable;
 
 /**
  * Wraps an existing {@link Backoff}.
  */
-public class BackoffWrapper implements Backoff {
-    private final Backoff delegate;
+public class BackoffWrapper extends AbstractUnwrappable<Backoff> implements Backoff {
 
     protected BackoffWrapper(Backoff delegate) {
-        this.delegate = checkNotNull(delegate, "delegate");
+        super(delegate);
     }
 
     @Override
     public long nextDelayMillis(int numAttemptsSoFar) {
-        return delegate.nextDelayMillis(numAttemptsSoFar);
-    }
-
-    protected Backoff delegate() {
-        return delegate;
-    }
-
-    @Override
-    public final <T> Optional<T> as(Class<T> backoffType) {
-        final Optional<T> result = Backoff.super.as(backoffType);
-        return result.isPresent() ? result : delegate.as(backoffType);
-    }
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this).add("delegate", delegate).toString();
+        return delegate().nextDelayMillis(numAttemptsSoFar);
     }
 }

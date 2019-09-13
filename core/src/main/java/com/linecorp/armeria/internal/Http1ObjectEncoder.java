@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.stream.ClosedPublisherException;
 
@@ -202,7 +203,7 @@ public final class Http1ObjectEncoder extends HttpObjectEncoder {
             final io.netty.handler.codec.http.HttpHeaders outHeaders = res.headers();
             convert(streamId, headers, outHeaders, false, false);
 
-            if (ArmeriaHttpUtil.isContentAlwaysEmpty(statusCode)) {
+            if (HttpStatus.isContentAlwaysEmpty(statusCode)) {
                 outHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
             } else if (!headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
                 // NB: Set the 'content-length' only when not set rather than always setting to 0.

@@ -25,6 +25,7 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientOptionsBuilder;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -121,6 +122,21 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
     public AbstractHealthCheckedEndpointGroupBuilder retryBackoff(Backoff retryBackoff) {
         this.retryBackoff = requireNonNull(retryBackoff, "retryBackoff");
         return this;
+    }
+
+    /**
+     * Sets the {@link ClientOptions} of the {@link Client} that sends health check requests.
+     * This method can be useful if you already have an Armeria client and want to reuse its configuration,
+     * such as using the same decorators.
+     * <pre>{@code
+     * HttpClient myClient = ...;
+     * // Use the same settings and decorators with `myClient` when sending health check requests.
+     * builder.clientOptions(myClient.options());
+     * }</pre>
+     */
+    public AbstractHealthCheckedEndpointGroupBuilder clientOptions(ClientOptions clientOptions) {
+        requireNonNull(clientOptions, "clientOptions");
+        return withClientOptions(b -> b.options(clientOptions));
     }
 
     /**

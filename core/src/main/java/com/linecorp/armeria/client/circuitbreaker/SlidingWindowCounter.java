@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.LongAdder;
 
-import com.google.common.base.Ticker;
+import com.linecorp.armeria.common.util.Ticker;
 
 /**
  * An {@link EventCounter} that accumulates the count of events within a time window.

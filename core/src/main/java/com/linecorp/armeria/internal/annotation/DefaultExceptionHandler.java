@@ -23,9 +23,9 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpStatusException;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
@@ -45,7 +45,7 @@ final class DefaultExceptionHandler implements ExceptionHandlerFunction {
     private static final Logger logger = LoggerFactory.getLogger(DefaultExceptionHandler.class);
 
     @Override
-    public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
+    public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
         if (cause instanceof IllegalArgumentException) {
             return HttpResponse.of(HttpStatus.BAD_REQUEST);
         }

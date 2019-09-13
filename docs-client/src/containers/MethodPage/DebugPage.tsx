@@ -123,99 +123,105 @@ class DebugPage extends React.PureComponent<Props, State> {
   public render() {
     return (
       <Section>
-        <Typography variant="body2" paragraph />
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
-            <Typography variant="h6" paragraph>
-              Debug
-            </Typography>
-            {this.props.isAnnotatedHttpService &&
-              (this.props.exactPathMapping ? (
+        <div id="debug-form">
+          <Typography variant="body2" paragraph />
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="h6" paragraph>
+                Debug
+              </Typography>
+              {this.props.isAnnotatedHttpService &&
+                (this.props.exactPathMapping ? (
+                  <>
+                    <HttpQueryString
+                      additionalQueriesOpen={this.state.additionalQueriesOpen}
+                      additionalQueries={this.state.additionalQueries}
+                      onEditHttpQueriesClick={this.onEditHttpQueriesClick}
+                      onQueriesFormChange={this.onQueriesFormChange}
+                    />
+                  </>
+                ) : (
+                  <EndpointPath
+                    endpointPathOpen={this.state.endpointPathOpen}
+                    endpointPath={this.state.endpointPath}
+                    onEditEndpointPathClick={this.onEditEndpointPathClick}
+                    onEndpointPathChange={this.onEndpointPathChange}
+                  />
+                ))}
+              <HttpHeaders
+                exampleHeaders={this.props.exampleHeaders}
+                additionalHeadersOpen={this.state.additionalHeadersOpen}
+                additionalHeaders={this.state.additionalHeaders}
+                stickyHeaders={this.state.stickyHeaders}
+                onEditHttpHeadersClick={this.onEditHttpHeadersClick}
+                onSelectedHeadersChange={this.onSelectedHeadersChange}
+                onHeadersFormChange={this.onHeadersFormChange}
+                onStickyHeadersChange={this.onStickyHeadersChange}
+              />
+              {this.props.useRequestBody && (
                 <>
-                  <HttpQueryString
-                    additionalQueriesOpen={this.state.additionalQueriesOpen}
-                    additionalQueries={this.state.additionalQueries}
-                    onEditHttpQueriesClick={this.onEditHttpQueriesClick}
-                    onQueriesFormChange={this.onQueriesFormChange}
+                  <RequestBody
+                    requestBodyOpen={this.state.requestBodyOpen}
+                    requestBody={this.state.requestBody}
+                    onEditRequestBodyClick={this.onEditRequestBodyClick}
+                    onDebugFormChange={this.onDebugFormChange}
                   />
                 </>
-              ) : (
-                <EndpointPath
-                  endpointPathOpen={this.state.endpointPathOpen}
-                  endpointPath={this.state.endpointPath}
-                  onEditEndpointPathClick={this.onEditEndpointPathClick}
-                  onEndpointPathChange={this.onEndpointPathChange}
-                />
-              ))}
-            <HttpHeaders
-              exampleHeaders={this.props.exampleHeaders}
-              additionalHeadersOpen={this.state.additionalHeadersOpen}
-              additionalHeaders={this.state.additionalHeaders}
-              stickyHeaders={this.state.stickyHeaders}
-              onEditHttpHeadersClick={this.onEditHttpHeadersClick}
-              onSelectedHeadersChange={this.onSelectedHeadersChange}
-              onHeadersFormChange={this.onHeadersFormChange}
-              onStickyHeadersChange={this.onStickyHeadersChange}
-            />
-            {this.props.useRequestBody && (
-              <>
-                <RequestBody
-                  requestBodyOpen={this.state.requestBodyOpen}
-                  requestBody={this.state.requestBody}
-                  onEditRequestBodyClick={this.onEditRequestBodyClick}
-                  onDebugFormChange={this.onDebugFormChange}
-                />
-              </>
-            )}
-            <Typography variant="body2" paragraph />
-            <Button variant="contained" color="primary" onClick={this.onSubmit}>
-              Submit
-            </Button>
-            <Button variant="text" color="secondary" onClick={this.onExport}>
-              Copy as a curl command
-            </Button>
+              )}
+              <Typography variant="body2" paragraph />
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={this.onSubmit}
+              >
+                Submit
+              </Button>
+              <Button variant="text" color="secondary" onClick={this.onExport}>
+                Copy as a curl command
+              </Button>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Tooltip title="Copy response">
+                <div>
+                  <IconButton
+                    onClick={this.onCopy}
+                    disabled={this.state.debugResponse.length === 0}
+                  >
+                    <FileCopyIcon />
+                  </IconButton>
+                </div>
+              </Tooltip>
+              <Tooltip title="Clear response">
+                <div>
+                  <IconButton
+                    onClick={this.onClear}
+                    disabled={this.state.debugResponse.length === 0}
+                  >
+                    <DeleteSweepIcon />
+                  </IconButton>
+                </div>
+              </Tooltip>
+              <SyntaxHighlighter
+                language="json"
+                style={githubGist}
+                wrapLines={false}
+              >
+                {this.state.debugResponse}
+              </SyntaxHighlighter>
+            </Grid>
           </Grid>
-          <Grid item xs={12} sm={6}>
-            <Tooltip title="Copy response">
-              <div>
-                <IconButton
-                  onClick={this.onCopy}
-                  disabled={this.state.debugResponse.length === 0}
-                >
-                  <FileCopyIcon />
-                </IconButton>
-              </div>
-            </Tooltip>
-            <Tooltip title="Clear response">
-              <div>
-                <IconButton
-                  onClick={this.onClear}
-                  disabled={this.state.debugResponse.length === 0}
-                >
-                  <DeleteSweepIcon />
-                </IconButton>
-              </div>
-            </Tooltip>
-            <SyntaxHighlighter
-              language="json"
-              style={githubGist}
-              wrapLines={false}
-            >
-              {this.state.debugResponse}
-            </SyntaxHighlighter>
-          </Grid>
-        </Grid>
-        <Snackbar
-          open={this.state.snackbarOpen}
-          message={this.state.snackbarMessage}
-          autoHideDuration={3000}
-          onClose={this.onSnackbarDismiss}
-          action={
-            <IconButton color="inherit" onClick={this.onSnackbarDismiss}>
-              <CloseIcon />
-            </IconButton>
-          }
-        />
+          <Snackbar
+            open={this.state.snackbarOpen}
+            message={this.state.snackbarMessage}
+            autoHideDuration={3000}
+            onClose={this.onSnackbarDismiss}
+            action={
+              <IconButton color="inherit" onClick={this.onSnackbarDismiss}>
+                <CloseIcon />
+              </IconButton>
+            }
+          />
+        </div>
       </Section>
     );
   }
@@ -504,9 +510,10 @@ class DebugPage extends React.PureComponent<Props, State> {
 
     let urlRequestBody;
     if (this.props.useRequestBody) {
-      urlRequestBody = urlParams.has('request_body')
-        ? jsonPrettify(urlParams.get('request_body')!)
-        : undefined;
+      if (urlParams.has('request_body')) {
+        urlRequestBody = jsonPrettify(urlParams.get('request_body')!);
+        this.scrollToDebugForm();
+      }
     }
 
     const urlHeaders = urlParams.has('http_headers')
@@ -588,6 +595,13 @@ class DebugPage extends React.PureComponent<Props, State> {
     this.setState({
       debugResponse,
     });
+  }
+
+  private scrollToDebugForm() {
+    const scrollNode = document.getElementById('debug-form');
+    if (scrollNode) {
+      scrollNode.scrollIntoView({ behavior: 'smooth' });
+    }
   }
 }
 

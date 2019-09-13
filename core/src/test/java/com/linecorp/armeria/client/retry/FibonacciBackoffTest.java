@@ -51,7 +51,7 @@ class FibonacciBackoffTest {
     }
 
     @Test
-    void testContraintInitialDelay() {
+    void testConstraintInitialDelay() {
         assertThatThrownBy(() -> new FibonacciBackoff(-5, 120))
                 .isInstanceOf(IllegalArgumentException.class);
     }
