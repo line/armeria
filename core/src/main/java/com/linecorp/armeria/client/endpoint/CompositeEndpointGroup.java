@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.util.AbstractListenable;
 final class CompositeEndpointGroup extends AbstractListenable<List<Endpoint>> implements EndpointGroup {
 
     private final List<EndpointGroup> endpointGroups;
+    private final boolean isStaticIPs;
 
     private final CompletableFuture<List<Endpoint>> initialEndpointsFuture;
     private final AtomicBoolean dirty;
@@ -51,12 +52,17 @@ final class CompositeEndpointGroup extends AbstractListenable<List<Endpoint>> im
         this.endpointGroups = ImmutableList.copyOf(endpointGroups);
         dirty = new AtomicBoolean(true);
 
+        boolean isStaticIPs = true;
         for (EndpointGroup endpointGroup : endpointGroups) {
+            if (!endpointGroup.isStaticIPs()) {
+                isStaticIPs = false;
+            }
             endpointGroup.addListener(unused -> {
                 dirty.set(true);
                 notifyListeners(endpoints());
             });
         }
+        this.isStaticIPs = isStaticIPs;
 
         initialEndpointsFuture =
                 CompletableFuture.anyOf(this.endpointGroups.stream()
@@ -88,6 +94,11 @@ final class CompositeEndpointGroup extends AbstractListenable<List<Endpoint>> im
     @Override
     public CompletableFuture<List<Endpoint>> initialEndpointsFuture() {
         return initialEndpointsFuture;
+    }
+
+    @Override
+    public boolean isStaticIPs() {
+        return isStaticIPs;
     }
 
     @Override

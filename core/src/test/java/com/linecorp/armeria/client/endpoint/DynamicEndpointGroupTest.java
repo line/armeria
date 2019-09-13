@@ -55,4 +55,14 @@ public class DynamicEndpointGroupTest {
         assertThat(endpointGroup.endpoints()).containsExactly(Endpoint.of("127.0.0.1", 1111),
                                                               Endpoint.of("127.0.0.1", 3333));
     }
+
+    /** A dynamic endpoint group is not a static list of IPs because it can change. */
+    @Test
+    public void isNotStaticIPs() {
+        final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
+        endpointGroup.setEndpoints(ImmutableList.of(Endpoint.of("127.0.0.1", 3333),
+            Endpoint.of("127.0.0.1", 1111)));
+
+        assertThat(endpointGroup.isStaticIPs()).isFalse();
+    }
 }

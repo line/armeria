@@ -622,6 +622,11 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         }
     }
 
+    @Override
+    public boolean isStaticIPs() {
+        return hostType != null && hostType != HostType.HOSTNAME_ONLY;
+    }
+
     private void ensureGroup() {
         if (!isGroup()) {
             throw new IllegalStateException("not a group endpoint");

@@ -76,4 +76,28 @@ public class OrElseEndpointGroupTest {
                                                                          Endpoint.of("127.0.0.1", 3333),
                                                                          Endpoint.of("127.0.0.1", 5555)));
     }
+
+    @Test
+    public void isStaticIPs() {
+        final OrElseEndpointGroup endpointGroup = new OrElseEndpointGroup(
+            Endpoint.of("127.0.0.1", 3333), Endpoint.of("127.0.0.1", 1111));
+
+        assertThat(endpointGroup.isStaticIPs()).isTrue();
+    }
+
+    @Test
+    public void isNotStaticIPs_whenUnresolved() {
+        final OrElseEndpointGroup endpointGroup = new OrElseEndpointGroup(
+            Endpoint.of("hosta", 3333), Endpoint.of("hostb", 1111));
+
+        assertThat(endpointGroup.isStaticIPs()).isFalse();
+    }
+
+    @Test
+    public void isNotStaticIPs_whenMixed() {
+        final OrElseEndpointGroup endpointGroup = new OrElseEndpointGroup(
+            Endpoint.of("127.0.0.1", 3333), Endpoint.of("hostb", 1111));
+
+        assertThat(endpointGroup.isStaticIPs()).isFalse();
+    }
 }

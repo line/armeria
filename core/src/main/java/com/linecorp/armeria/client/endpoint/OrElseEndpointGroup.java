@@ -56,6 +56,11 @@ final class OrElseEndpointGroup extends AbstractListenable<List<Endpoint>> imple
     }
 
     @Override
+    public boolean isStaticIPs() {
+        return first.isStaticIPs() && second.isStaticIPs();
+    }
+
+    @Override
     public void close() {
         try (EndpointGroup first = this.first;
              EndpointGroup second = this.second) {

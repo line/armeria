@@ -37,6 +37,7 @@ public final class StaticEndpointGroup implements EndpointGroup {
     private final List<Endpoint> endpoints;
 
     private final CompletableFuture<List<Endpoint>> initialEndpointsFuture;
+    private final boolean isStaticIPs;
 
     /**
      * Creates a new instance.
@@ -59,6 +60,14 @@ public final class StaticEndpointGroup implements EndpointGroup {
 
         this.endpoints = ImmutableList.copyOf(endpoints);
 
+        boolean isStaticIPs = true;
+        for (Endpoint endpoint : endpoints) {
+            if (!endpoint.isStaticIPs()) {
+                isStaticIPs = false;
+            }
+        }
+        this.isStaticIPs = isStaticIPs;
+
         initialEndpointsFuture = CompletableFuture.completedFuture(this.endpoints);
     }
 
@@ -70,6 +79,11 @@ public final class StaticEndpointGroup implements EndpointGroup {
     @Override
     public CompletableFuture<List<Endpoint>> initialEndpointsFuture() {
         return initialEndpointsFuture;
+    }
+
+    @Override
+    public boolean isStaticIPs() {
+        return isStaticIPs;
     }
 
     @Override

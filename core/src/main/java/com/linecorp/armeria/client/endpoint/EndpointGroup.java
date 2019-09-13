@@ -126,6 +126,13 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, SafeCloseable
     }
 
     /**
+     * Returns true if the group is fixed size and every endpoint has a resolved IP address.
+     */
+    default boolean isStaticIPs() {
+        return false;
+    }
+
+    /**
      * Waits until the initial {@link Endpoint}s are ready, with timeout.
      *
      * @throws CancellationException if {@link #close()} was called before the initial {@link Endpoint}s are set

@@ -39,6 +39,7 @@ class EndpointTest {
         assertThat(foo.hasIpAddr()).isFalse();
         assertThat(foo.hasPort()).isFalse();
         assertThat(foo.toUri("none+http").toString()).isEqualTo("none+http://foo");
+        assertThat(foo.isStaticIPs()).isFalse();
 
         final Endpoint bar = Endpoint.parse("bar:80");
         assertThat(bar).isEqualTo(Endpoint.of("bar", 80));
@@ -49,6 +50,7 @@ class EndpointTest {
         assertThat(bar.hasIpAddr()).isFalse();
         assertThat(bar.hasPort()).isTrue();
         assertThat(bar.toUri("none+http").toString()).isEqualTo("none+http://bar:80");
+        assertThat(bar.isStaticIPs()).isFalse();
 
         assertThat(Endpoint.parse("group:foo")).isEqualTo(Endpoint.ofGroup("foo"));
     }
@@ -60,6 +62,7 @@ class EndpointTest {
         assertThat(foo.groupName()).isEqualTo("foo");
         assertThat(foo.authority()).isEqualTo("group:foo");
         assertThat(foo.toUri("none+http").toString()).isEqualTo("none+http://group:foo");
+        assertThat(foo.isStaticIPs()).isFalse();
 
         assertThatThrownBy(foo::host).isInstanceOf(IllegalStateException.class);
         assertThatThrownBy(foo::ipAddr).isInstanceOf(IllegalStateException.class);
@@ -84,6 +87,7 @@ class EndpointTest {
         assertThat(foo.authority()).isEqualTo("foo.com");
         assertThat(foo.withIpAddr(null)).isSameAs(foo);
         assertThat(foo.toUri("none+http").toString()).isEqualTo("none+http://foo.com");
+        assertThat(foo.isStaticIPs()).isFalse();
 
         assertThatThrownBy(foo::port).isInstanceOf(IllegalStateException.class);
         assertThatThrownBy(foo::groupName).isInstanceOf(IllegalStateException.class);
@@ -105,6 +109,7 @@ class EndpointTest {
         assertThat(foo.weight()).isEqualTo(1000);
         assertThat(foo.authority()).isEqualTo("foo.com:80");
         assertThat(foo.toUri("none+http").toString()).isEqualTo("none+http://foo.com:80");
+        assertThat(foo.isStaticIPs()).isFalse();
 
         assertThatThrownBy(foo::groupName).isInstanceOf(IllegalStateException.class);
     }
@@ -142,6 +147,7 @@ class EndpointTest {
         assertThat(foo.withIpAddr("192.168.0.2").hasIpAddr()).isTrue();
         assertThat(foo.withIpAddr("192.168.0.2").toUri("none+http").toString())
                 .isEqualTo("none+http://foo.com");
+        assertThat(foo.isStaticIPs()).isTrue();
 
         assertThatThrownBy(() -> foo.withIpAddr("no-ip")).isInstanceOf(IllegalArgumentException.class);
     }
@@ -166,6 +172,7 @@ class EndpointTest {
         assertThatThrownBy(() -> a.withIpAddr(null)).isInstanceOf(IllegalStateException.class);
         assertThat(a.withIpAddr("192.168.0.1")).isSameAs(a);
         assertThat(a.withIpAddr("192.168.0.2")).isEqualTo(Endpoint.of("192.168.0.2"));
+        assertThat(a.isStaticIPs()).isTrue();
 
         assertThat(Endpoint.of("192.168.0.1", 80).authority()).isEqualTo("192.168.0.1:80");
     }
@@ -180,6 +187,7 @@ class EndpointTest {
         assertThat(a.port()).isEqualTo(80);
         assertThat(a.authority()).isEqualTo("192.168.0.1:80");
         assertThat(a.toUri("none+http").toString()).isEqualTo("none+http://192.168.0.1:80");
+        assertThat(a.isStaticIPs()).isTrue();
     }
 
     @Test
@@ -196,6 +204,7 @@ class EndpointTest {
         assertThat(a.withIpAddr("::2")).isEqualTo(Endpoint.of("::2"));
         assertThat(a.withIpAddr("[::1]")).isSameAs(a);
         assertThat(a.withIpAddr("[::2]")).isEqualTo(Endpoint.of("::2"));
+        assertThat(a.isStaticIPs()).isTrue();
 
         final Endpoint b = Endpoint.of("::1", 80);
         assertThat(b.host()).isEqualTo("::1");
@@ -240,6 +249,7 @@ class EndpointTest {
         assertThat(a.port()).isEqualTo(80);
         assertThat(a.authority()).isEqualTo("[::1]:80");
         assertThat(a.toUri("none+http").toString()).isEqualTo("none+http://[::1]:80");
+        assertThat(a.isStaticIPs()).isTrue();
     }
 
     @Test
