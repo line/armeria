@@ -48,7 +48,7 @@ import com.linecorp.armeria.server.docs.DocService;
  * >                                                               "Hello",
  * >                                                               HelloRequest.newBuilder()
  * >                                                                           .setName("Armeria")
- * >                                                       s                    .build())));
+ * >                                                                           .build())));
  * > }
  * }</pre>
  */
