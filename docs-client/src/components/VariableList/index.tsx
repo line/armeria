@@ -87,7 +87,6 @@ interface State {
   isEmpty: boolean;
   isBeans: boolean[];
   openBeans: boolean[];
-  colSpanLength: number;
   childStates: { [key: number]: State };
 }
 
