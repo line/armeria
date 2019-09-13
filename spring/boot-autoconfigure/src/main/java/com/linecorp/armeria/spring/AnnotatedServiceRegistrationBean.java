@@ -23,6 +23,7 @@ import java.util.Collection;
 
 import javax.validation.constraints.NotNull;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
@@ -44,7 +45,7 @@ import com.linecorp.armeria.server.docs.DocService;
  * >             .setExceptionHandlers(new MyExceptionHandler())
  * >             .setRequestConverters(new MyRequestConverter())
  * >             .setResponseConverters(new MyResponseConverter())
- * >             .setExampleRequests(Lists.of(AnnotatedExampleRequest.of("post", "{"foo":"bar"}")));
+ * >             .setExampleRequests(Lists.of(AnnotatedExampleRequest.of("post", "{\"foo\":\"bar\"}")));
  * > }
  * }</pre>
  */
@@ -71,6 +72,14 @@ public class AnnotatedServiceRegistrationBean
         public static AnnotatedExampleRequest of(@NotNull String methodName,
                                                  @NotNull Object exampleRequest) {
             return new AnnotatedExampleRequest(methodName, exampleRequest);
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                              .add("methodName", methodName)
+                              .add("exampleRequest", exampleRequest)
+                              .toString();
         }
     }
 
@@ -212,7 +221,7 @@ public class AnnotatedServiceRegistrationBean
     }
 
     /**
-     * Adds sample requests for {@link #getService()}.
+     * Adds sample request for {@link #getService()}.
      */
     public AnnotatedServiceRegistrationBean addExampleRequest(String methodName, Object exampleRequest) {
         requireNonNull(methodName, "methodName");

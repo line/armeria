@@ -20,8 +20,11 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.stream.Collectors;
 
 import javax.validation.constraints.NotNull;
+
+import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -64,6 +67,15 @@ public class GrpcServiceRegistrationBean
                                             @NotNull String methodName,
                                             @NotNull Object exampleRequest) {
             return new GrpcExampleRequest(serviceType, methodName, exampleRequest);
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                              .add("serviceType", getServiceType())
+                              .add("methodName", getMethodName())
+                              .add("exampleRequest", getExampleRequest())
+                              .toString();
         }
     }
 
@@ -143,6 +155,11 @@ public class GrpcServiceRegistrationBean
     public GrpcServiceRegistrationBean setExampleRequests(
             @NotNull Collection<ExampleRequest> exampleRequests) {
         this.exampleRequests = exampleRequests;
+        grpcExampleRequests = exampleRequests.stream()
+                                             .map(it -> GrpcExampleRequest.of(it.getServiceType(),
+                                                                              it.getMethodName(),
+                                                                              it.getExampleRequest()))
+                                             .collect(Collectors.toList());
         return this;
     }
 
@@ -164,7 +181,7 @@ public class GrpcServiceRegistrationBean
     }
 
     /**
-     * Adds sample requests for {@link #getService()}.
+     * Adds sample request for {@link #getService()}.
      */
     public GrpcServiceRegistrationBean addGrpcExampleRequest(String serviceType, String methodName,
                                                              Object exampleRequest) {
