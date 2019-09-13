@@ -217,6 +217,10 @@ public final class GrpcStatus {
         return builder.build();
     }
 
+    /**
+     * Extracts the gRPC status from the {@link HttpHeaders}, closing the {@link HttpStreamReader} for a
+     * successful response, then delivering the status to the {@link TransportStatusListener}.
+     */
     public static void reportStatus(HttpHeaders headers,
                                     HttpStreamReader reader,
                                     TransportStatusListener transportStatusListener) {
