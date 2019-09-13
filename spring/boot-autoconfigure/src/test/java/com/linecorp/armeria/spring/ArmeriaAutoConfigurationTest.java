@@ -39,7 +39,6 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
@@ -64,7 +63,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Post;
-import com.linecorp.armeria.server.annotation.ProducesJson;
 import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.StringRequestConverterFunction;
@@ -181,10 +179,8 @@ public class ArmeriaAutoConfigurationTest {
         }
 
         @Post("/post")
-        @ProducesJson
-        public AggregatedHttpResponse post(@RequestObject JsonNode jsonNode) throws JsonProcessingException {
-            return AggregatedHttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
-                                             objectMapper.writeValueAsString(jsonNode));
+        public JsonNode post(@RequestObject JsonNode jsonNode) {
+            return objectMapper.valueToTree(jsonNode);
         }
     }
 
