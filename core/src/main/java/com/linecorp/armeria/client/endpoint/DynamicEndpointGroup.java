@@ -17,6 +17,8 @@ package com.linecorp.armeria.client.endpoint;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.Lock;
@@ -32,7 +34,12 @@ import com.linecorp.armeria.common.util.AbstractListenable;
  * A dynamic {@link EndpointGroup}. The list of {@link Endpoint}s can be updated dynamically.
  */
 public class DynamicEndpointGroup extends AbstractListenable<List<Endpoint>> implements EndpointGroup {
-    private volatile List<Endpoint> endpoints = ImmutableList.of();
+
+    // An empty list of endpoints we also use as a marker that we have not initialized endpoints yet.
+    private static final List<Endpoint> UNINITIALIZED_ENDPOINTS = Collections.unmodifiableList(
+            new ArrayList<>());
+
+    private volatile List<Endpoint> endpoints = UNINITIALIZED_ENDPOINTS;
     private final Lock endpointsLock = new ReentrantLock();
     private final CompletableFuture<List<Endpoint>> initialEndpointsFuture = new CompletableFuture<>();
 
@@ -90,7 +97,7 @@ public class DynamicEndpointGroup extends AbstractListenable<List<Endpoint>> imp
         final List<Endpoint> oldEndpoints = this.endpoints;
         final List<Endpoint> newEndpoints = ImmutableList.sortedCopyOf(endpoints);
 
-        if (oldEndpoints.equals(newEndpoints)) {
+        if (oldEndpoints != UNINITIALIZED_ENDPOINTS && oldEndpoints.equals(newEndpoints)) {
             return;
         }
 
@@ -106,7 +113,7 @@ public class DynamicEndpointGroup extends AbstractListenable<List<Endpoint>> imp
     }
 
     private void completeInitialEndpointsFuture(List<Endpoint> endpoints) {
-        if (!endpoints.isEmpty() && !initialEndpointsFuture.isDone()) {
+        if (endpoints != UNINITIALIZED_ENDPOINTS && !initialEndpointsFuture.isDone()) {
             initialEndpointsFuture.complete(endpoints);
         }
     }
