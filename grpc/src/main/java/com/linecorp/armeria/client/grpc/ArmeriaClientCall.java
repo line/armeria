@@ -294,7 +294,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             // trailers never compressed
             assert buf != null;
             try {
-                HttpHeaders trailers = parseGrpcWebTrailers(buf);
+                final HttpHeaders trailers = parseGrpcWebTrailers(buf);
                 if (trailers == null) {
                     // Malformed trailers.
                     close(Status.INTERNAL
@@ -388,7 +388,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     @Nullable
     private HttpHeaders parseGrpcWebTrailers(ByteBuf buf) {
-        HttpHeadersBuilder trailers = HttpHeaders.builder();
+        final HttpHeadersBuilder trailers = HttpHeaders.builder();
         while (buf.readableBytes() > 0) {
             int start = buf.forEachByte(ByteProcessor.FIND_NON_LINEAR_WHITESPACE);
             if (start == -1) {
@@ -406,19 +406,19 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             if (endExclusive == -1) {
                 return null;
             }
-            CharSequence name = buf.readCharSequence(endExclusive - start, StandardCharsets.UTF_8);
+            final CharSequence name = buf.readCharSequence(endExclusive - start, StandardCharsets.UTF_8);
             buf.readerIndex(endExclusive + 1);
             start = buf.forEachByte(ByteProcessor.FIND_NON_LINEAR_WHITESPACE);
             buf.readerIndex(start);
             endExclusive = buf.forEachByte(ByteProcessor.FIND_CRLF);
-            CharSequence value = buf.readCharSequence(endExclusive - start, StandardCharsets.UTF_8);
+            final CharSequence value = buf.readCharSequence(endExclusive - start, StandardCharsets.UTF_8);
             trailers.add(name, value.toString());
             start = buf.forEachByte(ByteProcessor.FIND_NON_CRLF);
             if (start != -1) {
                 buf.readerIndex(start);
             } else {
                 // Nothing but CRLF remaining, we're done.
-                buf.readerIndex(buf.writerIndex());
+                buf.skipBytes(buf.readableBytes());
             }
         }
         return trailers.build();
