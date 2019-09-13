@@ -23,7 +23,6 @@ import java.util.Collection;
 
 import javax.validation.constraints.NotNull;
 
-import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
@@ -51,38 +50,6 @@ import com.linecorp.armeria.server.docs.DocService;
  */
 public class AnnotatedServiceRegistrationBean
         extends AbstractServiceRegistrationBean<Object, AnnotatedServiceRegistrationBean> {
-
-    public static final class AnnotatedExampleRequest {
-
-        public static AnnotatedExampleRequest of(@NotNull String methodName,
-                                                 @NotNull Object exampleRequest) {
-            return new AnnotatedExampleRequest(methodName, exampleRequest);
-        }
-
-        private final String methodName;
-        private final Object exampleRequest;
-
-        private AnnotatedExampleRequest(String methodName, Object exampleRequest) {
-            this.methodName = methodName;
-            this.exampleRequest = exampleRequest;
-        }
-
-        public String getMethodName() {
-            return methodName;
-        }
-
-        public Object getExampleRequest() {
-            return exampleRequest;
-        }
-
-        @Override
-        public String toString() {
-            return MoreObjects.toStringHelper(this)
-                              .add("methodName", methodName)
-                              .add("exampleRequest", exampleRequest)
-                              .toString();
-        }
-    }
 
     /**
      * The path prefix of the annotated service object.

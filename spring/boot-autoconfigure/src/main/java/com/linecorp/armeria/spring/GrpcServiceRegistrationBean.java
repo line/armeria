@@ -23,8 +23,6 @@ import java.util.Collection;
 
 import javax.validation.constraints.NotNull;
 
-import com.google.common.base.MoreObjects;
-
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.ServiceWithRoutes;
@@ -56,46 +54,6 @@ public class GrpcServiceRegistrationBean
         extends AbstractServiceRegistrationBean<ServiceWithRoutes<HttpRequest, HttpResponse>,
         GrpcServiceRegistrationBean> {
 
-    public static final class GrpcExampleRequest {
-
-        public static GrpcExampleRequest of(@NotNull String serviceType,
-                                            @NotNull String methodName,
-                                            @NotNull Object exampleRequest) {
-            return new GrpcExampleRequest(serviceType, methodName, exampleRequest);
-        }
-
-        private final String serviceType;
-        private final String methodName;
-        private final Object exampleRequest;
-
-        private GrpcExampleRequest(String serviceType, String methodName, Object exampleRequest) {
-            this.serviceType = serviceType;
-            this.methodName = methodName;
-            this.exampleRequest = exampleRequest;
-        }
-
-        public String getServiceType() {
-            return serviceType;
-        }
-
-        public String getMethodName() {
-            return methodName;
-        }
-
-        public Object getExampleRequest() {
-            return exampleRequest;
-        }
-
-        @Override
-        public String toString() {
-            return MoreObjects.toStringHelper(this)
-                              .add("serviceType", serviceType)
-                              .add("methodName", methodName)
-                              .add("exampleRequest", exampleRequest)
-                              .toString();
-        }
-    }
-
     /**
      * Sample requests to populate debug forms in {@link DocService}.
      * This should be a list of request objects which correspond to methods
@@ -124,8 +82,8 @@ public class GrpcServiceRegistrationBean
     /**
      * Adds sample request for {@link #getService()}.
      */
-    public GrpcServiceRegistrationBean addGrpcExampleRequest(String serviceType, String methodName,
-                                                             Object exampleRequest) {
+    public GrpcServiceRegistrationBean addExampleRequest(String serviceType, String methodName,
+                                                         Object exampleRequest) {
         requireNonNull(serviceType, "serviceType");
         checkArgument(!serviceType.isEmpty(), "serviceType is empty.");
         requireNonNull(methodName, "methodName");
