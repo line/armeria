@@ -31,7 +31,6 @@ import io.netty.util.concurrent.DefaultThreadFactory;
 public abstract class AbstractThreadFactory implements ThreadFactory {
     // Note that we did not extend DefaultThreadFactory directly to hide it from the class hierarchy.
     private final ThreadFactoryImpl delegate;
-
     private Function<? super Runnable, ? extends Runnable> taskFunction = Function.identity();
 
     protected AbstractThreadFactory(String threadNamePrefix) {

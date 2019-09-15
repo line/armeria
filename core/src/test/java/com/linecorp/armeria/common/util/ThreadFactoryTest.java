@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
 
@@ -27,48 +28,69 @@ public class ThreadFactoryTest {
     @Test
     void testEventLoopThreadFactory() {
 
-        final Thread eventLoopThread = ThreadFactories.builderForEventLoops("event-loop-normal")
+        final ThreadGroup eventLoopThreadGroup = new ThreadGroup("normal-group");
+        final Thread eventLoopThread = ThreadFactories.builderForEventLoops("normal-thread")
+                                                      .threadGroup(eventLoopThreadGroup)
                                                       .build()
                                                       .newThread(() -> {});
 
         assertThat(eventLoopThread.getClass()).isSameAs(EventLoopThread.class);
-        assertThat(eventLoopThread.getName()).startsWith("event-loop-normal");
+        assertThat(eventLoopThread.getName()).startsWith("normal-thread");
         assertThat(eventLoopThread.getPriority()).isEqualTo(Thread.NORM_PRIORITY);
         assertThat(eventLoopThread.isDaemon()).isFalse();
+        assertThat(eventLoopThread.getThreadGroup().getName()).isEqualTo("normal-group");
 
-        final Thread eventLoopThreadCustom = ThreadFactories.builderForEventLoops("event-loop-custom")
+        final ThreadGroup eventLoopCustomThreadGroup = new ThreadGroup("custom-group");
+        final Thread eventLoopCustomThread = ThreadFactories.builderForEventLoops("custom-thread")
                                                             .priority(Thread.MAX_PRIORITY)
                                                             .daemon(true)
+                                                            .threadGroup(eventLoopCustomThreadGroup)
                                                             .build()
                                                             .newThread(() -> {});
 
-        assertThat(eventLoopThreadCustom.getClass()).isSameAs(EventLoopThread.class);
-        assertThat(eventLoopThreadCustom.getName()).startsWith("event-loop-custom");
-        assertThat(eventLoopThreadCustom.getPriority()).isEqualTo(Thread.MAX_PRIORITY);
-        assertThat(eventLoopThreadCustom.isDaemon()).isTrue();
+        assertThat(eventLoopCustomThread.getClass()).isSameAs(EventLoopThread.class);
+        assertThat(eventLoopCustomThread.getName()).startsWith("custom-thread");
+        assertThat(eventLoopCustomThread.getPriority()).isEqualTo(Thread.MAX_PRIORITY);
+        assertThat(eventLoopCustomThread.isDaemon()).isTrue();
+        assertThat(eventLoopCustomThread.getThreadGroup().getName()).isEqualTo("custom-group");
     }
 
     @Test
     void testNonEventLoopThreadFactory() {
 
-        final Thread nonEventLoopThread = ThreadFactories.builder("non-event-loop-normal")
+        final ThreadGroup nonEventLoopThreadGroup = new ThreadGroup("normal-group");
+        final Thread nonEventLoopThread = ThreadFactories.builder("normal-thread")
+                                                         .threadGroup(nonEventLoopThreadGroup)
                                                          .build()
                                                          .newThread(() -> {});
 
         assertThat(nonEventLoopThread.getClass()).isSameAs(FastThreadLocalThread.class);
-        assertThat(nonEventLoopThread.getName()).startsWith("non-event-loop-normal");
+        assertThat(nonEventLoopThread.getName()).startsWith("normal-thread");
         assertThat(nonEventLoopThread.getPriority()).isEqualTo(Thread.NORM_PRIORITY);
         assertThat(nonEventLoopThread.isDaemon()).isFalse();
+        assertThat(nonEventLoopThread.getThreadGroup().getName()).isEqualTo("normal-group");
 
-        final Thread nonEventLoopThreadCustom = ThreadFactories.builder("non-event-loop-custom")
+        final ThreadGroup nonEventLoopCustomThreadGroup = new ThreadGroup("custom-group");
+        final Thread nonEventLoopCustomThread = ThreadFactories.builder("custom-thread")
                                                                .priority(Thread.MAX_PRIORITY)
                                                                .daemon(true)
+                                                               .threadGroup(nonEventLoopCustomThreadGroup)
                                                                .build()
                                                                .newThread(() -> {});
 
-        assertThat(nonEventLoopThreadCustom.getClass()).isSameAs(FastThreadLocalThread.class);
-        assertThat(nonEventLoopThreadCustom.getName()).startsWith("non-event-loop-custom");
-        assertThat(nonEventLoopThreadCustom.getPriority()).isEqualTo(Thread.MAX_PRIORITY);
-        assertThat(nonEventLoopThreadCustom.isDaemon()).isTrue();
+        assertThat(nonEventLoopCustomThread.getClass()).isSameAs(FastThreadLocalThread.class);
+        assertThat(nonEventLoopCustomThread.getName()).startsWith("custom-thread");
+        assertThat(nonEventLoopCustomThread.getPriority()).isEqualTo(Thread.MAX_PRIORITY);
+        assertThat(nonEventLoopCustomThread.isDaemon()).isTrue();
+        assertThat(nonEventLoopCustomThread.getThreadGroup().getName()).isEqualTo("custom-group");
+    }
+
+    @Test
+    void testTheadPriorityRange() {
+        assertThrows(IllegalArgumentException.class, () -> {
+           ThreadFactories.builder("priority-test")
+                          .priority(-1)
+                          .build();
+        });
     }
 }
