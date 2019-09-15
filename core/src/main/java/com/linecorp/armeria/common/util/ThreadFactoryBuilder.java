@@ -35,6 +35,12 @@ public final class ThreadFactoryBuilder {
                           Function<? super Runnable, ? extends Runnable>,
                           ? extends AbstractThreadFactory> factoryConstructor;
 
+    /**
+     * Creates a new factory builder that creates a specified type of {@link ThreadFactory}.
+     *
+     * @param threadNamePrefix the prefix of the names of the threads created by this factory.
+     * @param factoryConstructor the constructor reference of concrete {@link AbstractThreadFactory}.
+     */
     public ThreadFactoryBuilder(String threadNamePrefix,
                                 PentaFunction<String, Boolean, Integer, ThreadGroup,
                                               Function<? super Runnable, ? extends Runnable>,
