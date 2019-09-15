@@ -89,9 +89,9 @@ public final class EventLoopGroups {
 
         final TransportType type = TransportType.detectTransportType();
         final String prefix = threadNamePrefix + '-' + type.lowerCasedName();
-        return newEventLoopGroup(numThreads, EventLoopThreadFactory.builder(prefix)
-                                                                   .daemon(useDaemonThreads)
-                                                                   .build());
+        return newEventLoopGroup(numThreads, ThreadFactories.builderForEventLoops(prefix)
+                                                            .daemon(useDaemonThreads)
+                                                            .build());
     }
 
     /**

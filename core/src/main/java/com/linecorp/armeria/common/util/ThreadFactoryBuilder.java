@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -18,27 +18,35 @@ package com.linecorp.armeria.common.util;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.ThreadFactory;
 import java.util.function.Function;
 
 /**
- * Builds a new {@link EventLoopThreadFactory}.
+ * Builds a new {@link ThreadFactory} instance.
  */
-public final class EventLoopThreadFactoryBuilder {
+public final class ThreadFactoryBuilder {
 
     private String threadNamePrefix;
     private boolean daemon;
     private int priority = Thread.NORM_PRIORITY;
     private ThreadGroup threadGroup;
     private Function<? super Runnable, ? extends Runnable> taskFunction = Function.identity();
+    private PentaFunction<String, Boolean, Integer, ThreadGroup,
+                          Function<? super Runnable, ? extends Runnable>,
+                          ? extends AbstractThreadFactory> factoryConstructor;
 
-    public EventLoopThreadFactoryBuilder(String threadNamePrefix) {
+    public ThreadFactoryBuilder(String threadNamePrefix,
+                                PentaFunction<String, Boolean, Integer, ThreadGroup,
+                                              Function<? super Runnable, ? extends Runnable>,
+                                              ? extends AbstractThreadFactory> factoryConstructor) {
         this.threadNamePrefix = requireNonNull(threadNamePrefix, "threadNamePrefix");
+        this.factoryConstructor = requireNonNull(factoryConstructor, "factoryConstructor");
     }
 
     /**
      * Sets daemon for new threads.
      */
-    public EventLoopThreadFactoryBuilder daemon(boolean daemon) {
+    public ThreadFactoryBuilder daemon(boolean daemon) {
         this.daemon = daemon;
         return this;
     }
@@ -46,7 +54,7 @@ public final class EventLoopThreadFactoryBuilder {
     /**
      * Sets priority for new threads.
      */
-    public EventLoopThreadFactoryBuilder priority(int priority) {
+    public ThreadFactoryBuilder priority(int priority) {
         if (priority < Thread.MIN_PRIORITY || priority > Thread.MAX_PRIORITY) {
             throw new IllegalArgumentException(
                     "priority: " + priority +
@@ -60,7 +68,7 @@ public final class EventLoopThreadFactoryBuilder {
     /**
      * Sets thread group for new threads.
      */
-    public EventLoopThreadFactoryBuilder threadGroup(ThreadGroup threadGroup) {
+    public ThreadFactoryBuilder threadGroup(ThreadGroup threadGroup) {
         this.threadGroup = requireNonNull(threadGroup, "threadGroup");
         return this;
     }
@@ -69,27 +77,27 @@ public final class EventLoopThreadFactoryBuilder {
      * Sets task function for new threads.
      * Use this method to set additional work before or after the Runnable is run. For example:
      * <pre>{@code
-     * EventLoopThreadFactory.builder("thread-prefix")
-     *                       .taskFunction( task -> {
-     *                           return () -> {
-     *                               // Add something to do before task is run
-     *                               task.run();
-     *                               // Add something to do after task is run
-     *                           };
-     *                       })
-     *                       .build();
+     * ThreadFactories.builder("thread-prefix")
+     *                .taskFunction( task -> {
+     *                    return () -> {
+     *                        // Add something to do before task is run
+     *                           task.run();
+     *                        // Add something to do after task is run
+     *                    };
+     *                })
+     *                .build();
      * }</pre>
      */
-    public EventLoopThreadFactoryBuilder taskFunction(
+    public ThreadFactoryBuilder taskFunction(
             Function<? super Runnable, ? extends Runnable> taskFunction) {
         this.taskFunction = requireNonNull(taskFunction, "taskFunction");
         return this;
     }
 
     /**
-     * Returns a new {@link EventLoopThreadFactory}.
+     * Returns a new {@link ThreadFactory} instance.
      */
-    public EventLoopThreadFactory build() {
-        return new EventLoopThreadFactory(threadNamePrefix, daemon, priority, threadGroup, taskFunction);
+    public AbstractThreadFactory build() {
+        return factoryConstructor.apply(threadNamePrefix, daemon, priority, threadGroup, taskFunction);
     }
 }

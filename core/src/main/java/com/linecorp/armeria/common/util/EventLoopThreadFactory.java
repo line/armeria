@@ -23,37 +23,22 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import io.netty.util.concurrent.DefaultThreadFactory;
-
 /**
  * {@link ThreadFactory} that creates event loop threads.
  *
  * @see EventLoopGroups
  */
-public final class EventLoopThreadFactory implements ThreadFactory {
-    /**
-     * Returns a new builder which builds a new {@link EventLoopThreadFactory}.
-     */
-    public static EventLoopThreadFactoryBuilder builder(String threadNamePrefix) {
-        return new EventLoopThreadFactoryBuilder(requireNonNull(threadNamePrefix, "threadNamePrefix"));
-    }
-
-    // Note that we did not extend DefaultThreadFactory directly to hide it from the class hierarchy.
-    private final ThreadFactory delegate;
-
-    @Nullable
-    private Function<? super Runnable, ? extends Runnable> taskFunction;
-
+public final class EventLoopThreadFactory extends AbstractThreadFactory {
     /**
      * Creates a new factory that creates a non-daemon and normal-priority thread.
      *
      * @param threadNamePrefix the prefix of the names of the threads created by this factory.
      *
-     * @deprecated Use {@link #builder(String)}.
+     * @deprecated Use {@link ThreadFactories#builderForEventLoops(String)}.
      */
     @Deprecated
     public EventLoopThreadFactory(String threadNamePrefix) {
-        this(new EventLoopThreadFactoryImpl(requireNonNull(threadNamePrefix, "threadNamePrefix")));
+        super(requireNonNull(threadNamePrefix, "threadNamePrefix"));
     }
 
     /**
@@ -62,11 +47,11 @@ public final class EventLoopThreadFactory implements ThreadFactory {
      * @param threadNamePrefix the prefix of the names of the threads created by this factory.
      * @param daemon whether to create a daemon thread.
      *
-     * @deprecated Use {@link #builder(String)}.
+     * @deprecated Use {@link ThreadFactories#builderForEventLoops(String)}.
      */
     @Deprecated
     public EventLoopThreadFactory(String threadNamePrefix, boolean daemon) {
-        this(new EventLoopThreadFactoryImpl(requireNonNull(threadNamePrefix, "threadNamePrefix"), daemon));
+        super(requireNonNull(threadNamePrefix, "threadNamePrefix"), daemon);
     }
 
     /**
@@ -75,11 +60,11 @@ public final class EventLoopThreadFactory implements ThreadFactory {
      * @param threadNamePrefix the prefix of the names of the threads created by this factory.
      * @param priority the priority of the threads created by this factory.
      *
-     * @deprecated Use {@link #builder(String)}.
+     * @deprecated Use {@link ThreadFactories#builderForEventLoops(String)}.
      */
     @Deprecated
     public EventLoopThreadFactory(String threadNamePrefix, int priority) {
-        this(new EventLoopThreadFactoryImpl(requireNonNull(threadNamePrefix, "threadNamePrefix"), priority));
+        super(requireNonNull(threadNamePrefix, "threadNamePrefix"), priority);
     }
 
     /**
@@ -89,12 +74,11 @@ public final class EventLoopThreadFactory implements ThreadFactory {
      * @param daemon whether to create a daemon thread.
      * @param priority the priority of the threads created by this factory.
      *
-     * @deprecated Use {@link #builder(String)}.
+     * @deprecated Use {@link ThreadFactories#builderForEventLoops(String)}.
      */
     @Deprecated
     public EventLoopThreadFactory(String threadNamePrefix, boolean daemon, int priority) {
-        this(new EventLoopThreadFactoryImpl(requireNonNull(threadNamePrefix, "threadNamePrefix"),
-                                            daemon, priority));
+        super(requireNonNull(threadNamePrefix, "threadNamePrefix"), daemon, priority);
     }
 
     /**
@@ -105,57 +89,23 @@ public final class EventLoopThreadFactory implements ThreadFactory {
      * @param priority the priority of the threads created by this factory.
      * @param threadGroup the {@link ThreadGroup}.
      *
-     * @deprecated Use {@link #builder(String)}.
+     * @deprecated Use {@link ThreadFactories#builderForEventLoops(String)}.
      */
     @Deprecated
     public EventLoopThreadFactory(String threadNamePrefix, boolean daemon, int priority,
                                   @Nullable ThreadGroup threadGroup) {
-        this(new EventLoopThreadFactoryImpl(requireNonNull(threadNamePrefix, "threadNamePrefix"),
-                                            daemon, priority, threadGroup));
-    }
-
-    private EventLoopThreadFactory(ThreadFactory delegate) {
-        this.delegate = delegate;
+        super(requireNonNull(threadNamePrefix, "threadNamePrefix"), daemon, priority, threadGroup);
     }
 
     EventLoopThreadFactory(String threadNamePrefix, boolean daemon, int priority,
                            @Nullable ThreadGroup threadGroup,
                            Function<? super Runnable, ? extends Runnable> taskFunction) {
-        this(new EventLoopThreadFactoryImpl(requireNonNull(threadNamePrefix, "threadNamePrefix"),
-                                            daemon, priority, threadGroup));
-        this.taskFunction = requireNonNull(taskFunction, "taskFunction");
+        super(requireNonNull(threadNamePrefix, "threadNamePrefix"), daemon, priority, threadGroup,
+              requireNonNull(taskFunction, "taskFunction"));
     }
 
     @Override
-    public Thread newThread(Runnable r) {
-        return delegate.newThread(taskFunction.apply(r));
-    }
-
-    private static final class EventLoopThreadFactoryImpl extends DefaultThreadFactory {
-        EventLoopThreadFactoryImpl(String threadNamePrefix) {
-            super(threadNamePrefix);
-        }
-
-        EventLoopThreadFactoryImpl(String threadNamePrefix, boolean daemon) {
-            super(threadNamePrefix, daemon);
-        }
-
-        EventLoopThreadFactoryImpl(String threadNamePrefix, int priority) {
-            super(threadNamePrefix, priority);
-        }
-
-        EventLoopThreadFactoryImpl(String threadNamePrefix, boolean daemon, int priority) {
-            super(threadNamePrefix, daemon, priority);
-        }
-
-        EventLoopThreadFactoryImpl(String threadNamePrefix, boolean daemon, int priority,
-                                   @Nullable ThreadGroup threadGroup) {
-            super(threadNamePrefix, daemon, priority, threadGroup);
-        }
-
-        @Override
-        protected Thread newThread(Runnable r, String name) {
-            return new EventLoopThread(threadGroup, r, name);
-        }
+    Thread newThread(@Nullable ThreadGroup threadGroup, Runnable r, String name) {
+        return new EventLoopThread(threadGroup, r, name);
     }
 }

@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.common.util.EventLoopGroups;
-import com.linecorp.armeria.common.util.EventLoopThreadFactory;
+import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.server.ServerBuilder;
 
 import io.netty.channel.EventLoopGroup;
@@ -41,9 +41,9 @@ public final class CommonPools {
         final ThreadPoolExecutor blockingTaskExecutor = new ThreadPoolExecutor(
                 Flags.numCommonBlockingTaskThreads(), Flags.numCommonBlockingTaskThreads(),
                 60, TimeUnit.SECONDS, new LinkedTransferQueue<>(),
-                EventLoopThreadFactory.builder("armeria-common-blocking-tasks")
-                                      .daemon(true)
-                                      .build());
+                ThreadFactories.builderForEventLoops("armeria-common-blocking-tasks")
+                               .daemon(true)
+                               .build());
 
         blockingTaskExecutor.allowCoreThreadTimeOut(true);
         BLOCKING_TASK_EXECUTOR = blockingTaskExecutor;
