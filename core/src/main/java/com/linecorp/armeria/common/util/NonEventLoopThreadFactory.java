@@ -27,7 +27,6 @@ import io.netty.util.concurrent.FastThreadLocalThread;
 
 /**
  * {@link ThreadFactory} that creates non event loop threads.
- *
  */
 public final class NonEventLoopThreadFactory extends AbstractThreadFactory {
     NonEventLoopThreadFactory(String threadNamePrefix, boolean daemon, int priority,

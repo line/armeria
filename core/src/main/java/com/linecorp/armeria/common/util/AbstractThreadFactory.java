@@ -25,6 +25,9 @@ import javax.annotation.Nullable;
 
 import io.netty.util.concurrent.DefaultThreadFactory;
 
+/**
+ * A skeletal {@link ThreadFactory} implementation.
+ */
 public abstract class AbstractThreadFactory implements ThreadFactory {
     // Note that we did not extend DefaultThreadFactory directly to hide it from the class hierarchy.
     private final ThreadFactoryImpl delegate;
