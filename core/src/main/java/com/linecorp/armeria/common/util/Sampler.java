@@ -87,7 +87,7 @@ public interface Sampler<T> {
     /**
      * Returns {@code true} if a request should be recorded.
      *
-     * @param object The object to be decided on, can be ignored
+     * @param object the object to be decided on, can be ignored
      */
     boolean isSampled(T object);
 }

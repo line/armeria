@@ -29,6 +29,8 @@
 
 package com.linecorp.armeria.common.util;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -61,9 +63,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 final class RateLimitingSampler implements Sampler {
     static Sampler create(int tracesPerSecond) {
-        if (tracesPerSecond < 0) {
-            throw new IllegalArgumentException("tracesPerSecond < 0");
-        }
+        checkArgument(tracesPerSecond >= 0, "tracesPerSecond >= 0");
         if (tracesPerSecond == 0) {
             return Sampler.never();
         }

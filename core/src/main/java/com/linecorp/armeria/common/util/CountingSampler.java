@@ -61,7 +61,7 @@ final class CountingSampler implements Sampler {
         if (rate == 1.0) {
             return Sampler.always();
         }
-        if (rate < 0.01f || rate > 1) {
+        if (rate < 0.01 || rate > 1) {
             throw new IllegalArgumentException("rate should be between 0.01 and 1: was " + rate);
         }
         return new CountingSampler(rate);
@@ -80,7 +80,7 @@ final class CountingSampler implements Sampler {
      */
     CountingSampler(double rate, Random random) {
         counter = new AtomicInteger();
-        final int outOf100 = (int) (rate * 100.0f);
+        final int outOf100 = (int) (rate * 100.0);
         sampleDecisions = randomBitSet(100, outOf100, random);
     }
 
