@@ -38,31 +38,29 @@ public abstract class AbstractThreadFactory implements ThreadFactory {
     }
 
     protected AbstractThreadFactory(String threadNamePrefix, boolean daemon) {
-        delegate = new ThreadFactoryImpl(requireNonNull(threadNamePrefix, "threadNamePrefix"),
-                                              daemon);
+        delegate = new ThreadFactoryImpl(requireNonNull(threadNamePrefix, "threadNamePrefix"), daemon);
     }
 
     protected AbstractThreadFactory(String threadNamePrefix, int priority) {
-        delegate = new ThreadFactoryImpl(requireNonNull(threadNamePrefix, "threadNamePrefix"),
-                                              priority);
+        delegate = new ThreadFactoryImpl(requireNonNull(threadNamePrefix, "threadNamePrefix"), priority);
     }
 
     protected AbstractThreadFactory(String threadNamePrefix, boolean daemon, int priority) {
         delegate = new ThreadFactoryImpl(requireNonNull(threadNamePrefix, "threadNamePrefix"),
-                                              daemon, priority);
+                                         daemon, priority);
     }
 
     protected AbstractThreadFactory(String threadNamePrefix, boolean daemon, int priority,
                                     @Nullable ThreadGroup threadGroup) {
         delegate = new ThreadFactoryImpl(requireNonNull(threadNamePrefix, "threadNamePrefix"),
-                                              daemon, priority, threadGroup);
+                                         daemon, priority, threadGroup);
     }
 
     protected AbstractThreadFactory(String threadNamePrefix, boolean daemon, int priority,
-                                 @Nullable ThreadGroup threadGroup,
-                                 Function<? super Runnable, ? extends Runnable> taskFunction) {
+                                    @Nullable ThreadGroup threadGroup,
+                                    Function<? super Runnable, ? extends Runnable> taskFunction) {
         delegate = new ThreadFactoryImpl(requireNonNull(threadNamePrefix, "threadNamePrefix"),
-                                              daemon, priority, threadGroup);
+                                         daemon, priority, threadGroup);
         this.taskFunction = requireNonNull(taskFunction, "taskFunction");
     }
 
@@ -91,7 +89,7 @@ public abstract class AbstractThreadFactory implements ThreadFactory {
         }
 
         ThreadFactoryImpl(String threadNamePrefix, boolean daemon, int priority,
-                                   @Nullable ThreadGroup threadGroup) {
+                          @Nullable ThreadGroup threadGroup) {
             super(threadNamePrefix, daemon, priority, threadGroup);
         }
 
