@@ -27,7 +27,10 @@ import javax.annotation.Nullable;
  * {@link ThreadFactory} that creates event loop threads.
  *
  * @see EventLoopGroups
+ *
+ * @deprecated Use {@link ThreadFactories#builderForEventLoops(String)}.
  */
+@Deprecated
 public final class EventLoopThreadFactory extends AbstractThreadFactory {
     /**
      * Creates a new factory that creates a non-daemon and normal-priority thread.
@@ -38,7 +41,8 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      */
     @Deprecated
     public EventLoopThreadFactory(String threadNamePrefix) {
-        super(requireNonNull(threadNamePrefix, "threadNamePrefix"));
+        super(requireNonNull(threadNamePrefix, "threadNamePrefix"), false, Thread.NORM_PRIORITY,
+              null, Function.identity());
     }
 
     /**
@@ -51,7 +55,8 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      */
     @Deprecated
     public EventLoopThreadFactory(String threadNamePrefix, boolean daemon) {
-        super(requireNonNull(threadNamePrefix, "threadNamePrefix"), daemon);
+        super(requireNonNull(threadNamePrefix, "threadNamePrefix"), daemon, Thread.NORM_PRIORITY,
+              null, Function.identity());
     }
 
     /**
@@ -64,7 +69,8 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      */
     @Deprecated
     public EventLoopThreadFactory(String threadNamePrefix, int priority) {
-        super(requireNonNull(threadNamePrefix, "threadNamePrefix"), priority);
+        super(requireNonNull(threadNamePrefix, "threadNamePrefix"), false, priority,
+              null, Function.identity());
     }
 
     /**
@@ -78,7 +84,8 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      */
     @Deprecated
     public EventLoopThreadFactory(String threadNamePrefix, boolean daemon, int priority) {
-        super(requireNonNull(threadNamePrefix, "threadNamePrefix"), daemon, priority);
+        super(requireNonNull(threadNamePrefix, "threadNamePrefix"), daemon, priority, null,
+              Function.identity());
     }
 
     /**
@@ -94,7 +101,8 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
     @Deprecated
     public EventLoopThreadFactory(String threadNamePrefix, boolean daemon, int priority,
                                   @Nullable ThreadGroup threadGroup) {
-        super(requireNonNull(threadNamePrefix, "threadNamePrefix"), daemon, priority, threadGroup);
+        super(requireNonNull(threadNamePrefix, "threadNamePrefix"), daemon, priority, threadGroup,
+              Function.identity());
     }
 
     EventLoopThreadFactory(String threadNamePrefix, boolean daemon, int priority,

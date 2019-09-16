@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.util;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.ThreadFactory;
@@ -31,22 +32,17 @@ public final class ThreadFactoryBuilder {
     private int priority = Thread.NORM_PRIORITY;
     private ThreadGroup threadGroup;
     private Function<? super Runnable, ? extends Runnable> taskFunction = Function.identity();
-    private PentaFunction<String, Boolean, Integer, ThreadGroup,
-                          Function<? super Runnable, ? extends Runnable>,
-                          ? extends AbstractThreadFactory> factoryConstructor;
+    private ThreadFactoryProvider threadFactoryProvider;
 
     /**
      * Creates a new factory builder that creates a specified type of {@link ThreadFactory}.
      *
      * @param threadNamePrefix the prefix of the names of the threads created by this factory.
-     * @param factoryConstructor the constructor reference of concrete {@link AbstractThreadFactory}.
+     * @param threadFactoryProvider the constructor reference of concrete {@link AbstractThreadFactory}.
      */
-    public ThreadFactoryBuilder(String threadNamePrefix,
-                                PentaFunction<String, Boolean, Integer, ThreadGroup,
-                                              Function<? super Runnable, ? extends Runnable>,
-                                              ? extends AbstractThreadFactory> factoryConstructor) {
+    ThreadFactoryBuilder(String threadNamePrefix, ThreadFactoryProvider threadFactoryProvider) {
         this.threadNamePrefix = requireNonNull(threadNamePrefix, "threadNamePrefix");
-        this.factoryConstructor = requireNonNull(factoryConstructor, "factoryConstructor");
+        this.threadFactoryProvider = requireNonNull(threadFactoryProvider, "threadFactoryProvider");
     }
 
     /**
@@ -61,11 +57,9 @@ public final class ThreadFactoryBuilder {
      * Sets priority for new threads.
      */
     public ThreadFactoryBuilder priority(int priority) {
-        if (priority < Thread.MIN_PRIORITY || priority > Thread.MAX_PRIORITY) {
-            throw new IllegalArgumentException(
-                    "priority: " + priority +
-                    " (expected: Thread.MIN_PRIORITY <= priority <= Thread.MAX_PRIORITY)");
-        }
+        checkArgument(priority >= Thread.MIN_PRIORITY && priority <= Thread.MAX_PRIORITY,
+                      "priority: %s (expected: Thread.MIN_PRIORITY <= priority <= Thread.MAX_PRIORITY)",
+                      priority);
 
         this.priority = priority;
         return this;
@@ -87,7 +81,7 @@ public final class ThreadFactoryBuilder {
      *                .taskFunction( task -> {
      *                    return () -> {
      *                        // Add something to do before task is run
-     *                           task.run();
+     *                        task.run();
      *                        // Add something to do after task is run
      *                    };
      *                })
@@ -103,7 +97,7 @@ public final class ThreadFactoryBuilder {
     /**
      * Returns a new {@link ThreadFactory} instance.
      */
-    public AbstractThreadFactory build() {
-        return factoryConstructor.apply(threadNamePrefix, daemon, priority, threadGroup, taskFunction);
+    public ThreadFactory build() {
+        return threadFactoryProvider.get(threadNamePrefix, daemon, priority, threadGroup, taskFunction);
     }
 }

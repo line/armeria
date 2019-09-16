@@ -28,57 +28,14 @@ import io.netty.util.concurrent.DefaultThreadFactory;
 /**
  * A skeletal {@link ThreadFactory} implementation.
  */
-public abstract class AbstractThreadFactory implements ThreadFactory {
+abstract class AbstractThreadFactory implements ThreadFactory {
     // Note that we did not extend DefaultThreadFactory directly to hide it from the class hierarchy.
     private final ThreadFactoryImpl delegate;
     private Function<? super Runnable, ? extends Runnable> taskFunction = Function.identity();
 
-    /**
-     * @deprecated Use {@link ThreadFactories}.
-     */
-    @Deprecated
-    protected AbstractThreadFactory(String threadNamePrefix) {
-        delegate = new ThreadFactoryImpl(requireNonNull(threadNamePrefix, "threadNamePrefix"));
-    }
-
-    /**
-     * @deprecated Use {@link ThreadFactories}.
-     */
-    @Deprecated
-    protected AbstractThreadFactory(String threadNamePrefix, boolean daemon) {
-        delegate = new ThreadFactoryImpl(requireNonNull(threadNamePrefix, "threadNamePrefix"), daemon);
-    }
-
-    /**
-     * @deprecated Use {@link ThreadFactories}.
-     */
-    @Deprecated
-    protected AbstractThreadFactory(String threadNamePrefix, int priority) {
-        delegate = new ThreadFactoryImpl(requireNonNull(threadNamePrefix, "threadNamePrefix"), priority);
-    }
-
-    /**
-     * @deprecated Use {@link ThreadFactories}.
-     */
-    @Deprecated
-    protected AbstractThreadFactory(String threadNamePrefix, boolean daemon, int priority) {
-        delegate = new ThreadFactoryImpl(requireNonNull(threadNamePrefix, "threadNamePrefix"),
-                                         daemon, priority);
-    }
-
-    /**
-     * @deprecated Use {@link ThreadFactories}.
-     */
-    @Deprecated
-    protected AbstractThreadFactory(String threadNamePrefix, boolean daemon, int priority,
-                                    @Nullable ThreadGroup threadGroup) {
-        delegate = new ThreadFactoryImpl(requireNonNull(threadNamePrefix, "threadNamePrefix"),
-                                         daemon, priority, threadGroup);
-    }
-
-    protected AbstractThreadFactory(String threadNamePrefix, boolean daemon, int priority,
-                                    @Nullable ThreadGroup threadGroup,
-                                    Function<? super Runnable, ? extends Runnable> taskFunction) {
+    AbstractThreadFactory(String threadNamePrefix, boolean daemon, int priority,
+                          @Nullable ThreadGroup threadGroup,
+                          Function<? super Runnable, ? extends Runnable> taskFunction) {
         delegate = new ThreadFactoryImpl(requireNonNull(threadNamePrefix, "threadNamePrefix"),
                                          daemon, priority, threadGroup);
         this.taskFunction = requireNonNull(taskFunction, "taskFunction");
@@ -115,7 +72,7 @@ public abstract class AbstractThreadFactory implements ThreadFactory {
 
         @Override
         protected Thread newThread(Runnable r, String name) {
-            return AbstractThreadFactory.this.newThread(threadGroup, taskFunction.apply(r), name);
+            return AbstractThreadFactory.this.newThread(threadGroup, r, name);
         }
     }
 }

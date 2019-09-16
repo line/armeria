@@ -16,10 +16,11 @@
 
 package com.linecorp.armeria.common.util;
 
-/**
- * A custom Function interface which takes five argument.
- */
+import java.util.concurrent.ThreadFactory;
+import java.util.function.Function;
+
 @FunctionalInterface
-public interface PentaFunction<A, B, C, D, E, F> {
-    F apply(A var1, B var2, C var3, D var4, E var5);
+interface ThreadFactoryProvider {
+    ThreadFactory get(String threadNamePrefix, boolean daemon, int priority, ThreadGroup threadGroup,
+                      Function<? super Runnable, ? extends Runnable> taskFunction);
 }
