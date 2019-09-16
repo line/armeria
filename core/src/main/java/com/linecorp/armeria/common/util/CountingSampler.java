@@ -29,6 +29,8 @@
  */
 package com.linecorp.armeria.common.util;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import java.util.BitSet;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -55,14 +57,13 @@ final class CountingSampler implements Sampler {
      *             rate is between {@code 0.01} and {@code 1.0}.
      */
     static Sampler create(final double rate) {
-        if (rate == 0) {
+        final int percent = (int) (rate * 100.0);
+        checkArgument(percent >= 0 && percent <= 100, "rate should be between 0.0 and 1: was " + rate);
+        if (percent == 0) {
             return Sampler.never();
         }
-        if (rate == 1.0) {
+        if (percent == 100) {
             return Sampler.always();
-        }
-        if (rate < 0.01 || rate > 1) {
-            throw new IllegalArgumentException("rate should be between 0.01 and 1: was " + rate);
         }
         return new CountingSampler(rate);
     }

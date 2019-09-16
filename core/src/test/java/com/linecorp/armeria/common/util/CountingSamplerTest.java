@@ -37,17 +37,17 @@ import org.junit.jupiter.api.Test;
 public class CountingSamplerTest {
     @Test
     public void testSamplingRateMinimumLimit() throws Exception {
-        assertThatThrownBy(() -> CountingSampler.create(0.0001f)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> CountingSampler.create(-1.99)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     public void testSamplingRateMaximumLimit() throws Exception {
-        assertThatThrownBy(() -> CountingSampler.create(1.0001f)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> CountingSampler.create(1.01)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     public void testNeverSampledSampler() throws Exception {
-        assertThat(CountingSampler.create(0)).isSameAs(Sampler.never());
+        assertThat(CountingSampler.create(0.0)).isSameAs(Sampler.never());
     }
 
     @Test
