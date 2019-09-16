@@ -16,12 +16,13 @@
 
 package com.linecorp.armeria.client.retry;
 
-import com.linecorp.armeria.common.HttpResponse;
-import org.junit.Test;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.concurrent.CompletableFuture;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.Test;
+
+import com.linecorp.armeria.common.HttpResponse;
 
 public class RetryingHttpClientBuilderTest {
 

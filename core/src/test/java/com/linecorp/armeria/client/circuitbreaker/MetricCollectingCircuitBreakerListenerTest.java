@@ -16,12 +16,14 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import com.linecorp.armeria.common.metric.MoreMeters;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
-import io.micrometer.core.instrument.MeterRegistry;
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.junit.Test;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import com.linecorp.armeria.common.metric.MoreMeters;
+import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+
+import io.micrometer.core.instrument.MeterRegistry;
 
 public class MetricCollectingCircuitBreakerListenerTest {
 

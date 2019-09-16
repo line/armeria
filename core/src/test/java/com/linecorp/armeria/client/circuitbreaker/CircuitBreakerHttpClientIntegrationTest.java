@@ -15,16 +15,9 @@
  */
 package com.linecorp.armeria.client.circuitbreaker;
 
-import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.HttpClientBuilder;
-import com.linecorp.armeria.client.UnprocessedRequestException;
-import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpRequestWriter;
-import com.linecorp.armeria.common.stream.AbortedStreamException;
-import com.linecorp.armeria.unsafe.ByteBufHttpData;
-import io.netty.buffer.Unpooled;
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 import java.net.ConnectException;
 import java.time.Duration;
@@ -33,9 +26,18 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.awaitility.Awaitility.await;
+import org.junit.jupiter.api.Test;
+
+import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.HttpClientBuilder;
+import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpRequestWriter;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.unsafe.ByteBufHttpData;
+
+import io.netty.buffer.Unpooled;
 
 class CircuitBreakerHttpClientIntegrationTest {
     @Test

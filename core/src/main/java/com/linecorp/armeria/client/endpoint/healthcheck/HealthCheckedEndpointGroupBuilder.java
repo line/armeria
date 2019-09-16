@@ -16,6 +16,11 @@
 
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
+import static java.util.Objects.requireNonNull;
+
+import java.time.Duration;
+import java.util.function.Function;
+
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientOptionsBuilder;
@@ -23,11 +28,6 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.AsyncCloseable;
-
-import java.time.Duration;
-import java.util.function.Function;
-
-import static java.util.Objects.requireNonNull;
 
 /**
  * A builder for creating a new {@link HealthCheckedEndpointGroup} that sends HTTP health check requests.

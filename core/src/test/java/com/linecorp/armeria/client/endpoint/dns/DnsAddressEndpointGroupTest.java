@@ -15,9 +15,26 @@
  */
 package com.linecorp.armeria.client.endpoint.dns;
 
+import static io.netty.handler.codec.dns.DnsRecordType.A;
+import static io.netty.handler.codec.dns.DnsRecordType.AAAA;
+import static io.netty.handler.codec.dns.DnsRecordType.CNAME;
+import static io.netty.handler.codec.dns.DnsSection.ANSWER;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
+
+import java.util.concurrent.TimeUnit;
+
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.DisableOnDebug;
+import org.junit.rules.TestRule;
+import org.junit.rules.Timeout;
+
 import com.google.common.collect.ImmutableMap;
+
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.retry.Backoff;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
@@ -26,18 +43,6 @@ import io.netty.handler.codec.dns.DefaultDnsResponse;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.util.NetUtil;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.DisableOnDebug;
-import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
-
-import java.util.concurrent.TimeUnit;
-
-import static io.netty.handler.codec.dns.DnsRecordType.*;
-import static io.netty.handler.codec.dns.DnsSection.ANSWER;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 
 public class DnsAddressEndpointGroupTest {
 

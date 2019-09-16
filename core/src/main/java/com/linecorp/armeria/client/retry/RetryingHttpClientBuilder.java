@@ -16,16 +16,17 @@
 
 package com.linecorp.armeria.client.retry;
 
-import com.google.common.base.MoreObjects.ToStringHelper;
-import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 
 import java.time.Duration;
 import java.util.function.Function;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
+import com.google.common.base.MoreObjects.ToStringHelper;
+
+import com.linecorp.armeria.client.Client;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 
 /**
  * Builds a new {@link RetryingHttpClient} or its decorator function.

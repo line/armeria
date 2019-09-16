@@ -16,14 +16,14 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import static java.util.Objects.requireNonNull;
+
+import java.util.function.Function;
+
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-
-import java.util.function.Function;
-
-import static java.util.Objects.requireNonNull;
 
 /**
  * A {@link Client} decorator that handles failures of RPC remote invocation based on circuit breaker pattern.

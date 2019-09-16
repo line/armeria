@@ -16,26 +16,29 @@
 
 package com.linecorp.armeria.client.endpoint.dns;
 
-import com.google.common.collect.ImmutableMap;
-import com.linecorp.armeria.client.Endpoint;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.dns.DefaultDnsQuestion;
-import io.netty.handler.codec.dns.DefaultDnsRawRecord;
-import io.netty.handler.codec.dns.DefaultDnsResponse;
-import io.netty.handler.codec.dns.DnsRecord;
+import static io.netty.handler.codec.dns.DnsRecordType.CNAME;
+import static io.netty.handler.codec.dns.DnsRecordType.SRV;
+import static io.netty.handler.codec.dns.DnsSection.ANSWER;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.concurrent.TimeUnit;
+
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.DisableOnDebug;
 import org.junit.rules.TestRule;
 import org.junit.rules.Timeout;
 
-import java.util.concurrent.TimeUnit;
+import com.google.common.collect.ImmutableMap;
 
-import static io.netty.handler.codec.dns.DnsRecordType.CNAME;
-import static io.netty.handler.codec.dns.DnsRecordType.SRV;
-import static io.netty.handler.codec.dns.DnsSection.ANSWER;
-import static org.assertj.core.api.Assertions.assertThat;
+import com.linecorp.armeria.client.Endpoint;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.dns.DefaultDnsQuestion;
+import io.netty.handler.codec.dns.DefaultDnsRawRecord;
+import io.netty.handler.codec.dns.DefaultDnsResponse;
+import io.netty.handler.codec.dns.DnsRecord;
 
 public class DnsServiceEndpointGroupTest {
 

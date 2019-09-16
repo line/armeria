@@ -16,11 +16,11 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import java.util.function.Function;
+
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-
-import java.util.function.Function;
 
 /**
  * Builds a new {@link CircuitBreakerHttpClient} or its decorator function.

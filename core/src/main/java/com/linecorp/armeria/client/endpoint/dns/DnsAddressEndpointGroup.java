@@ -16,12 +16,19 @@
 
 package com.linecorp.armeria.client.endpoint.dns;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
+import javax.annotation.Nullable;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
+
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.EventLoop;
@@ -32,10 +39,6 @@ import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 import io.netty.util.NetUtil;
-
-import javax.annotation.Nullable;
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * {@link DynamicEndpointGroup} which resolves targets using DNS address queries ({@code A} and {@code AAAA}).

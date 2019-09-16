@@ -15,13 +15,16 @@
  */
 package com.linecorp.armeria.client.endpoint.dns;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.linecorp.armeria.client.Endpoint;
-import io.netty.resolver.ResolvedAddressTypes;
+import static com.google.common.base.Preconditions.checkArgument;
 
 import javax.annotation.Nullable;
 
-import static com.google.common.base.Preconditions.checkArgument;
+import com.google.common.annotations.VisibleForTesting;
+
+import com.linecorp.armeria.client.Endpoint;
+
+import io.netty.resolver.ResolvedAddressTypes;
+
 
 /**
  * Builds a new {@link DnsAddressEndpointGroup} that sources its {@link Endpoint} list from the {@code A} or

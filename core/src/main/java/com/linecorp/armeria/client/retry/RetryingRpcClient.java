@@ -15,18 +15,18 @@
  */
 package com.linecorp.armeria.client.retry;
 
+import static com.linecorp.armeria.internal.ClientUtil.executeWithFallback;
+
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
+
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
-
-import static com.linecorp.armeria.internal.ClientUtil.executeWithFallback;
 
 /**
  * A {@link Client} decorator that handles failures of an invocation and retries RPC requests.

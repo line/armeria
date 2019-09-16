@@ -16,8 +16,7 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.linecorp.armeria.common.util.Ticker;
+import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -25,7 +24,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static java.util.Objects.requireNonNull;
+import com.google.common.annotations.VisibleForTesting;
+
+import com.linecorp.armeria.common.util.Ticker;
 
 /**
  * Builds a {@link CircuitBreaker} instance using builder pattern.
