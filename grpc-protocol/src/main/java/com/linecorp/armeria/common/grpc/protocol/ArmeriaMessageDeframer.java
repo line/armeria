@@ -84,8 +84,8 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
     private static final int HEADER_LENGTH = 5;
     private static final int COMPRESSED_FLAG_MASK = 1;
     private static final int RESERVED_MASK = 0x7E;
-    // Valid type always has 0s for middle bits.
-    private static final int UNINITIALIED_TYPE = 0xFF;
+    // Valid type is always positive.
+    private static final int UNINITIALIED_TYPE = -1;
 
     /**
      * A deframed message. For uncompressed messages, we have the entire buffer available and return it
