@@ -40,7 +40,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientBuilder;
@@ -165,8 +164,6 @@ public class ArmeriaAutoConfigurationTest {
 
     public static class AnnotatedService {
 
-        private final ObjectMapper objectMapper = new ObjectMapper();
-
         @Get("/get")
         public AggregatedHttpResponse get() {
             return AggregatedHttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "annotated");
@@ -180,7 +177,7 @@ public class ArmeriaAutoConfigurationTest {
 
         @Post("/post")
         public JsonNode post(@RequestObject JsonNode jsonNode) {
-            return objectMapper.valueToTree(jsonNode);
+            return jsonNode;
         }
     }
 
