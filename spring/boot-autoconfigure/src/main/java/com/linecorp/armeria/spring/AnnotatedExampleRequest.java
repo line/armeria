@@ -20,7 +20,7 @@ import javax.validation.constraints.NotNull;
 import com.google.common.base.MoreObjects;
 
 /**
- * Used as a example request object in {@link AnnotatedServiceRegistrationBean}.
+ * Used as an example request object in {@link AnnotatedServiceRegistrationBean}.
  */
 public final class AnnotatedExampleRequest {
 

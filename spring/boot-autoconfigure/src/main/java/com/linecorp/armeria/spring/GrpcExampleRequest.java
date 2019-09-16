@@ -20,7 +20,7 @@ import javax.validation.constraints.NotNull;
 import com.google.common.base.MoreObjects;
 
 /**
- * Used as a example request object in {@link GrpcServiceRegistrationBean}.
+ * Used as an example request object in {@link GrpcServiceRegistrationBean}.
  */
 public final class GrpcExampleRequest {
 

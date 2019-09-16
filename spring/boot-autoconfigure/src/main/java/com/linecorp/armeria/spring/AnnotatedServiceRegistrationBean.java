@@ -15,8 +15,8 @@
  */
 package com.linecorp.armeria.spring;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static java.util.Objects.requireNonNull;
+import static com.google.common.base.Preconditions.*;
+import static java.util.Objects.*;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -189,7 +189,7 @@ public class AnnotatedServiceRegistrationBean
     }
 
     /**
-     * Adds sample request for {@link #getService()}.
+     * Adds a sample request for {@link #getService()}.
      */
     public AnnotatedServiceRegistrationBean addExampleRequest(String methodName, Object exampleRequest) {
         requireNonNull(methodName, "methodName");
