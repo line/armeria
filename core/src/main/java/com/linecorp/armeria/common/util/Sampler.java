@@ -39,8 +39,6 @@ package com.linecorp.armeria.common.util;
  *
  * <p>The instrumentation sampling decision happens once, at the root of the trace, and is
  * propagated downstream. For this reason, the algorithm needn't be consistent based on trace ID.
- *
- * <p>Forked from brave-core 5.6.3 at 3be55b5cccf881104bdd80c93e97d2575b83952d
  */
 @FunctionalInterface
 public interface Sampler<T> {
