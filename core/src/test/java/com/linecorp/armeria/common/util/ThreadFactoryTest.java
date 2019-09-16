@@ -88,9 +88,40 @@ public class ThreadFactoryTest {
     @Test
     void testTheadPriorityRange() {
         assertThrows(IllegalArgumentException.class, () -> {
-           ThreadFactories.builder("priority-test")
-                          .priority(-1)
+           ThreadFactories.builder("priority-lowerbound-test")
+                          .priority(Thread.MIN_PRIORITY - 1)
                           .build();
         });
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            ThreadFactories.builder("priority-upperbound-test")
+                           .priority(Thread.MAX_PRIORITY + 1)
+                           .build();
+        });
+    }
+
+    @Test
+    void testAbstractThreadFactory() {
+        Thread t1 = new EventLoopThreadFactory("test").newThread(() -> {});
+        assertThat(t1.getName()).startsWith("test");
+
+        Thread t2 = new EventLoopThreadFactory("test", true).newThread(() -> {});
+        assertThat(t2.isDaemon()).isTrue();
+
+        Thread t3 = new EventLoopThreadFactory("test", Thread.MAX_PRIORITY).newThread(() -> {});
+        assertThat(t3.getPriority()).isEqualTo(Thread.MAX_PRIORITY);
+
+        Thread t4 = new EventLoopThreadFactory("test",
+                                               true, Thread.MIN_PRIORITY).newThread(() -> {});
+        assertThat(t4.isDaemon()).isTrue();
+        assertThat(t4.getPriority()).isEqualTo(Thread.MIN_PRIORITY);
+
+        ThreadGroup testGroup = new ThreadGroup("test-group");
+        Thread t5 = new EventLoopThreadFactory("test", false,
+                                               Thread.NORM_PRIORITY, testGroup)
+                    .newThread(() -> {});
+        assertThat(t5.isDaemon()).isFalse();
+        assertThat(t5.getPriority()).isEqualTo(Thread.NORM_PRIORITY);
+        assertThat(t5.getThreadGroup().getName()).isEqualTo("test-group");
     }
 }
