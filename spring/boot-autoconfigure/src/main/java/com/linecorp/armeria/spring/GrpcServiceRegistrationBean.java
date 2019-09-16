@@ -15,9 +15,6 @@
  */
 package com.linecorp.armeria.spring;
 
-import static com.google.common.base.Preconditions.*;
-import static java.util.Objects.*;
-
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -82,13 +79,9 @@ public class GrpcServiceRegistrationBean
     /**
      * Adds a sample request for {@link #getService()}.
      */
-    public GrpcServiceRegistrationBean addExampleRequest(String serviceType, String methodName,
-                                                         Object exampleRequest) {
-        requireNonNull(serviceType, "serviceType");
-        checkArgument(!serviceType.isEmpty(), "serviceType is empty.");
-        requireNonNull(methodName, "methodName");
-        checkArgument(!methodName.isEmpty(), "methodName is empty.");
-        requireNonNull(exampleRequest, "exampleRequest");
+    public GrpcServiceRegistrationBean addExampleRequest(@NotNull String serviceType,
+                                                         @NotNull String methodName,
+                                                         @NotNull Object exampleRequest) {
         exampleRequests.add(GrpcExampleRequest.of(serviceType, methodName, exampleRequest));
         return this;
     }

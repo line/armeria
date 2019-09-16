@@ -15,9 +15,6 @@
  */
 package com.linecorp.armeria.spring;
 
-import static com.google.common.base.Preconditions.*;
-import static java.util.Objects.*;
-
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -191,10 +188,8 @@ public class AnnotatedServiceRegistrationBean
     /**
      * Adds a sample request for {@link #getService()}.
      */
-    public AnnotatedServiceRegistrationBean addExampleRequest(String methodName, Object exampleRequest) {
-        requireNonNull(methodName, "methodName");
-        checkArgument(!methodName.isEmpty(), "methodName is empty.");
-        requireNonNull(exampleRequest, "exampleRequest");
+    public AnnotatedServiceRegistrationBean addExampleRequest(@NotNull String methodName,
+                                                              @NotNull Object exampleRequest) {
         exampleRequests.add(AnnotatedExampleRequest.of(methodName, exampleRequest));
         return this;
     }
