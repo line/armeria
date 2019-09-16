@@ -33,23 +33,43 @@ public abstract class AbstractThreadFactory implements ThreadFactory {
     private final ThreadFactoryImpl delegate;
     private Function<? super Runnable, ? extends Runnable> taskFunction = Function.identity();
 
+    /**
+     * @deprecated Use {@link ThreadFactories}.
+     */
+    @Deprecated
     protected AbstractThreadFactory(String threadNamePrefix) {
         delegate = new ThreadFactoryImpl(requireNonNull(threadNamePrefix, "threadNamePrefix"));
     }
 
+    /**
+     * @deprecated Use {@link ThreadFactories}.
+     */
+    @Deprecated
     protected AbstractThreadFactory(String threadNamePrefix, boolean daemon) {
         delegate = new ThreadFactoryImpl(requireNonNull(threadNamePrefix, "threadNamePrefix"), daemon);
     }
 
+    /**
+     * @deprecated Use {@link ThreadFactories}.
+     */
+    @Deprecated
     protected AbstractThreadFactory(String threadNamePrefix, int priority) {
         delegate = new ThreadFactoryImpl(requireNonNull(threadNamePrefix, "threadNamePrefix"), priority);
     }
 
+    /**
+     * @deprecated Use {@link ThreadFactories}.
+     */
+    @Deprecated
     protected AbstractThreadFactory(String threadNamePrefix, boolean daemon, int priority) {
         delegate = new ThreadFactoryImpl(requireNonNull(threadNamePrefix, "threadNamePrefix"),
                                          daemon, priority);
     }
 
+    /**
+     * @deprecated Use {@link ThreadFactories}.
+     */
+    @Deprecated
     protected AbstractThreadFactory(String threadNamePrefix, boolean daemon, int priority,
                                     @Nullable ThreadGroup threadGroup) {
         delegate = new ThreadFactoryImpl(requireNonNull(threadNamePrefix, "threadNamePrefix"),
