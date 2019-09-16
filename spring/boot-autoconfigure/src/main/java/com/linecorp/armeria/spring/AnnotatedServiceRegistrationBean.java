@@ -41,7 +41,7 @@ import com.linecorp.armeria.server.docs.DocService;
  * >             .setExceptionHandlers(new MyExceptionHandler())
  * >             .setRequestConverters(new MyRequestConverter())
  * >             .setResponseConverters(new MyResponseConverter())
- * >             .setExampleRequests(Lists.of(AnnotatedExampleRequest.of("post", "{\"foo\":\"bar\"}")));
+ * >             .setExampleRequests(Lists.of(AnnotatedExampleRequest.of("myMethod", "{\"foo\":\"bar\"}")));
  * > }
  * }</pre>
  */
