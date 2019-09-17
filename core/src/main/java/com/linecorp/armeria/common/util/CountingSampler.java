@@ -65,24 +65,23 @@ final class CountingSampler implements Sampler {
         if (percent == 100) {
             return Sampler.always();
         }
-        return new CountingSampler(rate);
+        return new CountingSampler(percent);
     }
 
     private final AtomicInteger counter;
     private final BitSet sampleDecisions;
 
-    /** Fills a bitset with decisions according to the supplied rate. */
-    CountingSampler(double rate) {
-        this(rate, new Random());
+    /** Fills a bitset with decisions according to the supplied percent. */
+    CountingSampler(int percent) {
+        this(percent, new Random());
     }
 
     /**
-     * Fills a bitset with decisions according to the supplied rate with the supplied {@link Random}.
+     * Fills a bitset with decisions according to the supplied percent with the supplied {@link Random}.
      */
-    CountingSampler(double rate, Random random) {
+    CountingSampler(int percent, Random random) {
         counter = new AtomicInteger();
-        final int outOf100 = (int) (rate * 100.0);
-        sampleDecisions = randomBitSet(100, outOf100, random);
+        sampleDecisions = randomBitSet(100, percent, random);
     }
 
     /** loops over the pre-canned decisions, resetting to zero when it gets to the end. */
