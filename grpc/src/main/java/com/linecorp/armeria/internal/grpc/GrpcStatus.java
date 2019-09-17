@@ -239,7 +239,7 @@ public final class GrpcStatus {
             status = addCause(status, grpcThrowable);
         }
 
-        Metadata metadata = MetadataUtil.copyFromHeaders(headers);
+        final Metadata metadata = MetadataUtil.copyFromHeaders(headers);
 
         transportStatusListener.transportReportStatus(status, metadata);
     }
