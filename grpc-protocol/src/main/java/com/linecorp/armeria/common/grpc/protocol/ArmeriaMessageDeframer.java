@@ -141,7 +141,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
 
             final DeframedMessage that = (DeframedMessage) o;
 
-            return Objects.equals(buf, that.buf) && Objects.equals(stream, that.stream);
+            return type == that.type && Objects.equals(buf, that.buf) && Objects.equals(stream, that.stream);
         }
 
         @Override
@@ -438,7 +438,7 @@ public class ArmeriaMessageDeframer implements AutoCloseable {
      */
     private void readBody() {
         final ByteBuf buf = readBytes(requiredLength);
-        boolean isCompressed = (currentType & COMPRESSED_FLAG_MASK) != 0;
+        final boolean isCompressed = (currentType & COMPRESSED_FLAG_MASK) != 0;
         final DeframedMessage msg = isCompressed ? getCompressedBody(buf) : getUncompressedBody(buf);
         listener.messageRead(msg);
 
