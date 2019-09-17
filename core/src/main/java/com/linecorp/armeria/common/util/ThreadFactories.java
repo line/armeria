@@ -40,5 +40,22 @@ public final class ThreadFactories {
                                         NonEventLoopThreadFactory::new);
     }
 
+    /**
+     * Creates a new {@link ThreadFactory} for event loop thread.
+     * a shortcut method of {@code ThreadFactories.builderForEventLoops("threadPrefix").daemon(daemon).build()}.
+     */
+    public static ThreadFactory newEventLoopThreadFactory(String threadPrefix, boolean daemon) {
+
+        return builderForEventLoops(requireNonNull(threadPrefix, "threadPrefix")).daemon(daemon).build();
+    }
+
+    /**
+     * Creates a new {@link ThreadFactory} for non event loop thread.
+     * a shortcut method of {@code ThreadFactories.builder("threadPrefix").daemon(daemon).build()}.
+     */
+    public static ThreadFactory newThreadFactory(String threadPrefix, boolean daemon) {
+        return builder(requireNonNull(threadPrefix, "threadPrefix")).daemon(daemon).build();
+    }
+
     private ThreadFactories() {}
 }

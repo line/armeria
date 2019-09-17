@@ -22,17 +22,21 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.ThreadFactory;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 /**
  * Builds a new {@link ThreadFactory} instance.
  */
 public final class ThreadFactoryBuilder {
 
-    private String threadNamePrefix;
+    private final String threadNamePrefix;
+    private final ThreadFactoryProvider threadFactoryProvider;
     private boolean daemon;
     private int priority = Thread.NORM_PRIORITY;
-    private ThreadGroup threadGroup;
     private Function<? super Runnable, ? extends Runnable> taskFunction = Function.identity();
-    private ThreadFactoryProvider threadFactoryProvider;
+
+    @Nullable
+    private ThreadGroup threadGroup;
 
     /**
      * Creates a new factory builder that creates a specified type of {@link ThreadFactory}.
