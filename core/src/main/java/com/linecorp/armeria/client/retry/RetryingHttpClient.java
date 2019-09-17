@@ -145,21 +145,22 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
     private void doExecute0(ClientRequestContext ctx, HttpRequestDuplicator rootReqDuplicator,
                             HttpRequest originalReq, HttpResponse returnedRes,
                             CompletableFuture<HttpResponse> future, boolean hasInitialAuthority) {
+        final int totalAttempts = getTotalAttempts(ctx);
+        final boolean initialAttempt = totalAttempts <= 1;
         if (originalReq.completionFuture().isCompletedExceptionally() || returnedRes.isComplete()) {
             // The request or response has been aborted by the client before it receives a response,
             // so stop retrying.
-            handleException(ctx, rootReqDuplicator, future, AbortedStreamException.get());
+            handleException(ctx, rootReqDuplicator, future, AbortedStreamException.get(), initialAttempt);
             return;
         }
 
         if (!setResponseTimeout(ctx)) {
-            handleException(ctx, rootReqDuplicator, future, ResponseTimeoutException.get());
+            handleException(ctx, rootReqDuplicator, future, ResponseTimeoutException.get(), initialAttempt);
             return;
         }
 
-        final int totalAttempts = getTotalAttempts(ctx);
         final HttpRequest duplicateReq;
-        if (hasInitialAuthority && totalAttempts <= 1) {
+        if (hasInitialAuthority && initialAttempt) {
             duplicateReq = rootReqDuplicator.duplicateStream();
         } else {
             final RequestHeadersBuilder newHeaders = originalReq.headers().toBuilder();
@@ -172,7 +173,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
             duplicateReq = rootReqDuplicator.duplicateStream(newHeaders.build());
         }
 
-        final ClientRequestContext derivedCtx = newDerivedContext(ctx, duplicateReq, totalAttempts);
+        final ClientRequestContext derivedCtx = newDerivedContext(ctx, duplicateReq, initialAttempt);
         ctx.logBuilder().addChild(derivedCtx.log());
 
         final HttpResponse response = executeWithFallback(delegate(), derivedCtx,
@@ -200,8 +201,12 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
     }
 
     private static void handleException(ClientRequestContext ctx, HttpRequestDuplicator rootReqDuplicator,
-                                        CompletableFuture<HttpResponse> future, Throwable cause) {
-        onRetryingComplete(ctx);
+                                        CompletableFuture<HttpResponse> future, Throwable cause,
+                                        boolean endRequestLog) {
+        if (endRequestLog) {
+            ctx.logBuilder().endRequest(cause);
+        }
+        ctx.logBuilder().endResponse(cause);
         future.completeExceptionally(cause);
         rootReqDuplicator.close();
     }
@@ -233,7 +238,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
                 if (nextDelay >= 0) {
                     closingOriginalResTask.run();
                     scheduleNextRetry(
-                            ctx, cause -> handleException(ctx, rootReqDuplicator, future, cause),
+                            ctx, cause -> handleException(ctx, rootReqDuplicator, future, cause, false),
                             () -> doExecute0(ctx, rootReqDuplicator, originalReq,
                                              returnedRes, future, hasInitialAuthority),
                             nextDelay);
