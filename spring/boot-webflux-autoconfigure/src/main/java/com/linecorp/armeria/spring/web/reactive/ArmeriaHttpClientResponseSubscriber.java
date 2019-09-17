@@ -18,13 +18,11 @@ package com.linecorp.armeria.spring.web.reactive;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 
-import javax.annotation.Nullable;
-
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -34,6 +32,8 @@ import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 
 import io.netty.channel.EventLoop;
+import reactor.core.publisher.EmitterProcessor;
+import reactor.core.scheduler.Schedulers;
 
 /**
  * A {@link Subscriber} which reads the {@link ResponseHeaders} first from an {@link HttpResponse}.
@@ -42,76 +42,30 @@ import io.netty.channel.EventLoop;
  * by calling {@link #toResponseBodyPublisher()} which returns {@link ResponseBodyPublisher}.
  */
 final class ArmeriaHttpClientResponseSubscriber
-        implements Subscriber<HttpObject>, BiFunction<Void, Throwable, Void> {
+        implements BiFunction<Void, Throwable, Void> {
 
     private final CompletableFuture<ResponseHeaders> future = new CompletableFuture<>();
     private final EventLoop eventLoop = CommonPools.workerGroup().next();
-
-    @Nullable
-    private ResponseBodyPublisher publisher;
-
-    @Nullable
-    private Subscription subscription;
-
-    private boolean isCompleted;
-    @Nullable
-    private Throwable completedCause;
+    private final EmitterProcessor<HttpData> httpDataProcessor = EmitterProcessor.create(1);
 
     ArmeriaHttpClientResponseSubscriber(HttpResponse httpResponse) {
+        final EmitterProcessor<HttpObject> httpObjectProcessor = EmitterProcessor.create(1);
+        httpObjectProcessor
+                .ofType(HttpData.class)
+                .subscribe(httpDataProcessor);
+
+        httpObjectProcessor
+                .ofType(ResponseHeaders.class)
+                .filter(headers -> headers.status().codeClass() != HttpStatusClass.INFORMATIONAL)
+                .limitRequest(1)
+                .subscribe(future::complete);
+
         httpResponse.completionFuture().handle(this);
-        httpResponse.subscribe(this, eventLoop);
+        httpResponse.subscribe(httpObjectProcessor, eventLoop);
     }
 
     CompletableFuture<ResponseHeaders> httpHeadersFuture() {
         return future;
-    }
-
-    @Override
-    public void onSubscribe(Subscription s) {
-        subscription = s;
-        s.request(1);
-    }
-
-    @Override
-    public void onNext(HttpObject httpObject) {
-        if (publisher != null) {
-            publisher.relayOnNext(httpObject);
-            return;
-        }
-        if (httpObject instanceof ResponseHeaders) {
-            final ResponseHeaders headers = (ResponseHeaders) httpObject;
-            final HttpStatus status = headers.status();
-            if (status.codeClass() != HttpStatusClass.INFORMATIONAL) {
-                future.complete(headers);
-                return;
-            }
-        }
-        if (!future.isDone()) {
-            ensureSubscribed().request(1);
-        }
-    }
-
-    @Override
-    public void onError(Throwable cause) {
-        if (publisher != null) {
-            publisher.relayOnError(cause);
-        } else {
-            complete(cause);
-        }
-    }
-
-    @Override
-    public void onComplete() {
-        if (publisher != null) {
-            publisher.relayOnComplete();
-        } else {
-            complete(null);
-        }
-    }
-
-    private void complete(@Nullable Throwable cause) {
-        isCompleted = true;
-        completedCause = cause;
     }
 
     @Override
@@ -129,75 +83,19 @@ final class ArmeriaHttpClientResponseSubscriber
         return null;
     }
 
-    private Subscription ensureSubscribed() {
-        return ensureSubscribed(subscription);
-    }
-
-    private static <T> T ensureSubscribed(@Nullable T s) {
-        if (s == null) {
-            throw new IllegalStateException("No subscriber has been subscribed.");
-        }
-        return s;
-    }
-
     ResponseBodyPublisher toResponseBodyPublisher() {
         if (!future.isDone()) {
             throw new IllegalStateException("HTTP headers have not been consumed yet.");
         }
-        final ResponseBodyPublisher publisher = new ResponseBodyPublisher(this);
-        this.publisher = publisher;
-        return publisher;
+        return new ResponseBodyPublisher();
     }
 
-    final class ResponseBodyPublisher implements Publisher<HttpObject>, Subscription {
-
-        @Nullable
-        private Subscriber<? super HttpObject> subscriber;
-
-        private final ArmeriaHttpClientResponseSubscriber upstreamSubscriber;
-
-        private ResponseBodyPublisher(ArmeriaHttpClientResponseSubscriber upstreamSubscriber) {
-            this.upstreamSubscriber = upstreamSubscriber;
-        }
-
+    final class ResponseBodyPublisher implements Publisher<HttpObject> {
         @Override
         public void subscribe(Subscriber<? super HttpObject> s) {
-            subscriber = s;
-            s.onSubscribe(this);
-        }
-
-        @Override
-        public void request(long n) {
-            if (!isCompleted) {
-                upstreamSubscriber.ensureSubscribed().request(n);
-                return;
-            }
-
-            // If this stream is already completed, invoke 'onComplete' or 'onError' in asynchronous manner.
-            eventLoop.execute(() -> {
-                if (completedCause != null) {
-                    relayOnError(completedCause);
-                } else {
-                    relayOnComplete();
-                }
-            });
-        }
-
-        @Override
-        public void cancel() {
-            upstreamSubscriber.ensureSubscribed().cancel();
-        }
-
-        private void relayOnNext(HttpObject httpObject) {
-            ensureSubscribed(subscriber).onNext(httpObject);
-        }
-
-        private void relayOnError(Throwable cause) {
-            ensureSubscribed(subscriber).onError(cause);
-        }
-
-        private void relayOnComplete() {
-            ensureSubscribed(subscriber).onComplete();
+            httpDataProcessor
+                    .publishOn(Schedulers.fromExecutorService(eventLoop), 1)
+                    .subscribe(s);
         }
     }
 }
