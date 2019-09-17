@@ -57,7 +57,7 @@ public class GrpcServiceRegistrationBean
      * in this gRPC service.
      */
     @NotNull
-    private Collection<GrpcExampleRequest> exampleRequests = new ArrayList<>();
+    private final Collection<GrpcExampleRequest> exampleRequests = new ArrayList<>();
 
     /**
      * Returns sample requests of {@link #getService()}.
@@ -72,7 +72,15 @@ public class GrpcServiceRegistrationBean
      */
     public GrpcServiceRegistrationBean setExampleRequests(
             @NotNull Collection<GrpcExampleRequest> exampleRequests) {
-        this.exampleRequests = exampleRequests;
+        this.exampleRequests.addAll(exampleRequests);
+        return this;
+    }
+
+    /**
+     * Adds a sample request for {@link #getService()}.
+     */
+    public GrpcServiceRegistrationBean addExampleRequest(@NotNull GrpcExampleRequest exampleRequest) {
+        exampleRequests.add(exampleRequest);
         return this;
     }
 
@@ -82,7 +90,6 @@ public class GrpcServiceRegistrationBean
     public GrpcServiceRegistrationBean addExampleRequest(@NotNull String serviceType,
                                                          @NotNull String methodName,
                                                          @NotNull Object exampleRequest) {
-        exampleRequests.add(GrpcExampleRequest.of(serviceType, methodName, exampleRequest));
-        return this;
+        return addExampleRequest(GrpcExampleRequest.of(serviceType, methodName, exampleRequest));
     }
 }

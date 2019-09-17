@@ -78,7 +78,7 @@ public class AnnotatedServiceRegistrationBean
      * in this annotated service.
      */
     @NotNull
-    private Collection<AnnotatedExampleRequest> exampleRequests = new ArrayList<>();
+    private final Collection<AnnotatedExampleRequest> exampleRequests = new ArrayList<>();
 
     /**
      * Returns the path prefix.
@@ -181,7 +181,15 @@ public class AnnotatedServiceRegistrationBean
      */
     public AnnotatedServiceRegistrationBean setExampleRequests(
             @NotNull Collection<AnnotatedExampleRequest> exampleRequests) {
-        this.exampleRequests = exampleRequests;
+        this.exampleRequests.addAll(exampleRequests);
+        return this;
+    }
+
+    /**
+     * Adds a sample request for {@link #getService()}.
+     */
+    public AnnotatedServiceRegistrationBean addExampleRequest(@NotNull AnnotatedExampleRequest exampleRequest) {
+        exampleRequests.add(exampleRequest);
         return this;
     }
 
@@ -190,7 +198,6 @@ public class AnnotatedServiceRegistrationBean
      */
     public AnnotatedServiceRegistrationBean addExampleRequest(@NotNull String methodName,
                                                               @NotNull Object exampleRequest) {
-        exampleRequests.add(AnnotatedExampleRequest.of(methodName, exampleRequest));
-        return this;
+        return addExampleRequest(AnnotatedExampleRequest.of(methodName, exampleRequest));
     }
 }
