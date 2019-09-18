@@ -16,25 +16,12 @@
 
 package com.linecorp.armeria.common;
 
-import com.linecorp.armeria.common.util.Functions;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
-import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
-
-import static java.util.Objects.requireNonNull;
+import java.util.function.*;
 
 final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T> {
 
@@ -268,16 +255,20 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
 
     @SuppressWarnings("unchecked")
     public CompletableFuture<T> completeAsync(Supplier<? extends T> supplier) {
-        final Callable<? extends T> callable = Functions.toCallable(supplier);
-        return (CompletableFuture<T>) ctx.makeContextAware(supplyAsync(
-                Functions.fromCallable(ctx.makeContextAware(callable))));
+        return (CompletableFuture<T>) ctx.makeContextAware(supplyAsync(this.makeContextAware(supplier)));
     }
 
     @SuppressWarnings("unchecked")
     public CompletableFuture<T> completeAsync(Supplier<? extends T> supplier,
                                               Executor executor) {
-        final Callable<? extends T> callable = Functions.toCallable(supplier);
-        return (CompletableFuture<T>) ctx.makeContextAware(supplyAsync
-                (Functions.fromCallable(ctx.makeContextAware(callable)), executor));
+        return (CompletableFuture<T>) ctx.makeContextAware(supplyAsync(this.makeContextAware(supplier), executor));
+    }
+
+    private <T> Supplier<T> makeContextAware(Supplier<T> action) {
+        return () -> {
+            try (SafeCloseable ignored = ctx.pushIfAbsent()) {
+                return action.get();
+            }
+        };
     }
 }

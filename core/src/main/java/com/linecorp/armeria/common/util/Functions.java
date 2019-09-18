@@ -198,26 +198,5 @@ public final class Functions {
         };
     }
 
-    /**
-     * Converts the specified {@link Supplier} into a {@link Callable}.
-     */
-    public static <T> Callable<T> toCallable(Supplier<T> supplier) {
-        return supplier::get;
-    }
-
-    /**
-     * Converts the specified {@link Callable} into a {@link Supplier}.
-     */
-    public static <T> Supplier<T> fromCallable(Callable<T> callable) {
-        return () -> {
-            try {
-                return callable.call();
-            } catch (Throwable e) {
-                Throwables.throwIfUnchecked(e);
-                throw new RuntimeException("fromCallable call exception", e);
-            }
-        };
-    }
-
     private Functions() {}
 }
