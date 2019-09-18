@@ -28,7 +28,8 @@ import javax.annotation.Nullable;
  *
  * @see EventLoopGroups
  *
- * @deprecated Use {@link ThreadFactories#builderForEventLoops(String)}.
+ * @deprecated Use {@link ThreadFactories#newEventLoopThreadFactory(String, boolean)} or
+ * {@link ThreadFactories#builderForEventLoops(String)}.
  */
 @Deprecated
 public final class EventLoopThreadFactory extends AbstractThreadFactory {
@@ -37,9 +38,7 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      *
      * @param threadNamePrefix the prefix of the names of the threads created by this factory.
      *
-     * @deprecated Use {@link ThreadFactories#builderForEventLoops(String)}.
      */
-    @Deprecated
     public EventLoopThreadFactory(String threadNamePrefix) {
         super(requireNonNull(threadNamePrefix, "threadNamePrefix"), false, Thread.NORM_PRIORITY,
               null, Function.identity());
@@ -51,9 +50,7 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      * @param threadNamePrefix the prefix of the names of the threads created by this factory.
      * @param daemon whether to create a daemon thread.
      *
-     * @deprecated Use {@link ThreadFactories#builderForEventLoops(String)}.
      */
-    @Deprecated
     public EventLoopThreadFactory(String threadNamePrefix, boolean daemon) {
         super(requireNonNull(threadNamePrefix, "threadNamePrefix"), daemon, Thread.NORM_PRIORITY,
               null, Function.identity());
@@ -65,9 +62,7 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      * @param threadNamePrefix the prefix of the names of the threads created by this factory.
      * @param priority the priority of the threads created by this factory.
      *
-     * @deprecated Use {@link ThreadFactories#builderForEventLoops(String)}.
      */
-    @Deprecated
     public EventLoopThreadFactory(String threadNamePrefix, int priority) {
         super(requireNonNull(threadNamePrefix, "threadNamePrefix"), false, priority,
               null, Function.identity());
@@ -80,9 +75,7 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      * @param daemon whether to create a daemon thread.
      * @param priority the priority of the threads created by this factory.
      *
-     * @deprecated Use {@link ThreadFactories#builderForEventLoops(String)}.
      */
-    @Deprecated
     public EventLoopThreadFactory(String threadNamePrefix, boolean daemon, int priority) {
         super(requireNonNull(threadNamePrefix, "threadNamePrefix"), daemon, priority, null,
               Function.identity());
@@ -96,9 +89,7 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      * @param priority the priority of the threads created by this factory.
      * @param threadGroup the {@link ThreadGroup}.
      *
-     * @deprecated Use {@link ThreadFactories#builderForEventLoops(String)}.
      */
-    @Deprecated
     public EventLoopThreadFactory(String threadNamePrefix, boolean daemon, int priority,
                                   @Nullable ThreadGroup threadGroup) {
         super(requireNonNull(threadNamePrefix, "threadNamePrefix"), daemon, priority, threadGroup,
