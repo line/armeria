@@ -18,7 +18,10 @@ package com.linecorp.armeria.common;
 
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.function.*;
 
 final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T> {
@@ -269,29 +272,11 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
     }
 
     private MinimalStage<T> uniAsMinimalStage() {
-        if (this.isDone()) {
-            return new MinimalStage<>(encodeRelay(this.join()));
-        }
         return new MinimalStage<>();
-    }
-
-    static Object encodeRelay(Object r) {
-        Throwable x;
-        if (r instanceof AltResult
-                && (x = ((AltResult)r).ex) != null
-                && !(x instanceof CompletionException))
-            r = new AltResult(new CompletionException(x));
-        return r;
-    }
-
-    static final class AltResult {
-        final Throwable ex;
-        AltResult(Throwable x) { this.ex = x; }
     }
 
     static final class MinimalStage<T> extends CompletableFuture<T> {
         MinimalStage() {}
-        MinimalStage(Object r) { super(); }
         public <U> CompletableFuture<U> newIncompleteFuture() {
             return new MinimalStage<>(); }
         @Override public T get() {
@@ -333,10 +318,17 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
                 (T value, long timeout, TimeUnit unit) {
             throw new UnsupportedOperationException(); }
         @Override public CompletableFuture<T> toCompletableFuture() {
-            if (this.isDone()) {
-                return new CompletableFuture<>(encodeRelay(this.join()));
+            if (super.isDone()) {
+                CompletableFuture<T> future = new CompletableFuture<>();
+                try {
+                    T result = super.get();
+                    future.complete(result);
+                } catch (Throwable t) {
+                    future.completeExceptionally(t);
+                }
+                return future;
             }
-            return new CompletableFuture<>();
+            return this;
         }
     }
 }
