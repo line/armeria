@@ -35,7 +35,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.ByteBufOrStream;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Listener;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
@@ -166,7 +166,7 @@ public class UnaryGrpcClient {
 
                            try (ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(new Listener() {
                                @Override
-                               public void messageRead(ByteBufOrStream unframed) {
+                               public void messageRead(DeframedMessage unframed) {
                                    final ByteBuf buf = unframed.buf();
                                    // Compression not supported.
                                    assert buf != null;

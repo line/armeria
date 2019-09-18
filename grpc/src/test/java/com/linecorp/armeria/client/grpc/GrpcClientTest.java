@@ -230,6 +230,13 @@ public class GrpcClientTest {
     }
 
     @Test
+    public void emptyUnary_grpcWeb() throws Exception {
+        TestServiceBlockingStub stub = new ClientBuilder("gproto-web+" + server.httpUri("/"))
+                .build(TestServiceBlockingStub.class);
+        assertThat(stub.emptyCall(EMPTY)).isEqualTo(EMPTY);
+    }
+
+    @Test
     public void largeUnary() throws Exception {
         final SimpleRequest request =
                 SimpleRequest.newBuilder()
