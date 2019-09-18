@@ -241,8 +241,10 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                               findBeans(HttpServiceRegistrationBean.class),
                               meterIdPrefixFunctionFactory);
         configureAnnotatedHttpServices(sb,
+                                       docServiceBuilder,
                                        findBeans(AnnotatedServiceRegistrationBean.class),
-                                       meterIdPrefixFunctionFactory);
+                                       meterIdPrefixFunctionFactory,
+                                       settings.getDocsPath());
         configureServerWithArmeriaSettings(sb, settings,
                                            findBean(MeterRegistry.class).orElse(Metrics.globalRegistry),
                                            findBeans(HealthChecker.class));

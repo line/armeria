@@ -39,11 +39,11 @@ import com.linecorp.armeria.server.docs.DocService;
  * >                                 .enableUnframedRequests(true)
  * >                                 .build())
  * >             .setDecorators(LoggingService.newDecorator())
- * >             .setExampleRequests(List.of(ExampleRequest.of(HelloServiceGrpc.SERVICE_NAME,
- * >                                                           "Hello",
- * >                                                           HelloRequest.newBuilder()
- * >                                                                       .setName("Armeria")
- * >                                                                       .build())));
+ * >             .setExampleRequests(List.of(GrpcExampleRequest.of(HelloServiceGrpc.SERVICE_NAME,
+ * >                                                               "Hello",
+ * >                                                               HelloRequest.newBuilder()
+ * >                                                                           .setName("Armeria")
+ * >                                                                           .build())));
  * > }
  * }</pre>
  */
@@ -51,49 +51,19 @@ public class GrpcServiceRegistrationBean
         extends AbstractServiceRegistrationBean<ServiceWithRoutes<HttpRequest, HttpResponse>,
         GrpcServiceRegistrationBean> {
 
-    public static final class ExampleRequest {
-        private final String serviceType;
-        private final String methodName;
-        private final Object exampleRequest;
-
-        private ExampleRequest(String serviceType, String methodName, Object exampleRequest) {
-            this.serviceType = serviceType;
-            this.methodName = methodName;
-            this.exampleRequest = exampleRequest;
-        }
-
-        public String getServiceType() {
-            return serviceType;
-        }
-
-        public String getMethodName() {
-            return methodName;
-        }
-
-        public Object getExampleRequest() {
-            return exampleRequest;
-        }
-
-        public static ExampleRequest of(@NotNull String serviceType,
-                                        @NotNull String methodName,
-                                        @NotNull Object exampleRequest) {
-            return new ExampleRequest(serviceType, methodName, exampleRequest);
-        }
-    }
-
     /**
      * Sample requests to populate debug forms in {@link DocService}.
      * This should be a list of request objects which correspond to methods
      * in this gRPC service.
      */
     @NotNull
-    private Collection<ExampleRequest> exampleRequests = new ArrayList<>();
+    private final Collection<GrpcExampleRequest> exampleRequests = new ArrayList<>();
 
     /**
      * Returns sample requests of {@link #getService()}.
      */
     @NotNull
-    public Collection<ExampleRequest> getExampleRequests() {
+    public Collection<GrpcExampleRequest> getExampleRequests() {
         return exampleRequests;
     }
 
@@ -101,8 +71,25 @@ public class GrpcServiceRegistrationBean
      * Sets sample requests for {@link #getService()}.
      */
     public GrpcServiceRegistrationBean setExampleRequests(
-            @NotNull Collection<ExampleRequest> exampleRequests) {
-        this.exampleRequests = exampleRequests;
+            @NotNull Collection<GrpcExampleRequest> exampleRequests) {
+        this.exampleRequests.addAll(exampleRequests);
         return this;
+    }
+
+    /**
+     * Adds a sample request for {@link #getService()}.
+     */
+    public GrpcServiceRegistrationBean addExampleRequest(@NotNull GrpcExampleRequest exampleRequest) {
+        exampleRequests.add(exampleRequest);
+        return this;
+    }
+
+    /**
+     * Adds a sample request for {@link #getService()}.
+     */
+    public GrpcServiceRegistrationBean addExampleRequest(@NotNull String serviceType,
+                                                         @NotNull String methodName,
+                                                         @NotNull Object exampleRequest) {
+        return addExampleRequest(GrpcExampleRequest.of(serviceType, methodName, exampleRequest));
     }
 }
