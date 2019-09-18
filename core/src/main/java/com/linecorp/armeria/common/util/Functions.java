@@ -199,14 +199,14 @@ public final class Functions {
     }
 
     /**
-     * Converts the specified {@link Supplier} into a {@link Callable}
+     * Converts the specified {@link Supplier} into a {@link Callable}.
      */
     public static <T> Callable<T> toCallable(Supplier<T> supplier) {
         return supplier::get;
     }
 
     /**
-     * Converts the specified {@link Callable} into a {@link Supplier}
+     * Converts the specified {@link Callable} into a {@link Supplier}.
      */
     public static <T> Supplier<T> fromCallable(Callable<T> callable) {
         return () -> {
