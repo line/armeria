@@ -58,7 +58,8 @@ final class CountingSampler implements Sampler {
      */
     static Sampler create(final double rate) {
         final int percent = (int) (rate * 100.0);
-        checkArgument(percent >= 0 && percent <= 100, "rate should be between 0.0 and 1: was " + rate);
+        checkArgument(percent >= 0 && percent <= 100,
+                      "rate: %s (expected: 0.0 <= rate <= 1.0)", rate);
         if (percent == 0) {
             return Sampler.never();
         }
