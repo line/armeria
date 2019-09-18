@@ -47,7 +47,7 @@ public class LoggingClientBuilder extends LoggingDecoratorBuilder<LoggingClientB
      * cause a random sample of the requests to be logged.
      */
     public LoggingClientBuilder samplingRate(float samplingRate) {
-        checkArgument(0.0 <= samplingRate && samplingRate <= 1.0, 
+        checkArgument(0.0 <= samplingRate && samplingRate <= 1.0,
                       "samplingRate: %s (expected: 0.0 <= samplingRate <= 1.0)", samplingRate);
         return sampler(Sampler.random(samplingRate));
     }
