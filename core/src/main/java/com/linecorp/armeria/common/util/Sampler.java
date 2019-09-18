@@ -27,7 +27,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.linecorp.armeria.internal.logging;
+package com.linecorp.armeria.common.util;
 
 /**
  * Sampler is responsible for deciding if a particular trace should be "sampled", i.e. whether the
@@ -39,48 +39,53 @@ package com.linecorp.armeria.internal.logging;
  *
  * <p>The instrumentation sampling decision happens once, at the root of the trace, and is
  * propagated downstream. For this reason, the algorithm needn't be consistent based on trace ID.
- *
- * <p>Forked from brave-core 5.6.3 at 3be55b5cccf881104bdd80c93e97d2575b83952d
  */
-// abstract for factory-method support on Java language level 7
-public abstract class Sampler {
-
-    public static final Sampler ALWAYS_SAMPLE = new Sampler() {
-        @Override
-        public boolean isSampled() {
-            return true;
-        }
-
-        @Override public String toString() {
-            return "AlwaysSample";
-        }
-    };
-
-    public static final Sampler NEVER_SAMPLE = new Sampler() {
-        @Override
-        public boolean isSampled() {
-            return false;
-        }
-
-        @Override public String toString() {
-            return "NeverSample";
-        }
-    };
-
+@FunctionalInterface
+public interface Sampler<T> {
     /**
-     *  Returns true if a request should be recorded.
-     */
-    public abstract boolean isSampled();
-
-    /**
-     * Returns a sampler, given a rate expressed as a percentage.
+     * Returns a sampler, given a rate expressed as a floating point number between {@code 0.0} and {@code 1.0}.
      *
-     * <p>The sampler returned is good for low volumes of traffic (<100K requests), as it is precise.
-     * If you have high volumes of traffic, consider {@code BoundarySampler}.
-     *
-     * @param rate minimum sample rate is 0.01, or 1% of traces
+     * @param rate the sampling rate between {@code 0.0} and {@code 1.0}.
      */
-    public static Sampler create(float rate) {
-        return CountingSampler.create(rate);
+    static <T> Sampler<T> random(double rate) {
+        @SuppressWarnings("unchecked")
+        final Sampler<T> cast = CountingSampler.create(rate);
+        return cast;
     }
+
+    /**
+     * Returns a sampler, given a rate-limited on a per-second interval.
+     *
+     * @param samplesPerSecond an integer between {@code 0} and {@value Integer#MAX_VALUE}
+     */
+    static <T> Sampler<T> rateLimited(int samplesPerSecond) {
+        @SuppressWarnings("unchecked")
+        final Sampler<T> cast = RateLimitingSampler.create(samplesPerSecond);
+        return cast;
+    }
+
+    /**
+     * Returns a sampler that will always return {@code true}.
+     */
+    static <T> Sampler<T> always() {
+        @SuppressWarnings("unchecked")
+        final Sampler<T> cast = Samplers.ALWAYS;
+        return cast;
+    }
+
+    /**
+     * Returns a sampler that will always return {@code false}.
+     */
+    static <T> Sampler<T> never() {
+        @SuppressWarnings("unchecked")
+        final Sampler<T> cast = Samplers.NEVER;
+        return cast;
+    }
+
+    /**
+     * Returns {@code true} if a request should be recorded.
+     *
+     * @param object the object to be decided on, can be ignored
+     */
+    boolean isSampled(T object);
 }
