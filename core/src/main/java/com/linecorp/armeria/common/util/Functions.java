@@ -16,16 +16,12 @@
 
 package com.linecorp.armeria.common.util;
 
-import com.google.common.base.Throwables;
-
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.Callable;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 /**
  * Utility methods related with function composition.
