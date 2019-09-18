@@ -19,7 +19,7 @@ package com.linecorp.armeria.internal;
 final class CurrentJavaVersionSpecific {
 
     static JavaVersionSpecific get() {
-        return new Java8VersionSpecific();
+        return new JavaVersionSpecific();
     }
 
     private CurrentJavaVersionSpecific() {}

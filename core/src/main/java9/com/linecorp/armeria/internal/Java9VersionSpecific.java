@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * Implementation of {@link JavaVersionSpecific} using Java 9 APIs.
  */
-class Java9VersionSpecific extends Java8VersionSpecific {
+class Java9VersionSpecific extends JavaVersionSpecific {
 
     @Override
     public final long currentTimeMicros() {
