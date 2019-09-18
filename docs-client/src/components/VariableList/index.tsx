@@ -120,9 +120,8 @@ const formatRequirement = (s: string): string => {
   return lowerCase;
 };
 
-const formatLocation = (s: string): string => {
-  return formatRequirement(s);
-};
+// Same formatting for location as requirement at least for now.
+const formatLocation = formatRequirement;
 
 const FieldInfo: React.FunctionComponent<FieldInfoProps> = ({
   hasLocation,
