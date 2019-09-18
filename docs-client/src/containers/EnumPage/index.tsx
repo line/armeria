@@ -45,6 +45,9 @@ export default class EnumPage extends React.PureComponent<Props> {
       return <>Not found.</>;
     }
 
+    const hasIntValue = data.values.some((value) => !!value.intValue);
+    const hasDocString = data.values.some((value) => !!value.docString);
+
     return (
       <>
         <Typography variant="h5">
@@ -62,7 +65,8 @@ export default class EnumPage extends React.PureComponent<Props> {
             <TableHead>
               <TableRow>
                 <TableCell>Name</TableCell>
-                <TableCell>Description</TableCell>
+                {hasIntValue && <TableCell>Int Value</TableCell>}
+                {hasDocString && <TableCell>Description</TableCell>}
               </TableRow>
             </TableHead>
             <TableBody>
@@ -72,7 +76,8 @@ export default class EnumPage extends React.PureComponent<Props> {
                     <TableCell>
                       <code>{value.name}</code>
                     </TableCell>
-                    <TableCell>{value.docString}</TableCell>
+                    {hasIntValue && <TableCell>{value.intValue}</TableCell>}
+                    {hasDocString && <TableCell>{value.docString}</TableCell>}
                   </TableRow>
                 ))
               ) : (
