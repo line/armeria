@@ -52,7 +52,6 @@ public final class SystemInfo {
     private static boolean JETTY_ALPN_OPTIONAL_OR_AVAILABLE;
 
     static {
-        //
         int javaVersion = -1;
         try {
             final String spec = System.getProperty("java.specification.version");

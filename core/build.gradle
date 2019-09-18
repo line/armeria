@@ -1,4 +1,5 @@
-String compat(String src) {
+String releaseFlagFromVersion(String src) {
+    // Java 9+ are 9, 10, etc, before was 1.8, 1.7, etc.
     if (src.contains('.')) {
         src.substring(src.lastIndexOf('.')+1)
     } else {
@@ -20,7 +21,7 @@ compileJava9Java {
 }
 
 tasks.withType(JavaCompile) {
-    def version = compat(sourceCompatibility)
+    def version = releaseFlagFromVersion(sourceCompatibility)
     options.compilerArgs.addAll(['--release', version])
 }
 
@@ -37,15 +38,11 @@ tasks.withType(Jar) {
 tasks.trimShadedJar.doLast {
     // outjars is a file, so only one jar generated for sure
     def trimmed = tasks.trimShadedJar.outJarFiles[0].toPath()
-    def copied = trimmed.resolveSibling(trimmed.fileName.toString() + '.bak')
-    java.nio.file.Files.move(trimmed, copied, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
-    ant.zip(destfile: trimmed.toString()) {
-        zipfileset(src: copied.toString())
+    ant.jar(destfile: trimmed.toString(), update: true) {
         zipfileset(src: tasks.shadedJar.archivePath) {
             include(name: 'META-INF/versions/**')
         }
     }
-    delete copied
 }
 
 tasks.shadedTest.exclude 'META-INF/versions/**'
