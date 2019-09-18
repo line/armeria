@@ -253,18 +253,16 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
         return this;
     }
 
-    @SuppressWarnings("unchecked")
     public CompletableFuture<T> completeAsync(Supplier<? extends T> supplier) {
-        return (CompletableFuture<T>) ctx.makeContextAware(supplyAsync(this.makeContextAware(supplier)));
+        return ctx.makeContextAware(supplyAsync(this.makeContextAware(supplier)));
     }
 
-    @SuppressWarnings("unchecked")
     public CompletableFuture<T> completeAsync(Supplier<? extends T> supplier,
                                               Executor executor) {
-        return (CompletableFuture<T>) ctx.makeContextAware(supplyAsync(this.makeContextAware(supplier), executor));
+        return ctx.makeContextAware(supplyAsync(this.makeContextAware(supplier), executor));
     }
 
-    private <T> Supplier<T> makeContextAware(Supplier<T> action) {
+    private Supplier<T> makeContextAware(Supplier<? extends T> action) {
         return () -> {
             try (SafeCloseable ignored = ctx.pushIfAbsent()) {
                 return action.get();
