@@ -18,9 +18,7 @@ package com.linecorp.armeria.common;
 
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.concurrent.Executor;
+import java.util.concurrent.*;
 import java.util.function.*;
 
 final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T> {
@@ -250,7 +248,7 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
     }
 
     public CompletionStage<T> minimalCompletionStage() {
-        return this;
+        return this.uniAsMinimalStage();
     }
 
     public CompletableFuture<T> completeAsync(Supplier<? extends T> supplier) {
@@ -268,5 +266,77 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
                 return action.get();
             }
         };
+    }
+
+    private MinimalStage<T> uniAsMinimalStage() {
+        if (this.isDone()) {
+            return new MinimalStage<>(encodeRelay(this.join()));
+        }
+        return new MinimalStage<>();
+    }
+
+    static Object encodeRelay(Object r) {
+        Throwable x;
+        if (r instanceof AltResult
+                && (x = ((AltResult)r).ex) != null
+                && !(x instanceof CompletionException))
+            r = new AltResult(new CompletionException(x));
+        return r;
+    }
+
+    static final class AltResult {
+        final Throwable ex;
+        AltResult(Throwable x) { this.ex = x; }
+    }
+
+    static final class MinimalStage<T> extends CompletableFuture<T> {
+        MinimalStage() {}
+        MinimalStage(Object r) { super(); }
+        public <U> CompletableFuture<U> newIncompleteFuture() {
+            return new MinimalStage<>(); }
+        @Override public T get() {
+            throw new UnsupportedOperationException(); }
+        @Override public T get(long timeout, TimeUnit unit) {
+            throw new UnsupportedOperationException(); }
+        @Override public T getNow(T valueIfAbsent) {
+            throw new UnsupportedOperationException(); }
+        @Override public T join() {
+            throw new UnsupportedOperationException(); }
+        @Override public boolean complete(T value) {
+            throw new UnsupportedOperationException(); }
+        @Override public boolean completeExceptionally(Throwable ex) {
+            throw new UnsupportedOperationException(); }
+        @Override public boolean cancel(boolean mayInterruptIfRunning) {
+            throw new UnsupportedOperationException(); }
+        @Override public void obtrudeValue(T value) {
+            throw new UnsupportedOperationException(); }
+        @Override public void obtrudeException(Throwable ex) {
+            throw new UnsupportedOperationException(); }
+        @Override public boolean isDone() {
+            throw new UnsupportedOperationException(); }
+        @Override public boolean isCancelled() {
+            throw new UnsupportedOperationException(); }
+        @Override public boolean isCompletedExceptionally() {
+            throw new UnsupportedOperationException(); }
+        @Override public int getNumberOfDependents() {
+            throw new UnsupportedOperationException(); }
+        public CompletableFuture<T> completeAsync
+                (Supplier<? extends T> supplier, Executor executor) {
+            throw new UnsupportedOperationException(); }
+        public CompletableFuture<T> completeAsync
+                (Supplier<? extends T> supplier) {
+            throw new UnsupportedOperationException(); }
+        public CompletableFuture<T> orTimeout
+                (long timeout, TimeUnit unit) {
+            throw new UnsupportedOperationException(); }
+        public CompletableFuture<T> completeOnTimeout
+                (T value, long timeout, TimeUnit unit) {
+            throw new UnsupportedOperationException(); }
+        @Override public CompletableFuture<T> toCompletableFuture() {
+            if (this.isDone()) {
+                return new CompletableFuture<>(encodeRelay(this.join()));
+            }
+            return new CompletableFuture<>();
+        }
     }
 }
