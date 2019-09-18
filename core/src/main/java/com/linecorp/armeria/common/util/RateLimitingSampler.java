@@ -62,12 +62,13 @@ import java.util.concurrent.atomic.AtomicLong;
  * <p>Forked from brave-core 5.6.9 at b8c00c594cbf75a33788d3dc990f94b9c6f41c01
  */
 final class RateLimitingSampler implements Sampler {
-    static Sampler create(int tracesPerSecond) {
-        checkArgument(tracesPerSecond >= 0, "tracesPerSecond >= 0");
-        if (tracesPerSecond == 0) {
+    static Sampler create(int samplesPerSecond) {
+        checkArgument(samplesPerSecond >= 0,
+                      "samplesPerSecond: %s (expected: >= 0)", samplesPerSecond);
+        if (samplesPerSecond == 0) {
             return Sampler.never();
         }
-        return new RateLimitingSampler(tracesPerSecond);
+        return new RateLimitingSampler(samplesPerSecond);
     }
 
     static final long NANOS_PER_SECOND = TimeUnit.SECONDS.toNanos(1);
@@ -77,9 +78,9 @@ final class RateLimitingSampler implements Sampler {
     final AtomicInteger usage = new AtomicInteger(0);
     final AtomicLong nextReset;
 
-    RateLimitingSampler(int tracesPerSecond) {
+    RateLimitingSampler(int samplesPerSecond) {
         maxFunction =
-                tracesPerSecond < 10 ? new LessThan10(tracesPerSecond) : new AtLeast10(tracesPerSecond);
+                samplesPerSecond < 10 ? new LessThan10(samplesPerSecond) : new AtLeast10(samplesPerSecond);
         final long now = System.nanoTime();
         nextReset = new AtomicLong(now + NANOS_PER_SECOND);
     }
@@ -130,15 +131,15 @@ final class RateLimitingSampler implements Sampler {
      * For a reservoir of less than 10, we permit draining it completely at any time in the second.
      */
     static final class LessThan10 extends MaxFunction {
-        final int tracesPerSecond;
+        final int samplesPerSecond;
 
-        LessThan10(int tracesPerSecond) {
-            this.tracesPerSecond = tracesPerSecond;
+        LessThan10(int samplesPerSecond) {
+            this.samplesPerSecond = samplesPerSecond;
         }
 
         @Override
         int max(long nanosUntilResetIgnored) {
-            return tracesPerSecond;
+            return samplesPerSecond;
         }
     }
 
@@ -156,13 +157,13 @@ final class RateLimitingSampler implements Sampler {
     static final class AtLeast10 extends MaxFunction {
         final int[] max;
 
-        AtLeast10(int tracesPerSecond) {
-            final int tracesPerDecisecond = tracesPerSecond / 10;
-            final int remainder = tracesPerSecond % 10;
+        AtLeast10(int samplesPerSecond) {
+            final int samplesPerDecisecond = samplesPerSecond / 10;
+            final int remainder = samplesPerSecond % 10;
             max = new int[10];
-            max[0] = tracesPerDecisecond + remainder;
+            max[0] = samplesPerDecisecond + remainder;
             for (int i = 1; i < 10; i++) {
-                max[i] = max[i - 1] + tracesPerDecisecond;
+                max[i] = max[i - 1] + samplesPerDecisecond;
             }
         }
 
