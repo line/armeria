@@ -21,8 +21,11 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
-import java.util.function.*;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T> {
 
@@ -251,7 +254,7 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
     }
 
     public CompletionStage<T> minimalCompletionStage() {
-        return this.uniAsMinimalStage();
+        return ctx.makeContextAware(new RequestContextAwareMinimalStage<>(this));
     }
 
     public CompletableFuture<T> completeAsync(Supplier<? extends T> supplier) {
@@ -269,66 +272,5 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
                 return action.get();
             }
         };
-    }
-
-    private MinimalStage<T> uniAsMinimalStage() {
-        return new MinimalStage<>();
-    }
-
-    static final class MinimalStage<T> extends CompletableFuture<T> {
-        MinimalStage() {}
-        public <U> CompletableFuture<U> newIncompleteFuture() {
-            return new MinimalStage<>(); }
-        @Override public T get() {
-            throw new UnsupportedOperationException(); }
-        @Override public T get(long timeout, TimeUnit unit) {
-            throw new UnsupportedOperationException(); }
-        @Override public T getNow(T valueIfAbsent) {
-            throw new UnsupportedOperationException(); }
-        @Override public T join() {
-            throw new UnsupportedOperationException(); }
-        @Override public boolean complete(T value) {
-            throw new UnsupportedOperationException(); }
-        @Override public boolean completeExceptionally(Throwable ex) {
-            throw new UnsupportedOperationException(); }
-        @Override public boolean cancel(boolean mayInterruptIfRunning) {
-            throw new UnsupportedOperationException(); }
-        @Override public void obtrudeValue(T value) {
-            throw new UnsupportedOperationException(); }
-        @Override public void obtrudeException(Throwable ex) {
-            throw new UnsupportedOperationException(); }
-        @Override public boolean isDone() {
-            throw new UnsupportedOperationException(); }
-        @Override public boolean isCancelled() {
-            throw new UnsupportedOperationException(); }
-        @Override public boolean isCompletedExceptionally() {
-            throw new UnsupportedOperationException(); }
-        @Override public int getNumberOfDependents() {
-            throw new UnsupportedOperationException(); }
-        public CompletableFuture<T> completeAsync
-                (Supplier<? extends T> supplier, Executor executor) {
-            throw new UnsupportedOperationException(); }
-        public CompletableFuture<T> completeAsync
-                (Supplier<? extends T> supplier) {
-            throw new UnsupportedOperationException(); }
-        public CompletableFuture<T> orTimeout
-                (long timeout, TimeUnit unit) {
-            throw new UnsupportedOperationException(); }
-        public CompletableFuture<T> completeOnTimeout
-                (T value, long timeout, TimeUnit unit) {
-            throw new UnsupportedOperationException(); }
-        @Override public CompletableFuture<T> toCompletableFuture() {
-            if (super.isDone()) {
-                CompletableFuture<T> future = new CompletableFuture<>();
-                try {
-                    T result = super.get();
-                    future.complete(result);
-                } catch (Throwable t) {
-                    future.completeExceptionally(t);
-                }
-                return future;
-            }
-            return this;
-        }
     }
 }
