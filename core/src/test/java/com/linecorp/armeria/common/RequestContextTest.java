@@ -311,8 +311,8 @@ public class RequestContextTest {
     public void makeContextAwareCompletableFutureUsingCompleteAsync() throws Exception {
         final RequestContext context = createContext(false);
         final CompletableFuture<String> originalFuture = new CompletableFuture<>();
-        final CompletableFuture<String> contextAwareFuture = context.makeContextAware(originalFuture);
-        final CompletableFuture<String> resultFuture = contextAwareFuture.completeAsync(() -> "success");
+        final RequestContextAwareCompletableFuture<String> contextAwareFuture = (RequestContextAwareCompletableFuture) context.makeContextAware(originalFuture);
+        final CompletableFuture<String> resultFuture =  contextAwareFuture.completeAsync(() -> "success");
 
         originalFuture.complete("success");
         assertDepth(0);
@@ -321,14 +321,14 @@ public class RequestContextTest {
 
     @Test
     public void makeContextAwareCompletableFutureUsingCompleteAsyncWithExecutor() throws Exception {
-        final ExecutorService executor = Executors.newSingleThreadExecutor();
-        final RequestContext context = createContext();
+        final ExecutorService executor = Executors.newFixedThreadPool(2);
+        final RequestContext context = createContext(false);
         final CompletableFuture<String> originalFuture = new CompletableFuture<>();
-        final CompletableFuture<String> contextAwareFuture = context.makeContextAware(originalFuture);
+        final RequestContextAwareCompletableFuture<String> contextAwareFuture = (RequestContextAwareCompletableFuture) context.makeContextAware(originalFuture);
         final CompletableFuture<String> resultFuture = contextAwareFuture.completeAsync(() -> "success", executor);
 
         originalFuture.complete("success");
-        assertDepth(1);
+        assertDepth(0);
         assertThat(resultFuture.get()).isEqualTo("success");
     }
 
