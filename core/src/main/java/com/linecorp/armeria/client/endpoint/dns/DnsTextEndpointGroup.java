@@ -56,9 +56,10 @@ public final class DnsTextEndpointGroup extends DnsEndpointGroup {
     }
 
     /**
-     * Returns a new {@link DnsTextEndpointGroupBuilder} with the specified hostname and {@link Function} mapping.
+     * Returns a new {@link DnsTextEndpointGroupBuilder} with
+     * the specified hostname and {@link Function} mapping.
      */
-    public static DnsTextEndpointGroupBuilder builder(String hostname, Function<byte[], Endpoint> mapping){
+    public static DnsTextEndpointGroupBuilder builder(String hostname, Function<byte[], Endpoint> mapping) {
         return new DnsTextEndpointGroupBuilder(hostname,mapping);
     }
 

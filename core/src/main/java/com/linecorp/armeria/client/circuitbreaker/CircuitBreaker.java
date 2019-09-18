@@ -25,14 +25,14 @@ public interface CircuitBreaker {
     /**
      * Returns a new {@link CircuitBreakerBuilder}.
      */
-    static CircuitBreakerBuilder builder(){
+    static CircuitBreakerBuilder builder() {
         return new CircuitBreakerBuilder();
     }
 
     /**
      * Returns a new {@link CircuitBreakerBuilder} that has the specified name.
      */
-    static CircuitBreakerBuilder builder(String name){
+    static CircuitBreakerBuilder builder(String name) {
         return new CircuitBreakerBuilder(name);
     }
 

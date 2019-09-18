@@ -136,8 +136,8 @@ public class RetryingRpcClientTest {
                                            int maxAttempts) {
         return new ClientBuilder(server.uri(BINARY, "/thrift"))
                 .rpcDecorator(RetryingRpcClient.builder(strategy)
-                        .maxTotalAttempts(maxAttempts)
-                        .newDecorator())
+                                               .maxTotalAttempts(maxAttempts)
+                                               .newDecorator())
                 .build(HelloService.Iface.class);
     }
 
@@ -193,8 +193,8 @@ public class RetryingRpcClientTest {
             t = cause;
         }
         assertThat(t).isInstanceOf(IllegalStateException.class)
-                .satisfies(cause -> assertThat(cause.getMessage()).matches(
-                        "(?i).*(factory has been closed|not accepting a task).*"));
+                     .satisfies(cause -> assertThat(cause.getMessage()).matches(
+                             "(?i).*(factory has been closed|not accepting a task).*"));
     }
 
     @Test

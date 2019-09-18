@@ -72,7 +72,7 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
     /**
      * Returns a new {@link DnsAddressEndpointGroupBuilder} with the specified hostname.
      */
-    public static DnsAddressEndpointGroupBuilder builder(String hostname){
+    public static DnsAddressEndpointGroupBuilder builder(String hostname) {
         return new DnsAddressEndpointGroupBuilder(hostname);
     }
 

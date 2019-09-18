@@ -109,7 +109,8 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
     /**
      * Returns a new {@link RetryingHttpClientBuilder} with the specified {@link RetryStrategyWithContent}.
      */
-    public static RetryingHttpClientBuilder builder(RetryStrategyWithContent<HttpResponse> retryStrategyWithContent) {
+    public static RetryingHttpClientBuilder builder(
+            RetryStrategyWithContent<HttpResponse> retryStrategyWithContent) {
         return new RetryingHttpClientBuilder(retryStrategyWithContent);
     }
 

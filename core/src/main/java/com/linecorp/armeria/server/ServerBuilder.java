@@ -1428,7 +1428,6 @@ public final class ServerBuilder {
     /**
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
-
     public Server build() {
         final VirtualHost defaultVirtualHost = defaultVirtualHostBuilder.build().decorate(decorator);
         final List<VirtualHost> virtualHosts = virtualHostBuilders.stream()
@@ -1485,7 +1484,6 @@ public final class ServerBuilder {
             }
             sslContexts = mappingBuilder.build();
         }
-
 
         final Server server = new Server(new ServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext), virtualHosts,

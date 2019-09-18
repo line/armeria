@@ -58,7 +58,7 @@ public final class DnsServiceEndpointGroup extends DnsEndpointGroup {
     /**
      * Returns a new {@link DnsServiceEndpointGroupBuilder} with the specified hostname.
      */
-    public static DnsServiceEndpointGroupBuilder builder(String hostname){
+    public static DnsServiceEndpointGroupBuilder builder(String hostname) {
         return new DnsServiceEndpointGroupBuilder(hostname);
     }
 

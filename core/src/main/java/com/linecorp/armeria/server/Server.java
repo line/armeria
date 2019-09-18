@@ -117,7 +117,7 @@ public final class Server implements AutoCloseable {
         config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
     }
 
-    public static ServerBuilder builder(){
+    public static ServerBuilder builder() {
         return new ServerBuilder();
     }
 

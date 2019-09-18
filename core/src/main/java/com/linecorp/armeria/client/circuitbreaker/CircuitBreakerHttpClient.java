@@ -101,22 +101,23 @@ public final class CircuitBreakerHttpClient extends CircuitBreakerClient<HttpReq
     }
 
     /**
-     * Returns a new {@link CircuitBreakerHttpClientBuilder} instance with the specified {@link CircuitBreakerStrategy}.
+     * Returns a new {@link CircuitBreakerHttpClientBuilder} instance with
+     * the specified {@link CircuitBreakerStrategy}.
      */
     public static CircuitBreakerHttpClientBuilder builder(CircuitBreakerStrategy strategy) {
         return new CircuitBreakerHttpClientBuilder(strategy);
     }
 
     /**
-     * Returns a new {@link CircuitBreakerHttpClientBuilder} with the specified {@link CircuitBreakerStrategy} and {@link CircuitBreakerStrategyWithContent}.
+     * Returns a new {@link CircuitBreakerHttpClientBuilder} with
+     * the specified {@link CircuitBreakerStrategy} and {@link CircuitBreakerStrategyWithContent}.
      */
-    public static CircuitBreakerHttpClientBuilder builder(CircuitBreakerStrategyWithContent<HttpResponse> strategyWithContent) {
+    public static CircuitBreakerHttpClientBuilder builder(
+            CircuitBreakerStrategyWithContent<HttpResponse> strategyWithContent) {
         return new CircuitBreakerHttpClientBuilder(strategyWithContent);
     }
 
     private final boolean needsContentInStrategy;
-
-
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
@@ -135,8 +136,6 @@ public final class CircuitBreakerHttpClient extends CircuitBreakerClient<HttpReq
         super(delegate, mapping, strategyWithContent);
         needsContentInStrategy = true;
     }
-
-
 
     @Override
     protected HttpResponse doExecute(ClientRequestContext ctx, HttpRequest req, CircuitBreaker circuitBreaker)

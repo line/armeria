@@ -23,7 +23,7 @@ dependencies {
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
     runtime project(':spring:boot-actuator-starter')
-
+    
     testCompile 'junit:junit'
     testCompile 'org.assertj:assertj-core'
     testCompile 'org.springframework.boot:spring-boot-starter-test'

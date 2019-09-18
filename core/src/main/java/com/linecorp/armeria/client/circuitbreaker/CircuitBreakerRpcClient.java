@@ -101,11 +101,12 @@ public final class CircuitBreakerRpcClient extends CircuitBreakerClient<RpcReque
         return newDecorator(CircuitBreakerMapping.perHostAndMethod(factory), strategy);
     }
 
-
     /**
-     * Returns a new {@link CircuitBreakerRpcClientBuilder} instance with the specified {@link CircuitBreakerStrategyWithContent}.
+     * Returns a new {@link CircuitBreakerRpcClientBuilder} instance with
+     * the specified {@link CircuitBreakerStrategyWithContent}.
      */
-    public static CircuitBreakerRpcClientBuilder builder(CircuitBreakerStrategyWithContent<RpcResponse> strategyWithContent) {
+    public static CircuitBreakerRpcClientBuilder builder(
+            CircuitBreakerStrategyWithContent<RpcResponse> strategyWithContent) {
         return new CircuitBreakerRpcClientBuilder(strategyWithContent);
     }
 

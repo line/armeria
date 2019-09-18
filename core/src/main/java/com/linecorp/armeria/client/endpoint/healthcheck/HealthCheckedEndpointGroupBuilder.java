@@ -37,7 +37,6 @@ public class HealthCheckedEndpointGroupBuilder extends AbstractHealthCheckedEndp
     private final String path;
     private boolean useGet;
 
-
     @Deprecated
     HealthCheckedEndpointGroupBuilder(EndpointGroup delegate, String path) {
         super(delegate);

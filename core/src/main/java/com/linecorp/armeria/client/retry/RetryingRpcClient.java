@@ -74,7 +74,8 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
     /**
      * Returns a new {@link RetryingRpcClientBuilder} with the specified {@link RetryStrategyWithContent}.
      */
-    public static RetryingRpcClientBuilder builder(RetryStrategyWithContent<RpcResponse> retryStrategyWithContent) {
+    public static RetryingRpcClientBuilder builder(
+            RetryStrategyWithContent<RpcResponse> retryStrategyWithContent) {
         return new RetryingRpcClientBuilder(retryStrategyWithContent);
     }
 

@@ -30,6 +30,8 @@ public final class CircuitBreakerRpcClientBuilder
 
     /**
      * Creates a new builder with the specified {@link CircuitBreakerStrategyWithContent}.
+     *
+     * @deprecated {@link CircuitBreakerRpcClient#builder(CircuitBreakerStrategyWithContent)} instead.
      */
     @Deprecated
     public CircuitBreakerRpcClientBuilder(CircuitBreakerStrategyWithContent<RpcResponse> strategyWithContent) {

@@ -25,7 +25,6 @@ import com.linecorp.armeria.client.Endpoint;
 
 import io.netty.resolver.ResolvedAddressTypes;
 
-
 /**
  * Builds a new {@link DnsAddressEndpointGroup} that sources its {@link Endpoint} list from the {@code A} or
  * {@code AAAA} DNS records of a certain hostname.
@@ -40,7 +39,7 @@ public final class DnsAddressEndpointGroupBuilder
     /**
      * Creates a new instance that builds a {@link DnsAddressEndpointGroup} for the specified {@code hostname}.
      *
-     * @param hostname the hostname to query DNS queries for
+     * @deprecated Use {@link DnsAddressEndpointGroup#builder(String)} instead.
      */
     @Deprecated
     public DnsAddressEndpointGroupBuilder(String hostname) {
