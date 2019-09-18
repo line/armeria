@@ -259,11 +259,7 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
     // support JDK9 functions
 
     public <U> CompletableFuture<U> newIncompleteFuture() {
-        return new CompletableFuture<>();
-    }
-
-    public CompletableFuture<T> copy() {
-        return thenApply(Function.identity());
+        return new RequestContextAwareCompletableFuture<>(ctx);
     }
 
     public CompletionStage<T> minimalCompletionStage() {

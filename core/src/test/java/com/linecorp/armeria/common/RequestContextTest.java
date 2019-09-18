@@ -305,18 +305,6 @@ public class RequestContextTest {
     }
 
     @Test
-    public void usingCopyByContextAwareCompletableFuture() throws Exception {
-        final String failed = "failed";
-        final RequestContext context = createContext();
-        final CompletableFuture<String> originalFuture = new CompletableFuture<>();
-        final CompletableFuture<String> contextAwareFuture = context.makeContextAware(originalFuture);
-        contextAwareFuture.completeOnTimeout(failed, 1, TimeUnit.MILLISECONDS);
-        final CompletableFuture<String> copyFuture = contextAwareFuture.copy();
-
-        assertThat(copyFuture.get()).isEqualTo(failed);
-    }
-
-    @Test
     public void makeContextAwareCompletableFutureUsingCompleteAsync() throws Exception {
         final RequestContext context = createContext(false);
         final CompletableFuture<String> originalFuture = new CompletableFuture<>();
