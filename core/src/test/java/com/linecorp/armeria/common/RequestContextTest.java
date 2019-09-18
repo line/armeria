@@ -341,28 +341,6 @@ public class RequestContextTest {
         assertThat(resultFuture.get()).isEqualTo("success");
     }
 
-    @Test(expected = ExecutionException.class)
-    public void makeContextAwareCompletableFutureUsingOrTimeout() throws Exception {
-        final RequestContext context = createContext();
-        final CompletableFuture<String> originalFuture = new CompletableFuture<>();
-
-        context.makeContextAware(originalFuture)
-                .orTimeout(1, TimeUnit.MILLISECONDS)
-                .get();
-    }
-
-    @Test
-    public void makeContextAwareCompletableFutureUsingCompleteOnTimeout() throws Exception {
-        final RequestContext context = createContext();
-        final CompletableFuture<String> originalFuture = new CompletableFuture<>();
-        final String failed = "failed";
-
-        assertThat(context.makeContextAware(originalFuture)
-                .completeOnTimeout(failed, 1, TimeUnit.MILLISECONDS)
-                .get()
-        ).isEqualTo(failed);
-    }
-
     @Test
     public void makeContextAwareCompletableFutureWithDifferentContext() {
         final RequestContext context1 = createContext();
