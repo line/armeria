@@ -65,7 +65,7 @@ final class ArmeriaHttpServerAdapter extends HttpServerAdapter<RequestLog, Reque
     @Override
     @Nullable
     public String url(RequestLog requestLog) {
-        return SpanTags.generateUrl(requestLog);
+        return requestLog.context().uri(true).toString();
     }
 
     @Override

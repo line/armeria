@@ -22,14 +22,14 @@ import static org.mockito.Mockito.verify;
 
 import java.net.URI;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 
 public class DefaultHttpClientTest {
@@ -45,7 +45,7 @@ public class DefaultHttpClientTest {
                 ClientFactory.DEFAULT, new URI(clientUriPath), HttpClient.class, ClientOptions.DEFAULT);
         final DefaultHttpClient defaultHttpClient = new DefaultHttpClient(
                 clientBuilderParams, mockClientDelegate, NoopMeterRegistry.get(),
-                SessionProtocol.of("http"), Endpoint.of("127.0.0.1"));
+                Scheme.parse("none+http"), Endpoint.of("127.0.0.1"));
 
         defaultHttpClient.execute(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, requestPath)));
 

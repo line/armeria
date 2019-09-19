@@ -71,6 +71,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
     private final Channel ch;
     private final ServiceConfig cfg;
+    private final SessionProtocol sessionProtocol;
     private final RoutingContext routingContext;
     private final RoutingResult routingResult;
     @Nullable
@@ -158,13 +159,14 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
             InetAddress clientAddress, boolean requestStartTimeSet, long requestStartTimeNanos,
             long requestStartTimeMicros) {
 
-        super(meterRegistry, sessionProtocol,
+        super(meterRegistry,
               requireNonNull(routingContext, "routingContext").method(), routingContext.path(),
               requireNonNull(routingResult, "routingResult").query(),
               request);
 
         this.ch = requireNonNull(ch, "ch");
         this.cfg = requireNonNull(cfg, "cfg");
+        this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
         this.routingContext = routingContext;
         this.routingResult = routingResult;
         this.sslSession = sslSession;
@@ -270,6 +272,11 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     @Override
     protected Channel channel() {
         return ch;
+    }
+
+    @Override
+    public SessionProtocol sessionProtocol() {
+        return sessionProtocol;
     }
 
     @Override

@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.internal.PathAndQuery;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -37,8 +37,8 @@ import io.micrometer.core.instrument.MeterRegistry;
 final class DefaultTHttpClient extends UserClient<RpcRequest, RpcResponse> implements THttpClient {
 
     DefaultTHttpClient(ClientBuilderParams params, Client<RpcRequest, RpcResponse> delegate,
-                       MeterRegistry meterRegistry, SessionProtocol sessionProtocol, Endpoint endpoint) {
-        super(params, delegate, meterRegistry, sessionProtocol, endpoint);
+                       MeterRegistry meterRegistry, Scheme scheme, Endpoint endpoint) {
+        super(params, delegate, meterRegistry, scheme, endpoint);
     }
 
     @Override

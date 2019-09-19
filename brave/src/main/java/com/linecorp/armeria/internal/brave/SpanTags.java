@@ -20,14 +20,10 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
 
 import brave.Span;
 
@@ -65,7 +61,7 @@ public final class SpanTags {
         span.tag(TAG_HTTP_HOST, authority)
             .tag(TAG_HTTP_METHOD, log.method().name())
             .tag(TAG_HTTP_PATH, path)
-            .tag(TAG_HTTP_URL, generateUrl(log))
+            .tag(TAG_HTTP_URL, log.context().uri(true).toString())
             .tag(TAG_HTTP_STATUS_CODE, log.status().codeAsText())
             .tag(TAG_HTTP_PROTOCOL, scheme.sessionProtocol().uriText());
 
@@ -93,45 +89,6 @@ public final class SpanTags {
         if (requestContent instanceof RpcRequest) {
             span.name(((RpcRequest) requestContent).method());
         }
-    }
-
-    /**
-     * Url needs {@link RequestLogAvailability#SCHEME} and {@link RequestLogAvailability#REQUEST_HEADERS}.
-     * Return null if this property is not available yet.
-     */
-    @Nullable
-    public static String generateUrl(RequestLog requestLog) {
-        if (!requestLog.isAvailable(RequestLogAvailability.SCHEME) ||
-            !requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)) {
-            return null;
-        }
-        final Scheme scheme = requestLog.scheme();
-        final String authority = requestLog.authority();
-        final String path = requestLog.path();
-        final String query = requestLog.query();
-        final SessionProtocol sessionProtocol = scheme.sessionProtocol();
-        final String uriScheme;
-        if (SessionProtocol.httpValues().contains(sessionProtocol)) {
-            uriScheme = "http://";
-        } else if (SessionProtocol.httpsValues().contains(sessionProtocol)) {
-            uriScheme = "https://";
-        } else {
-            uriScheme = sessionProtocol.uriText() + "://";
-        }
-
-        final StringBuilder uriBuilder = new StringBuilder(
-                uriScheme.length() + authority.length() + path.length() +
-                (query != null ? query.length() + 1 : 0));
-
-        uriBuilder.append(uriScheme)
-                  .append(authority)
-                  .append(path);
-
-        if (query != null) {
-            uriBuilder.append('?').append(query);
-        }
-
-        return uriBuilder.toString();
     }
 
     public static void logWireSend(Span span, long wireSendTimeNanos, RequestLog requestLog) {

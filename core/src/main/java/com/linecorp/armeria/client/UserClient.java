@@ -26,7 +26,7 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -48,7 +48,7 @@ public abstract class UserClient<I extends Request, O extends Response>
 
     private final ClientBuilderParams params;
     private final MeterRegistry meterRegistry;
-    private final SessionProtocol sessionProtocol;
+    private final Scheme scheme;
     private final Endpoint endpoint;
 
     /**
@@ -57,15 +57,15 @@ public abstract class UserClient<I extends Request, O extends Response>
      * @param params the parameters used for constructing the client
      * @param delegate the {@link Client} that will process {@link Request}s
      * @param meterRegistry the {@link MeterRegistry} that collects various stats
-     * @param sessionProtocol the {@link SessionProtocol} of the {@link Client}
+     * @param scheme the {@link Scheme} of the {@link Client}
      * @param endpoint the {@link Endpoint} of the {@link Client}
      */
     protected UserClient(ClientBuilderParams params, Client<I, O> delegate, MeterRegistry meterRegistry,
-                         SessionProtocol sessionProtocol, Endpoint endpoint) {
+                         Scheme scheme, Endpoint endpoint) {
         super(delegate);
         this.params = params;
         this.meterRegistry = meterRegistry;
-        this.sessionProtocol = sessionProtocol;
+        this.scheme = scheme;
         this.endpoint = endpoint;
     }
 
@@ -90,10 +90,10 @@ public abstract class UserClient<I extends Request, O extends Response>
     }
 
     /**
-     * Returns the {@link SessionProtocol} of the {@link #delegate()}.
+     * Returns the {@link Scheme} of the {@link #delegate()}.
      */
-    protected final SessionProtocol sessionProtocol() {
-        return sessionProtocol;
+    protected final Scheme scheme() {
+        return scheme;
     }
 
     /**
@@ -138,10 +138,10 @@ public abstract class UserClient<I extends Request, O extends Response>
                               I req, BiFunction<ClientRequestContext, Throwable, O> fallback) {
         final DefaultClientRequestContext ctx;
         if (eventLoop == null) {
-            ctx = new DefaultClientRequestContext(factory(), meterRegistry, sessionProtocol,
+            ctx = new DefaultClientRequestContext(factory(), meterRegistry, scheme,
                                                   method, path, query, fragment, options(), req);
         } else {
-            ctx = new DefaultClientRequestContext(eventLoop, meterRegistry, sessionProtocol,
+            ctx = new DefaultClientRequestContext(eventLoop, meterRegistry, scheme,
                                                   method, path, query, fragment, options(), req);
         }
 

@@ -680,13 +680,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private static final class EarlyRespondingRequestContext extends NonWrappingRequestContext {
 
         private final Channel channel;
+        private final SessionProtocol sessionProtocol;
         private final DefaultRequestLog requestLog;
 
         EarlyRespondingRequestContext(Channel channel, MeterRegistry meterRegistry,
                                       SessionProtocol sessionProtocol, HttpMethod method, String path,
                                       @Nullable String query, Request request) {
-            super(meterRegistry, sessionProtocol, method, path, query, request);
+            super(meterRegistry, method, path, query, request);
             this.channel = requireNonNull(channel, "channel");
+            this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
             requestLog = new DefaultRequestLog(this);
         }
 
@@ -705,6 +707,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         @Override
         protected Channel channel() {
             return channel;
+        }
+
+        @Override
+        public SessionProtocol sessionProtocol() {
+            return sessionProtocol;
         }
 
         @Nullable

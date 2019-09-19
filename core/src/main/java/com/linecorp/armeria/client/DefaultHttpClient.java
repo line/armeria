@@ -31,7 +31,7 @@ import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.PathAndQuery;
 
@@ -43,8 +43,8 @@ final class DefaultHttpClient extends UserClient<HttpRequest, HttpResponse> impl
     private static final Logger logger = LoggerFactory.getLogger(DefaultHttpClient.class);
 
     DefaultHttpClient(ClientBuilderParams params, Client<HttpRequest, HttpResponse> delegate,
-                      MeterRegistry meterRegistry, SessionProtocol sessionProtocol, Endpoint endpoint) {
-        super(params, delegate, meterRegistry, sessionProtocol, endpoint);
+                      MeterRegistry meterRegistry, Scheme scheme, Endpoint endpoint) {
+        super(params, delegate, meterRegistry, scheme, endpoint);
     }
 
     @Override

@@ -24,7 +24,6 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.internal.brave.SpanTags;
 
 import brave.http.HttpClientAdapter;
 
@@ -59,7 +58,7 @@ final class ArmeriaHttpClientAdapter extends HttpClientAdapter<RequestLog, Reque
     @Override
     @Nullable
     public String url(RequestLog requestLog) {
-        return SpanTags.generateUrl(requestLog);
+        return requestLog.context().uri(true).toString();
     }
 
     @Override

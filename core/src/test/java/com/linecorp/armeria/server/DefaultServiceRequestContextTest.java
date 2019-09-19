@@ -18,13 +18,17 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Test;
+import java.net.URI;
+
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.util.AttributeKey;
 
@@ -44,7 +48,47 @@ public class DefaultServiceRequestContextTest {
     }
 
     @Test
-    public void deriveContext() {
+    void uri() {
+        final HttpRequest request =
+                HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/foo",
+                                                 HttpHeaderNames.AUTHORITY, "[::1]:8080"));
+        final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(request)
+                                                                      .sessionProtocol(SessionProtocol.H2C)
+                                                                      .build();
+        assertThat(ctx.uri()).isEqualTo(URI.create("h2c://[::1]:8080/foo"))
+                             .isEqualTo(ctx.uri(false));
+        assertThat(ctx.uri(true)).isEqualTo(URI.create("http://[::1]:8080/foo"));
+    }
+
+    @Test
+    void uriWithQuery() {
+        final HttpRequest request =
+                HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/foo?bar=baz",
+                                                 HttpHeaderNames.AUTHORITY, "127.0.0.1"));
+        final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(request)
+                                                                      .sessionProtocol(SessionProtocol.H2C)
+                                                                      .build();
+
+        assertThat(ctx.uri()).isEqualTo(URI.create("h2c://127.0.0.1/foo?bar=baz"))
+                             .isEqualTo(ctx.uri(false));
+        assertThat(ctx.uri(true)).isEqualTo(URI.create("http://127.0.0.1/foo?bar=baz"));
+    }
+
+    @Test
+    void uriCache() {
+        final HttpRequest request =
+                HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/foo",
+                                                 HttpHeaderNames.AUTHORITY, "example.com:8080"));
+        final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(request)
+                                                                      .sessionProtocol(SessionProtocol.H2C)
+                                                                      .build();
+        assertThat(ctx.uri(true)).isSameAs(ctx.uri(true));
+        assertThat(ctx.uri(false)).isSameAs(ctx.uri(false));
+        assertThat(ctx.uri(true)).isNotSameAs(ctx.uri(false));
+    }
+
+    @Test
+    void deriveContext() {
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/hello");
         final ServiceRequestContext originalCtx = ServiceRequestContextBuilder.of(request).build();
 

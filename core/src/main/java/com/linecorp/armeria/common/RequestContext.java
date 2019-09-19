@@ -16,7 +16,11 @@
 
 package com.linecorp.armeria.common;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
+
 import java.net.SocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.concurrent.Callable;
@@ -156,6 +160,62 @@ public interface RequestContext extends AttributeMap {
      */
     @Nullable
     SSLSession sslSession();
+
+    /**
+     * Returns the {@link URI} of the current {@link Request}. Note that the scheme of the returned {@link URI}
+     * denotes the requested scheme, which may be different from the actual scheme. For example, if you sent
+     * a request to {@code http://foo.com/"}, you will always get {@code "http"} as a scheme even if the actual
+     * {@link SessionProtocol} is {@code "h2c"}. Similarly, if you sent a request to {@code h2c://foo.com/}, you
+     * will always get {@code "h2c"} as a scheme.
+     *
+     * <p>This method is a shortcut of {@code uri(false)}. If you want to make sure the scheme of the returned
+     * {@link URI} is always {@code "http"} or {@code "https"}, call {@code uri(true)}.</p>
+     *
+     * @see #uri(boolean)
+     */
+    default URI uri() {
+        return uri(false);
+    }
+
+    /**
+     * Returns the {@link URI} of the current {@link Request}.
+     *
+     * @param simplifyScheme If {@code true}, the scheme of the returned {@link URI} will always be
+     *                       {@code "http"} or {@code "https"}.
+     *                       If {@code false}, the scheme of the returned {@link URI} will denote the
+     *                       requested scheme, which may be different from the actual scheme. For example,
+     *                       if you sent a request to {@code http://foo.com/"}, you will always get
+     *                       {@code "http"} as a scheme even if the actual {@link SessionProtocol} is
+     *                       {@code "h2c"}. Similarly, if you sent a request to {@code h2c://foo.com/}, you
+     *                       will always get {@code "h2c"} as a scheme.
+     */
+    default URI uri(boolean simplifyScheme) {
+        final StringBuilder buf = new StringBuilder(64);
+        if (simplifyScheme) {
+            buf.append(sessionProtocol().isTls() ? "https://" : "http://");
+        } else {
+            buf.append(sessionProtocol().uriText()).append("://");
+        }
+
+        final Request req = request();
+        String authority = null;
+        if (req instanceof HttpRequest) {
+            authority = ((HttpRequest) req).authority();
+        }
+        buf.append(firstNonNull(authority, "UNKNOWN"));
+        buf.append(path());
+
+        final String query = query();
+        if (query != null) {
+            buf.append('?').append(query);
+        }
+
+        try {
+            return new URI(buf.toString());
+        } catch (URISyntaxException e) {
+            throw new IllegalStateException("Failed to create a valid URI: " + buf, e);
+        }
+    }
 
     /**
      * Returns the HTTP method of the current {@link Request}.

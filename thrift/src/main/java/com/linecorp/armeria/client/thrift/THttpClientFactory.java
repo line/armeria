@@ -103,13 +103,13 @@ final class THttpClientFactory extends DecoratingClientFactory {
             @SuppressWarnings("unchecked")
             final T client = (T) new DefaultTHttpClient(
                     new DefaultClientBuilderParams(this, uri, THttpClient.class, options),
-                    delegate, meterRegistry(), scheme.sessionProtocol(), endpoint);
+                    delegate, meterRegistry(), scheme, endpoint);
             return client;
         } else {
             // Create a THttpClient without path.
             final THttpClient thriftClient = new DefaultTHttpClient(
                     new DefaultClientBuilderParams(this, pathlessUri(uri), THttpClient.class, options),
-                    delegate, meterRegistry(), scheme.sessionProtocol(), endpoint);
+                    delegate, meterRegistry(), scheme, endpoint);
 
             @SuppressWarnings("unchecked")
             final T client = (T) Proxy.newProxyInstance(

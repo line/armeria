@@ -23,6 +23,8 @@ import com.linecorp.armeria.client.endpoint.EndpointSelector;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContextWrapper;
+import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
 
 /**
  * Wraps an existing {@link ClientRequestContext}.
@@ -63,13 +65,23 @@ public class ClientRequestContextWrapper
     }
 
     @Override
-    public String fragment() {
-        return delegate().fragment();
+    public ClientOptions options() {
+        return delegate().options();
     }
 
     @Override
-    public ClientOptions options() {
-        return delegate().options();
+    public Scheme scheme() {
+        return delegate().scheme();
+    }
+
+    @Override
+    public SerializationFormat serializationFormat() {
+        return delegate().serializationFormat();
+    }
+
+    @Override
+    public String fragment() {
+        return delegate().fragment();
     }
 
     @Override

@@ -19,6 +19,7 @@ package com.linecorp.armeria.common;
 import static java.util.Objects.requireNonNull;
 
 import java.net.SocketAddress;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -42,7 +43,6 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
 
     private final MeterRegistry meterRegistry;
     private final DefaultAttributeMap attrs = new DefaultAttributeMap();
-    private final SessionProtocol sessionProtocol;
     private final HttpMethod method;
     private final String path;
     @Nullable
@@ -59,18 +59,21 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     @Nullable
     private List<BiConsumer<? super RequestContext, ? super RequestContext>> onChildCallbacks;
 
+    @Nullable
+    private URI cachedUri;
+    @Nullable
+    private URI cachedSimpleUri;
+
     /**
      * Creates a new instance.
      *
-     * @param sessionProtocol the {@link SessionProtocol} of the invocation
      * @param request the request associated with this context
      */
     protected NonWrappingRequestContext(
-            MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
+            MeterRegistry meterRegistry,
             HttpMethod method, String path, @Nullable String query, Request request) {
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
-        this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
         this.method = requireNonNull(method, "method");
         this.path = requireNonNull(path, "path");
         this.query = query;
@@ -102,11 +105,6 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
         return true;
     }
 
-    @Override
-    public final SessionProtocol sessionProtocol() {
-        return sessionProtocol;
-    }
-
     /**
      * Returns the {@link Channel} that is handling this request, or {@code null} if the connection is not
      * established yet.
@@ -128,6 +126,33 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     public <A extends SocketAddress> A localAddress() {
         final Channel ch = channel();
         return ch != null ? (A) ch.localAddress() : null;
+    }
+
+    @Override
+    public final URI uri() {
+        return super.uri();
+    }
+
+    @Override
+    public final URI uri(boolean simplifyScheme) {
+        if (simplifyScheme) {
+            if (cachedSimpleUri == null) {
+                cachedSimpleUri = uncachedUri(true);
+            }
+            return cachedSimpleUri;
+        } else {
+            if (cachedUri == null) {
+                cachedUri = uncachedUri(false);
+            }
+            return cachedUri;
+        }
+    }
+
+    /**
+     * Generates the {@link URI} of this request.
+     */
+    protected URI uncachedUri(boolean simplifyScheme) {
+        return super.uri(simplifyScheme);
     }
 
     @Override

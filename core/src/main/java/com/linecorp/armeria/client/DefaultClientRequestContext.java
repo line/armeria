@@ -19,6 +19,8 @@ package com.linecorp.armeria.client;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map.Entry;
@@ -39,6 +41,8 @@ import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -70,6 +74,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     @Nullable
     private EventLoop eventLoop;
     private final ClientOptions options;
+    private final Scheme scheme;
     @Nullable
     private EndpointSelector endpointSelector;
     @Nullable
@@ -94,14 +99,49 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      * the construction of this context.
      *
      * @param eventLoop the {@link EventLoop} associated with this context
-     * @param sessionProtocol the {@link SessionProtocol} of the invocation
+     * @param scheme the {@link Scheme} of the invocation
      * @param request the request associated with this context
      */
+    public DefaultClientRequestContext(
+            EventLoop eventLoop, MeterRegistry meterRegistry, Scheme scheme,
+            HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
+            ClientOptions options, Request request) {
+        this(null, requireNonNull(eventLoop, "eventLoop"), meterRegistry, scheme,
+             method, path, query, fragment, options, request);
+    }
+
+    /**
+     * Creates a new instance. Note that {@link #init(Endpoint)} method must be invoked to finish
+     * the construction of this context.
+     *
+     * @param eventLoop the {@link EventLoop} associated with this context
+     * @param sessionProtocol the {@link SessionProtocol} of the invocation
+     * @param request the request associated with this context
+     *
+     * @deprecated Use {@link #DefaultClientRequestContext(EventLoop, MeterRegistry, Scheme, HttpMethod, String, String, String, ClientOptions, Request)}.
+     */
+    @Deprecated
     public DefaultClientRequestContext(
             EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
             ClientOptions options, Request request) {
-        this(null, requireNonNull(eventLoop, "eventLoop"), meterRegistry, sessionProtocol,
+        this(eventLoop, meterRegistry, Scheme.of(SerializationFormat.NONE, sessionProtocol),
+             method, path, query, fragment, options, request);
+    }
+
+    /**
+     * Creates a new instance. Note that {@link #init(Endpoint)} method must be invoked to finish
+     * the construction of this context.
+     *
+     * @param factory the {@link ClientFactory} which is used to acquire an {@link EventLoop}
+     * @param scheme the {@link Scheme} of the invocation
+     * @param request the request associated with this context
+     */
+    public DefaultClientRequestContext(
+            ClientFactory factory, MeterRegistry meterRegistry, Scheme scheme,
+            HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
+            ClientOptions options, Request request) {
+        this(requireNonNull(factory, "factory"), null, meterRegistry, scheme,
              method, path, query, fragment, options, request);
     }
 
@@ -112,24 +152,28 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      * @param factory the {@link ClientFactory} which is used to acquire an {@link EventLoop}
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
      * @param request the request associated with this context
+     *
+     * @deprecated Use {@link #DefaultClientRequestContext(ClientFactory, MeterRegistry, Scheme, HttpMethod, String, String, String, ClientOptions, Request)}.
      */
+    @Deprecated
     public DefaultClientRequestContext(
             ClientFactory factory, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
             ClientOptions options, Request request) {
-        this(requireNonNull(factory, "factory"), null, meterRegistry, sessionProtocol,
+        this(factory, meterRegistry, Scheme.of(SerializationFormat.NONE, sessionProtocol),
              method, path, query, fragment, options, request);
     }
 
     private DefaultClientRequestContext(
             @Nullable ClientFactory factory, @Nullable EventLoop eventLoop, MeterRegistry meterRegistry,
-            SessionProtocol sessionProtocol, HttpMethod method, String path, @Nullable String query,
-            @Nullable String fragment, ClientOptions options, Request request) {
-        super(meterRegistry, sessionProtocol, method, path, query, request);
+            Scheme scheme, HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
+            ClientOptions options, Request request) {
+        super(meterRegistry, method, path, query, request);
 
         this.factory = factory;
         this.eventLoop = eventLoop;
         this.options = requireNonNull(options, "options");
+        this.scheme = scheme;
         this.fragment = fragment;
 
         log = new DefaultRequestLog(this, options.requestContentPreviewerFactory(),
@@ -213,12 +257,13 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     }
 
     private DefaultClientRequestContext(DefaultClientRequestContext ctx, Request request, Endpoint endpoint) {
-        super(ctx.meterRegistry(), ctx.sessionProtocol(), ctx.method(), ctx.path(), ctx.query(), request);
+        super(ctx.meterRegistry(), ctx.method(), ctx.path(), ctx.query(), request);
 
         eventLoop = ctx.eventLoop();
         options = ctx.options();
         endpointSelector = ctx.endpointSelector();
         this.endpoint = requireNonNull(endpoint, "endpoint");
+        scheme = ctx.scheme();
         fragment = ctx.fragment();
 
         log = new DefaultRequestLog(this, options.requestContentPreviewerFactory(),
@@ -284,11 +329,6 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     }
 
     @Override
-    public ClientOptions options() {
-        return options;
-    }
-
-    @Override
     public EndpointSelector endpointSelector() {
         return endpointSelector;
     }
@@ -299,9 +339,57 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     }
 
     @Override
+    public ClientOptions options() {
+        return options;
+    }
+
+    @Override
+    public Scheme scheme() {
+        return scheme;
+    }
+
+    @Override
+    public SessionProtocol sessionProtocol() {
+        return scheme.sessionProtocol();
+    }
+
+    @Override
     @Nullable
     public String fragment() {
         return fragment;
+    }
+
+    @Override
+    protected URI uncachedUri(boolean simplifyScheme) {
+        final StringBuilder buf = new StringBuilder(64);
+        if (simplifyScheme) {
+            buf.append(sessionProtocol().isTls() ? "https://" : "http://");
+        } else {
+            buf.append(sessionProtocol()).append("://");
+        }
+
+        if (endpoint != null) {
+            buf.append(endpoint.authority());
+        } else {
+            buf.append("UNKNOWN");
+        }
+
+        buf.append(path());
+
+        final String query = query();
+        if (query != null) {
+            buf.append('?').append(query);
+        }
+
+        if (fragment != null) {
+            buf.append('#').append(fragment);
+        }
+
+        try {
+            return new URI(buf.toString());
+        } catch (URISyntaxException e) {
+            throw new IllegalStateException("Failed to create a valid URI: " + buf, e);
+        }
     }
 
     @Override

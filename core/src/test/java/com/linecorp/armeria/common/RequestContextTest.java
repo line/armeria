@@ -455,8 +455,8 @@ public class RequestContextTest {
 
     private class DummyRequestContext extends NonWrappingRequestContext {
         DummyRequestContext() {
-            super(NoopMeterRegistry.get(), SessionProtocol.HTTP,
-                  HttpMethod.GET, "/", null, HttpRequest.streaming(HttpMethod.GET, "/"));
+            super(NoopMeterRegistry.get(), HttpMethod.GET, "/", null,
+                  HttpRequest.streaming(HttpMethod.GET, "/"));
         }
 
         @Override
@@ -477,6 +477,11 @@ public class RequestContextTest {
         @Override
         protected Channel channel() {
             return channel;
+        }
+
+        @Override
+        public SessionProtocol sessionProtocol() {
+            return SessionProtocol.HTTP;
         }
 
         @Nullable

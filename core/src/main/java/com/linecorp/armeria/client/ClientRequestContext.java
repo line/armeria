@@ -35,6 +35,8 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.logging.RequestLog;
 
 import io.netty.util.Attribute;
@@ -179,6 +181,18 @@ public interface ClientRequestContext extends RequestContext {
      * Returns the {@link ClientOptions} of the current {@link Request}.
      */
     ClientOptions options();
+
+    /**
+     * Returns the {@link Scheme} of the current {@link Request}.
+     */
+    Scheme scheme();
+
+    /**
+     * Returns the {@link SerializationFormat} of the current {@link Request}.
+     */
+    default SerializationFormat serializationFormat() {
+        return scheme().serializationFormat();
+    }
 
     /**
      * Returns the fragment part of the URI of the current {@link Request}, as defined in

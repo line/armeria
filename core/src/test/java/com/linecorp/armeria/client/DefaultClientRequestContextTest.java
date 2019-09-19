@@ -19,12 +19,21 @@ package com.linecorp.armeria.client;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+import java.net.URI;
+
 import org.junit.jupiter.api.Test;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 
@@ -34,9 +43,63 @@ import io.netty.util.AttributeKey;
 class DefaultClientRequestContextTest {
 
     @Test
+    void uri() {
+        final HttpRequest request =
+                HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/foo",
+                                                 HttpHeaderNames.AUTHORITY, "example.com:8080"));
+        final ClientRequestContext ctx = ClientRequestContextBuilder.of(request)
+                                                                    .sessionProtocol(SessionProtocol.H2C)
+                                                                    .build();
+        assertThat(ctx.uri()).isEqualTo(URI.create("h2c://example.com:8080/foo"))
+                             .isEqualTo(ctx.uri(false));
+        assertThat(ctx.uri(true)).isEqualTo(URI.create("http://example.com:8080/foo"));
+    }
+
+    @Test
+    void uriWithQuery() {
+        final HttpRequest request =
+                HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/foo?bar=baz",
+                                                 HttpHeaderNames.AUTHORITY, "127.0.0.1"));
+        final ClientRequestContext ctx = ClientRequestContextBuilder.of(request)
+                                                                    .sessionProtocol(SessionProtocol.H2C)
+                                                                    .build();
+
+        assertThat(ctx.uri()).isEqualTo(URI.create("h2c://127.0.0.1/foo?bar=baz"))
+                             .isEqualTo(ctx.uri(false));
+        assertThat(ctx.uri(true)).isEqualTo(URI.create("http://127.0.0.1/foo?bar=baz"));
+    }
+
+    @Test
+    void uriWithFragment() {
+        final RpcRequest request = RpcRequest.of(Object.class, "bar", ImmutableList.of());
+        final ClientRequestContext ctx =
+                ClientRequestContextBuilder.of(request, URI.create("h2c://[::1]:8080/foo#fragment"))
+                                           .sessionProtocol(SessionProtocol.H2C)
+                                           .build();
+
+        assertThat(ctx.uri()).isEqualTo(URI.create("h2c://[::1]:8080/foo#fragment"))
+                             .isEqualTo(ctx.uri(false));
+        assertThat(ctx.uri(true)).isEqualTo(URI.create("http://[::1]:8080/foo#fragment"));
+    }
+
+    @Test
+    void uriCache() {
+        final HttpRequest request =
+                HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/foo",
+                                                 HttpHeaderNames.AUTHORITY, "example.com:8080"));
+        final ClientRequestContext ctx = ClientRequestContextBuilder.of(request)
+                                                                    .sessionProtocol(SessionProtocol.H2C)
+                                                                    .build();
+        assertThat(ctx.uri(true)).isSameAs(ctx.uri(true));
+        assertThat(ctx.uri(false)).isSameAs(ctx.uri(false));
+        assertThat(ctx.uri(true)).isNotSameAs(ctx.uri(false));
+    }
+
+    @Test
     void deriveContext() {
         final DefaultClientRequestContext originalCtx = new DefaultClientRequestContext(
-                mock(EventLoop.class), NoopMeterRegistry.get(), SessionProtocol.H2C,
+                mock(EventLoop.class), NoopMeterRegistry.get(),
+                Scheme.of(SerializationFormat.NONE, SessionProtocol.H2C),
                 HttpMethod.POST, "/foo", null, null,
                 ClientOptions.DEFAULT, mock(Request.class));
         originalCtx.init(Endpoint.of("example.com", 8080));
@@ -50,6 +113,7 @@ class DefaultClientRequestContextTest {
         final ClientRequestContext derivedCtx = originalCtx.newDerivedContext(newRequest);
         assertThat(derivedCtx.endpoint()).isSameAs(originalCtx.endpoint());
         assertThat(derivedCtx.sessionProtocol()).isSameAs(originalCtx.sessionProtocol());
+        assertThat(derivedCtx.scheme()).isSameAs(originalCtx.scheme());
         assertThat(derivedCtx.method()).isSameAs(originalCtx.method());
         assertThat(derivedCtx.options()).isSameAs(originalCtx.options());
         assertThat(derivedCtx.<Request>request()).isSameAs(newRequest);

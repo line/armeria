@@ -27,6 +27,8 @@ import com.linecorp.armeria.common.AbstractRequestContextBuilder;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -64,6 +66,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
 
     @Nullable
     private final String fragment;
+    private SerializationFormat serializationFormat = SerializationFormat.NONE;
     @Nullable
     private Endpoint endpoint;
     private ClientOptions options = ClientOptions.DEFAULT;
@@ -81,6 +84,29 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     @Override
     public ClientRequestContextBuilder method(HttpMethod method) {
         super.method(method);
+        return this;
+    }
+
+    /**
+     * Sets the {@link SerializationFormat} of the request. If not set, {@link SerializationFormat#NONE} is
+     * used.
+     *
+     * @see #scheme(Scheme)
+     */
+    public ClientRequestContextBuilder serializationFormat(SerializationFormat serializationFormat) {
+        this.serializationFormat = requireNonNull(serializationFormat, "serializationFormat");
+        return this;
+    }
+
+    /**
+     * Sets the {@link Scheme} of the request. If not set, {@code "none+http"} is used.
+     *
+     * @see #sessionProtocol(SessionProtocol)
+     * @see #serializationFormat(SerializationFormat)
+     */
+    public ClientRequestContextBuilder scheme(Scheme scheme) {
+        sessionProtocol(scheme.sessionProtocol());
+        serializationFormat(scheme.serializationFormat());
         return this;
     }
 
@@ -112,7 +138,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
         }
 
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
-                eventLoop(), meterRegistry(), sessionProtocol(),
+                eventLoop(), meterRegistry(), Scheme.of(serializationFormat, sessionProtocol()),
                 method(), path(), query(), fragment, options, request());
         ctx.init(endpoint);
 
@@ -122,6 +148,8 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
         } else {
             ctx.logBuilder().startRequest(fakeChannel(), sessionProtocol(), sslSession());
         }
+
+        ctx.logBuilder().serializationFormat(serializationFormat);
 
         if (request() instanceof HttpRequest) {
             ctx.logBuilder().requestHeaders(((HttpRequest) request()).headers());

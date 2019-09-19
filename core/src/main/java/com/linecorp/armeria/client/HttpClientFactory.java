@@ -256,7 +256,7 @@ final class HttpClientFactory extends AbstractClientFactory {
                                             Client<HttpRequest, HttpResponse> delegate) {
         return new DefaultHttpClient(
                 new DefaultClientBuilderParams(this, uri, HttpClient.class, options),
-                delegate, meterRegistry, scheme.sessionProtocol(), endpoint);
+                delegate, meterRegistry, scheme, endpoint);
     }
 
     private static void validateClientType(Class<?> clientType) {

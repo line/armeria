@@ -220,8 +220,8 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
 
     private class DummyRequestContext extends NonWrappingRequestContext {
         DummyRequestContext() {
-            super(NoopMeterRegistry.get(), SessionProtocol.HTTP,
-                  HttpMethod.GET, "/", null, HttpRequest.streaming(HttpMethod.GET, "/"));
+            super(NoopMeterRegistry.get(), HttpMethod.GET, "/", null,
+                  HttpRequest.streaming(HttpMethod.GET, "/"));
         }
 
         @Override
@@ -243,6 +243,11 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
         @Override
         protected Channel channel() {
             return null;
+        }
+
+        @Override
+        public SessionProtocol sessionProtocol() {
+            return SessionProtocol.HTTP;
         }
 
         @Nullable

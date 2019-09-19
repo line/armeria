@@ -19,6 +19,7 @@ package com.linecorp.armeria.common;
 import static java.util.Objects.requireNonNull;
 
 import java.net.SocketAddress;
+import java.net.URI;
 import java.util.Iterator;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -89,6 +90,16 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     @Override
     public SSLSession sslSession() {
         return delegate().sslSession();
+    }
+
+    @Override
+    public URI uri() {
+        return delegate().uri();
+    }
+
+    @Override
+    public URI uri(boolean simplifyScheme) {
+        return delegate().uri(simplifyScheme);
     }
 
     @Override
