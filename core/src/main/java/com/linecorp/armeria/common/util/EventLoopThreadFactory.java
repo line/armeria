@@ -39,7 +39,6 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      * Creates a new factory that creates a non-daemon and normal-priority thread.
      *
      * @param threadNamePrefix the prefix of the names of the threads created by this factory.
-     *
      */
     public EventLoopThreadFactory(String threadNamePrefix) {
         super(requireNonNull(threadNamePrefix, "threadNamePrefix"), false, Thread.NORM_PRIORITY,
@@ -51,7 +50,6 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      *
      * @param threadNamePrefix the prefix of the names of the threads created by this factory.
      * @param daemon whether to create a daemon thread.
-     *
      */
     public EventLoopThreadFactory(String threadNamePrefix, boolean daemon) {
         super(requireNonNull(threadNamePrefix, "threadNamePrefix"), daemon, Thread.NORM_PRIORITY,
@@ -63,7 +61,6 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      *
      * @param threadNamePrefix the prefix of the names of the threads created by this factory.
      * @param priority the priority of the threads created by this factory.
-     *
      */
     public EventLoopThreadFactory(String threadNamePrefix, int priority) {
         super(requireNonNull(threadNamePrefix, "threadNamePrefix"), false, priority,
@@ -76,7 +73,6 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      * @param threadNamePrefix the prefix of the names of the threads created by this factory.
      * @param daemon whether to create a daemon thread.
      * @param priority the priority of the threads created by this factory.
-     *
      */
     public EventLoopThreadFactory(String threadNamePrefix, boolean daemon, int priority) {
         super(requireNonNull(threadNamePrefix, "threadNamePrefix"), daemon, priority, null,
@@ -90,7 +86,6 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      * @param daemon whether to create a daemon thread.
      * @param priority the priority of the threads created by this factory.
      * @param threadGroup the {@link ThreadGroup}.
-     *
      */
     public EventLoopThreadFactory(String threadNamePrefix, boolean daemon, int priority,
                                   @Nullable ThreadGroup threadGroup) {
