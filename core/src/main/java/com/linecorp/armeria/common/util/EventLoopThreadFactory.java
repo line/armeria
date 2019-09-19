@@ -29,7 +29,9 @@ import javax.annotation.Nullable;
  * @see EventLoopGroups
  *
  * @deprecated Use {@link ThreadFactories#newEventLoopThreadFactory(String, boolean)} or
- * {@link ThreadFactories#builderForEventLoops(String)}.
+ * {@link ThreadFactories#builder(String)}. Note that setting
+ * {@link ThreadFactoryBuilder#eventLoop(boolean)} true is required to create event loop thread. e.g.
+ * {@code ThreadFactories.builder("treadPrefix").eventLoop(true).build()}.
  */
 @Deprecated
 public final class EventLoopThreadFactory extends AbstractThreadFactory {

@@ -25,13 +25,13 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 /**
- * Builds a new {@link ThreadFactory} instance.
+ * Builds a new {@link ThreadFactory}.
  */
 public final class ThreadFactoryBuilder {
 
     private final String threadNamePrefix;
-    private final ThreadFactoryProvider threadFactoryProvider;
     private boolean daemon;
+    private boolean eventLoop;
     private int priority = Thread.NORM_PRIORITY;
     private Function<? super Runnable, ? extends Runnable> taskFunction = Function.identity();
 
@@ -39,14 +39,12 @@ public final class ThreadFactoryBuilder {
     private ThreadGroup threadGroup;
 
     /**
-     * Creates a new factory builder that creates a specified type of {@link ThreadFactory}.
+     * Creates a new factory builder.
      *
      * @param threadNamePrefix the prefix of the names of the threads created by this factory.
-     * @param threadFactoryProvider the constructor reference of concrete {@link AbstractThreadFactory}.
      */
-    ThreadFactoryBuilder(String threadNamePrefix, ThreadFactoryProvider threadFactoryProvider) {
+    ThreadFactoryBuilder(String threadNamePrefix) {
         this.threadNamePrefix = requireNonNull(threadNamePrefix, "threadNamePrefix");
-        this.threadFactoryProvider = requireNonNull(threadFactoryProvider, "threadFactoryProvider");
     }
 
     /**
@@ -54,6 +52,14 @@ public final class ThreadFactoryBuilder {
      */
     public ThreadFactoryBuilder daemon(boolean daemon) {
         this.daemon = daemon;
+        return this;
+    }
+
+    /**
+     * Sets event loop for new threads.
+     */
+    public ThreadFactoryBuilder eventLoop(boolean eventLoop) {
+        this.eventLoop = eventLoop;
         return this;
     }
 
@@ -99,9 +105,13 @@ public final class ThreadFactoryBuilder {
     }
 
     /**
-     * Returns a new {@link ThreadFactory} instance.
+     * Returns a new {@link ThreadFactory}.
      */
     public ThreadFactory build() {
-        return threadFactoryProvider.get(threadNamePrefix, daemon, priority, threadGroup, taskFunction);
+        if (eventLoop) {
+            return new EventLoopThreadFactory(threadNamePrefix, daemon, priority, threadGroup, taskFunction);
+        } else {
+            return new NonEventLoopThreadFactory(threadNamePrefix, daemon, priority, threadGroup, taskFunction);
+        }
     }
 }
