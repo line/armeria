@@ -88,7 +88,7 @@ public final class ArmeriaClientHttpConnector implements ClientHttpConnector {
             return requestCallback.apply(request)
                                   .then(Mono.fromFuture(request.future()))
                                   .map(ArmeriaHttpClientResponseSubscriber::new)
-                                  .flatMap(s -> Mono.fromFuture(s.httpHeadersFuture())
+                                  .flatMap(s -> Mono.fromFuture(s.headersFuture())
                                                     .map(headers -> createResponse(headers, s)));
         } catch (NullPointerException | IllegalArgumentException e) {
             return Mono.error(e);

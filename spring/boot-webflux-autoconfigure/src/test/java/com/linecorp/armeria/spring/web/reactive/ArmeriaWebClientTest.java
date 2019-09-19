@@ -136,6 +136,20 @@ public class ArmeriaWebClientTest {
     }
 
     @Test
+    public void getConflictUsingBodyToMono() {
+        final Mono<String> response =
+                webClient.get()
+                         .uri(uri("/conflict"))
+                         .retrieve()
+                         .onStatus(HttpStatus::isError,
+                                   resp -> resp.bodyToMono(String.class).map(Exception::new))
+                         .bodyToMono(String.class);
+        StepVerifier.create(response)
+                    .expectError()
+                    .verify(Duration.ofSeconds(10));
+    }
+
+    @Test
     public void getResource() {
         final Flux<DataBuffer> body =
                 webClient.get()
