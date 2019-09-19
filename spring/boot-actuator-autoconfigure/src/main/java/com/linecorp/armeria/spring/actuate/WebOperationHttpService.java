@@ -138,7 +138,7 @@ final class WebOperationHttpService implements HttpService {
     }
 
     private HttpResponse handleResult(ServiceRequestContext ctx,
-                                             @Nullable Object result, HttpMethod method) throws IOException {
+                                      @Nullable Object result, HttpMethod method) throws IOException {
         if (result == null) {
             return HttpResponse.of(method != HttpMethod.GET ? HttpStatus.NO_CONTENT : HttpStatus.NOT_FOUND);
         }
