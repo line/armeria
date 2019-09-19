@@ -46,7 +46,7 @@ abstract class AbstractThreadFactory implements ThreadFactory {
     public final Thread newThread(Runnable r) {
         final Runnable newRunnable = taskFunction.apply(r);
         checkState(newRunnable != null, "taskFunction.apply() returned null.");
-        return delegate.newThread(taskFunction.apply(r));
+        return delegate.newThread(newRunnable);
     }
 
     abstract Thread newThread(@Nullable ThreadGroup threadGroup, Runnable r, String name);
