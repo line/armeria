@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.util;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.ThreadFactory;
@@ -43,6 +44,8 @@ abstract class AbstractThreadFactory implements ThreadFactory {
 
     @Override
     public final Thread newThread(Runnable r) {
+        final Runnable newRunnable = taskFunction.apply(r);
+        checkState(newRunnable != null, "taskFunction.apply() returned null.");
         return delegate.newThread(taskFunction.apply(r));
     }
 
