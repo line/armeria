@@ -32,8 +32,7 @@ final class NonEventLoopThreadFactory extends AbstractThreadFactory {
     NonEventLoopThreadFactory(String threadNamePrefix, boolean daemon, int priority,
                               @Nullable ThreadGroup threadGroup,
                               Function<? super Runnable, ? extends Runnable> taskFunction) {
-        super(requireNonNull(threadNamePrefix, "threadNamePrefix"), daemon, priority, threadGroup,
-              requireNonNull(taskFunction, "taskFunction"));
+        super(threadNamePrefix, daemon, priority, threadGroup, requireNonNull(taskFunction, "taskFunction"));
     }
 
     @Override

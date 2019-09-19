@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.common.util;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.concurrent.ThreadFactory;
 import java.util.function.Function;
 
@@ -41,8 +39,7 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      * @param threadNamePrefix the prefix of the names of the threads created by this factory.
      */
     public EventLoopThreadFactory(String threadNamePrefix) {
-        super(requireNonNull(threadNamePrefix, "threadNamePrefix"), false, Thread.NORM_PRIORITY,
-              null, Function.identity());
+        super(threadNamePrefix, false, Thread.NORM_PRIORITY, null, Function.identity());
     }
 
     /**
@@ -52,8 +49,7 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      * @param daemon whether to create a daemon thread.
      */
     public EventLoopThreadFactory(String threadNamePrefix, boolean daemon) {
-        super(requireNonNull(threadNamePrefix, "threadNamePrefix"), daemon, Thread.NORM_PRIORITY,
-              null, Function.identity());
+        super(threadNamePrefix, daemon, Thread.NORM_PRIORITY, null, Function.identity());
     }
 
     /**
@@ -63,8 +59,7 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      * @param priority the priority of the threads created by this factory.
      */
     public EventLoopThreadFactory(String threadNamePrefix, int priority) {
-        super(requireNonNull(threadNamePrefix, "threadNamePrefix"), false, priority,
-              null, Function.identity());
+        super(threadNamePrefix, false, priority, null, Function.identity());
     }
 
     /**
@@ -75,8 +70,7 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      * @param priority the priority of the threads created by this factory.
      */
     public EventLoopThreadFactory(String threadNamePrefix, boolean daemon, int priority) {
-        super(requireNonNull(threadNamePrefix, "threadNamePrefix"), daemon, priority, null,
-              Function.identity());
+        super(threadNamePrefix, daemon, priority, null, Function.identity());
     }
 
     /**
@@ -89,15 +83,13 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      */
     public EventLoopThreadFactory(String threadNamePrefix, boolean daemon, int priority,
                                   @Nullable ThreadGroup threadGroup) {
-        super(requireNonNull(threadNamePrefix, "threadNamePrefix"), daemon, priority, threadGroup,
-              Function.identity());
+        super(threadNamePrefix, daemon, priority, threadGroup, Function.identity());
     }
 
     EventLoopThreadFactory(String threadNamePrefix, boolean daemon, int priority,
                            @Nullable ThreadGroup threadGroup,
                            Function<? super Runnable, ? extends Runnable> taskFunction) {
-        super(requireNonNull(threadNamePrefix, "threadNamePrefix"), daemon, priority, threadGroup,
-              requireNonNull(taskFunction, "taskFunction"));
+        super(threadNamePrefix, daemon, priority, threadGroup, taskFunction);
     }
 
     @Override
