@@ -55,7 +55,9 @@ final class ArmeriaHttpClientParser extends HttpClientParser {
     @Override
     public <T> void response(HttpAdapter<?, T> rawAdapter, T res, Throwable error, SpanCustomizer customizer) {
         super.response(rawAdapter, res, error, customizer);
-        if (!(res instanceof ClientRequestContext)) return;
+        if (!(res instanceof ClientRequestContext)) {
+            return;
+        }
         final ClientRequestContext ctx = (ClientRequestContext) res;
 
         final RequestLog requestLog = ctx.log();

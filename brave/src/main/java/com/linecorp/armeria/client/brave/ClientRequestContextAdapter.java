@@ -29,12 +29,15 @@ import com.linecorp.armeria.internal.brave.SpanContextUtil;
 import com.linecorp.armeria.internal.brave.SpanTags;
 
 import brave.http.HttpClientAdapter;
-import brave.http.HttpClientHandler;
 
+/**
+ * Wraps a pair of {@link ClientRequestContext} and {@link RequestHeadersBuilder} in an {@link
+ * brave.http.HttpClientRequest}.
+ */
 final class ClientRequestContextAdapter {
     /**
      * @param ctx used to parse http properties
-     * @param headersBuilder receives headers injected by {@link HttpClientHandler#handleSend(brave.http.HttpClientRequest)}.
+     * @param headersBuilder receives headers injected from the trace context.
      */
     static brave.http.HttpClientRequest asHttpClientRequest(ClientRequestContext ctx,
         RequestHeadersBuilder headersBuilder) {
@@ -88,16 +91,16 @@ final class ClientRequestContextAdapter {
         }
 
         @Override
+        public void header(String name, String value) {
+            headersBuilder.set(name, value);
+        }
+
+        @Override
         public long startTimestamp() {
             if (!ctx.log().isAvailable(RequestLogAvailability.REQUEST_START)) {
                 return 0L;
             }
             return ctx.log().requestStartTimeMicros();
-        }
-
-        @Override
-        public void header(String name, String value) {
-            headersBuilder.set(name, value);
         }
     }
 
@@ -175,5 +178,8 @@ final class ClientRequestContextAdapter {
         }
         final Object requestContent = requestLog.requestContent();
         return requestContent instanceof RpcRequest ? ((RpcRequest) requestContent).method() : null;
+    }
+
+    private ClientRequestContextAdapter() {
     }
 }

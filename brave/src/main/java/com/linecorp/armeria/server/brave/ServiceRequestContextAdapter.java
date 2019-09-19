@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.brave;
 
 import java.util.List;
+
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.RequestContext;
@@ -25,14 +26,19 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.server.Route;
-import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.internal.brave.SpanContextUtil;
 import com.linecorp.armeria.internal.brave.SpanTags;
+import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import brave.Span;
 import brave.http.HttpServerAdapter;
+import brave.http.HttpServerHandler;
 
+/**
+ * Wraps {@link ServiceRequestContext} in an {@link brave.http.HttpServerRequest}, for use in
+ * {@link HttpServerHandler}.
+ */
 final class ServiceRequestContextAdapter {
     static brave.http.HttpServerRequest asHttpServerRequest(ServiceRequestContext ctx) {
         return new HttpServerRequest(ctx);
@@ -197,5 +203,8 @@ final class ServiceRequestContextAdapter {
         }
         final Object requestContent = requestLog.requestContent();
         return requestContent instanceof RpcRequest ? ((RpcRequest) requestContent).method() : null;
+    }
+
+    private ServiceRequestContextAdapter() {
     }
 }
