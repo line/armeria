@@ -34,36 +34,33 @@ interface OwnProps {
 
 type Props = OwnProps & RouteComponentProps<{ name: string }>;
 
-const StructPage: React.FunctionComponent<Props> = ({
-  specification,
-  match,
-}) => {
-  const data = specification.getStructByName(match.params.name);
-  if (!data) {
-    return <>Not found.</>;
+export default class StructPage extends React.PureComponent<Props> {
+  public render() {
+    const { specification } = this.props;
+    const data = specification.getStructByName(this.props.match.params.name);
+    if (!data) {
+      return <>Not found.</>;
+    }
+
+    return (
+      <>
+        <Typography variant="h5">
+          <code>{simpleName(data.name)}</code>
+        </Typography>
+        <Typography variant="subtitle1" paragraph>
+          <code>{packageName(data.name)}</code>
+        </Typography>
+        <Typography variant="body2" paragraph>
+          {data.docString}
+        </Typography>
+        <Section>
+          <VariableList
+            title="Fields"
+            variables={data.fields}
+            specification={specification}
+          />
+        </Section>
+      </>
+    );
   }
-
-  return (
-    <>
-      <Typography variant="h5">
-        <code>{simpleName(data.name)}</code>
-      </Typography>
-      <Typography variant="subtitle1" paragraph>
-        <code>{packageName(data.name)}</code>
-      </Typography>
-      <Typography variant="body2" paragraph>
-        {data.docString}
-      </Typography>
-      <Section>
-        <VariableList
-          title="Fields"
-          variables={data.fields}
-          hasLocation={false}
-          specification={specification}
-        />
-      </Section>
-    </>
-  );
-};
-
-export default React.memo(StructPage);
+}
