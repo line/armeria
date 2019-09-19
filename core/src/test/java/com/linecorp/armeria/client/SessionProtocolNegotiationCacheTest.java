@@ -24,11 +24,19 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.netty.util.NetUtil;
 
 class SessionProtocolNegotiationCacheTest {
+
+    @BeforeEach
+    @AfterEach
+    void clearCache() {
+        SessionProtocolNegotiationCache.clear();
+    }
 
     @Test
     void unsupported() throws UnknownHostException {
