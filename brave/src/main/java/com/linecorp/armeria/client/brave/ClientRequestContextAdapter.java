@@ -35,10 +35,6 @@ import brave.http.HttpClientAdapter;
  * brave.http.HttpClientRequest}.
  */
 final class ClientRequestContextAdapter {
-    /**
-     * @param ctx used to parse http properties
-     * @param headersBuilder receives headers injected from the trace context.
-     */
     static brave.http.HttpClientRequest asHttpClientRequest(ClientRequestContext ctx,
         RequestHeadersBuilder headersBuilder) {
         return new HttpClientRequest(ctx, headersBuilder);
