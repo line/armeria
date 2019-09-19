@@ -38,9 +38,7 @@ public final class ThreadFactories {
      */
     public static ThreadFactory newEventLoopThreadFactory(String threadPrefix, boolean daemon) {
 
-        return builder(requireNonNull(threadPrefix, "threadPrefix")).eventLoop(true)
-                                                                    .daemon(daemon)
-                                                                    .build();
+        return builder(threadPrefix).eventLoop(true).daemon(daemon).build();
     }
 
     /**
@@ -48,7 +46,7 @@ public final class ThreadFactories {
      * This is a shortcut method of {@code ThreadFactories.builder("threadPrefix").daemon(daemon).build()}.
      */
     public static ThreadFactory newThreadFactory(String threadPrefix, boolean daemon) {
-        return builder(requireNonNull(threadPrefix, "threadPrefix")).daemon(daemon).build();
+        return builder(threadPrefix).daemon(daemon).build();
     }
 
     private ThreadFactories() {}
