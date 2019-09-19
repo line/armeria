@@ -15,7 +15,12 @@
  */
 package com.linecorp.armeria.common;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
+
 import java.util.Map.Entry;
+
+import com.linecorp.armeria.client.Endpoint;
 
 /**
  * Builds a {@link RequestHeaders}.
@@ -39,19 +44,53 @@ public interface RequestHeadersBuilder extends HttpHeadersBuilder, RequestHeader
     RequestHeadersBuilder method(HttpMethod method);
 
     /**
-     * Sets the {@code ":path"} headers.
+     * Sets the {@code ":path"} header.
      */
     RequestHeadersBuilder path(String path);
 
     /**
-     * Sets the {@code ":scheme"} headers.
+     * Sets the {@code ":scheme"} header.
      */
     RequestHeadersBuilder scheme(String scheme);
 
     /**
-     * Sets the {@code ":authority"} headers.
+     * Sets the {@code ":scheme"} header from the specified {@link SessionProtocol}.
+     */
+    default RequestHeadersBuilder scheme(SessionProtocol sessionProtocol) {
+        requireNonNull(sessionProtocol, "sessionProtocol");
+        switch (sessionProtocol) {
+            case HTTPS:
+            case H2:
+            case H1:
+                scheme("https");
+                break;
+            case HTTP:
+            case H2C:
+            case H1C:
+                scheme("http");
+                break;
+            case PROXY:
+                scheme("proxy");
+                break;
+        }
+        return this;
+    }
+
+    /**
+     * Sets the {@code ":authority"} header.
      */
     RequestHeadersBuilder authority(String authority);
+
+    /**
+     * Sets the {@code ":authority"} header from the specified {@link Endpoint}.
+     *
+     * @throws IllegalArgumentException if the specified {@link Endpoint} refers to a group
+     */
+    default RequestHeadersBuilder authority(Endpoint endpoint) {
+        requireNonNull(endpoint, "endpoint");
+        checkArgument(!endpoint.isGroup(), "endpoint: %s (expected: a host endpoint)", endpoint);
+        return authority(endpoint.authority());
+    }
 
     // Override the return type of the chaining methods in the superclass.
 

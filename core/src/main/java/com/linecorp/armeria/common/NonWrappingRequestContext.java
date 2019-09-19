@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.SocketAddress;
@@ -91,6 +92,9 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
             if (!(req instanceof HttpRequest)) {
                 return false;
             }
+
+            final HttpRequest httpReq = (HttpRequest) req;
+            validateHeaders(httpReq.headers());
         } else {
             assert oldReq instanceof RpcRequest;
             if (!(req instanceof RpcRequest)) {
@@ -98,8 +102,26 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
             }
         }
 
-        request = req;
+        unsafeUpdateRequest(req);
         return true;
+    }
+
+    /**
+     * Validates the specified {@link RequestHeaders}. By default, this method will raise
+     * an {@link IllegalArgumentException} if it does not have {@code ":scheme"} or {@code ":authority"}
+     * header.
+     */
+    protected void validateHeaders(RequestHeaders headers) {
+        checkArgument(headers.scheme() != null && headers.authority() != null,
+                      "must set ':scheme' and ':authority' headers");
+    }
+
+    /**
+     * Replaces the {@link Request} associated with this context with the specified one without any validation.
+     * Internal use only. Use it at your own risk.
+     */
+    protected final void unsafeUpdateRequest(Request req) {
+        request = req;
     }
 
     @Override

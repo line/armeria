@@ -37,8 +37,11 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -166,10 +169,10 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
                 //       so that the customizer can inject the attributes which may be required
                 //       by the EndpointSelector.
                 runThreadLocalContextCustomizer();
-                this.endpoint = endpointSelector.select(this);
+                updateEndpoint(endpointSelector.select(this));
             } else {
                 endpointSelector = null;
-                this.endpoint = endpoint;
+                updateEndpoint(endpoint);
                 runThreadLocalContextCustomizer();
             }
 
@@ -182,15 +185,20 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
             }
 
             return true;
-        } catch (Exception e) {
+        } catch (Throwable t) {
             if (eventLoop == null) {
                 // Always set the eventLoop because it can be used in a decorator.
                 eventLoop = CommonPools.workerGroup().next();
             }
-            failEarly(e);
+            failEarly(t);
         }
 
         return false;
+    }
+
+    private void updateEndpoint(Endpoint endpoint) {
+        this.endpoint = endpoint;
+        autoFillSchemeAndAuthority();
     }
 
     private void runThreadLocalContextCustomizer() {
@@ -200,7 +208,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         }
     }
 
-    private void failEarly(Exception cause) {
+    private void failEarly(Throwable cause) {
         final RequestLogBuilder logBuilder = logBuilder();
         final UnprocessedRequestException wrapped = new UnprocessedRequestException(cause);
         logBuilder.endRequest(wrapped);
@@ -208,7 +216,29 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
         final Request req = request();
         if (req instanceof StreamMessage) {
+            autoFillSchemeAndAuthority();
             ((StreamMessage<?>) req).abort();
+        }
+    }
+
+    private void autoFillSchemeAndAuthority() {
+        final Request req = request();
+        if (req instanceof HttpRequest) {
+            final HttpRequest httpReq = (HttpRequest) req;
+            final RequestHeaders oldHeaders = httpReq.headers();
+            final RequestHeadersBuilder newHeadersBuilder = oldHeaders.toBuilder();
+
+            final String authority = endpoint != null ? endpoint.authority() : "UNKNOWN";
+            if (oldHeaders.scheme() != null && authority.equals(oldHeaders.authority())) {
+                unsafeUpdateRequest(req);
+            } else {
+                unsafeUpdateRequest(HttpRequest.of(
+                        httpReq,
+                        oldHeaders.toBuilder()
+                                  .authority(authority)
+                                  .scheme(sessionProtocol())
+                                  .build()));
+            }
         }
     }
 
@@ -218,7 +248,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         eventLoop = ctx.eventLoop();
         options = ctx.options();
         endpointSelector = ctx.endpointSelector();
-        this.endpoint = requireNonNull(endpoint, "endpoint");
+        updateEndpoint(requireNonNull(endpoint, "endpoint"));
         fragment = ctx.fragment();
 
         log = new DefaultRequestLog(this, options.requestContentPreviewerFactory(),
@@ -255,6 +285,17 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     @Override
     public ClientRequestContext newDerivedContext(Request request, Endpoint endpoint) {
         return new DefaultClientRequestContext(this, request, endpoint);
+    }
+
+    @Override
+    protected void validateHeaders(RequestHeaders headers) {
+        // Do not validate/filter if the context is not fully initialized yet,
+        // because init() will trigger this method again via updateEndpoint().
+        if (eventLoop == null) {
+            return;
+        }
+
+        super.validateHeaders(headers);
     }
 
     @Override

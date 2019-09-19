@@ -36,7 +36,6 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextBuilder;
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -211,13 +210,11 @@ class BraveClientTest {
         final RpcRequest rpcReq = RpcRequest.of(HelloService.Iface.class, "hello", "Armeria");
         final HttpResponse res = HttpResponse.of(HttpStatus.OK);
         final RpcResponse rpcRes = RpcResponse.of("Hello, Armeria!");
-        final ClientRequestContext ctx =
-                ClientRequestContextBuilder.of(req)
-                                           .endpoint(Endpoint.of("localhost", 8080))
-                                           .build();
+        final ClientRequestContext ctx = ClientRequestContextBuilder.of(req).build();
+        final HttpRequest actualReq = ctx.request();
 
         ctx.logBuilder().requestFirstBytesTransferred();
-        ctx.logBuilder().requestContent(rpcReq, req);
+        ctx.logBuilder().requestContent(rpcReq, actualReq);
         ctx.logBuilder().endRequest();
 
         try (SafeCloseable ignored = ctx.push()) {
@@ -227,7 +224,7 @@ class BraveClientTest {
 
             final BraveClient stub = BraveClient.newDecorator(httpTracing).apply(delegate);
             // do invoke
-            final HttpResponse actualRes = stub.execute(ctx, req);
+            final HttpResponse actualRes = stub.execute(ctx, actualReq);
 
             assertThat(actualRes).isEqualTo(res);
 

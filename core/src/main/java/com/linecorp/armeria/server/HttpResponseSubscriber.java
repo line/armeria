@@ -179,7 +179,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                 final ResponseHeadersBuilder newHeaders = fillAdditionalHeaders(headers, additionalHeaders);
 
                 if (endOfStream && !additionalTrailers.isEmpty()) {
-                    newHeaders.setIfAbsent(additionalTrailers);
+                    newHeaders.set(additionalTrailers);
                 }
 
                 if (newHeaders.contains(HttpHeaderNames.CONTENT_LENGTH) &&
@@ -448,7 +448,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
             return trailers;
         }
 
-        return trailers.toBuilder().setIfAbsent(additionalTrailers).build();
+        return trailers.toBuilder().set(additionalTrailers).build();
     }
 
     private boolean cancelTimeout() {

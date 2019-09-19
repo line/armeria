@@ -98,5 +98,21 @@ public class DefaultRequestHeadersBuilderTest {
         assertThatThrownBy(() -> RequestHeaders.builder().path("/").build())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(":method");
+
+        // URI validation.
+        assertThatThrownBy(() -> RequestHeaders.builder().uri())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(":scheme")
+                .hasMessageContaining(":authority")
+                .hasMessageContaining(":path");
+        assertThatThrownBy(() -> RequestHeaders.builder().path("/").authority("foo.com").uri())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(":scheme");
+        assertThatThrownBy(() -> RequestHeaders.builder().path("/").scheme("http").uri())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(":authority");
+        assertThatThrownBy(() -> RequestHeaders.builder().authority("foo.com").scheme("http").uri())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(":path");
     }
 }

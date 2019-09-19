@@ -178,14 +178,26 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     }
 
     private RequestHeaders autoFillHeaders() {
-        final RequestHeadersBuilder requestHeaders = request.headers().toBuilder();
+        final RequestHeaders oldHeaders = request.headers();
+        final RequestHeadersBuilder newHeaders = oldHeaders.toBuilder();
+
         final HttpHeaders additionalHeaders = reqCtx.additionalRequestHeaders();
         if (!additionalHeaders.isEmpty()) {
-            requestHeaders.setIfAbsent(additionalHeaders);
+            newHeaders.set(additionalHeaders);
         }
 
+        if (!newHeaders.contains(HttpHeaderNames.USER_AGENT)) {
+            newHeaders.add(HttpHeaderNames.USER_AGENT, HttpHeaderUtil.USER_AGENT.toString());
+        }
+
+        // :scheme and :authority are auto-filled in the beginning of decorator chain,
+        // but a decorator might have removed them, so we check again.
         final SessionProtocol sessionProtocol = reqCtx.sessionProtocol();
-        if (requestHeaders.authority() == null) {
+        if (newHeaders.scheme() == null) {
+            newHeaders.scheme(sessionProtocol);
+        }
+
+        if (newHeaders.authority() == null) {
             final String hostname = remoteAddress.getHostName();
             final int port = remoteAddress.getPort();
 
@@ -200,17 +212,10 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
                 authority = buf.toString();
             }
 
-            requestHeaders.add(HttpHeaderNames.AUTHORITY, authority);
+            newHeaders.add(HttpHeaderNames.AUTHORITY, authority);
         }
 
-        if (!requestHeaders.contains(HttpHeaderNames.SCHEME)) {
-            requestHeaders.add(HttpHeaderNames.SCHEME, sessionProtocol.isTls() ? "https" : "http");
-        }
-
-        if (!requestHeaders.contains(HttpHeaderNames.USER_AGENT)) {
-            requestHeaders.add(HttpHeaderNames.USER_AGENT, HttpHeaderUtil.USER_AGENT.toString());
-        }
-        return requestHeaders.build();
+        return newHeaders.build();
     }
 
     @Override

@@ -439,23 +439,12 @@ class HttpClientIntegrationTest {
         testHeaderOverridableByClientOption("/authority", HttpHeaderNames.AUTHORITY, "foo:8080");
     }
 
-    @Test
-    void testAuthorityOverridableByRequestHeader() throws Exception {
-
-        testHeaderOverridableByRequestHeader("/authority", HttpHeaderNames.AUTHORITY, "bar:8080");
-    }
-
     /**
      * User-agent header should be overridden by ClientOption.HTTP_HEADER
      */
     @Test
     void testUserAgentOverridableByClientOption() throws Exception {
         testHeaderOverridableByClientOption("/useragent", HttpHeaderNames.USER_AGENT, "foo-agent");
-    }
-
-    @Test
-    void testUserAgentOverridableByRequestHeader() throws Exception {
-        testHeaderOverridableByRequestHeader("/useragent", HttpHeaderNames.USER_AGENT, "bar-agent");
     }
 
     private static void testHeaderOverridableByClientOption(String path, AsciiString headerName,
@@ -467,22 +456,6 @@ class HttpClientIntegrationTest {
         final AggregatedHttpResponse response = client.get(path).aggregate().get();
 
         assertEquals(headerValue, response.contentUtf8());
-    }
-
-    private static void testHeaderOverridableByRequestHeader(String path, AsciiString headerName,
-                                                             String headerValue) throws Exception {
-        final HttpHeaders headers = HttpHeaders.of(headerName, headerValue);
-        final ClientOptions options = ClientOptions.of(ClientOption.HTTP_HEADERS.newValue(headers));
-        final HttpClient client = HttpClient.of(server.uri("/"), options);
-
-        final String OVERRIDDEN_VALUE = "Overridden";
-
-        final AggregatedHttpResponse response =
-                client.execute(RequestHeaders.of(HttpMethod.GET, path,
-                                                 headerName, OVERRIDDEN_VALUE))
-                      .aggregate().get();
-
-        assertEquals(OVERRIDDEN_VALUE, response.contentUtf8());
     }
 
     @Test
