@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.common.util;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.concurrent.ThreadFactory;
 import java.util.function.Function;
 
