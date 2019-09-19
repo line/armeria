@@ -41,9 +41,10 @@ import reactor.core.publisher.Mono;
 
 /**
  * A {@link Subscriber} which reads the {@link ResponseHeaders} first from an {@link HttpResponse}.
- * If the {@link ResponseHeaders} is consumed, it completes the {@code future} with the {@link ResponseHeaders}.
- * After that, it can act as a {@link Publisher} on behalf of the {@link HttpResponse},
- * by calling {@link #toResponseBodyPublisher()} which returns {@link ResponseBodyPublisher}.
+ * If the {@link ResponseHeaders} is consumed, it completes the {@link #headersFuture} with
+ * the {@link ResponseHeaders}. After that, it can act as a {@link Publisher} on behalf of
+ * the {@link HttpResponse}, by calling {@link #toResponseBodyPublisher()}
+ * which returns {@link ResponseBodyPublisher}.
  */
 final class ArmeriaHttpClientResponseSubscriber implements Subscriber<HttpObject> {
 
