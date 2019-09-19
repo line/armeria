@@ -26,27 +26,36 @@ import java.util.concurrent.ThreadFactory;
 public final class ThreadFactories {
     /**
      * Returns a new builder which builds a new {@link ThreadFactory}.
+     *
+     * @param threadNamePrefix the prefix of the names of the threads created by the factory
+     *                         built by this factory builder.
      */
-    public static ThreadFactoryBuilder builder(String threadPrefix) {
-        return new ThreadFactoryBuilder(requireNonNull(threadPrefix, "threadPrefix"));
+    public static ThreadFactoryBuilder builder(String threadNamePrefix) {
+        return new ThreadFactoryBuilder(requireNonNull(threadNamePrefix, "threadNamePrefix"));
     }
 
     /**
      * Creates a new {@link ThreadFactory} for event loop thread.
      * This is a shortcut method of
-     * {@code ThreadFactories.builder("threadPrefix").eventLoop(true).daemon(daemon).build()}.
+     * {@code ThreadFactories.builder("threadNamePrefix").eventLoop(true).daemon(daemon).build()}.
+     *
+     * @param threadNamePrefix the prefix of the names of the threads created by this factory.
+     * @param daemon whether to create a daemon thread.
      */
-    public static ThreadFactory newEventLoopThreadFactory(String threadPrefix, boolean daemon) {
+    public static ThreadFactory newEventLoopThreadFactory(String threadNamePrefix, boolean daemon) {
 
-        return builder(threadPrefix).eventLoop(true).daemon(daemon).build();
+        return builder(threadNamePrefix).eventLoop(true).daemon(daemon).build();
     }
 
     /**
      * Creates a new {@link ThreadFactory} for non event loop thread.
-     * This is a shortcut method of {@code ThreadFactories.builder("threadPrefix").daemon(daemon).build()}.
+     * This is a shortcut method of {@code ThreadFactories.builder("threadNamePrefix").daemon(daemon).build()}.
+     *
+     * @param threadNamePrefix the prefix of the names of the threads created by this factory.
+     * @param daemon whether to create a daemon thread.
      */
-    public static ThreadFactory newThreadFactory(String threadPrefix, boolean daemon) {
-        return builder(threadPrefix).daemon(daemon).build();
+    public static ThreadFactory newThreadFactory(String threadNamePrefix, boolean daemon) {
+        return builder(threadNamePrefix).daemon(daemon).build();
     }
 
     private ThreadFactories() {}
