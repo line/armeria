@@ -120,7 +120,6 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
             }
         }
 
-        // TODO: see if it makes sense to defer all parsing until here
         ctx.log().addListener(log -> SpanContextUtil.startSpan(span, log),
                               RequestLogAvailability.REQUEST_START);
 
