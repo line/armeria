@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
@@ -39,6 +40,7 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Scheme;
@@ -360,7 +362,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     }
 
     @Override
-    protected URI uncachedUri(boolean simplifyScheme) {
+    protected URI generateUri(boolean simplifyScheme) {
         final StringBuilder buf = new StringBuilder(64);
         if (simplifyScheme) {
             buf.append(sessionProtocol().isTls() ? "https://" : "http://");
@@ -371,7 +373,12 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         if (endpoint != null) {
             buf.append(endpoint.authority());
         } else {
-            buf.append("UNKNOWN");
+            final Request req = request();
+            String authority = null;
+            if (req instanceof HttpRequest) {
+                authority = ((HttpRequest) req).authority();
+            }
+            buf.append(firstNonNull(authority, "UNKNOWN"));
         }
 
         buf.append(path());

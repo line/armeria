@@ -24,7 +24,10 @@ import static org.mockito.Mockito.when;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RpcRequest;
@@ -53,12 +56,10 @@ class ArmeriaHttpClientAdapterTest {
 
     @Test
     void url() {
-        when(requestLog.isAvailable(RequestLogAvailability.SCHEME)).thenReturn(true);
-        when(requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)).thenReturn(true);
-        when(requestLog.scheme()).thenReturn(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP));
-        when(requestLog.authority()).thenReturn("example.com");
-        when(requestLog.path()).thenReturn("/foo");
-        when(requestLog.query()).thenReturn("name=hoge");
+        when(requestLog.context()).thenReturn(
+                ClientRequestContext.of(HttpRequest.of(
+                        RequestHeaders.of(HttpMethod.GET, "/foo?name=hoge",
+                                          HttpHeaderNames.AUTHORITY, "example.com"))));
         assertThat(ArmeriaHttpClientAdapter.get().url(requestLog)).isEqualTo("http://example.com/foo?name=hoge");
     }
 

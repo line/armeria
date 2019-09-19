@@ -137,12 +137,12 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     public final URI uri(boolean simplifyScheme) {
         if (simplifyScheme) {
             if (cachedSimpleUri == null) {
-                cachedSimpleUri = uncachedUri(true);
+                cachedSimpleUri = generateUri(true);
             }
             return cachedSimpleUri;
         } else {
             if (cachedUri == null) {
-                cachedUri = uncachedUri(false);
+                cachedUri = generateUri(false);
             }
             return cachedUri;
         }
@@ -151,7 +151,7 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     /**
      * Generates the {@link URI} of this request.
      */
-    protected URI uncachedUri(boolean simplifyScheme) {
+    protected URI generateUri(boolean simplifyScheme) {
         return super.uri(simplifyScheme);
     }
 
