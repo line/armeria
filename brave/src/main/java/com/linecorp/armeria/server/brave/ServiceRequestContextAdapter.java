@@ -155,6 +155,9 @@ final class ServiceRequestContextAdapter {
 
         @Override
         public long finishTimestamp() {
+            if (!ctx.log().isAvailable(RequestLogAvailability.RESPONSE_END)) {
+                return 0L;
+            }
             return SpanContextUtil.wallTimeMicros(ctx.log(), ctx.log().responseEndTimeNanos());
         }
     }
