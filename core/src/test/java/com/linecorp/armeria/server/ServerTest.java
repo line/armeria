@@ -56,6 +56,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.CompletionActions;
@@ -329,6 +330,30 @@ public class ServerTest {
                 .build();
         assertThatThrownBy(() -> duplicatedPortServer.start().join())
                 .hasCauseInstanceOf(IOException.class);
+    }
+
+    @Test
+    public void testActiveLocalPort() throws Exception {
+        final Server server = new ServerBuilder()
+                .http(0)
+                .https(0)
+                .tlsSelfSigned()
+                .service("/", (ctx, res) -> HttpResponse.of(""))
+                .build();
+
+        // not started yet
+        assertThatThrownBy(server::activeLocalPort)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("no active local ports");
+
+        server.start().get();
+
+        assertThat(server.activeLocalPort()).isPositive();
+        assertThat(server.activeLocalPort(SessionProtocol.HTTP)).isPositive();
+        assertThat(server.activeLocalPort(SessionProtocol.HTTPS)).isPositive();
+        assertThatThrownBy(() -> server.activeLocalPort(SessionProtocol.PROXY))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("no active local ports for " + SessionProtocol.PROXY);
     }
 
     @Test

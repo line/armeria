@@ -18,8 +18,6 @@ package com.linecorp.armeria.client;
 import static com.linecorp.armeria.client.DefaultClientRequestContext.THREAD_LOCAL_CONTEXT_CUSTOMIZER;
 import static java.util.Objects.requireNonNull;
 
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -31,6 +29,7 @@ import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.common.util.Unwrappable;
 
 /**
  * Creates a new client that connects to a specified {@link URI}.
@@ -390,23 +389,42 @@ public final class Clients {
 
     private static ClientBuilderParams builderParams(Object client) {
         requireNonNull(client, "client");
-        if (client instanceof ClientBuilderParams) {
-            return (ClientBuilderParams) client;
-        }
-
-        if (Proxy.isProxyClass(client.getClass())) {
-            final InvocationHandler handler = Proxy.getInvocationHandler(client);
-            if (handler instanceof ClientBuilderParams) {
-                return (ClientBuilderParams) handler;
-            }
-        }
-
         final Optional<ClientBuilderParams> params = ClientFactory.DEFAULT.clientBuilderParams(client);
         if (params.isPresent()) {
             return params.get();
         }
 
         throw new IllegalArgumentException("derivation not supported by: " + client.getClass().getName());
+    }
+
+    /**
+     * Unwraps the specified client into the object of the specified {@code type}.
+     * Use this method instead of an explicit downcast. For example:
+     * <pre>{@code
+     * HttpClient client = new HttpClientBuilder()
+     *     .decorator(LoggingClient.newDecorator())
+     *     .build();
+     *
+     * LoggingClient unwrapped = Clients.unwrap(client, LoggingClient.class).get();
+     *
+     * // If the client implements Unwrappable, you can just use the 'as()' method.
+     * LoggingClient unwrapped2 = client.as(LoggingClient.class).get();
+     * }</pre>
+     *
+     * @param type the type of the object to return
+     * @return the object of the specified {@code type} if found. {@link Optional#empty()} if not found.
+     *
+     * @see Client#as(Class)
+     * @see ClientFactory#unwrap(Object, Class)
+     * @see Unwrappable
+     */
+    public static <T> Optional<T> unwrap(Object client, Class<T> type) {
+        final Optional<ClientBuilderParams> params = ClientFactory.DEFAULT.clientBuilderParams(client);
+        if (!params.isPresent()) {
+            return Optional.empty();
+        }
+
+        return params.get().factory().unwrap(client, type);
     }
 
     /**

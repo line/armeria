@@ -116,7 +116,7 @@ public class HttpHealthCheckServiceTest {
         try {
             server.start().join();
 
-            final int port = server.activePort().get().localAddress().getPort();
+            final int port = server.activeLocalPort();
             try (Socket s = new Socket(NetUtil.LOCALHOST, port)) {
                 s.setSoTimeout(10000);
                 final InputStream in = s.getInputStream();
@@ -143,7 +143,7 @@ public class HttpHealthCheckServiceTest {
         try {
             server.start().join();
 
-            final int port = server.activePort().get().localAddress().getPort();
+            final int port = server.activeLocalPort();
             try (Socket s = new Socket(NetUtil.LOCALHOST, port)) {
                 s.setSoTimeout(10000);
                 final InputStream in = s.getInputStream();

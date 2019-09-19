@@ -85,7 +85,6 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
           key={method.name}
           title="Parameters"
           variables={method.parameters}
-          hasLocation={isAnnotatedHttpService}
           specification={props.specification}
         />
       </Section>

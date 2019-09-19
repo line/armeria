@@ -25,6 +25,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
+import com.linecorp.armeria.client.ClientOptionsBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.client.retrofit2.ArmeriaRetrofitBuilder;
@@ -82,11 +83,10 @@ public class RetrofitMeterIdPrefixFunctionTest {
     public void metrics() {
         final Example example = new ArmeriaRetrofitBuilder(clientFactory)
                 .baseUrl("h1c://127.0.0.1:" + server.httpPort())
-                .withClientOptions((s, clientOptionsBuilder) -> {
-                    return clientOptionsBuilder.decorator(
-                            MetricCollectingClient.newDecorator(
-                                    RetrofitMeterIdPrefixFunction.builder("foo").build()));
-                })
+                .clientOptions(new ClientOptionsBuilder()
+                                       .decorator(MetricCollectingClient.newDecorator(
+                                               RetrofitMeterIdPrefixFunction.builder("foo").build()))
+                                       .build())
                 .build()
                 .create(Example.class);
 

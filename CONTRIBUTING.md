@@ -17,7 +17,7 @@ source projects you are aware of. It will be amazing if you could help us by doi
 
 When you are sending a pull request and it's a non-trivial change beyond fixing typos, please sign 
 [the ICLA (individual contributor license agreement)](https://cla-assistant.io/line/armeria). Please
-[contact us](dl_oss_dev@linecorp.com) if you need the CCLA (corporate contributor license agreement).
+[contact us](mailto:dl_oss_dev@linecorp.com) if you need the CCLA (corporate contributor license agreement).
 
 ### Code of conduct
 
@@ -35,7 +35,7 @@ After importing the project, import the IDE settings as well.
 #### IntelliJ IDEA
 
 - [`settings.jar`](https://raw.githubusercontent.com/line/armeria/master/settings/intellij_idea/settings.jar) -
-  See [Importing settings from a JAR archive](https://www.jetbrains.com/help/idea/sharing-your-ide-settings.html#23c8afba).
+  See [Import settings from a ZIP archive](https://www.jetbrains.com/help/idea/sharing-your-ide-settings.html#7a4f08b8).
 - Make sure to use 'LINE OSS' code style and inspection profile.
   - Go to `Preferences` > `Editors` > `Code Style` and set `Scheme` option to `LINE OSS`.
   - Go to `Preferences` > `Editors` > `Inspections` and set `Profile` option to `LINE OSS`.
@@ -59,12 +59,35 @@ After importing the project, import the IDE settings as well.
     <img src="https://raw.githubusercontent.com/line/armeria/master/settings/eclipse/save_actions.png">
   </details>
 - Although optional, if you want to run Checkstyle from Eclipse, install the
-  [Eclipse Checkstyle Plugin](http://eclipse-cs.sourceforge.net/), import and activate
+  [Eclipse Checkstyle Plugin](https://eclipse-cs.sourceforge.net/), import and activate
   the rule file at `settings/checkstyle/checkstyle.xml`.
   - Set the 'Type' to 'External Configuration File'.
   - Click the 'Additional properties...' button. A new dialog will show up.
   - Click the 'Find unresolved properties' button. It will find the `checkstyleConfigDir` property.
     Choose 'Yes' to add it. Set it to `<project root path>/settings/checkstyle`.
+
+### Configure `-parameters` javac option 
+
+You can configure your build tool and IDE to add `-parameters` javac option.
+Please refer to [Configure `-parameters` javac option](https://line.github.io/armeria/setup.html#configure-parameters-javac-option) for more information.
+
+### Use JUnit 5 instead of JUnit 4 for testing
+
+We support both [JUnit 4](https://junit.org/junit4/) and [JUnit 5](https://junit.org/junit5/) for testing, but we recommend to use JUnit 5.
+
+```java
+// Imports of JUnit5, Good
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+...
+
+// Imports of JUnit4, Not Good
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+...
+```
 
 ### Checklist for your pull request
 

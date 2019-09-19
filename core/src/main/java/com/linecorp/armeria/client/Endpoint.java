@@ -23,7 +23,9 @@ import java.net.StandardProtocolFamily;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
@@ -31,9 +33,11 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.net.HostAndPort;
 import com.google.common.net.InternetDomainName;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -52,7 +56,7 @@ import io.netty.util.NetUtil;
  * in the authority part of a URI. It can be resolved into a host endpoint with
  * {@link #resolve(ClientRequestContext)}.
  */
-public final class Endpoint implements Comparable<Endpoint> {
+public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
     private static final Comparator<Endpoint> NON_GROUP_COMPARATOR =
             Comparator.comparing(Endpoint::host)
@@ -169,6 +173,7 @@ public final class Endpoint implements Comparable<Endpoint> {
     private final String ipAddr;
     private final int port;
     private final int weight;
+    private final List<Endpoint> endpoints;
     @Nullable // null if this endpoint is a group.
     private final HostType hostType;
     @Nullable
@@ -181,6 +186,7 @@ public final class Endpoint implements Comparable<Endpoint> {
         port = 0;
         weight = 0;
         hostType = null;
+        endpoints = ImmutableList.of(this);
     }
 
     private Endpoint(String host, @Nullable String ipAddr, int port, int weight, HostType hostType) {
@@ -190,6 +196,7 @@ public final class Endpoint implements Comparable<Endpoint> {
         this.weight = weight;
         this.hostType = hostType;
         groupName = null;
+        endpoints = ImmutableList.of(this);
 
         // hostType must be HOSTNAME_ONLY when ipAddr is null and vice versa.
         assert ipAddr == null && hostType == HostType.HOSTNAME_ONLY ||
@@ -216,6 +223,16 @@ public final class Endpoint implements Comparable<Endpoint> {
         } else {
             return this;
         }
+    }
+
+    @Override
+    public List<Endpoint> endpoints() {
+        return endpoints;
+    }
+
+    @Override
+    public CompletableFuture<List<Endpoint>> initialEndpointsFuture() {
+        return CompletableFuture.completedFuture(endpoints);
     }
 
     /**
@@ -321,8 +338,55 @@ public final class Endpoint implements Comparable<Endpoint> {
     }
 
     /**
+     * Returns whether this endpoint has a port number specified.
+     *
+     * @return {@code true} if and only if this endpoint has a port number.
+     * @throws IllegalStateException if this endpoint is not a host but a group
+     */
+    public boolean hasPort() {
+        ensureSingle();
+        return port != 0;
+    }
+
+    /**
+     * Returns a new host endpoint with the specified port number.
+     *
+     * @param port the new port number
+     * @return the new endpoint with the specified port number if this endpoint does not have a port or
+     *         it has a different port number than what's specified.
+     *         {@code this} if this endpoint has the same port number with the specified one.
+     *
+     * @throws IllegalStateException if this endpoint is not a host but a group
+     */
+    public Endpoint withPort(int port) {
+        ensureSingle();
+        validatePort("port", port);
+        if (this.port == port) {
+            return this;
+        }
+        return new Endpoint(host, ipAddr, port, weight, hostType);
+    }
+
+    /**
+     * Returns a new host endpoint with its port number unspecified.
+     *
+     * @return the new endpoint whose port is unspecified if this endpoint has its port.
+     *         {@code this} if this endpoint does not have a port already.
+     *
+     * @throws IllegalStateException if this endpoint is not a host but a group
+     */
+    public Endpoint withoutPort() {
+        ensureSingle();
+        if (port == 0) {
+            return this;
+        }
+        return new Endpoint(host, ipAddr, 0, weight, hostType);
+    }
+
+    /**
      * Returns a new host endpoint with the specified default port number.
      *
+     * @param defaultPort the default port number
      * @return the new endpoint whose port is {@code defaultPort} if this endpoint does not have its port
      *         specified. {@code this} if this endpoint already has its port specified.
      *
@@ -336,7 +400,27 @@ public final class Endpoint implements Comparable<Endpoint> {
             return this;
         }
 
-        return new Endpoint(host(), ipAddr(), defaultPort, weight(), hostType);
+        return new Endpoint(host, ipAddr, defaultPort, weight, hostType);
+    }
+
+    /**
+     * Returns a new host endpoint with the default port number removed.
+     *
+     * @param defaultPort the default port number
+     * @return the new endpoint without a port number if this endpoint had the same port number
+     *         with the specified default port number. {@code this} if this endpoint had a different
+     *         port number than the specified default port number or this endpoint already does not have
+     *         a port number.
+     *
+     * @throws IllegalStateException if this endpoint is not a host but a group
+     */
+    public Endpoint withoutDefaultPort(int defaultPort) {
+        ensureSingle();
+        validatePort("defaultPort", defaultPort);
+        if (port == defaultPort) {
+            return new Endpoint(host, ipAddr, 0, weight, hostType);
+        }
+        return this;
     }
 
     /**

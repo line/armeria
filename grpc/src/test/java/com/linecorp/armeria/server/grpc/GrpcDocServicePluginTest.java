@@ -211,9 +211,9 @@ public class GrpcDocServicePluginTest {
         final EnumInfo enumInfo = generator.newEnumInfo(CompressionType.getDescriptor());
         assertThat(enumInfo).isEqualTo(new EnumInfo(
                 "armeria.grpc.testing.CompressionType",
-                ImmutableList.of(new EnumValueInfo("NONE"),
-                                 new EnumValueInfo("GZIP"),
-                                 new EnumValueInfo("DEFLATE"))));
+                ImmutableList.of(new EnumValueInfo("NONE", 0),
+                                 new EnumValueInfo("GZIP", 1),
+                                 new EnumValueInfo("DEFLATE", 3))));
     }
 
     @Test

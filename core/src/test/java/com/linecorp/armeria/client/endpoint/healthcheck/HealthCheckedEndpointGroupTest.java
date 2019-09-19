@@ -19,10 +19,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 
@@ -30,8 +34,70 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
+import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.util.AsyncCloseable;
+
+import io.netty.channel.EventLoopGroup;
 
 class HealthCheckedEndpointGroupTest {
+
+    @Test
+    void delegateUpdateCandidatesWhileCreatingHealthCheckedEndpointGroup() {
+        final MockEndpointGroup delegate = new MockEndpointGroup();
+        final CompletableFuture<List<Endpoint>> future = delegate.initialEndpointsFuture();
+        future.complete(ImmutableList.of(Endpoint.of("127.0.0.1", 8080), Endpoint.of("127.0.0.1", 8081)));
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        // Schedule the task which update the endpoint one second later to ensure that the change is happening
+        // while creating the HealthCheckedEndpointGroup.
+        final EventLoopGroup executors = CommonPools.workerGroup();
+        executors.schedule(
+                () -> {
+                    delegate.set(Endpoint.of("127.0.0.1", 8082));
+                    latch.countDown();
+                }, 1, TimeUnit.SECONDS);
+
+        new AbstractHealthCheckedEndpointGroupBuilder(delegate) {
+            @Override
+            protected Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory() {
+                return (Function<HealthCheckerContext, AsyncCloseable>) ctx -> {
+                    // Call updateHealth after the endpoint is changed so that
+                    // snapshot.forEach(ctx -> ctx.initialCheckFuture.join()); performs the next action.
+                    executors.schedule(() -> {
+                        try {
+                            latch.await();
+                        } catch (InterruptedException e) {
+                            // Ignore
+                        }
+                        ctx.updateHealth(1);
+                    }, 2, TimeUnit.SECONDS);
+                    return CompletableFuture::new;
+                };
+            }
+        }.build();
+    }
+
+    @Test
+    void startsUnhealthyAwaitsForEmptyEndpoints() throws Exception {
+        final MockEndpointGroup delegate = new MockEndpointGroup();
+        delegate.set(Endpoint.of("foo"));
+        final AtomicReference<HealthCheckerContext> ctxCapture = new AtomicReference<>();
+
+        try (HealthCheckedEndpointGroup group = new AbstractHealthCheckedEndpointGroupBuilder(delegate) {
+            @Override
+            protected Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory() {
+                return ctx -> {
+                    ctxCapture.set(ctx);
+                    ctx.updateHealth(0);
+                    return () -> CompletableFuture.completedFuture(null);
+                };
+            }
+        }.build()) {
+            assertThat(group.awaitInitialEndpoints(10, TimeUnit.SECONDS)).isEmpty();
+        }
+    }
+
     @Test
     void disappearedEndpoint() {
         // Start with an endpoint group that has healthy 'foo'.
@@ -39,12 +105,16 @@ class HealthCheckedEndpointGroupTest {
         delegate.set(Endpoint.of("foo"));
         final AtomicReference<HealthCheckerContext> ctxCapture = new AtomicReference<>();
 
-        try (HealthCheckedEndpointGroup group = new AbstractHealthCheckedEndpointGroupBuilder(
-                delegate, ctx -> {
+        try (HealthCheckedEndpointGroup group = new AbstractHealthCheckedEndpointGroupBuilder(delegate) {
+            @Override
+            protected Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory() {
+                return ctx -> {
                     ctxCapture.set(ctx);
                     ctx.updateHealth(1);
                     return () -> CompletableFuture.completedFuture(null);
-                }) {}.build()) {
+                };
+            }
+        }.build()) {
 
             // Check the initial state.
             final HealthCheckerContext ctx = ctxCapture.get();
@@ -68,7 +138,8 @@ class HealthCheckedEndpointGroupTest {
             assertThat(group.healthyEndpoints).isEmpty();
 
             // An attempt to schedule a new task for a disappeared endpoint must fail.
-            assertThatThrownBy(() -> ctx.executor().execute(() -> {}))
+            assertThatThrownBy(() -> ctx.executor().execute(() -> {
+            }))
                     .isInstanceOf(RejectedExecutionException.class)
                     .hasMessageContaining("destroyed");
         }

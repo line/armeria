@@ -110,6 +110,7 @@ const config: Configuration = {
         context: (pathname, req) =>
           !!req.headers[docServiceDebug] ||
           pathname.endsWith('specification.json') ||
+          pathname.endsWith('versions.json') ||
           pathname.endsWith('injected.js'),
         target: `http://127.0.0.1:${armeriaPort}`,
         changeOrigin: true,

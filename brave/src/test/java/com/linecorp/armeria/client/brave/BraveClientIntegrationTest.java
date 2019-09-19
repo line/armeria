@@ -151,16 +151,6 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
 
     @Override
     @Test
-    public void addsErrorTagOnTransportException() throws Exception {
-        if (sessionProtocol == SessionProtocol.H1C) {
-            // TODO https://github.com/line/armeria/issues/1914
-            throw new AssumptionViolatedException("Armeria does not preserve the error in HTTP/1.1.");
-        }
-        super.addsErrorTagOnTransportException();
-    }
-
-    @Override
-    @Test
     public void supportsPortableCustomization() throws Exception {
         String uri = "/foo?z=2&yAA=1";
 

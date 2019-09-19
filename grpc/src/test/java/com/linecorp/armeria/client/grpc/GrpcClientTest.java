@@ -30,6 +30,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -229,6 +230,13 @@ public class GrpcClientTest {
     }
 
     @Test
+    public void emptyUnary_grpcWeb() throws Exception {
+        TestServiceBlockingStub stub = new ClientBuilder("gproto-web+" + server.httpUri("/"))
+                .build(TestServiceBlockingStub.class);
+        assertThat(stub.emptyCall(EMPTY)).isEqualTo(EMPTY);
+    }
+
+    @Test
     public void largeUnary() throws Exception {
         final SimpleRequest request =
                 SimpleRequest.newBuilder()
@@ -350,6 +358,45 @@ public class GrpcClientTest {
         recorder.awaitCompletion();
         assertSuccess(recorder);
         assertThat(recorder.getValues()).containsExactlyElementsOf(goldenResponses);
+
+        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+            assertThat(rpcReq.params()).containsExactly(request);
+            assertThat(rpcRes.get()).isEqualTo(goldenResponses.get(0));
+        });
+    }
+
+    @Test
+    public void serverStreaming_blocking() throws Exception {
+        final StreamingOutputCallRequest request =
+                StreamingOutputCallRequest.newBuilder()
+                                          .setResponseType(COMPRESSABLE)
+                                          .addResponseParameters(
+                                                  ResponseParameters.newBuilder()
+                                                                    .setSize(31415)
+                                                                    .setIntervalUs(1000))
+                                          .addResponseParameters(ResponseParameters.newBuilder()
+                                                                                   .setSize(9)
+                                                                                   .setIntervalUs(1000))
+                                          .build();
+        final List<StreamingOutputCallResponse> goldenResponses = Arrays.asList(
+                StreamingOutputCallResponse.newBuilder()
+                                           .setPayload(Payload.newBuilder()
+                                                              .setType(COMPRESSABLE)
+                                                              .setBody(ByteString.copyFrom(new byte[31415])))
+                                           .build(),
+                StreamingOutputCallResponse.newBuilder()
+                                           .setPayload(Payload.newBuilder()
+                                                              .setType(COMPRESSABLE)
+                                                              .setBody(ByteString.copyFrom(new byte[9])))
+                                           .build());
+
+        final List<StreamingOutputCallResponse> responses = new ArrayList<>();
+        final Iterator<StreamingOutputCallResponse> it = blockingStub.streamingOutputCall(request);
+        while (it.hasNext()) {
+            responses.add(it.next());
+        }
+
+        assertThat(responses).containsExactlyElementsOf(goldenResponses);
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
             assertThat(rpcReq.params()).containsExactly(request);

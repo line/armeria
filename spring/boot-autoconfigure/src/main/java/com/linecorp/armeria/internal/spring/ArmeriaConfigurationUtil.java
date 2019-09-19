@@ -83,11 +83,12 @@ import com.linecorp.armeria.server.healthcheck.HttpHealthCheckService;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.server.metric.PrometheusExpositionService;
 import com.linecorp.armeria.spring.AbstractServiceRegistrationBean;
+import com.linecorp.armeria.spring.AnnotatedExampleRequest;
 import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
+import com.linecorp.armeria.spring.GrpcExampleRequest;
 import com.linecorp.armeria.spring.GrpcServiceRegistrationBean;
-import com.linecorp.armeria.spring.GrpcServiceRegistrationBean.ExampleRequest;
 import com.linecorp.armeria.spring.HttpServiceRegistrationBean;
 import com.linecorp.armeria.spring.MeterIdPrefixFunctionFactory;
 import com.linecorp.armeria.spring.Ssl;
@@ -306,7 +307,7 @@ public final class ArmeriaConfigurationUtil {
         requireNonNull(docServiceBuilder, "docServiceBuilder");
         requireNonNull(beans, "beans");
 
-        final List<ExampleRequest> docServiceRequests = new ArrayList<>();
+        final List<GrpcExampleRequest> docServiceRequests = new ArrayList<>();
         beans.forEach(bean -> {
             final ServiceWithRoutes<HttpRequest, HttpResponse> serviceWithRoutes =
                     bean.getService();
@@ -338,11 +339,15 @@ public final class ArmeriaConfigurationUtil {
      * Adds annotated HTTP services to the specified {@link ServerBuilder}.
      */
     public static void configureAnnotatedHttpServices(
-            ServerBuilder server, List<AnnotatedServiceRegistrationBean> beans,
-            @Nullable MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory) {
+            ServerBuilder server, DocServiceBuilder docServiceBuilder,
+            List<AnnotatedServiceRegistrationBean> beans,
+            @Nullable MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory,
+            @Nullable String docsPath) {
         requireNonNull(server, "server");
+        requireNonNull(docServiceBuilder, "docServiceBuilder");
         requireNonNull(beans, "beans");
 
+        final List<AnnotatedExampleRequest> docServiceRequests = new ArrayList<>();
         beans.forEach(bean -> {
             Function<Service<HttpRequest, HttpResponse>,
                     ? extends Service<HttpRequest, HttpResponse>> decorator = Function.identity();
@@ -360,8 +365,19 @@ public final class ArmeriaConfigurationUtil {
                                  .addAll(bean.getRequestConverters())
                                  .addAll(bean.getResponseConverters())
                                  .build();
+            docServiceRequests.addAll(bean.getExampleRequests());
             server.annotatedService(bean.getPathPrefix(), bean.getService(), decorator,
                                     exceptionHandlersAndConverters);
+
+            if (!Strings.isNullOrEmpty(docsPath)) {
+                docServiceRequests.forEach(
+                        exampleReq -> {
+                            final String serviceName = bean.getService().getClass().getName();
+                            docServiceBuilder.exampleRequestForMethod(serviceName,
+                                                                      exampleReq.getMethodName(),
+                                                                      exampleReq.getExampleRequest());
+                        });
+            }
         });
     }
 

@@ -46,14 +46,6 @@ public interface HealthCheckerContext {
     SessionProtocol protocol();
 
     /**
-     * Returns the port where a health check request will be sent instead of the original port number
-     * specified by {@link #endpoint()}.
-     *
-     * @return {@code 0} to send to the original port, or the alternative port number.
-     */
-    int port();
-
-    /**
      * Returns the {@link Function} that customizes a {@link Client} that sends health check requests.
      */
     Function<? super ClientOptionsBuilder, ClientOptionsBuilder> clientConfigurator();

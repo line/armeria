@@ -49,6 +49,8 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.io.Closeables;
 
 /**
@@ -183,26 +185,32 @@ public final class Version {
         this.repositoryStatus = repositoryStatus;
     }
 
+    @JsonProperty
     public String artifactId() {
         return artifactId;
     }
 
+    @JsonProperty
     public String artifactVersion() {
         return artifactVersion;
     }
 
+    @JsonProperty
     public long commitTimeMillis() {
         return commitTimeMillis;
     }
 
+    @JsonProperty
     public String shortCommitHash() {
         return shortCommitHash;
     }
 
+    @JsonProperty
     public String longCommitHash() {
         return longCommitHash;
     }
 
+    @JsonProperty
     public String repositoryStatus() {
         return repositoryStatus;
     }
@@ -216,6 +224,7 @@ public final class Version {
     /**
      * Returns true if repository status is not dirty.
      */
+    @JsonIgnore
     public boolean isClean() {
         return "clean".equals(repositoryStatus);
     }

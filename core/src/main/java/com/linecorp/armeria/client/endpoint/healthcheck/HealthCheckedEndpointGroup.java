@@ -96,7 +96,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     private final int port;
     private final Backoff retryBackoff;
     private final Function<? super ClientOptionsBuilder, ClientOptionsBuilder> clientConfigurator;
-    private final Function<? super HealthCheckerContext, ? extends AsyncCloseable> checker;
+    private final Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkerFactory;
 
     private final Map<Endpoint, DefaultHealthCheckerContext> contexts = new HashMap<>();
     @VisibleForTesting
@@ -106,23 +106,33 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     /**
      * Creates a new instance.
      */
-    HealthCheckedEndpointGroup(EndpointGroup delegate, ClientFactory clientFactory,
-                               SessionProtocol protocol, int port, Backoff retryBackoff,
-                               Function<? super ClientOptionsBuilder, ClientOptionsBuilder> clientConfigurator,
-                               Function<? super HealthCheckerContext, ? extends AsyncCloseable> checker) {
+    HealthCheckedEndpointGroup(
+            EndpointGroup delegate, ClientFactory clientFactory,
+            SessionProtocol protocol, int port, Backoff retryBackoff,
+            Function<? super ClientOptionsBuilder, ClientOptionsBuilder> clientConfigurator,
+            Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkerFactory) {
         this.delegate = requireNonNull(delegate, "delegate");
         this.clientFactory = requireNonNull(clientFactory, "clientFactory");
         this.protocol = requireNonNull(protocol, "protocol");
         this.port = port;
         this.retryBackoff = requireNonNull(retryBackoff, "retryBackoff");
         this.clientConfigurator = requireNonNull(clientConfigurator, "clientConfigurator");
-        this.checker = requireNonNull(checker, "checker");
+        this.checkerFactory = requireNonNull(checkerFactory, "checkerFactory");
 
         delegate.addListener(this::updateCandidates);
         updateCandidates(delegate.initialEndpointsFuture().join());
 
         // Wait until the initial health of all endpoints are determined.
-        contexts.values().forEach(ctx -> ctx.initialCheckFuture.join());
+        final List<DefaultHealthCheckerContext> snapshot;
+        synchronized (contexts) {
+            snapshot = ImmutableList.copyOf(contexts.values());
+        }
+        snapshot.forEach(ctx -> ctx.initialCheckFuture.join());
+
+        // If all endpoints are unhealthy, we will not have called setEndpoints even once, meaning listeners
+        // aren't notified that we've finished an initial health check. We make sure to refresh endpoints once
+        // on initialization to ensure this happens, even if the endpoints are currently empty.
+        refreshEndpoints();
     }
 
     private void updateCandidates(List<Endpoint> candidates) {
@@ -152,10 +162,17 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                     continue;
                 }
                 final DefaultHealthCheckerContext ctx = new DefaultHealthCheckerContext(e);
-                ctx.init(checker.apply(ctx));
+                ctx.init(checkerFactory.apply(ctx));
                 contexts.put(e, ctx);
             }
         }
+    }
+
+    private void refreshEndpoints() {
+        // Rebuild the endpoint list and notify.
+        setEndpoints(delegate.endpoints().stream()
+                             .filter(healthyEndpoints::contains)
+                             .collect(toImmutableList()));
     }
 
     @Override
@@ -216,6 +233,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     private final class DefaultHealthCheckerContext
             extends AbstractExecutorService implements HealthCheckerContext, ScheduledExecutorService {
 
+        private final Endpoint originalEndpoint;
         private final Endpoint endpoint;
 
         /**
@@ -230,7 +248,16 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         private boolean destroyed;
 
         DefaultHealthCheckerContext(Endpoint endpoint) {
-            this.endpoint = endpoint;
+            originalEndpoint = endpoint;
+
+            final int altPort = port;
+            if (altPort == 0) {
+                this.endpoint = endpoint.withoutDefaultPort(protocol.defaultPort());
+            } else if (altPort == protocol.defaultPort()) {
+                this.endpoint = endpoint.withoutPort();
+            } else {
+                this.endpoint = endpoint.withPort(altPort);
+            }
         }
 
         void init(AsyncCloseable handle) {
@@ -279,11 +306,6 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         }
 
         @Override
-        public int port() {
-            return port;
-        }
-
-        @Override
         public Function<? super ClientOptionsBuilder, ClientOptionsBuilder> clientConfigurator() {
             return clientConfigurator;
         }
@@ -316,17 +338,14 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 if (!updateEvenIfDestroyed && destroyed) {
                     updated = false;
                 } else if (health > 0) {
-                    updated = healthyEndpoints.add(endpoint);
+                    updated = healthyEndpoints.add(originalEndpoint);
                 } else {
-                    updated = healthyEndpoints.remove(endpoint);
+                    updated = healthyEndpoints.remove(originalEndpoint);
                 }
             }
 
             if (updated) {
-                // Rebuild the endpoint list and notify.
-                setEndpoints(delegate.endpoints().stream()
-                                     .filter(healthyEndpoints::contains)
-                                     .collect(toImmutableList()));
+                refreshEndpoints();
             }
 
             initialCheckFuture.complete(null);

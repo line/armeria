@@ -24,11 +24,9 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
@@ -91,19 +89,13 @@ final class HttpClientFactory extends AbstractClientFactory {
 
     HttpClientFactory(
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnClose,
-            Map<ChannelOption<?>, Object> channelOptions,
+            EventLoopScheduler eventLoopScheduler, Map<ChannelOption<?>, Object> channelOptions,
             Consumer<? super SslContextBuilder> sslContextCustomizer,
-            Function<? super EventLoopGroup,
-                    ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory,
+            AddressResolverGroup<InetSocketAddress> addressResolverGroup,
             int http2InitialConnectionWindowSize, int http2InitialStreamWindowSize, int http2MaxFrameSize,
             long http2MaxHeaderListSize, int http1MaxInitialLineLength, int http1MaxHeaderSize,
             int http1MaxChunkSize, long idleTimeoutMillis, boolean useHttp2Preface, boolean useHttp1Pipelining,
             ConnectionPoolListener connectionPoolListener, MeterRegistry meterRegistry) {
-
-        @SuppressWarnings("unchecked")
-        final AddressResolverGroup<InetSocketAddress> addressResolverGroup =
-                (AddressResolverGroup<InetSocketAddress>) addressResolverGroupFactory.apply(workerGroup);
-
         final Bootstrap baseBootstrap = new Bootstrap();
         baseBootstrap.channel(TransportType.socketChannelType(workerGroup));
         baseBootstrap.resolver(addressResolverGroup);
@@ -116,6 +108,7 @@ final class HttpClientFactory extends AbstractClientFactory {
 
         this.workerGroup = workerGroup;
         this.shutdownWorkerGroupOnClose = shutdownWorkerGroupOnClose;
+        this.eventLoopScheduler = eventLoopScheduler;
         this.baseBootstrap = baseBootstrap;
         this.sslContextCustomizer = sslContextCustomizer;
         this.http2InitialConnectionWindowSize = http2InitialConnectionWindowSize;
@@ -132,7 +125,6 @@ final class HttpClientFactory extends AbstractClientFactory {
         this.meterRegistry = meterRegistry;
 
         clientDelegate = new HttpClientDelegate(this, addressResolverGroup);
-        eventLoopScheduler = new EventLoopScheduler(workerGroup);
     }
 
     /**
@@ -207,8 +199,8 @@ final class HttpClientFactory extends AbstractClientFactory {
     }
 
     @Override
-    public ReleasableHolder<EventLoop> acquireEventLoop(Endpoint endpoint) {
-        return eventLoopScheduler.acquire(endpoint);
+    public ReleasableHolder<EventLoop> acquireEventLoop(Endpoint endpoint, SessionProtocol sessionProtocol) {
+        return eventLoopScheduler.acquire(endpoint, sessionProtocol);
     }
 
     @Override
@@ -258,11 +250,6 @@ final class HttpClientFactory extends AbstractClientFactory {
         } else {
             throw new IllegalArgumentException("unsupported client type: " + clientType.getName());
         }
-    }
-
-    @Override
-    public <T> Optional<ClientBuilderParams> clientBuilderParams(T client) {
-        return Optional.empty();
     }
 
     private DefaultHttpClient newHttpClient(URI uri, Scheme scheme, Endpoint endpoint, ClientOptions options,

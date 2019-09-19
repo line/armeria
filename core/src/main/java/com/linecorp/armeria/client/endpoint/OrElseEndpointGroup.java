@@ -37,7 +37,7 @@ final class OrElseEndpointGroup extends AbstractListenable<List<Endpoint>> imple
         second.addListener(unused -> notifyListeners(endpoints()));
 
         initialEndpointsFuture = CompletableFuture
-                .allOf(first.initialEndpointsFuture(), second.initialEndpointsFuture())
+                .anyOf(first.initialEndpointsFuture(), second.initialEndpointsFuture())
                 .thenApply(unused -> endpoints());
     }
 

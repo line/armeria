@@ -25,7 +25,8 @@ import java.util.List;
 import java.util.Optional;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Ticker;
+
+import com.linecorp.armeria.common.util.Ticker;
 
 /**
  * Builds a {@link CircuitBreaker} instance using builder pattern.

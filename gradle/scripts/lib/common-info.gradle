@@ -17,6 +17,7 @@ rootProject.ext {
             '&copy; Copyright ' + "${rootProject.ext.inceptionYear}&ndash;${LocalDateTime.now().year} " +
             '<a href="' + rootProject.ext.authorUrl + '">' + rootProject.ext.authorName + '</a>. ' +
             'All rights reserved.'
+    googleAnalyticsId = rootProject.findProperty('googleAnalyticsId')
 }
 
 subprojects {

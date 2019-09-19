@@ -37,6 +37,8 @@ import org.springframework.boot.actuate.endpoint.SecurityContext;
 import org.springframework.boot.actuate.endpoint.web.WebEndpointResponse;
 import org.springframework.boot.actuate.endpoint.web.WebOperation;
 import org.springframework.boot.actuate.endpoint.web.reactive.AbstractWebFluxEndpointHandlerMapping;
+import org.springframework.boot.actuate.health.Health;
+import org.springframework.boot.actuate.health.HealthStatusHttpMapper;
 import org.springframework.core.io.Resource;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -75,9 +77,12 @@ final class WebOperationHttpService implements HttpService {
             new TypeReference<Map<String, Object>>() {};
 
     private final WebOperation operation;
+    private final HealthStatusHttpMapper healthMapper;
 
-    WebOperationHttpService(WebOperation operation) {
+    WebOperationHttpService(WebOperation operation,
+                            HealthStatusHttpMapper healthMapper) {
         this.operation = operation;
+        this.healthMapper = healthMapper;
     }
 
     @Override
@@ -132,8 +137,8 @@ final class WebOperationHttpService implements HttpService {
         return ImmutableMap.copyOf(arguments);
     }
 
-    private static HttpResponse handleResult(ServiceRequestContext ctx,
-                                             @Nullable Object result, HttpMethod method) throws IOException {
+    private HttpResponse handleResult(ServiceRequestContext ctx,
+                                      @Nullable Object result, HttpMethod method) throws IOException {
         if (result == null) {
             return HttpResponse.of(method != HttpMethod.GET ? HttpStatus.NO_CONTENT : HttpStatus.NOT_FOUND);
         }
@@ -145,7 +150,11 @@ final class WebOperationHttpService implements HttpService {
             status = HttpStatus.valueOf(webResult.getStatus());
             body = webResult.getBody();
         } else {
-            status = HttpStatus.OK;
+            if (result instanceof Health) {
+                status = HttpStatus.valueOf(healthMapper.mapStatus(((Health) result).getStatus()));
+            } else {
+                status = HttpStatus.OK;
+            }
             body = result;
         }
 
