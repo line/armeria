@@ -16,6 +16,7 @@
 package com.linecorp.armeria.internal.annotation;
 
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.collectDecorators;
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.find;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.lang.annotation.ElementType;
@@ -23,6 +24,8 @@ import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -31,21 +34,27 @@ import org.junit.Test;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.DecoratorAndOrder;
 import com.linecorp.armeria.server.DecoratingServiceFunction;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.DecoratorFactory;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
+import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.PathPrefix;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecoratorFactoryFunction;
 import com.linecorp.armeria.server.annotation.decorator.RateLimitingDecorator;
 import com.linecorp.armeria.server.annotation.decorator.RateLimitingDecoratorFactoryFunction;
 
 public class AnnotatedHttpServiceFactoryTest {
+
+    private static final String HOME_PATH_PREFIX = "/home";
 
     @Test
     public void ofNoOrdering() throws NoSuchMethodException {
@@ -120,6 +129,35 @@ public class AnnotatedHttpServiceFactoryTest {
         assertThat(udd1.value()).isEqualTo(1);
         final UserDefinedRepeatableDecorator udd2 = (UserDefinedRepeatableDecorator) list.get(4).annotation();
         assertThat(udd2.value()).isEqualTo(2);
+    }
+
+    @org.junit.jupiter.api.Test
+    public void testFindAnnotatedServiceElementsWithPathPrefixAnnotation() {
+        final Object object = new PathPrefixServiceObject();
+        final List<AnnotatedHttpServiceElement> elements = find("/", object, new ArrayList<>());
+
+        final List<String> paths = elements.stream()
+                                           .map(AnnotatedHttpServiceElement::route)
+                                           .map(Route::paths)
+                                           .flatMap(Collection::stream)
+                                           .collect(Collectors.toList());
+
+        assertThat(paths).allMatch(path -> path.startsWith(HOME_PATH_PREFIX + '/'));
+    }
+
+    @org.junit.jupiter.api.Test
+    public void testFindAnnotatedServiceElementsWithoutPathPrefixAnnotation() {
+        final Object serviceObject = new ServiceObject();
+        final String root = "/home";
+        final List<AnnotatedHttpServiceElement> elements = find(root, serviceObject, new ArrayList<>());
+
+        final List<String> paths = elements.stream()
+                                           .map(AnnotatedHttpServiceElement::route)
+                                           .map(Route::paths)
+                                           .flatMap(Collection::stream)
+                                           .collect(Collectors.toList());
+
+        assertThat(paths).allMatch(path -> path.startsWith(root + '/'));
     }
 
     private static List<Class<?>> values(List<DecoratorAndOrder> list) {
@@ -222,6 +260,23 @@ public class AnnotatedHttpServiceFactoryTest {
         @UserDefinedRepeatableDecorator(value = 2, order = 3)
         public String userDefinedRepeatableDecorator() {
             return "";
+        }
+    }
+
+    @PathPrefix(HOME_PATH_PREFIX)
+    static class PathPrefixServiceObject {
+
+        @Get("/hello")
+        public HttpResponse hello() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+    }
+
+    static class ServiceObject {
+
+        @Get("/hello")
+        public HttpResponse hello() {
+            return HttpResponse.of(HttpStatus.OK);
         }
     }
 }

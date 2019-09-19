@@ -104,6 +104,7 @@ import com.linecorp.armeria.server.annotation.Options;
 import com.linecorp.armeria.server.annotation.Order;
 import com.linecorp.armeria.server.annotation.Patch;
 import com.linecorp.armeria.server.annotation.Path;
+import com.linecorp.armeria.server.annotation.PathPrefix;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.ProduceType;
 import com.linecorp.armeria.server.annotation.Produces;
@@ -270,11 +271,12 @@ public final class AnnotatedHttpServiceFactory {
             throw new IllegalArgumentException(method.getDeclaringClass().getName() + '#' + method.getName() +
                                                " must have an HTTP method annotation.");
         }
-
         final Class<?> clazz = object.getClass();
         final String pattern = findPattern(method, methodAnnotations);
+        final String selectedPathPrefix = selectPathPrefix(clazz, pathPrefix);
+
         final Route route = Route.builder()
-                                 .pathWithPrefix(pathPrefix, pattern)
+                                 .pathWithPrefix(selectedPathPrefix, pattern)
                                  .methods(methods)
                                  .consumes(consumableMediaTypes(method, clazz))
                                  .produces(producibleMediaTypes(method, clazz))
@@ -757,6 +759,15 @@ public final class AnnotatedHttpServiceFactory {
             }
         }
         return null;
+    }
+
+    /**
+     * Return the path prefix to use. If there is {@link PathPrefix} annotation on the class
+     * then the value from the annotation is used, else falls back to pathPrefix passed through
+     * method pram.
+     */
+    private static String selectPathPrefix(Class<?> clazz, String pathPrefix) {
+        return findFirst(clazz, PathPrefix.class).map(PathPrefix::value).orElse(pathPrefix);
     }
 
     private AnnotatedHttpServiceFactory() {}
