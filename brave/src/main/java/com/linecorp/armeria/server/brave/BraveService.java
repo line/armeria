@@ -98,7 +98,7 @@ public final class BraveService extends SimpleDecoratingHttpService {
             if (log.isAvailable(RequestLogAvailability.RESPONSE_FIRST_BYTES_TRANSFERRED)) {
                 SpanTags.logWireSend(span, log.responseFirstBytesTransferredTimeNanos(), log);
             }
-            HttpServerResponse response = ServiceRequestContextAdapter.asHttpServerResponse(ctx);
+            final HttpServerResponse response = ServiceRequestContextAdapter.asHttpServerResponse(ctx);
             handler.handleSend(response, log.responseCause(), span);
         }, RequestLogAvailability.COMPLETE);
 

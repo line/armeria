@@ -133,7 +133,7 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
                 SpanTags.logWireReceive(span, log.responseFirstBytesTransferredTimeNanos(), log);
             }
             SpanTags.updateRemoteEndpoint(span, ctx);
-            HttpClientResponse response = ClientRequestContextAdapter.asHttpClientResponse(ctx);
+            final HttpClientResponse response = ClientRequestContextAdapter.asHttpClientResponse(ctx);
             handler.handleReceive(response, log.responseCause(), span);
         }, RequestLogAvailability.COMPLETE);
 
