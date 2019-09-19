@@ -39,7 +39,7 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      * @param threadNamePrefix the prefix of the names of the threads created by this factory.
      */
     public EventLoopThreadFactory(String threadNamePrefix) {
-        super(threadNamePrefix, false, Thread.NORM_PRIORITY, null, Function.identity());
+        this(threadNamePrefix, false);
     }
 
     /**
@@ -49,7 +49,7 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      * @param daemon whether to create a daemon thread.
      */
     public EventLoopThreadFactory(String threadNamePrefix, boolean daemon) {
-        super(threadNamePrefix, daemon, Thread.NORM_PRIORITY, null, Function.identity());
+        this(threadNamePrefix, daemon, Thread.NORM_PRIORITY);
     }
 
     /**
@@ -59,7 +59,7 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      * @param priority the priority of the threads created by this factory.
      */
     public EventLoopThreadFactory(String threadNamePrefix, int priority) {
-        super(threadNamePrefix, false, priority, null, Function.identity());
+        this(threadNamePrefix, false, priority);
     }
 
     /**
@@ -70,7 +70,7 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      * @param priority the priority of the threads created by this factory.
      */
     public EventLoopThreadFactory(String threadNamePrefix, boolean daemon, int priority) {
-        super(threadNamePrefix, daemon, priority, null, Function.identity());
+        this(threadNamePrefix, daemon, priority, null);
     }
 
     /**
@@ -83,7 +83,7 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      */
     public EventLoopThreadFactory(String threadNamePrefix, boolean daemon, int priority,
                                   @Nullable ThreadGroup threadGroup) {
-        super(threadNamePrefix, daemon, priority, threadGroup, Function.identity());
+        this(threadNamePrefix, daemon, priority, threadGroup, Function.identity());
     }
 
     EventLoopThreadFactory(String threadNamePrefix, boolean daemon, int priority,
