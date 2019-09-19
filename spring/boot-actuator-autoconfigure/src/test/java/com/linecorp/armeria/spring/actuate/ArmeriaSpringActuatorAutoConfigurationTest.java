@@ -33,11 +33,13 @@ import org.junit.rules.Timeout;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.actuate.health.Health;
+import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -59,6 +61,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfigurationTest.TestConfiguration;
 
 import io.prometheus.client.exporter.common.TextFormat;
 import reactor.test.StepVerifier;
@@ -85,8 +88,27 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
     @SuppressWarnings("unused")
     private static final Logger TEST_LOGGER = LoggerFactory.getLogger(TEST_LOGGER_NAME);
 
+    static class SettableHealthIndicator implements HealthIndicator {
+
+        private volatile Health health = Health.up().build();
+
+        void setHealth(Health health) {
+            this.health = health;
+        }
+
+        @Override
+        public Health health() {
+            return health;
+        }
+    }
+
     @SpringBootApplication
-    public static class TestConfiguration {}
+    public static class TestConfiguration {
+        @Bean
+        public SettableHealthIndicator settableHealth() {
+            return new SettableHealthIndicator();
+        }
+    }
 
     @Rule
     public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
@@ -94,11 +116,15 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
     @Inject
     private Server server;
 
+    @Inject
+    private SettableHealthIndicator settableHealth;
+
     private HttpClient client;
 
     @Before
     public void setUp() {
         client = HttpClient.of(newUrl("h2c"));
+        settableHealth.setHealth(Health.up().build());
     }
 
     private String newUrl(String scheme) {
@@ -114,6 +140,16 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
 
         final Map<String, Object> values = OBJECT_MAPPER.readValue(res.content().array(), JSON_MAP);
         assertThat(values).containsEntry("status", "UP");
+    }
+
+    @Test
+    public void testHealth_down() throws Exception {
+        settableHealth.setHealth(Health.down().build());
+        final AggregatedHttpResponse res = client.get("/internal/actuator/health").aggregate().get();
+        assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+
+        final Map<String, Object> values = OBJECT_MAPPER.readValue(res.content().array(), JSON_MAP);
+        assertThat(values).containsEntry("status", "DOWN");
     }
 
     @Test
