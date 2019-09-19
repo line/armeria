@@ -120,7 +120,8 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
      * @param request the request associated with this context
      *
-     * @deprecated Use {@link #DefaultClientRequestContext(EventLoop, MeterRegistry, Scheme, HttpMethod, String, String, String, ClientOptions, Request)}.
+     * @deprecated Use {@link #DefaultClientRequestContext(EventLoop, MeterRegistry, Scheme, HttpMethod,
+     *             String, String, String, ClientOptions, Request)}.
      */
     @Deprecated
     public DefaultClientRequestContext(
@@ -155,7 +156,8 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
      * @param request the request associated with this context
      *
-     * @deprecated Use {@link #DefaultClientRequestContext(ClientFactory, MeterRegistry, Scheme, HttpMethod, String, String, String, ClientOptions, Request)}.
+     * @deprecated Use {@link #DefaultClientRequestContext(ClientFactory, MeterRegistry, Scheme, HttpMethod,
+     *             String, String, String, ClientOptions, Request)}.
      */
     @Deprecated
     public DefaultClientRequestContext(
