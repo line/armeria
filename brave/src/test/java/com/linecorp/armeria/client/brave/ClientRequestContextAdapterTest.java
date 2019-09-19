@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -72,12 +73,11 @@ class ClientRequestContextAdapterTest {
     @Test
     void url() {
         when(ctx.log()).thenReturn(requestLog);
-        when(requestLog.isAvailable(RequestLogAvailability.SCHEME)).thenReturn(true);
         when(requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)).thenReturn(true);
-        when(requestLog.scheme()).thenReturn(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP));
-        when(requestLog.authority()).thenReturn("example.com");
-        when(requestLog.path()).thenReturn("/foo");
-        when(requestLog.query()).thenReturn("name=hoge");
+        when(requestLog.requestHeaders()).thenReturn(
+                RequestHeaders.of(HttpMethod.GET, "/foo?name=hoge",
+                                  HttpHeaderNames.SCHEME, "http",
+                                  HttpHeaderNames.AUTHORITY, "example.com"));
         assertThat(request.url()).isEqualTo("http://example.com/foo?name=hoge");
     }
 
