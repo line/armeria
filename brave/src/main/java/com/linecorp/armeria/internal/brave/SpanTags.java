@@ -22,6 +22,7 @@ import java.net.SocketAddress;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -142,8 +143,8 @@ public final class SpanTags {
         span.annotate(SpanContextUtil.wallTimeMicros(requestLog, wireSendTimeNanos), WIRE_RECEIVE_ANNOTATION);
     }
 
-    public static boolean updateRemoteEndpoint(Span span, RequestLog log) {
-        final SocketAddress remoteAddress = log.context().remoteAddress();
+    public static boolean updateRemoteEndpoint(Span span, RequestContext ctx) {
+        final SocketAddress remoteAddress = ctx.remoteAddress();
         final InetAddress address;
         final int port;
         if (remoteAddress instanceof InetSocketAddress) {

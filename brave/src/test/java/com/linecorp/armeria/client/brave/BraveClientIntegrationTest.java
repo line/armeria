@@ -53,7 +53,6 @@ import brave.SpanCustomizer;
 import brave.Tracing.Builder;
 import brave.http.HttpAdapter;
 import brave.http.HttpClientParser;
-import brave.http.HttpClientResponse;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.StrictScopeDecorator;
 import brave.sampler.Sampler;
@@ -176,10 +175,10 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
                                                         Throwable error,
                                                         SpanCustomizer customizer) {
                                    super.response(adapter, res, error, customizer);
-                                   // TODO: is there a way to get the URL visible earlier? Waiting until response is
-                                   // too late for typical parsing or sampling
-                                   if (res instanceof RequestLog) {
-                                       customizer.tag("http.url", SpanTags.generateUrl((RequestLog) res));
+                                   // TODO: make this possible at request scope https://github.com/line/armeria/issues/2089
+                                   if (res instanceof RequestContext) {
+                                       final RequestContext ctx = (RequestContext) res;
+                                       customizer.tag("http.url", SpanTags.generateUrl(ctx.log()));
                                    }
                                    customizer.tag("response_customizer.is_span",
                                                   String.valueOf(customizer instanceof brave.Span));

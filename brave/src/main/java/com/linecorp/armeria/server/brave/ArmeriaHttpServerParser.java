@@ -16,14 +16,16 @@
 
 package com.linecorp.armeria.server.brave;
 
-import brave.SpanCustomizer;
-import brave.http.HttpAdapter;
-import brave.http.HttpServerParser;
-import brave.http.HttpServerResponse;
+import java.net.SocketAddress;
+
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.brave.SpanTags;
-import java.net.SocketAddress;
+import com.linecorp.armeria.server.ServiceRequestContext;
+
+import brave.SpanCustomizer;
+import brave.http.HttpAdapter;
+import brave.http.HttpServerParser;
 
 /**
  * Default implementation of {@link HttpServerParser}.
@@ -53,31 +55,30 @@ final class ArmeriaHttpServerParser extends HttpServerParser {
     @Override
     public <T> void response(HttpAdapter<?, T> rawAdapter, T res, Throwable error, SpanCustomizer customizer) {
         super.response(rawAdapter, res, error, customizer);
-        if (!(res instanceof HttpServerResponse)) return;
-        Object unwrapped = ((HttpServerResponse) res).unwrap();
-        if (!(unwrapped instanceof RequestLog)) return;
+        if (!(res instanceof ServiceRequestContext)) return;
+        final ServiceRequestContext ctx = (ServiceRequestContext) res;
 
-        final RequestLog requestLog = (RequestLog) unwrapped;
-        customizer.tag(SpanTags.TAG_HTTP_HOST, RequestLogAdapter.authority(requestLog))
+        final RequestLog requestLog = ctx.log();
+        customizer.tag(SpanTags.TAG_HTTP_HOST, ServiceRequestContextAdapter.authority(requestLog))
                   .tag(SpanTags.TAG_HTTP_URL, SpanTags.generateUrl(requestLog))
-                  .tag(SpanTags.TAG_HTTP_PROTOCOL, RequestLogAdapter.protocol(requestLog));
+                  .tag(SpanTags.TAG_HTTP_PROTOCOL, ServiceRequestContextAdapter.protocol(requestLog));
 
-        final String serFmt = RequestLogAdapter.serializationFormat(requestLog);
+        final String serFmt = ServiceRequestContextAdapter.serializationFormat(requestLog);
         if (serFmt != null) {
             customizer.tag(SpanTags.TAG_HTTP_SERIALIZATION_FORMAT, serFmt);
         }
 
-        final SocketAddress raddr = requestLog.context().remoteAddress();
+        final SocketAddress raddr = ctx.remoteAddress();
         if (raddr != null) {
             customizer.tag(SpanTags.TAG_ADDRESS_REMOTE, raddr.toString());
         }
 
-        final SocketAddress laddr = requestLog.context().localAddress();
+        final SocketAddress laddr = ctx.localAddress();
         if (laddr != null) {
             customizer.tag(SpanTags.TAG_ADDRESS_LOCAL, laddr.toString());
         }
 
-        final String rpcMethod = RequestLogAdapter.rpcMethod(requestLog);
+        final String rpcMethod = ServiceRequestContextAdapter.rpcMethod(requestLog);
         if (rpcMethod != null) {
             customizer.name(rpcMethod);
         }

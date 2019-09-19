@@ -16,14 +16,15 @@
 
 package com.linecorp.armeria.client.brave;
 
-import brave.Span;
-import brave.Tracer;
-import brave.Tracer.SpanInScope;
-import brave.Tracing;
-import brave.http.HttpClientHandler;
-import brave.http.HttpClientRequest;
-import brave.http.HttpClientResponse;
-import brave.http.HttpTracing;
+import static com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext.ensureScopeUsesRequestContext;
+
+import java.util.function.Function;
+
+import javax.annotation.Nullable;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
@@ -34,12 +35,15 @@ import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.brave.SpanContextUtil;
 import com.linecorp.armeria.internal.brave.SpanTags;
 import com.linecorp.armeria.internal.brave.TraceContextUtil;
-import java.util.function.Function;
-import javax.annotation.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import static com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext.ensureScopeUsesRequestContext;
+import brave.Span;
+import brave.Tracer;
+import brave.Tracer.SpanInScope;
+import brave.Tracing;
+import brave.http.HttpClientHandler;
+import brave.http.HttpClientRequest;
+import brave.http.HttpClientResponse;
+import brave.http.HttpTracing;
 
 /**
  * Decorates a {@link Client} to trace outbound {@link HttpRequest}s using
@@ -101,8 +105,7 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final RequestHeadersBuilder newHeaders = req.headers().toBuilder();
-        final HttpClientRequest request =
-            RequestLogAdapter.asHttpClientRequest(ctx.log(), newHeaders);
+        final HttpClientRequest request = ClientRequestContextAdapter.asHttpClientRequest(ctx, newHeaders);
         final Span span = handler.handleSend(request);
         req = HttpRequest.of(req, newHeaders.build());
         ctx.updateRequest(req);
@@ -130,8 +133,8 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
             if (log.isAvailable(RequestLogAvailability.RESPONSE_FIRST_BYTES_TRANSFERRED)) {
                 SpanTags.logWireReceive(span, log.responseFirstBytesTransferredTimeNanos(), log);
             }
-            SpanTags.updateRemoteEndpoint(span, log);
-            HttpClientResponse response = RequestLogAdapter.asHttpClientResponse(log);
+            SpanTags.updateRemoteEndpoint(span, ctx);
+            HttpClientResponse response = ClientRequestContextAdapter.asHttpClientResponse(ctx);
             handler.handleReceive(response, log.responseCause(), span);
         }, RequestLogAvailability.COMPLETE);
 

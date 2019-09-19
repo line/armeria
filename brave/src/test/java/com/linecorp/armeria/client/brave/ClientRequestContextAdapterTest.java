@@ -15,63 +15,63 @@
  *
  */
 
-package com.linecorp.armeria.server.brave;
+package com.linecorp.armeria.client.brave;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.server.Route;
-import com.linecorp.armeria.server.ServiceRequestContext;
 
-import brave.Span;
-import brave.http.HttpServerRequest;
-import brave.http.HttpServerResponse;
+import brave.http.HttpClientRequest;
+import brave.http.HttpClientResponse;
 
-class RequestLogAdapterTest {
+class ClientRequestContextAdapterTest {
 
     @Mock
+    private ClientRequestContext ctx;
+    @Mock
     private RequestLog requestLog;
-    private HttpServerRequest request;
-    private HttpServerResponse response;
+    @Mock
+    private RequestHeadersBuilder headersBuilder;
+    private HttpClientRequest request;
+    private HttpClientResponse response;
 
     @BeforeEach
     void setup() {
-        request = RequestLogAdapter.asHttpServerRequest(requestLog);
-        response = RequestLogAdapter.asHttpServerResponse(requestLog);
+        request = ClientRequestContextAdapter.asHttpClientRequest(ctx, headersBuilder);
+        response = ClientRequestContextAdapter.asHttpClientResponse(ctx);
     }
 
     @Test
     void path() {
-        when(requestLog.path()).thenReturn("/foo");
+        when(ctx.path()).thenReturn("/foo");
         assertThat(request.path()).isEqualTo("/foo");
     }
 
     @Test
     void method() {
-        when(requestLog.method()).thenReturn(HttpMethod.GET);
+        when(ctx.method()).thenReturn(HttpMethod.GET);
         assertThat(request.method()).isEqualTo("GET");
     }
 
     @Test
     void url() {
+        when(ctx.log()).thenReturn(requestLog);
         when(requestLog.isAvailable(RequestLogAvailability.SCHEME)).thenReturn(true);
         when(requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)).thenReturn(true);
         when(requestLog.scheme()).thenReturn(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP));
@@ -83,6 +83,7 @@ class RequestLogAdapterTest {
 
     @Test
     void statusCode() {
+        when(ctx.log()).thenReturn(requestLog);
         when(requestLog.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)).thenReturn(true);
         when(requestLog.status()).thenReturn(HttpStatus.OK);
         assertThat(response.statusCode()).isEqualTo(200);
@@ -93,6 +94,7 @@ class RequestLogAdapterTest {
 
     @Test
     void statusCode_notAvailable() {
+        when(ctx.log()).thenReturn(requestLog);
         when(requestLog.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)).thenReturn(false);
         assertThat(response.statusCode()).isEqualTo(0);
     }
@@ -101,91 +103,43 @@ class RequestLogAdapterTest {
     void authority() {
         when(requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)).thenReturn(true);
         when(requestLog.authority()).thenReturn("example.com");
-        assertThat(RequestLogAdapter.authority(requestLog)).isEqualTo("example.com");
+        assertThat(ClientRequestContextAdapter.authority(requestLog)).isEqualTo("example.com");
     }
 
     @Test
     void protocol() {
         when(requestLog.isAvailable(RequestLogAvailability.SCHEME)).thenReturn(true);
         when(requestLog.scheme()).thenReturn(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP));
-        assertThat(RequestLogAdapter.protocol(requestLog)).isEqualTo("http");
+        assertThat(ClientRequestContextAdapter.protocol(requestLog)).isEqualTo("http");
     }
 
     @Test
     void serializationFormat() {
         when(requestLog.isAvailable(RequestLogAvailability.SCHEME)).thenReturn(true);
         when(requestLog.scheme()).thenReturn(Scheme.of(SerializationFormat.of("tjson"), SessionProtocol.HTTP));
-        assertThat(RequestLogAdapter.serializationFormat(requestLog)).isEqualTo("tjson");
-
+        assertThat(ClientRequestContextAdapter.serializationFormat(requestLog)).isEqualTo("tjson");
         when(requestLog.scheme()).thenReturn(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP));
-        assertThat(RequestLogAdapter.serializationFormat(requestLog)).isNull();
+        assertThat(ClientRequestContextAdapter.serializationFormat(requestLog)).isNull();
     }
 
     @Test
     void rpcMethod() {
         when(requestLog.isAvailable(RequestLogAvailability.REQUEST_CONTENT)).thenReturn(true);
-        assertThat(RequestLogAdapter.rpcMethod(requestLog)).isNull();
+        assertThat(ClientRequestContextAdapter.rpcMethod(requestLog)).isNull();
 
         final RpcRequest rpcRequest = mock(RpcRequest.class);
         when(requestLog.requestContent()).thenReturn(rpcRequest);
         when(rpcRequest.method()).thenReturn("foo");
-        assertThat(RequestLogAdapter.rpcMethod(requestLog)).isEqualTo("foo");
+        assertThat(ClientRequestContextAdapter.rpcMethod(requestLog)).isEqualTo("foo");
     }
 
     @Test
     void requestHeader() {
+        when(ctx.log()).thenReturn(requestLog);
         when(requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)).thenReturn(true);
         final RequestHeaders requestHeaders = mock(RequestHeaders.class);
         when(requestLog.requestHeaders()).thenReturn(requestHeaders);
         when(requestHeaders.get("foo")).thenReturn("bar");
         assertThat(request.header("foo")).isEqualTo("bar");
-    }
-
-    @Test
-    void parseClientIpAndPort() throws Exception {
-        when(requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)).thenReturn(true);
-        final RequestHeaders requestHeaders = mock(RequestHeaders.class);
-        when(requestLog.requestHeaders()).thenReturn(requestHeaders);
-
-        final RequestContext requestContext = mock(RequestContext.class);
-        when(requestLog.context()).thenReturn(requestContext);
-        when(requestContext.remoteAddress())
-                .thenReturn(new InetSocketAddress(
-                        InetAddress.getByAddress(new byte[] { 127, 0, 0, 1 }), 1234));
-        final Span span = mock(Span.class);
-        when(span.remoteIpAndPort("127.0.0.1", 1234)).thenReturn(true);
-        assertThat(request.parseClientIpAndPort(span)).isTrue();
-    }
-
-    @Test
-    void route() {
-        final ServiceRequestContext context = mock(ServiceRequestContext.class);
-        when(requestLog.context()).thenReturn(context);
-        when(context.route()).thenReturn(Route.builder().path("/foo/:bar/hoge").build());
-        assertThat(response.route()).isEqualTo("/foo/:/hoge");
-    }
-
-    @Test
-    void route_prefix() {
-        final ServiceRequestContext context = mock(ServiceRequestContext.class);
-        when(requestLog.context()).thenReturn(context);
-        when(context.route()).thenReturn(Route.builder().path("exact:/foo").build());
-        assertThat(response.route()).isEqualTo("/foo");
-    }
-
-    @Test
-    void route_pathWithPrefix_glob() {
-        final ServiceRequestContext context = mock(ServiceRequestContext.class);
-        when(requestLog.context()).thenReturn(context);
-        when(context.route()).thenReturn(Route.builder().pathWithPrefix("/foo/", "glob:bar").build());
-        assertThat(response.route()).isEqualTo("/foo/**/bar");
-    }
-
-    @Test
-    void route_pathWithPrefix_regex() {
-        final ServiceRequestContext context = mock(ServiceRequestContext.class);
-        when(requestLog.context()).thenReturn(context);
-        when(context.route()).thenReturn(Route.builder().pathWithPrefix("/foo/", "regex:(bar|baz)").build());
-        assertThat(response.route()).isEqualTo("/foo/(bar|baz)");
     }
 }

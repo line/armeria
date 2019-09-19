@@ -16,9 +16,9 @@
 
 package com.linecorp.armeria.client.brave;
 
-import brave.http.HttpClientAdapter;
-import brave.http.HttpClientHandler;
-import com.linecorp.armeria.common.Request;
+import javax.annotation.Nullable;
+
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -27,35 +27,37 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.brave.SpanContextUtil;
 import com.linecorp.armeria.internal.brave.SpanTags;
-import javax.annotation.Nullable;
 
-final class RequestLogAdapter {
+import brave.http.HttpClientAdapter;
+import brave.http.HttpClientHandler;
+
+final class ClientRequestContextAdapter {
     /**
-     * @param log used to parse http properties
+     * @param ctx used to parse http properties
      * @param headersBuilder receives headers injected by {@link HttpClientHandler#handleSend(brave.http.HttpClientRequest)}.
      */
-    static brave.http.HttpClientRequest asHttpClientRequest(RequestLog log,
+    static brave.http.HttpClientRequest asHttpClientRequest(ClientRequestContext ctx,
         RequestHeadersBuilder headersBuilder) {
-        return new HttpClientRequest(log, headersBuilder);
+        return new HttpClientRequest(ctx, headersBuilder);
     }
 
     private static final class HttpClientRequest extends brave.http.HttpClientRequest {
-        private final RequestLog log;
+        private final ClientRequestContext ctx;
         private final RequestHeadersBuilder headersBuilder;
 
-        HttpClientRequest(RequestLog log, RequestHeadersBuilder headersBuilder) {
-            this.log = log;
+        HttpClientRequest(ClientRequestContext ctx, RequestHeadersBuilder headersBuilder) {
+            this.ctx = ctx;
             this.headersBuilder = headersBuilder;
         }
 
         @Override
-        public Object unwrap() {
-            return log;
+        public ClientRequestContext unwrap() {
+            return ctx;
         }
 
         @Override
         public String method() {
-            return log.method().name();
+            return ctx.method().name();
         }
 
         /**
@@ -67,30 +69,30 @@ final class RequestLogAdapter {
          */
         @Override
         public String path() {
-            return log.path();
+            return ctx.path();
         }
 
         @Override
         @Nullable
         public String url() {
-            return SpanTags.generateUrl(log);
+            return SpanTags.generateUrl(ctx.log());
         }
 
         @Override
         @Nullable
         public String header(String name) {
-            if (!log.isAvailable(RequestLogAvailability.REQUEST_HEADERS)) {
+            if (!ctx.log().isAvailable(RequestLogAvailability.REQUEST_HEADERS)) {
                 return null;
             }
-            return log.requestHeaders().get(name);
+            return ctx.log().requestHeaders().get(name);
         }
 
         @Override
         public long startTimestamp() {
-            if (!log.isAvailable(RequestLogAvailability.REQUEST_START)) {
+            if (!ctx.log().isAvailable(RequestLogAvailability.REQUEST_START)) {
                 return 0L;
             }
-            return log.requestStartTimeMicros();
+            return ctx.log().requestStartTimeMicros();
         }
 
         @Override
@@ -99,38 +101,38 @@ final class RequestLogAdapter {
         }
     }
 
-    static brave.http.HttpClientResponse asHttpClientResponse(RequestLog log) {
-        return new HttpClientResponse(log);
+    static brave.http.HttpClientResponse asHttpClientResponse(ClientRequestContext ctx) {
+        return new HttpClientResponse(ctx);
     }
 
     private static final class HttpClientResponse extends brave.http.HttpClientResponse {
-        private final RequestLog log;
+        private final ClientRequestContext ctx;
 
-        HttpClientResponse(RequestLog log) {
-            this.log = log;
+        HttpClientResponse(ClientRequestContext ctx) {
+            this.ctx = ctx;
         }
 
         @Override
-        public Object unwrap() {
-            return log;
+        public ClientRequestContext unwrap() {
+            return ctx;
         }
 
         @Override
         public int statusCode() {
-            if (!log.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
+            if (!ctx.log().isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
                 return 0;
             }
-            return log.status().code();
+            return ctx.log().status().code();
         }
 
         @Override
         public long finishTimestamp() {
-            return SpanContextUtil.wallTimeMicros(log, log.responseEndTimeNanos());
+            return SpanContextUtil.wallTimeMicros(ctx.log(), ctx.log().responseEndTimeNanos());
         }
     }
 
     /**
-     * Returns the authority of the {@link Request}.
+     * Returns the authority of the {@link RequestLog}.
      */
     @Nullable
     static String authority(RequestLog requestLog) {
@@ -141,7 +143,7 @@ final class RequestLogAdapter {
     }
 
     /**
-     * Returns the {@link SessionProtocol#uriText()} of the {@link Request}.
+     * Returns the {@link SessionProtocol#uriText()} of the {@link RequestLog}.
      */
     @Nullable
     static String protocol(RequestLog requestLog) {

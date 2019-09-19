@@ -18,8 +18,6 @@ package com.linecorp.armeria.server.brave;
 
 import static com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext.ensureScopeUsesRequestContext;
 
-import brave.http.HttpServerRequest;
-import brave.http.HttpServerResponse;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpRequest;
@@ -37,6 +35,8 @@ import brave.Tracer;
 import brave.Tracer.SpanInScope;
 import brave.Tracing;
 import brave.http.HttpServerHandler;
+import brave.http.HttpServerRequest;
+import brave.http.HttpServerResponse;
 import brave.http.HttpTracing;
 
 /**
@@ -77,7 +77,7 @@ public final class BraveService extends SimpleDecoratingHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final Span span = handler.handleReceive(RequestLogAdapter.asHttpServerRequest(ctx.log()));
+        final Span span = handler.handleReceive(ServiceRequestContextAdapter.asHttpServerRequest(ctx));
 
         // Ensure the trace context propagates to children
         ctx.onChild(TraceContextUtil::copy);
@@ -99,7 +99,7 @@ public final class BraveService extends SimpleDecoratingHttpService {
             if (log.isAvailable(RequestLogAvailability.RESPONSE_FIRST_BYTES_TRANSFERRED)) {
                 SpanTags.logWireSend(span, log.responseFirstBytesTransferredTimeNanos(), log);
             }
-            HttpServerResponse response = RequestLogAdapter.asHttpServerResponse(log);
+            HttpServerResponse response = ServiceRequestContextAdapter.asHttpServerResponse(ctx);
             handler.handleSend(response, log.responseCause(), span);
         }, RequestLogAvailability.COMPLETE);
 
