@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.spring.web.reactive;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkState;
 
 import java.util.concurrent.CompletableFuture;
@@ -37,6 +38,7 @@ import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 
 import io.netty.channel.EventLoop;
+import reactor.core.publisher.Mono;
 
 /**
  * A {@link Subscriber} which reads the {@link ResponseHeaders} first from an {@link HttpResponse}.
@@ -46,7 +48,12 @@ import io.netty.channel.EventLoop;
  */
 final class ArmeriaHttpClientResponseSubscriber implements Subscriber<HttpObject> {
 
+    private static final Throwable SUCCESS = new Throwable("SUCCESS", null, false, false) {
+        private static final long serialVersionUID = 16755233460671894L;
+    };
+
     private final CompletableFuture<ResponseHeaders> headersFuture = new CompletableFuture<>();
+    private final CompletableFuture<Void> completionFuture;
     private final EventLoop eventLoop = CommonPools.workerGroup().next();
 
     private final ResponseBodyPublisher bodyPublisher = new ResponseBodyPublisher(this);
@@ -54,12 +61,11 @@ final class ArmeriaHttpClientResponseSubscriber implements Subscriber<HttpObject
     @Nullable
     private volatile Subscription subscription;
 
-    private boolean isCompleted;
-
     @Nullable
     private Throwable completedCause;
 
     ArmeriaHttpClientResponseSubscriber(HttpResponse httpResponse) {
+        completionFuture = httpResponse.completionFuture();
         httpResponse.subscribe(this, eventLoop, SubscriptionOption.NOTIFY_CANCELLATION);
     }
 
@@ -103,12 +109,7 @@ final class ArmeriaHttpClientResponseSubscriber implements Subscriber<HttpObject
     }
 
     private void complete(@Nullable Throwable cause) {
-        if (isCompleted) {
-            return;
-        }
-
-        isCompleted = true;
-        completedCause = cause;
+        completedCause = firstNonNull(cause, SUCCESS);
 
         // Complete the future for the response headers if it did not receive any non-informational headers yet.
         if (!headersFuture.isDone()) {
@@ -121,7 +122,7 @@ final class ArmeriaHttpClientResponseSubscriber implements Subscriber<HttpObject
         }
 
         // Notify the publisher.
-        bodyPublisher.relayOnComplete(cause);
+        bodyPublisher.relayOnComplete();
     }
 
     Subscription upstreamSubscription() {
@@ -151,6 +152,9 @@ final class ArmeriaHttpClientResponseSubscriber implements Subscriber<HttpObject
         @Nullable
         private volatile Subscriber<? super HttpObject> subscriber;
 
+        @Nullable
+        private Publisher<HttpObject> publisherForLateSubscribers;
+
         ResponseBodyPublisher(ArmeriaHttpClientResponseSubscriber parent) {
             this.parent = parent;
         }
@@ -162,29 +166,32 @@ final class ArmeriaHttpClientResponseSubscriber implements Subscriber<HttpObject
                 if (oldSubscriber == null) {
                     // The first subscriber.
                     if (subscriberUpdater.compareAndSet(this, null, s)) {
+                        s.onSubscribe(this);
                         break;
                     }
                 } else {
-                    // The second subscriber.
-                    final Subscriber<HttpObject> newSubscriber = new CompositeSubscriber<>(oldSubscriber, s);
-                    if (subscriberUpdater.compareAndSet(this, oldSubscriber, newSubscriber)) {
-                        break;
+                    // The other subscribers - notify whether completed successfully only.
+                    if (publisherForLateSubscribers == null) {
+                        @SuppressWarnings({ "unchecked", "rawtypes" })
+                        final Publisher<HttpObject> newPublisher =
+                                (Publisher) Mono.fromFuture(parent.completionFuture);
+                        publisherForLateSubscribers = newPublisher;
                     }
+                    publisherForLateSubscribers.subscribe(s);
+                    break;
                 }
             }
-
-            s.onSubscribe(this);
         }
 
         @Override
         public void request(long n) {
-            if (!parent.isCompleted) {
+            if (parent.completedCause == null) {
+                // The stream is not completed yet.
                 parent.upstreamSubscription().request(n);
-                return;
+            } else {
+                // If this stream is already completed, invoke 'onComplete' or 'onError' asynchronously.
+                parent.eventLoop.execute(this::relayOnComplete);
             }
-
-            // If this stream is already completed, invoke 'onComplete' or 'onError' asynchronously.
-            parent.eventLoop.execute(() -> relayOnComplete(parent.completedCause));
         }
 
         @Override
@@ -199,10 +206,13 @@ final class ArmeriaHttpClientResponseSubscriber implements Subscriber<HttpObject
             subscriber.onNext(obj);
         }
 
-        private void relayOnComplete(@Nullable Throwable cause) {
+        private void relayOnComplete() {
             final Subscriber<? super HttpObject> subscriber = this.subscriber;
+            final Throwable cause = parent.completedCause;
+            assert cause != null;
+
             if (subscriber != null) {
-                if (cause == null) {
+                if (cause == SUCCESS) {
                     subscriber.onComplete();
                 } else {
                     subscriber.onError(cause);
@@ -210,51 +220,6 @@ final class ArmeriaHttpClientResponseSubscriber implements Subscriber<HttpObject
             } else {
                 // If there's no Subscriber yet, we can notify later
                 // when a Subscriber subscribes and calls Subscription.request().
-            }
-        }
-    }
-
-    private static final class CompositeSubscriber<T> implements Subscriber<T> {
-
-        private final Subscriber<? super T> mainSubscriber;
-        private final Subscriber<? super T> subSubscriber;
-
-        CompositeSubscriber(Subscriber<? super T> mainSubscriber, Subscriber<? super T> subSubscriber) {
-            this.mainSubscriber = mainSubscriber;
-            this.subSubscriber = subSubscriber;
-        }
-
-        /**
-         * This method is never invoked because {@link ResponseBodyPublisher#subscribe(Subscriber)} invokes
-         * the {@link Subscriber}s.
-         */
-        @Override
-        public void onSubscribe(Subscription s) {
-            throw new Error();
-        }
-
-        @Override
-        public void onNext(T t) {
-            // Note that only the main Subscriber gets the data.
-            // Other Subscribers only get whether the response streaming was successful or not.
-            mainSubscriber.onNext(t);
-        }
-
-        @Override
-        public void onError(Throwable t) {
-            try {
-                mainSubscriber.onError(t);
-            } finally {
-                subSubscriber.onError(t);
-            }
-        }
-
-        @Override
-        public void onComplete() {
-            try {
-                mainSubscriber.onComplete();
-            } finally {
-                subSubscriber.onComplete();
             }
         }
     }
