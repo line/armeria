@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.spring.web.reactive;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkState;
 
 import java.util.concurrent.CompletableFuture;
@@ -62,7 +61,7 @@ final class ArmeriaHttpClientResponseSubscriber implements Subscriber<HttpObject
     private volatile Subscription subscription;
 
     @Nullable
-    private Throwable completedCause;
+    private volatile Throwable completedCause;
 
     ArmeriaHttpClientResponseSubscriber(HttpResponse httpResponse) {
         completionFuture = httpResponse.completionFuture();
@@ -100,7 +99,7 @@ final class ArmeriaHttpClientResponseSubscriber implements Subscriber<HttpObject
 
     @Override
     public void onComplete() {
-        complete(null);
+        complete(SUCCESS);
     }
 
     @Override
@@ -108,12 +107,12 @@ final class ArmeriaHttpClientResponseSubscriber implements Subscriber<HttpObject
         complete(cause);
     }
 
-    private void complete(@Nullable Throwable cause) {
-        completedCause = firstNonNull(cause, SUCCESS);
+    private void complete(Throwable cause) {
+        completedCause = cause;
 
         // Complete the future for the response headers if it did not receive any non-informational headers yet.
         if (!headersFuture.isDone()) {
-            if (cause != null && !(cause instanceof CancelledSubscriptionException) &&
+            if (cause != SUCCESS && !(cause instanceof CancelledSubscriptionException) &&
                 !(cause instanceof AbortedStreamException)) {
                 headersFuture.completeExceptionally(cause);
             } else {
