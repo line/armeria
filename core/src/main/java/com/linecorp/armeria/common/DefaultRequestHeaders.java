@@ -19,7 +19,7 @@ import java.net.URI;
 
 import javax.annotation.Nullable;
 
-@SuppressWarnings("EqualsAndHashcode")
+@SuppressWarnings({ "checkstyle:EqualsHashCode", "EqualsAndHashcode" })
 final class DefaultRequestHeaders extends DefaultHttpHeaders implements RequestHeaders {
 
     @Nullable

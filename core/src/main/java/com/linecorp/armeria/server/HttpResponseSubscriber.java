@@ -468,7 +468,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         return fillAdditionalTrailers(trailers.toBuilder(), additionalTrailers).build();
     }
 
-    private static HttpHeadersBuilder fillAdditionalTrailers(HttpHeadersBuilder builder, HttpHeaders additionalTrailers) {
+    private static HttpHeadersBuilder fillAdditionalTrailers(HttpHeadersBuilder builder,
+                                                             HttpHeaders additionalTrailers) {
         if (!additionalTrailers.isEmpty()) {
             for (AsciiString name : additionalTrailers.names()) {
                 if (!HEADER_BLACKLIST.contains(name) &&
