@@ -24,6 +24,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+@SuppressWarnings("unchecked")
 public class RequestContextAwareMinimalStage<T> implements CompletionStage<T> {
 
     private final RequestContextAwareCompletableFuture<T> delegate;
@@ -34,191 +35,191 @@ public class RequestContextAwareMinimalStage<T> implements CompletionStage<T> {
 
     @Override
     public <U> CompletionStage<U> thenApply(Function<? super T, ? extends U> fn) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<U>) delegate.thenApply(fn));
     }
 
     @Override
     public <U> CompletionStage<U> thenApplyAsync(Function<? super T, ? extends U> fn) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<U>) delegate.thenApplyAsync(fn));
     }
 
     @Override
     public <U> CompletionStage<U> thenApplyAsync(Function<? super T, ? extends U> fn, Executor executor) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<U>) delegate.thenApplyAsync(fn, executor));
     }
 
     @Override
     public CompletionStage<Void> thenAccept(Consumer<? super T> action) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<Void>) delegate.thenAccept(action));
     }
 
     @Override
     public CompletionStage<Void> thenAcceptAsync(Consumer<? super T> action) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<Void>) delegate.thenAcceptAsync(action));
     }
 
     @Override
     public CompletionStage<Void> thenAcceptAsync(Consumer<? super T> action, Executor executor) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<Void>) delegate.thenAcceptAsync(action, executor));
     }
 
     @Override
     public CompletionStage<Void> thenRun(Runnable action) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<Void>) delegate.thenRun(action));
     }
 
     @Override
     public CompletionStage<Void> thenRunAsync(Runnable action) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<Void>) delegate.thenRunAsync(action));
     }
 
     @Override
     public CompletionStage<Void> thenRunAsync(Runnable action, Executor executor) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<Void>) delegate.thenRunAsync(action, executor));
     }
 
     @Override
     public <U, V> CompletionStage<V> thenCombine(CompletionStage<? extends U> other, BiFunction<? super T, ? super U, ? extends V> fn) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<V>) delegate.thenCombine(other, fn));
     }
 
     @Override
     public <U, V> CompletionStage<V> thenCombineAsync(CompletionStage<? extends U> other, BiFunction<? super T, ? super U, ? extends V> fn) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<V>) delegate.thenCombineAsync(other, fn));
     }
 
     @Override
     public <U, V> CompletionStage<V> thenCombineAsync(CompletionStage<? extends U> other, BiFunction<? super T, ? super U, ? extends V> fn, Executor executor) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<V>) delegate.thenCombineAsync(other, fn, executor));
     }
 
     @Override
     public <U> CompletionStage<Void> thenAcceptBoth(CompletionStage<? extends U> other, BiConsumer<? super T, ? super U> action) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<Void>) delegate.thenAcceptBoth(other, action));
     }
 
     @Override
     public <U> CompletionStage<Void> thenAcceptBothAsync(CompletionStage<? extends U> other, BiConsumer<? super T, ? super U> action) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<Void>) delegate.thenAcceptBothAsync(other, action));
     }
 
     @Override
     public <U> CompletionStage<Void> thenAcceptBothAsync(CompletionStage<? extends U> other, BiConsumer<? super T, ? super U> action, Executor executor) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<Void>) delegate.thenAcceptBothAsync(other, action, executor));
     }
 
     @Override
     public CompletionStage<Void> runAfterBoth(CompletionStage<?> other, Runnable action) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<Void>) delegate.runAfterBoth(other, action));
     }
 
     @Override
     public CompletionStage<Void> runAfterBothAsync(CompletionStage<?> other, Runnable action) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<Void>) delegate.runAfterBothAsync(other, action));
     }
 
     @Override
     public CompletionStage<Void> runAfterBothAsync(CompletionStage<?> other, Runnable action, Executor executor) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<Void>) delegate.runAfterBothAsync(other, action, executor));
     }
 
     @Override
     public <U> CompletionStage<U> applyToEither(CompletionStage<? extends T> other, Function<? super T, U> fn) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<U>) delegate.applyToEither(other, fn));
     }
 
     @Override
     public <U> CompletionStage<U> applyToEitherAsync(CompletionStage<? extends T> other, Function<? super T, U> fn) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<U>) delegate.applyToEitherAsync(other, fn));
     }
 
     @Override
     public <U> CompletionStage<U> applyToEitherAsync(CompletionStage<? extends T> other, Function<? super T, U> fn, Executor executor) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<U>) delegate.applyToEitherAsync(other, fn, executor));
     }
 
     @Override
     public CompletionStage<Void> acceptEither(CompletionStage<? extends T> other, Consumer<? super T> action) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<Void>) delegate.acceptEither(other, action));
     }
 
     @Override
     public CompletionStage<Void> acceptEitherAsync(CompletionStage<? extends T> other, Consumer<? super T> action) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<Void>) delegate.acceptEitherAsync(other, action));
     }
 
     @Override
     public CompletionStage<Void> acceptEitherAsync(CompletionStage<? extends T> other, Consumer<? super T> action, Executor executor) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<Void>) delegate.acceptEitherAsync(other, action, executor));
     }
 
     @Override
     public CompletionStage<Void> runAfterEither(CompletionStage<?> other, Runnable action) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<Void>) delegate.runAfterEither(other, action));
     }
 
     @Override
     public CompletionStage<Void> runAfterEitherAsync(CompletionStage<?> other, Runnable action) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<Void>) delegate.runAfterEitherAsync(other, action));
     }
 
     @Override
     public CompletionStage<Void> runAfterEitherAsync(CompletionStage<?> other, Runnable action, Executor executor) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<Void>) delegate.runAfterEitherAsync(other, action, executor));
     }
 
     @Override
     public <U> CompletionStage<U> thenCompose(Function<? super T, ? extends CompletionStage<U>> fn) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<U>) delegate.thenCompose(fn));
     }
 
     @Override
     public <U> CompletionStage<U> thenComposeAsync(Function<? super T, ? extends CompletionStage<U>> fn) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<U>) delegate.thenComposeAsync(fn));
     }
 
     @Override
     public <U> CompletionStage<U> thenComposeAsync(Function<? super T, ? extends CompletionStage<U>> fn, Executor executor) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<U>) delegate.thenComposeAsync(fn, executor));
     }
 
     @Override
     public <U> CompletionStage<U> handle(BiFunction<? super T, Throwable, ? extends U> fn) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<U>) delegate.handle(fn));
     }
 
     @Override
     public <U> CompletionStage<U> handleAsync(BiFunction<? super T, Throwable, ? extends U> fn) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<U>) delegate.handleAsync(fn));
     }
 
     @Override
     public <U> CompletionStage<U> handleAsync(BiFunction<? super T, Throwable, ? extends U> fn, Executor executor) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<U>) delegate.handleAsync(fn, executor));
     }
 
     @Override
     public CompletionStage<T> whenComplete(BiConsumer<? super T, ? super Throwable> action) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<T>) delegate.whenComplete(action));
     }
 
     @Override
     public CompletionStage<T> whenCompleteAsync(BiConsumer<? super T, ? super Throwable> action) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<T>) delegate.whenCompleteAsync(action));
     }
 
     @Override
     public CompletionStage<T> whenCompleteAsync(BiConsumer<? super T, ? super Throwable> action, Executor executor) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<T>) delegate.whenCompleteAsync(action, executor));
     }
 
     @Override
     public CompletionStage<T> exceptionally(Function<Throwable, ? extends T> fn) {
-        throw new UnsupportedOperationException();
+        return new RequestContextAwareMinimalStage((RequestContextAwareCompletableFuture<T>) delegate.exceptionally(fn));
     }
 
     @Override
     public CompletableFuture<T> toCompletableFuture() {
-        return delegate;
+        return delegate.thenApply(Function.identity());
     }
 }

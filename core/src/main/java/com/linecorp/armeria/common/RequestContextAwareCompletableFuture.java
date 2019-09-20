@@ -250,11 +250,11 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
     // support JDK9 functions
 
     public <U> CompletableFuture<U> newIncompleteFuture() {
-        return new RequestContextAwareCompletableFuture<>(ctx);
+        return new CompletableFuture<>();
     }
 
     public CompletionStage<T> minimalCompletionStage() {
-        return ctx.makeContextAware(new RequestContextAwareMinimalStage<>(this));
+        return new RequestContextAwareMinimalStage<>(this);
     }
 
     public CompletableFuture<T> completeAsync(Supplier<? extends T> supplier) {
