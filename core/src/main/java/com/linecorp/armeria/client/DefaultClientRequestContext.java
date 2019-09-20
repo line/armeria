@@ -67,6 +67,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
             additionalRequestHeadersUpdater = AtomicReferenceFieldUpdater.newUpdater(
                     DefaultClientRequestContext.class, HttpHeaders.class, "additionalRequestHeaders");
 
+    private boolean initialized;
     @Nullable
     private ClientFactory factory;
     @Nullable
@@ -153,6 +154,9 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      */
     public boolean init(Endpoint endpoint) {
         assert this.endpoint == null : this.endpoint;
+        assert !initialized;
+        initialized = true;
+
         try {
             if (endpoint.isGroup()) {
                 final String groupName = endpoint.groupName();
@@ -284,9 +288,9 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     @Override
     protected void validateHeaders(RequestHeaders headers) {
-        // Do not validate/filter if the context is not fully initialized yet,
+        // Do not validate if the context is not fully initialized yet,
         // because init() will trigger this method again via updateEndpoint().
-        if (eventLoop == null) {
+        if (!initialized) {
             return;
         }
 
