@@ -26,7 +26,6 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 
@@ -102,37 +101,11 @@ public final class SpanTags {
      */
     @Nullable
     public static String generateUrl(RequestLog requestLog) {
-        if (!requestLog.isAvailable(RequestLogAvailability.SCHEME) ||
-            !requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)) {
+        if (!requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)) {
             return null;
         }
-        final Scheme scheme = requestLog.scheme();
-        final String authority = requestLog.authority();
-        final String path = requestLog.path();
-        final String query = requestLog.query();
-        final SessionProtocol sessionProtocol = scheme.sessionProtocol();
-        final String uriScheme;
-        if (SessionProtocol.httpValues().contains(sessionProtocol)) {
-            uriScheme = "http://";
-        } else if (SessionProtocol.httpsValues().contains(sessionProtocol)) {
-            uriScheme = "https://";
-        } else {
-            uriScheme = sessionProtocol.uriText() + "://";
-        }
 
-        final StringBuilder uriBuilder = new StringBuilder(
-                uriScheme.length() + authority.length() + path.length() +
-                (query != null ? query.length() + 1 : 0));
-
-        uriBuilder.append(uriScheme)
-                  .append(authority)
-                  .append(path);
-
-        if (query != null) {
-            uriBuilder.append('?').append(query);
-        }
-
-        return uriBuilder.toString();
+        return requestLog.requestHeaders().uri().toString();
     }
 
     public static void logWireSend(Span span, long wireSendTimeNanos, RequestLog requestLog) {

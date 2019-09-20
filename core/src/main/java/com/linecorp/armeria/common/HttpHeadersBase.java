@@ -31,12 +31,15 @@ package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isAbsoluteUri;
 import static io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName.hasPseudoHeaderFormat;
 import static io.netty.util.internal.MathUtil.findNextPositivePowerOfTwo;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Objects.requireNonNull;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
@@ -122,6 +125,26 @@ class HttpHeadersBase implements HttpHeaderGetters {
     }
 
     // Shortcut methods
+
+    URI uri() {
+        final String uri;
+        final String path = path();
+        if (isAbsoluteUri(path)) {
+            uri = path;
+        } else {
+            final String scheme = scheme();
+            checkState(scheme != null, ":scheme header does not exist.");
+            final String authority = authority();
+            checkState(authority != null, ":authority header does not exist.");
+            uri = scheme + "://" + authority + path;
+        }
+
+        try {
+            return new URI(uri);
+        } catch (URISyntaxException e) {
+            throw new IllegalStateException("not a valid URI: " + uri, e);
+        }
+    }
 
     HttpMethod method() {
         final String methodStr = get(HttpHeaderNames.METHOD);
