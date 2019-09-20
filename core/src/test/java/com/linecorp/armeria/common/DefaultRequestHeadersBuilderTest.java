@@ -22,10 +22,12 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.Maps;
 
-public class DefaultRequestHeadersBuilderTest {
+import com.linecorp.armeria.client.Endpoint;
+
+class DefaultRequestHeadersBuilderTest {
 
     @Test
-    public void mutationAfterBuild() {
+    void mutationAfterBuild() {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/");
         final DefaultRequestHeadersBuilder builder = (DefaultRequestHeadersBuilder) headers.toBuilder();
 
@@ -79,7 +81,7 @@ public class DefaultRequestHeadersBuilderTest {
     }
 
     @Test
-    public void noMutationNoCopy() {
+    void noMutationNoCopy() {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/");
         final DefaultRequestHeadersBuilder builder = (DefaultRequestHeadersBuilder) headers.toBuilder();
         assertThat(builder.build()).isSameAs(headers);
@@ -87,7 +89,7 @@ public class DefaultRequestHeadersBuilderTest {
     }
 
     @Test
-    public void validation() {
+    void validation() {
         assertThatThrownBy(() -> RequestHeaders.builder().build())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(":method")
@@ -114,5 +116,20 @@ public class DefaultRequestHeadersBuilderTest {
         assertThatThrownBy(() -> RequestHeaders.builder().authority("foo.com").scheme("http").uri())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(":path");
+    }
+    
+    @Test
+    void authorityFromEndpoint() {
+        final RequestHeadersBuilder builder = RequestHeaders.builder();
+        assertThat(builder.authority(Endpoint.of("foo", 8080)).authority()).isEqualTo("foo:8080");
+    }
+
+    @Test
+    void schemeFromSessionProtocol() {
+        final RequestHeadersBuilder builder = RequestHeaders.builder();
+        SessionProtocol.httpValues().forEach(p -> assertThat(builder.scheme(p).scheme()).isEqualTo("http"));
+        SessionProtocol.httpsValues().forEach(p -> assertThat(builder.scheme(p).scheme()).isEqualTo("https"));
+        assertThatThrownBy(() -> builder.scheme(SessionProtocol.PROXY))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }
