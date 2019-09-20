@@ -22,6 +22,8 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import javax.annotation.Nullable;
+
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.util.Exceptions;
@@ -120,7 +122,7 @@ public final class SamlEndpoint {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (this == o) {
             return true;
         }

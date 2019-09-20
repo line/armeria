@@ -19,6 +19,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.Date;
 
+import javax.annotation.Nullable;
+
 import com.google.common.base.MoreObjects;
 
 import io.netty.handler.codec.DateFormatter;
@@ -66,7 +68,7 @@ public final class HttpFileAttributes {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
         if (obj == null || obj.getClass() != HttpFileAttributes.class) {
             return false;
         }

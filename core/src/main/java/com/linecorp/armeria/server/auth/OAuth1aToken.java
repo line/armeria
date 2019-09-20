@@ -20,6 +20,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
 import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
@@ -185,7 +187,7 @@ public final class OAuth1aToken {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (this == o) {
             return true;
         }

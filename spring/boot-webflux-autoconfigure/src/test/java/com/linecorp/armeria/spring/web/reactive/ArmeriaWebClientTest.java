@@ -19,6 +19,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 
+import javax.annotation.Nullable;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -201,7 +203,7 @@ public class ArmeriaWebClientTest {
         }
 
         @Override
-        public boolean equals(Object o) {
+        public boolean equals(@Nullable Object o) {
             if (this == o) {
                 return true;
             }
