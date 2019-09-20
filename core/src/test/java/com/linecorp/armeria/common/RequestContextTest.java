@@ -333,11 +333,11 @@ public class RequestContextTest {
 
         AtomicInteger atomicInteger = new AtomicInteger();
         AtomicReference<Throwable> atomicReference = new AtomicReference<>();
-        completionStage.whenComplete((value, error) -> {
+        completionStage.whenComplete((result, error) -> {
             if (error != null) {
                 atomicReference.set(error);
             } else {
-                atomicInteger.set(value);
+                atomicInteger.set(result);
             }
         });
         contextAwareFuture.complete(1);
