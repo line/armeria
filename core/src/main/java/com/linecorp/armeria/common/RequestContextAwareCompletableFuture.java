@@ -258,12 +258,28 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
     }
 
     public CompletableFuture<T> completeAsync(Supplier<? extends T> supplier) {
-        return ctx.makeContextAware(supplyAsync(this.makeContextAware(supplier)));
+        supplyAsync(this.makeContextAware(supplier)).handle((res, cause) -> {
+            if (cause != null) {
+                completeExceptionally(cause);
+            } else {
+                complete(res);
+            }
+            return null;
+        });
+        return this;
     }
 
     public CompletableFuture<T> completeAsync(Supplier<? extends T> supplier,
                                               Executor executor) {
-        return ctx.makeContextAware(supplyAsync(this.makeContextAware(supplier), executor));
+        supplyAsync(this.makeContextAware(supplier), executor).handle((res, cause) -> {
+            if (cause != null) {
+                completeExceptionally(cause);
+            } else {
+                complete(res);
+            }
+            return null;
+        });
+        return this;
     }
 
     private Supplier<T> makeContextAware(Supplier<? extends T> action) {

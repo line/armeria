@@ -308,10 +308,13 @@ public class RequestContextTest {
     public void minimalCompletionStageUsingCompleteAsync() throws Exception {
         final RequestContext context = createContext(false);
         final CompletableFuture<Integer> originalFuture = new CompletableFuture<>();
-        final RequestContextAwareCompletableFuture<Integer> contextAwareFuture = (RequestContextAwareCompletableFuture) context.makeContextAware(originalFuture);
+        final RequestContextAwareCompletableFuture<Integer> contextAwareFuture =
+                (RequestContextAwareCompletableFuture) context.makeContextAware(originalFuture);
         final CompletionStage<Integer> completionStage = contextAwareFuture.minimalCompletionStage();
 
-        contextAwareFuture.completeAsync(() -> { throw new RuntimeException(); });
+        contextAwareFuture.completeAsync(() -> {
+            throw new RuntimeException();
+        });
         contextAwareFuture.complete(1);
 
         assertThat(contextAwareFuture.join()).isEqualTo(1);
@@ -324,12 +327,19 @@ public class RequestContextTest {
     public void minimalCompletionStageUsingWhenComplete() throws Exception {
         final RequestContext context = createContext(false);
         final CompletableFuture<Integer> originalFuture = new CompletableFuture<>();
-        final RequestContextAwareCompletableFuture<Integer> contextAwareFuture = (RequestContextAwareCompletableFuture) context.makeContextAware(originalFuture);
+        final RequestContextAwareCompletableFuture<Integer> contextAwareFuture =
+                (RequestContextAwareCompletableFuture) context.makeContextAware(originalFuture);
         final CompletionStage<Integer> completionStage = contextAwareFuture.minimalCompletionStage();
 
-        AtomicInteger atomicInteger = new AtomicInteger(0);
+        AtomicInteger atomicInteger = new AtomicInteger();
         AtomicReference<Throwable> atomicReference = new AtomicReference<>();
-        completionStage.whenComplete((v, e) -> {if (e != null) atomicReference.set(e); else atomicInteger.set(v);});
+        completionStage.whenComplete((value, error) -> {
+            if (error != null) {
+                atomicReference.set(error);
+            } else {
+                atomicInteger.set(value);
+            }
+        });
         contextAwareFuture.complete(1);
 
         assertThat(contextAwareFuture.join()).isEqualTo(1);
@@ -343,7 +353,8 @@ public class RequestContextTest {
     public void makeContextAwareCompletableFutureUsingCompleteAsync() throws Exception {
         final RequestContext context = createContext(false);
         final CompletableFuture<String> originalFuture = new CompletableFuture<>();
-        final RequestContextAwareCompletableFuture<String> contextAwareFuture = (RequestContextAwareCompletableFuture) context.makeContextAware(originalFuture);
+        final RequestContextAwareCompletableFuture<String> contextAwareFuture =
+                (RequestContextAwareCompletableFuture) context.makeContextAware(originalFuture);
         final CompletableFuture<String> resultFuture =  contextAwareFuture.completeAsync(() -> "success");
 
         originalFuture.complete("success");
@@ -356,7 +367,8 @@ public class RequestContextTest {
         final ExecutorService executor = Executors.newFixedThreadPool(2);
         final RequestContext context = createContext(false);
         final CompletableFuture<String> originalFuture = new CompletableFuture<>();
-        final RequestContextAwareCompletableFuture<String> contextAwareFuture = (RequestContextAwareCompletableFuture) context.makeContextAware(originalFuture);
+        final RequestContextAwareCompletableFuture<String> contextAwareFuture =
+                (RequestContextAwareCompletableFuture) context.makeContextAware(originalFuture);
         final CompletableFuture<String> resultFuture = contextAwareFuture.completeAsync(() -> "success", executor);
 
         originalFuture.complete("success");
