@@ -37,188 +37,111 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
 
     @Override
     public <U> CompletableFuture<U> thenApply(Function<? super T,? extends U> fn) {
-        final CompletableFuture<U> result = super.thenApply(ctx.makeContextAware(fn));
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.thenApply(ctx.makeContextAware(fn)));
     }
 
     @Override
     public <U> CompletableFuture<U> thenApplyAsync(Function<? super T,? extends U> fn) {
-        final CompletableFuture<U> result = super.thenApplyAsync(ctx.makeContextAware(fn));
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.thenApplyAsync(ctx.makeContextAware(fn)));
     }
 
     @Override
     public <U> CompletableFuture<U> thenApplyAsync(Function<? super T,? extends U> fn, Executor executor) {
-        final CompletableFuture<U> result = super.thenApplyAsync(ctx.makeContextAware(fn), executor);
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.thenApplyAsync(ctx.makeContextAware(fn), executor));
     }
 
     @Override
     public CompletableFuture<Void> thenAccept(Consumer<? super T> action) {
-        final CompletableFuture<Void> result = super.thenAccept(ctx.makeContextAware(action));
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.thenAccept(ctx.makeContextAware(action)));
     }
 
     @Override
     public CompletableFuture<Void> thenAcceptAsync(Consumer<? super T> action) {
-        final CompletableFuture<Void> result = super.thenAcceptAsync(ctx.makeContextAware(action));
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.thenAcceptAsync(ctx.makeContextAware(action)));
     }
 
     @Override
     public CompletableFuture<Void> thenAcceptAsync(Consumer<? super T> action, Executor executor) {
-        final CompletableFuture<Void> result = super.thenAcceptAsync(ctx.makeContextAware(action), executor);
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.thenAcceptAsync(ctx.makeContextAware(action), executor));
     }
 
     @Override
     public CompletableFuture<Void> thenRun(Runnable action) {
-        final CompletableFuture<Void> result = super.thenRun(ctx.makeContextAware(action));
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.thenRun(ctx.makeContextAware(action)));
     }
 
     @Override
     public CompletableFuture<Void> thenRunAsync(Runnable action) {
-        final CompletableFuture<Void> result = super.thenRunAsync(ctx.makeContextAware(action));
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.thenRunAsync(ctx.makeContextAware(action)));
     }
 
     @Override
     public CompletableFuture<Void> thenRunAsync(Runnable action, Executor executor) {
-        final CompletableFuture<Void> result = super.thenRunAsync(ctx.makeContextAware(action), executor);
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.thenRunAsync(ctx.makeContextAware(action), executor));
     }
 
     @Override
     public <U,V> CompletableFuture<V> thenCombine(CompletionStage<? extends U> other,
                                                   BiFunction<? super T,? super U,? extends V> fn) {
-        final CompletableFuture<V> result = super.thenCombine(other, ctx.makeContextAware(fn));
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.thenCombine(other, ctx.makeContextAware(fn)));
     }
 
     @Override
     public <U,V> CompletableFuture<V> thenCombineAsync(CompletionStage<? extends U> other,
                                                        BiFunction<? super T,? super U,? extends V> fn) {
-        final CompletableFuture<V> result = super.thenCombineAsync(other, ctx.makeContextAware(fn));
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.thenCombineAsync(other, ctx.makeContextAware(fn)));
     }
 
     @Override
     public <U,V> CompletableFuture<V> thenCombineAsync(CompletionStage<? extends U> other,
                                                        BiFunction<? super T,? super U,? extends V> fn,
                                                        Executor executor) {
-        final CompletableFuture<V> result = super.thenCombineAsync(other, ctx.makeContextAware(fn), executor);
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.thenCombineAsync(other, ctx.makeContextAware(fn), executor));
     }
 
     @Override
     public <U> CompletableFuture<Void> thenAcceptBoth(CompletionStage<? extends U> other,
                                                       BiConsumer<? super T, ? super U> action) {
-        final CompletableFuture<Void> result = super.thenAcceptBoth(other, ctx.makeContextAware(action));
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.thenAcceptBoth(other, ctx.makeContextAware(action)));
     }
 
     @Override
     public <U> CompletableFuture<Void> thenAcceptBothAsync(CompletionStage<? extends U> other,
                                                            BiConsumer<? super T, ? super U> action) {
-        final CompletableFuture<Void> result = super.thenAcceptBothAsync(other, ctx.makeContextAware(action));
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.thenAcceptBothAsync(other, ctx.makeContextAware(action)));
     }
 
     @Override
     public <U> CompletableFuture<Void> thenAcceptBothAsync(CompletionStage<? extends U> other,
                                                            BiConsumer<? super T, ? super U> action,
                                                            Executor executor) {
-        final CompletableFuture<Void> result = super.thenAcceptBothAsync(
-                other, ctx.makeContextAware(action), executor);
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.thenAcceptBothAsync(other, ctx.makeContextAware(action), executor));
     }
 
     @Override
     public CompletableFuture<Void> runAfterBoth(CompletionStage<?> other,
                                                 Runnable action) {
-        final CompletableFuture<Void> result = super.runAfterBoth(other, ctx.makeContextAware(action));
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.runAfterBoth(other, ctx.makeContextAware(action)));
     }
 
     @Override
     public CompletableFuture<Void> runAfterBothAsync(CompletionStage<?> other,
                                                      Runnable action) {
-        final CompletableFuture<Void> result = super.runAfterBothAsync(other, ctx.makeContextAware(action));
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.runAfterBothAsync(other, ctx.makeContextAware(action)));
     }
 
     @Override
     public CompletableFuture<Void> runAfterBothAsync(CompletionStage<?> other,
                                                      Runnable action,
                                                      Executor executor) {
-        final CompletableFuture<Void> result = super.runAfterBothAsync(
-                other, ctx.makeContextAware(action), executor);
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.runAfterBothAsync(
+                other, ctx.makeContextAware(action), executor));
     }
 
     @Override
     public <U> CompletableFuture<U> applyToEither(CompletionStage<? extends T> other,
                                                   Function<? super T, U> fn) {
-        final CompletableFuture<U> result = super.applyToEither(other, ctx.makeContextAware(fn));
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.applyToEither(other, ctx.makeContextAware(fn)));
     }
 
     @Override
@@ -235,165 +158,101 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
     public <U> CompletableFuture<U> applyToEitherAsync(CompletionStage<? extends T> other,
                                                        Function<? super T, U> fn,
                                                        Executor executor) {
-        final CompletableFuture<U> result = super.applyToEitherAsync(other, ctx.makeContextAware(fn), executor);
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.applyToEitherAsync(other, ctx.makeContextAware(fn), executor));
     }
 
     @Override
     public CompletableFuture<Void> acceptEither(CompletionStage<? extends T> other,
                                                 Consumer<? super T> action) {
-        final CompletableFuture<Void> result = super.acceptEither(other, ctx.makeContextAware(action));
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.acceptEither(other, ctx.makeContextAware(action)));
     }
 
     @Override
     public CompletableFuture<Void> acceptEitherAsync(CompletionStage<? extends T> other,
                                                      Consumer<? super T> action) {
-        final CompletableFuture<Void> result = super.acceptEitherAsync(other, ctx.makeContextAware(action));
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.acceptEitherAsync(other, ctx.makeContextAware(action)));
     }
 
     @Override
     public CompletableFuture<Void> acceptEitherAsync(CompletionStage<? extends T> other,
                                                      Consumer<? super T> action,
                                                      Executor executor) {
-        final CompletableFuture<Void> result = super.acceptEitherAsync(
-                other, ctx.makeContextAware(action), executor);
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.acceptEitherAsync(
+                other, ctx.makeContextAware(action), executor));
     }
 
     @Override
     public CompletableFuture<Void> runAfterEither(CompletionStage<?> other,
                                                   Runnable action) {
-        final CompletableFuture<Void> result = super.runAfterEither(other, ctx.makeContextAware(action));
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.runAfterEither(other, ctx.makeContextAware(action)));
     }
 
     @Override
     public CompletableFuture<Void> runAfterEitherAsync(CompletionStage<?> other,
                                                        Runnable action) {
-        final CompletableFuture<Void> result = super.runAfterEitherAsync(other, ctx.makeContextAware(action));
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.runAfterEitherAsync(other, ctx.makeContextAware(action)));
     }
 
     @Override
     public CompletableFuture<Void> runAfterEitherAsync(CompletionStage<?> other,
                                                        Runnable action,
                                                        Executor executor) {
-        final CompletableFuture<Void> result = super.runAfterEitherAsync(
-                other, ctx.makeContextAware(action), executor);
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.runAfterEitherAsync(
+                other, ctx.makeContextAware(action), executor));
     }
 
     @Override
     public <U> CompletableFuture<U> thenCompose(Function<? super T, ? extends CompletionStage<U>> fn) {
-        final CompletableFuture<U> result = super.thenCompose(ctx.makeContextAware(fn));
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.thenCompose(ctx.makeContextAware(fn)));
     }
 
     @Override
     public <U> CompletableFuture<U> thenComposeAsync(Function<? super T, ? extends CompletionStage<U>> fn) {
-        final CompletableFuture<U> result = super.thenComposeAsync(ctx.makeContextAware(fn));
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.thenComposeAsync(ctx.makeContextAware(fn)));
     }
 
     @Override
     public <U> CompletableFuture<U> thenComposeAsync(Function<? super T, ? extends CompletionStage<U>> fn,
                                                      Executor executor) {
-        final CompletableFuture<U> result = super.thenComposeAsync(ctx.makeContextAware(fn), executor);
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.thenComposeAsync(ctx.makeContextAware(fn), executor));
     }
 
     @Override
     public CompletableFuture<T> whenComplete(BiConsumer<? super T, ? super Throwable> action) {
-        final CompletableFuture<T> result = super.whenComplete(ctx.makeContextAware(action));
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.whenComplete(ctx.makeContextAware(action)));
     }
 
     @Override
     public CompletableFuture<T> whenCompleteAsync(BiConsumer<? super T, ? super Throwable> action) {
-        final CompletableFuture<T> result = super.whenCompleteAsync(ctx.makeContextAware(action));
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.whenCompleteAsync(ctx.makeContextAware(action)));
     }
 
     @Override
     public CompletableFuture<T> whenCompleteAsync(BiConsumer<? super T, ? super Throwable> action,
                                                   Executor executor) {
-        final CompletableFuture<T> result = super.whenCompleteAsync(ctx.makeContextAware(action),
-                                                                    executor);
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.whenCompleteAsync(ctx.makeContextAware(action),
+                                                                    executor));
     }
 
     @Override
     public <U> CompletableFuture<U> handle(BiFunction<? super T, Throwable, ? extends U> fn) {
-        final CompletableFuture<U> result = super.handle(ctx.makeContextAware(fn));
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.handle(ctx.makeContextAware(fn)));
     }
 
     @Override
     public <U> CompletableFuture<U> handleAsync(BiFunction<? super T, Throwable, ? extends U> fn) {
-        final CompletableFuture<U> result = super.handleAsync(ctx.makeContextAware(fn));
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.handleAsync(ctx.makeContextAware(fn)));
     }
 
     @Override
     public <U> CompletableFuture<U> handleAsync(BiFunction<? super T, Throwable, ? extends U> fn,
                                                 Executor executor) {
-        final CompletableFuture<U> result = super.handleAsync(ctx.makeContextAware(fn), executor);
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.handleAsync(ctx.makeContextAware(fn), executor));
     }
 
     @Override
     public CompletableFuture<T> exceptionally(Function<Throwable, ? extends T> fn) {
-        return ctx.makeContextAware(super.exceptionally(ctx.makeContextAware(fn)));
+        return maybeMakeContextAware(super.exceptionally(ctx.makeContextAware(fn)));
     }
 
     // support JDK9 functions
@@ -415,7 +274,7 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
             }
             return null;
         });
-        return this;
+        return maybeMakeContextAware(this);
     }
 
     public CompletableFuture<T> completeAsync(Supplier<? extends T> supplier,
@@ -428,7 +287,14 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
             }
             return null;
         });
-        return this;
+        return maybeMakeContextAware(this);
+    }
+
+    private <T> CompletableFuture<T> maybeMakeContextAware(CompletableFuture<T> result) {
+        if (result instanceof RequestContextAwareCompletableFuture) {
+            return result;
+        }
+        return ctx.makeContextAware(result);
     }
 
     private Supplier<T> makeContextAware(Supplier<? extends T> action) {
