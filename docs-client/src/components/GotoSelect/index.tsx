@@ -26,7 +26,12 @@ import {
 import { emphasize } from '@material-ui/core/styles/colorManipulator';
 import TextField, { BaseTextFieldProps } from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
-import React, { CSSProperties, HTMLAttributes, useCallback } from 'react';
+import React, {
+  CSSProperties,
+  HTMLAttributes,
+  useCallback,
+  useMemo,
+} from 'react';
 import Async from 'react-select/async';
 import {
   IndicatorContainerProps,
@@ -359,15 +364,18 @@ const GotoSelect: React.FunctionComponent<GotoSelectProps> = ({
   const classes = useStyles();
   const theme = useTheme();
 
-  const selectStyles = {
-    input: (base: CSSProperties) => ({
-      ...base,
-      color: theme.palette.text.secondary,
-      '& input': {
-        font: 'inherit',
-      },
+  const selectStyles = useMemo(
+    () => ({
+      input: (base: CSSProperties) => ({
+        ...base,
+        color: theme.palette.text.secondary,
+        '& input': {
+          font: 'inherit',
+        },
+      }),
     }),
-  };
+    [theme],
+  );
 
   const handleSelection = useCallback(
     (option: ValueType<OptionType>): void => {
