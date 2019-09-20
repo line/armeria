@@ -45,6 +45,54 @@ interface OwnProps {
   specification: Specification;
 }
 
+function getExampleHeaders(
+  specification: Specification,
+  service: Service,
+  method: Method,
+): Option[] {
+  const exampleHeaders: Option[] = [];
+  addExampleHeadersIfExists(exampleHeaders, method.exampleHttpHeaders);
+  addExampleHeadersIfExists(exampleHeaders, service.exampleHttpHeaders);
+  addExampleHeadersIfExists(
+    exampleHeaders,
+    specification.getExampleHttpHeaders(),
+  );
+  return exampleHeaders;
+}
+
+function addExampleHeadersIfExists(
+  dst: Option[],
+  src: { [name: string]: string }[],
+) {
+  if (src.length > 0) {
+    for (const headers of src) {
+      dst.push({
+        value: JSON.stringify(headers, null, 2),
+        label: removeBrackets(JSON.stringify(headers).trim()),
+      });
+    }
+  }
+}
+
+function removeBrackets(headers: string): string {
+  const length = headers.length;
+  return headers.substring(1, length - 1).trim();
+}
+
+function isExactPathMapping(method: Method): boolean {
+  const endpoints = method.endpoints;
+  if (endpoints.length !== 1) {
+    throw new Error(`
+    Endpoints size should be 1 to determine prefix or regex. size: ${endpoints.length}`);
+  }
+  const endpoint = endpoints[0];
+  return endpoint.pathMapping.startsWith('exact:');
+}
+
+function useRequestBody(httpMethod: string) {
+  return httpMethod === 'POST' || httpMethod === 'PUT';
+}
+
 type Props = OwnProps &
   RouteComponentProps<{
     serviceName: string;
@@ -127,53 +175,5 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
     </>
   );
 };
-
-function getExampleHeaders(
-  specification: Specification,
-  service: Service,
-  method: Method,
-): Option[] {
-  const exampleHeaders: Option[] = [];
-  addExampleHeadersIfExists(exampleHeaders, method.exampleHttpHeaders);
-  addExampleHeadersIfExists(exampleHeaders, service.exampleHttpHeaders);
-  addExampleHeadersIfExists(
-    exampleHeaders,
-    specification.getExampleHttpHeaders(),
-  );
-  return exampleHeaders;
-}
-
-function addExampleHeadersIfExists(
-  dst: Option[],
-  src: { [name: string]: string }[],
-) {
-  if (src.length > 0) {
-    for (const headers of src) {
-      dst.push({
-        value: JSON.stringify(headers, null, 2),
-        label: removeBrackets(JSON.stringify(headers).trim()),
-      });
-    }
-  }
-}
-
-function removeBrackets(headers: string): string {
-  const length = headers.length;
-  return headers.substring(1, length - 1).trim();
-}
-
-function isExactPathMapping(method: Method): boolean {
-  const endpoints = method.endpoints;
-  if (endpoints.length !== 1) {
-    throw new Error(`
-    Endpoints size should be 1 to determine prefix or regex. size: ${endpoints.length}`);
-  }
-  const endpoint = endpoints[0];
-  return endpoint.pathMapping.startsWith('exact:');
-}
-
-function useRequestBody(httpMethod: string) {
-  return httpMethod === 'POST' || httpMethod === 'PUT';
-}
 
 export default React.memo(MethodPage);
