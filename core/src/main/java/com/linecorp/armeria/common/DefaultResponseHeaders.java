@@ -17,7 +17,7 @@ package com.linecorp.armeria.common;
 
 import javax.annotation.Nullable;
 
-@SuppressWarnings({ "checkstyle:EqualsHashCode", "EqualsAndHashcode" })
+@SuppressWarnings("EqualsAndHashcode")
 final class DefaultResponseHeaders extends DefaultHttpHeaders implements ResponseHeaders {
 
     @Nullable

@@ -117,7 +117,7 @@ class DefaultRequestHeadersBuilderTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(":path");
     }
-    
+
     @Test
     void authorityFromEndpoint() {
         final RequestHeadersBuilder builder = RequestHeaders.builder();
