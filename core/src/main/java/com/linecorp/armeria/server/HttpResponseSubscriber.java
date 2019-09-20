@@ -64,7 +64,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     private static final AggregatedHttpResponse SERVICE_UNAVAILABLE_MESSAGE =
             AggregatedHttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
 
-    private static final Set<AsciiString> HEADER_BLACKLIST = ImmutableSet.of(
+    private static final Set<AsciiString> ADDITIONAL_HEADER_BLACKLIST = ImmutableSet.of(
             HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD, HttpHeaderNames.PATH);
 
     enum State {
@@ -450,7 +450,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         final ResponseHeadersBuilder builder = headers.toBuilder();
         if (!additionalHeaders.isEmpty()) {
             for (AsciiString name : additionalHeaders.names()) {
-                if (!HEADER_BLACKLIST.contains(name)) {
+                if (!ADDITIONAL_HEADER_BLACKLIST.contains(name)) {
                     builder.remove(name);
                     additionalHeaders.forEachValue(name, value -> builder.add(name, value));
                 }
@@ -472,7 +472,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                                                              HttpHeaders additionalTrailers) {
         if (!additionalTrailers.isEmpty()) {
             for (AsciiString name : additionalTrailers.names()) {
-                if (!HEADER_BLACKLIST.contains(name) &&
+                if (!ADDITIONAL_HEADER_BLACKLIST.contains(name) &&
                     !isTrailerBlacklisted(name)) {
                     builder.remove(name);
                     additionalTrailers.forEachValue(name, value -> builder.add(name, value));

@@ -59,7 +59,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
     private static final Logger logger = LoggerFactory.getLogger(HttpRequestSubscriber.class);
 
-    private static final Set<AsciiString> HEADER_BLACKLIST = ImmutableSet.of(
+    private static final Set<AsciiString> ADDITIONAL_HEADER_BLACKLIST = ImmutableSet.of(
             HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD);
 
     enum State {
@@ -191,7 +191,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         final HttpHeaders additionalHeaders = reqCtx.additionalRequestHeaders();
         if (!additionalHeaders.isEmpty()) {
             for (AsciiString name : additionalHeaders.names()) {
-                if (!HEADER_BLACKLIST.contains(name)) {
+                if (!ADDITIONAL_HEADER_BLACKLIST.contains(name)) {
                     newHeaders.remove(name);
                     additionalHeaders.forEachValue(name, value -> newHeaders.add(name, value));
                 }
