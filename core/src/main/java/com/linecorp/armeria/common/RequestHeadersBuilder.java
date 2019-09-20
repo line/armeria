@@ -69,9 +69,9 @@ public interface RequestHeadersBuilder extends HttpHeadersBuilder, RequestHeader
             case H1C:
                 scheme("http");
                 break;
-            case PROXY:
-                scheme("proxy");
-                break;
+            default:
+                throw new IllegalArgumentException("sessionProtocol: " + sessionProtocol +
+                                                   " (expected: HTTPS, H2, H1, HTTP, H2C or H1C)");
         }
         return this;
     }
