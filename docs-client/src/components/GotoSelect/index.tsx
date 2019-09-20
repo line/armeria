@@ -26,7 +26,7 @@ import {
 import { emphasize } from '@material-ui/core/styles/colorManipulator';
 import TextField, { BaseTextFieldProps } from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
-import React, { CSSProperties, HTMLAttributes } from 'react';
+import React, { CSSProperties, HTMLAttributes, useCallback } from 'react';
 import Async from 'react-select/async';
 import {
   IndicatorContainerProps,
@@ -369,22 +369,25 @@ const GotoSelect: React.FunctionComponent<GotoSelectProps> = ({
     }),
   };
 
-  function handleSelection(option: ValueType<OptionType>): void {
-    if (option) {
-      navigateTo((option as OptionType).value);
-    }
-  }
+  const handleSelection = useCallback(
+    (option: ValueType<OptionType>): void => {
+      if (option) {
+        navigateTo((option as OptionType).value);
+      }
+    },
+    [navigateTo],
+  );
 
-  function filterSuggestion(
-    inputValue: string,
-    callback: (n: GroupType[]) => void,
-  ): void {
-    callback(
-      makeSuggestions(specification, FILTERED_SUGGESTION_SIZE, (suggestion) =>
-        suggestion.toLowerCase().includes(inputValue.toLowerCase()),
-      ),
-    );
-  }
+  const filterSuggestion = useCallback(
+    (inputValue: string, callback: (n: GroupType[]) => void): void => {
+      callback(
+        makeSuggestions(specification, FILTERED_SUGGESTION_SIZE, (suggestion) =>
+          suggestion.toLowerCase().includes(inputValue.toLowerCase()),
+        ),
+      );
+    },
+    [specification],
+  );
 
   return (
     <div className={classes.root}>
