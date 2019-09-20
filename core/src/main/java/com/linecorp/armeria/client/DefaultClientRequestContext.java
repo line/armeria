@@ -226,9 +226,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
             final HttpRequest httpReq = (HttpRequest) req;
             final RequestHeaders headers = httpReq.headers();
             final String authority = endpoint != null ? endpoint.authority() : "UNKNOWN";
-            if (headers.scheme() != null && authority.equals(headers.authority())) {
-                unsafeUpdateRequest(req);
-            } else {
+            if (headers.scheme() == null || !authority.equals(headers.authority())) {
                 unsafeUpdateRequest(HttpRequest.of(
                         httpReq,
                         headers.toBuilder()
