@@ -292,7 +292,7 @@ public class ArmeriaAutoConfigurationTest {
         assertThatJson(res.contentUtf8()).node("services[1].name").isStringEqualTo(
                 "com.linecorp.armeria.spring.test.grpc.main.HelloService");
         assertThatJson(res.contentUtf8())
-                .node("services[0].exampleHttpHeaders[0].x-additional-header").isStringEqualTo("headerVal");
+                .node("services[1].exampleHttpHeaders[0].x-additional-header").isStringEqualTo("headerVal");
     }
 
     @Test
