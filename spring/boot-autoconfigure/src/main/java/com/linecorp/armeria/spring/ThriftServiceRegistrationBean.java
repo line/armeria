@@ -40,7 +40,7 @@ import com.linecorp.armeria.server.docs.DocService;
  * >             .setService(new MyThriftService())
  * >             .setDecorators(LoggingService.newDecorator())
  * >             .setExampleHeaders(ImmutableList.of(HttpHeaders.of(AUTHORIZATION, "bearer b03c4fed1a")))
- * >             .setExampleRequests(ImmutableList.of(new MyThriftService.hello_args("Armeria")))
+ * >             .setExampleRequests(ImmutableList.of(new MyThriftService.hello_args("Armeria")));
  * > }
  * }</pre>
  */
@@ -66,7 +66,7 @@ public class ThriftServiceRegistrationBean
      * Example {@link HttpHeaders} being used in debug forms.
      */
     @NotNull
-    private Collection<HttpHeaders> exampleHeaders = new ArrayList<>();
+    private final Collection<HttpHeaders> exampleHeaders = new ArrayList<>();
 
     /**
      * Returns the url path this service map to.
@@ -113,7 +113,7 @@ public class ThriftServiceRegistrationBean
      * Sets example {@link HttpHeaders}.
      */
     public ThriftServiceRegistrationBean setExampleHeaders(@NotNull Collection<HttpHeaders> exampleHeaders) {
-        this.exampleHeaders = exampleHeaders;
+        this.exampleHeaders.addAll(exampleHeaders);
         return this;
     }
 }

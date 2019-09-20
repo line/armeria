@@ -39,11 +39,14 @@ import com.linecorp.armeria.server.docs.DocService;
  * >                                 .enableUnframedRequests(true)
  * >                                 .build())
  * >             .setDecorators(LoggingService.newDecorator())
- * >             .setExampleRequests(List.of(GrpcExampleRequest.of(HelloServiceGrpc.SERVICE_NAME,
- * >                                                               "Hello",
- * >                                                               HelloRequest.newBuilder()
- * >                                                                           .setName("Armeria")
- * >                                                                           .build())));
+ * >             .setExampleRequests(List.of(
+ * >                    GrpcExampleRequest.of(HelloServiceGrpc.SERVICE_NAME,
+ * >                                          "Hello",
+ * >                                          HelloRequest.newBuilder().setName("Armeria").build())
+ * >             ))
+ * >             .setExampleHeaders(Lists.of(
+ * >                    HttpHeaders.of(HttpHeaderNames.of("my-header"), "headerVal")
+ * >             ));
  * > }
  * }</pre>
  */
@@ -58,6 +61,12 @@ public class GrpcServiceRegistrationBean
      */
     @NotNull
     private final Collection<GrpcExampleRequest> exampleRequests = new ArrayList<>();
+
+    /**
+     * Example {@link GrpcExampleHeaders} being used in debug forms.
+     */
+    @NotNull
+    private final Collection<GrpcExampleHeaders> exampleHeaders = new ArrayList<>();
 
     /**
      * Returns sample requests of {@link #getService()}.
@@ -91,5 +100,22 @@ public class GrpcServiceRegistrationBean
                                                          @NotNull String methodName,
                                                          @NotNull Object exampleRequest) {
         return addExampleRequest(GrpcExampleRequest.of(serviceType, methodName, exampleRequest));
+    }
+
+    /**
+     * Returns example {@link GrpcExampleHeaders}.
+     */
+    @NotNull
+    public Collection<GrpcExampleHeaders> getExampleHeaders() {
+        return exampleHeaders;
+    }
+
+    /**
+     * Sets example {@link GrpcExampleHeaders}.
+     */
+    public GrpcServiceRegistrationBean setExampleHeaders(
+            @NotNull Collection<GrpcExampleHeaders> exampleHeaders) {
+        this.exampleHeaders.addAll(exampleHeaders);
+        return this;
     }
 }

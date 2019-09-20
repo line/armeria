@@ -22,6 +22,7 @@ import javax.validation.constraints.NotNull;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -41,7 +42,10 @@ import com.linecorp.armeria.server.docs.DocService;
  * >             .setExceptionHandlers(new MyExceptionHandler())
  * >             .setRequestConverters(new MyRequestConverter())
  * >             .setResponseConverters(new MyResponseConverter())
- * >             .setExampleRequests(Lists.of(AnnotatedExampleRequest.of("myMethod", "{\"foo\":\"bar\"}")));
+ * >             .setExampleRequests(Lists.of(AnnotatedExampleRequest.of("myMethod", "{\"foo\":\"bar\"}")))
+ * >             .setExampleHeaders(Lists.of(
+ * >                    HttpHeaders.of(HttpHeaderNames.of("my-header"), "headerVal")
+ * >             ));
  * > }
  * }</pre>
  */
@@ -79,6 +83,12 @@ public class AnnotatedServiceRegistrationBean
      */
     @NotNull
     private final Collection<AnnotatedExampleRequest> exampleRequests = new ArrayList<>();
+
+    /**
+     * Example {@link HttpHeaders} being used in debug forms.
+     */
+    @NotNull
+    private final Collection<HttpHeaders> exampleHeaders = new ArrayList<>();
 
     /**
      * Returns the path prefix.
@@ -199,5 +209,21 @@ public class AnnotatedServiceRegistrationBean
     public AnnotatedServiceRegistrationBean addExampleRequest(@NotNull String methodName,
                                                               @NotNull Object exampleRequest) {
         return addExampleRequest(AnnotatedExampleRequest.of(methodName, exampleRequest));
+    }
+
+    /**
+     * Returns example {@link HttpHeaders}.
+     */
+    @NotNull
+    public Collection<HttpHeaders> getExampleHeaders() {
+        return exampleHeaders;
+    }
+
+    /**
+     * Sets example {@link HttpHeaders}.
+     */
+    public AnnotatedServiceRegistrationBean setExampleHeaders(@NotNull Collection<HttpHeaders> exampleHeaders) {
+        this.exampleHeaders.addAll(exampleHeaders);
+        return this;
     }
 }

@@ -87,6 +87,7 @@ import com.linecorp.armeria.spring.AnnotatedExampleRequest;
 import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
+import com.linecorp.armeria.spring.GrpcExampleHeaders;
 import com.linecorp.armeria.spring.GrpcExampleRequest;
 import com.linecorp.armeria.spring.GrpcServiceRegistrationBean;
 import com.linecorp.armeria.spring.HttpServiceRegistrationBean;
@@ -262,9 +263,8 @@ public final class ArmeriaConfigurationUtil {
             server.service(bean.getPath(), service);
             docServiceRequests.addAll(bean.getExampleRequests());
             ThriftServiceUtils.serviceNames(bean.getService())
-                              .forEach(serviceName -> docServiceHeaders
-                                      .put(serviceName,
-                                           bean.getExampleHeaders()));
+                              .forEach(serviceName ->
+                                               docServiceHeaders.put(serviceName, bean.getExampleHeaders()));
         });
 
         if (!Strings.isNullOrEmpty(docsPath)) {
@@ -308,10 +308,12 @@ public final class ArmeriaConfigurationUtil {
         requireNonNull(beans, "beans");
 
         final List<GrpcExampleRequest> docServiceRequests = new ArrayList<>();
+        final List<GrpcExampleHeaders> docServiceHeaders = new ArrayList<>();
         beans.forEach(bean -> {
             final ServiceWithRoutes<HttpRequest, HttpResponse> serviceWithRoutes =
                     bean.getService();
             docServiceRequests.addAll(bean.getExampleRequests());
+            docServiceHeaders.addAll(bean.getExampleHeaders());
             serviceWithRoutes.routes().forEach(
                     route -> {
                         Service<HttpRequest, HttpResponse> service = bean.getService();
@@ -332,6 +334,10 @@ public final class ArmeriaConfigurationUtil {
                     exampleReq -> docServiceBuilder.exampleRequestForMethod(exampleReq.getServiceType(),
                                                                             exampleReq.getMethodName(),
                                                                             exampleReq.getExampleRequest()));
+            docServiceHeaders.forEach(
+                    exampleHeader -> docServiceBuilder.exampleHttpHeaders(exampleHeader.getServiceType(),
+                                                                          exampleHeader.getExampleHttpHeaders())
+            );
         }
     }
 
@@ -348,6 +354,7 @@ public final class ArmeriaConfigurationUtil {
         requireNonNull(beans, "beans");
 
         final List<AnnotatedExampleRequest> docServiceRequests = new ArrayList<>();
+        final Map<String, Collection<HttpHeaders>> docServiceHeaders = new HashMap<>();
         beans.forEach(bean -> {
             Function<Service<HttpRequest, HttpResponse>,
                     ? extends Service<HttpRequest, HttpResponse>> decorator = Function.identity();
@@ -365,18 +372,21 @@ public final class ArmeriaConfigurationUtil {
                                  .addAll(bean.getRequestConverters())
                                  .addAll(bean.getResponseConverters())
                                  .build();
+            final String serviceName = bean.getService().getClass().getName();
             docServiceRequests.addAll(bean.getExampleRequests());
+            docServiceHeaders.put(serviceName, bean.getExampleHeaders());
             server.annotatedService(bean.getPathPrefix(), bean.getService(), decorator,
                                     exceptionHandlersAndConverters);
 
             if (!Strings.isNullOrEmpty(docsPath)) {
                 docServiceRequests.forEach(
-                        exampleReq -> {
-                            final String serviceName = bean.getService().getClass().getName();
-                            docServiceBuilder.exampleRequestForMethod(serviceName,
-                                                                      exampleReq.getMethodName(),
-                                                                      exampleReq.getExampleRequest());
-                        });
+                        exampleReq ->
+                                docServiceBuilder.exampleRequestForMethod(serviceName,
+                                                                          exampleReq.getMethodName(),
+                                                                          exampleReq.getExampleRequest()));
+                for (Entry<String, Collection<HttpHeaders>> entry : docServiceHeaders.entrySet()) {
+                    docServiceBuilder.exampleHttpHeaders(entry.getKey(), entry.getValue());
+                }
             }
         });
     }

@@ -135,4 +135,8 @@ public class AbstractServiceRegistrationBean<T, U> {
     private U self() {
         return (U) this;
     }
+
+    //TODO(heowc): Cannot set example HTTP headers for gRPC Service.
+    //TODO(heowc): Cannot set example HTTP headers in method level.
+    //TODO(heowc): Cannot set example requests for Thrift in method level.
 }

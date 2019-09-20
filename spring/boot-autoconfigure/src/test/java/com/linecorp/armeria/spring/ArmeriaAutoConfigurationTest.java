@@ -19,7 +19,6 @@ import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
@@ -102,7 +101,10 @@ public class ArmeriaAutoConfigurationTest {
                     .setExceptionHandlers(ImmutableList.of(new IllegalArgumentExceptionHandler()))
                     .setRequestConverters(ImmutableList.of(new StringRequestConverterFunction()))
                     .setResponseConverters(ImmutableList.of(new StringResponseConverter()))
-                    .addExampleRequest("post", "{\"foo\":\"bar\"}");
+                    .addExampleRequest("post", "{\"foo\":\"bar\"}")
+                    .setExampleHeaders(ImmutableList.of(
+                            HttpHeaders.of(HttpHeaderNames.of("x-additional-header"), "headerVal")
+                    ));
         }
 
         @Bean
@@ -112,9 +114,10 @@ public class ArmeriaAutoConfigurationTest {
                     .setService(THttpService.of((HelloService.Iface) name -> "hello " + name))
                     .setPath("/thrift")
                     .setDecorators(ImmutableList.of(LoggingService.newDecorator()))
-                    .setExampleRequests(Collections.singleton(new hello_args("nameVal")))
-                    .setExampleHeaders(Collections.singleton(HttpHeaders.of(
-                            HttpHeaderNames.of("x-additional-header"), "headerVal")));
+                    .setExampleRequests(ImmutableList.of(new hello_args("nameVal")))
+                    .setExampleHeaders(ImmutableList.of(
+                            HttpHeaders.of(HttpHeaderNames.of("x-additional-header"), "headerVal")
+                    ));
         }
 
         @Bean
@@ -127,11 +130,16 @@ public class ArmeriaAutoConfigurationTest {
                                         .enableUnframedRequests(true)
                                         .build())
                     .setDecorators(LoggingService.newDecorator())
-                    .setExampleRequests(ImmutableList.of(GrpcExampleRequest.of(HelloServiceGrpc.SERVICE_NAME,
-                                                                               "Hello",
-                                                                               HelloRequest.newBuilder()
-                                                                                           .setName("Armeria")
-                                                                                           .build())));
+                    .setExampleRequests(ImmutableList.of(
+                            GrpcExampleRequest.of(HelloServiceGrpc.SERVICE_NAME,
+                                                  "Hello",
+                                                  HelloRequest.newBuilder().setName("Armeria").build())
+                    ))
+                    .setExampleHeaders(ImmutableList.of(
+                            GrpcExampleHeaders.of(HelloServiceGrpc.SERVICE_NAME,
+                                                  HttpHeaders.of(HttpHeaderNames.of("x-additional-header"),
+                                                                 "headerVal"))
+                    ));
         }
     }
 
@@ -245,6 +253,8 @@ public class ArmeriaAutoConfigurationTest {
                 "com.linecorp.armeria.spring.ArmeriaAutoConfigurationTest$AnnotatedService");
         assertThatJson(res.contentUtf8())
                 .node("services[0].methods[2].exampleRequests[0]").isStringEqualTo("{\"foo\":\"bar\"}");
+        assertThatJson(res.contentUtf8())
+                .node("services[0].exampleHttpHeaders[0].x-additional-header").isStringEqualTo("headerVal");
     }
 
     @Test
@@ -282,7 +292,7 @@ public class ArmeriaAutoConfigurationTest {
         assertThatJson(res.contentUtf8()).node("services[1].name").isStringEqualTo(
                 "com.linecorp.armeria.spring.test.grpc.main.HelloService");
         assertThatJson(res.contentUtf8())
-                .node("services[1].exampleHttpHeaders").isEqualTo(Collections.emptyList());
+                .node("services[0].exampleHttpHeaders[0].x-additional-header").isStringEqualTo("headerVal");
     }
 
     @Test
