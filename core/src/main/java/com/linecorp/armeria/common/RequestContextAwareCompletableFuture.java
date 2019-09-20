@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.common;
 
-import com.linecorp.armeria.common.util.SafeCloseable;
-
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
@@ -26,6 +24,8 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+
+import com.linecorp.armeria.common.util.SafeCloseable;
 
 final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T> {
 
