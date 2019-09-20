@@ -23,6 +23,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
 import com.google.common.collect.Iterators;
 import com.google.common.math.IntMath;
 
@@ -103,7 +105,7 @@ final class RequestLogAvailabilitySet extends AbstractSet<RequestLogAvailability
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         return this == o;
     }
 

@@ -47,7 +47,7 @@ final class DefaultResponseHeaders extends DefaultHttpHeaders implements Respons
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         return o instanceof ResponseHeaders && super.equals(o);
     }
 }

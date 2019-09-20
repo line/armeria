@@ -64,7 +64,7 @@ final class DefaultRequestHeaders extends DefaultHttpHeaders implements RequestH
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         return o instanceof RequestHeaders && super.equals(o);
     }
 }
