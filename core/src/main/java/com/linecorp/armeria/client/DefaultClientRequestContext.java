@@ -41,7 +41,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -225,19 +224,17 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         final Request req = request();
         if (req instanceof HttpRequest) {
             final HttpRequest httpReq = (HttpRequest) req;
-            final RequestHeaders oldHeaders = httpReq.headers();
-            final RequestHeadersBuilder newHeadersBuilder = oldHeaders.toBuilder();
-
+            final RequestHeaders headers = httpReq.headers();
             final String authority = endpoint != null ? endpoint.authority() : "UNKNOWN";
-            if (oldHeaders.scheme() != null && authority.equals(oldHeaders.authority())) {
+            if (headers.scheme() != null && authority.equals(headers.authority())) {
                 unsafeUpdateRequest(req);
             } else {
                 unsafeUpdateRequest(HttpRequest.of(
                         httpReq,
-                        oldHeaders.toBuilder()
-                                  .authority(authority)
-                                  .scheme(sessionProtocol())
-                                  .build()));
+                        headers.toBuilder()
+                               .authority(authority)
+                               .scheme(sessionProtocol())
+                               .build()));
             }
         }
     }
