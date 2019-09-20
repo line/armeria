@@ -16,11 +16,12 @@
 
 package com.linecorp.armeria.client;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.security.cert.X509Certificate;
 import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -101,7 +102,7 @@ class HttpClientSniTest {
     }
 
     private static void testMatch(String fqdn) throws Exception {
-        Assertions.assertEquals(fqdn + ": CN=" + fqdn, get(fqdn));
+        assertThat(get(fqdn)).isEqualTo(fqdn + ": CN=" + fqdn);
     }
 
     @Test
@@ -111,7 +112,7 @@ class HttpClientSniTest {
     }
 
     private static void testMismatch(String fqdn) throws Exception {
-        Assertions.assertEquals("b.com: CN=b.com", get(fqdn));
+        assertThat(get(fqdn)).isEqualTo("b.com: CN=b.com");
     }
 
     private static String get(String fqdn) throws Exception {
@@ -119,7 +120,7 @@ class HttpClientSniTest {
 
         final AggregatedHttpResponse response = client.get("/").aggregate().get();
 
-        Assertions.assertEquals(HttpStatus.OK, response.status());
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
         return response.contentUtf8();
     }
 
@@ -133,8 +134,8 @@ class HttpClientSniTest {
 
         final AggregatedHttpResponse response = client.get("/").aggregate().get();
 
-        Assertions.assertEquals(HttpStatus.OK, response.status());
-        Assertions.assertEquals("a.com: CN=a.com", response.contentUtf8());
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("a.com: CN=a.com");
     }
 
     @Test
@@ -142,8 +143,8 @@ class HttpClientSniTest {
         final HttpClient client = HttpClient.of(clientFactory, "https://127.0.0.1:" + httpsPort);
         try (SafeCloseable unused = Clients.withHttpHeader(HttpHeaderNames.AUTHORITY, "a.com:" + httpsPort)) {
             final AggregatedHttpResponse response = client.get("/").aggregate().get();
-            Assertions.assertEquals(HttpStatus.OK, response.status());
-            Assertions.assertEquals("a.com: CN=a.com", response.contentUtf8());
+            assertThat(response.status()).isEqualTo(HttpStatus.OK);
+            assertThat(response.contentUtf8()).isEqualTo("a.com: CN=a.com");
         }
     }
 
