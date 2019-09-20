@@ -95,7 +95,8 @@ class BraveClientTest {
         final RequestLog requestLog = testRemoteInvocation(tracing, null);
 
         // check span name
-        final Span span = reporter.spans().take();
+        final Span span = reporter.spans().poll(10, TimeUnit.SECONDS);
+        assertThat(span).isNotNull();
         assertThat(span.name()).isEqualTo(TEST_SPAN);
 
         // check kind
@@ -133,9 +134,10 @@ class BraveClientTest {
         testRemoteInvocation(tracing, "fooService");
 
         // check span name
-        final Span span = reporter.spans().take();
+        final Span span = reporter.spans().poll(10, TimeUnit.SECONDS);
 
         // check tags
+        assertThat(span).isNotNull();
         assertThat(span.tags()).containsEntry("http.host", "foo.com")
                                .containsEntry("http.method", "POST")
                                .containsEntry("http.path", "/hello/armeria")
@@ -171,7 +173,7 @@ class BraveClientTest {
         testRemoteInvocation(tracing, null);
 
         // check span name
-        final Span span = reporter.spans().take();
+        final Span span = reporter.spans().poll(10, TimeUnit.SECONDS);
 
         // check tags
         assertTags(span);
@@ -244,7 +246,8 @@ class BraveClientTest {
         return ctx.log();
     }
 
-    private static void assertTags(Span span) {
+    private static void assertTags(@Nullable Span span) {
+        assertThat(span).isNotNull();
         assertThat(span.tags()).containsEntry("http.host", "foo.com")
                                .containsEntry("http.method", "POST")
                                .containsEntry("http.path", "/hello/armeria")

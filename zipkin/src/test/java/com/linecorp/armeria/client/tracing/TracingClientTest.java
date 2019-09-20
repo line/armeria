@@ -90,7 +90,8 @@ class TracingClientTest {
         testRemoteInvocation(tracing, null);
 
         // check span name
-        final Span span = reporter.spans().take();
+        final Span span = reporter.spans().poll(10, TimeUnit.SECONDS);
+        assertThat(span).isNotNull();
         assertThat(span.name()).isEqualTo(TEST_SPAN);
 
         // check kind
@@ -124,7 +125,7 @@ class TracingClientTest {
         testRemoteInvocation(tracing, "fooService");
 
         // check span name
-        final Span span = reporter.spans().take();
+        final Span span = reporter.spans().poll(10, TimeUnit.SECONDS);
 
         // check tags
         assertThat(span.tags()).containsEntry("http.host", "foo.com")
@@ -163,7 +164,7 @@ class TracingClientTest {
         testRemoteInvocation(tracing, null);
 
         // check span name
-        final Span span = reporter.spans().take();
+        final Span span = reporter.spans().poll(10, TimeUnit.SECONDS);
 
         // check tags
         assertTags(span);
@@ -191,6 +192,7 @@ class TracingClientTest {
 
         // prepare parameters
         final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/armeria",
+                                                                 HttpHeaderNames.SCHEME, "http",
                                                                  HttpHeaderNames.AUTHORITY, "foo.com"));
         final RpcRequest rpcReq = RpcRequest.of(HelloService.Iface.class, "hello", "Armeria");
         final HttpResponse res = HttpResponse.of(HttpStatus.OK);
@@ -228,7 +230,8 @@ class TracingClientTest {
         ctx.logBuilder().endResponse();
     }
 
-    private static void assertTags(Span span) {
+    private static void assertTags(@Nullable Span span) {
+        assertThat(span).isNotNull();
         assertThat(span.tags()).containsEntry("http.host", "foo.com")
                                .containsEntry("http.method", "POST")
                                .containsEntry("http.path", "/hello/armeria")
