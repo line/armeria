@@ -37,7 +37,12 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      * Creates a new factory that creates a non-daemon and normal-priority thread.
      *
      * @param threadNamePrefix the prefix of the names of the threads created by this factory.
+     *
+     * @deprecated Use {@link ThreadFactories#newEventLoopThreadFactory(String, boolean)} or
+     *             {@link ThreadFactories#builder(String)}. Make sure to set
+     *             {@link ThreadFactoryBuilder#eventLoop(boolean)} true to create event loop threads.
      */
+    @Deprecated
     public EventLoopThreadFactory(String threadNamePrefix) {
         this(threadNamePrefix, false);
     }
@@ -47,7 +52,12 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      *
      * @param threadNamePrefix the prefix of the names of the threads created by this factory.
      * @param daemon whether to create a daemon thread.
+     *
+     * @deprecated Use {@link ThreadFactories#newEventLoopThreadFactory(String, boolean)} or
+     *             {@link ThreadFactories#builder(String)}. Make sure to set
+     *             {@link ThreadFactoryBuilder#eventLoop(boolean)} true to create event loop threads.
      */
+    @Deprecated
     public EventLoopThreadFactory(String threadNamePrefix, boolean daemon) {
         this(threadNamePrefix, daemon, Thread.NORM_PRIORITY);
     }
@@ -57,7 +67,12 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      *
      * @param threadNamePrefix the prefix of the names of the threads created by this factory.
      * @param priority the priority of the threads created by this factory.
+     *
+     * @deprecated Use {@link ThreadFactories#newEventLoopThreadFactory(String, boolean)} or
+     *             {@link ThreadFactories#builder(String)}. Make sure to set
+     *             {@link ThreadFactoryBuilder#eventLoop(boolean)} true to create event loop threads.
      */
+    @Deprecated
     public EventLoopThreadFactory(String threadNamePrefix, int priority) {
         this(threadNamePrefix, false, priority);
     }
@@ -68,7 +83,12 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      * @param threadNamePrefix the prefix of the names of the threads created by this factory.
      * @param daemon whether to create a daemon thread.
      * @param priority the priority of the threads created by this factory.
+     *
+     * @deprecated Use {@link ThreadFactories#newEventLoopThreadFactory(String, boolean)} or
+     *             {@link ThreadFactories#builder(String)}. Make sure to set
+     *             {@link ThreadFactoryBuilder#eventLoop(boolean)} true to create event loop threads.
      */
+    @Deprecated
     public EventLoopThreadFactory(String threadNamePrefix, boolean daemon, int priority) {
         this(threadNamePrefix, daemon, priority, null);
     }
@@ -80,7 +100,12 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      * @param daemon whether to create a daemon thread.
      * @param priority the priority of the threads created by this factory.
      * @param threadGroup the {@link ThreadGroup}.
+     *
+     * @deprecated Use {@link ThreadFactories#newEventLoopThreadFactory(String, boolean)} or
+     *             {@link ThreadFactories#builder(String)}. Make sure to set
+     *             {@link ThreadFactoryBuilder#eventLoop(boolean)} true to create event loop threads.
      */
+    @Deprecated
     public EventLoopThreadFactory(String threadNamePrefix, boolean daemon, int priority,
                                   @Nullable ThreadGroup threadGroup) {
         this(threadNamePrefix, daemon, priority, threadGroup, Function.identity());
