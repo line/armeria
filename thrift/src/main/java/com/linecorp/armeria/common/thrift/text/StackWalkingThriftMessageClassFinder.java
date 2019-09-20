@@ -45,8 +45,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 final class StackWalkingThriftMessageClassFinder extends AbstractThriftMessageClassFinder {
-    private final Logger logger =
+
+    private static final Logger logger =
             LoggerFactory.getLogger(StackWalkingThriftMessageClassFinder.class);
+
+    private static final String INVOKING_FAIL_MSG =
+            "Failed to invoke StackWalker.StackFrame.getDeclaringClass():";
 
     @Nullable
     private final Function<Stream<Object>, Class<?>> walkHandler;
@@ -63,7 +67,6 @@ final class StackWalkingThriftMessageClassFinder extends AbstractThriftMessageCl
                                     MethodType.methodType(Object.class, Function.class));
 
         final Class<?> stackFrameClass = classLoader.loadClass("java.lang.StackWalker$StackFrame");
-        final String invokingFailMsg = "Failed to invoke StackWalker.StackFrame.getDeclaringClass():";
         Function<Object, Class<?>> getClassByStackFrameTemp;
         Object instance;
 
@@ -91,7 +94,7 @@ final class StackWalkingThriftMessageClassFinder extends AbstractThriftMessageCl
                 try {
                     return getMatchedClass((Class<?>) getDeclaringClassMH.invoke(stackFrame));
                 } catch (Throwable t) {
-                    logger.warn(invokingFailMsg, t);
+                    logger.warn(INVOKING_FAIL_MSG, t);
                 }
                 return null;
             };
@@ -110,7 +113,7 @@ final class StackWalkingThriftMessageClassFinder extends AbstractThriftMessageCl
                 try {
                     return getMatchedClass(getClassByName(getClassNameMH.invoke(stackFrame).toString()));
                 } catch (Throwable t) {
-                    logger.warn(invokingFailMsg, t);
+                    logger.warn(INVOKING_FAIL_MSG, t);
                 }
                 return null;
             };
@@ -120,10 +123,10 @@ final class StackWalkingThriftMessageClassFinder extends AbstractThriftMessageCl
 
         final Function<Object, Class<?>> getClassByStackFrame = getClassByStackFrameTemp;
         walkHandler = stackFrameStream ->
-                        stackFrameStream.map(getClassByStackFrame)
-                                        .filter(Objects::nonNull)
-                                        .findFirst()
-                                        .orElse(null);
+                stackFrameStream.map(getClassByStackFrame)
+                                .filter(Objects::nonNull)
+                                .findFirst()
+                                .orElse(null);
     }
 
     @Nullable
