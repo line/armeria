@@ -67,10 +67,7 @@ public class HttpTracingClient extends SimpleDecoratingHttpClient {
 
     /**
      * Creates a new tracing {@link Client} decorator using the specified {@link Tracing} instance.
-     *
-     * @deprecated Use {@link BraveClient#newDecorator(Tracing)}.
      */
-    @Deprecated
     public static Function<Client<HttpRequest, HttpResponse>, HttpTracingClient> newDecorator(Tracing tracing) {
         return newDecorator(tracing, null);
     }
@@ -78,10 +75,7 @@ public class HttpTracingClient extends SimpleDecoratingHttpClient {
     /**
      * Creates a new tracing {@link Client} decorator using the specified {@link Tracing} instance
      * and the remote service name.
-     *
-     * @deprecated Use {@link BraveClient#newDecorator(Tracing, String)}.
      */
-    @Deprecated
     public static Function<Client<HttpRequest, HttpResponse>, HttpTracingClient> newDecorator(
             Tracing tracing, @Nullable String remoteServiceName) {
         try {

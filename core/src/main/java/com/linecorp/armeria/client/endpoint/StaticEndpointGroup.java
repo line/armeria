@@ -40,20 +40,14 @@ public final class StaticEndpointGroup implements EndpointGroup {
 
     /**
      * Creates a new instance.
-     *
-     * @deprecated Use {@link EndpointGroup#of(EndpointGroup...)}.
      */
-    @Deprecated
     public StaticEndpointGroup(Endpoint... endpoints) {
         this(ImmutableList.copyOf(requireNonNull(endpoints, "endpoints")));
     }
 
     /**
      * Creates a new instance.
-     *
-     * @deprecated Use {@link EndpointGroup#of(Iterable)}.
      */
-    @Deprecated
     public StaticEndpointGroup(Iterable<Endpoint> endpoints) {
         requireNonNull(endpoints, "endpoints");
 

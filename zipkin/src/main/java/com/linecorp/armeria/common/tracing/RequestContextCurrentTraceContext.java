@@ -64,10 +64,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
 
     /**
      * Singleton retained for backwards compatibility, but replaced by {@link #DEFAULT}.
-     *
-     * @deprecated Please use {@link #DEFAULT} or {@link #builder()} to customize an instance.
      */
-    @Deprecated
     public static final CurrentTraceContext INSTANCE = DEFAULT;
 
     private static final Logger logger = LoggerFactory.getLogger(RequestContextCurrentTraceContext.class);
@@ -112,11 +109,8 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
      * Use this when you need customizations such as log integration via
      * {@linkplain Builder#addScopeDecorator(ScopeDecorator)}.
      *
-     * @deprecated Use {@link #builder()}.
-     *
      * @see brave.Tracing.Builder#currentTraceContext(brave.propagation.CurrentTraceContext)
      */
-    @Deprecated
     public static CurrentTraceContext.Builder newBuilder() {
         return new Builder();
     }
