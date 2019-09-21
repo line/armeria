@@ -46,7 +46,7 @@ import com.linecorp.armeria.common.util.Exceptions;
  * <p>A user simply creates a streaming {@link HttpResponse} which emits JSON Text Sequences, e.g.
  * <pre>{@code
  * ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
- * Server server = new ServerBuilder()
+ * Server server = Server.builder()
  *         // Emit JSON Text Sequences with a default ObjectMapper.
  *         .service("/seq1",
  *                  (ctx, req) -> JsonTextSequences.fromPublisher(Flux.just("foo", "bar")))

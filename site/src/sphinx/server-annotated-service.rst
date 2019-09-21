@@ -16,7 +16,7 @@ with an HTTP ``GET`` method.
 
 .. code-block:: java
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     sb.annotatedService(new Object() {
         @Get("/hello/{name}")
         public HttpResponse hello(@Param("name") String name) {

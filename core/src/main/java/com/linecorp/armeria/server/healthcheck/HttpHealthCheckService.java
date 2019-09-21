@@ -50,7 +50,7 @@ import com.linecorp.armeria.server.TransientService;
  *
  * <h2>Example:</h2>
  * <pre>{@code
- * Server server = new ServerBuilder()
+ * Server server = Server.builder()
  *         .service("/services", myService)
  *         .service("/health", new HttpHealthCheckService())
  *         .build();
@@ -63,7 +63,7 @@ import com.linecorp.armeria.server.TransientService;
  *
  * <pre>{@code
  * SettableHealthChecker healthChecker = new SettableHealthChecker();
- * Server server = new ServerBuilder()
+ * Server server = Server.builder()
  *         .service("/services", myService)
  *         .service("/health", new HttpHealthCheckService(healthChecker))
  *         .build();

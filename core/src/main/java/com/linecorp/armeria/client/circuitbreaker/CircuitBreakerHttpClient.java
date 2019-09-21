@@ -101,7 +101,7 @@ public final class CircuitBreakerHttpClient extends CircuitBreakerClient<HttpReq
     }
 
     /**
-     * Returns a new {@link CircuitBreakerHttpClientBuilder} instance with
+     * Returns a new {@link CircuitBreakerHttpClientBuilder} with
      * the specified {@link CircuitBreakerStrategy}.
      */
     public static CircuitBreakerHttpClientBuilder builder(CircuitBreakerStrategy strategy) {
@@ -110,7 +110,7 @@ public final class CircuitBreakerHttpClient extends CircuitBreakerClient<HttpReq
 
     /**
      * Returns a new {@link CircuitBreakerHttpClientBuilder} with
-     * the specified {@link CircuitBreakerStrategy} and {@link CircuitBreakerStrategyWithContent}.
+     * the specified {@link CircuitBreakerStrategyWithContent}.
      */
     public static CircuitBreakerHttpClientBuilder builder(
             CircuitBreakerStrategyWithContent<HttpResponse> strategyWithContent) {

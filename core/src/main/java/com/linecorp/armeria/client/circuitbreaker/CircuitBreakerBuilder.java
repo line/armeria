@@ -71,7 +71,9 @@ public final class CircuitBreakerBuilder {
     /**
      * Creates a new {@link CircuitBreakerBuilder} with the specified name.
      *
-     * @deprecated Use {@link CircuitBreaker#builder()} instead.
+     * @param name The name of the circuit breaker.
+     *
+     * @deprecated Use {@link CircuitBreaker#builder(String)}.
      */
     @Deprecated
     public CircuitBreakerBuilder(String name) {
@@ -85,7 +87,7 @@ public final class CircuitBreakerBuilder {
     /**
      * Creates a new {@link CircuitBreakerBuilder}.
      *
-     * @deprecated Use {@link CircuitBreaker#builder(String)}  instead.
+     * @deprecated Use {@link CircuitBreaker#builder()}.
      */
     @Deprecated
     public CircuitBreakerBuilder() {

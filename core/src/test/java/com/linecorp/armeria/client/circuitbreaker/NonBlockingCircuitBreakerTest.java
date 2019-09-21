@@ -43,15 +43,15 @@ class NonBlockingCircuitBreakerTest {
 
     private static NonBlockingCircuitBreaker create(long minimumRequestThreshold, double failureRateThreshold) {
         return (NonBlockingCircuitBreaker) CircuitBreaker.builder(remoteServiceName)
-                .failureRateThreshold(failureRateThreshold)
-                .minimumRequestThreshold(minimumRequestThreshold)
-                .circuitOpenWindow(circuitOpenWindow)
-                .trialRequestInterval(trialRequestInterval)
-                .counterSlidingWindow(Duration.ofSeconds(10))
-                .counterUpdateInterval(counterUpdateInterval)
-                .listener(listener)
-                .ticker(ticker::get)
-                .build();
+                                                         .failureRateThreshold(failureRateThreshold)
+                                                         .minimumRequestThreshold(minimumRequestThreshold)
+                                                         .circuitOpenWindow(circuitOpenWindow)
+                                                         .trialRequestInterval(trialRequestInterval)
+                                                         .counterSlidingWindow(Duration.ofSeconds(10))
+                                                         .counterUpdateInterval(counterUpdateInterval)
+                                                         .listener(listener)
+                                                         .ticker(ticker::get)
+                                                         .build();
     }
 
     private static CircuitBreaker closedState(long minimumRequestThreshold, double failureRateThreshold) {

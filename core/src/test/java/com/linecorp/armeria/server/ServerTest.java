@@ -324,7 +324,7 @@ public class ServerTest {
         // Known to fail on WSL (Windows Subsystem for Linux)
         assumeTrue(System.getenv("WSLENV") == null);
 
-        final Server duplicatedPortServer = new ServerBuilder()
+        final Server duplicatedPortServer = Server.builder()
                 .http(server.httpPort())
                 .service("/", (ctx, res) -> HttpResponse.of(""))
                 .build();
@@ -334,7 +334,7 @@ public class ServerTest {
 
     @Test
     public void testActiveLocalPort() throws Exception {
-        final Server server = new ServerBuilder()
+        final Server server = Server.builder()
                 .http(0)
                 .https(0)
                 .tlsSelfSigned()
@@ -373,7 +373,7 @@ public class ServerTest {
         final Queue<Thread> threads = new LinkedTransferQueue<>();
         final String prefix = getClass().getName() + "#customStartStopExecutor";
         final ExecutorService executor = Executors.newSingleThreadExecutor(new EventLoopThreadFactory(prefix));
-        final Server server = new ServerBuilder()
+        final Server server = Server.builder()
                 .startStopExecutor(executor)
                 .service("/", (ctx, req) -> HttpResponse.of(200))
                 .serverListener(new ThreadRecordingServerListener(threads))
@@ -389,7 +389,7 @@ public class ServerTest {
     public void gracefulShutdownBlockingTaskExecutor() {
         final ExecutorService executor = Executors.newSingleThreadExecutor();
 
-        final Server server = new ServerBuilder()
+        final Server server = Server.builder()
                 .blockingTaskExecutor(executor, true)
                 .service("/", (ctx, req) -> HttpResponse.of(200))
                 .build();
@@ -414,7 +414,7 @@ public class ServerTest {
     public void notGracefulShutdownBlockingTaskExecutor() {
         final ExecutorService executor = Executors.newSingleThreadExecutor();
 
-        final Server server = new ServerBuilder()
+        final Server server = Server.builder()
                 .blockingTaskExecutor(executor, false)
                 .service("/", (ctx, req) -> HttpResponse.of(200))
                 .build();

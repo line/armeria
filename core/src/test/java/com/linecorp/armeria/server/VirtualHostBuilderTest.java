@@ -31,7 +31,7 @@ class VirtualHostBuilderTest {
 
     @Test
     void defaultVirtualHost() {
-        final ServerBuilder sb = new ServerBuilder();
+        final ServerBuilder sb = Server.builder();
         final Server server = sb.defaultVirtualHost()
                                 .service("/test", (ctx, req) -> HttpResponse.of(OK))
                                 .and().build();
@@ -43,7 +43,7 @@ class VirtualHostBuilderTest {
 
     @Test
     void withDefaultVirtualHost() {
-        final ServerBuilder sb = new ServerBuilder();
+        final ServerBuilder sb = Server.builder();
 
         final Server server = sb.withDefaultVirtualHost(builder -> {
             builder.defaultHostname("foo")
@@ -57,7 +57,7 @@ class VirtualHostBuilderTest {
 
     @Test
     void defaultVirtualHostSetDefaultHostname() {
-        final ServerBuilder sb = new ServerBuilder();
+        final ServerBuilder sb = Server.builder();
         sb.defaultHostname("foo");
         final Server server = sb.defaultVirtualHost()
                                 .service("/test", (ctx, req) -> HttpResponse.of(OK))
@@ -70,7 +70,7 @@ class VirtualHostBuilderTest {
 
     @Test
     void defaultVirtualHostWithImplicitStyle() {
-        final ServerBuilder sb = new ServerBuilder();
+        final ServerBuilder sb = Server.builder();
         final Server server = sb.service("/test", (ctx, req) -> HttpResponse.of(OK)).build();
 
         final VirtualHost virtualHost = server.config().defaultVirtualHost();
@@ -79,7 +79,7 @@ class VirtualHostBuilderTest {
 
     @Test
     void virtualHostWithHostnamePattern() {
-        final ServerBuilder sb = new ServerBuilder();
+        final ServerBuilder sb = Server.builder();
         final Server server = sb.virtualHost("*.foo.com")
                                 .service("/test", (ctx, req) -> HttpResponse.of(OK))
                                 .and()
@@ -98,7 +98,7 @@ class VirtualHostBuilderTest {
 
     @Test
     void virtualHostWithDefaultHostnameAndHostnamePattern() {
-        final ServerBuilder sb = new ServerBuilder();
+        final ServerBuilder sb = Server.builder();
         final Server server = sb.virtualHost("foo", "*")
                                 .service("/test", (ctx, req) -> HttpResponse.of(OK))
                                 .and()
@@ -117,7 +117,7 @@ class VirtualHostBuilderTest {
 
     @Test
     void withVirtualHost() {
-        final ServerBuilder sb = new ServerBuilder();
+        final ServerBuilder sb = Server.builder();
         final Server server = sb.withVirtualHost(builder -> {
             builder.defaultHostname("foo")
                    .service("/test", (ctx, req) -> HttpResponse.of(OK));
@@ -133,7 +133,7 @@ class VirtualHostBuilderTest {
 
     @Test
     void defaultVirtualHostMixedStyle() {
-        final ServerBuilder sb = new ServerBuilder();
+        final ServerBuilder sb = Server.builder();
         sb.service("/test", (ctx, req) -> HttpResponse.of(OK))
           .defaultVirtualHost().service("/test2", (ctx, req) -> HttpResponse.of(OK));
 
@@ -145,7 +145,7 @@ class VirtualHostBuilderTest {
 
     @Test
     void virtualHostWithoutPattern() {
-        final VirtualHost h = new VirtualHostBuilder(new ServerBuilder(), false)
+        final VirtualHost h = new VirtualHostBuilder(Server.builder(), false)
                 .defaultHostname("foo.com")
                 .hostnamePattern("foo.com")
                 .build();
@@ -155,7 +155,7 @@ class VirtualHostBuilderTest {
 
     @Test
     void virtualHostWithPattern() {
-        final VirtualHost h = new VirtualHostBuilder(new ServerBuilder(), false)
+        final VirtualHost h = new VirtualHostBuilder(Server.builder(), false)
                 .defaultHostname("bar.foo.com")
                 .hostnamePattern("*.foo.com")
                 .build();
@@ -165,14 +165,14 @@ class VirtualHostBuilderTest {
 
     @Test
     void accessLoggerCustomization() {
-        final VirtualHost h1 = new VirtualHostBuilder(new ServerBuilder(), false)
+        final VirtualHost h1 = new VirtualHostBuilder(Server.builder(), false)
                 .defaultHostname("bar.foo.com")
                 .hostnamePattern("*.foo.com")
                 .accessLogger(host -> LoggerFactory.getLogger("customize.test"))
                 .build();
         assertThat(h1.accessLogger().getName()).isEqualTo("customize.test");
 
-        final VirtualHost h2 = new VirtualHostBuilder(new ServerBuilder(), false)
+        final VirtualHost h2 = new VirtualHostBuilder(Server.builder(), false)
                 .defaultHostname("bar.foo.com")
                 .hostnamePattern("*.foo.com")
                 .accessLogger(LoggerFactory.getLogger("com.foo.test"))
@@ -182,28 +182,28 @@ class VirtualHostBuilderTest {
 
     @Test
     void hostnamePatternCannotBeSetForDefaultBuilder() {
-        final ServerBuilder sb = new ServerBuilder();
+        final ServerBuilder sb = Server.builder();
         assertThrows(UnsupportedOperationException.class,
                      () -> sb.defaultVirtualHost().hostnamePattern("CannotSet"));
     }
 
     @Test
     void hostnamePatternCannotBeSetForDefaultBuilder2() {
-        final ServerBuilder sb = new ServerBuilder();
+        final ServerBuilder sb = Server.builder();
         assertThrows(UnsupportedOperationException.class,
                      () -> sb.withDefaultVirtualHost(builder -> builder.hostnamePattern("CannotSet")));
     }
 
     @Test
     void virtualHostWithNull2() {
-        final ServerBuilder sb = new ServerBuilder();
+        final ServerBuilder sb = Server.builder();
         assertThrows(NullPointerException.class,
                      () -> sb.virtualHost(null, "foo.com"));
     }
 
     @Test
     void virtualHostWithNull3() {
-        final ServerBuilder sb = new ServerBuilder();
+        final ServerBuilder sb = Server.builder();
         assertThrows(NullPointerException.class,
                      () -> sb.virtualHost(null, null));
     }
@@ -211,7 +211,7 @@ class VirtualHostBuilderTest {
     @Test
     void virtualHostWithMismatch() {
         assertThrows(IllegalArgumentException.class, () -> {
-            new VirtualHostBuilder(new ServerBuilder(), false)
+            new VirtualHostBuilder(Server.builder(), false)
                     .defaultHostname("bar.com")
                     .hostnamePattern("foo.com")
                     .build();
@@ -221,7 +221,7 @@ class VirtualHostBuilderTest {
     @Test
     void virtualHostWithMismatch2() {
         assertThrows(IllegalArgumentException.class, () -> {
-            new VirtualHostBuilder(new ServerBuilder(), false)
+            new VirtualHostBuilder(Server.builder(), false)
                     .defaultHostname("bar.com")
                     .hostnamePattern("*.foo.com")
                     .build();

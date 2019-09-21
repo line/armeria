@@ -277,8 +277,8 @@ public class RetryingHttpClientTest {
         final HttpClient client = new HttpClientBuilder(server.uri("/"))
                 .factory(clientFactory)
                 .decorator(RetryingHttpClient.builder(new RetryIfContentMatch("Need to retry"))
-                                   .contentPreviewLength(1024)
-                                   .newDecorator())
+                                             .contentPreviewLength(1024)
+                                             .newDecorator())
                 .build();
 
         final AggregatedHttpResponse res = client.get("/retry-content").aggregate().join();
@@ -538,10 +538,10 @@ public class RetryingHttpClientTest {
         return new HttpClientBuilder(server.uri("/"))
                 .factory(clientFactory).responseTimeoutMillis(responseTimeoutMillis)
                 .decorator(RetryingHttpClient.builder(strategy)
-                                   .responseTimeoutMillisForEachAttempt(responseTimeoutForEach)
-                                   .useRetryAfter(true)
-                                   .maxTotalAttempts(maxTotalAttempts)
-                                   .newDecorator())
+                                             .responseTimeoutMillisForEachAttempt(responseTimeoutForEach)
+                                             .useRetryAfter(true)
+                                             .maxTotalAttempts(maxTotalAttempts)
+                                             .newDecorator())
                 .build();
     }
 

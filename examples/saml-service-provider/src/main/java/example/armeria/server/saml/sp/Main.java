@@ -81,7 +81,7 @@ public class Main {
 
     public static void main(String[] args) throws Exception {
         final SamlServiceProvider ssp = samlServiceProvider();
-        final Server server = new ServerBuilder()
+        final Server server = Server.builder()
                 .https(8443)
                 // You can add this certificate to your trust store in order to make your web browser happy.
                 .tls(new File(ClassLoader.getSystemResource("localhost.crt").toURI()),

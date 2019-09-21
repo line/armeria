@@ -17,7 +17,7 @@ Use :api:`HttpFileService` to serve static files under a certain directory. :api
     import com.linecorp.armeria.server.ServerBuilder;
     import com.linecorp.armeria.server.file.HttpFileService;
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     sb.serviceUnder("/images/",
                     HttpFileService.forFileSystem("/var/lib/www/images"));
 
@@ -156,7 +156,7 @@ based on ``If-None-Match`` and ``If-Modified-Since`` header values.
 
     HttpFile favicon = HttpFile.of(new File("/var/lib/www/favicon.ico"));
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     // Serve the favicon.ico file by converting an HttpFile into a service.
     sb.service("/favicon.ico", favicon.asService());
 
@@ -167,7 +167,7 @@ path, which is useful when serving a frontend application with client-side routi
 
     HttpFile index = HttpFile.of(new File("/var/lib/www/index.html"));
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     // Register the file service for assets.
     sb.serviceUnder("/node_modules",
                     HttpFileService.forFileSystem("/var/lib/www/node_modules"));

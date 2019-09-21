@@ -492,9 +492,10 @@ class ArmeriaHttpUtilTest {
     }
 
     private static ServerConfig serverConfig() {
-        final Server server = new ServerBuilder().defaultHostname("foo")
-                                                 .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                                                 .build();
+        final Server server = Server.builder()
+                                    .defaultHostname("foo")
+                                    .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                    .build();
         return server.config();
     }
 }

@@ -253,12 +253,12 @@ class CircuitBreakerRpcClientTest {
 
     private static CircuitBreaker buildCircuitBreaker(Ticker ticker) {
         return CircuitBreaker.builder(remoteServiceName)
-                .minimumRequestThreshold(minimumRequestThreshold)
-                .circuitOpenWindow(circuitOpenWindow)
-                .counterSlidingWindow(counterSlidingWindow)
-                .counterUpdateInterval(counterUpdateInterval)
-                .ticker(ticker)
-                .build();
+                             .minimumRequestThreshold(minimumRequestThreshold)
+                             .circuitOpenWindow(circuitOpenWindow)
+                             .counterSlidingWindow(counterSlidingWindow)
+                             .counterUpdateInterval(counterUpdateInterval)
+                             .ticker(ticker)
+                             .build();
     }
 
     private static void failFastInvocation(

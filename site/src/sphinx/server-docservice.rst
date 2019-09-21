@@ -19,7 +19,7 @@ First, add :api:`DocService` to the :api:`ServerBuilder`:
     import com.linecorp.armeria.server.ServerBuilder;
     import com.linecorp.armeria.server.thrift.THttpService;
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     sb.http(8080);
 
     // Add a Thrift service which implements 'ThriftHelloService'.
@@ -112,7 +112,7 @@ with a :api:`DocServiceBuilder`:
     import com.linecorp.armeria.server.docs.DocServiceBuilder;
     import com.linecorp.armeria.server.docs.DocServiceFilter;
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     ...
     sb.serviceUnder("/docs", new DocServiceBuilder()
             // Include Thrift services and Annotated services.
@@ -140,7 +140,7 @@ with a :api:`DocServiceBuilder`:
     import com.linecorp.armeria.common.HttpHeaders;
     import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     ...
     sb.serviceUnder("/docs", new DocServiceBuilder()
             // HTTP headers for all services

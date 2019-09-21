@@ -55,7 +55,7 @@ public class ZooKeeperRegistrationTest extends ZooKeeperTestBase {
         servers = new ArrayList<>();
 
         for (Endpoint endpoint : sampleEndpoints) {
-            final Server server = new ServerBuilder().http(endpoint.port())
+            final Server server = Server.builder().http(endpoint.port())
                                                      .service("/", new EchoService())
                                                      .build();
             final ServerListener listener = new ZooKeeperUpdatingListenerBuilder(

@@ -25,7 +25,7 @@ sending a response with `Server-Sent Events`_.
     import com.linecorp.armeria.server.streaming.ServerSentEvents;
     import reactor.core.publisher.Flux;
 
-    Server server = new ServerBuilder()
+    Server server = Server.builder()
             // Emit Server-Sent Events with the SeverSentEvent instances published by a publisher.
             .service("/sse1",
                      (ctx, req) -> ServerSentEvents.fromPublisher(
@@ -69,12 +69,12 @@ which you want to adjust timeout for.
 
     import java.time.Duration;
     import com.linecorp.armeria.common.sse.ServerSentEvent;
-    import com.linecorp.armeria.server.Server;
+    import com.linecorp.armeria.server.Server;F
     import com.linecorp.armeria.server.ServerBuilder;
     import com.linecorp.armeria.server.streaming.ServerSentEvents;
     import reactor.core.publisher.Flux;
 
-    Server server = new ServerBuilder()
+    Server server = Server.builder()
             // This service infinitely sends numbers as the data of events every second.
             .service("/long-sse", (ctx, req) -> {
                 // Note that you MUST adjust the request timeout if you want to send events for a

@@ -41,7 +41,7 @@ public class DnsEndpointGroupBenchmark {
 
     @Setup(Level.Trial)
     public void startServer() {
-        server = new ServerBuilder()
+        server = Server.builder()
                 .service("/health", (ctx, req) -> HttpResponse.of(OK))
                 .build();
         server.start().join();

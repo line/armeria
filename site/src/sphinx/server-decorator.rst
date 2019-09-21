@@ -30,7 +30,7 @@ a decorating service. It enables you to write a decorating service with a single
     import com.linecorp.armeria.common.HttpStatus;
     import com.linecorp.armeria.server.HttpService;
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     HttpService service = ...;
     sb.serviceUnder("/web", service.decorate((delegate, ctx, req) -> {
         if (!authenticate(req)) {
@@ -74,7 +74,7 @@ If your decorator is expected to be reusable, it is recommended to define a new 
         }
     }
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     // Using a lambda expression:
     sb.serviceUnder("/web", service.decorate(delegate -> new AuthService(delegate)));
     // Using reflection:
@@ -175,7 +175,7 @@ routes for a single service. It has a method called ``routes()`` which returns a
         }
     }
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     // No path is specified.
     sb.service(new MyServiceWithRoutes());
     // Override the path provided by routes().
@@ -189,7 +189,7 @@ register it without specifying a path explicitly, because a decorated service is
 
     import com.linecorp.armeria.server.logging.LoggingService;
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
 
     // Works.
     ServiceWithRoutes<HttpRequest, HttpResponse> service =
@@ -208,7 +208,7 @@ Therefore, you need to specify the decorators as extra parameters:
 
 .. code-block:: java
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     // Register a service decorated with two decorators at multiple routes.
     sb.service(new MyServiceWithRoutes(),
                MyDecoratedService::new,

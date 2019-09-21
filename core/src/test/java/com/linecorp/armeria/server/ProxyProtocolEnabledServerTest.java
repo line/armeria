@@ -135,11 +135,11 @@ public class ProxyProtocolEnabledServerTest {
                 return "";
             }
         };
-        assertThat(new ServerBuilder().tlsSelfSigned().port(0, PROXY, HTTP, HTTPS)
+        assertThat(Server.builder().tlsSelfSigned().port(0, PROXY, HTTP, HTTPS)
                                       .annotatedService(service).build()).isNotNull();
-        assertThat(new ServerBuilder().tlsSelfSigned().port(0, PROXY, HTTPS)
+        assertThat(Server.builder().tlsSelfSigned().port(0, PROXY, HTTPS)
                                       .annotatedService(service).build()).isNotNull();
-        assertThat(new ServerBuilder().port(0, PROXY, HTTP)
+        assertThat(Server.builder().port(0, PROXY, HTTP)
                                       .annotatedService(service).build()).isNotNull();
     }
 

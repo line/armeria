@@ -62,7 +62,7 @@ public class DownstreamSimpleBenchmark extends SimpleBenchmarkBase {
 
     @Override
     protected void setUp() throws Exception {
-        server = new ServerBuilder()
+        server = Server.builder()
                 .serviceUnder("/", new GrpcServiceBuilder().addService(new GithubApiService()).build())
                 .requestTimeout(Duration.ZERO)
                 .meterRegistry(NoopMeterRegistry.get())

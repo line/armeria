@@ -74,7 +74,7 @@ public class ServerBuilderTest {
 
     @Test
     public void acceptDuplicatePort() throws Exception {
-        final Server server = new ServerBuilder()
+        final Server server = Server.builder()
                 .http(8080)
                 .https(8080)
                 .tlsSelfSigned()
@@ -89,7 +89,7 @@ public class ServerBuilderTest {
 
     @Test
     public void treatAsSeparatePortIfZeroIsSpecifiedManyTimes() throws Exception {
-        final Server server = new ServerBuilder()
+        final Server server = Server.builder()
                 .http(0)
                 .http(0)
                 .https(0)
@@ -106,7 +106,7 @@ public class ServerBuilderTest {
 
     @Test
     public void numMaxConnections() {
-        final ServerBuilder sb = new ServerBuilder();
+        final ServerBuilder sb = Server.builder();
         assertThat(sb.maxNumConnections()).isEqualTo(Integer.MAX_VALUE);
     }
 
@@ -115,7 +115,7 @@ public class ServerBuilderTest {
      */
     @Test
     public void setAccessLoggerTest1() {
-        final Server sb = new ServerBuilder()
+        final Server sb = Server.builder()
                 .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                 .accessLogger(LoggerFactory.getLogger("default"))
                 .virtualHost("*.example.com")
@@ -157,7 +157,7 @@ public class ServerBuilderTest {
      */
     @Test
     public void setAccessLoggerTest2() {
-        final Server sb = new ServerBuilder()
+        final Server sb = Server.builder()
                 .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                 .accessLogger("test.default")
                 .virtualHost("*.example.com")
@@ -175,7 +175,7 @@ public class ServerBuilderTest {
      */
     @Test
     public void defaultAccessLoggerTest() {
-        final Server sb = new ServerBuilder()
+        final Server sb = Server.builder()
                 .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                 .virtualHost("*.example.com")
                 .and()
@@ -194,11 +194,11 @@ public class ServerBuilderTest {
      */
     @Test
     public void buildIllegalExceptionTest() {
-        final ServerBuilder sb = new ServerBuilder()
+        final ServerBuilder sb = Server.builder()
                 .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                 .accessLogger(host -> null);
         assertThatThrownBy(sb::build).isInstanceOf(IllegalStateException.class);
-        final ServerBuilder sb2 = new ServerBuilder()
+        final ServerBuilder sb2 = Server.builder()
                 .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                 .accessLogger(host -> {
                     if ("*.example.com".equals(host.hostnamePattern())) {

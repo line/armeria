@@ -46,7 +46,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
  * <ul>
  *   <li>{@code /new} (no path parameters)
  *     <pre>{@code
- *     ServerBuilder sb = new ServerBuilder();
+ *     ServerBuilder sb = Server.builder();
  *     // e.g. /old -> /new
  *     sb.service("/old", new RedirectService("/new");
  *     }</pre>
@@ -89,7 +89,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
  * template:</p>
  *
  * <pre>{@code
- * ServerBuilder sb = new ServerBuilder();
+ * ServerBuilder sb = Server.builder();
  * // e.g. /foo/bar -> /NNNNNN/foo_bar
  * sb.service("/:var1/:var2", new RedirectService(ctx -> {
  *     String name = ctx.pathParam("var1") + "_" + ctx.pathParam("var2");

@@ -88,7 +88,7 @@ public class ArmeriaAutoConfiguration {
                 armeriaSettings.isEnableMetrics() ? meterIdPrefixFunctionFactory.orElse(DEFAULT)
                                                   : null;
 
-        final ServerBuilder server = new ServerBuilder();
+        final ServerBuilder server = Server.builder();
 
         final List<Port> ports = armeriaSettings.getPorts();
         if (ports.isEmpty()) {

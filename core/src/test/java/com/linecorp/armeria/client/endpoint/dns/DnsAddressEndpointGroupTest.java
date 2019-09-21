@@ -257,7 +257,6 @@ public class DnsAddressEndpointGroupTest {
 
                 await().untilAsserted(() -> assertThat(group.attemptsSoFar).isGreaterThan(2));
                 assertThat(group.endpoints()).isEmpty();
-
                 // Start to respond correctly.
                 server.setResponses(ImmutableMap.of(
                         new DefaultDnsQuestion("empty.com.", A),

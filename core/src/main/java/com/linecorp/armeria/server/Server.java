@@ -99,7 +99,13 @@ public final class Server implements AutoCloseable {
     @Nullable
     private ServerBootstrap serverBootstrap;
 
-    @Deprecated
+    /**
+     * Creates a new {@link ServerBuilder}.
+     */
+    public static ServerBuilder builder() {
+        return new ServerBuilder();
+    }
+
     Server(ServerConfig config, @Nullable DomainNameMapping<SslContext> sslContexts) {
         this.config = requireNonNull(config, "config");
         this.sslContexts = sslContexts;
@@ -115,10 +121,6 @@ public final class Server implements AutoCloseable {
         // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
         // add a listener to it.
         config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
-    }
-
-    public static ServerBuilder builder() {
-        return new ServerBuilder();
     }
 
     /**
@@ -255,7 +257,7 @@ public final class Server implements AutoCloseable {
      * Note that the startup procedure is asynchronous and thus this method returns immediately. To wait until
      * this {@link Server} is fully started up, wait for the returned {@link CompletableFuture}:
      * <pre>{@code
-     * ServerBuilder builder = new ServerBuilder();
+     * ServerBuilder builder = Server.builder();
      * ...
      * Server server = builder.build();
      * server.start().get();

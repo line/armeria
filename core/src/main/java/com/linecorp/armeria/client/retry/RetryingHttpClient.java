@@ -60,6 +60,21 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
     private static final Logger logger = LoggerFactory.getLogger(RetryingHttpClient.class);
 
     /**
+     * Returns a new {@link RetryingHttpClientBuilder} with the specified {@link RetryStrategy}.
+     */
+    public static RetryingHttpClientBuilder builder(RetryStrategy retryStrategy) {
+        return new RetryingHttpClientBuilder(retryStrategy);
+    }
+
+    /**
+     * Returns a new {@link RetryingHttpClientBuilder} with the specified {@link RetryStrategyWithContent}.
+     */
+    public static RetryingHttpClientBuilder builder(
+            RetryStrategyWithContent<HttpResponse> retryStrategyWithContent) {
+        return new RetryingHttpClientBuilder(retryStrategyWithContent);
+    }
+
+    /**
      * Creates a new {@link Client} decorator that handles failures of an invocation and retries HTTP requests.
      *
      * @param retryStrategy the retry strategy
@@ -78,8 +93,8 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
     public static Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient>
     newDecorator(RetryStrategy retryStrategy, int maxTotalAttempts) {
         return RetryingHttpClient.builder(retryStrategy)
-                .maxTotalAttempts(maxTotalAttempts)
-                .newDecorator();
+                                 .maxTotalAttempts(maxTotalAttempts)
+                                 .newDecorator();
     }
 
     /**
@@ -94,24 +109,9 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
     newDecorator(RetryStrategy retryStrategy,
                  int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
         return RetryingHttpClient.builder(retryStrategy)
-                .maxTotalAttempts(maxTotalAttempts)
-                .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt)
-                .newDecorator();
-    }
-
-    /**
-     * Returns a new {@link RetryingHttpClientBuilder} with the specified {@link RetryStrategy}.
-     */
-    public static RetryingHttpClientBuilder builder(RetryStrategy retryStrategy) {
-        return new RetryingHttpClientBuilder(retryStrategy);
-    }
-
-    /**
-     * Returns a new {@link RetryingHttpClientBuilder} with the specified {@link RetryStrategyWithContent}.
-     */
-    public static RetryingHttpClientBuilder builder(
-            RetryStrategyWithContent<HttpResponse> retryStrategyWithContent) {
-        return new RetryingHttpClientBuilder(retryStrategyWithContent);
+                                 .maxTotalAttempts(maxTotalAttempts)
+                                 .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt)
+                                 .newDecorator();
     }
 
     private final boolean useRetryAfter;

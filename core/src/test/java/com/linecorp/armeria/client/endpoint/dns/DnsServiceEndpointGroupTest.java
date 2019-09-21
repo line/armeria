@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.client.endpoint.dns;
 
 import static io.netty.handler.codec.dns.DnsRecordType.CNAME;
@@ -87,7 +86,7 @@ public class DnsServiceEndpointGroupTest {
                 new DefaultDnsQuestion("no-port.com.", SRV),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newSrvRecord("no-port.com.", 7, 0, "d.no-port.com"))
         ))) {
-            try (DnsServiceEndpointGroup group = DnsServiceEndpointGroup.builder("no-port.com")
+            try (DnsServiceEndpointGroup group = new DnsServiceEndpointGroupBuilder("no-port.com")
                     .serverAddresses(server.addr()).build()) {
 
                 assertThat(group.awaitInitialEndpoints()).containsExactly(

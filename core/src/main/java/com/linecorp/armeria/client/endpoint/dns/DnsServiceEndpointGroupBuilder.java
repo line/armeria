@@ -27,7 +27,7 @@ public final class DnsServiceEndpointGroupBuilder
     /**
      * Creates a new instance that builds a {@link DnsServiceEndpointGroup} for the specified {@code hostname}.
      *
-     * @deprecated Use {@link DnsServiceEndpointGroup#builder(String)} instead.
+     * @deprecated Use {@link DnsServiceEndpointGroup#builder(String)}.
      */
     @Deprecated
     public DnsServiceEndpointGroupBuilder(String hostname) {

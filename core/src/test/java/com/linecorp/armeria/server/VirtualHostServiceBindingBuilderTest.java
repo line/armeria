@@ -35,7 +35,7 @@ class VirtualHostServiceBindingBuilderTest {
 
     @Test
     void serviceBindingBuilder() {
-        final ServerBuilder sb = new ServerBuilder();
+        final ServerBuilder sb = Server.builder();
         final ContentPreviewerFactory requestFactory = mock(ContentPreviewerFactory.class);
         final ContentPreviewerFactory responseFactory = mock(ContentPreviewerFactory.class);
 
@@ -70,7 +70,7 @@ class VirtualHostServiceBindingBuilderTest {
 
     @Test
     void withRoute() {
-        final ServerBuilder sb = new ServerBuilder();
+        final ServerBuilder sb = Server.builder();
 
         sb.virtualHost("example.com").withRoute(builder -> {
             builder.pathUnder("/foo/bar")

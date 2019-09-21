@@ -55,14 +55,14 @@ public class ArmeriaConfigurationUtilTest {
                 .setService(new SimpleService())
                 .setDecorators(decorator);
 
-        final ServerBuilder sb1 = new ServerBuilder();
+        final ServerBuilder sb1 = Server.builder();
         configureAnnotatedHttpServices(sb1, ImmutableList.of(bean), MeterIdPrefixFunctionFactory.DEFAULT);
         verify(decorator).apply(any());
         assertThat(service(sb1).as(MetricCollectingService.class)).isPresent();
 
         reset(decorator);
 
-        final ServerBuilder sb2 = new ServerBuilder();
+        final ServerBuilder sb2 = Server.builder();
         configureAnnotatedHttpServices(sb2, ImmutableList.of(bean), null);
         verify(decorator).apply(any());
         assertThat(service(sb2)).isInstanceOf(AnnotatedHttpService.class);
@@ -77,7 +77,7 @@ public class ArmeriaConfigurationUtilTest {
                 .setService(new SimpleService())
                 .setDecorators(decorator);
 
-        final ServerBuilder sb = new ServerBuilder();
+        final ServerBuilder sb = Server.builder();
         configureAnnotatedHttpServices(sb, ImmutableList.of(bean), null);
         verify(decorator).apply(any());
         assertThat(service(sb).as(SimpleDecorator.class)).isPresent();

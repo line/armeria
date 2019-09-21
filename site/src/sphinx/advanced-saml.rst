@@ -99,7 +99,7 @@ attach it to your :api:`Server`.
             .and()
             .build();
 
-    Server server = new ServerBuilder()
+    Server server = Server.builder()
             .https(8443)
             // Configure TLS with your key and certificate.
             .tls(new File("your-certificate-file-path"), new File("your-key-file-path"))

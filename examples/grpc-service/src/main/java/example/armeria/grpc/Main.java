@@ -38,7 +38,7 @@ public final class Main {
 
     static Server newServer(int httpPort, int httpsPort) throws Exception {
         final HelloRequest exampleRequest = HelloRequest.newBuilder().setName("Armeria").build();
-        return new ServerBuilder()
+        return Server.builder()
                 .http(httpPort)
                 .https(httpsPort)
                 .tlsSelfSigned()

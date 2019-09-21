@@ -45,7 +45,6 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.EnumInfo;
@@ -160,7 +159,7 @@ public class ThriftDocServicePluginTest {
     }
 
     private static Map<String, ServiceInfo> services(DocServiceFilter include, DocServiceFilter exclude) {
-        final Server server = new ServerBuilder()
+        final Server server = Server.builder()
                 .service(Route.builder().exact("/hello").build(), THttpService.of(mock(AsyncIface.class)))
                 .service(Route.builder().exact("/foo").build(),
                          THttpService.ofFormats(mock(FooService.AsyncIface.class),

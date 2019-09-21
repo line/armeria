@@ -198,10 +198,10 @@ They refresh the :api:`Endpoint` list automatically, respecting TTL values, and 
 
     DnsAddressEndpointGroup group =
             DnsAddressEndpointGroup.builder("www.google.com")
-                    // Refresh more often than every 10 seconds and
-                    // less often than every 60 seconds even if DNS server asks otherwise.
-                    .ttl(/* minTtl */ 10, /* maxTtl */ 60)
-                    .build();
+                                   // Refresh more often than every 10 seconds and
+                                   // less often than every 60 seconds even if DNS server asks otherwise.
+                                   .ttl(/* minTtl */ 10, /* maxTtl */ 60)
+                                   .build();
 
     // Wait until the initial DNS queries are finished.
     group.awaitInitialEndpoints();
@@ -214,9 +214,9 @@ environments that leverage DNS for service discovery such as Kubernetes:
 
     DnsServiceEndpointGroup group =
             DnsServiceEndpointGroup.builder("_http._tcp.example.com")
-                    // Custom backoff strategy.
-                    .backoff(Backoff.exponential(1000, 16000).withJitter(0.3))
-                    .build();
+                                   // Custom backoff strategy.
+                                   .backoff(Backoff.exponential(1000, 16000).withJitter(0.3))
+                                   .build();
 
     // Wait until the initial DNS queries are finished.
     group.awaitInitialEndpoints();

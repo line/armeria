@@ -12,7 +12,7 @@ To start a server, you need to build it first. Use :api:`ServerBuilder`:
     import com.linecorp.armeria.server.Server;
     import com.linecorp.armeria.server.ServerBuilder;
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     // TODO: Configure your server here.
     Server server = sb.build();
     CompletableFuture<Void> future = server.start();
@@ -26,7 +26,7 @@ To serve anything, you need to specify which TCP/IP port you want to bind onto:
 
 .. code-block:: java
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     // Configure an HTTP port.
     sb.http(8080);
     // TODO: Add your services here.
@@ -59,7 +59,7 @@ Even if we opened a port, it's of no use if we didn't bind any services to them.
     import com.linecorp.armeria.server.annotation.Produces;
     import com.linecorp.armeria.server.logging.LoggingService;
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     sb.http(8080);
 
     // Add a simple 'Hello, world!' service.
@@ -151,7 +151,7 @@ for a specific service, you can use fluent API:
 
 .. code-block:: java
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     sb.route()                                   // Configure the service.
       .post("/foo/bar")                          // Matched when the path is "/foo/bar" and the method is POST.
       .consumes(MediaType.JSON)                  // Matched when the "content-type" header is "application/json".
@@ -169,7 +169,7 @@ Or use a ``Consumer``:
 
     import com.linecorp.armeria.common.HttpMethod;
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     sb.withRoute(builder -> builder.path("/baz")         // Matched when the path is "/baz".
                                    // Matched when the method is GET or POST.
                                    .methods(HttpMethod.GET, HttpMethod.POST)
@@ -183,7 +183,7 @@ You can also add an HTTPS port with your certificate and its private key files:
 
 .. code-block:: java
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     sb.https(8443)
       .tls(new File("certificate.crt"), new File("private.key"), "myPassphrase");
     ...
@@ -202,7 +202,7 @@ If your server is behind a load balancer such as `HAProxy <https://www.haproxy.o
     import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
     import static com.linecorp.armeria.common.SessionProtocol.PROXY;
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     sb.port(8080, PROXY, HTTP);
     sb.port(8443, PROXY, HTTPS);
     ...
@@ -216,7 +216,7 @@ implementations that supports port unification:
 
 .. code-block:: java
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     sb.port(8888, HTTP, HTTPS);
     // Enable PROXY protocol, too.
     sb.port(9999, PROXY, HTTP, HTTPS);
@@ -230,7 +230,7 @@ Use ``ServerBuilder.virtualHost(...)`` to configure `a name-based virtual host`_
 
 .. code-block:: java
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     // Configure foo.com.
     sb.virtualHost("foo.com")
       .service(...)
@@ -258,7 +258,7 @@ your :api:`ServerBuilder` before doing that:
     import com.linecorp.armeria.common.util.InetAddressPredicates;
     import com.linecorp.armeria.server.ClientAddressSource;
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
 
     // Configure a filter which evaluates whether an address of a remote endpoint is trusted.
     // If unspecified, no remote endpoint is trusted.

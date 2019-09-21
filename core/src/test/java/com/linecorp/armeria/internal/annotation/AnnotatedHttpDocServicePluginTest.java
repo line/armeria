@@ -332,7 +332,7 @@ public class AnnotatedHttpDocServicePluginTest {
     }
 
     private static Map<String, ServiceInfo> services(DocServiceFilter include, DocServiceFilter exclude) {
-        final Server server = new ServerBuilder()
+        final Server server = Server.builder()
                 .annotatedService(new FooClass())
                 .annotatedService(new BarClass())
                 .build();

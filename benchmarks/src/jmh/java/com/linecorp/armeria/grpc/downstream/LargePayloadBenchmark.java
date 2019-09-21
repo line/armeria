@@ -64,7 +64,7 @@ public class LargePayloadBenchmark {
 
     @Setup
     public void setUp() {
-        server = new ServerBuilder()
+        server = Server.builder()
                 .serviceUnder("/", new GrpcServiceBuilder().addService(new BinaryProxyImplBase() {
                     @Override
                     public StreamObserver<BinaryPayload> echo(StreamObserver<BinaryPayload> responseObserver) {

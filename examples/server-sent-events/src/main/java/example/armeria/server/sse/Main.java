@@ -42,7 +42,7 @@ public final class Main {
 
     static Server newServer(int httpPort, int httpsPort, Duration sendingInterval, long eventCount,
                             Supplier<String> randomStringSupplier) throws Exception {
-        return new ServerBuilder()
+        return Server.builder()
                 .http(httpPort)
                 .https(httpsPort)
                 .tlsSelfSigned()

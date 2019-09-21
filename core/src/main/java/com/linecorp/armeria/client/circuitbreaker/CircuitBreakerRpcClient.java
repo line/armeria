@@ -102,7 +102,7 @@ public final class CircuitBreakerRpcClient extends CircuitBreakerClient<RpcReque
     }
 
     /**
-     * Returns a new {@link CircuitBreakerRpcClientBuilder} instance with
+     * Returns a new {@link CircuitBreakerRpcClientBuilder} with
      * the specified {@link CircuitBreakerStrategyWithContent}.
      */
     public static CircuitBreakerRpcClientBuilder builder(

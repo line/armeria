@@ -7,7 +7,6 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.ServerCacheControl;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.file.HttpFileBuilder;
 import com.linecorp.armeria.server.healthcheck.HttpHealthCheckService;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -52,7 +51,7 @@ public final class Main {
     }
 
     static Server newBackendServer(int port, int frameIntervalMillis) throws Exception {
-        return new ServerBuilder()
+        return Server.builder()
                 .http(port)
                 // Disable timeout to serve infinite streaming response.
                 .requestTimeoutMillis(0)
@@ -68,7 +67,7 @@ public final class Main {
     }
 
     static Server newProxyServer(int httpPort, int httpsPort) throws Exception {
-        return new ServerBuilder()
+        return Server.builder()
                 .http(httpPort)
                 .https(httpsPort)
                 .tlsSelfSigned()

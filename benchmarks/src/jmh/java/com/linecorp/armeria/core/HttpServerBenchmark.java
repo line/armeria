@@ -64,7 +64,7 @@ public class HttpServerBenchmark {
 
     @Setup
     public void startServer() throws Exception {
-        server = new ServerBuilder()
+        server = Server.builder()
                 .service("/empty", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                 .requestTimeout(Duration.ZERO)
                 .meterRegistry(NoopMeterRegistry.get())

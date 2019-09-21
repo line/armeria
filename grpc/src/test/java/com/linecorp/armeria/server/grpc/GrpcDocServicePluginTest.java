@@ -49,6 +49,7 @@ import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceImplBase;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceWithRoutes;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
@@ -172,7 +173,7 @@ public class GrpcDocServicePluginTest {
     }
 
     private static Map<String, ServiceInfo> services(DocServiceFilter include, DocServiceFilter exclude) {
-        final ServerBuilder serverBuilder = new ServerBuilder();
+        final ServerBuilder serverBuilder = Server.builder();
 
         // The case where a GrpcService is added to ServerBuilder without a prefix.
         final ServiceWithRoutes<HttpRequest, HttpResponse> prefixlessService =

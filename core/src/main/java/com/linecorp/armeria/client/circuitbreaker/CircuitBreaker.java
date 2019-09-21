@@ -31,6 +31,8 @@ public interface CircuitBreaker {
 
     /**
      * Returns a new {@link CircuitBreakerBuilder} that has the specified name.
+     *
+     * @param name The name of the circuit breaker.
      */
     static CircuitBreakerBuilder builder(String name) {
         return new CircuitBreakerBuilder(name);

@@ -42,7 +42,7 @@ import com.linecorp.armeria.common.sse.ServerSentEvent;
  *
  * <p>A user simply creates a streaming {@link HttpResponse} which emits Server-Sent Events, e.g.
  * <pre>{@code
- * Server server = new ServerBuilder()
+ * Server server = Server.builder()
  *         // Emit Server-Sent Events with the SeverSentEvent instances published by a publisher.
  *         .service("/sse1",
  *                  (ctx, req) -> ServerSentEvents.fromPublisher(

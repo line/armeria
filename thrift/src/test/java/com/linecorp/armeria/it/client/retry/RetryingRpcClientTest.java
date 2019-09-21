@@ -125,7 +125,6 @@ public class RetryingRpcClientTest {
                 (ctx, response) -> CompletableFuture.completedFuture(Backoff.fixed(10000000));
         final HelloService.Iface client = helloClient(strategy, 100);
         when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
-
         final Throwable thrown = catchThrowable(() -> client.hello("hello"));
         assertThat(thrown).isInstanceOf(TApplicationException.class);
         assertThat(((TApplicationException) thrown).getType()).isEqualTo(TApplicationException.INTERNAL_ERROR);
