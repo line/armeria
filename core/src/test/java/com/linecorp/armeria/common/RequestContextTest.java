@@ -308,6 +308,7 @@ public class RequestContextTest {
         }
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void minimalCompletionStageUsingCompleteAsync() throws Exception {
         final RequestContext context = createContext(false);
@@ -327,6 +328,7 @@ public class RequestContextTest {
         completionStage.toCompletableFuture().get();
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void minimalCompletionStageUsingWhenComplete() throws Exception {
         final RequestContext context = createContext(false);
@@ -353,6 +355,7 @@ public class RequestContextTest {
         assertThat(atomicReference.get()).isNull();
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void makeContextAwareCompletableFutureUsingCompleteAsync() throws Exception {
         final RequestContext context = createContext(false);
@@ -366,6 +369,7 @@ public class RequestContextTest {
         assertThat(resultFuture.get()).isEqualTo("success");
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void makeContextAwareCompletableFutureUsingCompleteAsyncWithExecutor() throws Exception {
         final ExecutorService executor = Executors.newFixedThreadPool(2);
