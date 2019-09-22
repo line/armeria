@@ -33,7 +33,6 @@ import com.linecorp.armeria.grpc.BinaryProxyGrpc.BinaryProxyImplBase;
 import com.linecorp.armeria.grpc.BinaryProxyGrpc.BinaryProxyStub;
 import com.linecorp.armeria.grpc.BinaryProxyOuterClass.BinaryPayload;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;

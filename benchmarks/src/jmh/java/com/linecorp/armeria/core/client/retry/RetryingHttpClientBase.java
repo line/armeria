@@ -25,7 +25,6 @@ import org.openjdk.jmh.annotations.TearDown;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
 
 @State(Scope.Benchmark)
