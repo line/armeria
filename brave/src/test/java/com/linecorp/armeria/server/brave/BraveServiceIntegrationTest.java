@@ -87,7 +87,7 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
 
     @After
     public void stopServer() {
-         server.stop().join();
+        server.stop().join();
     }
 
     @Override
