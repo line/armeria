@@ -34,13 +34,11 @@ import com.linecorp.armeria.server.ServerBuilder;
  *     public HttpResponse foo() {...}
  * }
  * </pre>
- *
  * And then can be registered to {@link ServerBuilder} like this
  * <pre>{@code
  * ServerBuilder sb = new ServerBuilder();
  * sb.annotatedService("/a", new MyService());
  * }</pre>
- *
  * In this case <b>foo</b> methods handles a request that matches path <b>a/b/c</b>
  */
 @Retention(RetentionPolicy.RUNTIME)

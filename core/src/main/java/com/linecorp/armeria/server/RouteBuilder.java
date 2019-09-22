@@ -22,7 +22,6 @@ import static com.linecorp.armeria.internal.RouteUtil.EXACT;
 import static com.linecorp.armeria.internal.RouteUtil.GLOB;
 import static com.linecorp.armeria.internal.RouteUtil.PREFIX;
 import static com.linecorp.armeria.internal.RouteUtil.REGEX;
-import static com.linecorp.armeria.internal.RouteUtil.ensureAbsolutePath;
 import static com.linecorp.armeria.server.HttpHeaderUtil.ensureUniqueMediaTypes;
 import static java.util.Objects.requireNonNull;
 
