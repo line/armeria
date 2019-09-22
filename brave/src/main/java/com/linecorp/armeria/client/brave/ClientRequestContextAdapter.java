@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.brave;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -26,7 +27,6 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.brave.SpanContextUtil;
-import com.linecorp.armeria.internal.brave.SpanTags;
 
 import brave.http.HttpClientAdapter;
 
@@ -74,7 +74,11 @@ final class ClientRequestContextAdapter {
         @Override
         @Nullable
         public String url() {
-            return SpanTags.generateUrl(ctx.log());
+            // This dies because lack of RequestLogAvailability.REQUEST_HEADERS
+            //return SpanTags.generateUrl(ctx.log());
+
+            // This doesn't die
+            return ((HttpRequest) ctx.request()).uri().toString();
         }
 
         @Override

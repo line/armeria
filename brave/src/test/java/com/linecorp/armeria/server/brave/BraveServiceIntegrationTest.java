@@ -18,50 +18,39 @@ package com.linecorp.armeria.server.brave;
 
 import static com.linecorp.armeria.common.HttpStatus.BAD_REQUEST;
 import static com.linecorp.armeria.common.HttpStatus.OK;
-import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Optional;
 
 import org.junit.After;
 import org.junit.AssumptionViolatedException;
+import org.junit.Before;
 import org.junit.Test;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
-import com.linecorp.armeria.internal.brave.SpanTags;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 
-import brave.SpanCustomizer;
 import brave.Tracing;
-import brave.Tracing.Builder;
-import brave.http.HttpAdapter;
-import brave.http.HttpServerParser;
-import brave.propagation.CurrentTraceContext;
 import brave.propagation.StrictScopeDecorator;
-import brave.sampler.Sampler;
 import brave.test.http.ITHttpServer;
-import zipkin2.Span;
 
 public class BraveServiceIntegrationTest extends ITHttpServer {
 
     private Server server;
 
-    // Hide currentTraceContext in ITHttpServer
-    private final CurrentTraceContext currentTraceContext =
-            RequestContextCurrentTraceContext.builder()
-                                             .addScopeDecorator(StrictScopeDecorator.create())
-                                             .build();
-
+    @Before
     @Override
-    protected Builder tracingBuilder(Sampler sampler) {
-        return super.tracingBuilder(sampler)
-                    .currentTraceContext(currentTraceContext);
+    public void setup() throws Exception {
+        currentTraceContext =
+            RequestContextCurrentTraceContext.builder()
+                .addScopeDecorator(StrictScopeDecorator.create())
+                .build();
+        super.setup();
     }
 
     @Override
@@ -90,44 +79,6 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
         server.start().join();
     }
 
-    /**
-     * Postpone url to response.
-     */
-    @Override
-    @Test
-    public void supportsPortableCustomization() throws Exception {
-        httpTracing = httpTracing.toBuilder().serverParser(new HttpServerParser() {
-            @Override
-            public <T> void request(HttpAdapter<T, ?> adapter, T req, SpanCustomizer customizer) {
-                customizer.tag("context.visible", String.valueOf(currentTraceContext.get() != null));
-                customizer.tag("request_customizer.is_span", String.valueOf(customizer instanceof brave.Span));
-            }
-
-            @Override
-            public <T> void response(HttpAdapter<?, T> adapter, T res, Throwable error,
-                                     SpanCustomizer customizer) {
-                super.response(adapter, res, error, customizer);
-                // TODO: make this possible at request scope https://github.com/line/armeria/issues/2089
-                if (res instanceof RequestContext) {
-                    final RequestContext ctx = (RequestContext) res;
-                    customizer.tag("http.url", SpanTags.generateUrl(ctx.log()));
-                }
-                customizer.tag("response_customizer.is_span", String.valueOf(customizer instanceof brave.Span));
-            }
-        }).build();
-        init();
-
-        final String uri = "/foo?z=2&yAA=1";
-        get(uri);
-
-        final Span span = takeSpan();
-        assertThat(span.tags())
-                .containsEntry("http.url", url(uri))
-                .containsEntry("context.visible", "true")
-                .containsEntry("request_customizer.is_span", "false")
-                .containsEntry("response_customizer.is_span", "false");
-    }
-
     @Override
     @Test
     public void notFound() {
@@ -136,7 +87,7 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
 
     @After
     public void stopServer() {
-        server.stop().join();
+         server.stop().join();
     }
 
     @Override
