@@ -52,7 +52,7 @@ public final class DnsServiceEndpointGroup extends DnsEndpointGroup {
      * @param hostname the hostname to query DNS queries for.
      */
     public static DnsServiceEndpointGroup of(String hostname) {
-        return new DnsServiceEndpointGroupBuilder(hostname).build();
+        return DnsServiceEndpointGroup.builder(hostname).build();
     }
 
     /**
