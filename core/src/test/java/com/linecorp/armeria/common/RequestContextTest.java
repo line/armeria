@@ -308,11 +308,11 @@ public class RequestContextTest {
         }
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void minimalCompletionStageUsingCompleteAsync() throws Exception {
         final RequestContext context = createContext(false);
         final CompletableFuture<Integer> originalFuture = new CompletableFuture<>();
+        @SuppressWarnings("unchecked")
         final RequestContextAwareCompletableFuture<Integer> contextAwareFuture =
                 (RequestContextAwareCompletableFuture) context.makeContextAware(originalFuture);
         final CompletionStage<Integer> completionStage = contextAwareFuture.minimalCompletionStage();
@@ -325,23 +325,23 @@ public class RequestContextTest {
         assertThat(contextAwareFuture.join()).isEqualTo(1);
         assertThat(contextAwareFuture.getNow(null)).isEqualTo(1);
         assertThat(contextAwareFuture.get()).isEqualTo(1);
-        completionStage.toCompletableFuture().get();
+        assertThat(completionStage.toCompletableFuture().get()).isEqualTo(1);
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void minimalCompletionStageUsingWhenComplete() throws Exception {
         final RequestContext context = createContext(false);
         final CompletableFuture<Integer> originalFuture = new CompletableFuture<>();
+        @SuppressWarnings("unchecked")
         final RequestContextAwareCompletableFuture<Integer> contextAwareFuture =
                 (RequestContextAwareCompletableFuture) context.makeContextAware(originalFuture);
         final CompletionStage<Integer> completionStage = contextAwareFuture.minimalCompletionStage();
 
         AtomicInteger atomicInteger = new AtomicInteger();
-        AtomicReference<Throwable> atomicReference = new AtomicReference<>();
+        AtomicReference<Throwable> causeCaptor = new AtomicReference<>();
         completionStage.whenComplete((result, error) -> {
             if (error != null) {
-                atomicReference.set(error);
+                causeCaptor.set(error);
             } else {
                 atomicInteger.set(result);
             }
@@ -352,14 +352,14 @@ public class RequestContextTest {
         assertThat(contextAwareFuture.getNow(null)).isEqualTo(1);
         assertThat(contextAwareFuture.get()).isEqualTo(1);
         assertThat(atomicInteger.get()).isEqualTo(1);
-        assertThat(atomicReference.get()).isNull();
+        assertThat(causeCaptor.get()).isNull();
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void makeContextAwareCompletableFutureUsingCompleteAsync() throws Exception {
         final RequestContext context = createContext(false);
         final CompletableFuture<String> originalFuture = new CompletableFuture<>();
+        @SuppressWarnings("unchecked")
         final RequestContextAwareCompletableFuture<String> contextAwareFuture =
                 (RequestContextAwareCompletableFuture) context.makeContextAware(originalFuture);
         final CompletableFuture<String> resultFuture = contextAwareFuture.completeAsync(() -> "success");
@@ -369,12 +369,12 @@ public class RequestContextTest {
         assertThat(resultFuture.get()).isEqualTo("success");
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void makeContextAwareCompletableFutureUsingCompleteAsyncWithExecutor() throws Exception {
         final ExecutorService executor = Executors.newFixedThreadPool(2);
         final RequestContext context = createContext(false);
         final CompletableFuture<String> originalFuture = new CompletableFuture<>();
+        @SuppressWarnings("unchecked")
         final RequestContextAwareCompletableFuture<String> contextAwareFuture =
                 (RequestContextAwareCompletableFuture) context.makeContextAware(originalFuture);
         final CompletableFuture<String> resultFuture = contextAwareFuture.completeAsync(() -> "success",

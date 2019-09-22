@@ -147,11 +147,7 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
     @Override
     public <U> CompletableFuture<U> applyToEitherAsync(CompletionStage<? extends T> other,
                                                        Function<? super T, U> fn) {
-        final CompletableFuture<U> result = super.applyToEitherAsync(other, ctx.makeContextAware(fn));
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
-        }
-        return ctx.makeContextAware(result);
+        return maybeMakeContextAware(super.applyToEitherAsync(other, ctx.makeContextAware(fn)));
     }
 
     @Override
@@ -255,7 +251,7 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
         return maybeMakeContextAware(super.exceptionally(ctx.makeContextAware(fn)));
     }
 
-    // support JDK9 functions
+    // The methods not available in Java 8 but only in Java 9+
 
     public <U> CompletableFuture<U> newIncompleteFuture() {
         return new RequestContextAwareCompletableFuture<>(ctx);
@@ -274,7 +270,7 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
             }
             return null;
         });
-        return maybeMakeContextAware(this);
+        return this;
     }
 
     public CompletableFuture<T> completeAsync(Supplier<? extends T> supplier,
@@ -287,14 +283,14 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
             }
             return null;
         });
-        return maybeMakeContextAware(this);
+        return this;
     }
 
-    private <T> CompletableFuture<T> maybeMakeContextAware(CompletableFuture<T> result) {
-        if (result instanceof RequestContextAwareCompletableFuture) {
-            return result;
+    private <T> CompletableFuture<T> maybeMakeContextAware(CompletableFuture<T> future) {
+        if (future instanceof RequestContextAwareCompletableFuture) {
+            return future;
         }
-        return ctx.makeContextAware(result);
+        return ctx.makeContextAware(future);
     }
 
     private Supplier<T> makeContextAware(Supplier<? extends T> action) {

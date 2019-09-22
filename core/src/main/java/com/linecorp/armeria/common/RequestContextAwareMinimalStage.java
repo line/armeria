@@ -24,8 +24,10 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import com.google.common.base.MoreObjects;
+
 @SuppressWarnings("unchecked")
-public class RequestContextAwareMinimalStage<T> implements CompletionStage<T> {
+final class RequestContextAwareMinimalStage<T> implements CompletionStage<T> {
 
     private final RequestContextAwareCompletableFuture<T> delegate;
 
@@ -283,5 +285,12 @@ public class RequestContextAwareMinimalStage<T> implements CompletionStage<T> {
     @Override
     public CompletableFuture<T> toCompletableFuture() {
         return delegate.thenApply(Function.identity());
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("delegate", delegate)
+                .toString();
     }
 }
