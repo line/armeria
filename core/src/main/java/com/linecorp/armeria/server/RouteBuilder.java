@@ -173,7 +173,6 @@ public class RouteBuilder {
      * @see #path(String)
      */
     public RouteBuilder pathWithPrefix(String prefix, String pathPattern) {
-        prefix = ensureAbsolutePath(prefix, "prefix");
         if (!prefix.endsWith("/")) {
             prefix += '/';
         }

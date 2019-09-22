@@ -47,6 +47,7 @@ import com.linecorp.armeria.server.annotation.DecoratorFactory;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.PathPrefix;
+import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecoratorFactoryFunction;
 import com.linecorp.armeria.server.annotation.decorator.RateLimitingDecorator;
@@ -131,7 +132,7 @@ public class AnnotatedHttpServiceFactoryTest {
         assertThat(udd2.value()).isEqualTo(2);
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     public void testFindAnnotatedServiceElementsWithPathPrefixAnnotation() {
         final Object object = new PathPrefixServiceObject();
         final List<AnnotatedHttpServiceElement> elements = find("/", object, new ArrayList<>());
@@ -145,11 +146,11 @@ public class AnnotatedHttpServiceFactoryTest {
         assertThat(paths).allMatch(path -> path.startsWith(HOME_PATH_PREFIX + '/'));
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     public void testFindAnnotatedServiceElementsWithoutPathPrefixAnnotation() {
         final Object serviceObject = new ServiceObject();
-        final String root = "/home";
-        final List<AnnotatedHttpServiceElement> elements = find(root, serviceObject, new ArrayList<>());
+        final List<AnnotatedHttpServiceElement> elements = find(HOME_PATH_PREFIX, serviceObject,
+                                                                new ArrayList<>());
 
         final List<String> paths = elements.stream()
                                            .map(AnnotatedHttpServiceElement::route)
@@ -157,7 +158,7 @@ public class AnnotatedHttpServiceFactoryTest {
                                            .flatMap(Collection::stream)
                                            .collect(Collectors.toList());
 
-        assertThat(paths).allMatch(path -> path.startsWith(root + '/'));
+        assertThat(paths).allMatch(path -> path.startsWith(HOME_PATH_PREFIX + '/'));
     }
 
     private static List<Class<?>> values(List<DecoratorAndOrder> list) {
@@ -267,7 +268,12 @@ public class AnnotatedHttpServiceFactoryTest {
     static class PathPrefixServiceObject {
 
         @Get("/hello")
-        public HttpResponse hello() {
+        public HttpResponse get() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Post("/")
+        public HttpResponse post() {
             return HttpResponse.of(HttpStatus.OK);
         }
     }
@@ -275,7 +281,12 @@ public class AnnotatedHttpServiceFactoryTest {
     static class ServiceObject {
 
         @Get("/hello")
-        public HttpResponse hello() {
+        public HttpResponse get() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Post("/")
+        public HttpResponse post() {
             return HttpResponse.of(HttpStatus.OK);
         }
     }

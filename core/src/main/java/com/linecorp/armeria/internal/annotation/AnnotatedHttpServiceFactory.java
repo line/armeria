@@ -19,6 +19,8 @@ package com.linecorp.armeria.internal.annotation;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Sets.toImmutableEnumSet;
+import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
+import static com.linecorp.armeria.internal.RouteUtil.ensureAbsolutePath;
 import static com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.toRequestObjectResolvers;
 import static com.linecorp.armeria.internal.annotation.AnnotationUtil.findAll;
 import static com.linecorp.armeria.internal.annotation.AnnotationUtil.findFirst;
@@ -273,10 +275,10 @@ public final class AnnotatedHttpServiceFactory {
         }
         final Class<?> clazz = object.getClass();
         final String pattern = findPattern(method, methodAnnotations);
-        final String selectedPathPrefix = selectPathPrefix(clazz, pathPrefix);
+        final String computedPathPrefix = computePathPrefix(clazz, pathPrefix);
 
         final Route route = Route.builder()
-                                 .pathWithPrefix(selectedPathPrefix, pattern)
+                                 .pathWithPrefix(computedPathPrefix, pattern)
                                  .methods(methods)
                                  .consumes(consumableMediaTypes(method, clazz))
                                  .produces(producibleMediaTypes(method, clazz))
@@ -763,11 +765,18 @@ public final class AnnotatedHttpServiceFactory {
 
     /**
      * Return the path prefix to use. If there is {@link PathPrefix} annotation on the class
-     * then the value from the annotation is used, else falls back to pathPrefix passed through
-     * method pram.
+     * then path prefix is computed by concatenating pathPrefix and value from annotation else
+     * return pathPrefix
      */
-    private static String selectPathPrefix(Class<?> clazz, String pathPrefix) {
-        return findFirst(clazz, PathPrefix.class).map(PathPrefix::value).orElse(pathPrefix);
+    private static String computePathPrefix(Class<?> clazz, String pathPrefix) {
+        ensureAbsolutePath(pathPrefix, "pathPrefix");
+        final Optional<PathPrefix> pathPrefixAnnotation = findFirst(clazz, PathPrefix.class);
+        if (!pathPrefixAnnotation.isPresent()) {
+            return pathPrefix;
+        }
+        final String pathPrefixFromAnnotation = pathPrefixAnnotation.get().value();
+        ensureAbsolutePath(pathPrefixFromAnnotation, "pathPrefixFromAnnotation");
+        return concatPaths(pathPrefix, pathPrefixFromAnnotation);
     }
 
     private AnnotatedHttpServiceFactory() {}

@@ -21,15 +21,34 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.linecorp.armeria.server.ServerBuilder;
+
 /**
- * Annotation for mapping dynamic web requests onto specific class.
+ * Annotation that can be used on a class as a path prefix for all the
+ * methods that handle http request. For ex:
+ * <pre>
+ * {@code @PathPrefix("/b")}
+ * public class MyService {
+ *
+ *     {@code @Get("/c")}
+ *     public HttpResponse foo() {...}
+ * }
+ * </pre>
+ *
+ * And then can be registered to {@link ServerBuilder} like this
+ * <pre>{@code
+ * ServerBuilder sb = new ServerBuilder();
+ * sb.annotatedService("/a", new MyService());
+ * }</pre>
+ *
+ * In this case <b>foo</b> methods handles a request that matches path <b>a/b/c</b>
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface PathPrefix {
 
     /**
-     * A path pattern for the annotated method.
+     * A path for the annotated method.
      */
     String value();
 }
