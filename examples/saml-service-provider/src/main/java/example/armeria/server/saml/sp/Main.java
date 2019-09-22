@@ -11,7 +11,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.saml.KeyStoreCredentialResolverBuilder;
 import com.linecorp.armeria.server.saml.SamlServiceProvider;
 import com.linecorp.armeria.server.saml.SamlServiceProviderBuilder;
