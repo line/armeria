@@ -44,9 +44,7 @@ import com.linecorp.armeria.server.docs.DocService;
  * >                                          "Hello",
  * >                                          HelloRequest.newBuilder().setName("Armeria").build())
  * >             ))
- * >             .setExampleHeaders(Lists.of(
- * >                    HttpHeaders.of(HttpHeaderNames.of("my-header"), "headerVal")
- * >             ));
+ * >             .setExampleHeaders(Lists.of(HttpHeaders.of(HttpHeaderNames.of("my-header"), "headerVal")));
  * > }
  * }</pre>
  */

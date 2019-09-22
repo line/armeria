@@ -43,9 +43,7 @@ import com.linecorp.armeria.server.docs.DocService;
  * >             .setRequestConverters(new MyRequestConverter())
  * >             .setResponseConverters(new MyResponseConverter())
  * >             .setExampleRequests(Lists.of(AnnotatedExampleRequest.of("myMethod", "{\"foo\":\"bar\"}")))
- * >             .setExampleHeaders(Lists.of(
- * >                    HttpHeaders.of(HttpHeaderNames.of("my-header"), "headerVal")
- * >             ));
+ * >             .setExampleHeaders(Lists.of(HttpHeaders.of("my-header", "headerVal")));
  * > }
  * }</pre>
  */
