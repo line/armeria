@@ -38,7 +38,7 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      *
      * @param threadNamePrefix the prefix of the names of the threads created by this factory.
      *
-     * @deprecated Use {@linkplain ThreadFactories#newEventLoopThreadFactory(String, boolean)
+     * @deprecated Use {@link ThreadFactories#newEventLoopThreadFactory(String, boolean)
      *             ThreadFactories#newEventLoopThreadFactory(String, false)} or
      *             {@link ThreadFactories#builder(String)}. Make sure to set
      *             {@link ThreadFactoryBuilder#eventLoop(boolean)} true to create event loop threads.
