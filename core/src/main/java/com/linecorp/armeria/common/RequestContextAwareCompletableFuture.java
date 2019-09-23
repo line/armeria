@@ -226,8 +226,7 @@ final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T>
     @Override
     public CompletableFuture<T> whenCompleteAsync(BiConsumer<? super T, ? super Throwable> action,
                                                   Executor executor) {
-        return maybeMakeContextAware(super.whenCompleteAsync(ctx.makeContextAware(action),
-                                                                    executor));
+        return maybeMakeContextAware(super.whenCompleteAsync(ctx.makeContextAware(action), executor));
     }
 
     @Override
