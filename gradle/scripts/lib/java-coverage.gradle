@@ -98,7 +98,7 @@ configure(rootProject) {
             def exclusions = rootProject.ext.relocations.collect { "/${it['to'].replace('.', '/')}/**" }
             def additionalExclusions = rootProject.findProperty('jacocoExclusions');
             if (additionalExclusions) {
-                additionalExclusions.each { exclusions.add("${it}") }
+                additionalExclusions.split(',').each { exclusions.add("${it}") }
             }
             classDirectories.from = files(classDirectories.files.collect {
                 fileTree(dir: it, exclude: exclusions)
