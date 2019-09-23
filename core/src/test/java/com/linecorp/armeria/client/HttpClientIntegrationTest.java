@@ -33,12 +33,12 @@ import java.util.Collections;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntFunction;
 
+import javax.annotation.Nullable;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.eclipse.jetty.server.Request;
-import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.junit.jupiter.api.AfterAll;
@@ -716,13 +716,18 @@ class HttpClientIntegrationTest {
 
     @Nested
     @TestInstance(Lifecycle.PER_CLASS)
-    static class JettyInterop {
+    @SuppressWarnings({
+            "InnerClassMayBeStatic", // A nested test class must not be static.
+            "UnnecessaryFullyQualifiedName", // Using FQCN for Jetty Server to avoid confusion.
+    })
+    class JettyInteropTest {
 
-        Server jetty;
+        @Nullable
+        org.eclipse.jetty.server.Server jetty;
 
         @BeforeAll
         void startJetty() throws Exception {
-            jetty = new Server(0);
+            jetty = new org.eclipse.jetty.server.Server(0);
             jetty.setHandler(new AbstractHandler() {
                 @Override
                 public void handle(String target, Request baseRequest, HttpServletRequest request,
@@ -740,13 +745,15 @@ class HttpClientIntegrationTest {
 
         @AfterAll
         void stopJetty() throws Exception {
-            jetty.stop();
+            if (jetty != null) {
+                jetty.stop();
+            }
         }
 
         @Test
         void http1SendsOneHostHeaderWhenUserSetsIt() {
             final HttpClient client = HttpClient.of(
-                    "h1c://localhost:" + ((ServerConnector)jetty.getConnectors()[0]).getLocalPort() + '/');
+                    "h1c://localhost:" + ((ServerConnector) jetty.getConnectors()[0]).getLocalPort() + '/');
 
             final AggregatedHttpResponse response = client.execute(
                     RequestHeaders.of(HttpMethod.GET, "/onlyonehost", HttpHeaderNames.HOST, "foobar")
