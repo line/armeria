@@ -25,21 +25,21 @@ import com.linecorp.armeria.server.ServerBuilder;
 
 /**
  * Annotation that can be used on a class as a path prefix for all the
- * methods that handle http request. For ex:
- * <pre>
- * {@code @PathPrefix("/b")}
- * public class MyService {
- *
- *     {@code @Get("/c")}
- *     public HttpResponse foo() {...}
- * }
- * </pre>
+ * methods that handle http request. For example
+ * <pre>{@code
+ * > @PathPrefix("/b")
+ * > public class MyService {
+ * >     @Get("/c")
+ * >     public HttpResponse foo() { ... }
+ * > }
+ * }</pre>
  * And then can be registered to {@link ServerBuilder} like this
  * <pre>{@code
  * ServerBuilder sb = new ServerBuilder();
  * sb.annotatedService("/a", new MyService());
  * }</pre>
- * In this case <b>foo</b> methods handles a request that matches path <b>a/b/c</b>
+ *
+ * <p>In this case {@code foo()} methods handles a request that matches path {@code /a/b/c}</p>
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
