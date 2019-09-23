@@ -31,16 +31,16 @@ public final class GrpcExampleHeaders {
      * and {@code exampleHttpHeaders}.
      */
     public static GrpcExampleHeaders of(@NotNull String serviceType,
-                                        @NotNull HttpHeaders exampleHttpHeaders) {
-        return new GrpcExampleHeaders(serviceType, exampleHttpHeaders);
+                                        @NotNull HttpHeaders exampleHeaders) {
+        return new GrpcExampleHeaders(serviceType, exampleHeaders);
     }
 
     private final String serviceType;
-    private final HttpHeaders exampleHttpHeaders;
+    private final HttpHeaders exampleHeaders;
 
-    private GrpcExampleHeaders(String serviceType, HttpHeaders exampleHttpHeaders) {
+    private GrpcExampleHeaders(String serviceType, HttpHeaders exampleHeaders) {
         this.serviceType = serviceType;
-        this.exampleHttpHeaders = exampleHttpHeaders;
+        this.exampleHeaders = exampleHeaders;
     }
 
     /**
@@ -53,15 +53,15 @@ public final class GrpcExampleHeaders {
     /**
      * Returns the example headers of this {@link GrpcExampleHeaders}.
      */
-    public HttpHeaders getExampleHttpHeaders() {
-        return exampleHttpHeaders;
+    public HttpHeaders getExampleHeaders() {
+        return exampleHeaders;
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("serviceType", serviceType)
-                          .add("exampleHttpHeaders", exampleHttpHeaders)
+                          .add("exampleHeaders", exampleHeaders)
                           .toString();
     }
 }

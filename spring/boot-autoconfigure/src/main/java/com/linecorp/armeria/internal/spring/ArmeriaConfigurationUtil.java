@@ -36,7 +36,6 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -269,9 +268,7 @@ public final class ArmeriaConfigurationUtil {
 
         if (!Strings.isNullOrEmpty(docsPath)) {
             docServiceBuilder.exampleRequest(docServiceRequests);
-            for (Entry<String, Collection<HttpHeaders>> entry : docServiceHeaders.entrySet()) {
-                docServiceBuilder.exampleHttpHeaders(entry.getKey(), entry.getValue());
-            }
+            docServiceHeaders.forEach(docServiceBuilder::exampleHttpHeaders);
         }
     }
 
@@ -336,7 +333,7 @@ public final class ArmeriaConfigurationUtil {
                                                                             exampleReq.getExampleRequest()));
             docServiceHeaders.forEach(
                     exampleHeader -> docServiceBuilder.exampleHttpHeaders(exampleHeader.getServiceType(),
-                                                                          exampleHeader.getExampleHttpHeaders())
+                                                                          exampleHeader.getExampleHeaders())
             );
         }
     }
@@ -384,9 +381,7 @@ public final class ArmeriaConfigurationUtil {
                                 docServiceBuilder.exampleRequestForMethod(serviceName,
                                                                           exampleReq.getMethodName(),
                                                                           exampleReq.getExampleRequest()));
-                for (Entry<String, Collection<HttpHeaders>> entry : docServiceHeaders.entrySet()) {
-                    docServiceBuilder.exampleHttpHeaders(entry.getKey(), entry.getValue());
-                }
+                docServiceHeaders.forEach(docServiceBuilder::exampleHttpHeaders);
             }
         });
     }
