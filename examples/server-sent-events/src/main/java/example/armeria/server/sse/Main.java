@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.sse.ServerSentEvent;
 import com.linecorp.armeria.common.sse.ServerSentEventBuilder;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.ProducesEventStream;
 import com.linecorp.armeria.server.file.HttpFile;
