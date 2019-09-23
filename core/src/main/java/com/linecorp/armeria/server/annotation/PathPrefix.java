@@ -46,7 +46,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 public @interface PathPrefix {
 
     /**
-     * A path for the annotated method.
+     * A path for the annotated service class.
      */
     String value();
 }
