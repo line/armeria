@@ -38,7 +38,8 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      *
      * @param threadNamePrefix the prefix of the names of the threads created by this factory.
      *
-     * @deprecated Use {@link ThreadFactories#newEventLoopThreadFactory(String, boolean)} or
+     * @deprecated Use {@linkplain ThreadFactories#newEventLoopThreadFactory(String, boolean)
+     *             ThreadFactories#newEventLoopThreadFactory(String, false)} or
      *             {@link ThreadFactories#builder(String)}. Make sure to set
      *             {@link ThreadFactoryBuilder#eventLoop(boolean)} true to create event loop threads.
      */
@@ -68,8 +69,7 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      * @param threadNamePrefix the prefix of the names of the threads created by this factory.
      * @param priority the priority of the threads created by this factory.
      *
-     * @deprecated Use {@link ThreadFactories#newEventLoopThreadFactory(String, boolean)} or
-     *             {@link ThreadFactories#builder(String)}. Make sure to set
+     * @deprecated Use {@link ThreadFactories#builder(String)}. Make sure to set
      *             {@link ThreadFactoryBuilder#eventLoop(boolean)} true to create event loop threads.
      */
     @Deprecated
@@ -84,8 +84,7 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      * @param daemon whether to create a daemon thread.
      * @param priority the priority of the threads created by this factory.
      *
-     * @deprecated Use {@link ThreadFactories#newEventLoopThreadFactory(String, boolean)} or
-     *             {@link ThreadFactories#builder(String)}. Make sure to set
+     * @deprecated Use {@link ThreadFactories#builder(String)}. Make sure to set
      *             {@link ThreadFactoryBuilder#eventLoop(boolean)} true to create event loop threads.
      */
     @Deprecated
@@ -101,8 +100,7 @@ public final class EventLoopThreadFactory extends AbstractThreadFactory {
      * @param priority the priority of the threads created by this factory.
      * @param threadGroup the {@link ThreadGroup}.
      *
-     * @deprecated Use {@link ThreadFactories#newEventLoopThreadFactory(String, boolean)} or
-     *             {@link ThreadFactories#builder(String)}. Make sure to set
+     * @deprecated Use {@link ThreadFactories#builder(String)}. Make sure to set
      *             {@link ThreadFactoryBuilder#eventLoop(boolean)} true to create event loop threads.
      */
     @Deprecated
