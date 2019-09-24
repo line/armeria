@@ -21,6 +21,8 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
@@ -54,8 +56,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.ResourceUtils;
 
-import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.json.MetricsModule;
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Ascii;
@@ -70,11 +71,9 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceWithRoutes;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
@@ -96,7 +95,6 @@ import com.linecorp.armeria.spring.ThriftServiceRegistrationBean;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
-import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslProvider;
@@ -161,22 +159,42 @@ public final class ArmeriaConfigurationUtil {
                                .ifPresent(r -> addPrometheusExposition(settings, server, r));
             } else if (meterRegistry instanceof PrometheusMeterRegistry) {
                 addPrometheusExposition(settings, server, (PrometheusMeterRegistry) meterRegistry);
-            } else if (meterRegistry instanceof DropwizardMeterRegistry) {
-                final MetricRegistry dropwizardRegistry =
-                        ((DropwizardMeterRegistry) meterRegistry).getDropwizardRegistry();
-                final ObjectMapper objectMapper = new ObjectMapper()
-                        .enable(SerializationFeature.INDENT_OUTPUT)
-                        .registerModule(new MetricsModule(TimeUnit.SECONDS, TimeUnit.MILLISECONDS, true));
-                server.service(
-                        settings.getMetricsPath(),
-                        new AbstractHttpService() {
-                            @Override
-                            protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
-                                    throws Exception {
-                                return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
-                                                       objectMapper.writeValueAsBytes(dropwizardRegistry));
-                            }
-                        });
+            } else {
+                // Need to use reflection to access the classes related with Dropwizard Metrics
+                // because it's an optional dependency.
+                try {
+                    final ClassLoader classLoader = ArmeriaConfigurationUtil.class.getClassLoader();
+                    final Class<?> dropwizardMeterRegistryClass = Class.forName(
+                            "io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry",
+                            false, classLoader);
+                    final Method getDropwizardRegistryMethod =
+                            dropwizardMeterRegistryClass.getMethod("getDropwizardRegistry");
+                    final Class<?> metricsModuleClass = Class.forName(
+                            "com.codahale.metrics.json.MetricsModule", false, classLoader);
+                    final Constructor<?> metricsModuleCtor =
+                            metricsModuleClass.getConstructor(TimeUnit.class, TimeUnit.class, boolean.class);
+
+                    if (dropwizardMeterRegistryClass.isAssignableFrom(meterRegistry.getClass())) {
+                        final Object dropwizardRegistry = getDropwizardRegistryMethod.invoke(meterRegistry);
+                        final Module metricsModule = (Module) metricsModuleCtor.newInstance(
+                                TimeUnit.SECONDS, TimeUnit.MILLISECONDS, true);
+
+                        final ObjectMapper objectMapper = new ObjectMapper()
+                                .enable(SerializationFeature.INDENT_OUTPUT)
+                                .registerModule(metricsModule);
+
+                        server.route()
+                              .get(settings.getMetricsPath())
+                              .build((ctx, req) -> {
+                                  return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
+                                                         objectMapper.writeValueAsBytes(dropwizardRegistry));
+                              });
+                    }
+                } catch (ClassNotFoundException e) {
+                    logger.debug("Dropwizard Metrics not available:", e);
+                } catch (Exception e) {
+                    logger.warn("Failed to configure Dropwizard Metrics:", e);
+                }
             }
         }
 

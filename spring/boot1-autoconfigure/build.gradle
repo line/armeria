@@ -8,7 +8,9 @@ dependencies {
 
     compile 'io.micrometer:micrometer-spring-legacy'
     compile 'io.micrometer:micrometer-registry-prometheus'
-    compile 'io.dropwizard.metrics:metrics-json'
+    compile('io.dropwizard.metrics:metrics-json') {
+        ext.optional = true
+    }
     compile 'javax.inject:javax.inject'
     compileOnly 'javax.validation:validation-api'
     compile 'org.springframework.boot:spring-boot-starter:1.5.22.RELEASE'
