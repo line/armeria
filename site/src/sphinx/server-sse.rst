@@ -69,7 +69,7 @@ which you want to adjust timeout for.
 
     import java.time.Duration;
     import com.linecorp.armeria.common.sse.ServerSentEvent;
-    import com.linecorp.armeria.server.Server;F
+    import com.linecorp.armeria.server.Server;
     import com.linecorp.armeria.server.ServerBuilder;
     import com.linecorp.armeria.server.streaming.ServerSentEvents;
     import reactor.core.publisher.Flux;

@@ -68,14 +68,14 @@ public final class Main {
 
     static Server newProxyServer(int httpPort, int httpsPort) throws Exception {
         return Server.builder()
-                .http(httpPort)
-                .https(httpsPort)
-                .tlsSelfSigned()
-                // Disable timeout to serve infinite streaming response.
-                .requestTimeoutMillis(0)
-                .serviceUnder("/", new ProxyService())
-                .decorator(LoggingService.newDecorator())
-                .build();
+                     .http(httpPort)
+                     .https(httpsPort)
+                     .tlsSelfSigned()
+                     // Disable timeout to serve infinite streaming response.
+                     .requestTimeoutMillis(0)
+                     .serviceUnder("/", new ProxyService())
+                     .decorator(LoggingService.newDecorator())
+                     .build();
     }
 
     private Main() {}

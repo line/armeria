@@ -44,10 +44,7 @@ public class HealthCheckedEndpointGroupBuilder extends AbstractHealthCheckedEndp
      *
      * @param delegate the {@link EndpointGroup} that provides the candidate {@link Endpoint}s
      * @param path     the HTTP request path, e.g. {@code "/internal/l7check"}
-     *
-     * @deprecated Use {@link HealthCheckedEndpointGroup#builder(EndpointGroup, String)}.
      */
-    @Deprecated
     HealthCheckedEndpointGroupBuilder(EndpointGroup delegate, String path) {
         super(delegate);
         this.path = requireNonNull(path, "path");

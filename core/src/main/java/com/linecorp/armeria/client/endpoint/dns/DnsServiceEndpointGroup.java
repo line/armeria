@@ -13,6 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package com.linecorp.armeria.client.endpoint.dns;
 
 import java.util.List;
@@ -56,6 +57,8 @@ public final class DnsServiceEndpointGroup extends DnsEndpointGroup {
 
     /**
      * Returns a new {@link DnsServiceEndpointGroupBuilder} with the specified hostname.
+     *
+     * @param hostname the hostname to query DNS queries for
      */
     public static DnsServiceEndpointGroupBuilder builder(String hostname) {
         return new DnsServiceEndpointGroupBuilder(hostname);

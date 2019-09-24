@@ -62,10 +62,10 @@ public class DownstreamSimpleBenchmark extends SimpleBenchmarkBase {
     @Override
     protected void setUp() throws Exception {
         server = Server.builder()
-                .serviceUnder("/", new GrpcServiceBuilder().addService(new GithubApiService()).build())
-                .requestTimeout(Duration.ZERO)
-                .meterRegistry(NoopMeterRegistry.get())
-                .build();
+                       .serviceUnder("/", new GrpcServiceBuilder().addService(new GithubApiService()).build())
+                       .requestTimeout(Duration.ZERO)
+                       .meterRegistry(NoopMeterRegistry.get())
+                       .build();
         server.start().join();
         final String url = "gproto+http://127.0.0.1:" + port() + '/';
         githubApiClient = Clients.newClient(url, GithubServiceBlockingStub.class);

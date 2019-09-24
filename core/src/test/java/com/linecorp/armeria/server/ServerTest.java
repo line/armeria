@@ -325,9 +325,9 @@ public class ServerTest {
         assumeTrue(System.getenv("WSLENV") == null);
 
         final Server duplicatedPortServer = Server.builder()
-                .http(server.httpPort())
-                .service("/", (ctx, res) -> HttpResponse.of(""))
-                .build();
+                                                  .http(server.httpPort())
+                                                  .service("/", (ctx, res) -> HttpResponse.of(""))
+                                                  .build();
         assertThatThrownBy(() -> duplicatedPortServer.start().join())
                 .hasCauseInstanceOf(IOException.class);
     }
@@ -335,11 +335,11 @@ public class ServerTest {
     @Test
     public void testActiveLocalPort() throws Exception {
         final Server server = Server.builder()
-                .http(0)
-                .https(0)
-                .tlsSelfSigned()
-                .service("/", (ctx, res) -> HttpResponse.of(""))
-                .build();
+                                    .http(0)
+                                    .https(0)
+                                    .tlsSelfSigned()
+                                    .service("/", (ctx, res) -> HttpResponse.of(""))
+                                    .build();
 
         // not started yet
         assertThatThrownBy(server::activeLocalPort)

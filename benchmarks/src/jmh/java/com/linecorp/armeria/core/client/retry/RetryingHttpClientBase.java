@@ -36,9 +36,9 @@ public abstract class RetryingHttpClientBase {
     @Setup
     public void start() {
         server = Server.builder()
-                .http(0)
-                .service("/empty", (ctx, req) -> HttpResponse.of("\"\""))
-                .build();
+                       .http(0)
+                       .service("/empty", (ctx, req) -> HttpResponse.of("\"\""))
+                       .build();
         server.start().join();
         client = newClient();
     }

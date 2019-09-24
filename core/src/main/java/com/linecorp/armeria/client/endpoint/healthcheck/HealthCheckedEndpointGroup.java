@@ -64,20 +64,9 @@ import io.netty.util.concurrent.Future;
  */
 public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
-    private static final Logger logger = LoggerFactory.getLogger(HealthCheckedEndpointGroup.class);
-
-    /**
-     * Returns a newly created {@link HealthCheckedEndpointGroupBuilder} that builds
-     * a {@link HealthCheckedEndpointGroup} which sends HTTP {@code HEAD} health check requests.
-     *
-     * @param delegate the {@link EndpointGroup} that provides the candidate {@link Endpoint}s
-     * @param path     the HTTP request path, e.g. {@code "/internal/l7check"}
-     */
-    public static HealthCheckedEndpointGroupBuilder builder(EndpointGroup delegate, String path) {
-        return new HealthCheckedEndpointGroupBuilder(delegate, path);
-    }
-
     static final Backoff DEFAULT_HEALTH_CHECK_RETRY_BACKOFF = Backoff.fixed(3000).withJitter(0.2);
+
+    private static final Logger logger = LoggerFactory.getLogger(HealthCheckedEndpointGroup.class);
 
     /**
      * Returns a newly created {@link HealthCheckedEndpointGroup} that sends HTTP {@code HEAD} health check
@@ -88,6 +77,17 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
      */
     public static HealthCheckedEndpointGroup of(EndpointGroup delegate, String path) {
         return builder(delegate, path).build();
+    }
+
+    /**
+     * Returns a newly created {@link HealthCheckedEndpointGroupBuilder} that builds
+     * a {@link HealthCheckedEndpointGroup} which sends HTTP {@code HEAD} health check requests.
+     *
+     * @param delegate the {@link EndpointGroup} that provides the candidate {@link Endpoint}s
+     * @param path     the HTTP request path, e.g. {@code "/internal/l7check"}
+     */
+    public static HealthCheckedEndpointGroupBuilder builder(EndpointGroup delegate, String path) {
+        return new HealthCheckedEndpointGroupBuilder(delegate, path);
     }
 
     final EndpointGroup delegate;

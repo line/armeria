@@ -41,7 +41,7 @@ public final class DnsAddressEndpointGroupBuilder
      *
      * @param hostname the hostname to query DNS queries for
      *
-     * @deprecated Use {@link DnsAddressEndpointGroup#builder(String)} instead.
+     * @deprecated Use {@link DnsAddressEndpointGroup#builder(String)}.
      */
     @Deprecated
     public DnsAddressEndpointGroupBuilder(String hostname) {
