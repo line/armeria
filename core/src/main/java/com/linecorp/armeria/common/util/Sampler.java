@@ -29,8 +29,6 @@
  */
 package com.linecorp.armeria.common.util;
 
-import static java.util.Objects.requireNonNull;
-
 /**
  * Sampler is responsible for deciding if a particular trace should be "sampled", i.e. whether the
  * overhead of tracing will occur and/or if a trace will be reported to the collection tier.
