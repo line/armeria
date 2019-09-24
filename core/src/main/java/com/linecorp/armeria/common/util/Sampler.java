@@ -29,6 +29,8 @@
  */
 package com.linecorp.armeria.common.util;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Sampler is responsible for deciding if a particular trace should be "sampled", i.e. whether the
  * overhead of tracing will occur and/or if a trace will be reported to the collection tier.
@@ -80,6 +82,38 @@ public interface Sampler<T> {
         @SuppressWarnings("unchecked")
         final Sampler<T> cast = Samplers.NEVER;
         return cast;
+    }
+
+    /**
+     * Returns a {@link Sampler} that is configured as specified in the given {@code specification} string.
+     * The {@code specification} string must be formatted in one of the following formats:
+     * <ul>
+     *   <li>{@code "always"}
+     *     <ul>
+     *       <li>Returns the {@link Sampler} that always samples.</li>
+     *     </ul>
+     *   </li>
+     *   <li>{@code "never"}
+     *     <ul>
+     *       <li>Returns the {@link Sampler} that never samples.</li>
+     *     </ul>
+     *   </li>
+     *   <li>{@code "random=<rate>"} where {@code rate} is a floating point number between 0.0 and 1.0
+     *     <ul>
+     *       <li>Returns the random {@link Sampler} that samples at the given rate.</li>
+     *       <li>e.g. {@code "random=0.05"} to sample at 5% rate</li>
+     *     </ul>
+     *   </li>
+     *   <li>{@code "rate-limited=<samples_per_sec>"} where {@code samples_per_sec} is a non-negative integer
+     *     <ul>
+     *       <li>Returns the rate-limited {@link Sampler} that samples at the given rate.</li>
+     *       <li>e.g. {@code "rate-limited=10"} to sample 10 samples per second at most</li>
+     *     </ul>
+     *   </li>
+     * </ul>
+     */
+    static <T> Sampler<T> of(String specification) {
+        return Samplers.of(specification);
     }
 
     /**
