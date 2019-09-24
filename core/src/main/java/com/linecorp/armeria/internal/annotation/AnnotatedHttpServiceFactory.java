@@ -764,9 +764,9 @@ public final class AnnotatedHttpServiceFactory {
     }
 
     /**
-     * Return the path prefix to use. If there is {@link PathPrefix} annotation on the class
+     * Returns the path prefix to use. If there is {@link PathPrefix} annotation on the class
      * then path prefix is computed by concatenating pathPrefix and value from annotation else
-     * return pathPrefix
+     * returns pathPrefix.
      */
     private static String computePathPrefix(Class<?> clazz, String pathPrefix) {
         ensureAbsolutePath(pathPrefix, "pathPrefix");

@@ -25,7 +25,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -38,7 +37,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.DecoratorAndOrder;
 import com.linecorp.armeria.server.DecoratingServiceFunction;
-import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
@@ -139,11 +137,10 @@ public class AnnotatedHttpServiceFactoryTest {
 
         final List<String> paths = elements.stream()
                                            .map(AnnotatedHttpServiceElement::route)
-                                           .map(Route::paths)
-                                           .flatMap(Collection::stream)
+                                           .map(route -> route.paths().get(0))
                                            .collect(Collectors.toList());
 
-        assertThat(paths).allMatch(path -> path.startsWith(HOME_PATH_PREFIX + '/'));
+        assertThat(paths).containsExactlyInAnyOrder(HOME_PATH_PREFIX + "/hello", HOME_PATH_PREFIX + '/');
     }
 
     @Test
@@ -154,11 +151,10 @@ public class AnnotatedHttpServiceFactoryTest {
 
         final List<String> paths = elements.stream()
                                            .map(AnnotatedHttpServiceElement::route)
-                                           .map(Route::paths)
-                                           .flatMap(Collection::stream)
+                                           .map(route -> route.paths().get(0))
                                            .collect(Collectors.toList());
 
-        assertThat(paths).allMatch(path -> path.startsWith(HOME_PATH_PREFIX + '/'));
+        assertThat(paths).containsExactlyInAnyOrder(HOME_PATH_PREFIX + "/hello", HOME_PATH_PREFIX + '/');
     }
 
     private static List<Class<?>> values(List<DecoratorAndOrder> list) {

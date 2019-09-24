@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -27,11 +27,11 @@ import com.linecorp.armeria.server.ServerBuilder;
  * Annotation that can be used on a class as a path prefix for all the
  * methods that handle http request. For example
  * <pre>{@code
- * > @PathPrefix("/b")
- * > public class MyService {
- * >     @Get("/c")
- * >     public HttpResponse foo() { ... }
- * > }
+ *  {@literal @}  @PathPrefix("/b")
+ *  public class MyService {
+ *      @Get("/c")
+ *      public HttpResponse foo() { ... }
+ *  }
  * }</pre>
  * And then can be registered to {@link ServerBuilder} like this
  * <pre>{@code
@@ -39,7 +39,7 @@ import com.linecorp.armeria.server.ServerBuilder;
  * sb.annotatedService("/a", new MyService());
  * }</pre>
  *
- * <p>In this case {@code foo()} methods handles a request that matches path {@code /a/b/c}</p>
+ * <p>In this case {@code foo()} method handles a request that matches path {@code /a/b/c}</p>
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
