@@ -27,11 +27,11 @@ import com.linecorp.armeria.server.ServerBuilder;
  * Annotation that can be used on a class as a path prefix for all the
  * methods that handle http request. For example
  * <pre>{@code
- *  {@literal @}  @PathPrefix("/b")
- *  public class MyService {
- *      @Get("/c")
- *      public HttpResponse foo() { ... }
- *  }
+ * > @PathPrefix("/b")
+ * > public class MyService {
+ * >     @Get("/c")
+ * >     public HttpResponse foo() { ... }
+ * > }
  * }</pre>
  * And then can be registered to {@link ServerBuilder} like this
  * <pre>{@code
