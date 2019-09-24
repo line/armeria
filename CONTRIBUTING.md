@@ -59,7 +59,7 @@ After importing the project, import the IDE settings as well.
     <img src="https://raw.githubusercontent.com/line/armeria/master/settings/eclipse/save_actions.png">
   </details>
 - Although optional, if you want to run Checkstyle from Eclipse, install the
-  [Eclipse Checkstyle Plugin](http://eclipse-cs.sourceforge.net/), import and activate
+  [Eclipse Checkstyle Plugin](https://eclipse-cs.sourceforge.net/), import and activate
   the rule file at `settings/checkstyle/checkstyle.xml`.
   - Set the 'Type' to 'External Configuration File'.
   - Click the 'Additional properties...' button. A new dialog will show up.
@@ -69,7 +69,25 @@ After importing the project, import the IDE settings as well.
 ### Configure `-parameters` javac option 
 
 You can configure your build tool and IDE to add `-parameters` javac option.
-Please refer to [Configure `-parameters` javac option](http://line.github.io/armeria/setup.html#configure-parameters-javac-option) for more information.
+Please refer to [Configure `-parameters` javac option](https://line.github.io/armeria/setup.html#configure-parameters-javac-option) for more information.
+
+### Use JUnit 5 instead of JUnit 4 for testing
+
+We support both [JUnit 4](https://junit.org/junit4/) and [JUnit 5](https://junit.org/junit5/) for testing, but we recommend to use JUnit 5.
+
+```java
+// Imports of JUnit5, Good
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+...
+
+// Imports of JUnit4, Not Good
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+...
+```
 
 ### Checklist for your pull request
 
@@ -194,7 +212,7 @@ public final class MyClass {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
         ... usual type check ...
         // OK
         return name.equals(((MyClass) obj).name);

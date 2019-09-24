@@ -38,7 +38,7 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.ByteBufOrStream;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Listener;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
@@ -259,7 +259,7 @@ class UnframedGrpcService extends SimpleDecoratingHttpService
         try (ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(
                 new Listener() {
                     @Override
-                    public void messageRead(ByteBufOrStream message) {
+                    public void messageRead(DeframedMessage message) {
                         // We know that we don't support compression, so this is always a ByteBuffer.
                         final HttpData unframedContent = new ByteBufHttpData(message.buf(), true);
                         unframedHeaders.setInt(HttpHeaderNames.CONTENT_LENGTH, unframedContent.length());

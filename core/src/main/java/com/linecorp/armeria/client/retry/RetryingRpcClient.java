@@ -98,22 +98,23 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
 
     private void doExecute0(ClientRequestContext ctx, RpcRequest req,
                             RpcResponse returnedRes, CompletableFuture<RpcResponse> future) {
+        final int totalAttempts = getTotalAttempts(ctx);
+        final boolean initialAttempt = totalAttempts <= 1;
         if (returnedRes.isDone()) {
             // The response has been cancelled by the client before it receives a response, so stop retrying.
             handleException(ctx, future, new CancellationException(
-                    "the response returned to the client has been cancelled"));
+                    "the response returned to the client has been cancelled"), initialAttempt);
             return;
         }
         if (!setResponseTimeout(ctx)) {
-            handleException(ctx, future, ResponseTimeoutException.get());
+            handleException(ctx, future, ResponseTimeoutException.get(), initialAttempt);
             return;
         }
 
-        final int totalAttempts = getTotalAttempts(ctx);
-        final ClientRequestContext derivedCtx = newDerivedContext(ctx, req, totalAttempts);
+        final ClientRequestContext derivedCtx = newDerivedContext(ctx, req, initialAttempt);
         ctx.logBuilder().addChild(derivedCtx.log());
 
-        if (totalAttempts > 1) {
+        if (!initialAttempt) {
             derivedCtx.setAdditionalRequestHeader(ARMERIA_RETRY_COUNT, Integer.toString(totalAttempts - 1));
         }
 
@@ -130,7 +131,7 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
                         return null;
                     }
 
-                    scheduleNextRetry(ctx, cause -> handleException(ctx, future, cause),
+                    scheduleNextRetry(ctx, cause -> handleException(ctx, future, cause, false),
                                       () -> doExecute0(ctx, req, returnedRes, future), nextDelay);
                 } else {
                     onRetryingComplete(ctx);
@@ -143,8 +144,11 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
     }
 
     private static void handleException(ClientRequestContext ctx, CompletableFuture<RpcResponse> future,
-                                        Throwable cause) {
-        onRetryingComplete(ctx);
+                                        Throwable cause, boolean endRequestLog) {
+        if (endRequestLog) {
+            ctx.logBuilder().endRequest(cause);
+        }
+        ctx.logBuilder().endResponse(cause);
         future.completeExceptionally(cause);
     }
 }

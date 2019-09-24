@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Objects;
 
+import javax.annotation.Nullable;
+
 import com.google.common.base.MoreObjects;
 
 /**
@@ -51,7 +53,7 @@ public final class BasicToken {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (this == o) {
             return true;
         }

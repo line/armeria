@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import javax.annotation.Nullable;
+
 /**
  * An immutable object that stores the count of events.
  */
@@ -99,7 +101,7 @@ public final class EventCount {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (this == o) {
             return true;
         }

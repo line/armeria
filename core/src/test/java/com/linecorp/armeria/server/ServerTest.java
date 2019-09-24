@@ -374,10 +374,10 @@ public class ServerTest {
         final String prefix = getClass().getName() + "#customStartStopExecutor";
         final ExecutorService executor = Executors.newSingleThreadExecutor(new EventLoopThreadFactory(prefix));
         final Server server = Server.builder()
-                .startStopExecutor(executor)
-                .service("/", (ctx, req) -> HttpResponse.of(200))
-                .serverListener(new ThreadRecordingServerListener(threads))
-                .build();
+                                    .startStopExecutor(executor)
+                                    .service("/", (ctx, req) -> HttpResponse.of(200))
+                                    .serverListener(new ThreadRecordingServerListener(threads))
+                                    .build();
 
         threads.add(server.start().thenApply(unused -> Thread.currentThread()).join());
         threads.add(server.stop().thenApply(unused -> Thread.currentThread()).join());

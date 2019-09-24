@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.thrift;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.docs.DocServiceUtil.unifyFilter;
+import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newEnumInfo;
 import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newExceptionInfo;
 import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newFieldInfo;
 import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newStructInfo;
@@ -186,12 +187,12 @@ public class ThriftDocServicePluginTest {
 
     @Test
     public void testNewEnumInfo() {
-        final EnumInfo enumInfo = new EnumInfo(FooEnum.class);
+        final EnumInfo enumInfo = newEnumInfo(FooEnum.class);
 
         assertThat(enumInfo).isEqualTo(new EnumInfo(FooEnum.class.getName(),
-                                                    Arrays.asList(new EnumValueInfo("VAL1"),
-                                                                  new EnumValueInfo("VAL2"),
-                                                                  new EnumValueInfo("VAL3"))));
+                                                    Arrays.asList(new EnumValueInfo("VAL1", 1),
+                                                                  new EnumValueInfo("VAL2", 2),
+                                                                  new EnumValueInfo("VAL3", 3))));
     }
 
     @Test

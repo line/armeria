@@ -1,7 +1,7 @@
 dependencyManagement {
     // Override Tomcat versions.
     dependencies {
-        dependencySet(group: 'org.apache.tomcat.embed', version: '8.5.43') {
+        dependencySet(group: 'org.apache.tomcat.embed', version: '8.5.45') {
             entry 'tomcat-embed-core'
             entry 'tomcat-embed-jasper'
             entry 'tomcat-embed-el'

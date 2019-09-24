@@ -204,12 +204,6 @@ class GrpcServiceServerTest {
             metadata.put(CUSTOM_VALUE_KEY, "custom value");
 
             final ServiceRequestContext ctx = ServiceRequestContext.current();
-            // Metadata takes priority, this trailer will not be written since it has the same name.
-            ctx.addAdditionalResponseTrailer(
-                    STRING_VALUE_KEY.name(),
-                    Base64.getEncoder().encodeToString(
-                            StringValue.newBuilder().setValue("context trailer 1").build().toByteArray()));
-
             // gRPC wire format allow comma-separated binary headers.
             ctx.addAdditionalResponseTrailer(
                     INT_32_VALUE_KEY.name(),

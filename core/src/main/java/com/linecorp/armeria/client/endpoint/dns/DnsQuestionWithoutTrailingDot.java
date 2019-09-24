@@ -19,6 +19,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.IDN;
 
+import javax.annotation.Nullable;
+
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecordType;
 
@@ -56,7 +58,7 @@ final class DnsQuestionWithoutTrailingDot implements DnsQuestion {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (this == o) {
             return true;
         }

@@ -128,6 +128,11 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
             snapshot = ImmutableList.copyOf(contexts.values());
         }
         snapshot.forEach(ctx -> ctx.initialCheckFuture.join());
+
+        // If all endpoints are unhealthy, we will not have called setEndpoints even once, meaning listeners
+        // aren't notified that we've finished an initial health check. We make sure to refresh endpoints once
+        // on initialization to ensure this happens, even if the endpoints are currently empty.
+        refreshEndpoints();
     }
 
     private void updateCandidates(List<Endpoint> candidates) {
@@ -161,6 +166,13 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 contexts.put(e, ctx);
             }
         }
+    }
+
+    private void refreshEndpoints() {
+        // Rebuild the endpoint list and notify.
+        setEndpoints(delegate.endpoints().stream()
+                             .filter(healthyEndpoints::contains)
+                             .collect(toImmutableList()));
     }
 
     @Override
@@ -333,10 +345,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
             }
 
             if (updated) {
-                // Rebuild the endpoint list and notify.
-                setEndpoints(delegate.endpoints().stream()
-                                     .filter(healthyEndpoints::contains)
-                                     .collect(toImmutableList()));
+                refreshEndpoints();
             }
 
             initialCheckFuture.complete(null);

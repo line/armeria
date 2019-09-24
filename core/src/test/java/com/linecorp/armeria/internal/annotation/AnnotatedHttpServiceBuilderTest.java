@@ -319,7 +319,7 @@ public class AnnotatedHttpServiceBuilderTest {
 
     private static class DummyExceptionHandler implements ExceptionHandlerFunction {
         @Override
-        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
+        public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
             return null;
         }
     }

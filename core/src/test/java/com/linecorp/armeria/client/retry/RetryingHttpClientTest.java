@@ -53,6 +53,7 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -64,6 +65,9 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -417,6 +421,7 @@ public class RetryingHttpClientTest {
                 .decorator(RetryingHttpClient.builder(
                         // Retry after 8000 which is slightly less than responseTimeoutMillis(10000).
                         RetryStrategy.onServerErrorStatus(Backoff.fixed(8000))).newDecorator())
+                .decorator(LoggingClient.newDecorator())
                 .build();
 
         // There's no way to notice that the RetryingClient has scheduled the next retry.
@@ -447,11 +452,23 @@ public class RetryingHttpClientTest {
 
     @Test
     public void doNotRetryWhenResponseIsAborted() throws Exception {
-        final HttpClient client = client(retryAlways);
+        final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
+        final HttpClient client = new HttpClientBuilder(server.uri("/"))
+                .decorator(RetryingHttpClient.newDecorator(retryAlways))
+                .decorator((delegate, ctx, req) -> {
+                    context.set(ctx);
+                    return delegate.execute(ctx, req);
+                })
+                .build();
         final HttpResponse httpResponse = client.get("/response-abort");
         httpResponse.abort();
 
-        await().untilAsserted(() -> assertThat(responseAbortServiceCallCounter.get()).isOne());
+        final RequestLog log = context.get().log();
+        await().untilAsserted(() -> assertThat(log.isAvailable(RequestLogAvailability.COMPLETE)).isTrue());
+        assertThat(responseAbortServiceCallCounter.get()).isOne();
+        assertThat(log.requestCause()).isNull();
+        assertThat(log.responseCause()).isExactlyInstanceOf(AbortedStreamException.class);
+
         // Sleep 3 seconds more to check if there was another retry.
         TimeUnit.SECONDS.sleep(3);
         assertThat(responseAbortServiceCallCounter.get()).isOne();
@@ -482,7 +499,14 @@ public class RetryingHttpClientTest {
 
     @Test
     public void doNotRetryWhenRequestIsAborted() throws Exception {
-        final HttpClient client = client(retryAlways);
+        final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
+        final HttpClient client = new HttpClientBuilder(server.uri("/"))
+                .decorator(RetryingHttpClient.newDecorator(retryAlways))
+                .decorator((delegate, ctx, req) -> {
+                    context.set(ctx);
+                    return delegate.execute(ctx, req);
+                })
+                .build();
 
         final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.GET, "/request-abort");
         req.write(HttpData.ofUtf8("I'm going to abort this request"));
@@ -492,6 +516,9 @@ public class RetryingHttpClientTest {
         TimeUnit.SECONDS.sleep(1);
         // No request is made.
         assertThat(responseAbortServiceCallCounter.get()).isZero();
+        final RequestLog log = context.get().log();
+        assertThat(log.requestCause()).isExactlyInstanceOf(AbortedStreamException.class);
+        assertThat(log.responseCause()).isExactlyInstanceOf(AbortedStreamException.class);
     }
 
     @Test

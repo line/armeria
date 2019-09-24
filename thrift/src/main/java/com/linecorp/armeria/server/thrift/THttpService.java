@@ -449,12 +449,20 @@ public final class THttpService extends AbstractHttpService {
         if (contentType != null) {
             serializationFormat = findSerializationFormat(contentType);
             if (serializationFormat == null) {
-                return null;
+                // Browser clients often send a non-Thrift content type.
+                // Choose the default serialization format for some vague media types.
+                if (!("text".equals(contentType.type()) &&
+                      "plain".equals(contentType.subtype())) &&
+                    !("application".equals(contentType.type()) &&
+                      "octet-stream".equals(contentType.subtype()))) {
+                    return null;
+                }
+            } else {
+                return serializationFormat;
             }
-        } else {
-            serializationFormat = defaultSerializationFormat();
         }
-        return serializationFormat;
+
+        return defaultSerializationFormat();
     }
 
     private static boolean validateAcceptHeaders(HttpRequest req, SerializationFormat serializationFormat) {
@@ -470,7 +478,6 @@ public final class THttpService extends AbstractHttpService {
 
     @Nullable
     private SerializationFormat findSerializationFormat(MediaType contentType) {
-
         for (SerializationFormat format : allowedSerializationFormatArray) {
             if (format.isAccepted(contentType)) {
                 return format;

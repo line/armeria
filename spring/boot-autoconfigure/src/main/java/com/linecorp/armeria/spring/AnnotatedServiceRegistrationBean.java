@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
+import com.linecorp.armeria.server.docs.DocService;
 
 /**
  * A bean with information for registering an annotated service object.
@@ -39,7 +40,8 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
  * >             .setDecorators(LoggingService.newDecorator())
  * >             .setExceptionHandlers(new MyExceptionHandler())
  * >             .setRequestConverters(new MyRequestConverter())
- * >             .setResponseConverters(new MyResponseConverter());
+ * >             .setResponseConverters(new MyResponseConverter())
+ * >             .setExampleRequests(Lists.of(AnnotatedExampleRequest.of("myMethod", "{\"foo\":\"bar\"}")));
  * > }
  * }</pre>
  */
@@ -69,6 +71,14 @@ public class AnnotatedServiceRegistrationBean
      */
     @NotNull
     private Collection<? extends ResponseConverterFunction> responseConverters = new ArrayList<>();
+
+    /**
+     * Sample requests to populate debug forms in {@link DocService}.
+     * This should be a list of request objects which correspond to methods
+     * in this annotated service.
+     */
+    @NotNull
+    private final Collection<AnnotatedExampleRequest> exampleRequests = new ArrayList<>();
 
     /**
      * Returns the path prefix.
@@ -156,5 +166,38 @@ public class AnnotatedServiceRegistrationBean
     public AnnotatedServiceRegistrationBean setResponseConverters(
             ResponseConverterFunction... responseConverters) {
         return setResponseConverters(ImmutableList.copyOf(responseConverters));
+    }
+
+    /**
+     * Returns sample requests of {@link #getService()}.
+     */
+    @NotNull
+    public Collection<AnnotatedExampleRequest> getExampleRequests() {
+        return exampleRequests;
+    }
+
+    /**
+     * Sets sample requests for {@link #getService()}.
+     */
+    public AnnotatedServiceRegistrationBean setExampleRequests(
+            @NotNull Collection<AnnotatedExampleRequest> exampleRequests) {
+        this.exampleRequests.addAll(exampleRequests);
+        return this;
+    }
+
+    /**
+     * Adds a sample request for {@link #getService()}.
+     */
+    public AnnotatedServiceRegistrationBean addExampleRequest(@NotNull AnnotatedExampleRequest exampleRequest) {
+        exampleRequests.add(exampleRequest);
+        return this;
+    }
+
+    /**
+     * Adds a sample request for {@link #getService()}.
+     */
+    public AnnotatedServiceRegistrationBean addExampleRequest(@NotNull String methodName,
+                                                              @NotNull Object exampleRequest) {
+        return addExampleRequest(AnnotatedExampleRequest.of(methodName, exampleRequest));
     }
 }

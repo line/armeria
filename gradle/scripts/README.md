@@ -6,6 +6,7 @@ sensible defaults. By applying them, you can:
 - Manage dependencies using a simple YAML file.
 - Configure Checkstyle and JaCoCo code coverage.
 - Add [Javadoc offline links](https://docs.oracle.com/javase/9/javadoc/javadoc-command.htm#GUID-51213F2C-6E01-4A03-A82A-17428A258A0F) easily.
+- Add Google Analytics scripts into Javadoc if `googleAnalyticsId` property exists.
 - Generate Maven BOM (Bill of Materials).
 - Sign and deploy artifacts to a Maven repository.
 - Embedding version properties into a JAR.
@@ -115,6 +116,7 @@ sensible defaults. By applying them, you can:
    publishUrlForSnapshot=https://oss.sonatype.org/content/repositories/snapshots/
    publishUsernameProperty=ossrhUsername
    publishPasswordProperty=ossrhPassword
+   googleAnalyticsId=UA-XXXXXXXX
    javaSourceCompatibility=1.8
    javaTargetCompatibility=1.8
    ```

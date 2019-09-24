@@ -34,6 +34,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.thrift.TApplicationException;
 import org.junit.Rule;
@@ -42,11 +43,14 @@ import org.junit.Test;
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryStrategyWithContent;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
@@ -198,9 +202,11 @@ public class RetryingRpcClientTest {
 
     @Test
     public void doNotRetryWhenResponseIsCancelled() throws Exception {
+        final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
         final HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift"))
                 .rpcDecorator(RetryingRpcClient.builder(retryAlways).newDecorator())
                 .rpcDecorator((delegate, ctx, req) -> {
+                    context.set(ctx);
                     final RpcResponse res = delegate.execute(ctx, req);
                     res.cancel(true);
                     return res;
@@ -209,7 +215,12 @@ public class RetryingRpcClientTest {
         when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
 
         assertThatThrownBy(() -> client.hello("hello")).isInstanceOf(CancellationException.class);
-        await().untilAsserted(() -> verify(serviceHandler, only()).hello("hello"));
+
+        final RequestLog log = context.get().log();
+        await().untilAsserted(() -> assertThat(log.isAvailable(RequestLogAvailability.COMPLETE)).isTrue());
+        verify(serviceHandler, only()).hello("hello");
+        assertThat(log.requestCause()).isNull();
+        assertThat(log.responseCause()).isExactlyInstanceOf(CancellationException.class);
 
         // Sleep 1 second more to check if there was another retry.
         TimeUnit.SECONDS.sleep(1);

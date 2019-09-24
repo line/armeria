@@ -40,6 +40,7 @@ import org.springframework.boot.actuate.endpoint.web.PathMapper;
 import org.springframework.boot.actuate.endpoint.web.WebEndpointsSupplier;
 import org.springframework.boot.actuate.endpoint.web.WebOperationRequestPredicate;
 import org.springframework.boot.actuate.endpoint.web.annotation.WebEndpointDiscoverer;
+import org.springframework.boot.actuate.health.HealthStatusHttpMapper;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -49,6 +50,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.util.StringUtils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -70,8 +72,12 @@ import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 @EnableConfigurationProperties(WebEndpointProperties.class)
 public class ArmeriaSpringActuatorAutoConfiguration {
 
+    @VisibleForTesting
+    static final MediaType ACTUATOR_MEDIA_TYPE = MediaType.parse(ActuatorMediaType.V2_JSON);
+
     private static final List<String> MEDIA_TYPES =
             ImmutableList.of(ActuatorMediaType.V2_JSON, "application/json");
+
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Bean
@@ -101,7 +107,8 @@ public class ArmeriaSpringActuatorAutoConfiguration {
     ArmeriaServerConfigurator actuatorServerConfigurator(
             WebEndpointsSupplier endpointsSupplier,
             EndpointMediaTypes mediaTypes,
-            WebEndpointProperties properties) {
+            WebEndpointProperties properties,
+            HealthStatusHttpMapper healthMapper) {
         final EndpointMapping endpointMapping = new EndpointMapping(properties.getBasePath());
 
         final Collection<ExposableWebEndpoint> endpoints = endpointsSupplier.getEndpoints();
@@ -114,7 +121,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                                           endpointMapping.createSubPath(predicate.getPath()),
                                           predicate.getConsumes(),
                                           predicate.getProduces()),
-                                    new WebOperationHttpService(operation));
+                                    new WebOperationHttpService(operation, healthMapper));
                      });
             if (StringUtils.hasText(endpointMapping.getPath())) {
                 final Route route = route(
@@ -128,7 +135,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                             new EndpointLinksResolver(endpoints).resolveLinks(req.path());
                     return HttpResponse.of(
                             HttpStatus.OK,
-                            MediaType.JSON,
+                            ACTUATOR_MEDIA_TYPE,
                             OBJECT_MAPPER.writeValueAsBytes(ImmutableMap.of("_links", links))
                     );
                 });

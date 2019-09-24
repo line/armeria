@@ -131,7 +131,7 @@ final class GlobPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
         return obj instanceof GlobPathMapping &&
                (this == obj || glob.equals(((GlobPathMapping) obj).glob));
     }

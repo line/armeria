@@ -79,6 +79,26 @@ class HealthCheckedEndpointGroupTest {
     }
 
     @Test
+    void startsUnhealthyAwaitsForEmptyEndpoints() throws Exception {
+        final MockEndpointGroup delegate = new MockEndpointGroup();
+        delegate.set(Endpoint.of("foo"));
+        final AtomicReference<HealthCheckerContext> ctxCapture = new AtomicReference<>();
+
+        try (HealthCheckedEndpointGroup group = new AbstractHealthCheckedEndpointGroupBuilder(delegate) {
+            @Override
+            protected Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory() {
+                return ctx -> {
+                    ctxCapture.set(ctx);
+                    ctx.updateHealth(0);
+                    return () -> CompletableFuture.completedFuture(null);
+                };
+            }
+        }.build()) {
+            assertThat(group.awaitInitialEndpoints(10, TimeUnit.SECONDS)).isEmpty();
+        }
+    }
+
+    @Test
     void disappearedEndpoint() {
         // Start with an endpoint group that has healthy 'foo'.
         final MockEndpointGroup delegate = new MockEndpointGroup();

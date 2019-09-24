@@ -47,6 +47,7 @@ import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
+import com.linecorp.armeria.internal.brave.SpanTags;
 
 import brave.SpanCustomizer;
 import brave.Tracing.Builder;
@@ -174,10 +175,13 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
                                                         Throwable error,
                                                         SpanCustomizer customizer) {
                                    super.response(adapter, res, error, customizer);
+                                   // TODO: make this possible at request scope https://github.com/line/armeria/issues/2089
+                                   if (res instanceof RequestContext) {
+                                       final RequestContext ctx = (RequestContext) res;
+                                       customizer.tag("http.url", SpanTags.generateUrl(ctx.log()));
+                                   }
                                    customizer.tag("response_customizer.is_span",
                                                   String.valueOf(customizer instanceof brave.Span));
-                                   customizer.tag("http.url",
-                                                  ((ArmeriaHttpClientAdapter) adapter).url((RequestLog) res));
                                }
                            }).build().clientOf("remote-service");
 
