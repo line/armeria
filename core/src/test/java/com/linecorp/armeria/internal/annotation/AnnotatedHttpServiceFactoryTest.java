@@ -172,9 +172,8 @@ public class AnnotatedHttpServiceFactoryTest {
     public void testCreateAnnotatedServiceElementWithoutExplicitPathOnMethod() {
         final ServiceObjectWithoutPathOnAnnotatedMethod serviceObject =
                 new ServiceObjectWithoutPathOnAnnotatedMethod();
-        final Method[] methods = serviceObject.getClass().getDeclaredMethods();
 
-        Stream.of(methods).forEach(method -> {
+        getMethods(ServiceObjectWithoutPathOnAnnotatedMethod.class, HttpResponse.class).forEach(method -> {
             assertThatThrownBy(() -> {
                 create("/", serviceObject, method, Lists.emptyList(), Lists.emptyList(), Lists.emptyList());
             }).isInstanceOf(IllegalArgumentException.class)
@@ -217,6 +216,11 @@ public class AnnotatedHttpServiceFactoryTest {
                                   HttpRequest req) throws Exception {
             return delegate.serve(ctx, req);
         }
+    }
+
+    static Stream<Method> getMethods(Class<?> clazz, Class<?> returnTypeClass) {
+        final Method[] methods = clazz.getMethods();
+        return Stream.of(methods).filter(method -> method.getReturnType() == returnTypeClass);
     }
 
     @Retention(RetentionPolicy.RUNTIME)
