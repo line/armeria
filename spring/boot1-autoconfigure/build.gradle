@@ -7,7 +7,9 @@ dependencies {
     compile project(':logback')
 
     compile 'io.micrometer:micrometer-spring-legacy'
-    compile 'io.micrometer:micrometer-registry-prometheus'
+    compile('io.micrometer:micrometer-registry-prometheus') {
+        ext.optional = true
+    }
     compile('io.dropwizard.metrics:metrics-json') {
         ext.optional = true
     }

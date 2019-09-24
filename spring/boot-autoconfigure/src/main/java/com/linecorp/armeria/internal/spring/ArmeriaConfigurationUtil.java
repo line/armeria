@@ -21,8 +21,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
@@ -56,7 +54,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.ResourceUtils;
 
-import com.fasterxml.jackson.databind.Module;
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.json.MetricsModule;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Ascii;
@@ -77,8 +76,8 @@ import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceWithRoutes;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
+import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
-import com.linecorp.armeria.server.healthcheck.HttpHealthCheckService;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.server.metric.PrometheusExpositionService;
 import com.linecorp.armeria.spring.AbstractServiceRegistrationBean;
@@ -95,6 +94,7 @@ import com.linecorp.armeria.spring.ThriftServiceRegistrationBean;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslProvider;
@@ -109,7 +109,6 @@ import io.prometheus.client.CollectorRegistry;
 public final class ArmeriaConfigurationUtil {
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaConfigurationUtil.class);
 
-    private static final HealthChecker[] EMPTY_HEALTH_CHECKERS = new HealthChecker[0];
     private static final String[] EMPTY_PROTOCOL_NAMES = new String[0];
 
     private static final String METER_TYPE = "server";
@@ -142,59 +141,43 @@ public final class ArmeriaConfigurationUtil {
 
         final String healthCheckPath = settings.getHealthCheckPath();
         if (!Strings.isNullOrEmpty(healthCheckPath)) {
-            server.service(healthCheckPath,
-                           new HttpHealthCheckService(healthCheckers.toArray(EMPTY_HEALTH_CHECKERS)));
+            server.service(healthCheckPath, HealthCheckService.of(healthCheckers));
         }
 
         server.meterRegistry(meterRegistry);
 
         if (settings.isEnableMetrics() && !Strings.isNullOrEmpty(settings.getMetricsPath())) {
+            final boolean hasPrometheus = hasClasses(
+                    "io.micrometer.prometheus.PrometheusMeterRegistry",
+                    "io.prometheus.client.CollectorRegistry");
+            final boolean hasDropwizard = hasClasses(
+                    "io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry",
+                    "com.codahale.metrics.MetricRegistry",
+                    "com.codahale.metrics.json.MetricsModule");
+
             if (meterRegistry instanceof CompositeMeterRegistry) {
-                final Set<MeterRegistry> childRegistries =
-                        ((CompositeMeterRegistry) meterRegistry).getRegistries();
-                childRegistries.stream()
-                               .filter(PrometheusMeterRegistry.class::isInstance)
-                               .map(PrometheusMeterRegistry.class::cast)
-                               .findAny()
-                               .ifPresent(r -> addPrometheusExposition(settings, server, r));
-            } else if (meterRegistry instanceof PrometheusMeterRegistry) {
-                addPrometheusExposition(settings, server, (PrometheusMeterRegistry) meterRegistry);
-            } else {
-                // Need to use reflection to access the classes related with Dropwizard Metrics
-                // because it's an optional dependency.
-                try {
-                    final ClassLoader classLoader = ArmeriaConfigurationUtil.class.getClassLoader();
-                    final Class<?> dropwizardMeterRegistryClass = Class.forName(
-                            "io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry",
-                            false, classLoader);
-                    final Method getDropwizardRegistryMethod =
-                            dropwizardMeterRegistryClass.getMethod("getDropwizardRegistry");
-                    final Class<?> metricsModuleClass = Class.forName(
-                            "com.codahale.metrics.json.MetricsModule", false, classLoader);
-                    final Constructor<?> metricsModuleCtor =
-                            metricsModuleClass.getConstructor(TimeUnit.class, TimeUnit.class, boolean.class);
-
-                    if (dropwizardMeterRegistryClass.isAssignableFrom(meterRegistry.getClass())) {
-                        final Object dropwizardRegistry = getDropwizardRegistryMethod.invoke(meterRegistry);
-                        final Module metricsModule = (Module) metricsModuleCtor.newInstance(
-                                TimeUnit.SECONDS, TimeUnit.MILLISECONDS, true);
-
-                        final ObjectMapper objectMapper = new ObjectMapper()
-                                .enable(SerializationFeature.INDENT_OUTPUT)
-                                .registerModule(metricsModule);
-
-                        server.route()
-                              .get(settings.getMetricsPath())
-                              .build((ctx, req) -> {
-                                  return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
-                                                         objectMapper.writeValueAsBytes(dropwizardRegistry));
-                              });
-                    }
-                } catch (ClassNotFoundException e) {
-                    logger.debug("Dropwizard Metrics not available:", e);
-                } catch (Exception e) {
-                    logger.warn("Failed to configure Dropwizard Metrics:", e);
+                if (hasPrometheus) {
+                    final Set<MeterRegistry> childRegistries =
+                            ((CompositeMeterRegistry) meterRegistry).getRegistries();
+                    childRegistries.stream()
+                                   .filter(PrometheusMeterRegistry.class::isInstance)
+                                   .map(PrometheusMeterRegistry.class::cast)
+                                   .findAny()
+                                   .ifPresent(r -> addPrometheusExposition(settings, server, r));
                 }
+            } else if (hasPrometheus && meterRegistry instanceof PrometheusMeterRegistry) {
+                addPrometheusExposition(settings, server, (PrometheusMeterRegistry) meterRegistry);
+            } else if (hasDropwizard && meterRegistry instanceof DropwizardMeterRegistry) {
+                final MetricRegistry dropwizardRegistry =
+                        ((DropwizardMeterRegistry) meterRegistry).getDropwizardRegistry();
+                final ObjectMapper objectMapper = new ObjectMapper()
+                        .enable(SerializationFeature.INDENT_OUTPUT)
+                        .registerModule(new MetricsModule(TimeUnit.SECONDS, TimeUnit.MILLISECONDS, true));
+
+                server.route()
+                      .get(settings.getMetricsPath())
+                      .build((ctx, req) -> HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
+                                                           objectMapper.writeValueAsBytes(dropwizardRegistry)));
             }
         }
 
@@ -208,6 +191,17 @@ public final class ArmeriaConfigurationUtil {
                                                       compression.getExcludedUserAgents(),
                                                       parseDataSize(compression.getMinResponseSize())));
         }
+    }
+
+    private static boolean hasClasses(String... classNames) {
+        for (String className : classNames) {
+            try {
+                Class.forName(className, false, ArmeriaConfigurationUtil.class.getClassLoader());
+            } catch (Throwable t) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
