@@ -37,8 +37,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -54,10 +52,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.ResourceUtils;
 
-import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.json.MetricsModule;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Ascii;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
@@ -67,7 +61,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -79,7 +72,6 @@ import com.linecorp.armeria.server.encoding.HttpEncodingService;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
-import com.linecorp.armeria.server.metric.PrometheusExpositionService;
 import com.linecorp.armeria.spring.AbstractServiceRegistrationBean;
 import com.linecorp.armeria.spring.AnnotatedExampleRequest;
 import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean;
@@ -93,14 +85,10 @@ import com.linecorp.armeria.spring.Ssl;
 import com.linecorp.armeria.spring.ThriftServiceRegistrationBean;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
-import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
-import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty.util.NetUtil;
-import io.prometheus.client.CollectorRegistry;
 
 /**
  * A utility class which is used to configure a {@link ServerBuilder} with the {@link ArmeriaSettings} and
@@ -150,34 +138,22 @@ public final class ArmeriaConfigurationUtil {
             final boolean hasPrometheus = hasClasses(
                     "io.micrometer.prometheus.PrometheusMeterRegistry",
                     "io.prometheus.client.CollectorRegistry");
-            final boolean hasDropwizard = hasClasses(
-                    "io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry",
-                    "com.codahale.metrics.MetricRegistry",
-                    "com.codahale.metrics.json.MetricsModule");
 
-            if (meterRegistry instanceof CompositeMeterRegistry) {
-                if (hasPrometheus) {
-                    final Set<MeterRegistry> childRegistries =
-                            ((CompositeMeterRegistry) meterRegistry).getRegistries();
-                    childRegistries.stream()
-                                   .filter(PrometheusMeterRegistry.class::isInstance)
-                                   .map(PrometheusMeterRegistry.class::cast)
-                                   .findAny()
-                                   .ifPresent(r -> addPrometheusExposition(settings, server, r));
+            final boolean addedPrometheusExposition;
+            if (hasPrometheus) {
+                addedPrometheusExposition = PrometheusSupport.addExposition(settings, server, meterRegistry);
+            } else {
+                addedPrometheusExposition = false;
+            }
+
+            if (!addedPrometheusExposition) {
+                final boolean hasDropwizard = hasClasses(
+                        "io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry",
+                        "com.codahale.metrics.MetricRegistry",
+                        "com.codahale.metrics.json.MetricsModule");
+                if (hasDropwizard) {
+                    DropwizardSupport.addExposition(settings, server, meterRegistry);
                 }
-            } else if (hasPrometheus && meterRegistry instanceof PrometheusMeterRegistry) {
-                addPrometheusExposition(settings, server, (PrometheusMeterRegistry) meterRegistry);
-            } else if (hasDropwizard && meterRegistry instanceof DropwizardMeterRegistry) {
-                final MetricRegistry dropwizardRegistry =
-                        ((DropwizardMeterRegistry) meterRegistry).getDropwizardRegistry();
-                final ObjectMapper objectMapper = new ObjectMapper()
-                        .enable(SerializationFeature.INDENT_OUTPUT)
-                        .registerModule(new MetricsModule(TimeUnit.SECONDS, TimeUnit.MILLISECONDS, true));
-
-                server.route()
-                      .get(settings.getMetricsPath())
-                      .build((ctx, req) -> HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
-                                                           objectMapper.writeValueAsBytes(dropwizardRegistry)));
             }
         }
 
@@ -415,21 +391,6 @@ public final class ArmeriaConfigurationUtil {
 
         return MetricCollectingService.newDecorator(
                 meterIdPrefixFunctionFactory.get(METER_TYPE, bean.getServiceName()));
-    }
-
-    private static void addPrometheusExposition(ArmeriaSettings armeriaSettings, ServerBuilder server,
-                                                PrometheusMeterRegistry registry) {
-        requireNonNull(armeriaSettings, "armeriaSettings");
-        requireNonNull(server, "server");
-        requireNonNull(registry, "registry");
-
-        final String metricsPath = armeriaSettings.getMetricsPath();
-        if (metricsPath == null) {
-            return;
-        }
-
-        final CollectorRegistry prometheusRegistry = registry.getPrometheusRegistry();
-        server.service(metricsPath, new PrometheusExpositionService(prometheusRegistry));
     }
 
     /**
