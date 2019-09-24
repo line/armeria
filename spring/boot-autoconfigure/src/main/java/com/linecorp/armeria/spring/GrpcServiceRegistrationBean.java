@@ -15,15 +15,12 @@
  */
 package com.linecorp.armeria.spring;
 
-import java.util.ArrayList;
-import java.util.Collection;
-
 import javax.validation.constraints.NotNull;
 
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.ServiceWithRoutes;
-import com.linecorp.armeria.server.docs.DocService;
 
 /**
  * A bean with information for registering a gRPC service.
@@ -39,57 +36,16 @@ import com.linecorp.armeria.server.docs.DocService;
  * >                                 .enableUnframedRequests(true)
  * >                                 .build())
  * >             .setDecorators(LoggingService.newDecorator())
- * >             .setExampleRequests(List.of(
- * >                    GrpcExampleRequest.of(HelloServiceGrpc.SERVICE_NAME,
- * >                                          "Hello",
- * >                                          HelloRequest.newBuilder().setName("Armeria").build())
- * >             ))
- * >             .setExampleHeaders(Lists.of(HttpHeaders.of(HttpHeaderNames.of("my-header"), "headerVal")));
+ * >             .addExampleRequest(GrpcExampleRequest.of(HelloServiceGrpc.SERVICE_NAME,
+ * >                                                      "Hello",
+ * >                                                      HelloRequest.newBuilder().setName("Armeria").build()))
+ * >             .addExampleHeader(HttpHeaders.of("my-header", "headerVal"));
  * > }
  * }</pre>
  */
 public class GrpcServiceRegistrationBean
         extends AbstractServiceRegistrationBean<ServiceWithRoutes<HttpRequest, HttpResponse>,
-        GrpcServiceRegistrationBean> {
-
-    /**
-     * Sample requests to populate debug forms in {@link DocService}.
-     * This should be a list of request objects which correspond to methods
-     * in this gRPC service.
-     */
-    @NotNull
-    private final Collection<GrpcExampleRequest> exampleRequests = new ArrayList<>();
-
-    /**
-     * Example {@link GrpcExampleHeaders} being used in debug forms.
-     */
-    @NotNull
-    private final Collection<GrpcExampleHeaders> exampleHeaders = new ArrayList<>();
-
-    /**
-     * Returns sample requests of {@link #getService()}.
-     */
-    @NotNull
-    public Collection<GrpcExampleRequest> getExampleRequests() {
-        return exampleRequests;
-    }
-
-    /**
-     * Sets sample requests for {@link #getService()}.
-     */
-    public GrpcServiceRegistrationBean setExampleRequests(
-            @NotNull Collection<GrpcExampleRequest> exampleRequests) {
-        this.exampleRequests.addAll(exampleRequests);
-        return this;
-    }
-
-    /**
-     * Adds a sample request for {@link #getService()}.
-     */
-    public GrpcServiceRegistrationBean addExampleRequest(@NotNull GrpcExampleRequest exampleRequest) {
-        exampleRequests.add(exampleRequest);
-        return this;
-    }
+        GrpcServiceRegistrationBean, GrpcExampleRequest, GrpcExampleHeaders> {
 
     /**
      * Adds a sample request for {@link #getService()}.
@@ -101,19 +57,16 @@ public class GrpcServiceRegistrationBean
     }
 
     /**
-     * Returns example {@link GrpcExampleHeaders}.
+     * Adds example {@link GrpcExampleHeaders}.
      */
-    @NotNull
-    public Collection<GrpcExampleHeaders> getExampleHeaders() {
-        return exampleHeaders;
+    public GrpcServiceRegistrationBean addExampleHeader(String serviceType, HttpHeaders headers) {
+        return addExampleHeader(GrpcExampleHeaders.of(serviceType, headers));
     }
 
     /**
-     * Sets example {@link GrpcExampleHeaders}.
+     * Adds example {@link GrpcExampleHeaders}.
      */
-    public GrpcServiceRegistrationBean setExampleHeaders(
-            @NotNull Collection<GrpcExampleHeaders> exampleHeaders) {
-        this.exampleHeaders.addAll(exampleHeaders);
-        return this;
+    public GrpcServiceRegistrationBean addExampleHeader(String serviceType, CharSequence name, String value) {
+        return addExampleHeader(GrpcExampleHeaders.of(serviceType, HttpHeaders.of(name, value)));
     }
 }

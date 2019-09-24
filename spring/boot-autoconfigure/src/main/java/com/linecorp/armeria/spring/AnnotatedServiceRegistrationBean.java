@@ -42,13 +42,14 @@ import com.linecorp.armeria.server.docs.DocService;
  * >             .setExceptionHandlers(new MyExceptionHandler())
  * >             .setRequestConverters(new MyRequestConverter())
  * >             .setResponseConverters(new MyResponseConverter())
- * >             .setExampleRequests(Lists.of(AnnotatedExampleRequest.of("myMethod", "{\"foo\":\"bar\"}")))
- * >             .setExampleHeaders(Lists.of(HttpHeaders.of("my-header", "headerVal")));
+ * >             .addExampleRequest(AnnotatedExampleRequest.of("myMethod", "{\"foo\":\"bar\"}"))
+ * >             .addExampleHeader(HttpHeaders.of("my-header", "headerVal"));
  * > }
  * }</pre>
  */
 public class AnnotatedServiceRegistrationBean
-        extends AbstractServiceRegistrationBean<Object, AnnotatedServiceRegistrationBean> {
+        extends AbstractServiceRegistrationBean<Object, AnnotatedServiceRegistrationBean,
+        AnnotatedExampleRequest, HttpHeaders> {
 
     /**
      * The path prefix of the annotated service object.
@@ -80,13 +81,13 @@ public class AnnotatedServiceRegistrationBean
      * in this annotated service.
      */
     @NotNull
-    private final Collection<AnnotatedExampleRequest> exampleRequests = new ArrayList<>();
+    private Collection<AnnotatedExampleRequest> exampleRequests = new ArrayList<>();
 
     /**
      * Example {@link HttpHeaders} being used in debug forms.
      */
     @NotNull
-    private final Collection<HttpHeaders> exampleHeaders = new ArrayList<>();
+    private Collection<HttpHeaders> exampleHeaders = new ArrayList<>();
 
     /**
      * Returns the path prefix.
@@ -177,31 +178,6 @@ public class AnnotatedServiceRegistrationBean
     }
 
     /**
-     * Returns sample requests of {@link #getService()}.
-     */
-    @NotNull
-    public Collection<AnnotatedExampleRequest> getExampleRequests() {
-        return exampleRequests;
-    }
-
-    /**
-     * Sets sample requests for {@link #getService()}.
-     */
-    public AnnotatedServiceRegistrationBean setExampleRequests(
-            @NotNull Collection<AnnotatedExampleRequest> exampleRequests) {
-        this.exampleRequests.addAll(exampleRequests);
-        return this;
-    }
-
-    /**
-     * Adds a sample request for {@link #getService()}.
-     */
-    public AnnotatedServiceRegistrationBean addExampleRequest(@NotNull AnnotatedExampleRequest exampleRequest) {
-        exampleRequests.add(exampleRequest);
-        return this;
-    }
-
-    /**
      * Adds a sample request for {@link #getService()}.
      */
     public AnnotatedServiceRegistrationBean addExampleRequest(@NotNull String methodName,
@@ -210,18 +186,9 @@ public class AnnotatedServiceRegistrationBean
     }
 
     /**
-     * Returns example {@link HttpHeaders}.
+     * Adds example {@link HttpHeaders}.
      */
-    @NotNull
-    public Collection<HttpHeaders> getExampleHeaders() {
-        return exampleHeaders;
-    }
-
-    /**
-     * Sets example {@link HttpHeaders}.
-     */
-    public AnnotatedServiceRegistrationBean setExampleHeaders(@NotNull Collection<HttpHeaders> exampleHeaders) {
-        this.exampleHeaders.addAll(exampleHeaders);
-        return this;
+    public AnnotatedServiceRegistrationBean addExampleHeader(CharSequence name, String value) {
+        return addExampleHeader(HttpHeaders.of(name, value));
     }
 }

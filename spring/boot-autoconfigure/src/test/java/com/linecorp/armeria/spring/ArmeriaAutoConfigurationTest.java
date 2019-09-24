@@ -102,9 +102,7 @@ public class ArmeriaAutoConfigurationTest {
                     .setRequestConverters(ImmutableList.of(new StringRequestConverterFunction()))
                     .setResponseConverters(ImmutableList.of(new StringResponseConverter()))
                     .addExampleRequest("post", "{\"foo\":\"bar\"}")
-                    .setExampleHeaders(ImmutableList.of(
-                            HttpHeaders.of(HttpHeaderNames.of("x-additional-header"), "headerVal")
-                    ));
+                    .addExampleHeader("x-additional-header", "headerVal");
         }
 
         @Bean
@@ -114,10 +112,8 @@ public class ArmeriaAutoConfigurationTest {
                     .setService(THttpService.of((HelloService.Iface) name -> "hello " + name))
                     .setPath("/thrift")
                     .setDecorators(ImmutableList.of(LoggingService.newDecorator()))
-                    .setExampleRequests(ImmutableList.of(new hello_args("nameVal")))
-                    .setExampleHeaders(ImmutableList.of(
-                            HttpHeaders.of(HttpHeaderNames.of("x-additional-header"), "headerVal")
-                    ));
+                    .addExampleRequest(new hello_args("nameVal"))
+                    .addExampleHeader("x-additional-header", "headerVal");
         }
 
         @Bean
@@ -130,16 +126,10 @@ public class ArmeriaAutoConfigurationTest {
                                         .enableUnframedRequests(true)
                                         .build())
                     .setDecorators(LoggingService.newDecorator())
-                    .setExampleRequests(ImmutableList.of(
-                            GrpcExampleRequest.of(HelloServiceGrpc.SERVICE_NAME,
-                                                  "Hello",
-                                                  HelloRequest.newBuilder().setName("Armeria").build())
-                    ))
-                    .setExampleHeaders(ImmutableList.of(
-                            GrpcExampleHeaders.of(HelloServiceGrpc.SERVICE_NAME,
-                                                  HttpHeaders.of(HttpHeaderNames.of("x-additional-header"),
-                                                                 "headerVal"))
-                    ));
+                    .addExampleRequest(HelloServiceGrpc.SERVICE_NAME,
+                                       "Hello",
+                                       HelloRequest.newBuilder().setName("Armeria").build())
+                    .addExampleHeader(HelloServiceGrpc.SERVICE_NAME, "x-additional-header", "headerVal");
         }
     }
 

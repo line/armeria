@@ -388,7 +388,7 @@ public final class ArmeriaConfigurationUtil {
 
     private static Service<HttpRequest, HttpResponse> setupMetricCollectingService(
             Service<HttpRequest, HttpResponse> service,
-            AbstractServiceRegistrationBean<?, ?> bean,
+            AbstractServiceRegistrationBean<?, ?, ?, ?> bean,
             @Nullable MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory) {
         requireNonNull(service, "service");
         requireNonNull(bean, "bean");
@@ -401,7 +401,7 @@ public final class ArmeriaConfigurationUtil {
 
     private static Function<Service<HttpRequest, HttpResponse>,
             MetricCollectingService<HttpRequest, HttpResponse>> metricCollectingServiceDecorator(
-            AbstractServiceRegistrationBean<?, ?> bean,
+            AbstractServiceRegistrationBean<?, ?, ?, ?> bean,
             MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory) {
         requireNonNull(bean, "bean");
         requireNonNull(meterIdPrefixFunctionFactory, "meterIdPrefixFunctionFactory");
