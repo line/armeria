@@ -16,19 +16,24 @@
 package com.linecorp.armeria.internal.annotation;
 
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.collectDecorators;
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.create;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.find;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import org.assertj.core.util.Lists;
 import org.junit.Test;
 
 import com.linecorp.armeria.common.HttpRequest;
@@ -43,9 +48,15 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.DecoratorFactory;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
+import com.linecorp.armeria.server.annotation.Delete;
 import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.Head;
+import com.linecorp.armeria.server.annotation.Options;
+import com.linecorp.armeria.server.annotation.Patch;
 import com.linecorp.armeria.server.annotation.PathPrefix;
 import com.linecorp.armeria.server.annotation.Post;
+import com.linecorp.armeria.server.annotation.Put;
+import com.linecorp.armeria.server.annotation.Trace;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecoratorFactoryFunction;
 import com.linecorp.armeria.server.annotation.decorator.RateLimitingDecorator;
@@ -155,6 +166,20 @@ public class AnnotatedHttpServiceFactoryTest {
                                            .collect(Collectors.toList());
 
         assertThat(paths).containsExactlyInAnyOrder(HOME_PATH_PREFIX + "/hello", HOME_PATH_PREFIX + '/');
+    }
+
+    @Test
+    public void testCreateAnnotatedServiceElementWithoutExplicitPathOnMethod() {
+        final ServiceObjectWithoutPathOnAnnotatedMethod serviceObject =
+                new ServiceObjectWithoutPathOnAnnotatedMethod();
+        final Method[] methods = serviceObject.getClass().getDeclaredMethods();
+
+        Stream.of(methods).forEach(method -> {
+            assertThatThrownBy(() -> {
+                create("/", serviceObject, method, Lists.emptyList(), Lists.emptyList(), Lists.emptyList());
+            }).isInstanceOf(IllegalArgumentException.class)
+              .hasMessage("A path pattern should be specified by @Path or HTTP method annotations.");
+        });
     }
 
     private static List<Class<?>> values(List<DecoratorAndOrder> list) {
@@ -283,6 +308,50 @@ public class AnnotatedHttpServiceFactoryTest {
 
         @Post("/")
         public HttpResponse post() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+    }
+
+    @PathPrefix("/")
+    static class ServiceObjectWithoutPathOnAnnotatedMethod {
+
+        @Post
+        public HttpResponse post() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Get
+        public HttpResponse get() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Head
+        public HttpResponse head() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Put
+        public HttpResponse put() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Delete
+        public HttpResponse delete() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Options
+        public HttpResponse options() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Patch
+        public HttpResponse patch() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Trace
+        public HttpResponse trace() {
             return HttpResponse.of(HttpStatus.OK);
         }
     }

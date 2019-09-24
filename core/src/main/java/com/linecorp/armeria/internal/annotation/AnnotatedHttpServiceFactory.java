@@ -258,7 +258,8 @@ public final class AnnotatedHttpServiceFactory {
      * Returns an {@link AnnotatedHttpService} instance defined to {@code method} of {@code object} using
      * {@link Path} annotation.
      */
-    private static AnnotatedHttpServiceElement create(String pathPrefix, Object object, Method method,
+    @VisibleForTesting
+    static AnnotatedHttpServiceElement create(String pathPrefix, Object object, Method method,
                                                       List<ExceptionHandlerFunction> baseExceptionHandlers,
                                                       List<RequestConverterFunction> baseRequestConverters,
                                                       List<ResponseConverterFunction> baseResponseConverters) {
