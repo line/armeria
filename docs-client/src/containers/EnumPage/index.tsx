@@ -74,8 +74,8 @@ const EnumPage: React.FunctionComponent<Props> = ({ match, specification }) => {
                   <TableCell>
                     <code>{value.name}</code>
                   </TableCell>
-                  {hasIntValue && <TableCell>Int Value</TableCell>}
-                  {hasDocString && <TableCell>Description</TableCell>}
+                  {hasIntValue && <TableCell>{value.intValue}</TableCell>}
+                  {hasDocString && <TableCell>{value.docString}</TableCell>}
                 </TableRow>
               ))
             ) : (
