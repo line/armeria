@@ -50,7 +50,7 @@ class SamplerTest {
 
         // 'rate-limited=<samples_per_sec>'
         assertThat(Sampler.of("rate-limited=0")).isSameAs(Sampler.never());
-        assertThat(Sampler.of("rate-limites=1")).isInstanceOfSatisfying(RateLimitingSampler.class, sampler -> {
+        assertThat(Sampler.of("rate-limited=1")).isInstanceOfSatisfying(RateLimitingSampler.class, sampler -> {
             assertThat(sampler.maxFunction).isInstanceOfSatisfying(LessThan10.class, maxFunc -> {
                 assertThat(maxFunc.samplesPerSecond).isEqualTo(1);
             });
