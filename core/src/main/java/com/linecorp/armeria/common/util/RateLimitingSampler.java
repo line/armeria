@@ -35,6 +35,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * The rate-limited sampler allows you to choose an amount of traces to accept on a per-second
  * interval. The minimum number is 0 and the max is 2,147,483,647 (max int).
@@ -74,9 +76,10 @@ final class RateLimitingSampler implements Sampler {
     static final long NANOS_PER_SECOND = TimeUnit.SECONDS.toNanos(1);
     static final long NANOS_PER_DECISECOND = NANOS_PER_SECOND / 10;
 
+    @VisibleForTesting
     final MaxFunction maxFunction;
-    final AtomicInteger usage = new AtomicInteger(0);
-    final AtomicLong nextReset;
+    private final AtomicInteger usage = new AtomicInteger();
+    private final AtomicLong nextReset;
 
     RateLimitingSampler(int samplesPerSecond) {
         maxFunction =
@@ -123,13 +126,14 @@ final class RateLimitingSampler implements Sampler {
         return "RateLimitingSampler()";
     }
 
-    abstract static class MaxFunction {
+    private abstract static class MaxFunction {
         abstract int max(long nanosUntilReset);
     }
 
     /**
      * For a reservoir of less than 10, we permit draining it completely at any time in the second.
      */
+    @VisibleForTesting
     static final class LessThan10 extends MaxFunction {
         final int samplesPerSecond;
 
@@ -154,7 +158,7 @@ final class RateLimitingSampler implements Sampler {
      * <p>Ex. If the rate is 103/s then you can use 13 in the first decisecond, another 10 in the
      * 2nd, or up to 103 by the last.
      */
-    static final class AtLeast10 extends MaxFunction {
+    private static final class AtLeast10 extends MaxFunction {
         final int[] max;
 
         AtLeast10(int samplesPerSecond) {

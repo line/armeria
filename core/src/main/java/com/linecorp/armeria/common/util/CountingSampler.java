@@ -35,6 +35,8 @@ import java.util.BitSet;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * This sampler is appropriate for low-traffic instrumentation (ex servers that each receive <100K
  * requests), or those who do not provision random trace ids. It is not appropriate for collectors
@@ -70,7 +72,8 @@ final class CountingSampler implements Sampler {
     }
 
     private final AtomicInteger counter;
-    private final BitSet sampleDecisions;
+    @VisibleForTesting
+    final BitSet sampleDecisions;
 
     /** Fills a bitset with decisions according to the supplied percent. */
     CountingSampler(int percent) {
