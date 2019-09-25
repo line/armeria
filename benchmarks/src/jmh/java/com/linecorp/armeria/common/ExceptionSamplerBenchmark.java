@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.common;
 
 import org.openjdk.jmh.annotations.Benchmark;
@@ -98,7 +97,7 @@ public class ExceptionSamplerBenchmark {
     }
 
     private static final class ExceptionB extends Throwable {
-        private static final long serialVersionUID = 7024319028414180839L;
+        private static final long serialVersionUID = 1617065108978544599L;
 
         static final ExceptionB INSTANCE = new ExceptionB(false);
 
