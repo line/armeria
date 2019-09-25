@@ -297,6 +297,8 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             req.close(GrpcStatus.fromThrowable(t).asException());
             throw t instanceof RuntimeException ? (RuntimeException) t : new RuntimeException(t);
         }
+
+        notifyExecutor();
     }
 
     @Override

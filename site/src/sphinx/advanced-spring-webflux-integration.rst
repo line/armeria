@@ -40,7 +40,7 @@ For Maven:
         <dependency>
           <groupId>io.netty</groupId>
           <artifactId>netty-bom</artifactId>
-          <version>\ |io.netty:netty-common:version|\ </version>
+          <version>\ |io.netty:netty-bom:version|\ </version>
           <type>pom</type>
           <scope>import</scope>
         </dependency>
@@ -64,7 +64,7 @@ For Gradle:
     dependencyManagement {
         imports {
             mavenBom 'com.linecorp.armeria:armeria-bom:\ |release|\ '
-            mavenBom 'io.netty:netty-bom:\ |io.netty:netty-common:version|\ '
+            mavenBom 'io.netty:netty-bom:\ |io.netty:netty-bom:version|\ '
         }
     }
 

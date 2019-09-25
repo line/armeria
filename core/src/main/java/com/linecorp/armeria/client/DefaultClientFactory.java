@@ -35,6 +35,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -110,8 +111,8 @@ final class DefaultClientFactory extends AbstractClientFactory {
     }
 
     @Override
-    public ReleasableHolder<EventLoop> acquireEventLoop(Endpoint endpoint) {
-        return httpClientFactory.acquireEventLoop(endpoint);
+    public ReleasableHolder<EventLoop> acquireEventLoop(Endpoint endpoint, SessionProtocol sessionProtocol) {
+        return httpClientFactory.acquireEventLoop(endpoint, sessionProtocol);
     }
 
     @Override
@@ -139,13 +140,19 @@ final class DefaultClientFactory extends AbstractClientFactory {
     }
 
     @Override
-    public <T> Optional<ClientBuilderParams> clientBuilderParams(T client) {
+    public <T> Optional<T> unwrap(Object client, Class<T> type) {
+        final Optional<T> params = super.unwrap(client, type);
+        if (params.isPresent()) {
+            return params;
+        }
+
         for (ClientFactory factory : clientFactories.values()) {
-            final Optional<ClientBuilderParams> params = factory.clientBuilderParams(client);
-            if (params.isPresent()) {
-                return params;
+            final Optional<T> p = factory.unwrap(client, type);
+            if (p.isPresent()) {
+                return p;
             }
         }
+
         return Optional.empty();
     }
 

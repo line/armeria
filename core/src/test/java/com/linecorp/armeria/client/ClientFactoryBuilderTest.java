@@ -15,14 +15,17 @@
  */
 package com.linecorp.armeria.client;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class ClientFactoryBuilderTest {
+class ClientFactoryBuilderTest {
 
     @Test
-    public void addressResolverGroupFactoryAndDomainNameResolverCustomizerAreMutuallyExclusive() {
+    void addressResolverGroupFactoryAndDomainNameResolverCustomizerAreMutuallyExclusive() {
         final ClientFactoryBuilder builder1 = new ClientFactoryBuilder();
         builder1.addressResolverGroupFactory(eventLoopGroup -> null);
         assertThatThrownBy(() -> builder1.domainNameResolverCustomizer(b -> {}))
@@ -34,5 +37,22 @@ public class ClientFactoryBuilderTest {
         assertThatThrownBy(() -> builder2.addressResolverGroupFactory(eventLoopGroup -> null))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("mutually exclusive");
+    }
+
+    @Test
+    void maxNumEventLoopsAndEventLoopSchedulerFactoryAreMutuallyExclusive() {
+        final ClientFactoryBuilder builder1 = new ClientFactoryBuilder();
+        builder1.maxNumEventLoopsPerEndpoint(2);
+
+        assertThrows(IllegalStateException.class,
+                     () -> builder1.eventLoopSchedulerFactory(
+                             eventLoopGroup -> mock(EventLoopScheduler.class)));
+
+        final ClientFactoryBuilder builder2 = new ClientFactoryBuilder();
+        builder2.eventLoopSchedulerFactory(eventLoopGroup -> mock(EventLoopScheduler.class));
+
+        final IllegalStateException cause = assertThrows(IllegalStateException.class,
+                                                         () -> builder2.maxNumEventLoopsPerEndpoint(2));
+        assertThat(cause).hasMessageContaining("mutually exclusive");
     }
 }

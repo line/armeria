@@ -37,7 +37,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
@@ -142,7 +141,7 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
 
     static class MyExceptionHandler1 implements ExceptionHandlerFunction {
         @Override
-        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
+        public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
             if (cause instanceof IllegalArgumentException) {
                 return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, MediaType.PLAIN_TEXT_UTF_8,
                                        "Cause:" + IllegalArgumentException.class.getSimpleName());
@@ -153,7 +152,7 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
 
     static class MyExceptionHandler2 implements ExceptionHandlerFunction {
         @Override
-        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
+        public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
             if (cause instanceof IllegalStateException) {
                 return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, MediaType.PLAIN_TEXT_UTF_8,
                                        "Cause:" + IllegalStateException.class.getSimpleName());

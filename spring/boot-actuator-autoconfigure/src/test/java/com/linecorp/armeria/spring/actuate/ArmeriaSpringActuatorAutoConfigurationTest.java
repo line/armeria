@@ -102,7 +102,7 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
     }
 
     private String newUrl(String scheme) {
-        final int port = server.activePort().get().localAddress().getPort();
+        final int port = server.activeLocalPort();
         return scheme + "://127.0.0.1:" + port;
     }
 
@@ -110,6 +110,7 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
     public void testHealth() throws Exception {
         final AggregatedHttpResponse res = client.get("/internal/actuator/health").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentType()).isEqualTo(ArmeriaSpringActuatorAutoConfiguration.ACTUATOR_MEDIA_TYPE);
 
         final Map<String, Object> values = OBJECT_MAPPER.readValue(res.content().array(), JSON_MAP);
         assertThat(values).containsEntry("status", "UP");
@@ -120,6 +121,7 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
         final String loggerPath = "/internal/actuator/loggers/" + TEST_LOGGER_NAME;
         AggregatedHttpResponse res = client.get(loggerPath).aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentType()).isEqualTo(ArmeriaSpringActuatorAutoConfiguration.ACTUATOR_MEDIA_TYPE);
 
         Map<String, Object> values = OBJECT_MAPPER.readValue(res.content().array(), JSON_MAP);
         assertThat(values).containsEntry("effectiveLevel", "DEBUG");
@@ -183,6 +185,7 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
     public void testLinks() throws Exception {
         final AggregatedHttpResponse res = client.get("/internal/actuator").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentType()).isEqualTo(ArmeriaSpringActuatorAutoConfiguration.ACTUATOR_MEDIA_TYPE);
         final Map<String, Object> values = OBJECT_MAPPER.readValue(res.content().array(), JSON_MAP);
         assertThat(values).containsKey("_links");
     }

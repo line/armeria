@@ -25,6 +25,7 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientOptionsBuilder;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -38,7 +39,6 @@ import com.linecorp.armeria.common.util.AsyncCloseable;
 public abstract class AbstractHealthCheckedEndpointGroupBuilder {
 
     private final EndpointGroup delegate;
-    private final Function<? super HealthCheckerContext, ? extends AsyncCloseable> checker;
 
     private SessionProtocol protocol = SessionProtocol.HTTP;
     private Backoff retryBackoff = DEFAULT_HEALTH_CHECK_RETRY_BACKOFF;
@@ -50,19 +50,9 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
      * Creates a new {@link AbstractHealthCheckedEndpointGroupBuilder}.
      *
      * @param delegate the {@link EndpointGroup} which provides the candidate {@link Endpoint}s
-     * @param checker the {@link Function} that starts to send health check requests to the {@link Endpoint}
-     *                specified in a given {@link HealthCheckerContext} when invoked.
-     *                The {@link Function} must update the health of the {@link Endpoint} with a value
-     *                between [0, 1] via {@link HealthCheckerContext#updateHealth(double)}.
-     *                {@link HealthCheckedEndpointGroup} will call {@link AsyncCloseable#closeAsync()} on
-     *                the {@link AsyncCloseable} returned by the {@link Function} when it needs to stop sending
-     *                health check requests.
      */
-    protected AbstractHealthCheckedEndpointGroupBuilder(
-            EndpointGroup delegate,
-            Function<? super HealthCheckerContext, ? extends AsyncCloseable> checker) {
+    protected AbstractHealthCheckedEndpointGroupBuilder(EndpointGroup delegate) {
         this.delegate = requireNonNull(delegate, "delegate");
-        this.checker = requireNonNull(checker, "checker");
     }
 
     /**
@@ -135,6 +125,21 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
     }
 
     /**
+     * Sets the {@link ClientOptions} of the {@link Client} that sends health check requests.
+     * This method can be useful if you already have an Armeria client and want to reuse its configuration,
+     * such as using the same decorators.
+     * <pre>{@code
+     * HttpClient myClient = ...;
+     * // Use the same settings and decorators with `myClient` when sending health check requests.
+     * builder.clientOptions(myClient.options());
+     * }</pre>
+     */
+    public AbstractHealthCheckedEndpointGroupBuilder clientOptions(ClientOptions clientOptions) {
+        requireNonNull(clientOptions, "clientOptions");
+        return withClientOptions(b -> b.options(clientOptions));
+    }
+
+    /**
      * Sets the {@link Function} that customizes a {@link Client} that sends health check requests.
      * <pre>{@code
      * builder.withClientOptions(b -> {
@@ -155,6 +160,16 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
      */
     public HealthCheckedEndpointGroup build() {
         return new HealthCheckedEndpointGroup(delegate, clientFactory, protocol, port,
-                                              retryBackoff, configurator, checker);
+                                              retryBackoff, configurator, newCheckerFactory());
     }
+
+    /**
+     * Returns the {@link Function} that starts to send health check requests to the {@link Endpoint}
+     * specified in a given {@link HealthCheckerContext} when invoked. The {@link Function} must update
+     * the health of the {@link Endpoint} with a value between [0, 1] via
+     * {@link HealthCheckerContext#updateHealth(double)}. {@link HealthCheckedEndpointGroup} will call
+     * {@link AsyncCloseable#closeAsync()} on the {@link AsyncCloseable} returned by the {@link Function}
+     * when it needs to stop sending health check requests.
+     */
+    protected abstract Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory();
 }

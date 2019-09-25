@@ -35,6 +35,18 @@
   - Learn how to serve static files.
   - See [Serving static files](https://line.github.io/armeria/server-http-file.html).
 
+## Configure `-parameters` javac option 
+
+You can omit the value of `@Param` if you compiled your code with `-parameters` javac option.
+Please refer to [Configure `-parameters` javac option](http://line.github.io/armeria/setup.html#configure-parameters-javac-option) for more information.
+
+## How to run
+
+- Use `run` or `bootRun` task to run an example from Gradle.
+- See [Open an existing Gradle project](https://www.jetbrains.com/help/idea/gradle.html#gradle_import_project_start) to import an example into IntelliJ IDEA.
+- See [Configure `-parameters` javac option](http://line.github.io/armeria/setup.html#configure-parameters-javac-option) to configure IntelliJ IDEA.
+- See [Build and run the application](https://www.jetbrains.com/help/idea/creating-and-running-your-first-java-application.html#run_app) to run an example from IntelliJ IDEA.
+
 ## License
 
 All files under this directory (`examples`) belong to

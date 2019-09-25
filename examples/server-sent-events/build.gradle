@@ -1,3 +1,7 @@
+plugins {
+    id 'application'
+}
+
 dependencies {
     compile project(':core')
     compile 'io.projectreactor:reactor-core'
@@ -7,4 +11,8 @@ dependencies {
     testCompile 'junit:junit'
     testCompile 'net.javacrumbs.json-unit:json-unit-fluent'
     testCompile 'org.assertj:assertj-core'
+}
+
+application {
+    mainClassName = 'example.armeria.server.sse.Main'
 }

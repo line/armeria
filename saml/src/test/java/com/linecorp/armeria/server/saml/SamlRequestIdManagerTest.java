@@ -24,7 +24,7 @@ import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
-import org.awaitility.Duration;
+import org.awaitility.Durations;
 import org.junit.Test;
 
 public class SamlRequestIdManagerTest {
@@ -61,8 +61,8 @@ public class SamlRequestIdManagerTest {
         final String id = manager.newId();
         assertThat(manager.validateId(id)).isTrue();
 
-        await().pollDelay(Duration.TWO_HUNDRED_MILLISECONDS)
-               .atMost(Duration.FIVE_SECONDS)
+        await().pollDelay(Durations.TWO_HUNDRED_MILLISECONDS)
+               .atMost(Durations.FIVE_SECONDS)
                .untilAsserted(() -> assertThat(manager.validateId(id)).isFalse());
 
         assertThat(java.time.Duration.between(started, Instant.now()).toMillis())
@@ -78,8 +78,8 @@ public class SamlRequestIdManagerTest {
         final String id = manager.newId();
         assertThat(manager.validateId(id)).isTrue();
 
-        await().pollDelay(Duration.TWO_HUNDRED_MILLISECONDS)
-               .atMost(Duration.FIVE_SECONDS)
+        await().pollDelay(Durations.TWO_HUNDRED_MILLISECONDS)
+               .atMost(Durations.FIVE_SECONDS)
                .untilAsserted(() -> assertThat(manager.validateId(id)).isFalse());
 
         assertThat(java.time.Duration.between(started, Instant.now()).toMillis())

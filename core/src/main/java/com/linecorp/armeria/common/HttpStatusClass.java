@@ -30,6 +30,8 @@
  */
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull;
+
 import io.netty.util.AsciiString;
 
 /**
@@ -106,6 +108,13 @@ public enum HttpStatusClass {
      */
     public boolean contains(int code) {
         return code >= min && code < max;
+    }
+
+    /**
+     * Returns {@code true} if and only if the specified {@link HttpStatus} falls into this class.
+     */
+    public boolean contains(HttpStatus status) {
+        return contains(requireNonNull(status, "status").code());
     }
 
     /**

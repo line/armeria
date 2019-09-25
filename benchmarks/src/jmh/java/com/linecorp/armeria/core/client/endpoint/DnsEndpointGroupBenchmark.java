@@ -56,7 +56,7 @@ public class DnsEndpointGroupBenchmark {
     public void setUp() {
         endpointGroup = HealthCheckedEndpointGroup.of(
                 DnsAddressEndpointGroup.of("localhost",
-                                           server.activePort().get().localAddress().getPort()), "/health");
+                                           server.activeLocalPort()), "/health");
     }
 
     @TearDown(Level.Invocation)

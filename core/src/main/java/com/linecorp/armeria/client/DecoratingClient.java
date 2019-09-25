@@ -16,10 +16,9 @@
 
 package com.linecorp.armeria.client;
 
-import static java.util.Objects.requireNonNull;
-
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.util.AbstractUnwrappable;
 
 /**
  * Decorates a {@link Client}. Use {@link SimpleDecoratingClient},
@@ -33,29 +32,14 @@ import com.linecorp.armeria.common.Response;
  * @param <R_O> the {@link Response} type of this {@link Client}
  */
 public abstract class DecoratingClient<T_I extends Request, T_O extends Response,
-                                       R_I extends Request, R_O extends Response> implements Client<R_I, R_O> {
-
-    private final Client<T_I, T_O> delegate;
+                                       R_I extends Request, R_O extends Response>
+        extends AbstractUnwrappable<Client<T_I, T_O>>
+        implements Client<R_I, R_O> {
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
     protected DecoratingClient(Client<T_I, T_O> delegate) {
-        this.delegate = requireNonNull(delegate, "delegate");
-    }
-
-    /**
-     * Returns the {@link Client} being decorated.
-     */
-    @SuppressWarnings("unchecked")
-    protected final <T extends Client<T_I, T_O>> T delegate() {
-        return (T) delegate;
-    }
-
-    @Override
-    public String toString() {
-        final String simpleName = getClass().getSimpleName();
-        final String name = simpleName.isEmpty() ? getClass().getName() : simpleName;
-        return name + '(' + delegate + ')';
+        super(delegate);
     }
 }

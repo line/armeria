@@ -27,6 +27,7 @@ import static com.linecorp.armeria.spring.MeterIdPrefixFunctionFactory.DEFAULT;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
@@ -70,6 +71,7 @@ public class ArmeriaAutoConfiguration {
             Optional<MeterIdPrefixFunctionFactory> meterIdPrefixFunctionFactory,
             Optional<List<HealthChecker>> healthCheckers,
             Optional<List<ArmeriaServerConfigurator>> armeriaServerConfigurators,
+            Optional<List<Consumer<ServerBuilder>>> armeriaServerBuilderConsumers,
             Optional<List<ThriftServiceRegistrationBean>> thriftServiceRegistrationBeans,
             Optional<List<GrpcServiceRegistrationBean>> grpcServiceRegistrationBean,
             Optional<List<HttpServiceRegistrationBean>> httpServiceRegistrationBeans,
@@ -122,6 +124,10 @@ public class ArmeriaAutoConfiguration {
         armeriaServerConfigurators.ifPresent(
                 configurators -> configurators.forEach(
                         configurator -> configurator.configure(server)));
+
+        armeriaServerBuilderConsumers.ifPresent(
+                consumers -> consumers.forEach(
+                        consumer -> consumer.accept(server)));
 
         if (!Strings.isNullOrEmpty(docsPath)) {
             server.serviceUnder(docsPath, docServiceBuilder.build());

@@ -295,7 +295,7 @@ public final class SystemInfo {
                         logger.info("PID: {} (from VMManagement.getProcessId())", pid);
                     }
                 } catch (Throwable t) {
-                    logFailure("VMManagment.getProcessId()", false, t);
+                    logFailure("VMManagement.getProcessId()", false, t);
                 }
             }
 

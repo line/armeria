@@ -177,35 +177,7 @@ option. In this case the variable name is used as the value.
         public HttpResponse hello1(@Param String name) { ... }
     }
 
-.. note::
-
-    You can configure your build tool to add ``-parameters`` javac option as follows.
-
-    .. code-block:: gradle
-
-        // Gradle:
-        tasks.withType(JavaCompile) {
-            options.compilerArgs += '-parameters'
-        }
-
-    .. code-block:: xml
-
-        <!-- Maven -->
-        <project>
-          <build>
-            <plugins>
-              <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                  <compilerArgs>
-                    <arg>-parameters</arg>
-                  </compilerArgs>
-                </configuration>
-              </plugin>
-            </plugins>
-          </build>
-        </project>
+Please refer to :ref:`configure_parameters` for more information.
 
 Injecting a parameter as an ``Enum`` type
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -806,7 +778,7 @@ more response types which can be used in the annotated service.
 
       public class MyAnnotatedService {
           @Get("/users")
-          public HttpResult<User> getUsers(@Param int start) {
+          public HttpResult<List<User>> getUsers(@Param int start) {
               List<User> users = ...;
               ResponseHeaders headers = ResponseHeaders.builder()
                   .status(HttpStatus.OK)

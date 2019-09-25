@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -37,7 +38,10 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.healthcheck.SettableHealthChecker;
@@ -49,17 +53,33 @@ class HttpHealthCheckedEndpointGroupLongPollingTest {
     private static final String HEALTH_CHECK_PATH = "/healthcheck";
 
     private static final SettableHealthChecker health = new SettableHealthChecker();
+    private static final Duration LONG_POLLING_TIMEOUT = Duration.ofSeconds(1);
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.service(HEALTH_CHECK_PATH, HealthCheckService.of(health));
+            sb.service(HEALTH_CHECK_PATH, HealthCheckService.builder()
+                                                            .longPolling(LONG_POLLING_TIMEOUT)
+                                                            .checkers(health)
+                                                            .build());
+
+            // Enable graceful shutdown so that the server is given a chance
+            // to send a health check response when the server is shutting down.
+            // Without graceful shutdown, the health check request will be aborted
+            // with GOAWAY or disconnection.
+            sb.gracefulShutdownTimeout(3000, 10000);
         }
     };
 
     @Nullable
     private volatile BlockingQueue<RequestLog> healthCheckRequestLogs;
+
+    @BeforeEach
+    void startServer() {
+        server.start();
+        healthCheckRequestLogs = null;
+    }
 
     @Test
     void immediateNotification() throws Exception {
@@ -83,6 +103,42 @@ class HttpHealthCheckedEndpointGroupLongPollingTest {
             // Stop the server.
             server.stop();
             waitForGroup(endpointGroup, null);
+        }
+    }
+
+    @Test
+    @Timeout(15)
+    void longPollingDisabledOnStop() throws Exception {
+        final BlockingQueue<RequestLog> healthCheckRequestLogs = new LinkedTransferQueue<>();
+        this.healthCheckRequestLogs = healthCheckRequestLogs;
+        final Endpoint endpoint = Endpoint.of("127.0.0.1", server.httpPort());
+        try (HealthCheckedEndpointGroup endpointGroup = build(
+                HealthCheckedEndpointGroup.builder(
+                        new StaticEndpointGroup(endpoint),
+                        HEALTH_CHECK_PATH))) {
+
+            // Check the initial state (healthy).
+            assertThat(endpointGroup.endpoints()).containsExactly(endpoint);
+
+            // Drop the first request.
+            healthCheckRequestLogs.take();
+
+            // Stop the server.
+            server.stop();
+            waitForGroup(endpointGroup, null);
+
+            // Must receive the '503 Service Unavailable' response with long polling disabled,
+            // so that the next health check respects the backoff.
+            final ResponseHeaders stoppingResponseHeaders = healthCheckRequestLogs.take().responseHeaders();
+            assertThat(stoppingResponseHeaders.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+            assertThat(stoppingResponseHeaders.getLong("armeria-lphc", -1)).isEqualTo(0);
+
+            // Check the next check respected backoff, because there's no point of
+            // sending a request immediately only to get a 'connection refused' error.
+            final Stopwatch stopwatch = Stopwatch.createStarted();
+            healthCheckRequestLogs.take();
+            assertThat(stopwatch.elapsed(TimeUnit.MILLISECONDS))
+                    .isGreaterThan(RETRY_INTERVAL.toMillis() * 4 / 5);
         }
     }
 
@@ -115,6 +171,40 @@ class HttpHealthCheckedEndpointGroupLongPollingTest {
         }
     }
 
+    @Test
+    @Timeout(15)
+    void keepEndpointHealthinessWhenLongPollingTimeout() throws Exception {
+        final BlockingQueue<RequestLog> healthCheckRequestLogs = new LinkedTransferQueue<>();
+        this.healthCheckRequestLogs = healthCheckRequestLogs;
+        final Endpoint endpoint = Endpoint.of("127.0.0.1", server.httpPort());
+        try (HealthCheckedEndpointGroup endpointGroup = build(
+                HealthCheckedEndpointGroup.builder(
+                        new StaticEndpointGroup(endpoint),
+                        HEALTH_CHECK_PATH))) {
+
+            // Check the initial state (healthy).
+            assertThat(endpointGroup.endpoints()).containsExactly(endpoint);
+
+            // Drop the first request.
+            healthCheckRequestLogs.take();
+
+            // Check the endpoint is populated even after long polling timeout.
+            Thread.sleep(LONG_POLLING_TIMEOUT.toMillis());
+            assertThat(endpointGroup.endpoints()).containsExactly(endpoint);
+
+            // Must receive the '304 Not Modified' response with long polling.
+            final ResponseHeaders notModifiedResponseHeaders = healthCheckRequestLogs.take().responseHeaders();
+            assertThat(notModifiedResponseHeaders.status()).isEqualTo(HttpStatus.NOT_MODIFIED);
+            assertThat(notModifiedResponseHeaders.getLong("armeria-lphc", 1))
+                    .isEqualTo(LONG_POLLING_TIMEOUT.getSeconds());
+
+            final Stopwatch stopwatch = Stopwatch.createStarted();
+            healthCheckRequestLogs.take();
+            assertThat(stopwatch.elapsed(TimeUnit.MILLISECONDS))
+                    .isLessThanOrEqualTo(LONG_POLLING_TIMEOUT.toMillis());
+        }
+    }
+
     /**
      * Makes sure the notification occurs as soon as possible thanks to long polling.
      */
@@ -137,7 +227,7 @@ class HttpHealthCheckedEndpointGroupLongPollingTest {
                 // Record when health check requests were sent.
                 final Queue<RequestLog> healthCheckRequestLogs = this.healthCheckRequestLogs;
                 if (healthCheckRequestLogs != null) {
-                    healthCheckRequestLogs.add(ctx.log());
+                    ctx.log().addListener(healthCheckRequestLogs::add, RequestLogAvailability.COMPLETE);
                 }
                 return delegate.execute(ctx, req);
             });

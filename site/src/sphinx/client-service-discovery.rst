@@ -50,7 +50,7 @@ at construction time:
 .. code-block:: java
 
     // Create a group of well-known search engine endpoints.
-    EndpointGroup searchEngineGroup = new StaticEndpointGroup(
+    EndpointGroup searchEngineGroup = EndpointGroup.of(
             Endpoint.of("www.google.com", 443),
             Endpoint.of("www.bing.com", 443),
             Endpoint.of("duckduckgo.com", 443);
@@ -158,7 +158,7 @@ be removed from the list.
 .. code-block:: java
 
     // Create an EndpointGroup with 2 Endpoints.
-    StaticEndpointGroup group = new StaticEndpointGroup(
+    EndpointGroup group = EndpointGroup.of(
         Endpoint.of("192.168.0.1", 80),
         Endpoint.of("192.168.0.2", 80));
 
