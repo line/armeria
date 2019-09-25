@@ -17,6 +17,7 @@ package com.linecorp.armeria.common;
 
 import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 
+import java.net.URI;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -159,6 +160,11 @@ final class HeaderOverridingHttpRequest implements HttpRequest {
     @Override
     public RequestHeaders headers() {
         return headers;
+    }
+
+    @Override
+    public URI uri() {
+        return headers.uri();
     }
 
     @Override

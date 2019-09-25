@@ -30,9 +30,10 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
-import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.internal.brave.SpanTags;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 
@@ -64,7 +65,7 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
     }
 
     @Override
-    protected void init() throws Exception {
+    protected void init() {
         final ServerBuilder sb = new ServerBuilder();
         sb.service("/", (ctx, req) -> {
             if (req.method() == HttpMethod.OPTIONS) {
@@ -106,8 +107,12 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
             public <T> void response(HttpAdapter<?, T> adapter, T res, Throwable error,
                                      SpanCustomizer customizer) {
                 super.response(adapter, res, error, customizer);
+                // TODO: make this possible at request scope https://github.com/line/armeria/issues/2089
+                if (res instanceof RequestContext) {
+                    final RequestContext ctx = (RequestContext) res;
+                    customizer.tag("http.url", SpanTags.generateUrl(ctx.log()));
+                }
                 customizer.tag("response_customizer.is_span", String.valueOf(customizer instanceof brave.Span));
-                customizer.tag("http.url", ((ArmeriaHttpServerAdapter) adapter).url((RequestLog) res));
             }
         }).build();
         init();

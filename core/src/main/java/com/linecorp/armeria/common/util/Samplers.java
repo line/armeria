@@ -16,16 +16,27 @@
 
 package com.linecorp.armeria.common.util;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
+
+import java.util.List;
+import java.util.Locale;
+
+import com.google.common.base.Splitter;
+
 /**
- * A utility class to provide default {@link Sampler}.
+ * A utility class to provide useful {@link Sampler} implementations and functionalities to {@link Sampler}.
  */
 final class Samplers {
 
-    private Samplers() {}
+    private static final Splitter KEY_VALUE_SPLITTER = Splitter.on('=').trimResults();
+    private static final String IAE_MSG_TEMPLATE =
+            "specification: %s (expected: always, never, random=<rate> or rate-limited=<samples_per_second>";
 
     /**
      * A sampler that will always be sampled.
      */
+    @SuppressWarnings("rawtypes")
     static final Sampler ALWAYS = new Sampler() {
         @Override
         public boolean isSampled(Object ignored) {
@@ -41,6 +52,7 @@ final class Samplers {
     /**
      * A sampler that will never be sampled.
      */
+    @SuppressWarnings("rawtypes")
     static final Sampler NEVER = new Sampler() {
         @Override
         public boolean isSampled(Object ignored) {
@@ -52,4 +64,37 @@ final class Samplers {
             return "NeverSample";
         }
     };
+
+    static <T> Sampler<T> of(String specification) {
+        requireNonNull(specification, "specification");
+        switch (specification.trim()) {
+            case "always":
+                return Sampler.always();
+            case "never":
+                return Sampler.never();
+        }
+
+        final List<String> components = KEY_VALUE_SPLITTER.splitToList(specification);
+        checkArgument(components.size() == 2, IAE_MSG_TEMPLATE, specification);
+
+        final String key = components.get(0);
+        final String value = components.get(1);
+        try {
+            switch (key) {
+                case "random":
+                    return Sampler.random(Double.parseDouble(value));
+                case "rate-limited":
+                    return Sampler.rateLimited(Integer.parseInt(value));
+                default:
+            }
+        } catch (Exception e) {
+            throw new IllegalArgumentException(
+                    String.format(Locale.ROOT, IAE_MSG_TEMPLATE, specification), e);
+        }
+
+        throw new IllegalArgumentException(
+                String.format(Locale.ROOT, IAE_MSG_TEMPLATE, specification));
+    }
+
+    private Samplers() {}
 }

@@ -35,8 +35,6 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.ClientRequestContextBuilder;
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -92,7 +90,8 @@ class TracingClientTest {
         testRemoteInvocation(tracing, null);
 
         // check span name
-        final Span span = reporter.spans().take();
+        final Span span = reporter.spans().poll(10, TimeUnit.SECONDS);
+        assertThat(span).isNotNull();
         assertThat(span.name()).isEqualTo(TEST_SPAN);
 
         // check kind
@@ -126,7 +125,7 @@ class TracingClientTest {
         testRemoteInvocation(tracing, "fooService");
 
         // check span name
-        final Span span = reporter.spans().take();
+        final Span span = reporter.spans().poll(10, TimeUnit.SECONDS);
 
         // check tags
         assertThat(span.tags()).containsEntry("http.host", "foo.com")
@@ -165,7 +164,7 @@ class TracingClientTest {
         testRemoteInvocation(tracing, null);
 
         // check span name
-        final Span span = reporter.spans().take();
+        final Span span = reporter.spans().poll(10, TimeUnit.SECONDS);
 
         // check tags
         assertTags(span);
@@ -193,17 +192,16 @@ class TracingClientTest {
 
         // prepare parameters
         final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/armeria",
+                                                                 HttpHeaderNames.SCHEME, "http",
                                                                  HttpHeaderNames.AUTHORITY, "foo.com"));
         final RpcRequest rpcReq = RpcRequest.of(HelloService.Iface.class, "hello", "Armeria");
         final HttpResponse res = HttpResponse.of(HttpStatus.OK);
         final RpcResponse rpcRes = RpcResponse.of("Hello, Armeria!");
-        final ClientRequestContext ctx =
-                ClientRequestContextBuilder.of(req)
-                                           .endpoint(Endpoint.of("localhost", 8080))
-                                           .build();
+        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        final HttpRequest actualRequest = ctx.request();
 
         ctx.logBuilder().requestFirstBytesTransferred();
-        ctx.logBuilder().requestContent(rpcReq, req);
+        ctx.logBuilder().requestContent(rpcReq, actualRequest);
         ctx.logBuilder().endRequest();
 
         try (SafeCloseable ignored = ctx.push()) {
@@ -214,7 +212,7 @@ class TracingClientTest {
             final HttpTracingClient stub = HttpTracingClient.newDecorator(tracing, remoteServiceName)
                                                             .apply(delegate);
             // do invoke
-            final HttpResponse actualRes = stub.execute(ctx, req);
+            final HttpResponse actualRes = stub.execute(ctx, actualRequest);
 
             assertThat(actualRes).isEqualTo(res);
 
@@ -232,7 +230,8 @@ class TracingClientTest {
         ctx.logBuilder().endResponse();
     }
 
-    private static void assertTags(Span span) {
+    private static void assertTags(@Nullable Span span) {
+        assertThat(span).isNotNull();
         assertThat(span.tags()).containsEntry("http.host", "foo.com")
                                .containsEntry("http.method", "POST")
                                .containsEntry("http.path", "/hello/armeria")

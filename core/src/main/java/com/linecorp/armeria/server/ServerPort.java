@@ -185,7 +185,7 @@ public final class ServerPort implements Comparable<ServerPort> {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
         if (obj == this) {
             return true;
         }

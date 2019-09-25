@@ -104,6 +104,12 @@ public class ArmeriaSpringActuatorAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnMissingBean // In case HealthEndpointAutoConfiguration is excluded
+    HealthStatusHttpMapper healthStatusHttpMapper() {
+        return new HealthStatusHttpMapper();
+    }
+
+    @Bean
     ArmeriaServerConfigurator actuatorServerConfigurator(
             WebEndpointsSupplier endpointsSupplier,
             EndpointMediaTypes mediaTypes,

@@ -20,6 +20,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
@@ -113,7 +115,7 @@ public final class ClientDecoration {
         }
 
         @Override
-        public boolean equals(Object o) {
+        public boolean equals(@Nullable Object o) {
             if (this == o) {
                 return true;
             }
