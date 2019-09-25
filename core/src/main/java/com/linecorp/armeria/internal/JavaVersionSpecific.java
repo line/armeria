@@ -29,12 +29,14 @@ import org.slf4j.LoggerFactory;
  */
 public class JavaVersionSpecific {
 
-    private static Logger logger = LoggerFactory.getLogger(JavaVersionSpecific.class);
+    private static final Logger logger = LoggerFactory.getLogger(JavaVersionSpecific.class);
 
     private static final JavaVersionSpecific CURRENT = CurrentJavaVersionSpecific.get();
 
     static {
-        logger.info("Using version specific APIs from {}", CURRENT.getClass().getSimpleName());
+        if (CURRENT.getClass() != JavaVersionSpecific.class) {
+            logger.info("Using the APIs optimized for: {}", CURRENT.name());
+        }
     }
 
     /**
@@ -42,6 +44,10 @@ public class JavaVersionSpecific {
      */
     public static JavaVersionSpecific get() {
         return CURRENT;
+    }
+
+    String name() {
+        return "Java 8";
     }
 
     /**
