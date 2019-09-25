@@ -26,6 +26,11 @@ import java.util.concurrent.TimeUnit;
 class Java9VersionSpecific extends JavaVersionSpecific {
 
     @Override
+    String name() {
+        return "Java 9+";
+    }
+
+    @Override
     public final long currentTimeMicros() {
         final Instant now = Clock.systemUTC().instant();
         return TimeUnit.SECONDS.toMicros(now.getEpochSecond()) + TimeUnit.NANOSECONDS.toMicros(
