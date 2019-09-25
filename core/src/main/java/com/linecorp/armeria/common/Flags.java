@@ -95,16 +95,19 @@ public final class Flags {
 
         switch (spec) {
             case "true":
+            case "always":
                 VERBOSE_EXCEPTION_SAMPLER_SPEC = "always";
+                VERBOSE_EXCEPTION_SAMPLER = Sampler.always();
                 break;
             case "false":
+            case "never":
                 VERBOSE_EXCEPTION_SAMPLER_SPEC = "never";
+                VERBOSE_EXCEPTION_SAMPLER = Sampler.never();
                 break;
             default:
                 VERBOSE_EXCEPTION_SAMPLER_SPEC = spec;
+                VERBOSE_EXCEPTION_SAMPLER = new ExceptionSampler(VERBOSE_EXCEPTION_SAMPLER_SPEC);
         }
-
-        VERBOSE_EXCEPTION_SAMPLER = new ExceptionSampler(VERBOSE_EXCEPTION_SAMPLER_SPEC);
     }
 
     private static final boolean VERBOSE_SOCKET_EXCEPTIONS = getBoolean("verboseSocketExceptions", false);
