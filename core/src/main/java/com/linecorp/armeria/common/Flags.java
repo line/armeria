@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.common;
 
-import static java.util.Objects.requireNonNull;
-
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
@@ -76,7 +74,7 @@ public final class Flags {
 
     private static final int NUM_CPU_CORES = Runtime.getRuntime().availableProcessors();
 
-    private static final String DEFAULT_VERBOSE_EXCEPTION_SAMPLER_SPEC = "rate-limited=1";
+    private static final String DEFAULT_VERBOSE_EXCEPTION_SAMPLER_SPEC = "rate-limited=10";
     private static final String VERBOSE_EXCEPTION_SAMPLER_SPEC;
     private static final Sampler<Class<? extends Throwable>> VERBOSE_EXCEPTION_SAMPLER;
 
@@ -334,23 +332,25 @@ public final class Flags {
     }
 
     /**
-     * Returns the {@link Sampler} that determines whether to retain the stack trace for the exceptions
-     * that is thrown frequently by Armeria. A sampled exception will have the stack trace while the others
-     * will have empty stack trace to eliminate the cost of capturing the stack trace.
+     * Returns the {@link Sampler} that determines whether to retain the stack trace of the exceptions
+     * that are thrown frequently by Armeria.
      *
-     * <p>This flag will by default return the {@link Sampler} that retains the stack trace of the exceptions
-     * at the maximum rate of 1 exception per second.
-     * Specify the {@code -Dcom.linecorp.armeria.verboseExceptions=<specification>} JVM option to override
-     * the default. See {@link Sampler#of(String)} for the specification string format.</p>
+     * @see #verboseExceptionSamplerSpec()
      */
     public static Sampler<Class<? extends Throwable>> verboseExceptionSampler() {
         return VERBOSE_EXCEPTION_SAMPLER;
     }
 
     /**
-     * Returns the specification string of {@link #verboseExceptionSampler()}.
+     * Returns the specification string of the {@link Sampler} that determines whether to retain the stack
+     * trace of the exceptions that are thrown frequently by Armeria. A sampled exception will have the stack
+     * trace while the others will have an empty stack trace to eliminate the cost of capturing the stack
+     * trace.
      *
-     * @see Sampler#of(String)
+     * <p>The default value of this flag is {@value #DEFAULT_VERBOSE_EXCEPTION_SAMPLER_SPEC}, which retains
+     * the stack trace of the exceptions at the maximum rate of 10 exceptions/sec.
+     * Specify the {@code -Dcom.linecorp.armeria.verboseExceptions=<specification>} JVM option to override
+     * the default. See {@link Sampler#of(String)} for the specification string format.</p>
      */
     public static String verboseExceptionSamplerSpec() {
         return VERBOSE_EXCEPTION_SAMPLER_SPEC;
