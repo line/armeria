@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.server.healthcheck;
 
-import java.util.ArrayDeque;
-import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
@@ -28,6 +26,7 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.math.LongMath;
@@ -50,7 +49,9 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TransientService;
 
 import io.netty.util.AsciiString;
+import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ScheduledFuture;
+import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 
 /**
  * An {@link HttpService} that responds with HTTP status {@code "200 OK"} if the server is healthy and can
@@ -132,9 +133,11 @@ public final class HealthCheckService implements HttpService, TransientService<H
     @Nullable
     private final Consumer<HealthChecker> healthCheckerListener;
     @Nullable
-    private final Queue<PendingResponse> pendingHealthyResponses;
+    @VisibleForTesting
+    final Set<PendingResponse> pendingHealthyResponses;
     @Nullable
-    private final Queue<PendingResponse> pendingUnhealthyResponses;
+    @VisibleForTesting
+    final Set<PendingResponse> pendingUnhealthyResponses;
     @Nullable
     private final HealthCheckUpdateHandler updateHandler;
 
@@ -156,8 +159,8 @@ public final class HealthCheckService implements HttpService, TransientService<H
             this.maxLongPollingTimeoutMillis = maxLongPollingTimeoutMillis;
             this.longPollingTimeoutJitterRate = longPollingTimeoutJitterRate;
             healthCheckerListener = this::onHealthCheckerUpdate;
-            pendingHealthyResponses = new ArrayDeque<>();
-            pendingUnhealthyResponses = new ArrayDeque<>();
+            pendingHealthyResponses = new ObjectLinkedOpenHashSet<>();
+            pendingUnhealthyResponses = new ObjectLinkedOpenHashSet<>();
         } else {
             this.maxLongPollingTimeoutMillis = 0;
             this.longPollingTimeoutJitterRate = 0;
@@ -285,16 +288,19 @@ public final class HealthCheckService implements HttpService, TransientService<H
             synchronized (healthCheckerListener) {
                 final boolean currentHealthiness = isHealthy();
                 if (isHealthy == currentHealthiness) {
+                    final Set<PendingResponse> pendingResponses = isHealthy ? pendingUnhealthyResponses
+                                                                            : pendingHealthyResponses;
                     final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
                     final ScheduledFuture<Boolean> timeoutFuture = ctx.eventLoop().schedule(
                             () -> future.complete(HttpResponse.of(notModifiedHeaders)),
                             longPollingTimeoutMillis, TimeUnit.MILLISECONDS);
                     final PendingResponse pendingResponse = new PendingResponse(method, future, timeoutFuture);
-                    if (isHealthy) {
-                        pendingUnhealthyResponses.add(pendingResponse);
-                    } else {
-                        pendingHealthyResponses.add(pendingResponse);
-                    }
+                    pendingResponses.add(pendingResponse);
+                    timeoutFuture.addListener((FutureListener<Boolean>) f -> {
+                        synchronized (healthCheckerListener) {
+                            pendingResponses.remove(pendingResponse);
+                        }
+                    });
 
                     updateRequestTimeout(ctx, longPollingTimeoutMillis);
                     return HttpResponse.from(future);
@@ -420,11 +426,11 @@ public final class HealthCheckService implements HttpService, TransientService<H
         final boolean isHealthy = isHealthy();
         final PendingResponse[] pendingResponses;
         synchronized (healthCheckerListener) {
-            final Queue<PendingResponse> queue = isHealthy ? pendingHealthyResponses
-                                                           : pendingUnhealthyResponses;
-            if (!queue.isEmpty()) {
-                pendingResponses = queue.toArray(EMPTY_PENDING_RESPONSES);
-                queue.clear();
+            final Set<PendingResponse> set = isHealthy ? pendingHealthyResponses
+                                                       : pendingUnhealthyResponses;
+            if (!set.isEmpty()) {
+                pendingResponses = set.toArray(EMPTY_PENDING_RESPONSES);
+                set.clear();
             } else {
                 pendingResponses = EMPTY_PENDING_RESPONSES;
             }
