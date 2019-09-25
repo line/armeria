@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.spring;
 
-import static java.util.Objects.*;
+import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.Collection;

@@ -171,7 +171,7 @@ public class AnnotatedServiceRegistrationBean
     }
 
     /**
-     * Adds an example HTTP header
+     * Adds an example HTTP header.
      */
     public AnnotatedServiceRegistrationBean addExampleHeader(CharSequence name, String value) {
         return addExampleHeader(HttpHeaders.of(name, value));

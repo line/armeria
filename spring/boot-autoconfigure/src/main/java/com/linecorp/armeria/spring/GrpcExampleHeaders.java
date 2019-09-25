@@ -28,7 +28,7 @@ public final class GrpcExampleHeaders {
 
     /**
      * Returns a new {@link GrpcExampleHeaders} with the specified {@code serviceType}
-     * and {@code exampleHttpHeaders}.
+     * and {@code exampleHeaders}.
      */
     public static GrpcExampleHeaders of(@NotNull String serviceType,
                                         @NotNull HttpHeaders exampleHeaders) {
