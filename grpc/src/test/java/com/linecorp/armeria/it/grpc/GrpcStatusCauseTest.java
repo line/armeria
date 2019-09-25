@@ -45,17 +45,17 @@ public class GrpcStatusCauseTest {
     private static class TestServiceImpl extends TestServiceImplBase {
         @Override
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
-            IllegalStateException e1 = new IllegalStateException("Exception 1");
-            IllegalArgumentException e2 = new IllegalArgumentException();
-            AssertionError e3 = new AssertionError("Exception 3");
+            final IllegalStateException e1 = new IllegalStateException("Exception 1");
+            final IllegalArgumentException e2 = new IllegalArgumentException();
+            final AssertionError e3 = new AssertionError("Exception 3");
             Exceptions.clearTrace(e3);
-            RuntimeException e4 = new RuntimeException("Exception 4");
+            final RuntimeException e4 = new RuntimeException("Exception 4");
 
             e1.initCause(e2);
             e2.initCause(e3);
             e3.initCause(e4);
 
-            Status status = Status.ABORTED.withCause(e1);
+            final Status status = Status.ABORTED.withCause(e1);
             responseObserver.onError(status.asRuntimeException());
         }
     }
