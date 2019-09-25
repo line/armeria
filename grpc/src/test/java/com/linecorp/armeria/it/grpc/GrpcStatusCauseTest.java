@@ -18,6 +18,7 @@ package com.linecorp.armeria.it.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.Assume.assumeTrue;
 
 import org.junit.Before;
 import org.junit.ClassRule;
@@ -78,10 +79,9 @@ public class GrpcStatusCauseTest {
 
     @Test
     public void normal() {
-        if (!Flags.verboseExceptions()) {
-            // This test doesn't do anything if verbose exceptions aren't enabled.
-            return;
-        }
+        // This test doesn't work if verbose exceptions aren't fully enabled.
+        assumeTrue("always".equals(Flags.verboseExceptionSamplerSpec()));
+
         assertThatThrownBy(() -> stub.unaryCall(SimpleRequest.getDefaultInstance()))
                 .isInstanceOfSatisfying(StatusRuntimeException.class, t -> {
                     assertThat(t.getCause()).isInstanceOfSatisfying(

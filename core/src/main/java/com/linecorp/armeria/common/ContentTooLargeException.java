@@ -27,10 +27,11 @@ public final class ContentTooLargeException extends RuntimeException {
 
     /**
      * Returns a {@link ContentTooLargeException} which may be a singleton or a new instance, depending on
-     * whether {@linkplain Flags#verboseExceptions() the verbose exception mode} is enabled.
+     * {@link Flags#verboseExceptionSampler()}'s decision.
      */
     public static ContentTooLargeException get() {
-        return Flags.verboseExceptions() ? new ContentTooLargeException() : INSTANCE;
+        return Flags.verboseExceptionSampler().isSampled(ContentTooLargeException.class) ?
+               new ContentTooLargeException() : INSTANCE;
     }
 
     private ContentTooLargeException() {}

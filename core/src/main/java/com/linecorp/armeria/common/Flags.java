@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
@@ -45,6 +47,7 @@ import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingHttpClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.internal.SslContextUtil;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -73,7 +76,38 @@ public final class Flags {
 
     private static final int NUM_CPU_CORES = Runtime.getRuntime().availableProcessors();
 
-    private static final boolean VERBOSE_EXCEPTIONS = getBoolean("verboseExceptions", false);
+    private static final String DEFAULT_VERBOSE_EXCEPTION_SAMPLER_SPEC = "rate-limited=1";
+    private static final String VERBOSE_EXCEPTION_SAMPLER_SPEC;
+    private static final Sampler<Class<? extends Throwable>> VERBOSE_EXCEPTION_SAMPLER;
+
+    static {
+        final String spec = getNormalized("verboseExceptions", DEFAULT_VERBOSE_EXCEPTION_SAMPLER_SPEC, value -> {
+            if ("true".equals(value) || "false".equals(value)) {
+                return true;
+            }
+
+            try {
+                Sampler.of(value);
+                return true;
+            } catch (Exception e) {
+                // Invalid sampler specification
+                return false;
+            }
+        });
+
+        switch (spec) {
+            case "true":
+                VERBOSE_EXCEPTION_SAMPLER_SPEC = "always";
+                break;
+            case "false":
+                VERBOSE_EXCEPTION_SAMPLER_SPEC = "never";
+                break;
+            default:
+                VERBOSE_EXCEPTION_SAMPLER_SPEC = spec;
+        }
+
+        VERBOSE_EXCEPTION_SAMPLER = new ExceptionSampler(spec);
+    }
 
     private static final boolean VERBOSE_SOCKET_EXCEPTIONS = getBoolean("verboseSocketExceptions", false);
 
@@ -300,15 +334,26 @@ public final class Flags {
     }
 
     /**
-     * Returns whether the verbose exception mode is enabled. When enabled, the exceptions frequently thrown by
-     * Armeria will have full stack trace. When disabled, such exceptions will have empty stack trace to
-     * eliminate the cost of capturing the stack trace.
+     * Returns the {@link Sampler} that determines whether to retain the stack trace for the exceptions
+     * that is thrown frequently by Armeria. A sampled exception will have the stack trace while the others
+     * will have empty stack trace to eliminate the cost of capturing the stack trace.
      *
-     * <p>This flag is disabled by default. Specify the {@code -Dcom.linecorp.armeria.verboseExceptions=true}
-     * JVM option to enable it.
+     * <p>This flag will by default return the {@link Sampler} that retains the stack trace of the exceptions
+     * at the maximum rate of 1 exception per second.
+     * Specify the {@code -Dcom.linecorp.armeria.verboseExceptions=<specification>} JVM option to override
+     * the default. See {@link Sampler#of(String)} for the specification string format.</p>
      */
-    public static boolean verboseExceptions() {
-        return VERBOSE_EXCEPTIONS;
+    public static Sampler<Class<? extends Throwable>> verboseExceptionSampler() {
+        return VERBOSE_EXCEPTION_SAMPLER;
+    }
+
+    /**
+     * Returns the specification string of {@link #verboseExceptionSampler()}.
+     *
+     * @see Sampler#of(String)
+     */
+    public static String verboseExceptionSamplerSpec() {
+        return VERBOSE_EXCEPTION_SAMPLER_SPEC;
     }
 
     /**
@@ -854,4 +899,5 @@ public final class Flags {
     }
 
     private Flags() {}
+
 }
