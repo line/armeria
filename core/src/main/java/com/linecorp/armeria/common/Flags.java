@@ -106,7 +106,7 @@ public final class Flags {
                 VERBOSE_EXCEPTION_SAMPLER_SPEC = spec;
         }
 
-        VERBOSE_EXCEPTION_SAMPLER = new ExceptionSampler(spec);
+        VERBOSE_EXCEPTION_SAMPLER = new ExceptionSampler(VERBOSE_EXCEPTION_SAMPLER_SPEC);
     }
 
     private static final boolean VERBOSE_SOCKET_EXCEPTIONS = getBoolean("verboseSocketExceptions", false);
