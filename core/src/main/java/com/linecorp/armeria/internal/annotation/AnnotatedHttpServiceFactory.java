@@ -260,9 +260,9 @@ public final class AnnotatedHttpServiceFactory {
      */
     @VisibleForTesting
     static AnnotatedHttpServiceElement create(String pathPrefix, Object object, Method method,
-                                                      List<ExceptionHandlerFunction> baseExceptionHandlers,
-                                                      List<RequestConverterFunction> baseRequestConverters,
-                                                      List<ResponseConverterFunction> baseResponseConverters) {
+                                              List<ExceptionHandlerFunction> baseExceptionHandlers,
+                                              List<RequestConverterFunction> baseRequestConverters,
+                                              List<ResponseConverterFunction> baseResponseConverters) {
 
         final Set<Annotation> methodAnnotations = httpMethodAnnotations(method);
         if (methodAnnotations.isEmpty()) {
