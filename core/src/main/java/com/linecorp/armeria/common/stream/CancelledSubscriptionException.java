@@ -33,13 +33,14 @@ public final class CancelledSubscriptionException extends RuntimeException {
 
     /**
      * Returns a {@link CancelledSubscriptionException} which may be a singleton or a new instance, depending
-     * on whether {@linkplain Flags#verboseExceptions() the verbose exception mode} is enabled.
+     * on {@link Flags#verboseExceptionSampler()}'s decision.
      */
     public static CancelledSubscriptionException get() {
-        return Flags.verboseExceptions() ? new CancelledSubscriptionException() : INSTANCE;
+        return Flags.verboseExceptionSampler().isSampled(CancelledSubscriptionException.class) ?
+               new CancelledSubscriptionException() : INSTANCE;
     }
 
-    private CancelledSubscriptionException() {}
+    CancelledSubscriptionException() {}
 
     private CancelledSubscriptionException(@SuppressWarnings("unused") boolean dummy) {
         super(null, null, false, false);

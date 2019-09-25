@@ -30,10 +30,11 @@ public final class ClosedPublisherException extends RuntimeException {
 
     /**
      * Returns a {@link ClosedPublisherException} which may be a singleton or a new instance, depending on
-     * whether {@linkplain Flags#verboseExceptions() the verbose exception mode} is enabled.
+     * {@link Flags#verboseExceptionSampler()}'s decision.
      */
     public static ClosedPublisherException get() {
-        return Flags.verboseExceptions() ? new ClosedPublisherException() : INSTANCE;
+        return Flags.verboseExceptionSampler().isSampled(ClosedPublisherException.class) ?
+               new ClosedPublisherException() : INSTANCE;
     }
 
     private ClosedPublisherException() {}

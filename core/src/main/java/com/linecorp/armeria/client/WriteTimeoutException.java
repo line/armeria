@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.TimeoutException;
 
 /**
@@ -25,16 +26,19 @@ public final class WriteTimeoutException extends TimeoutException {
 
     private static final long serialVersionUID = 2556616197251937869L;
 
-    private static final WriteTimeoutException INSTANCE = new WriteTimeoutException();
+    private static final WriteTimeoutException INSTANCE = new WriteTimeoutException(false);
 
     /**
      * Returns a singleton {@link WriteTimeoutException}.
      */
     public static WriteTimeoutException get() {
-        return INSTANCE;
+        return Flags.verboseExceptionSampler().isSampled(WriteTimeoutException.class) ?
+               new WriteTimeoutException() : INSTANCE;
     }
 
-    private WriteTimeoutException() {
+    private WriteTimeoutException() {}
+
+    private WriteTimeoutException(@SuppressWarnings("unused") boolean dummy) {
         super(null, null, false, false);
     }
 }
