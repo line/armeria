@@ -899,5 +899,4 @@ public final class Flags {
     }
 
     private Flags() {}
-
 }
