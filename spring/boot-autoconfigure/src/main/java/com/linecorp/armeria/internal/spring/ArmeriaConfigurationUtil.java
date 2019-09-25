@@ -135,7 +135,7 @@ public final class ArmeriaConfigurationUtil {
         server.meterRegistry(meterRegistry);
 
         if (settings.isEnableMetrics() && !Strings.isNullOrEmpty(settings.getMetricsPath())) {
-            final boolean hasPrometheus = hasClasses(
+            final boolean hasPrometheus = hasAllClasses(
                     "io.micrometer.prometheus.PrometheusMeterRegistry",
                     "io.prometheus.client.CollectorRegistry");
 
@@ -147,7 +147,7 @@ public final class ArmeriaConfigurationUtil {
             }
 
             if (!addedPrometheusExposition) {
-                final boolean hasDropwizard = hasClasses(
+                final boolean hasDropwizard = hasAllClasses(
                         "io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry",
                         "com.codahale.metrics.MetricRegistry",
                         "com.codahale.metrics.json.MetricsModule");
@@ -169,7 +169,7 @@ public final class ArmeriaConfigurationUtil {
         }
     }
 
-    private static boolean hasClasses(String... classNames) {
+    private static boolean hasAllClasses(String... classNames) {
         for (String className : classNames) {
             try {
                 Class.forName(className, false, ArmeriaConfigurationUtil.class.getClassLoader());
