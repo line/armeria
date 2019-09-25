@@ -16,21 +16,29 @@
 package com.linecorp.armeria.internal.annotation;
 
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.collectDecorators;
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.create;
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.find;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import org.assertj.core.util.Lists;
 import org.junit.Test;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.DecoratorAndOrder;
 import com.linecorp.armeria.server.DecoratingServiceFunction;
@@ -40,12 +48,23 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.DecoratorFactory;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
+import com.linecorp.armeria.server.annotation.Delete;
+import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.Head;
+import com.linecorp.armeria.server.annotation.Options;
+import com.linecorp.armeria.server.annotation.Patch;
+import com.linecorp.armeria.server.annotation.PathPrefix;
+import com.linecorp.armeria.server.annotation.Post;
+import com.linecorp.armeria.server.annotation.Put;
+import com.linecorp.armeria.server.annotation.Trace;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecoratorFactoryFunction;
 import com.linecorp.armeria.server.annotation.decorator.RateLimitingDecorator;
 import com.linecorp.armeria.server.annotation.decorator.RateLimitingDecoratorFactoryFunction;
 
 public class AnnotatedHttpServiceFactoryTest {
+
+    private static final String HOME_PATH_PREFIX = "/home";
 
     @Test
     public void ofNoOrdering() throws NoSuchMethodException {
@@ -122,6 +141,46 @@ public class AnnotatedHttpServiceFactoryTest {
         assertThat(udd2.value()).isEqualTo(2);
     }
 
+    @Test
+    public void testFindAnnotatedServiceElementsWithPathPrefixAnnotation() {
+        final Object object = new PathPrefixServiceObject();
+        final List<AnnotatedHttpServiceElement> elements = find("/", object, new ArrayList<>());
+
+        final List<String> paths = elements.stream()
+                                           .map(AnnotatedHttpServiceElement::route)
+                                           .map(route -> route.paths().get(0))
+                                           .collect(Collectors.toList());
+
+        assertThat(paths).containsExactlyInAnyOrder(HOME_PATH_PREFIX + "/hello", HOME_PATH_PREFIX + '/');
+    }
+
+    @Test
+    public void testFindAnnotatedServiceElementsWithoutPathPrefixAnnotation() {
+        final Object serviceObject = new ServiceObject();
+        final List<AnnotatedHttpServiceElement> elements = find(HOME_PATH_PREFIX, serviceObject,
+                                                                new ArrayList<>());
+
+        final List<String> paths = elements.stream()
+                                           .map(AnnotatedHttpServiceElement::route)
+                                           .map(route -> route.paths().get(0))
+                                           .collect(Collectors.toList());
+
+        assertThat(paths).containsExactlyInAnyOrder(HOME_PATH_PREFIX + "/hello", HOME_PATH_PREFIX + '/');
+    }
+
+    @Test
+    public void testCreateAnnotatedServiceElementWithoutExplicitPathOnMethod() {
+        final ServiceObjectWithoutPathOnAnnotatedMethod serviceObject =
+                new ServiceObjectWithoutPathOnAnnotatedMethod();
+
+        getMethods(ServiceObjectWithoutPathOnAnnotatedMethod.class, HttpResponse.class).forEach(method -> {
+            assertThatThrownBy(() -> {
+                create("/", serviceObject, method, Lists.emptyList(), Lists.emptyList(), Lists.emptyList());
+            }).isInstanceOf(IllegalArgumentException.class)
+              .hasMessage("A path pattern should be specified by @Path or HTTP method annotations.");
+        });
+    }
+
     private static List<Class<?>> values(List<DecoratorAndOrder> list) {
         return list.stream()
                    .map(DecoratorAndOrder::annotation)
@@ -157,6 +216,11 @@ public class AnnotatedHttpServiceFactoryTest {
                                   HttpRequest req) throws Exception {
             return delegate.serve(ctx, req);
         }
+    }
+
+    static Stream<Method> getMethods(Class<?> clazz, Class<?> returnTypeClass) {
+        final Method[] methods = clazz.getMethods();
+        return Stream.of(methods).filter(method -> method.getReturnType() == returnTypeClass);
     }
 
     @Retention(RetentionPolicy.RUNTIME)
@@ -222,6 +286,77 @@ public class AnnotatedHttpServiceFactoryTest {
         @UserDefinedRepeatableDecorator(value = 2, order = 3)
         public String userDefinedRepeatableDecorator() {
             return "";
+        }
+    }
+
+    @PathPrefix(HOME_PATH_PREFIX)
+    static class PathPrefixServiceObject {
+
+        @Get("/hello")
+        public HttpResponse get() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Post("/")
+        public HttpResponse post() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+    }
+
+    static class ServiceObject {
+
+        @Get("/hello")
+        public HttpResponse get() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Post("/")
+        public HttpResponse post() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+    }
+
+    @PathPrefix("/")
+    static class ServiceObjectWithoutPathOnAnnotatedMethod {
+
+        @Post
+        public HttpResponse post() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Get
+        public HttpResponse get() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Head
+        public HttpResponse head() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Put
+        public HttpResponse put() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Delete
+        public HttpResponse delete() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Options
+        public HttpResponse options() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Patch
+        public HttpResponse patch() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Trace
+        public HttpResponse trace() {
+            return HttpResponse.of(HttpStatus.OK);
         }
     }
 }
