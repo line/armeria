@@ -353,6 +353,7 @@ public final class Flags {
      * the default. See {@link Sampler#of(String)} for the specification string format.</p>
      */
     public static String verboseExceptionSamplerSpec() {
+        // XXX(trustin): Is it worth allowing to specify different specs for different exception types?
         return VERBOSE_EXCEPTION_SAMPLER_SPEC;
     }
 
