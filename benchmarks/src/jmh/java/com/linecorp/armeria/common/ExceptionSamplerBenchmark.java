@@ -26,7 +26,7 @@ public class ExceptionSamplerBenchmark {
     private static final ExceptionSampler never = new ExceptionSampler("never");
     private static final ExceptionSampler always = new ExceptionSampler("always");
     private static final ExceptionSampler rateLimited1 = new ExceptionSampler("rate-limited=1");
-    private static final ExceptionSampler rateLimited10 = new ExceptionSampler("rate-limited=1");
+    private static final ExceptionSampler rateLimited10 = new ExceptionSampler("rate-limited=10");
     private static final ExceptionSampler random1 = new ExceptionSampler("random=0.01");
     private static final ExceptionSampler random10 = new ExceptionSampler("random=0.1");
 
