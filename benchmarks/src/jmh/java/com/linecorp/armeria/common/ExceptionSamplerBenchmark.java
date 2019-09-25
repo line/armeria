@@ -26,7 +26,10 @@ public class ExceptionSamplerBenchmark {
 
     private static final ExceptionSampler never = new ExceptionSampler("never");
     private static final ExceptionSampler always = new ExceptionSampler("always");
-    private static final ExceptionSampler rateLimited = new ExceptionSampler("rate-limited=1");
+    private static final ExceptionSampler rateLimited1 = new ExceptionSampler("rate-limited=1");
+    private static final ExceptionSampler rateLimited10 = new ExceptionSampler("rate-limited=1");
+    private static final ExceptionSampler random1 = new ExceptionSampler("random=0.01");
+    private static final ExceptionSampler random10 = new ExceptionSampler("random=0.1");
 
     @Benchmark
     public void baseline_singleton(Blackhole bh) {
@@ -53,9 +56,27 @@ public class ExceptionSamplerBenchmark {
     }
 
     @Benchmark
-    public void sampler_rateLimited(Blackhole bh) {
-        bh.consume(rateLimited.isSampled(ExceptionA.class) ? new ExceptionA() : ExceptionA.INSTANCE);
-        bh.consume(rateLimited.isSampled(ExceptionB.class) ? new ExceptionB() : ExceptionB.INSTANCE);
+    public void sampler_rateLimited_1(Blackhole bh) {
+        bh.consume(rateLimited1.isSampled(ExceptionA.class) ? new ExceptionA() : ExceptionA.INSTANCE);
+        bh.consume(rateLimited1.isSampled(ExceptionB.class) ? new ExceptionB() : ExceptionB.INSTANCE);
+    }
+
+    @Benchmark
+    public void sampler_rateLimited_10(Blackhole bh) {
+        bh.consume(rateLimited10.isSampled(ExceptionA.class) ? new ExceptionA() : ExceptionA.INSTANCE);
+        bh.consume(rateLimited10.isSampled(ExceptionB.class) ? new ExceptionB() : ExceptionB.INSTANCE);
+    }
+
+    @Benchmark
+    public void sampler_random_1(Blackhole bh) {
+        bh.consume(random1.isSampled(ExceptionA.class) ? new ExceptionA() : ExceptionA.INSTANCE);
+        bh.consume(random1.isSampled(ExceptionB.class) ? new ExceptionB() : ExceptionB.INSTANCE);
+    }
+
+    @Benchmark
+    public void sampler_random_10(Blackhole bh) {
+        bh.consume(random10.isSampled(ExceptionA.class) ? new ExceptionA() : ExceptionA.INSTANCE);
+        bh.consume(random10.isSampled(ExceptionB.class) ? new ExceptionB() : ExceptionB.INSTANCE);
     }
 
     @Benchmark
