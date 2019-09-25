@@ -79,13 +79,13 @@ public final class Flags {
     private static final Sampler<Class<? extends Throwable>> VERBOSE_EXCEPTION_SAMPLER;
 
     static {
-        final String spec = getNormalized("verboseExceptions", DEFAULT_VERBOSE_EXCEPTION_SAMPLER_SPEC, value -> {
-            if ("true".equals(value) || "false".equals(value)) {
+        final String spec = getNormalized("verboseExceptions", DEFAULT_VERBOSE_EXCEPTION_SAMPLER_SPEC, val -> {
+            if ("true".equals(val) || "false".equals(val)) {
                 return true;
             }
 
             try {
-                Sampler.of(value);
+                Sampler.of(val);
                 return true;
             } catch (Exception e) {
                 // Invalid sampler specification

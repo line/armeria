@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.TimeoutException;
 
