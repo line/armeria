@@ -122,9 +122,9 @@ public class ArmeriaClientHttpResponseTest {
 
     private static ArmeriaClientHttpResponse response(ArmeriaHttpClientResponseSubscriber subscriber,
                                                       HttpHeaders expectedHttpHeaders) {
-        await().until(() -> subscriber.httpHeadersFuture().isDone());
+        await().until(() -> subscriber.headersFuture().isDone());
 
-        final ResponseHeaders h = subscriber.httpHeadersFuture().join();
+        final ResponseHeaders h = subscriber.headersFuture().join();
         assertThat(h).isEqualTo(expectedHttpHeaders);
 
         return new ArmeriaClientHttpResponse(h, subscriber.toResponseBodyPublisher(),

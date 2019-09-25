@@ -40,6 +40,7 @@ import org.springframework.boot.actuate.endpoint.web.PathMapper;
 import org.springframework.boot.actuate.endpoint.web.WebEndpointsSupplier;
 import org.springframework.boot.actuate.endpoint.web.WebOperationRequestPredicate;
 import org.springframework.boot.actuate.endpoint.web.annotation.WebEndpointDiscoverer;
+import org.springframework.boot.actuate.health.HealthStatusHttpMapper;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -103,10 +104,17 @@ public class ArmeriaSpringActuatorAutoConfiguration {
     }
 
     @Bean
+    @ConditionalOnMissingBean // In case HealthEndpointAutoConfiguration is excluded
+    HealthStatusHttpMapper healthStatusHttpMapper() {
+        return new HealthStatusHttpMapper();
+    }
+
+    @Bean
     ArmeriaServerConfigurator actuatorServerConfigurator(
             WebEndpointsSupplier endpointsSupplier,
             EndpointMediaTypes mediaTypes,
-            WebEndpointProperties properties) {
+            WebEndpointProperties properties,
+            HealthStatusHttpMapper healthMapper) {
         final EndpointMapping endpointMapping = new EndpointMapping(properties.getBasePath());
 
         final Collection<ExposableWebEndpoint> endpoints = endpointsSupplier.getEndpoints();
@@ -119,7 +127,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                                           endpointMapping.createSubPath(predicate.getPath()),
                                           predicate.getConsumes(),
                                           predicate.getProduces()),
-                                    new WebOperationHttpService(operation));
+                                    new WebOperationHttpService(operation, healthMapper));
                      });
             if (StringUtils.hasText(endpointMapping.getPath())) {
                 final Route route = route(

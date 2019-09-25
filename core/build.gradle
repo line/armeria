@@ -1,4 +1,56 @@
+String releaseFlagFromVersion(String src) {
+    // Java 9+ are 9, 10, etc, before was 1.8, 1.7, etc.
+    if (src.contains('.')) {
+        src.substring(src.lastIndexOf('.')+1)
+    } else {
+        src
+    }
+}
+
+sourceSets {
+    java9 {
+        java {
+            srcDirs = ['src/main/java9']
+        }
+    }
+}
+
+compileJava9Java {
+    sourceCompatibility = 9
+    targetCompatibility = 9
+}
+
+tasks.withType(JavaCompile) {
+    def version = releaseFlagFromVersion(sourceCompatibility)
+    options.compilerArgs.addAll(['--release', version])
+}
+
+tasks.withType(Jar) {
+    into('META-INF/versions/9') {
+        from sourceSets.java9.output
+    }
+    manifest.attributes(
+            'Multi-Release': 'true'
+    )
+}
+
+// Proguard can't handle multi-release jars so we recreate it here.
+tasks.trimShadedJar.doLast {
+    // outjars is a file, so only one jar generated for sure
+    def trimmed = tasks.trimShadedJar.outJarFiles[0].toPath()
+    ant.jar(destfile: trimmed.toString(), update: true) {
+        zipfileset(src: tasks.shadedJar.archivePath) {
+            include(name: 'META-INF/versions/**')
+        }
+    }
+}
+
+tasks.shadedTest.exclude 'META-INF/versions/**'
+
 dependencies {
+    // Common to reference classes in main sourceset from Java 9 one (e.g., to return a common interface)
+    java9Implementation files(sourceSets.main.output.classesDirs) { builtBy compileJava }
+
     // cglib
     testCompile 'cglib:cglib'
 

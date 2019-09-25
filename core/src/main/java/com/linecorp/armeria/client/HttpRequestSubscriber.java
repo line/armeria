@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -27,6 +28,8 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
 import com.linecorp.armeria.common.ClosedSessionException;
@@ -49,11 +52,15 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http2.Http2Error;
+import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 
 final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutureListener {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpRequestSubscriber.class);
+
+    private static final Set<AsciiString> ADDITIONAL_HEADER_BLACKLIST = ImmutableSet.of(
+            HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD);
 
     enum State {
         NEEDS_TO_WRITE_FIRST_HEADER,
@@ -178,14 +185,31 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     }
 
     private RequestHeaders autoFillHeaders() {
-        final RequestHeadersBuilder requestHeaders = request.headers().toBuilder();
+        final RequestHeaders oldHeaders = request.headers();
+        final RequestHeadersBuilder newHeaders = oldHeaders.toBuilder();
+
         final HttpHeaders additionalHeaders = reqCtx.additionalRequestHeaders();
         if (!additionalHeaders.isEmpty()) {
-            requestHeaders.setIfAbsent(additionalHeaders);
+            for (AsciiString name : additionalHeaders.names()) {
+                if (!ADDITIONAL_HEADER_BLACKLIST.contains(name)) {
+                    newHeaders.remove(name);
+                    additionalHeaders.forEachValue(name, value -> newHeaders.add(name, value));
+                }
+            }
         }
 
+        if (!newHeaders.contains(HttpHeaderNames.USER_AGENT)) {
+            newHeaders.add(HttpHeaderNames.USER_AGENT, HttpHeaderUtil.USER_AGENT.toString());
+        }
+
+        // :scheme and :authority are auto-filled in the beginning of decorator chain,
+        // but a decorator might have removed them, so we check again.
         final SessionProtocol sessionProtocol = reqCtx.sessionProtocol();
-        if (requestHeaders.authority() == null) {
+        if (newHeaders.scheme() == null) {
+            newHeaders.scheme(sessionProtocol);
+        }
+
+        if (newHeaders.authority() == null) {
             final String hostname = remoteAddress.getHostName();
             final int port = remoteAddress.getPort();
 
@@ -200,17 +224,10 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
                 authority = buf.toString();
             }
 
-            requestHeaders.add(HttpHeaderNames.AUTHORITY, authority);
+            newHeaders.add(HttpHeaderNames.AUTHORITY, authority);
         }
 
-        if (!requestHeaders.contains(HttpHeaderNames.SCHEME)) {
-            requestHeaders.add(HttpHeaderNames.SCHEME, sessionProtocol.isTls() ? "https" : "http");
-        }
-
-        if (!requestHeaders.contains(HttpHeaderNames.USER_AGENT)) {
-            requestHeaders.add(HttpHeaderNames.USER_AGENT, HttpHeaderUtil.USER_AGENT.toString());
-        }
-        return requestHeaders.build();
+        return newHeaders.build();
     }
 
     @Override

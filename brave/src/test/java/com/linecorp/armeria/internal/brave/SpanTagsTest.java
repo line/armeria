@@ -50,7 +50,8 @@ class SpanTagsTest {
     void http() {
         final Span span = mockSpan();
         final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/post",
-                                                                 HttpHeaderNames.AUTHORITY, "foo.com"));
+                                                                 HttpHeaderNames.AUTHORITY, "foo.com",
+                                                                 HttpHeaderNames.SCHEME, "http"));
         final ServiceRequestContext ctx = newContext(req, SessionProtocol.H2C, 200);
 
         SpanTags.addTags(span, ctx.log());
@@ -70,7 +71,8 @@ class SpanTagsTest {
     void https() {
         final Span span = mockSpan();
         final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/get",
-                                                                 HttpHeaderNames.AUTHORITY, "bar.com"));
+                                                                 HttpHeaderNames.AUTHORITY, "bar.com",
+                                                                 HttpHeaderNames.SCHEME, "https"));
         final ServiceRequestContext ctx = newContext(req, SessionProtocol.H2, 404);
 
         SpanTags.addTags(span, ctx.log());
@@ -90,7 +92,8 @@ class SpanTagsTest {
     void rpc() {
         final Span span = mockSpan();
         final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/rpc",
-                                                                 HttpHeaderNames.AUTHORITY, "call.com"));
+                                                                 HttpHeaderNames.AUTHORITY, "call.com",
+                                                                 HttpHeaderNames.SCHEME, "http"));
         final ServiceRequestContext ctx = newContext(req, SessionProtocol.H2C, 200, logBuilder -> {
             logBuilder.serializationFormat(SerializationFormat.UNKNOWN);
             logBuilder.requestContent(RpcRequest.of(Object.class, "someMethod"), null);
@@ -115,7 +118,8 @@ class SpanTagsTest {
     void error() {
         final Span span = mockSpan();
         final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.CONNECT, "/error",
-                                                                 HttpHeaderNames.AUTHORITY, "oops.com"));
+                                                                 HttpHeaderNames.AUTHORITY, "oops.com",
+                                                                 HttpHeaderNames.SCHEME, "http"));
         final ServiceRequestContext ctx = newContext(req, SessionProtocol.H2C, 0, logBuilder -> {
             logBuilder.endResponse(new Exception("oops"));
         });

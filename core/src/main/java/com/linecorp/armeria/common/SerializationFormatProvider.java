@@ -20,6 +20,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
 import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
@@ -55,7 +57,7 @@ public abstract class SerializationFormatProvider {
         }
 
         @Override
-        public boolean equals(Object obj) {
+        public boolean equals(@Nullable Object obj) {
             if (this == obj) {
                 return true;
             }

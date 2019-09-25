@@ -127,7 +127,7 @@ final class RegexPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
         return obj instanceof RegexPathMapping &&
                (this == obj || regex.pattern().equals(((RegexPathMapping) obj).regex.pattern()));
     }

@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import com.linecorp.armeria.common.Flags;
+
 /**
  * An exception indicating that a request has been failed by circuit breaker.
  */
@@ -38,6 +40,9 @@ public final class FailFastException extends RuntimeException {
 
     @Override
     public Throwable fillInStackTrace() {
+        if (Flags.verboseExceptionSampler().isSampled(getClass())) {
+            super.fillInStackTrace();
+        }
         return this;
     }
 }

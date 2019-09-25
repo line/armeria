@@ -167,6 +167,7 @@ class BraveServiceTest {
                                                    .build();
 
         final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/trustin",
+                                                                 HttpHeaderNames.SCHEME, "http",
                                                                  HttpHeaderNames.AUTHORITY, "foo.com"));
         final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(req)
                                                                       .build();

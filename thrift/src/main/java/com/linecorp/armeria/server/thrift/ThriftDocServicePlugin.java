@@ -37,6 +37,7 @@ import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 import org.apache.thrift.TBase;
+import org.apache.thrift.TEnum;
 import org.apache.thrift.TException;
 import org.apache.thrift.TFieldIdEnum;
 import org.apache.thrift.TFieldRequirementType;
@@ -64,6 +65,7 @@ import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.EnumInfo;
+import com.linecorp.armeria.server.docs.EnumValueInfo;
 import com.linecorp.armeria.server.docs.ExceptionInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.FieldInfoBuilder;
@@ -275,8 +277,9 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
         final Class<?> type = (Class<?>) namedTypeDescriptor.get();
         if (type.isEnum()) {
             @SuppressWarnings("unchecked")
-            final Class<? extends Enum<?>> enumType = (Class<? extends Enum<?>>) type;
-            return new EnumInfo(enumType);
+            final Class<? extends Enum<? extends TEnum>> enumType =
+                    (Class<? extends Enum<? extends TEnum>>) type;
+            return newEnumInfo(enumType);
         }
 
         if (TException.class.isAssignableFrom(type)) {
@@ -400,6 +403,15 @@ public class ThriftDocServicePlugin implements DocServicePlugin {
         }
 
         return TypeSignature.ofUnresolved(firstNonNull(unresolvedName, "unknown"));
+    }
+
+    @VisibleForTesting
+    static EnumInfo newEnumInfo(Class<? extends Enum<? extends TEnum>> enumType) {
+        final List<EnumValueInfo> values = Arrays.stream(enumType.getEnumConstants())
+            .map(e -> new EnumValueInfo(e.name(), ((TEnum)e).getValue()))
+            .collect(toImmutableList());
+
+        return new EnumInfo(enumType.getTypeName(), values);
     }
 
     private static FieldRequirement convertRequirement(byte value) {

@@ -18,6 +18,8 @@ package com.linecorp.armeria.server.auth;
 
 import static java.util.Objects.requireNonNull;
 
+import javax.annotation.Nullable;
+
 /**
  * The bearer token of <a href="https://tools.ietf.org/html/rfc6750">OAuth 2.0 authentication</a>.
  */
@@ -41,7 +43,7 @@ public final class OAuth2Token {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (this == o) {
             return true;
         }

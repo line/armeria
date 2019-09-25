@@ -19,6 +19,8 @@ package com.linecorp.armeria.internal.annotation;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Sets.toImmutableEnumSet;
+import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
+import static com.linecorp.armeria.internal.RouteUtil.ensureAbsolutePath;
 import static com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.toRequestObjectResolvers;
 import static com.linecorp.armeria.internal.annotation.AnnotationUtil.findAll;
 import static com.linecorp.armeria.internal.annotation.AnnotationUtil.findFirst;
@@ -104,6 +106,7 @@ import com.linecorp.armeria.server.annotation.Options;
 import com.linecorp.armeria.server.annotation.Order;
 import com.linecorp.armeria.server.annotation.Patch;
 import com.linecorp.armeria.server.annotation.Path;
+import com.linecorp.armeria.server.annotation.PathPrefix;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.ProduceType;
 import com.linecorp.armeria.server.annotation.Produces;
@@ -255,10 +258,11 @@ public final class AnnotatedHttpServiceFactory {
      * Returns an {@link AnnotatedHttpService} instance defined to {@code method} of {@code object} using
      * {@link Path} annotation.
      */
-    private static AnnotatedHttpServiceElement create(String pathPrefix, Object object, Method method,
-                                                      List<ExceptionHandlerFunction> baseExceptionHandlers,
-                                                      List<RequestConverterFunction> baseRequestConverters,
-                                                      List<ResponseConverterFunction> baseResponseConverters) {
+    @VisibleForTesting
+    static AnnotatedHttpServiceElement create(String pathPrefix, Object object, Method method,
+                                              List<ExceptionHandlerFunction> baseExceptionHandlers,
+                                              List<RequestConverterFunction> baseRequestConverters,
+                                              List<ResponseConverterFunction> baseResponseConverters) {
 
         final Set<Annotation> methodAnnotations = httpMethodAnnotations(method);
         if (methodAnnotations.isEmpty()) {
@@ -270,11 +274,12 @@ public final class AnnotatedHttpServiceFactory {
             throw new IllegalArgumentException(method.getDeclaringClass().getName() + '#' + method.getName() +
                                                " must have an HTTP method annotation.");
         }
-
         final Class<?> clazz = object.getClass();
         final String pattern = findPattern(method, methodAnnotations);
+        final String computedPathPrefix = computePathPrefix(clazz, pathPrefix);
+
         final Route route = Route.builder()
-                                 .pathWithPrefix(pathPrefix, pattern)
+                                 .pathWithPrefix(computedPathPrefix, pattern)
                                  .methods(methods)
                                  .consumes(consumableMediaTypes(method, clazz))
                                  .produces(producibleMediaTypes(method, clazz))
@@ -757,6 +762,22 @@ public final class AnnotatedHttpServiceFactory {
             }
         }
         return null;
+    }
+
+    /**
+     * Returns the path prefix to use. If there is {@link PathPrefix} annotation on the class
+     * then path prefix is computed by concatenating pathPrefix and value from annotation else
+     * returns pathPrefix.
+     */
+    private static String computePathPrefix(Class<?> clazz, String pathPrefix) {
+        ensureAbsolutePath(pathPrefix, "pathPrefix");
+        final Optional<PathPrefix> pathPrefixAnnotation = findFirst(clazz, PathPrefix.class);
+        if (!pathPrefixAnnotation.isPresent()) {
+            return pathPrefix;
+        }
+        final String pathPrefixFromAnnotation = pathPrefixAnnotation.get().value();
+        ensureAbsolutePath(pathPrefixFromAnnotation, "pathPrefixFromAnnotation");
+        return concatPaths(pathPrefix, pathPrefixFromAnnotation);
     }
 
     private AnnotatedHttpServiceFactory() {}

@@ -27,11 +27,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.linecorp.armeria.internal.logging;
+package com.linecorp.armeria.common.util;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.BitSet;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * This sampler is appropriate for low-traffic instrumentation (ex servers that each receive <100K
@@ -46,47 +50,47 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * <p>Forked from brave-core 5.6.3 at d4cbd86e1df75687339da6ec2964d42ab3a8cf14
  */
-final class CountingSampler extends Sampler {
+final class CountingSampler implements Sampler {
 
     /**
      * Creates a new instance.
      *
-     * @param rate 0 means never sample, 1 means always sample. Otherwise minimum sample rate is 0.01,
-     *             or 1% of traces
+     * @param rate {@code 0.0} means never sample, {@code 1.0} means always sample. Otherwise minimum sampling
+     *             rate is between {@code 0.01} and {@code 1.0}.
      */
-    public static Sampler create(final float rate) {
-        if (rate == 0) {
-            return NEVER_SAMPLE;
+    static Sampler create(final double rate) {
+        final int percent = (int) (rate * 100.0);
+        checkArgument(percent >= 0 && percent <= 100,
+                      "rate: %s (expected: 0.0 <= rate <= 1.0)", rate);
+        if (percent == 0) {
+            return Sampler.never();
         }
-        if (rate == 1.0) {
-            return ALWAYS_SAMPLE;
+        if (percent == 100) {
+            return Sampler.always();
         }
-        if (rate < 0.01f || rate > 1) {
-            throw new IllegalArgumentException("rate should be between 0.01 and 1: was " + rate);
-        }
-        return new CountingSampler(rate);
+        return new CountingSampler(percent);
     }
 
     private final AtomicInteger counter;
-    private final BitSet sampleDecisions;
+    @VisibleForTesting
+    final BitSet sampleDecisions;
 
-    /** Fills a bitset with decisions according to the supplied rate. */
-    CountingSampler(float rate) {
-        this(rate, new Random());
+    /** Fills a bitset with decisions according to the supplied percent. */
+    CountingSampler(int percent) {
+        this(percent, new Random());
     }
 
     /**
-     * Fills a bitset with decisions according to the supplied rate with the supplied {@link Random}.
+     * Fills a bitset with decisions according to the supplied percent with the supplied {@link Random}.
      */
-    CountingSampler(float rate, Random random) {
+    CountingSampler(int percent, Random random) {
         counter = new AtomicInteger();
-        int outOf100 = (int) (rate * 100.0f);
-        this.sampleDecisions = randomBitSet(100, outOf100, random);
+        sampleDecisions = randomBitSet(100, percent, random);
     }
 
     /** loops over the pre-canned decisions, resetting to zero when it gets to the end. */
     @Override
-    public boolean isSampled() {
+    public boolean isSampled(Object ignored) {
         return sampleDecisions.get(mod(counter.getAndIncrement(), 100));
     }
 
@@ -99,7 +103,7 @@ final class CountingSampler extends Sampler {
      * Returns a non-negative mod.
      */
     static int mod(int dividend, int divisor) {
-        int result = dividend % divisor;
+        final int result = dividend % divisor;
         return result >= 0 ? result : divisor + result;
     }
 
@@ -108,15 +112,15 @@ final class CountingSampler extends Sampler {
      * "http://stackoverflow.com/questions/12817946/generate-a-random-bitset-with-n-1s">Stack Overflow</a>.
      */
     static BitSet randomBitSet(int size, int cardinality, Random rnd) {
-        BitSet result = new BitSet(size);
-        int[] chosen = new int[cardinality];
+        final BitSet result = new BitSet(size);
+        final int[] chosen = new int[cardinality];
         int i;
         for (i = 0; i < cardinality; ++i) {
             chosen[i] = i;
             result.set(i);
         }
         for (; i < size; ++i) {
-            int j = rnd.nextInt(i + 1);
+            final int j = rnd.nextInt(i + 1);
             if (j < cardinality) {
                 result.clear(chosen[j]);
                 result.set(i);
