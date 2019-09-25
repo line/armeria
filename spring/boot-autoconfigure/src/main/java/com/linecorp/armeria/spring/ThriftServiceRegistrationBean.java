@@ -68,7 +68,7 @@ public class ThriftServiceRegistrationBean
     }
 
     /**
-     * Adds example {@link HttpHeaders}.
+     * Adds an example HTTP header.
      */
     public ThriftServiceRegistrationBean addExampleHeader(CharSequence name, String value) {
         return addExampleHeader(HttpHeaders.of(name, value));

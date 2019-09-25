@@ -74,11 +74,6 @@ public class HttpServiceRegistrationBean
     }
 
     @Override
-    public @NotNull Collection<Object> getExampleRequests() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public HttpServiceRegistrationBean setExampleRequests(@NotNull Collection<Object> exampleRequests) {
         throw new UnsupportedOperationException();
     }
@@ -110,11 +105,6 @@ public class HttpServiceRegistrationBean
 
     @Override
     public HttpServiceRegistrationBean addExampleRequest(@NotNull Object exampleRequest) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public @NotNull Collection<HttpHeaders> getExampleHeaders() {
         throw new UnsupportedOperationException();
     }
 

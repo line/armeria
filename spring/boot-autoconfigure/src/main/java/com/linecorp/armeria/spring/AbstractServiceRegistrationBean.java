@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.spring;
 
-import static java.util.Objects.requireNonNull;
+import static java.util.Objects.*;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -38,6 +38,8 @@ import com.linecorp.armeria.server.docs.DocService;
  *
  * @param <T> the type of the service object to be registered
  * @param <U> the type of the implementation of this bean
+ * @param <V> the type of the example request object to be registered
+ * @param <M> the type of the example header object to be registered
  */
 public class AbstractServiceRegistrationBean<T, U, V, W> {
     /**
@@ -65,13 +67,13 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
      * in each service.
      */
     @NotNull
-    private Collection<V> exampleRequests = new ArrayList<>();
+    private Collection<V> exampleRequests = ImmutableList.of();
 
     /**
      * Example {@link HttpHeaders} being used in debug forms.
      */
     @NotNull
-    private Collection<W> exampleHeaders = new ArrayList<>();
+    private Collection<W> exampleHeaders = ImmutableList.of();
 
     /**
      * Returns the annotated service object registered to this bean.
@@ -149,7 +151,7 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
     }
 
     /**
-     * Returns sample requests of {@link #getService()}.
+     * Returns example requests of {@link #getService()}.
      */
     @NotNull
     public Collection<V> getExampleRequests() {
@@ -157,34 +159,31 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
     }
 
     /**
-     * Sets sample requests for {@link #getService()}.
+     * Sets example requests for {@link #getService()}.
      */
-    public U setExampleRequests(
-            @NotNull Collection<V> exampleRequests) {
+    public U setExampleRequests(@NotNull Collection<V> exampleRequests) {
         this.exampleRequests = exampleRequests;
         return self();
     }
 
     /**
-     * Sets sample requests for {@link #getService()}.
+     * Sets example requests for {@link #getService()}.
      */
-    public U setExampleRequests(
-            @NotNull Iterable<V> exampleRequests) {
+    public U setExampleRequests(@NotNull Iterable<V> exampleRequests) {
         return setExampleRequests(ImmutableList.copyOf(exampleRequests));
     }
 
     /**
-     * Sets sample requests for {@link #getService()}.
+     * Sets example requests for {@link #getService()}.
      */
     public U setExampleRequests(V... exampleRequests) {
         return setExampleRequests(ImmutableList.copyOf(exampleRequests));
     }
 
     /**
-     * Adds sample requests for {@link #getService()}.
+     * Adds example requests for {@link #getService()}.
      */
-    public U addExampleRequests(
-            @NotNull Collection<V> exampleRequests) {
+    public U addExampleRequests(@NotNull Collection<V> exampleRequests) {
         this.exampleRequests = ImmutableList.<V>builder().addAll(this.exampleRequests)
                                                          .addAll(exampleRequests)
                                                          .build();
@@ -192,21 +191,21 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
     }
 
     /**
-     * Adds sample requests for {@link #getService()}.
+     * Adds example requests for {@link #getService()}.
      */
     public U addExampleRequests(@NotNull Iterable<V> exampleRequests) {
         return addExampleRequests(ImmutableList.copyOf(exampleRequests));
     }
 
     /**
-     * Adds sample requests for {@link #getService()}.
+     * Adds example requests for {@link #getService()}.
      */
     public U addExampleRequests(V... exampleRequests) {
         return addExampleRequests(ImmutableList.copyOf(exampleRequests));
     }
 
     /**
-     * Adds a sample request for {@link #getService()}.
+     * Adds an example request for {@link #getService()}.
      */
     public U addExampleRequest(@NotNull V exampleRequest) {
         exampleRequests = ImmutableList.<V>builder().addAll(exampleRequests)
@@ -216,7 +215,7 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
     }
 
     /**
-     * Returns example {@link HttpHeaders}.
+     * Returns example HTTP headers.
      */
     @NotNull
     public Collection<W> getExampleHeaders() {
@@ -224,7 +223,7 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
     }
 
     /**
-     * Sets example {@link HttpHeaders}.
+     * Sets example HTTP headers.
      */
     public U setExampleHeaders(@NotNull Collection<W> exampleHeaders) {
         this.exampleHeaders = exampleHeaders;
@@ -232,21 +231,21 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
     }
 
     /**
-     * Sets example {@link HttpHeaders}.
+     * Sets example HTTP headers.
      */
     public U setExampleHeaders(@NotNull Iterable<W> exampleHeaders) {
         return setExampleHeaders(ImmutableList.copyOf(exampleHeaders));
     }
 
     /**
-     * Sets example {@link HttpHeaders}.
+     * Sets example HTTP headers.
      */
     public U setExampleHeaders(@NotNull W... exampleHeaders) {
         return setExampleHeaders(ImmutableList.copyOf(exampleHeaders));
     }
 
     /**
-     * Adds example {@link HttpHeaders}.
+     * Adds an example HTTP headers.
      */
     public U addExampleHeaders(@NotNull Collection<W> exampleHeaders) {
         this.exampleHeaders = ImmutableList.<W>builder().addAll(this.exampleHeaders)
@@ -256,21 +255,21 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
     }
 
     /**
-     * Adds example {@link HttpHeaders}.
+     * Adds example HTTP headers.
      */
     public U addExampleHeaders(@NotNull Iterable<W> exampleHeaders) {
         return addExampleHeaders(ImmutableList.copyOf(exampleHeaders));
     }
 
     /**
-     * Adds example {@link HttpHeaders}.
+     * Adds example HTTP headers.
      */
     public U addExampleHeaders(W... exampleHeaders) {
         return addExampleHeaders(ImmutableList.copyOf(exampleHeaders));
     }
 
     /**
-     * Adds example {@link HttpHeaders}.
+     * Adds an example HTTP header.
      */
     public U addExampleHeader(W exampleHeaders) {
         this.exampleHeaders = ImmutableList.<W>builder().addAll(this.exampleHeaders)

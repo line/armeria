@@ -26,7 +26,6 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
-import com.linecorp.armeria.server.docs.DocService;
 
 /**
  * A bean with information for registering an annotated service object.
@@ -74,20 +73,6 @@ public class AnnotatedServiceRegistrationBean
      */
     @NotNull
     private Collection<? extends ResponseConverterFunction> responseConverters = new ArrayList<>();
-
-    /**
-     * Sample requests to populate debug forms in {@link DocService}.
-     * This should be a list of request objects which correspond to methods
-     * in this annotated service.
-     */
-    @NotNull
-    private Collection<AnnotatedExampleRequest> exampleRequests = new ArrayList<>();
-
-    /**
-     * Example {@link HttpHeaders} being used in debug forms.
-     */
-    @NotNull
-    private Collection<HttpHeaders> exampleHeaders = new ArrayList<>();
 
     /**
      * Returns the path prefix.
@@ -178,7 +163,7 @@ public class AnnotatedServiceRegistrationBean
     }
 
     /**
-     * Adds a sample request for {@link #getService()}.
+     * Adds an example request for {@link #getService()}.
      */
     public AnnotatedServiceRegistrationBean addExampleRequest(@NotNull String methodName,
                                                               @NotNull Object exampleRequest) {
@@ -186,7 +171,7 @@ public class AnnotatedServiceRegistrationBean
     }
 
     /**
-     * Adds example {@link HttpHeaders}.
+     * Adds an example HTTP header
      */
     public AnnotatedServiceRegistrationBean addExampleHeader(CharSequence name, String value) {
         return addExampleHeader(HttpHeaders.of(name, value));

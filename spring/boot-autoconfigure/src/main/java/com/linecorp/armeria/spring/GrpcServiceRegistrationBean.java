@@ -48,7 +48,7 @@ public class GrpcServiceRegistrationBean
         GrpcServiceRegistrationBean, GrpcExampleRequest, GrpcExampleHeaders> {
 
     /**
-     * Adds a sample request for {@link #getService()}.
+     * Adds an example request for {@link #getService()}.
      */
     public GrpcServiceRegistrationBean addExampleRequest(@NotNull String serviceType,
                                                          @NotNull String methodName,
@@ -57,14 +57,14 @@ public class GrpcServiceRegistrationBean
     }
 
     /**
-     * Adds example {@link GrpcExampleHeaders}.
+     * Adds an example HTTP header.
      */
     public GrpcServiceRegistrationBean addExampleHeader(String serviceType, HttpHeaders headers) {
         return addExampleHeader(GrpcExampleHeaders.of(serviceType, headers));
     }
 
     /**
-     * Adds example {@link GrpcExampleHeaders}.
+     * Adds an example HTTP header.
      */
     public GrpcServiceRegistrationBean addExampleHeader(String serviceType, CharSequence name, String value) {
         return addExampleHeader(GrpcExampleHeaders.of(serviceType, HttpHeaders.of(name, value)));
