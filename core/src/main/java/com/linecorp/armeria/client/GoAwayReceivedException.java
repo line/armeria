@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client;
 
+import com.linecorp.armeria.common.Flags;
+
 /**
  * A {@link RuntimeException} raised when a server sent an
  * <a href="https://httpwg.org/specs/rfc7540.html#GOAWAY">HTTP/2 GOAWAY frame</a> with
@@ -25,16 +27,19 @@ public final class GoAwayReceivedException extends RuntimeException {
 
     private static final long serialVersionUID = -7167601309699030853L;
 
-    private static final GoAwayReceivedException INSTANCE = new GoAwayReceivedException();
+    private static final GoAwayReceivedException INSTANCE = new GoAwayReceivedException(false);
 
     /**
      * Returns a singleton {@link GoAwayReceivedException}.
      */
     public static GoAwayReceivedException get() {
-        return INSTANCE;
+        return Flags.verboseExceptionSampler().isSampled(GoAwayReceivedException.class) ?
+               new GoAwayReceivedException() : INSTANCE;
     }
 
-    private GoAwayReceivedException() {
+    private GoAwayReceivedException() {}
+
+    private GoAwayReceivedException(@SuppressWarnings("unused") boolean dummy) {
         super(null, null, false, false);
     }
 }
