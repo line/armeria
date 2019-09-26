@@ -1,78 +1,110 @@
-import { Input, withStyles } from '@material-ui/core';
-import { createStyles, Theme, WithStyles } from '@material-ui/core/styles';
-import React, { CSSProperties } from 'react';
+import { Input } from '@material-ui/core';
+import React, { useState } from 'react';
 
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
 import TableCell from '@material-ui/core/TableCell';
 import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
-interface ValueType {
-  key: string;
-  value: string;
-  description: string;
+interface Row {
+  key?: string;
+  value?: string;
+  index: number;
 }
 
-const styles = (theme: Theme) =>
-  createStyles({
-    root: {
-      width: '100%',
-      marginTop: theme.spacing(3),
-      overflowX: 'auto',
-      // position: 'relative',
-      // margin: `${theme.spacing(1)}px`,
-      // marginLeft: `${theme.spacing(3)}px`,
-      // minWidth: 300,
-      // width: 800,
-      // backgroundColor: theme.palette.primary.light,
-      // borderRadius: `${theme.spacing(2)}px`,
-    },
-    table: {
-      minWidth: 650,
-    },
-  });
-
-interface KeyValueEditorProps extends WithStyles<typeof styles, true> {}
-interface KeyValueEditorState extends WithStyles<typeof styles, true> {
-  valueList: ValueType[];
+interface RowProps {
+  value?: Row;
+  id: number;
+  onRowChange: (index: number, key: string, value: string) => void;
 }
 
-class KeyValueEditor extends React.Component<
-  KeyValueEditorProps,
-  KeyValueEditorState
-> {
-  public handleUpdate(idx, targetKey, targetValue) {}
+const useKeyValueList = (
+  defaultRow: Row[] | undefined,
+): {
+  rowList: Row[] | undefined;
+  onRowChange: (index: number, key: string, value: string) => void;
+} => {
+  const [rowList, setRowList] = useState(defaultRow);
+  const onRowChange = (index: number, name: string, value: string) => {
+    if (!rowList) return;
+    const _rowList = rowList.slice();
+    _rowList[index] = { ..._rowList[index], [name]: value };
+    setRowList(_rowList);
+  };
+  return {
+    rowList,
+    onRowChange,
+  };
+};
 
-  public render() {
-    const { classes } = this.props;
-    const { valueList } = this.state;
-    return (
-      <Table className={classes.table}>
-        <TableHead>
-          <TableRow>
-            <TableCell>KEY</TableCell>
-            <TableCell>VALUE</TableCell>
-            <TableCell>DESCRIPTION</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {valueList.map((v, i) => (
-            <TableRow key={i}>
-              <TableCell>
-                <Input defaultValue={v.key} />
-              </TableCell>
-              <TableCell>
-                <Input defaultValue={v.value} />
-              </TableCell>
-              <TableCell>
-                <Input defaultValue={v.description} />
-              </TableCell>
-            </TableRow>
+const KeyValueEditorRow: React.FunctionComponent<RowProps> = ({
+  value,
+  id,
+  onRowChange,
+}) => {
+  const [row] = useState<Row>({ ...value, index: id });
+  const onChange = (rkey: string, rvalue: string) => {
+    onRowChange(id, rkey, rvalue);
+  };
+
+  return (
+    <TableRow key={row.index}>
+      <TableCell>
+        <Input
+          value={row.key}
+          onChange={(e) => onChange('key', e.target.value)}
+        />
+      </TableCell>
+      <TableCell>
+        <Input
+          defaultValue={row.value}
+          onChange={(e) => onChange('value', e.target.value)}
+        />
+      </TableCell>
+    </TableRow>
+  );
+};
+
+interface KeyValueEditorProps {
+  defaultKeyValueList?: Row[];
+}
+
+const KeyValueEditor: React.FunctionComponent<KeyValueEditorProps> = ({
+  defaultKeyValueList,
+}) => {
+  const { rowList, onRowChange } = useKeyValueList(
+    defaultKeyValueList || [
+      {
+        index: 0,
+      },
+      {
+        index: 1,
+      },
+    ],
+  );
+
+  return (
+    <Table>
+      <TableHead>
+        <TableRow>
+          <TableCell>KEY</TableCell>
+          <TableCell>VALUE</TableCell>
+          <TableCell>DESCRIPTION</TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {rowList &&
+          rowList.map((v, i) => (
+            <KeyValueEditorRow
+              value={v}
+              key={i}
+              id={i}
+              onRowChange={onRowChange}
+            />
           ))}
-        </TableBody>
-      </Table>
-    );
-  }
-}
+      </TableBody>
+    </Table>
+  );
+};
 
-export default withStyles(styles, { withTheme: true })(KeyValueEditor);
+export default React.memo(KeyValueEditor);
