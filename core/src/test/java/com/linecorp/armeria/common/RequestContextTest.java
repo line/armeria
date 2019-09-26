@@ -312,9 +312,8 @@ public class RequestContextTest {
     public void minimalCompletionStageUsingToCompletableFutureMutable() throws Exception {
         final RequestContext context = createContext(false);
         final CompletableFuture<Integer> originalFuture = new CompletableFuture<>();
-        @SuppressWarnings("unchecked")
         final RequestContextAwareCompletableFuture<Integer> contextAwareFuture =
-                (RequestContextAwareCompletableFuture) context.makeContextAware(originalFuture);
+                (RequestContextAwareCompletableFuture<Integer>) context.makeContextAware(originalFuture);
         final CompletionStage<Integer> completionStage = contextAwareFuture.minimalCompletionStage();
 
         assertThat(contextAwareFuture.complete(1)).isTrue();
@@ -328,9 +327,8 @@ public class RequestContextTest {
     public void minimalCompletionStageUsingWhenComplete() throws Exception {
         final RequestContext context = createContext(false);
         final CompletableFuture<Integer> originalFuture = new CompletableFuture<>();
-        @SuppressWarnings("unchecked")
         final RequestContextAwareCompletableFuture<Integer> contextAwareFuture =
-                (RequestContextAwareCompletableFuture) context.makeContextAware(originalFuture);
+                (RequestContextAwareCompletableFuture<Integer>) context.makeContextAware(originalFuture);
         final CompletionStage<Integer> completionStage = contextAwareFuture.minimalCompletionStage();
 
         AtomicInteger atomicInteger = new AtomicInteger();
@@ -355,9 +353,8 @@ public class RequestContextTest {
     public void makeContextAwareCompletableFutureUsingCompleteAsync() throws Exception {
         final RequestContext context = createContext(false);
         final CompletableFuture<String> originalFuture = new CompletableFuture<>();
-        @SuppressWarnings("unchecked")
         final RequestContextAwareCompletableFuture<String> contextAwareFuture =
-                (RequestContextAwareCompletableFuture) context.makeContextAware(originalFuture);
+                (RequestContextAwareCompletableFuture<String>) context.makeContextAware(originalFuture);
         final CompletableFuture<String> resultFuture = contextAwareFuture.completeAsync(() -> "success");
 
         originalFuture.complete("success");
@@ -370,9 +367,8 @@ public class RequestContextTest {
         final ExecutorService executor = Executors.newFixedThreadPool(2);
         final RequestContext context = createContext(false);
         final CompletableFuture<String> originalFuture = new CompletableFuture<>();
-        @SuppressWarnings("unchecked")
         final RequestContextAwareCompletableFuture<String> contextAwareFuture =
-                (RequestContextAwareCompletableFuture) context.makeContextAware(originalFuture);
+                (RequestContextAwareCompletableFuture<String>) context.makeContextAware(originalFuture);
         final CompletableFuture<String> resultFuture = contextAwareFuture.completeAsync(() -> "success",
                                                                                         executor);
 
