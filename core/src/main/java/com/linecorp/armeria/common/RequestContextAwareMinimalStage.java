@@ -290,7 +290,7 @@ final class RequestContextAwareMinimalStage<T> implements CompletionStage<T> {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                            .add("delegate", delegate)
-                            .toString();
+                          .add("delegate", delegate)
+                          .toString();
     }
 }
