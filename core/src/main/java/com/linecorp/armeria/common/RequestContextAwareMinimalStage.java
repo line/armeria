@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -290,7 +290,7 @@ final class RequestContextAwareMinimalStage<T> implements CompletionStage<T> {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                .add("delegate", delegate)
-                .toString();
+                            .add("delegate", delegate)
+                            .toString();
     }
 }

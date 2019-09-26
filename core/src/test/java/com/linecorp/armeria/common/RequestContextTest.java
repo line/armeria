@@ -309,7 +309,7 @@ public class RequestContextTest {
     }
 
     @Test
-    public void minimalCompletionStageUsingCompleteAsync() throws Exception {
+    public void minimalCompletionStageUsingToCompletableFutureMutable() throws Exception {
         final RequestContext context = createContext(false);
         final CompletableFuture<Integer> originalFuture = new CompletableFuture<>();
         @SuppressWarnings("unchecked")
@@ -317,11 +317,7 @@ public class RequestContextTest {
                 (RequestContextAwareCompletableFuture) context.makeContextAware(originalFuture);
         final CompletionStage<Integer> completionStage = contextAwareFuture.minimalCompletionStage();
 
-        contextAwareFuture.completeAsync(() -> {
-            throw new RuntimeException();
-        });
-        contextAwareFuture.complete(1);
-
+        assertThat(contextAwareFuture.complete(1)).isTrue();
         assertThat(contextAwareFuture.join()).isEqualTo(1);
         assertThat(contextAwareFuture.getNow(null)).isEqualTo(1);
         assertThat(contextAwareFuture.get()).isEqualTo(1);
@@ -378,7 +374,7 @@ public class RequestContextTest {
         final RequestContextAwareCompletableFuture<String> contextAwareFuture =
                 (RequestContextAwareCompletableFuture) context.makeContextAware(originalFuture);
         final CompletableFuture<String> resultFuture = contextAwareFuture.completeAsync(() -> "success",
-                executor);
+                                                                                        executor);
 
         originalFuture.complete("success");
         assertDepth(0);
