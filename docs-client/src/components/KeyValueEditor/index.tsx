@@ -7,9 +7,9 @@ import TableCell from '@material-ui/core/TableCell';
 import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 interface Row {
+  index: number;
   key?: string;
   value?: string;
-  index: number;
 }
 
 interface RowProps {
@@ -26,10 +26,13 @@ const useKeyValueList = (
 } => {
   const [rowList, setRowList] = useState(defaultRow);
   const onRowChange = (index: number, name: string, value: string) => {
-    if (!rowList) return;
-    const _rowList = rowList.slice();
-    _rowList[index] = { ..._rowList[index], [name]: value };
-    setRowList(_rowList);
+    if (rowList) {
+      setRowList(
+        rowList.map((row, i) =>
+          i === index ? { ...row, [name]: value } : row,
+        ),
+      );
+    }
   };
   return {
     rowList,
@@ -72,16 +75,7 @@ interface KeyValueEditorProps {
 const KeyValueEditor: React.FunctionComponent<KeyValueEditorProps> = ({
   defaultKeyValueList,
 }) => {
-  const { rowList, onRowChange } = useKeyValueList(
-    defaultKeyValueList || [
-      {
-        index: 0,
-      },
-      {
-        index: 1,
-      },
-    ],
-  );
+  const { rowList, onRowChange } = useKeyValueList(defaultKeyValueList);
 
   return (
     <Table>
