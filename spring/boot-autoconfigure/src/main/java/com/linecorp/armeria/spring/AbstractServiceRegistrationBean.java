@@ -62,7 +62,7 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
             ? extends Service<HttpRequest, HttpResponse>>> decorators = new ArrayList<>();
 
     /**
-     * Sample requests to populate debug forms in {@link DocService}.
+     * Example requests to populate debug forms in {@link DocService}.
      * This should be a list of request objects which correspond to methods
      * in each service.
      */
