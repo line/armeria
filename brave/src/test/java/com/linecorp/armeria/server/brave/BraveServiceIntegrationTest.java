@@ -22,6 +22,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Optional;
 
+import javax.annotation.Nullable;
+
 import org.junit.After;
 import org.junit.AssumptionViolatedException;
 import org.junit.Test;
@@ -30,30 +32,25 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServiceRequestContext;
 
-import brave.SpanCustomizer;
 import brave.Tracing;
 import brave.Tracing.Builder;
-import brave.http.HttpAdapter;
-import brave.http.HttpServerParser;
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.StrictScopeDecorator;
 import brave.sampler.Sampler;
 import brave.test.http.ITHttpServer;
-import zipkin2.Span;
 
 public class BraveServiceIntegrationTest extends ITHttpServer {
 
+    @Nullable
     private Server server;
 
     // Hide currentTraceContext in ITHttpServer
-    private final CurrentTraceContext currentTraceContext =
+    private final CurrentTraceContext currentTraceContext = super.currentTraceContext =
             RequestContextCurrentTraceContext.builder()
                                              .addScopeDecorator(StrictScopeDecorator.create())
                                              .build();
@@ -75,7 +72,8 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
         });
         sb.service("/foo", (ctx, req) -> HttpResponse.of(OK, MediaType.PLAIN_TEXT_UTF_8, "bar"));
         sb.service("/extra",
-                   (ctx, req) -> HttpResponse.of(OK, MediaType.PLAIN_TEXT_UTF_8, req.headers().get(EXTRA_KEY)));
+                   (ctx, req) -> HttpResponse.of(OK, MediaType.PLAIN_TEXT_UTF_8,
+                                                 String.valueOf(req.headers().get(EXTRA_KEY))));
         sb.service("/badrequest", (ctx, req) -> HttpResponse.of(BAD_REQUEST));
         sb.service("/child", (ctx, req) -> {
             Tracing.currentTracer().nextSpan().name("child").start().finish();
@@ -90,43 +88,6 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
         server.start().join();
     }
 
-    /**
-     * Postpone url to response.
-     */
-    @Override
-    @Test
-    public void supportsPortableCustomization() throws Exception {
-        httpTracing = httpTracing.toBuilder().serverParser(new HttpServerParser() {
-            @Override
-            public <T> void request(HttpAdapter<T, ?> adapter, T req, SpanCustomizer customizer) {
-                customizer.tag("context.visible", String.valueOf(currentTraceContext.get() != null));
-                customizer.tag("request_customizer.is_span", String.valueOf(customizer instanceof brave.Span));
-                if (req instanceof ServiceRequestContext) {
-                    final RequestContext ctx = (ServiceRequestContext) req;
-                    customizer.tag("http.url", ctx.request().uri().toString());
-                }
-            }
-
-            @Override
-            public <T> void response(HttpAdapter<?, T> adapter, T res, Throwable error,
-                                     SpanCustomizer customizer) {
-                super.response(adapter, res, error, customizer);
-                customizer.tag("response_customizer.is_span", String.valueOf(customizer instanceof brave.Span));
-            }
-        }).build();
-        init();
-
-        final String uri = "/foo?z=2&yAA=1";
-        get(uri);
-
-        final Span span = takeSpan();
-        assertThat(span.tags())
-                .containsEntry("http.url", url(uri))
-                .containsEntry("context.visible", "true")
-                .containsEntry("request_customizer.is_span", "false")
-                .containsEntry("response_customizer.is_span", "false");
-    }
-
     @Override
     @Test
     public void notFound() {
@@ -135,11 +96,14 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
 
     @After
     public void stopServer() {
-        server.stop().join();
+        if (server != null) {
+            server.stop();
+        }
     }
 
     @Override
     protected String url(String path) {
+        assertThat(server).isNotNull();
         final int port = server.activePorts().values().stream()
                                .filter(p1 -> p1.hasProtocol(SessionProtocol.HTTP)).findAny()
                                .flatMap(p -> Optional.of(p.localAddress().getPort()))
