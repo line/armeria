@@ -331,8 +331,8 @@ public class RequestContextTest {
                 (RequestContextAwareCompletableFuture<Integer>) context.makeContextAware(originalFuture);
         final CompletionStage<Integer> completionStage = contextAwareFuture.minimalCompletionStage();
 
-        AtomicInteger atomicInteger = new AtomicInteger();
-        AtomicReference<Throwable> causeCaptor = new AtomicReference<>();
+        final AtomicInteger atomicInteger = new AtomicInteger();
+        final AtomicReference<Throwable> causeCaptor = new AtomicReference<>();
         completionStage.whenComplete((result, error) -> {
             if (error != null) {
                 causeCaptor.set(error);
