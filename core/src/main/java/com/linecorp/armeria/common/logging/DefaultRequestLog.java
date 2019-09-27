@@ -53,6 +53,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -600,6 +601,10 @@ public class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         this.requestContent = requestContent;
         this.rawRequestContent = rawRequestContent;
         updateAvailability(REQUEST_CONTENT);
+
+        if (requestContent instanceof RpcRequest && ctx.rpcRequest() == null) {
+            ctx.updateRpcRequest((RpcRequest) requestContent);
+        }
     }
 
     @Override

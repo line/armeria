@@ -36,9 +36,9 @@ public class StickyEndpointSelectionStrategyTest {
     private static final String STICKY_HEADER_NAME = "USER_COOKIE";
 
     final ToLongFunction<ClientRequestContext> hasher = (ClientRequestContext ctx) -> {
-        return ((HttpRequest) ctx.request()).headers()
-                                            .get(HttpHeaderNames.of(STICKY_HEADER_NAME))
-                                            .hashCode();
+        return ctx.request().headers()
+                  .get(HttpHeaderNames.of(STICKY_HEADER_NAME))
+                  .hashCode();
     };
 
     final StickyEndpointSelectionStrategy strategy = new StickyEndpointSelectionStrategy(hasher);

@@ -442,16 +442,12 @@ public class RequestContextTest {
     private class DummyRequestContext extends NonWrappingRequestContext {
         DummyRequestContext() {
             super(NoopMeterRegistry.get(), SessionProtocol.HTTP,
-                  HttpMethod.GET, "/", null, HttpRequest.streaming(HttpMethod.GET, "/"));
+                  HttpMethod.GET, "/", null, HttpRequest.streaming(HttpMethod.GET, "/"), null);
         }
 
         @Override
-        public RequestContext newDerivedContext() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public RequestContext newDerivedContext(Request request) {
+        public RequestContext newDerivedContext(@Nullable HttpRequest req,
+                                                @Nullable RpcRequest rpcReq) {
             throw new UnsupportedOperationException();
         }
 

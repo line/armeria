@@ -24,9 +24,11 @@ import javax.net.ssl.SSLSession;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.ChannelUtil;
@@ -183,6 +185,9 @@ public interface RequestLogBuilder {
 
     /**
      * Sets the {@link RequestLog#requestContent()} and the {@link RequestLog#rawRequestContent()}.
+     * If the specified {@code requestContent} is a {@link RpcRequest} and
+     * the {@link RequestContext#rpcRequest()} is {@code null}, this method will call
+     * {@link RequestContext#updateRpcRequest(RpcRequest)}.
      */
     void requestContent(@Nullable Object requestContent, @Nullable Object rawRequestContent);
 

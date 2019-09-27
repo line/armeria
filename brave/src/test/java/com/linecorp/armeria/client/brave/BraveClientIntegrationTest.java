@@ -36,18 +36,18 @@ import com.linecorp.armeria.client.ClientDecorationBuilder;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
-import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
-import com.linecorp.armeria.internal.brave.SpanTags;
 
 import brave.SpanCustomizer;
 import brave.Tracing.Builder;
@@ -153,7 +153,7 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
     @Override
     @Test
     public void supportsPortableCustomization() throws Exception {
-        String uri = "/foo?z=2&yAA=1";
+        final String uri = "/foo?z=2&yAA=1";
 
         close();
         httpTracing =
@@ -168,6 +168,10 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
                                                   String.valueOf(currentTraceContext.get() != null));
                                    customizer.tag("request_customizer.is_span",
                                                   String.valueOf(customizer instanceof brave.Span));
+                                   if (req instanceof ClientRequestContext) {
+                                       final ClientRequestContext ctx = (ClientRequestContext) req;
+                                       customizer.tag("http.url", ctx.request().uri().toString());
+                                   }
                                }
 
                                @Override
@@ -175,11 +179,6 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
                                                         Throwable error,
                                                         SpanCustomizer customizer) {
                                    super.response(adapter, res, error, customizer);
-                                   // TODO: make this possible at request scope https://github.com/line/armeria/issues/2089
-                                   if (res instanceof RequestContext) {
-                                       final RequestContext ctx = (RequestContext) res;
-                                       customizer.tag("http.url", SpanTags.generateUrl(ctx.log()));
-                                   }
                                    customizer.tag("response_customizer.is_span",
                                                   String.valueOf(customizer instanceof brave.Span));
                                }
@@ -222,19 +221,15 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
         client.get(pathIncludingQuery);
     }
 
-    private class DummyRequestContext extends NonWrappingRequestContext {
+    private static class DummyRequestContext extends NonWrappingRequestContext {
         DummyRequestContext() {
             super(NoopMeterRegistry.get(), SessionProtocol.HTTP,
-                  HttpMethod.GET, "/", null, HttpRequest.streaming(HttpMethod.GET, "/"));
+                  HttpMethod.GET, "/", null, HttpRequest.streaming(HttpMethod.GET, "/"), null);
         }
 
         @Override
-        public RequestContext newDerivedContext() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public RequestContext newDerivedContext(Request request) {
+        public RequestContext newDerivedContext(@Nullable HttpRequest req,
+                                                @Nullable RpcRequest rpcReq) {
             throw new UnsupportedOperationException();
         }
 

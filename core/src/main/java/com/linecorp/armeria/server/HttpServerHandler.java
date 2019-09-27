@@ -49,11 +49,11 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.ProtocolViolationException;
-import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -565,7 +565,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         assert resContent == null || !resContent.isEmpty() : resContent;
 
         // No need to consume further since the response is ready.
-        final DecodedHttpRequest req = reqCtx.request();
+        final DecodedHttpRequest req = (DecodedHttpRequest) reqCtx.request();
+        assert req != null;
         req.close();
 
         final boolean hasContent = resContent != null;
@@ -684,22 +685,18 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         EarlyRespondingRequestContext(Channel channel, MeterRegistry meterRegistry,
                                       SessionProtocol sessionProtocol, HttpMethod method, String path,
-                                      @Nullable String query, Request request) {
-            super(meterRegistry, sessionProtocol, method, path, query, request);
+                                      @Nullable String query, HttpRequest request) {
+            super(meterRegistry, sessionProtocol, method, path, query, request, null);
             this.channel = requireNonNull(channel, "channel");
             requestLog = new DefaultRequestLog(this);
         }
 
         @Override
-        public RequestContext newDerivedContext() {
-            return newDerivedContext(request());
-        }
-
-        @Override
-        public RequestContext newDerivedContext(Request request) {
+        public RequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
             // There are no attributes which should be copied to a new instance.
+            requireNonNull(req, "req");
             return new EarlyRespondingRequestContext(channel, meterRegistry(), sessionProtocol(),
-                                                     method(), path(), query(), request);
+                                                     method(), path(), query(), req);
         }
 
         @Override
