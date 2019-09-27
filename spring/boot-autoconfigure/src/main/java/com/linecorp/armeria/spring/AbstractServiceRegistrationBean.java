@@ -39,7 +39,7 @@ import com.linecorp.armeria.server.docs.DocService;
  * @param <T> the type of the service object to be registered
  * @param <U> the type of the implementation of this bean
  * @param <V> the type of the example request object to be registered
- * @param <M> the type of the example header object to be registered
+ * @param <W> the type of the example header object to be registered
  */
 public class AbstractServiceRegistrationBean<T, U, V, W> {
     /**
