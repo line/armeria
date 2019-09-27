@@ -39,34 +39,50 @@ import com.linecorp.armeria.server.ServiceWithRoutes;
  * >             .addExampleRequest(GrpcExampleRequest.of(HelloServiceGrpc.SERVICE_NAME,
  * >                                                      "Hello",
  * >                                                      HelloRequest.newBuilder().setName("Armeria").build()))
- * >             .addExampleHeader(HttpHeaders.of("my-header", "headerVal"));
+ * >             .addExampleHeader(GrpcExampleHeader.of(HelloServiceGrpc.SERVICE_NAME,
+ * >                                                    HttpHeaders.of("my-header", "headerVal")));
  * > }
  * }</pre>
  */
 public class GrpcServiceRegistrationBean
         extends AbstractServiceRegistrationBean<ServiceWithRoutes<HttpRequest, HttpResponse>,
-        GrpcServiceRegistrationBean, GrpcExampleRequest, GrpcExampleHeaders> {
+        GrpcServiceRegistrationBean, GrpcExampleRequest, GrpcExampleHeader> {
 
     /**
      * Adds an example request for {@link #getService()}.
      */
-    public GrpcServiceRegistrationBean addExampleRequest(@NotNull String serviceType,
-                                                         @NotNull String methodName,
-                                                         @NotNull Object exampleRequest) {
-        return addExampleRequest(GrpcExampleRequest.of(serviceType, methodName, exampleRequest));
+    public GrpcServiceRegistrationBean addExampleRequest(String serviceName, String methodName,
+                                                         Object exampleRequest) {
+        return addExampleRequest(GrpcExampleRequest.of(serviceName, methodName, exampleRequest));
     }
 
     /**
      * Adds an example HTTP header.
      */
-    public GrpcServiceRegistrationBean addExampleHeader(String serviceType, HttpHeaders headers) {
-        return addExampleHeader(GrpcExampleHeaders.of(serviceType, headers));
+    public GrpcServiceRegistrationBean addExampleHeader(String serviceName, HttpHeaders exampleHeaders) {
+        return addExampleHeader(GrpcExampleHeader.of(serviceName, exampleHeaders));
     }
 
     /**
      * Adds an example HTTP header.
      */
-    public GrpcServiceRegistrationBean addExampleHeader(String serviceType, CharSequence name, String value) {
-        return addExampleHeader(GrpcExampleHeaders.of(serviceType, HttpHeaders.of(name, value)));
+    public GrpcServiceRegistrationBean addExampleHeader(String serviceName, CharSequence name, String value) {
+        return addExampleHeader(GrpcExampleHeader.of(serviceName, name, value));
+    }
+
+    /**
+     * Adds an example HTTP header for the method.
+     */
+    public GrpcServiceRegistrationBean addExampleHeader(
+            String serviceName, String methodName, CharSequence name, String value) {
+        return addExampleHeader(GrpcExampleHeader.of(serviceName, methodName, name, value));
+    }
+
+    /**
+     * Adds an example HTTP header for the method.
+     */
+    public GrpcServiceRegistrationBean addExampleHeader(
+            String serviceName, String methodName, HttpHeaders exampleHeaders) {
+        return addExampleHeader(GrpcExampleHeader.of(serviceName, methodName, exampleHeaders));
     }
 }

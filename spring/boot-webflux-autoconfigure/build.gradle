@@ -32,6 +32,7 @@ dependencies {
 task copyFiles(type: Copy) {
     from "${rootProject.projectDir}/spring/boot-autoconfigure/src/main/java"
     into "${project.ext.genSrcDir}/main/java"
+    include '**/*ExampleHeader.java'
     include '**/*ExampleRequest.java'
     include '**/*RegistrationBean.java'
     include '**/ArmeriaConfigurationUtil.java'
@@ -39,7 +40,6 @@ task copyFiles(type: Copy) {
     include '**/ArmeriaSettings.java'
     include '**/CustomAlias*KeyManager*.java'
     include '**/DropwizardSupport.java'
-    include '**/GrpcExampleHeaders.java'
     include '**/MeterIdPrefixFunctionFactory.java'
     include '**/PrometheusSupport.java'
     include '**/Ssl.java'

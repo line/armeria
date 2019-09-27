@@ -102,7 +102,8 @@ public class ArmeriaAutoConfigurationTest {
                     .setRequestConverters(ImmutableList.of(new StringRequestConverterFunction()))
                     .setResponseConverters(ImmutableList.of(new StringResponseConverter()))
                     .addExampleRequest("post", "{\"foo\":\"bar\"}")
-                    .addExampleHeader("x-additional-header", "headerVal");
+                    .addExampleHeader("x-additional-header", "headerVal")
+                    .addExampleHeader("get", "x-additional-header", "headerVal");
         }
 
         @Bean
@@ -113,7 +114,8 @@ public class ArmeriaAutoConfigurationTest {
                     .setPath("/thrift")
                     .setDecorators(ImmutableList.of(LoggingService.newDecorator()))
                     .addExampleRequest(new hello_args("nameVal"))
-                    .addExampleHeader("x-additional-header", "headerVal");
+                    .addExampleHeader("x-additional-header", "headerVal")
+                    .addExampleHeader("hello", "x-additional-header", "headerVal");
         }
 
         @Bean
@@ -129,7 +131,9 @@ public class ArmeriaAutoConfigurationTest {
                     .addExampleRequest(HelloServiceGrpc.SERVICE_NAME,
                                        "Hello",
                                        HelloRequest.newBuilder().setName("Armeria").build())
-                    .addExampleHeader(HelloServiceGrpc.SERVICE_NAME, "x-additional-header", "headerVal");
+                    .addExampleHeader(HelloServiceGrpc.SERVICE_NAME, "x-additional-header", "headerVal")
+                    .addExampleHeader(HelloServiceGrpc.SERVICE_NAME, "Hello", "x-additional-header",
+                                      "headerVal");
         }
     }
 
@@ -245,6 +249,9 @@ public class ArmeriaAutoConfigurationTest {
                 .node("services[0].methods[2].exampleRequests[0]").isStringEqualTo("{\"foo\":\"bar\"}");
         assertThatJson(res.contentUtf8())
                 .node("services[0].exampleHttpHeaders[0].x-additional-header").isStringEqualTo("headerVal");
+        assertThatJson(res.contentUtf8())
+                .node("services[0].methods[0].exampleHttpHeaders[0].x-additional-header")
+                .isStringEqualTo("headerVal");
     }
 
     @Test
@@ -263,6 +270,9 @@ public class ArmeriaAutoConfigurationTest {
                 "com.linecorp.armeria.spring.test.thrift.main.HelloService");
         assertThatJson(res.contentUtf8())
                 .node("services[2].exampleHttpHeaders[0].x-additional-header").isStringEqualTo("headerVal");
+        assertThatJson(res.contentUtf8())
+                .node("services[0].methods[0].exampleHttpHeaders[0].x-additional-header")
+                .isStringEqualTo("headerVal");
     }
 
     @Test
@@ -283,6 +293,9 @@ public class ArmeriaAutoConfigurationTest {
                 "com.linecorp.armeria.spring.test.grpc.main.HelloService");
         assertThatJson(res.contentUtf8())
                 .node("services[1].exampleHttpHeaders[0].x-additional-header").isStringEqualTo("headerVal");
+        assertThatJson(res.contentUtf8())
+                .node("services[1].methods[0].exampleHttpHeaders[0].x-additional-header")
+                .isStringEqualTo("headerVal");
     }
 
     @Test

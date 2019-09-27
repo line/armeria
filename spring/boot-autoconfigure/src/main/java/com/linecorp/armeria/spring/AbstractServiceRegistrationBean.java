@@ -176,7 +176,7 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
     /**
      * Sets example requests for {@link #getService()}.
      */
-    public U setExampleRequests(V... exampleRequests) {
+    public U setExampleRequests(@NotNull V... exampleRequests) {
         return setExampleRequests(ImmutableList.copyOf(exampleRequests));
     }
 
@@ -200,7 +200,7 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
     /**
      * Adds example requests for {@link #getService()}.
      */
-    public U addExampleRequests(V... exampleRequests) {
+    public U addExampleRequests(@NotNull V... exampleRequests) {
         return addExampleRequests(ImmutableList.copyOf(exampleRequests));
     }
 
@@ -264,14 +264,14 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
     /**
      * Adds example HTTP headers.
      */
-    public U addExampleHeaders(W... exampleHeaders) {
+    public U addExampleHeaders(@NotNull W... exampleHeaders) {
         return addExampleHeaders(ImmutableList.copyOf(exampleHeaders));
     }
 
     /**
      * Adds an example HTTP header.
      */
-    public U addExampleHeader(W exampleHeaders) {
+    public U addExampleHeader(@NotNull W exampleHeaders) {
         this.exampleHeaders = ImmutableList.<W>builder().addAll(this.exampleHeaders)
                                                         .add(exampleHeaders)
                                                         .build();

@@ -37,13 +37,13 @@ import com.linecorp.armeria.server.docs.DocService;
  * >             .setService(new MyThriftService())
  * >             .setDecorators(LoggingService.newDecorator())
  * >             .addExampleRequest(new MyThriftService.hello_args("Armeria"))
- * >             .addExampleHeader(HttpHeaders.of(AUTHORIZATION, "bearer b03c4fed1a"));
+ * >             .addExampleHeader(ExampleHeader.of(AUTHORIZATION, "bearer b03c4fed1a"));
  * > }
  * }</pre>
  */
 public class ThriftServiceRegistrationBean
         extends AbstractServiceRegistrationBean<Service<HttpRequest, HttpResponse>,
-        ThriftServiceRegistrationBean, TBase<?, ?>, HttpHeaders> {
+        ThriftServiceRegistrationBean, TBase<?, ?>, ExampleHeader> {
 
     /**
      * The url path to register the service at. If not specified, defaults to {@code /api}.
@@ -71,6 +71,20 @@ public class ThriftServiceRegistrationBean
      * Adds an example HTTP header.
      */
     public ThriftServiceRegistrationBean addExampleHeader(CharSequence name, String value) {
-        return addExampleHeader(HttpHeaders.of(name, value));
+        return addExampleHeader(ExampleHeader.of(HttpHeaders.of(name, value)));
+    }
+
+    /**
+     * Adds an example HTTP header for the method.
+     */
+    public ThriftServiceRegistrationBean addExampleHeader(String methodName, HttpHeaders exampleHeaders) {
+        return addExampleHeader(ExampleHeader.of(methodName, exampleHeaders));
+    }
+
+    /**
+     * Adds an example HTTP header for the method.
+     */
+    public ThriftServiceRegistrationBean addExampleHeader(String methodName, CharSequence name, String value) {
+        return addExampleHeader(ExampleHeader.of(methodName, HttpHeaders.of(name, value)));
     }
 }
