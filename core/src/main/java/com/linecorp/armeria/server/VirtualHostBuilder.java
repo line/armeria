@@ -38,6 +38,7 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 
 import org.slf4j.Logger;
@@ -62,6 +63,7 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
@@ -828,6 +830,14 @@ public final class VirtualHostBuilder {
             }
         }
 
+        if (sslContext != null) {
+            try {
+                validateSslContext(sslContext);
+            } catch (Exception e) {
+                throw new RuntimeException("failed to validate SSL/TLS configuration", e);
+            }
+        }
+
         final Function<VirtualHost, Logger> accessLoggerMapper =
                 this.accessLoggerMapper != null ? this.accessLoggerMapper : serverBuilder.accessLoggerMapper();
 
@@ -839,6 +849,19 @@ public final class VirtualHostBuilder {
                                 responseContentPreviewerFactory, accessLogWriter,
                                 shutdownAccessLogWriterOnStop);
         return decorator != null ? virtualHost.decorate(decorator) : virtualHost;
+    }
+
+    void validateSslContext(SslContext sslContext) throws SSLException {
+        SSLEngine engine = sslContext.newEngine(ByteBufAllocator.DEFAULT);
+        engine.setUseClientMode(false);
+
+        if (engine.getEnabledProtocols().length == 0) {
+            throw new RuntimeException("failed to enable protocols");
+        }
+
+        if (engine.getEnabledCipherSuites().length == 0) {
+            throw new RuntimeException("failed to enable cipher suites");
+        }
     }
 
     @Override
