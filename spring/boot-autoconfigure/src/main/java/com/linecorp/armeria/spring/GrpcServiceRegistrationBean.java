@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.spring;
 
-import javax.validation.constraints.NotNull;
-
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
