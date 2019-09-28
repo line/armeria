@@ -15,9 +15,13 @@
  */
 package com.linecorp.armeria.spring;
 
+import java.util.Collection;
+
 import javax.validation.constraints.NotNull;
 
 import org.apache.thrift.TBase;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
@@ -86,5 +90,30 @@ public class ThriftServiceRegistrationBean
      */
     public ThriftServiceRegistrationBean addExampleHeader(String methodName, CharSequence name, String value) {
         return addExampleHeader(ExampleHeader.of(methodName, HttpHeaders.of(name, value)));
+    }
+
+    /**
+     * Adds example HTTP headers for the method.
+     */
+    public ThriftServiceRegistrationBean addExampleHeader(String methodName,
+                                                          @NotNull Collection<HttpHeaders> exampleHeaders) {
+        exampleHeaders.forEach(h -> addExampleHeader(methodName, h));
+        return this;
+    }
+
+    /**
+     * Adds example HTTP headers for the method.
+     */
+    public ThriftServiceRegistrationBean addExampleHeader(String methodName,
+                                                          @NotNull Iterable<HttpHeaders> exampleHeaders) {
+        return addExampleHeader(methodName, ImmutableList.copyOf(exampleHeaders));
+    }
+
+    /**
+     * Adds example HTTP headers for the method.
+     */
+    public ThriftServiceRegistrationBean addExampleHeader(String methodName,
+                                                          @NotNull HttpHeaders... exampleHeaders) {
+        return addExampleHeader(methodName, ImmutableList.copyOf(exampleHeaders));
     }
 }

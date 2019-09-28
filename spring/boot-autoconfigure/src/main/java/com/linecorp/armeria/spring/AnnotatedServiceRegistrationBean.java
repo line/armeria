@@ -191,4 +191,29 @@ public class AnnotatedServiceRegistrationBean
                                                              String value) {
         return addExampleHeader(ExampleHeader.of(methodName, name, value));
     }
+
+    /**
+     * Adds example HTTP headers for the method.
+     */
+    public AnnotatedServiceRegistrationBean addExampleHeader(String methodName,
+                                                             @NotNull Collection<HttpHeaders> exampleHeaders) {
+        exampleHeaders.forEach(h -> addExampleHeader(methodName, h));
+        return this;
+    }
+
+    /**
+     * Adds example HTTP headers for the method.
+     */
+    public AnnotatedServiceRegistrationBean addExampleHeader(String methodName,
+                                                             @NotNull Iterable<HttpHeaders> exampleHeaders) {
+        return addExampleHeader(methodName, ImmutableList.copyOf(exampleHeaders));
+    }
+
+    /**
+     * Adds example HTTP headers for the method.
+     */
+    public AnnotatedServiceRegistrationBean addExampleHeader(String methodName,
+                                                             @NotNull HttpHeaders... exampleHeaders) {
+        return addExampleHeader(methodName, ImmutableList.copyOf(exampleHeaders));
+    }
 }

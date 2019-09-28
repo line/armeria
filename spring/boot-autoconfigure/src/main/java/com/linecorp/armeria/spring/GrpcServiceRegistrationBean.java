@@ -15,6 +15,12 @@
  */
 package com.linecorp.armeria.spring;
 
+import java.util.Collection;
+
+import javax.validation.constraints.NotNull;
+
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -82,5 +88,30 @@ public class GrpcServiceRegistrationBean
     public GrpcServiceRegistrationBean addExampleHeader(
             String serviceName, String methodName, HttpHeaders exampleHeaders) {
         return addExampleHeader(GrpcExampleHeader.of(serviceName, methodName, exampleHeaders));
+    }
+
+    /**
+     * Adds example HTTP headers for the method.
+     */
+    public GrpcServiceRegistrationBean addExampleHeader(
+            String serviceName, String methodName, @NotNull Collection<HttpHeaders> exampleHeaders) {
+        exampleHeaders.forEach(h -> addExampleHeader(serviceName, methodName, h));
+        return this;
+    }
+
+    /**
+     * Adds example HTTP headers for the method.
+     */
+    public GrpcServiceRegistrationBean addExampleHeader(
+            String serviceName, String methodName, @NotNull Iterable<HttpHeaders> exampleHeaders) {
+        return addExampleHeader(serviceName, methodName, ImmutableList.copyOf(exampleHeaders));
+    }
+
+    /**
+     * Adds example HTTP headers for the method.
+     */
+    public GrpcServiceRegistrationBean addExampleHeader(
+            String serviceName, String methodName, @NotNull HttpHeaders... exampleHeaders) {
+        return addExampleHeader(serviceName, methodName, ImmutableList.copyOf(exampleHeaders));
     }
 }
