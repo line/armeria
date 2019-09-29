@@ -110,7 +110,7 @@ public final class HttpFileService extends AbstractHttpService {
 
     HttpFileService(HttpFileServiceConfig config) {
         this.config = requireNonNull(config, "config");
-        if (config.maxCacheEntries() != 0) {
+        if (config.entryCacheSpec().isPresent()) {
             cache = newCache(config);
         } else {
             cache = null;
@@ -118,9 +118,8 @@ public final class HttpFileService extends AbstractHttpService {
     }
 
     private static Cache<PathAndEncoding, AggregatedHttpFile> newCache(HttpFileServiceConfig config) {
-        final Caffeine<Object, Object> b = Caffeine.newBuilder();
-        b.maximumSize(config.maxCacheEntries())
-         .recordStats()
+        final Caffeine<Object, Object> b = Caffeine.from(config.entryCacheSpec().get());
+        b.recordStats()
          .removalListener((RemovalListener<PathAndEncoding, AggregatedHttpFile>) (key, value, cause) -> {
              if (value != null) {
                  final HttpData content = value.content();

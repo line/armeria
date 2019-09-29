@@ -20,9 +20,11 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Clock;
 import java.util.Map.Entry;
+import java.util.Optional;
 
 import javax.annotation.Nullable;
 
+import com.github.benmanes.caffeine.cache.CaffeineSpec;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.HttpHeaders;
@@ -36,25 +38,42 @@ public final class HttpFileServiceConfig {
 
     private final HttpVfs vfs;
     private final Clock clock;
-    private final int maxCacheEntries;
+    private final Optional<String> entryCacheSpec;
     private final int maxCacheEntrySizeBytes;
     private final boolean serveCompressedFiles;
     private final boolean autoIndex;
     private final HttpHeaders headers;
 
-    HttpFileServiceConfig(HttpVfs vfs, Clock clock, int maxCacheEntries, int maxCacheEntrySizeBytes,
+    HttpFileServiceConfig(HttpVfs vfs, Clock clock, Optional<String> entryCacheSpec, int maxCacheEntrySizeBytes,
                           boolean serveCompressedFiles, boolean autoIndex, HttpHeaders headers) {
         this.vfs = requireNonNull(vfs, "vfs");
         this.clock = requireNonNull(clock, "clock");
-        this.maxCacheEntries = validateMaxCacheEntries(maxCacheEntries);
+        this.entryCacheSpec = validateEntryCacheSpec(entryCacheSpec);
         this.maxCacheEntrySizeBytes = validateMaxCacheEntrySizeBytes(maxCacheEntrySizeBytes);
         this.serveCompressedFiles = serveCompressedFiles;
         this.autoIndex = autoIndex;
         this.headers = requireNonNull(headers, "headers");
     }
 
-    static int validateMaxCacheEntries(int maxCacheEntries) {
-        return validateNonNegativeParameter(maxCacheEntries, "maxCacheEntries");
+    static Optional<String> validateEntryCacheSpec(Optional<String> entryCacheSpec) {
+        if (!entryCacheSpec.isPresent() || "off".equals(entryCacheSpec.get())) {
+            return Optional.empty();
+        }
+        try {
+            CaffeineSpec.parse(entryCacheSpec.get());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("invalid cache spec. entryCacheSpec=" + entryCacheSpec, e);
+        }
+        return entryCacheSpec;
+    }
+
+    @Deprecated
+    static Optional<String> validateMaxCacheEntries(int maxCacheEntries) {
+        if (maxCacheEntries == 0) {
+            return Optional.empty();
+        }
+        return Optional.of(String.format("maximumSize=%d",
+                                         validateNonNegativeParameter(maxCacheEntries, "maxCacheEntries")));
     }
 
     static int validateMaxCacheEntrySizeBytes(int maxCacheEntrySizeBytes) {
@@ -83,10 +102,10 @@ public final class HttpFileServiceConfig {
     }
 
     /**
-     * Returns the maximum allowed number of cached file entries.
+     * Returns the cache spec for file entry cache.
      */
-    public int maxCacheEntries() {
-        return maxCacheEntries;
+    public Optional<String> entryCacheSpec() {
+        return entryCacheSpec;
     }
 
     /**
@@ -121,19 +140,19 @@ public final class HttpFileServiceConfig {
 
     @Override
     public String toString() {
-        return toString(this, vfs(), clock(), maxCacheEntries(), maxCacheEntrySizeBytes(),
+        return toString(this, vfs(), clock(), entryCacheSpec(), maxCacheEntrySizeBytes(),
                         serveCompressedFiles(), autoIndex(), headers());
     }
 
     static String toString(Object holder, HttpVfs vfs, Clock clock,
-                           int maxCacheEntries, int maxCacheEntrySizeBytes,
+                           Optional<String> entryCacheSpec, int maxCacheEntrySizeBytes,
                            boolean serveCompressedFiles, boolean autoIndex,
                            @Nullable Iterable<Entry<AsciiString, String>> headers) {
 
         return MoreObjects.toStringHelper(holder).omitNullValues()
                           .add("vfs", vfs)
                           .add("clock", clock)
-                          .add("maxCacheEntries", maxCacheEntries)
+                          .add("entryCacheSpec", entryCacheSpec)
                           .add("maxCacheEntrySizeBytes", maxCacheEntrySizeBytes)
                           .add("serveCompressedFiles", serveCompressedFiles)
                           .add("autoIndex", autoIndex)
