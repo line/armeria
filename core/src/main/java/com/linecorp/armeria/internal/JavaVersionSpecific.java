@@ -16,10 +16,13 @@
 
 package com.linecorp.armeria.internal;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.linecorp.armeria.common.RequestContext;
 
 /**
  * Contains APIs that are implemented differently based on the version of Java being run. This class implements
@@ -55,5 +58,12 @@ public class JavaVersionSpecific {
      */
     public long currentTimeMicros() {
         return TimeUnit.MILLISECONDS.toMicros(System.currentTimeMillis());
+    }
+
+    /**
+     * Returns a {@link CompletableFuture} which executes all callbacks with the {@link RequestContext}.
+     */
+    public <T> CompletableFuture<T> newRequestContextCompletableFuture(RequestContext ctx) {
+        return new RequestContextAwareCompletableFuture<>(ctx);
     }
 }

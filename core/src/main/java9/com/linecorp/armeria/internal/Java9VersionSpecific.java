@@ -18,7 +18,10 @@ package com.linecorp.armeria.internal;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+
+import com.linecorp.armeria.common.RequestContext;
 
 /**
  * Implementation of {@link JavaVersionSpecific} using Java 9 APIs.
@@ -35,5 +38,10 @@ class Java9VersionSpecific extends JavaVersionSpecific {
         final Instant now = Clock.systemUTC().instant();
         return TimeUnit.SECONDS.toMicros(now.getEpochSecond()) + TimeUnit.NANOSECONDS.toMicros(
                 now.getNano());
+    }
+
+    @Override
+    public <T> CompletableFuture<T> newRequestContextCompletableFuture(RequestContext ctx) {
+        return new Java9RequestContextAwareCompletableFuture<>(ctx);
     }
 }

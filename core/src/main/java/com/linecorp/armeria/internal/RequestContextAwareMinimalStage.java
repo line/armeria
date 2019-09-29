@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.internal;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -131,7 +131,7 @@ final class RequestContextAwareMinimalStage<T> implements CompletionStage<T> {
                                                          Executor executor) {
         return new RequestContextAwareMinimalStage(
                 (RequestContextAwareCompletableFuture<Void>) delegate.thenAcceptBothAsync(other, action,
-                                                                                          executor));
+                                                                                                                      executor));
     }
 
     @Override
@@ -151,7 +151,7 @@ final class RequestContextAwareMinimalStage<T> implements CompletionStage<T> {
                                                    Executor executor) {
         return new RequestContextAwareMinimalStage(
                 (RequestContextAwareCompletableFuture<Void>) delegate.runAfterBothAsync(other, action,
-                                                                                        executor));
+                                                                                                                    executor));
     }
 
     @Override
@@ -195,7 +195,7 @@ final class RequestContextAwareMinimalStage<T> implements CompletionStage<T> {
                                                    Consumer<? super T> action, Executor executor) {
         return new RequestContextAwareMinimalStage(
                 (RequestContextAwareCompletableFuture<Void>) delegate.acceptEitherAsync(other, action,
-                                                                                        executor));
+                                                                                                                    executor));
     }
 
     @Override
@@ -216,7 +216,7 @@ final class RequestContextAwareMinimalStage<T> implements CompletionStage<T> {
                                                      Executor executor) {
         return new RequestContextAwareMinimalStage(
                 (RequestContextAwareCompletableFuture<Void>) delegate.runAfterEitherAsync(other, action,
-                                                                                          executor));
+                                                                                                                      executor));
     }
 
     @Override

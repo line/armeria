@@ -29,6 +29,7 @@ import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.JavaVersionSpecific;
 import com.linecorp.armeria.server.DefaultServiceRequestContext;
 
 import io.netty.channel.ChannelFutureListener;
@@ -127,7 +128,7 @@ public abstract class AbstractRequestContext implements RequestContext {
 
     @Override
     public final <T> CompletionStage<T> makeContextAware(CompletionStage<T> stage) {
-        final CompletableFuture<T> future = new RequestContextAwareCompletableFuture<>(this);
+        final CompletableFuture<T> future = JavaVersionSpecific.get().newRequestContextCompletableFuture(this);
         stage.handle((result, cause) -> {
             try (SafeCloseable ignored = pushIfAbsent()) {
                 if (cause != null) {
