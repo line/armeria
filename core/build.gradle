@@ -50,6 +50,9 @@ tasks.shadedTest.exclude 'META-INF/versions/**'
 dependencies {
     // Common to reference classes in main sourceset from Java 9 one (e.g., to return a common interface)
     java9Implementation files(sourceSets.main.output.classesDirs) { builtBy compileJava }
+    // Provide the dependencies of the main sourceset to others. Do not ever add version-specific dependencies
+    // to a sourceset, it won't work.
+    java9Implementation sourceSets.main.compileClasspath
 
     // cglib
     testCompile 'cglib:cglib'

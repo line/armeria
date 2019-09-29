@@ -24,6 +24,8 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import com.google.common.base.MoreObjects;
+
 @SuppressWarnings("unchecked")
 final class Java9RequestContextAwareMinimalStage<T> implements CompletionStage<T> {
 
@@ -250,6 +252,8 @@ final class Java9RequestContextAwareMinimalStage<T> implements CompletionStage<T
 
     @Override
     public String toString() {
-        return "RequestContextAwareMinimalStage{delegate=" + delegate + "}";
+        return MoreObjects.toStringHelper(this)
+                          .add("delegate", delegate)
+                          .toString();
     }
 }
