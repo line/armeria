@@ -131,6 +131,12 @@ allprojects {
             exclude '**/reactor/core/scheduler/**'
         }
     }
+
+    tasks.withType(Test) {
+        if (System.env.JAVA_TEST_HOME) {
+            executable "${System.env.JAVA_TEST_HOME}/bin/java"
+        }
+    }
 }
 
 // Require to use JDK 11 when releasing.

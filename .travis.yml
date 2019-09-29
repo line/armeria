@@ -1,4 +1,11 @@
 language: java
+matrix:
+  include:
+    - jdk: openjdk11
+    - jdk: openjdk9
+      before_install: source ./.travis.install_jdk.sh
+    - jdk: openjdk8
+      before_install: source ./.travis.install_jdk.sh
 jdk:
 - openjdk11
 sudo: false
@@ -22,11 +29,10 @@ cache:
 env:
   global:
   - "_JAVA_OPTIONS=-Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts"
-before_install:
-- "./gradlew --version"
 install:
 - true
 script:
+- "./gradlew --version"
 - "./gradlew --no-daemon --stacktrace --warning-mode=all -Pcoverage checkstyle check build"
 before_cache:
 - find $HOME/.gradle/caches -name '*.lock' -delete
