@@ -7,35 +7,42 @@ String releaseFlagFromVersion(String src) {
     }
 }
 
-sourceSets {
-    java9 {
-        java {
-            srcDirs = ['src/main/java9']
+def mrJarVersions = [9]
+
+mrJarVersions.each {version->
+    sourceSets {
+        "java${version}" {
+            java {
+                srcDirs = ["src/main/java${version}"]
+            }
+        }
+        "java${version}Test" {
+            java {
+                srcDirs = ["src/test/java${version}"]
+            }
         }
     }
-    java9Test {
-        java {
-            srcDirs = ['src/test/java9']
-        }
+
+    "compileJava${version}Java" {
+        sourceCompatibility = version
+        targetCompatibility = version
     }
-}
 
-compileJava9Java {
-    sourceCompatibility = 9
-    targetCompatibility = 9
-}
+    "compileJava${version}TestJava" {
+        sourceCompatibility = version
+        targetCompatibility = version
+    }
 
-compileJava9TestJava {
-    sourceCompatibility = 9
-    targetCompatibility = 9
-}
+    task "testJava${version}"(type: Test, group: 'Verification', description: "Runs unit tests for Java ${version} source set") {
+        testClassesDirs = sourceSets."java${version}Test".output.classesDirs
+        classpath = sourceSets."java${version}Test".runtimeClasspath
+    }
+    
+    configurations."java${version}Implementation".extendsFrom configurations.implementation
+    configurations."java${version}TestImplementation".extendsFrom configurations.testImplementation
 
-task testJava9(type: Test, group: 'Verification', description: 'Runs unit tests for Java 9 source set') {
-    testClassesDirs = sourceSets.java9Test.output.classesDirs
-    classpath = sourceSets.java9Test.runtimeClasspath
+    check.dependsOn "testJava${version}"
 }
-
-check.dependsOn testJava9
 
 tasks.withType(JavaCompile) {
     def version = releaseFlagFromVersion(sourceCompatibility)
@@ -43,8 +50,10 @@ tasks.withType(JavaCompile) {
 }
 
 tasks.withType(Jar) {
-    into('META-INF/versions/9') {
-        from sourceSets.java9.output
+    mrJarVersions.each {version->
+        into("META-INF/versions/${version}") {
+            from sourceSets."java${version}".output
+        }
     }
     manifest.attributes(
             'Multi-Release': 'true'
@@ -67,11 +76,6 @@ tasks.shadedTest.exclude 'META-INF/versions/**'
 dependencies {
     // Common to reference classes in main sourceset from Java 9 one (e.g., to return a common interface)
     java9Implementation files(sourceSets.main.output.classesDirs) { builtBy compileJava }
-    // Provide the dependencies of the main sourceset to others. Do not ever add version-specific dependencies
-    // to a sourceset, it won't work.
-    java9Implementation sourceSets.main.compileClasspath
-    java9TestImplementation sourceSets.java9.compileClasspath
-    java9TestImplementation sourceSets.test.compileClasspath
 
     // cglib
     testCompile 'cglib:cglib'
