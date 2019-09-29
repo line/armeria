@@ -23,10 +23,8 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.util.SafeCloseable;
 
 final class RequestContextAwareCompletableFuture<T> extends CompletableFuture<T> {
 

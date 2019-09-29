@@ -27,257 +27,220 @@ import java.util.function.Function;
 @SuppressWarnings("unchecked")
 final class Java9RequestContextAwareMinimalStage<T> implements CompletionStage<T> {
 
-    private final Java9RequestContextAwareCompletableFuture<T> delegate;
+    private final CompletableFuture<T> delegate;
 
-    Java9RequestContextAwareMinimalStage(Java9RequestContextAwareCompletableFuture<T> delegate) {
+    Java9RequestContextAwareMinimalStage(CompletableFuture<T> delegate) {
         this.delegate = delegate;
     }
 
     @Override
     public <U> CompletionStage<U> thenApply(Function<? super T, ? extends U> fn) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<U>) delegate.thenApply(fn));
+        return new Java9RequestContextAwareMinimalStage(delegate.thenApply(fn));
     }
 
     @Override
     public <U> CompletionStage<U> thenApplyAsync(Function<? super T, ? extends U> fn) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<U>) delegate.thenApplyAsync(fn));
+        return new Java9RequestContextAwareMinimalStage(delegate.thenApplyAsync(fn));
     }
 
     @Override
     public <U> CompletionStage<U> thenApplyAsync(Function<? super T, ? extends U> fn, Executor executor) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<U>) delegate.thenApplyAsync(fn, executor));
+        return new Java9RequestContextAwareMinimalStage(delegate.thenApplyAsync(fn, executor));
     }
 
     @Override
     public CompletionStage<Void> thenAccept(Consumer<? super T> action) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<Void>) delegate.thenAccept(action));
+        return new Java9RequestContextAwareMinimalStage(delegate.thenAccept(action));
     }
 
     @Override
     public CompletionStage<Void> thenAcceptAsync(Consumer<? super T> action) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<Void>) delegate.thenAcceptAsync(action));
+        return new Java9RequestContextAwareMinimalStage(delegate.thenAcceptAsync(action));
     }
 
     @Override
     public CompletionStage<Void> thenAcceptAsync(Consumer<? super T> action, Executor executor) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<Void>) delegate.thenAcceptAsync(action, executor));
+        return new Java9RequestContextAwareMinimalStage(delegate.thenAcceptAsync(action, executor));
     }
 
     @Override
     public CompletionStage<Void> thenRun(Runnable action) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<Void>) delegate.thenRun(action));
+        return new Java9RequestContextAwareMinimalStage(delegate.thenRun(action));
     }
 
     @Override
     public CompletionStage<Void> thenRunAsync(Runnable action) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<Void>) delegate.thenRunAsync(action));
+        return new Java9RequestContextAwareMinimalStage(delegate.thenRunAsync(action));
     }
 
     @Override
     public CompletionStage<Void> thenRunAsync(Runnable action, Executor executor) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<Void>) delegate.thenRunAsync(action, executor));
+        return new Java9RequestContextAwareMinimalStage(delegate.thenRunAsync(action, executor));
     }
 
     @Override
     public <U, V> CompletionStage<V> thenCombine(CompletionStage<? extends U> other,
                                                  BiFunction<? super T, ? super U, ? extends V> fn) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<V>) delegate.thenCombine(other, fn));
+        return new Java9RequestContextAwareMinimalStage(delegate.thenCombine(other, fn));
     }
 
     @Override
     public <U, V> CompletionStage<V> thenCombineAsync(CompletionStage<? extends U> other,
                                                       BiFunction<? super T, ? super U, ? extends V> fn) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<V>) delegate.thenCombineAsync(other, fn));
+        return new Java9RequestContextAwareMinimalStage(delegate.thenCombineAsync(other, fn));
     }
 
     @Override
     public <U, V> CompletionStage<V> thenCombineAsync(CompletionStage<? extends U> other,
                                                       BiFunction<? super T, ? super U, ? extends V> fn,
                                                       Executor executor) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<V>) delegate.thenCombineAsync(other, fn, executor));
+        return new Java9RequestContextAwareMinimalStage(delegate.thenCombineAsync(other, fn, executor));
     }
 
     @Override
     public <U> CompletionStage<Void> thenAcceptBoth(CompletionStage<? extends U> other,
                                                     BiConsumer<? super T, ? super U> action) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<Void>) delegate.thenAcceptBoth(other, action));
+        return new Java9RequestContextAwareMinimalStage(delegate.thenAcceptBoth(other, action));
     }
 
     @Override
     public <U> CompletionStage<Void> thenAcceptBothAsync(CompletionStage<? extends U> other,
                                                          BiConsumer<? super T, ? super U> action) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<Void>) delegate.thenAcceptBothAsync(other, action));
+        return new Java9RequestContextAwareMinimalStage(delegate.thenAcceptBothAsync(other, action));
     }
 
     @Override
     public <U> CompletionStage<Void> thenAcceptBothAsync(CompletionStage<? extends U> other,
                                                          BiConsumer<? super T, ? super U> action,
                                                          Executor executor) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<Void>) delegate.thenAcceptBothAsync(other, action,
+        return new Java9RequestContextAwareMinimalStage(delegate.thenAcceptBothAsync(other, action,
                                                                                                executor));
     }
 
     @Override
     public CompletionStage<Void> runAfterBoth(CompletionStage<?> other, Runnable action) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<Void>) delegate.runAfterBoth(other, action));
+        return new Java9RequestContextAwareMinimalStage(delegate.runAfterBoth(other, action));
     }
 
     @Override
     public CompletionStage<Void> runAfterBothAsync(CompletionStage<?> other, Runnable action) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<Void>) delegate.runAfterBothAsync(other, action));
+        return new Java9RequestContextAwareMinimalStage(delegate.runAfterBothAsync(other, action));
     }
 
     @Override
     public CompletionStage<Void> runAfterBothAsync(CompletionStage<?> other, Runnable action,
                                                    Executor executor) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<Void>) delegate.runAfterBothAsync(other, action,
+        return new Java9RequestContextAwareMinimalStage(delegate.runAfterBothAsync(other, action,
                                                                                              executor));
     }
 
     @Override
     public <U> CompletionStage<U> applyToEither(CompletionStage<? extends T> other,
                                                 Function<? super T, U> fn) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<U>) delegate.applyToEither(other, fn));
+        return new Java9RequestContextAwareMinimalStage(delegate.applyToEither(other, fn));
     }
 
     @Override
     public <U> CompletionStage<U> applyToEitherAsync(CompletionStage<? extends T> other,
                                                      Function<? super T, U> fn) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<U>) delegate.applyToEitherAsync(other, fn));
+        return new Java9RequestContextAwareMinimalStage(delegate.applyToEitherAsync(other, fn));
     }
 
     @Override
     public <U> CompletionStage<U> applyToEitherAsync(CompletionStage<? extends T> other,
                                                      Function<? super T, U> fn,
                                                      Executor executor) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<U>) delegate.applyToEitherAsync(other, fn, executor));
+        return new Java9RequestContextAwareMinimalStage(delegate.applyToEitherAsync(other, fn, executor));
     }
 
     @Override
     public CompletionStage<Void> acceptEither(CompletionStage<? extends T> other,
                                               Consumer<? super T> action) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<Void>) delegate.acceptEither(other, action));
+        return new Java9RequestContextAwareMinimalStage(delegate.acceptEither(other, action));
     }
 
     @Override
     public CompletionStage<Void> acceptEitherAsync(CompletionStage<? extends T> other,
                                                    Consumer<? super T> action) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<Void>) delegate.acceptEitherAsync(other, action));
+        return new Java9RequestContextAwareMinimalStage(delegate.acceptEitherAsync(other, action));
     }
 
     @Override
     public CompletionStage<Void> acceptEitherAsync(CompletionStage<? extends T> other,
                                                    Consumer<? super T> action, Executor executor) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<Void>) delegate.acceptEitherAsync(other, action,
+        return new Java9RequestContextAwareMinimalStage(delegate.acceptEitherAsync(other, action,
                                                                                              executor));
     }
 
     @Override
     public CompletionStage<Void> runAfterEither(CompletionStage<?> other, Runnable action) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<Void>) delegate.runAfterEither(other, action));
+        return new Java9RequestContextAwareMinimalStage(delegate.runAfterEither(other, action));
     }
 
     @Override
     public CompletionStage<Void> runAfterEitherAsync(CompletionStage<?> other, Runnable action) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<Void>) delegate.runAfterEitherAsync(other, action));
+        return new Java9RequestContextAwareMinimalStage(delegate.runAfterEitherAsync(other, action));
     }
 
     @Override
     public CompletionStage<Void> runAfterEitherAsync(CompletionStage<?> other,
                                                      Runnable action,
                                                      Executor executor) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<Void>) delegate.runAfterEitherAsync(other, action,
+        return new Java9RequestContextAwareMinimalStage(delegate.runAfterEitherAsync(other, action,
                                                                                                executor));
     }
 
     @Override
     public <U> CompletionStage<U> thenCompose(Function<? super T, ? extends CompletionStage<U>> fn) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<U>) delegate.thenCompose(fn));
+        return new Java9RequestContextAwareMinimalStage(delegate.thenCompose(fn));
     }
 
     @Override
     public <U> CompletionStage<U> thenComposeAsync(Function<? super T, ? extends CompletionStage<U>> fn) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<U>) delegate.thenComposeAsync(fn));
+        return new Java9RequestContextAwareMinimalStage(delegate.thenComposeAsync(fn));
     }
 
     @Override
     public <U> CompletionStage<U> thenComposeAsync(Function<? super T, ? extends CompletionStage<U>> fn,
                                                    Executor executor) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<U>) delegate.thenComposeAsync(fn, executor));
+        return new Java9RequestContextAwareMinimalStage(delegate.thenComposeAsync(fn, executor));
     }
 
     @Override
     public <U> CompletionStage<U> handle(BiFunction<? super T, Throwable, ? extends U> fn) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<U>) delegate.handle(fn));
+        return new Java9RequestContextAwareMinimalStage(delegate.handle(fn));
     }
 
     @Override
     public <U> CompletionStage<U> handleAsync(BiFunction<? super T, Throwable, ? extends U> fn) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<U>) delegate.handleAsync(fn));
+        return new Java9RequestContextAwareMinimalStage(delegate.handleAsync(fn));
     }
 
     @Override
     public <U> CompletionStage<U> handleAsync(BiFunction<? super T, Throwable, ? extends U> fn,
                                               Executor executor) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<U>) delegate.handleAsync(fn, executor));
+        return new Java9RequestContextAwareMinimalStage(delegate.handleAsync(fn, executor));
     }
 
     @Override
     public CompletionStage<T> whenComplete(BiConsumer<? super T, ? super Throwable> action) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<T>) delegate.whenComplete(action));
+        return new Java9RequestContextAwareMinimalStage(delegate.whenComplete(action));
     }
 
     @Override
     public CompletionStage<T> whenCompleteAsync(BiConsumer<? super T, ? super Throwable> action) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<T>) delegate.whenCompleteAsync(action));
+        return new Java9RequestContextAwareMinimalStage(delegate.whenCompleteAsync(action));
     }
 
     @Override
     public CompletionStage<T> whenCompleteAsync(BiConsumer<? super T, ? super Throwable> action,
                                                 Executor executor) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<T>) delegate.whenCompleteAsync(action, executor));
+        return new Java9RequestContextAwareMinimalStage(delegate.whenCompleteAsync(action, executor));
     }
 
     @Override
     public CompletionStage<T> exceptionally(Function<Throwable, ? extends T> fn) {
-        return new Java9RequestContextAwareMinimalStage(
-                (Java9RequestContextAwareCompletableFuture<T>) delegate.exceptionally(fn));
+        return new Java9RequestContextAwareMinimalStage(delegate.exceptionally(fn));
     }
 
     @Override
