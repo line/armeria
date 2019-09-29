@@ -6,8 +6,6 @@ matrix:
       before_install: source ./.travis.install_jdk.sh
     - jdk: openjdk8
       before_install: source ./.travis.install_jdk.sh
-jdk:
-- openjdk11
 sudo: false
 os:
 - linux
