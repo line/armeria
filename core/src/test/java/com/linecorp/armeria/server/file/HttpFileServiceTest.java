@@ -84,7 +84,7 @@ class HttpFileServiceTest {
             sb.serviceUnder(
                     "/uncached/fs/",
                     HttpFileServiceBuilder.forFileSystem(tmpDir)
-                                          .maxCacheEntries(0)
+                                          .entryCacheSpec("off")
                                           .autoIndex(true)
                                           .build());
 
@@ -97,7 +97,7 @@ class HttpFileServiceTest {
                     "/uncached/compressed/",
                     HttpFileServiceBuilder.forClassPath(baseResourceDir + "foo")
                                           .serveCompressedFiles(true)
-                                          .maxCacheEntries(0)
+                                          .entryCacheSpec("off")
                                           .build());
 
             sb.serviceUnder(
@@ -106,7 +106,7 @@ class HttpFileServiceTest {
             sb.serviceUnder(
                     "/uncached/classes/",
                     HttpFileServiceBuilder.forClassPath("/")
-                                          .maxCacheEntries(0)
+                                          .entryCacheSpec("off")
                                           .build());
 
             sb.serviceUnder(
@@ -116,7 +116,7 @@ class HttpFileServiceTest {
             sb.serviceUnder(
                     "/uncached/",
                     HttpFileServiceBuilder.forClassPath(baseResourceDir + "foo")
-                                          .maxCacheEntries(0)
+                                          .entryCacheSpec("off")
                                           .build()
                                           .orElse(HttpFileServiceBuilder.forClassPath(baseResourceDir + "bar")
                                                                         .maxCacheEntries(0)
