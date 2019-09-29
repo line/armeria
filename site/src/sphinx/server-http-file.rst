@@ -84,13 +84,15 @@ By default, :api:`HttpFileService` caches up to 1024 files whose length is less 
             HttpFileServiceBuilder.forFileSystem("/var/lib/www/images");
 
     // Cache up to 4096 files.
-    fsb.maxCacheEntries(4096);
+    fsb.entryCacheSpec("maximumSize=4096");
     // Cache files whose length is less than or equal to 1 MiB.
     fsb.maxCacheEntrySizeBytes(1048576);
 
     HttpFileService fs = fsb.build();
 
-The cache can also be disabled by specifying ``0`` for ``maxCacheEntries()``.
+The cache can also be disabled by specifying ``off`` for ``entryCacheSpec()``.
+Or, you can override the default value of ``maximumSize=1024`` using the JVM system property
+``-Dcom.linecorp.armeria.httpFileServiceCache=<spec>``.
 
 Serving pre-compressed files
 ----------------------------
