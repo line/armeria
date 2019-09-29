@@ -20,11 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
@@ -34,77 +29,6 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 
 class RequestContextAwareCompletableFutureTest {
-
-    @Test
-    void minimalCompletionStageUsingToCompletableFutureMutable() throws Exception {
-        final RequestContext context =
-                ServiceRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/")).build();
-        final CompletableFuture<Integer> originalFuture = new CompletableFuture<>();
-        final RequestContextAwareCompletableFuture<Integer> contextAwareFuture =
-                (RequestContextAwareCompletableFuture<Integer>) context.makeContextAware(originalFuture);
-        final CompletionStage<Integer> completionStage = contextAwareFuture.minimalCompletionStage();
-
-        assertThat(contextAwareFuture.complete(1)).isTrue();
-        assertThat(contextAwareFuture.join()).isEqualTo(1);
-        assertThat(contextAwareFuture.getNow(null)).isEqualTo(1);
-        assertThat(contextAwareFuture.get()).isEqualTo(1);
-        assertThat(completionStage.toCompletableFuture().get()).isEqualTo(1);
-    }
-
-    @Test
-    void minimalCompletionStageUsingWhenComplete() throws Exception {
-        final RequestContext context =
-                ServiceRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/")).build();
-        final CompletableFuture<Integer> originalFuture = new CompletableFuture<>();
-        final RequestContextAwareCompletableFuture<Integer> contextAwareFuture =
-                (RequestContextAwareCompletableFuture<Integer>) context.makeContextAware(originalFuture);
-        final CompletionStage<Integer> completionStage = contextAwareFuture.minimalCompletionStage();
-
-        final AtomicInteger atomicInteger = new AtomicInteger();
-        final AtomicReference<Throwable> causeCaptor = new AtomicReference<>();
-        completionStage.whenComplete((result, error) -> {
-            if (error != null) {
-                causeCaptor.set(error);
-            } else {
-                atomicInteger.set(result);
-            }
-        });
-        contextAwareFuture.complete(1);
-
-        assertThat(contextAwareFuture.join()).isEqualTo(1);
-        assertThat(contextAwareFuture.getNow(null)).isEqualTo(1);
-        assertThat(contextAwareFuture.get()).isEqualTo(1);
-        assertThat(atomicInteger.get()).isEqualTo(1);
-        assertThat(causeCaptor.get()).isNull();
-    }
-
-    @Test
-    void makeContextAwareCompletableFutureUsingCompleteAsync() throws Exception {
-        final RequestContext context =
-                ServiceRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/")).build();
-        final CompletableFuture<String> originalFuture = new CompletableFuture<>();
-        final RequestContextAwareCompletableFuture<String> contextAwareFuture =
-                (RequestContextAwareCompletableFuture<String>) context.makeContextAware(originalFuture);
-        final CompletableFuture<String> resultFuture = contextAwareFuture.completeAsync(() -> "success");
-
-        originalFuture.complete("success");
-        assertThat(resultFuture.get()).isEqualTo("success");
-    }
-
-    @Test
-    void makeContextAwareCompletableFutureUsingCompleteAsyncWithExecutor() throws Exception {
-        final ExecutorService executor = Executors.newFixedThreadPool(2);
-        final RequestContext context =
-                ServiceRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/")).build();
-        final CompletableFuture<String> originalFuture = new CompletableFuture<>();
-        final RequestContextAwareCompletableFuture<String> contextAwareFuture =
-                (RequestContextAwareCompletableFuture<String>) context.makeContextAware(originalFuture);
-        final CompletableFuture<String> resultFuture = contextAwareFuture.completeAsync(() -> "success",
-                                                                                        executor);
-
-        originalFuture.complete("success");
-        assertThat(resultFuture.get()).isEqualTo("success");
-    }
 
     @Test
     void makeContextAwareCompletableFutureWithDifferentContext() {
