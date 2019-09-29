@@ -40,6 +40,7 @@ mrJarVersions.each {version->
     
     configurations."java${version}Implementation".extendsFrom configurations.implementation
     configurations."java${version}TestImplementation".extendsFrom configurations.testImplementation
+    configurations."java${version}TestRuntimeClasspath".extendsFrom configurations.testRuntimeClasspath
 
     check.dependsOn "testJava${version}"
 }
@@ -74,8 +75,10 @@ tasks.trimShadedJar.doLast {
 tasks.shadedTest.exclude 'META-INF/versions/**'
 
 dependencies {
-    // Common to reference classes in main sourceset from Java 9 one (e.g., to return a common interface)
-    java9Implementation files(sourceSets.main.output.classesDirs) { builtBy compileJava }
+    mrJarVersions.each {version->
+        // Common to reference classes in main sourceset from Java 9 one (e.g., to return a common interface)
+        "java${version}Implementation" files(sourceSets.main.output.classesDirs) { builtBy compileJava }
+    }
 
     // cglib
     testCompile 'cglib:cglib'

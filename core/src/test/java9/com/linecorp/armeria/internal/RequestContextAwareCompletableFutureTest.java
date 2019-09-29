@@ -39,8 +39,7 @@ class RequestContextAwareCompletableFutureTest {
         final RequestContext context =
                 ServiceRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/")).build();
         final CompletableFuture<Integer> originalFuture = new CompletableFuture<>();
-        final RequestContextAwareCompletableFuture<Integer> contextAwareFuture =
-                (RequestContextAwareCompletableFuture<Integer>) context.makeContextAware(originalFuture);
+        final CompletableFuture<Integer> contextAwareFuture = context.makeContextAware(originalFuture);
         final CompletionStage<Integer> completionStage = contextAwareFuture.minimalCompletionStage();
 
         assertThat(contextAwareFuture.complete(1)).isTrue();
@@ -55,8 +54,7 @@ class RequestContextAwareCompletableFutureTest {
         final RequestContext context =
                 ServiceRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/")).build();
         final CompletableFuture<Integer> originalFuture = new CompletableFuture<>();
-        final RequestContextAwareCompletableFuture<Integer> contextAwareFuture =
-                (RequestContextAwareCompletableFuture<Integer>) context.makeContextAware(originalFuture);
+        final CompletableFuture<Integer> contextAwareFuture = context.makeContextAware(originalFuture);
         final CompletionStage<Integer> completionStage = contextAwareFuture.minimalCompletionStage();
 
         final AtomicInteger atomicInteger = new AtomicInteger();
@@ -82,8 +80,7 @@ class RequestContextAwareCompletableFutureTest {
         final RequestContext context =
                 ServiceRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/")).build();
         final CompletableFuture<String> originalFuture = new CompletableFuture<>();
-        final RequestContextAwareCompletableFuture<String> contextAwareFuture =
-                (RequestContextAwareCompletableFuture<String>) context.makeContextAware(originalFuture);
+        final CompletableFuture<String> contextAwareFuture = context.makeContextAware(originalFuture);
         final CompletableFuture<String> resultFuture = contextAwareFuture.completeAsync(() -> "success");
 
         originalFuture.complete("success");
@@ -96,8 +93,7 @@ class RequestContextAwareCompletableFutureTest {
         final RequestContext context =
                 ServiceRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/")).build();
         final CompletableFuture<String> originalFuture = new CompletableFuture<>();
-        final RequestContextAwareCompletableFuture<String> contextAwareFuture =
-                (RequestContextAwareCompletableFuture<String>) context.makeContextAware(originalFuture);
+        final CompletableFuture<String> contextAwareFuture = context.makeContextAware(originalFuture);
         final CompletableFuture<String> resultFuture = contextAwareFuture.completeAsync(() -> "success",
                                                                                         executor);
 
