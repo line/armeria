@@ -261,7 +261,12 @@ public final class ArmeriaConfigurationUtil {
         }
 
         docServiceBuilder.exampleRequest(docServiceRequests);
-        configureExampleHeaders(docServiceBuilder, docServiceHeaders);
+        for (Entry<String, Collection<? extends ExampleHeaders>> entry : docServiceHeaders.entrySet()) {
+            for (ExampleHeaders exampleHeaders : entry.getValue()) {
+                configureExampleHeaders(docServiceBuilder, entry.getKey(), exampleHeaders.getMethodName(),
+                                        exampleHeaders.getHeaders());
+            }
+        }
     }
 
     /**
@@ -326,10 +331,10 @@ public final class ArmeriaConfigurationUtil {
                 exampleReq -> docServiceBuilder.exampleRequestForMethod(exampleReq.getServiceType(),
                                                                         exampleReq.getMethodName(),
                                                                         exampleReq.getExampleRequest()));
-        docServiceHeaders.forEach(exampleHeader -> configureHeaders(docServiceBuilder,
-                                                                    exampleHeader.getServiceType(),
-                                                                    exampleHeader.getMethodName(),
-                                                                    exampleHeader.getHeaders()));
+        docServiceHeaders.forEach(exampleHeader -> configureExampleHeaders(docServiceBuilder,
+                                                                           exampleHeader.getServiceType(),
+                                                                           exampleHeader.getMethodName(),
+                                                                           exampleHeader.getHeaders()));
     }
 
     /**
@@ -383,7 +388,12 @@ public final class ArmeriaConfigurationUtil {
             }
         }
 
-        configureExampleHeaders(docServiceBuilder, docServiceHeaders);
+        for (Entry<String, Collection<? extends ExampleHeaders>> entry : docServiceHeaders.entrySet()) {
+            for (ExampleHeaders exampleHeaders : entry.getValue()) {
+                configureExampleHeaders(docServiceBuilder, entry.getKey(), exampleHeaders.getMethodName(),
+                                        exampleHeaders.getHeaders());
+            }
+        }
     }
 
     private static Service<HttpRequest, HttpResponse> setupMetricCollectingService(
@@ -410,21 +420,8 @@ public final class ArmeriaConfigurationUtil {
                 meterIdPrefixFunctionFactory.get(METER_TYPE, bean.getServiceName()));
     }
 
-    private static void configureExampleHeaders(DocServiceBuilder docServiceBuilder,
-                                                Map<String, Collection<? extends ExampleHeaders>> docServiceHeaders) {
-        requireNonNull(docServiceBuilder, "docServiceBuilder");
-        requireNonNull(docServiceHeaders, "docServiceHeaders");
-
-        for (Entry<String, Collection<? extends ExampleHeaders>> entry : docServiceHeaders.entrySet()) {
-            for (ExampleHeaders exampleHeaders : entry.getValue()) {
-                configureHeaders(docServiceBuilder, entry.getKey(), exampleHeaders.getMethodName(),
-                                 exampleHeaders.getHeaders());
-            }
-        }
-    }
-
-    private static void configureHeaders(DocServiceBuilder docServiceBuilder, String serviceName,
-                                         String methodName, HttpHeaders headers) {
+    private static void configureExampleHeaders(DocServiceBuilder docServiceBuilder, String serviceName,
+                                                String methodName, HttpHeaders headers) {
         requireNonNull(docServiceBuilder, "docServiceBuilder");
         requireNonNull(serviceName, "serviceName");
         requireNonNull(methodName, "methodName");
