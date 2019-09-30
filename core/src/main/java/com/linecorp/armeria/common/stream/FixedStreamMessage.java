@@ -16,7 +16,10 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -133,32 +136,50 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
 
     @Override
     final void cancel() {
-        cancelOrAbort(true);
+        cancelOrAbort(true, null);
     }
 
     @Override
     public final void abort() {
+        abort(AbortedStreamException::get);
+    }
+
+    @Override
+    public final void abort(Throwable cause) {
+        requireNonNull(cause, "cause");
+        abort(() -> cause);
+    }
+
+    @Override
+    public final void abort(Supplier<? extends Throwable> causeSupplier) {
+        requireNonNull(causeSupplier, "causeSupplier");
         final SubscriptionImpl currentSubscription = subscription;
         if (currentSubscription != null) {
-            cancelOrAbort(false);
+            cancelOrAbort(false, causeSupplier);
             return;
         }
 
         final SubscriptionImpl newSubscription = new SubscriptionImpl(
-                this, AbortingSubscriber.get(), ImmediateEventExecutor.INSTANCE, false, false);
+                this, new AbortingSubscriber<>(causeSupplier), ImmediateEventExecutor.INSTANCE, false, false);
         subscriptionUpdater.compareAndSet(this, null, newSubscription);
-        cancelOrAbort(false);
+        cancelOrAbort(false, causeSupplier);
     }
 
-    private void cancelOrAbort(boolean cancel) {
+    private void cancelOrAbort(boolean cancel, @Nullable Supplier<? extends Throwable> causeSupplier) {
         final CloseEvent closeEvent;
         final Sampler<Class<? extends Throwable>> sampler = Flags.verboseExceptionSampler();
         if (cancel) {
             closeEvent = sampler.isSampled(CancelledSubscriptionException.class) ?
                          new CloseEvent(new CancelledSubscriptionException()) : CANCELLED_CLOSE;
         } else {
-            closeEvent = sampler.isSampled(AbortedStreamException.class) ?
-                         new CloseEvent(new AbortedStreamException()) : ABORTED_CLOSE;
+            // causeSupplier is always not-null if cancel == false
+            final Throwable cause = requireNonNull(causeSupplier.get(), "cause");
+            if (cause instanceof AbortedStreamException) {
+                closeEvent = sampler.isSampled(AbortedStreamException.class) ?
+                             new CloseEvent(cause) : ABORTED_CLOSE;
+            } else {
+                closeEvent = new CloseEvent(cause);
+            }
         }
         if (closeEventUpdater.compareAndSet(this, null, closeEvent)) {
             if (subscription.needsDirectInvocation()) {

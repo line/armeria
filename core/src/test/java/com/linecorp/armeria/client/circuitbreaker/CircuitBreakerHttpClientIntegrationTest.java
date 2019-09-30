@@ -33,7 +33,6 @@ import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
-import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.Unpooled;
@@ -68,18 +67,22 @@ class CircuitBreakerHttpClientIntegrationTest {
                                 assertThat(cause.getCause()).isInstanceOf(UnprocessedRequestException.class)
                                                             .hasCauseInstanceOf(ConnectException.class);
                             });
+                    await().untilAsserted(() -> {
+                        assertThat(req.completionFuture()).hasFailedWithThrowableThat()
+                                                          .isInstanceOf(UnprocessedRequestException.class);
+                    });
                     break;
                 default:
                     await().until(() -> !circuitBreaker.canRequest());
                     assertThatThrownBy(() -> client.execute(req).aggregate().join())
                             .isInstanceOf(CompletionException.class)
                             .hasCauseInstanceOf(FailFastException.class);
-            }
 
-            await().untilAsserted(() -> {
-                assertThat(req.completionFuture()).hasFailedWithThrowableThat()
-                                                  .isInstanceOf(AbortedStreamException.class);
-            });
+                    await().untilAsserted(() -> {
+                        assertThat(req.completionFuture()).hasFailedWithThrowableThat()
+                                                          .isInstanceOf(FailFastException.class);
+                    });
+            }
 
             assertThat(data.refCnt()).isZero();
 

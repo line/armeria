@@ -23,6 +23,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -120,7 +121,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     }
 
     private void subscribe0(Subscriber<? super T> subscriber, EventExecutor executor,
-                           boolean notifyCancellation) {
+                            boolean notifyCancellation) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
 
@@ -204,21 +205,34 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
     @Override
     public void abort() {
+        abort(AbortedStreamException::get);
+    }
+
+    @Override
+    public void abort(Throwable cause) {
+        requireNonNull(cause, "cause");
+        abort(() -> cause);
+    }
+
+    @Override
+    public void abort(Supplier<? extends Throwable> causeSupplier) {
+        requireNonNull(causeSupplier, "causeSupplier");
         final AbortableSubscriber subscriber = this.subscriber;
         if (subscriber != null) {
-            subscriber.abort();
+            subscriber.abort(causeSupplier);
             return;
         }
 
-        final AbortableSubscriber abortable = new AbortableSubscriber(this, AbortingSubscriber.get(),
+        final AbortableSubscriber abortable = new AbortableSubscriber(this,
+                                                                      new AbortingSubscriber<>(causeSupplier),
                                                                       ImmediateEventExecutor.INSTANCE,
                                                                       false);
         if (!subscriberUpdater.compareAndSet(this, null, abortable)) {
-            this.subscriber.abort();
+            this.subscriber.abort(causeSupplier);
             return;
         }
 
-        abortable.abort();
+        abortable.abort(causeSupplier);
         abortable.onSubscribe(NoopSubscription.INSTANCE);
     }
 
@@ -233,7 +247,8 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         private final EventExecutor executor;
         private boolean notifyCancellation;
         private Subscriber<Object> subscriber;
-        private volatile boolean abortPending;
+        @Nullable
+        private volatile Supplier<? extends Throwable> abortCauseSupplier;
         @Nullable
         private volatile Subscription subscription;
 
@@ -260,25 +275,29 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
             assert subscription != null;
 
             // Don't cancel but just abort if abort is pending.
-            cancelOrAbort(!abortPending);
-        }
-
-        void abort() {
-            abortPending = true;
-            if (subscription != null) {
-                cancelOrAbort(false);
-            }
-        }
-
-        private void cancelOrAbort(boolean cancel) {
-            if (executor.inEventLoop()) {
-                cancelOrAbort0(cancel);
+            if (abortCauseSupplier == null) {
+                cancelOrAbort(true, CancelledSubscriptionException::get);
             } else {
-                executor.execute(() -> cancelOrAbort0(cancel));
+                cancelOrAbort(false, abortCauseSupplier);
             }
         }
 
-        private void cancelOrAbort0(boolean cancel) {
+        void abort(Supplier<? extends Throwable> causeSupplier) {
+            abortCauseSupplier = causeSupplier;
+            if (subscription != null) {
+                cancelOrAbort(false, causeSupplier);
+            }
+        }
+
+        private void cancelOrAbort(boolean cancel, Supplier<? extends Throwable> causeSupplier) {
+            if (executor.inEventLoop()) {
+                cancelOrAbort0(cancel, causeSupplier);
+            } else {
+                executor.execute(() -> cancelOrAbort0(cancel, causeSupplier));
+            }
+        }
+
+        private void cancelOrAbort0(boolean cancel, Supplier<? extends Throwable> causeSupplier) {
             final CompletableFuture<Void> completionFuture = parent.completionFuture();
             if (completionFuture.isDone()) {
                 return;
@@ -291,8 +310,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
                 this.subscriber = NoopSubscriber.get();
             }
 
-            final Throwable cause = cancel ? CancelledSubscriptionException.get()
-                                           : AbortedStreamException.get();
+            final Throwable cause = requireNonNull(causeSupplier.get(), "cause");
             try {
                 if (!cancel || notifyCancellation) {
                     subscriber.onError(cause);
@@ -320,8 +338,8 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
                 this.subscription = subscription;
                 subscriber.onSubscribe(this);
             } finally {
-                if (abortPending) {
-                    cancelOrAbort0(false);
+                if (abortCauseSupplier != null) {
+                    cancelOrAbort0(false, abortCauseSupplier);
                 }
             }
         }

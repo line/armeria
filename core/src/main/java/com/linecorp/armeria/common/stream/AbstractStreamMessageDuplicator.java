@@ -34,6 +34,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -158,7 +159,25 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
      * This will also clean up the data published from the upstream {@link StreamMessage}.
      */
     public void abort() {
-        processor.abort();
+        processor.abort(AbortedStreamException::get);
+    }
+
+    /**
+     * Closes this duplicator and aborts all stream messages returned by {@link #duplicateStream()}
+     * with the specified {@link Throwable}.
+     * This will also clean up the data published from the upstream {@link StreamMessage}.
+     */
+    public void abort(Throwable cause) {
+        processor.abort(() -> cause);
+    }
+
+    /**
+     * Closes this duplicator and aborts all stream messages returned by {@link #duplicateStream()}
+     * with a {@link Throwable} which is supplied by the specified {@link Supplier}.
+     * This will also clean up the data published from the upstream {@link StreamMessage}.
+     */
+    public void abort(Supplier<? extends Throwable> causeSupplier) {
+        processor.abort(causeSupplier);
     }
 
     @VisibleForTesting
@@ -279,9 +298,10 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                 if (dataLength > 0) {
                     final int allowedMaxSignalLength = maxSignalLength - signalLength;
                     if (dataLength > allowedMaxSignalLength) {
-                        upstream.abort();
-                        throw new IllegalStateException(
+                        final IllegalStateException cause = new IllegalStateException(
                                 "signal length greater than the maxSignalLength: " + maxSignalLength);
+                        upstream.abort(cause);
+                        throw cause;
                     }
                     signalLength += dataLength;
                 }
@@ -291,7 +311,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                 final int removedLength = signals.addAndRemoveIfRequested(obj);
                 signalLength -= removedLength;
             } catch (IllegalStateException e) {
-                upstream.abort();
+                upstream.abort(e);
                 throw e;
             }
 
@@ -442,29 +462,29 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             }
         }
 
-        void abort() {
+        void abort(Supplier<? extends Throwable> causeSupplier) {
             if (processorExecutor.inEventLoop()) {
-                doAbort();
+                doAbort(causeSupplier);
             } else {
-                processorExecutor.execute(this::doAbort);
+                processorExecutor.execute(() -> doAbort(causeSupplier));
             }
         }
 
-        void doAbort() {
+        void doAbort(Supplier<? extends Throwable> causeSupplier) {
             if (state != State.CLOSED) {
                 state = State.CLOSED;
                 doCancelUpstreamSubscription();
                 // Do not call 'upstream.abort();', but 'upstream.cancel()' because this is not aborting
                 // the upstream StreamMessage, but aborting duplicator.
-                doCleanup();
+                doCleanup(causeSupplier);
             }
         }
 
-        private void doCleanup() {
+        private void doCleanup(Supplier<? extends Throwable> causeSupplier) {
             final List<CompletableFuture<Void>> completionFutures =
                     new ArrayList<>(downstreamSubscriptions.size());
             downstreamSubscriptions.forEach(s -> {
-                s.abort();
+                s.abort(causeSupplier);
                 final CompletableFuture<Void> future = s.completionFuture();
                 completionFutures.add(future);
             });
@@ -645,19 +665,32 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
         @Override
         public void abort() {
+            abort(AbortedStreamException::get);
+        }
+
+        @Override
+        public void abort(Throwable cause) {
+            requireNonNull(cause, "cause");
+            abort(() -> cause);
+        }
+
+        @Override
+        public void abort(Supplier<? extends Throwable> causeSupplier) {
+            requireNonNull(causeSupplier, "causeSupplier");
+            final Throwable cause = requireNonNull(causeSupplier.get(), "cause");
             final DownstreamSubscription<T> currentSubscription = subscription;
             if (currentSubscription != null) {
-                currentSubscription.abort();
+                currentSubscription.abort(causeSupplier);
                 return;
             }
 
             final DownstreamSubscription<T> newSubscription = new DownstreamSubscription<>(
-                    this, AbortingSubscriber.get(), processor, ImmediateEventExecutor.INSTANCE,
+                    this, new AbortingSubscriber<>(causeSupplier), processor, ImmediateEventExecutor.INSTANCE,
                     false, false, false);
             if (subscriptionUpdater.compareAndSet(this, null, newSubscription)) {
-                newSubscription.completionFuture().completeExceptionally(AbortedStreamException.get());
+                newSubscription.completionFuture().completeExceptionally(cause);
             } else {
-                subscription.abort();
+                subscription.abort(causeSupplier);
             }
         }
     }
@@ -898,8 +931,8 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             }
         }
 
-        void abort() {
-            if (cancelledOrAbortedUpdater.compareAndSet(this, null, AbortedStreamException.get())) {
+        void abort(Supplier<? extends Throwable> causeSupplier) {
+            if (cancelledOrAbortedUpdater.compareAndSet(this, null, causeSupplier.get())) {
                 signal();
             }
         }

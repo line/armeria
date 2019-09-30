@@ -419,7 +419,8 @@ public class BraveIntegrationTest {
 
         // Client timed out, so no response data was ever sent from the server. There is no wire send in the
         // server and no wire receive in the client.
-        assertThat(serverSpan.annotations()).hasSize(1);
+        // FIXME(ikhoon) the server receives RST_STREAM frame, does it make sence?
+        assertThat(serverSpan.annotations()).hasSize(2);
         assertThat(clientSpan.annotations()).hasSize(1);
     }
 

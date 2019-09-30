@@ -334,6 +334,7 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
         if (response.isOpen()) {
             response.close(cause);
             error = Http2Error.INTERNAL_ERROR;
+            // FIXME(ikhoon) fix here? wrap an exception with AbortedStreamException?
         } else if (cause instanceof WriteTimeoutException || cause instanceof AbortedStreamException) {
             error = Http2Error.CANCEL;
         } else {

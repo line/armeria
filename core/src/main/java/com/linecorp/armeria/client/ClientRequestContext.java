@@ -277,6 +277,21 @@ public interface ClientRequestContext extends RequestContext {
     void setResponseTimeout(Duration responseTimeout);
 
     /**
+     * Returns {@link Response} timeout handler which is executed when
+     * the {@link Response} is not completely received within the allowed {@link #responseTimeoutMillis()}
+     * or the default {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
+     */
+    @Nullable
+    Runnable responseTimeoutHandler();
+
+    /**
+     * Sets the {@link Response} timeout handler which is executed when
+     * the {@link Response} is not completely received within the allowed {@link #responseTimeoutMillis()}
+     * or the default {@link ClientOption#RESPONSE_TIMEOUT_MILLIS}.
+     */
+    void setResponseTimeoutHandler(Runnable responseTimeoutHandler);
+
+    /**
      * Returns the maximum length of the received {@link Response}.
      * This value is initially set from {@link ClientOption#MAX_RESPONSE_LENGTH}.
      *

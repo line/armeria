@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -58,10 +59,10 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
                     DeferredStreamMessage.class, "subscribedToDelegate");
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicIntegerFieldUpdater<DeferredStreamMessage>
-            abortPendingUpdater =
-            AtomicIntegerFieldUpdater.newUpdater(
-                    DeferredStreamMessage.class, "abortPending");
+    private static final AtomicReferenceFieldUpdater<DeferredStreamMessage, Supplier>
+            abortCauseSupplierUpdater =
+            AtomicReferenceFieldUpdater.newUpdater(
+                    DeferredStreamMessage.class, Supplier.class, "abortCauseSupplier");
 
     @Nullable
     @SuppressWarnings("unused") // Updated only via delegateUpdater
@@ -81,8 +82,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     // Only accessed from subscription's executor.
     private long pendingDemand;
 
-    @SuppressWarnings("unused")
-    private volatile int abortPending; // 0 - false, 1 - true
+    private volatile Supplier<? extends Throwable> abortCauseSupplier;
 
     // Only accessed from subscription's executor.
     private boolean cancelPending;
@@ -100,8 +100,8 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             throw new IllegalStateException("delegate set already");
         }
 
-        if (abortPending != 0) {
-            delegate.abort();
+        if (abortCauseSupplier != null) {
+            delegate.abort(abortCauseSupplier);
         }
 
         if (!completionFuture().isDone()) {
@@ -276,23 +276,41 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
 
     @Override
     public void abort() {
-        if (!abortPendingUpdater.compareAndSet(this, 0, 1)) {
+        abort0(AbortedStreamException::get, ABORTED_CLOSE);
+    }
+
+    @Override
+    public void abort(Throwable cause) {
+        requireNonNull(cause, "cause");
+        abort(() -> cause);
+    }
+
+    @Override
+    public void abort(Supplier<? extends Throwable> causeSupplier) {
+        abort0(causeSupplier, null);
+    }
+
+    private void abort0(Supplier<? extends Throwable> causeSupplier, @Nullable CloseEvent closeEvent) {
+        requireNonNull(causeSupplier, "causeSupplier");
+        if (!abortCauseSupplierUpdater.compareAndSet(this, null, causeSupplier)) {
             return;
         }
 
         final SubscriptionImpl newSubscription = new SubscriptionImpl(
-                this, AbortingSubscriber.get(), ImmediateEventExecutor.INSTANCE, false, false);
+                this, new AbortingSubscriber<>(causeSupplier), ImmediateEventExecutor.INSTANCE, false, false);
         subscriptionUpdater.compareAndSet(this, null, newSubscription);
 
         final StreamMessage<T> delegate = this.delegate;
         if (delegate != null) {
-            delegate.abort();
+            delegate.abort(causeSupplier);
         } else {
+            final Throwable cause = requireNonNull(causeSupplier.get(), "cause");
+            final CloseEvent closeEvent0 = (closeEvent == null) ? new CloseEvent(cause) : closeEvent;
             if (subscription.needsDirectInvocation()) {
-                ABORTED_CLOSE.notifySubscriber(subscription, completionFuture());
+                closeEvent0.notifySubscriber(subscription, completionFuture());
             } else {
                 subscription.executor().execute(
-                        () -> ABORTED_CLOSE.notifySubscriber(subscription, completionFuture()));
+                        () -> closeEvent0.notifySubscriber(subscription, completionFuture()));
             }
         }
     }

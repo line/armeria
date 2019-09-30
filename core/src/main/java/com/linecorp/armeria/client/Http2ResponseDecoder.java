@@ -69,10 +69,11 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     @Override
     HttpResponseWrapper addResponse(
             int id, @Nullable HttpRequest req, DecodedHttpResponse res, RequestLogBuilder logBuilder,
-            long responseTimeoutMillis, long maxContentLength) {
+            long responseTimeoutMillis, @Nullable Runnable responseTimeoutHandler, long maxContentLength) {
 
         final HttpResponseWrapper resWrapper =
-                super.addResponse(id, req, res, logBuilder, responseTimeoutMillis, maxContentLength);
+                super.addResponse(id, req, res, logBuilder, responseTimeoutMillis,
+                                  responseTimeoutHandler, maxContentLength);
 
         resWrapper.completionFuture().handle((unused, cause) -> {
             final EventLoop eventLoop = channel().eventLoop();

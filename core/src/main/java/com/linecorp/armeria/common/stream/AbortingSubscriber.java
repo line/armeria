@@ -16,19 +16,18 @@
 
 package com.linecorp.armeria.common.stream;
 
+import java.util.function.Supplier;
+
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 final class AbortingSubscriber<T> implements Subscriber<T> {
 
-    private static final AbortingSubscriber<Object> INSTANCE = new AbortingSubscriber<>();
+    private final Supplier<? extends Throwable> causeSupplier;
 
-    @SuppressWarnings("unchecked")
-    static <T> AbortingSubscriber<T> get() {
-        return (AbortingSubscriber<T>) INSTANCE;
+    AbortingSubscriber(Supplier<? extends Throwable> causeSupplier) {
+        this.causeSupplier = causeSupplier;
     }
-
-    private AbortingSubscriber() {}
 
     @Override
     public void onSubscribe(Subscription s) {
@@ -43,4 +42,11 @@ final class AbortingSubscriber<T> implements Subscriber<T> {
 
     @Override
     public void onComplete() {}
+
+    /**
+     * Returns the {@link Supplier} that supplies the cause of {@link AbortingSubscriber}.
+     */
+    Supplier<? extends Throwable> causeSupplier() {
+        return causeSupplier;
+    }
 }

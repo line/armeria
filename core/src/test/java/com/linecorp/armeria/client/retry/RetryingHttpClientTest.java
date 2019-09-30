@@ -24,6 +24,8 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CountDownLatch;
@@ -457,26 +459,40 @@ public class RetryingHttpClientTest {
 
     @Test
     public void doNotRetryWhenResponseIsAborted() throws Exception {
-        final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
-        final HttpClient client = HttpClient.builder(server.uri("/"))
-                                            .decorator(RetryingHttpClient.newDecorator(retryAlways))
-                                            .decorator((delegate, ctx, req) -> {
-                                                context.set(ctx);
-                                                return delegate.execute(ctx, req);
-                                            })
-                                            .build();
-        final HttpResponse httpResponse = client.get("/response-abort");
-        httpResponse.abort();
+        final List<Throwable> abortCauses =
+                Arrays.asList(null, new IllegalStateException("abort stream with a specified cause"));
+        for (Throwable abortCause : abortCauses) {
+            final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
+            final HttpClient client = HttpClient.builder(server.uri("/"))
+                                                .decorator(RetryingHttpClient.newDecorator(retryAlways))
+                                                .decorator((delegate, ctx, req) -> {
+                                                    context.set(ctx);
+                                                    return delegate.execute(ctx, req);
+                                                })
+                                                .build();
+            final HttpResponse httpResponse = client.get("/response-abort");
+            if (abortCause == null) {
+                httpResponse.abort();
+            } else {
+                httpResponse.abort(abortCause);
+            }
 
-        final RequestLog log = context.get().log();
-        await().untilAsserted(() -> assertThat(log.isAvailable(RequestLogAvailability.COMPLETE)).isTrue());
-        assertThat(responseAbortServiceCallCounter.get()).isOne();
-        assertThat(log.requestCause()).isNull();
-        assertThat(log.responseCause()).isExactlyInstanceOf(AbortedStreamException.class);
+            final RequestLog log = context.get().log();
+            await().untilAsserted(() -> assertThat(log.isAvailable(RequestLogAvailability.COMPLETE)).isTrue());
+            assertThat(responseAbortServiceCallCounter.get()).isOne();
+            assertThat(log.requestCause()).isNull();
+            if (abortCause == null) {
+                assertThat(log.responseCause()).isExactlyInstanceOf(AbortedStreamException.class);
+            } else {
+                assertThat(log.responseCause()).isExactlyInstanceOf(abortCause.getClass())
+                                               .hasMessageContaining("abort stream with a specified cause");
+            }
 
-        // Sleep 3 seconds more to check if there was another retry.
-        TimeUnit.SECONDS.sleep(3);
-        assertThat(responseAbortServiceCallCounter.get()).isOne();
+            // Sleep 3 seconds more to check if there was another retry.
+            TimeUnit.SECONDS.sleep(3);
+            assertThat(responseAbortServiceCallCounter.get()).isOne();
+            responseAbortServiceCallCounter.decrementAndGet();
+        }
     }
 
     @Test
@@ -504,26 +520,39 @@ public class RetryingHttpClientTest {
 
     @Test
     public void doNotRetryWhenRequestIsAborted() throws Exception {
-        final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
-        final HttpClient client = HttpClient.builder(server.uri("/"))
-                                            .decorator(RetryingHttpClient.newDecorator(retryAlways))
-                                            .decorator((delegate, ctx, req) -> {
-                                                context.set(ctx);
-                                                return delegate.execute(ctx, req);
-                                            })
-                                            .build();
+        final List<Throwable> abortCauses =
+                Arrays.asList(null, new IllegalStateException("abort stream with a specified cause"));
+        for (Throwable abortCause : abortCauses) {
+            final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
+            final HttpClient client = HttpClient.builder(server.uri("/"))
+                                                .decorator(RetryingHttpClient.newDecorator(retryAlways))
+                                                .decorator((delegate, ctx, req) -> {
+                                                    context.set(ctx);
+                                                    return delegate.execute(ctx, req);
+                                                })
+                                                .build();
 
-        final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.GET, "/request-abort");
-        req.write(HttpData.ofUtf8("I'm going to abort this request"));
-        req.abort();
-        client.execute(req);
+            final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.GET, "/request-abort");
+            req.write(HttpData.ofUtf8("I'm going to abort this request"));
+            if (abortCause == null) {
+                req.abort();
+            } else {
+                req.abort(abortCause);
+            }
+            client.execute(req);
 
-        TimeUnit.SECONDS.sleep(1);
-        // No request is made.
-        assertThat(responseAbortServiceCallCounter.get()).isZero();
-        final RequestLog log = context.get().log();
-        assertThat(log.requestCause()).isExactlyInstanceOf(AbortedStreamException.class);
-        assertThat(log.responseCause()).isExactlyInstanceOf(AbortedStreamException.class);
+            TimeUnit.SECONDS.sleep(1);
+            // No request is made.
+            assertThat(responseAbortServiceCallCounter.get()).isZero();
+            final RequestLog log = context.get().log();
+            if (abortCause == null) {
+                assertThat(log.requestCause()).isExactlyInstanceOf(AbortedStreamException.class);
+                assertThat(log.responseCause()).isExactlyInstanceOf(AbortedStreamException.class);
+            } else {
+                assertThat(log.requestCause()).isExactlyInstanceOf(abortCause.getClass());
+                assertThat(log.responseCause()).isExactlyInstanceOf(abortCause.getClass());
+            }
+        }
     }
 
     @Test

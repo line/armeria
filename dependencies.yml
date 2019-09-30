@@ -216,6 +216,12 @@ javax.inject:
 javax.validation:
   validation-api: { version: '2.0.1.Final' }
 
+org.testng:
+  testng:
+    version: '7.0.0'
+    javadocs:
+      - https://static.javadoc.io/org.testng/testng/7.0.0/
+
 junit:
   junit:
     version: '4.12'

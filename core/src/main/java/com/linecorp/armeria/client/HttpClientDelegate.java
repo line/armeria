@@ -202,7 +202,7 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
 
     private static void handleEarlyRequestException(ClientRequestContext ctx,
                                                     HttpRequest req, Throwable cause) {
-        req.abort();
+        req.abort(cause);
         final RequestLogBuilder logBuilder = ctx.logBuilder();
         logBuilder.endRequest(cause);
         logBuilder.endResponse(cause);

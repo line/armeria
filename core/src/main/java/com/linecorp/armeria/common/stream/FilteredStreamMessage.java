@@ -25,6 +25,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -242,6 +243,16 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
     @Override
     public void abort() {
         delegate.abort();
+    }
+
+    @Override
+    public void abort(Throwable cause) {
+        delegate.abort(requireNonNull(cause, "cause"));
+    }
+
+    @Override
+    public void abort(Supplier<? extends Throwable> causeSupplier) {
+        delegate.abort(requireNonNull(causeSupplier, "causeSupplier"));
     }
 
     private final class FilteringSubscriber implements Subscriber<T> {

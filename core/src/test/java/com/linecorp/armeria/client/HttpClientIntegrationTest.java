@@ -30,6 +30,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntFunction;
 
@@ -49,6 +50,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -78,6 +81,8 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -341,6 +346,13 @@ class HttpClientIntegrationTest {
                 }
             });
 
+            sb.service("/slow", (ctx, req) -> {
+                final HttpResponseWriter response = HttpResponse.streaming();
+                response.write(ResponseHeaders.of(HttpStatus.OK));
+                response.write(HttpData.ofUtf8("slow response"));
+                ctx.eventLoop().schedule((Runnable) response::close, 2, TimeUnit.SECONDS);
+                return response;
+            });
             sb.disableServerHeader();
             sb.disableDateHeader();
         }
@@ -722,6 +734,50 @@ class HttpClientIntegrationTest {
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
 
         clientFactory.close();
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "H1C, true", "H1C, false",
+            "H2C, true", "H2C, false"
+    })
+    void testResponseTimeoutHandler(SessionProtocol protocol, boolean useResponseTimeoutHandler) {
+        final AtomicReference<RequestLog> logHolder = new AtomicReference<>();
+        final IllegalStateException reqCause = new IllegalStateException("abort request");
+        final IllegalStateException resCause = new IllegalStateException("abort response");
+        final IllegalStateException logCause = new IllegalStateException("log cause");
+        final HttpClient client = new HttpClientBuilder(server.uri(protocol, "/"))
+                .responseTimeout(Duration.ofSeconds(1))
+                .decorator((delegate, ctx, req) -> {
+                    final HttpResponse res = delegate.execute(ctx, req);
+                    if (useResponseTimeoutHandler) {
+                        ctx.setResponseTimeoutHandler(() -> {
+                            ctx.logBuilder().endResponse(logCause);
+                            ctx.request().abort(reqCause);
+                            res.abort(resCause);
+                        });
+                    }
+                    logHolder.set(ctx.log());
+                    return res;
+                })
+                .build();
+
+        final HttpRequestWriter writer = HttpRequest.streaming(HttpMethod.POST, "/slow");
+        final HttpResponse response = client.execute(writer);
+        await().untilAsserted(() -> {
+            assertThat(logHolder.get().isAvailable(RequestLogAvailability.COMPLETE)).isTrue();
+        });
+
+        if (useResponseTimeoutHandler) {
+            assertThatThrownBy(() -> response.aggregate().join()).hasCause(resCause);
+            assertThat(logHolder.get().requestCause()).isSameAs(reqCause);
+            assertThat(logHolder.get().responseCause()).isSameAs(logCause);
+        } else {
+            assertThat(logHolder.get().requestCause()).isInstanceOf(ResponseTimeoutException.class);
+            assertThat(logHolder.get().responseCause()).isInstanceOf(ResponseTimeoutException.class);
+            assertThatThrownBy(() -> response.aggregate().join())
+                    .hasCauseInstanceOf(ResponseTimeoutException.class);
+        }
     }
 
     @Nested

@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 
 import org.reactivestreams.Subscriber;
 
@@ -151,6 +152,18 @@ public class StreamMessageWrapper<T> implements StreamMessage<T> {
     @Override
     public void abort() {
         delegate().abort();
+    }
+
+    @Override
+    public void abort(Throwable cause) {
+        requireNonNull(cause, "cause");
+        delegate().abort(cause);
+    }
+
+    @Override
+    public void abort(Supplier<? extends Throwable> causeSupplier) {
+        requireNonNull(causeSupplier, "causeSupplier");
+        delegate().abort(causeSupplier);
     }
 
     @Override
