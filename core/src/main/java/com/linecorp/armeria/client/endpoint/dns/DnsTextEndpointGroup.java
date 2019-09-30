@@ -27,6 +27,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.internal.dns.DnsQuestionWithoutTrailingDot;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
@@ -52,7 +53,7 @@ public final class DnsTextEndpointGroup extends DnsEndpointGroup {
      *                if the record contains unsupported content.
      */
     public static DnsTextEndpointGroup of(String hostname, Function<byte[], Endpoint> mapping) {
-        return DnsTextEndpointGroup.builder(hostname, mapping).build();
+        return builder(hostname, mapping).build();
     }
 
     /**
@@ -74,7 +75,7 @@ public final class DnsTextEndpointGroup extends DnsEndpointGroup {
                          DnsServerAddressStreamProvider serverAddressStreamProvider,
                          Backoff backoff, String hostname, Function<byte[], Endpoint> mapping) {
         super(eventLoop, minTtl, maxTtl, serverAddressStreamProvider, backoff,
-              ImmutableList.of(new DnsQuestionWithoutTrailingDot(hostname, DnsRecordType.TXT)),
+              ImmutableList.of(DnsQuestionWithoutTrailingDot.of(hostname, DnsRecordType.TXT)),
               unused -> {});
         this.mapping = mapping;
         start();

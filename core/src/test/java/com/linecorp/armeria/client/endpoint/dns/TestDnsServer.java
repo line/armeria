@@ -15,6 +15,9 @@
  */
 package com.linecorp.armeria.client.endpoint.dns;
 
+import static io.netty.handler.codec.dns.DnsRecordType.A;
+import static io.netty.handler.codec.dns.DnsRecordType.AAAA;
+
 import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -25,6 +28,7 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.internal.TransportType;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -34,19 +38,31 @@ import io.netty.handler.codec.dns.DatagramDnsQuery;
 import io.netty.handler.codec.dns.DatagramDnsQueryDecoder;
 import io.netty.handler.codec.dns.DatagramDnsResponse;
 import io.netty.handler.codec.dns.DatagramDnsResponseEncoder;
+import io.netty.handler.codec.dns.DefaultDnsRawRecord;
 import io.netty.handler.codec.dns.DnsQuestion;
+import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsResponse;
 import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.handler.codec.dns.DnsSection;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
 
-final class TestDnsServer implements AutoCloseable {
+public final class TestDnsServer implements AutoCloseable {
+
+    public static DnsRecord newAddressRecord(String name, String ipAddr) {
+        return newAddressRecord(name, ipAddr, 60);
+    }
+
+    public static DnsRecord newAddressRecord(String name, String ipAddr, long ttl) {
+        return new DefaultDnsRawRecord(
+                name, NetUtil.isValidIpV4Address(ipAddr) ? A : AAAA,
+                ttl, Unpooled.wrappedBuffer(NetUtil.createByteArrayFromIpAddressString(ipAddr)));
+    }
 
     private final Channel channel;
     private volatile Map<DnsQuestion, DnsResponse> responses;
 
-    TestDnsServer(Map<DnsQuestion, DnsResponse> responses) {
+    public TestDnsServer(Map<DnsQuestion, DnsResponse> responses) {
         this.responses = ImmutableMap.copyOf(responses);
 
         final Bootstrap b = new Bootstrap();
@@ -65,11 +81,12 @@ final class TestDnsServer implements AutoCloseable {
         channel = b.bind(NetUtil.LOCALHOST, 0).syncUninterruptibly().channel();
     }
 
-    InetSocketAddress addr() {
+    public InetSocketAddress addr() {
         return (InetSocketAddress) channel.localAddress();
     }
 
-    void setResponses(Map<DnsQuestion, DnsResponse> responses) {
+    public void setResponses(Map<DnsQuestion, DnsResponse> responses) {
+        this.responses.values().forEach(DnsResponse::release);
         this.responses = ImmutableMap.copyOf(responses);
     }
 

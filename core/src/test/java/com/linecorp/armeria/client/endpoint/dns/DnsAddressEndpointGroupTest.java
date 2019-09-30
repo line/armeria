@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client.endpoint.dns;
 
+import static com.linecorp.armeria.client.endpoint.dns.TestDnsServer.newAddressRecord;
 import static io.netty.handler.codec.dns.DnsRecordType.A;
 import static io.netty.handler.codec.dns.DnsRecordType.AAAA;
 import static io.netty.handler.codec.dns.DnsRecordType.CNAME;
@@ -301,12 +302,6 @@ public class DnsAddressEndpointGroupTest {
                         Endpoint.of("partial.com").withIpAddr("1.1.1.1"));
             }
         }
-    }
-
-    private static DnsRecord newAddressRecord(String name, String ipAddr) {
-        return new DefaultDnsRawRecord(
-                name, NetUtil.isValidIpV4Address(ipAddr) ? A : AAAA,
-                60, Unpooled.wrappedBuffer(NetUtil.createByteArrayFromIpAddressString(ipAddr)));
     }
 
     private static DnsRecord newCompatibleAddressRecord(String name, String ipV4Addr) {

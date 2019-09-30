@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.endpoint.dns;
+package com.linecorp.armeria.internal.dns;
 
 import static java.util.Objects.requireNonNull;
 
@@ -27,12 +27,16 @@ import io.netty.handler.codec.dns.DnsRecordType;
 /**
  * A {@link DnsQuestion} implementation which does not append a dot (.) to the name.
  */
-final class DnsQuestionWithoutTrailingDot implements DnsQuestion {
+public final class DnsQuestionWithoutTrailingDot implements DnsQuestion {
 
     private final String name;
     private final DnsRecordType type;
 
-    DnsQuestionWithoutTrailingDot(String name, DnsRecordType type) {
+    public static DnsQuestionWithoutTrailingDot of(String name, DnsRecordType type) {
+        return new DnsQuestionWithoutTrailingDot(name, type);
+    }
+
+    private DnsQuestionWithoutTrailingDot(String name, DnsRecordType type) {
         this.name = IDN.toASCII(requireNonNull(name, "name"));
         this.type = requireNonNull(type, "type");
     }
