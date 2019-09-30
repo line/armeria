@@ -183,18 +183,11 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
     /**
      * Adds example requests for {@link #getService()}.
      */
-    public U addExampleRequests(@NotNull Collection<? extends V> exampleRequests) {
+    public U addExampleRequests(@NotNull Iterable<? extends V> exampleRequests) {
         this.exampleRequests = ImmutableList.<V>builder().addAll(this.exampleRequests)
                                                          .addAll(exampleRequests)
                                                          .build();
         return self();
-    }
-
-    /**
-     * Adds example requests for {@link #getService()}.
-     */
-    public U addExampleRequests(@NotNull Iterable<? extends V> exampleRequests) {
-        return addExampleRequests(ImmutableList.copyOf(exampleRequests));
     }
 
     /**
@@ -207,7 +200,7 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
     /**
      * Adds an example request for {@link #getService()}.
      */
-    public U addExampleRequest(@NotNull V exampleRequest) {
+    public U addExampleRequests(@NotNull V exampleRequest) {
         exampleRequests = ImmutableList.<V>builder().addAll(exampleRequests)
                                                     .add(exampleRequest)
                                                     .build();
@@ -245,20 +238,13 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
     }
 
     /**
-     * Adds an example HTTP headers.
+     * Adds example HTTP headers.
      */
-    public U addExampleHeaders(@NotNull Collection<? extends W> exampleHeaders) {
+    public U addExampleHeaders(@NotNull Iterable<? extends W> exampleHeaders) {
         this.exampleHeaders = ImmutableList.<W>builder().addAll(this.exampleHeaders)
                                                         .addAll(exampleHeaders)
                                                         .build();
         return self();
-    }
-
-    /**
-     * Adds example HTTP headers.
-     */
-    public U addExampleHeaders(@NotNull Iterable<? extends W> exampleHeaders) {
-        return addExampleHeaders(ImmutableList.copyOf(exampleHeaders));
     }
 
     /**
@@ -271,7 +257,7 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
     /**
      * Adds an example HTTP header.
      */
-    public U addExampleHeader(@NotNull W exampleHeaders) {
+    public U addExampleHeaders(@NotNull W exampleHeaders) {
         this.exampleHeaders = ImmutableList.<W>builder().addAll(this.exampleHeaders)
                                                         .add(exampleHeaders)
                                                         .build();

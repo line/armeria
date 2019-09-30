@@ -74,7 +74,8 @@ public class HttpServiceRegistrationBean
     }
 
     @Override
-    public HttpServiceRegistrationBean setExampleRequests(@NotNull Collection<? extends Object> exampleRequests) {
+    public HttpServiceRegistrationBean setExampleRequests(
+            @NotNull Collection<? extends Object> exampleRequests) {
         throw new UnsupportedOperationException();
     }
 
@@ -89,11 +90,6 @@ public class HttpServiceRegistrationBean
     }
 
     @Override
-    public HttpServiceRegistrationBean addExampleRequests(@NotNull Collection<? extends Object> exampleRequests) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public HttpServiceRegistrationBean addExampleRequests(@NotNull Iterable<? extends Object> exampleRequests) {
         throw new UnsupportedOperationException();
     }
@@ -104,17 +100,19 @@ public class HttpServiceRegistrationBean
     }
 
     @Override
-    public HttpServiceRegistrationBean addExampleRequest(@NotNull Object exampleRequest) {
+    public HttpServiceRegistrationBean addExampleRequests(@NotNull Object exampleRequest) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public HttpServiceRegistrationBean setExampleHeaders(@NotNull Collection<? extends HttpHeaders> exampleHeaders) {
+    public HttpServiceRegistrationBean setExampleHeaders(
+            @NotNull Collection<? extends HttpHeaders> exampleHeaders) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public HttpServiceRegistrationBean setExampleHeaders(@NotNull Iterable<? extends HttpHeaders> exampleHeaders) {
+    public HttpServiceRegistrationBean setExampleHeaders(
+            @NotNull Iterable<? extends HttpHeaders> exampleHeaders) {
         throw new UnsupportedOperationException();
     }
 
@@ -124,12 +122,8 @@ public class HttpServiceRegistrationBean
     }
 
     @Override
-    public HttpServiceRegistrationBean addExampleHeaders(@NotNull Collection<? extends HttpHeaders> exampleHeaders) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public HttpServiceRegistrationBean addExampleHeaders(@NotNull Iterable<? extends HttpHeaders> exampleHeaders) {
+    public HttpServiceRegistrationBean addExampleHeaders(
+            @NotNull Iterable<? extends HttpHeaders> exampleHeaders) {
         throw new UnsupportedOperationException();
     }
 
@@ -139,7 +133,7 @@ public class HttpServiceRegistrationBean
     }
 
     @Override
-    public HttpServiceRegistrationBean addExampleHeader(HttpHeaders exampleHeaders) {
+    public HttpServiceRegistrationBean addExampleHeaders(HttpHeaders exampleHeaders) {
         throw new UnsupportedOperationException();
     }
 }

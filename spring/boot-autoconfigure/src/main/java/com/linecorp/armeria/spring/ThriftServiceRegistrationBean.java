@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.spring;
 
-import java.util.Collection;
-
 import javax.validation.constraints.NotNull;
 
 import org.apache.thrift.TBase;
@@ -74,46 +72,38 @@ public class ThriftServiceRegistrationBean
     /**
      * Adds an example HTTP header.
      */
-    public ThriftServiceRegistrationBean addExampleHeader(CharSequence name, String value) {
-        return addExampleHeader(ExampleHeader.of(HttpHeaders.of(name, value)));
+    public ThriftServiceRegistrationBean addExampleHeaders(CharSequence name, String value) {
+        return addExampleHeaders(ExampleHeader.of(HttpHeaders.of(name, value)));
     }
 
     /**
      * Adds an example HTTP header for the method.
      */
-    public ThriftServiceRegistrationBean addExampleHeader(String methodName, HttpHeaders exampleHeaders) {
-        return addExampleHeader(ExampleHeader.of(methodName, exampleHeaders));
+    public ThriftServiceRegistrationBean addExampleHeaders(String methodName, HttpHeaders exampleHeaders) {
+        return addExampleHeaders(ExampleHeader.of(methodName, exampleHeaders));
     }
 
     /**
      * Adds an example HTTP header for the method.
      */
-    public ThriftServiceRegistrationBean addExampleHeader(String methodName, CharSequence name, String value) {
-        return addExampleHeader(ExampleHeader.of(methodName, HttpHeaders.of(name, value)));
+    public ThriftServiceRegistrationBean addExampleHeaders(String methodName, CharSequence name, String value) {
+        return addExampleHeaders(ExampleHeader.of(methodName, HttpHeaders.of(name, value)));
     }
 
     /**
      * Adds example HTTP headers for the method.
      */
-    public ThriftServiceRegistrationBean addExampleHeader(String methodName,
-                                                          @NotNull Collection<? extends HttpHeaders> exampleHeaders) {
-        exampleHeaders.forEach(h -> addExampleHeader(methodName, h));
+    public ThriftServiceRegistrationBean addExampleHeaders(String methodName,
+                                                           @NotNull Iterable<? extends HttpHeaders> exampleHeaders) {
+        exampleHeaders.forEach(h -> addExampleHeaders(methodName, h));
         return this;
     }
 
     /**
      * Adds example HTTP headers for the method.
      */
-    public ThriftServiceRegistrationBean addExampleHeader(String methodName,
-                                                          @NotNull Iterable<? extends HttpHeaders> exampleHeaders) {
-        return addExampleHeader(methodName, ImmutableList.copyOf(exampleHeaders));
-    }
-
-    /**
-     * Adds example HTTP headers for the method.
-     */
-    public ThriftServiceRegistrationBean addExampleHeader(String methodName,
-                                                          @NotNull HttpHeaders... exampleHeaders) {
-        return addExampleHeader(methodName, ImmutableList.copyOf(exampleHeaders));
+    public ThriftServiceRegistrationBean addExampleHeaders(String methodName,
+                                                           @NotNull HttpHeaders... exampleHeaders) {
+        return addExampleHeaders(methodName, ImmutableList.copyOf(exampleHeaders));
     }
 }

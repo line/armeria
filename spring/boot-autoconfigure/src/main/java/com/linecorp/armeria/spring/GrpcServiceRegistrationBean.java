@@ -55,63 +55,63 @@ public class GrpcServiceRegistrationBean
     /**
      * Adds an example request for {@link #getService()}.
      */
-    public GrpcServiceRegistrationBean addExampleRequest(String serviceName, String methodName,
-                                                         Object exampleRequest) {
-        return addExampleRequest(GrpcExampleRequest.of(serviceName, methodName, exampleRequest));
+    public GrpcServiceRegistrationBean addExampleRequests(String serviceName, String methodName,
+                                                          Object exampleRequest) {
+        return addExampleRequests(GrpcExampleRequest.of(serviceName, methodName, exampleRequest));
     }
 
     /**
      * Adds an example HTTP header.
      */
-    public GrpcServiceRegistrationBean addExampleHeader(String serviceName, HttpHeaders exampleHeaders) {
-        return addExampleHeader(GrpcExampleHeader.of(serviceName, exampleHeaders));
+    public GrpcServiceRegistrationBean addExampleHeaders(String serviceName, HttpHeaders exampleHeaders) {
+        return addExampleHeaders(GrpcExampleHeader.of(serviceName, exampleHeaders));
     }
 
     /**
      * Adds an example HTTP header.
      */
-    public GrpcServiceRegistrationBean addExampleHeader(String serviceName, CharSequence name, String value) {
-        return addExampleHeader(GrpcExampleHeader.of(serviceName, name, value));
+    public GrpcServiceRegistrationBean addExampleHeaders(String serviceName, CharSequence name, String value) {
+        return addExampleHeaders(GrpcExampleHeader.of(serviceName, name, value));
     }
 
     /**
      * Adds an example HTTP header for the method.
      */
-    public GrpcServiceRegistrationBean addExampleHeader(
+    public GrpcServiceRegistrationBean addExampleHeaders(
             String serviceName, String methodName, CharSequence name, String value) {
-        return addExampleHeader(GrpcExampleHeader.of(serviceName, methodName, name, value));
+        return addExampleHeaders(GrpcExampleHeader.of(serviceName, methodName, name, value));
     }
 
     /**
      * Adds an example HTTP header for the method.
      */
-    public GrpcServiceRegistrationBean addExampleHeader(
+    public GrpcServiceRegistrationBean addExampleHeaders(
             String serviceName, String methodName, HttpHeaders exampleHeaders) {
-        return addExampleHeader(GrpcExampleHeader.of(serviceName, methodName, exampleHeaders));
+        return addExampleHeaders(GrpcExampleHeader.of(serviceName, methodName, exampleHeaders));
     }
 
     /**
      * Adds example HTTP headers for the method.
      */
-    public GrpcServiceRegistrationBean addExampleHeader(
+    public GrpcServiceRegistrationBean addExampleHeaders(
             String serviceName, String methodName, @NotNull Collection<HttpHeaders> exampleHeaders) {
-        exampleHeaders.forEach(h -> addExampleHeader(serviceName, methodName, h));
+        exampleHeaders.forEach(h -> addExampleHeaders(serviceName, methodName, h));
         return this;
     }
 
     /**
      * Adds example HTTP headers for the method.
      */
-    public GrpcServiceRegistrationBean addExampleHeader(
+    public GrpcServiceRegistrationBean addExampleHeaders(
             String serviceName, String methodName, @NotNull Iterable<HttpHeaders> exampleHeaders) {
-        return addExampleHeader(serviceName, methodName, ImmutableList.copyOf(exampleHeaders));
+        return addExampleHeaders(serviceName, methodName, ImmutableList.copyOf(exampleHeaders));
     }
 
     /**
      * Adds example HTTP headers for the method.
      */
-    public GrpcServiceRegistrationBean addExampleHeader(
+    public GrpcServiceRegistrationBean addExampleHeaders(
             String serviceName, String methodName, @NotNull HttpHeaders... exampleHeaders) {
-        return addExampleHeader(serviceName, methodName, ImmutableList.copyOf(exampleHeaders));
+        return addExampleHeaders(serviceName, methodName, ImmutableList.copyOf(exampleHeaders));
     }
 }
