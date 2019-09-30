@@ -38,8 +38,8 @@ import com.linecorp.armeria.server.docs.DocService;
  * >             .setPath("/my_service")
  * >             .setService(new MyThriftService())
  * >             .setDecorators(LoggingService.newDecorator())
- * >             .addExampleRequest(new MyThriftService.hello_args("Armeria"))
- * >             .addExampleHeader(ExampleHeader.of(AUTHORIZATION, "bearer b03c4fed1a"));
+ * >             .addExampleRequests(new MyThriftService.hello_args("Armeria"))
+ * >             .addExampleHeaders(ExampleHeader.of(AUTHORIZATION, "bearer b03c4fed1a"));
  * > }
  * }</pre>
  */
@@ -93,8 +93,8 @@ public class ThriftServiceRegistrationBean
     /**
      * Adds example HTTP headers for the method.
      */
-    public ThriftServiceRegistrationBean addExampleHeaders(String methodName,
-                                                           @NotNull Iterable<? extends HttpHeaders> exampleHeaders) {
+    public ThriftServiceRegistrationBean addExampleHeaders(
+            String methodName, @NotNull Iterable<? extends HttpHeaders> exampleHeaders) {
         exampleHeaders.forEach(h -> addExampleHeaders(methodName, h));
         return this;
     }

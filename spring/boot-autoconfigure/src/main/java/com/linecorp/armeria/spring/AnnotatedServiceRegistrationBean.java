@@ -41,8 +41,8 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
  * >             .setExceptionHandlers(new MyExceptionHandler())
  * >             .setRequestConverters(new MyRequestConverter())
  * >             .setResponseConverters(new MyResponseConverter())
- * >             .addExampleRequest(AnnotatedExampleRequest.of("myMethod", "{\"foo\":\"bar\"}"))
- * >             .addExampleHeader(ExampleHeader.of("my-header", "headerVal"));
+ * >             .addExampleRequests(AnnotatedExampleRequest.of("myMethod", "{\"foo\":\"bar\"}"))
+ * >             .addExampleHeaders(ExampleHeader.of("my-header", "headerVal"));
  * > }
  * }</pre>
  */
@@ -195,8 +195,8 @@ public class AnnotatedServiceRegistrationBean
     /**
      * Adds example HTTP headers for the method.
      */
-    public AnnotatedServiceRegistrationBean addExampleHeaders(String methodName,
-                                                              @NotNull Iterable<? extends HttpHeaders> exampleHeaders) {
+    public AnnotatedServiceRegistrationBean addExampleHeaders(
+            String methodName, @NotNull Iterable<? extends HttpHeaders> exampleHeaders) {
         exampleHeaders.forEach(h -> addExampleHeaders(methodName, h));
         return this;
     }

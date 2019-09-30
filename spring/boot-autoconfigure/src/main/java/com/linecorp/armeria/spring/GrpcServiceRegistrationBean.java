@@ -40,11 +40,11 @@ import com.linecorp.armeria.server.ServiceWithRoutes;
  * >                                 .enableUnframedRequests(true)
  * >                                 .build())
  * >             .setDecorators(LoggingService.newDecorator())
- * >             .addExampleRequest(GrpcExampleRequest.of(HelloServiceGrpc.SERVICE_NAME,
- * >                                                      "Hello",
- * >                                                      HelloRequest.newBuilder().setName("Armeria").build()))
- * >             .addExampleHeader(GrpcExampleHeader.of(HelloServiceGrpc.SERVICE_NAME,
- * >                                                    HttpHeaders.of("my-header", "headerVal")));
+ * >             .addExampleRequests(GrpcExampleRequest.of(HelloServiceGrpc.SERVICE_NAME,
+ * >                                                       "Hello",
+ * >                                                       HelloRequest.newBuilder().setName("Armeria").build()))
+ * >             .addExampleHeaders(GrpcExampleHeader.of(HelloServiceGrpc.SERVICE_NAME,
+ * >                                                     HttpHeaders.of("my-header", "headerVal")));
  * > }
  * }</pre>
  */
@@ -94,17 +94,9 @@ public class GrpcServiceRegistrationBean
      * Adds example HTTP headers for the method.
      */
     public GrpcServiceRegistrationBean addExampleHeaders(
-            String serviceName, String methodName, @NotNull Collection<HttpHeaders> exampleHeaders) {
+            String serviceName, String methodName, @NotNull Iterable<? extends HttpHeaders> exampleHeaders) {
         exampleHeaders.forEach(h -> addExampleHeaders(serviceName, methodName, h));
         return this;
-    }
-
-    /**
-     * Adds example HTTP headers for the method.
-     */
-    public GrpcServiceRegistrationBean addExampleHeaders(
-            String serviceName, String methodName, @NotNull Iterable<HttpHeaders> exampleHeaders) {
-        return addExampleHeaders(serviceName, methodName, ImmutableList.copyOf(exampleHeaders));
     }
 
     /**
