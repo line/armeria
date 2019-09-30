@@ -1,9 +1,12 @@
 language: java
 matrix:
   include:
-    - before_install: source ./.travis.install_jdk.sh 13
-    - jdk: openjdk11
-    - jdk: openjdk8
+    - name: Java 13
+      before_install: source ./.travis.install_jdk.sh 13
+    - name: Java 11
+      jdk: openjdk11
+    - name: Java 8
+      jdk: openjdk8
       before_install: source ./.travis.install_jdk.sh
 sudo: false
 os:
