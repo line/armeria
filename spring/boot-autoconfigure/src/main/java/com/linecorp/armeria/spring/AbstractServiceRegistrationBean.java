@@ -162,7 +162,7 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
      * Sets example requests for {@link #getService()}.
      */
     public U setExampleRequests(@NotNull Collection<? extends V> exampleRequests) {
-        this.exampleRequests = exampleRequests;
+        this.exampleRequests = ImmutableList.copyOf(exampleRequests);
         return self();
     }
 
@@ -219,7 +219,7 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
      * Sets example HTTP headers.
      */
     public U setExampleHeaders(@NotNull Collection<? extends W> exampleHeaders) {
-        this.exampleHeaders = exampleHeaders;
+        this.exampleHeaders = ImmutableList.copyOf(exampleHeaders);
         return self();
     }
 
