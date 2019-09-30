@@ -61,7 +61,7 @@ import com.google.common.io.Closeables;
  * it may not be possible to retrieve the information completely, depending on your environment, such as
  * the specified {@link ClassLoader}, the current {@link SecurityManager}.
  */
-public final class Version {
+public final class Version implements Comparable<Version>{
 
     // Forked from Netty 4.1.34 at d0912f27091e4548466df81f545c017a25c9d256
 
@@ -227,5 +227,10 @@ public final class Version {
     @JsonIgnore
     public boolean isClean() {
         return "clean".equals(repositoryStatus);
+    }
+
+    @Override
+    public int compareTo(Version ver) {
+        return this.artifactId().compareTo(ver.artifactId());
     }
 }

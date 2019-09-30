@@ -164,7 +164,7 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
                 spec = addDocStrings(spec, services);
                 spec = addExamples(spec);
 
-                final List<Version> versions = ImmutableList.copyOf(
+                final List<Version> versions = ImmutableList.sortedCopyOf(
                         Version.identify(DocService.class.getClassLoader()).values());
 
                 vfs(SPECIFICATION_INDEX).setContent(jsonMapper.writerWithDefaultPrettyPrinter()
