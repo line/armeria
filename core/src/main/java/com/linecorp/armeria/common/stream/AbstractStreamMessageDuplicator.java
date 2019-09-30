@@ -158,7 +158,17 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
      * This will also clean up the data published from the upstream {@link StreamMessage}.
      */
     public void abort() {
-        processor.abort();
+        processor.abort(AbortedStreamException.get());
+    }
+
+    /**
+     * Closes this duplicator and aborts all stream messages returned by {@link #duplicateStream()}
+     * with the specified {@link Throwable}.
+     * This will also clean up the data published from the upstream {@link StreamMessage}.
+     */
+    public void abort(Throwable cause) {
+        requireNonNull(cause, "cause");
+        processor.abort(cause);
     }
 
     @VisibleForTesting
@@ -279,9 +289,10 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                 if (dataLength > 0) {
                     final int allowedMaxSignalLength = maxSignalLength - signalLength;
                     if (dataLength > allowedMaxSignalLength) {
-                        upstream.abort();
-                        throw new IllegalStateException(
+                        final IllegalStateException cause = new IllegalStateException(
                                 "signal length greater than the maxSignalLength: " + maxSignalLength);
+                        upstream.abort(cause);
+                        throw cause;
                     }
                     signalLength += dataLength;
                 }
@@ -291,7 +302,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                 final int removedLength = signals.addAndRemoveIfRequested(obj);
                 signalLength -= removedLength;
             } catch (IllegalStateException e) {
-                upstream.abort();
+                upstream.abort(e);
                 throw e;
             }
 
@@ -442,37 +453,38 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             }
         }
 
-        void abort() {
+        void abort(Throwable cause) {
             if (processorExecutor.inEventLoop()) {
-                doAbort();
+                doAbort(cause);
             } else {
-                processorExecutor.execute(this::doAbort);
+                processorExecutor.execute(() -> doAbort(cause));
             }
         }
 
-        void doAbort() {
+        void doAbort(Throwable cause) {
             if (state != State.CLOSED) {
                 state = State.CLOSED;
                 doCancelUpstreamSubscription();
                 // Do not call 'upstream.abort();', but 'upstream.cancel()' because this is not aborting
                 // the upstream StreamMessage, but aborting duplicator.
-                doCleanup();
+                doCleanup(cause);
             }
         }
 
-        private void doCleanup() {
+        private void doCleanup(Throwable cause) {
             final List<CompletableFuture<Void>> completionFutures =
                     new ArrayList<>(downstreamSubscriptions.size());
             downstreamSubscriptions.forEach(s -> {
-                s.abort();
+                s.abort(cause);
                 final CompletableFuture<Void> future = s.completionFuture();
                 completionFutures.add(future);
             });
             downstreamSubscriptions.clear();
-            CompletableFutures.successfulAsList(completionFutures, cause -> null).handle((unused1, unused2) -> {
-                signals.clear();
-                return null;
-            });
+            CompletableFutures.successfulAsList(completionFutures, unused -> null)
+                              .handle((unused1, unused2) -> {
+                                  signals.clear();
+                                  return null;
+                              });
         }
     }
 
@@ -490,6 +502,8 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         @Nullable
         @SuppressWarnings("unused")
         private volatile DownstreamSubscription<T> subscription;
+        @Nullable
+        private volatile Throwable completionCause;
 
         private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
 
@@ -645,19 +659,29 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
         @Override
         public void abort() {
+            abort0(AbortedStreamException.get());
+        }
+
+        @Override
+        public void abort(Throwable cause) {
+            requireNonNull(cause, "cause");
+            abort0(cause);
+        }
+
+        private void abort0(Throwable cause) {
             final DownstreamSubscription<T> currentSubscription = subscription;
             if (currentSubscription != null) {
-                currentSubscription.abort();
+                currentSubscription.abort(cause);
                 return;
             }
 
             final DownstreamSubscription<T> newSubscription = new DownstreamSubscription<>(
-                    this, AbortingSubscriber.get(), processor, ImmediateEventExecutor.INSTANCE,
+                    this, AbortingSubscriber.get(cause), processor, ImmediateEventExecutor.INSTANCE,
                     false, false, false);
             if (subscriptionUpdater.compareAndSet(this, null, newSubscription)) {
-                newSubscription.completionFuture().completeExceptionally(AbortedStreamException.get());
+                newSubscription.completionFuture().completeExceptionally(cause);
             } else {
-                subscription.abort();
+                subscription.abort(cause);
             }
         }
     }
@@ -691,7 +715,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         private volatile long demand;
 
         /**
-         * {@link CancelledSubscriptionException} if cancelled. {@link AbortedStreamException} if aborted.
+         * {@link CancelledSubscriptionException} if cancelled. {@link Throwable} if aborted.
          */
         @Nullable
         @SuppressWarnings("unused")
@@ -898,8 +922,8 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             }
         }
 
-        void abort() {
-            if (cancelledOrAbortedUpdater.compareAndSet(this, null, AbortedStreamException.get())) {
+        void abort(Throwable cause) {
+            if (cancelledOrAbortedUpdater.compareAndSet(this, null, cause)) {
                 signal();
             }
         }

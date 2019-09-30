@@ -25,7 +25,17 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import java.util.Arrays;
+import java.util.stream.Stream;
+
+import javax.annotation.Nullable;
+
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.reactivestreams.Publisher;
@@ -42,17 +52,18 @@ class PublisherBasedStreamMessageTest {
      * Tests if {@link PublisherBasedStreamMessage#abort()} cancels the {@link Subscription}, and tests if
      * the abort operation is idempotent.
      */
-    @Test
-    void testAbortWithEarlyOnSubscribe() {
+    @ParameterizedTest
+    @ArgumentsSource(AbortCauseArgumentProvider.class)
+    void testAbortWithEarlyOnSubscribe(@Nullable Throwable cause) {
         final AbortTest test = new AbortTest();
         test.prepare();
         test.invokeOnSubscribe();
-        test.abortAndAwait();
-        test.verify();
+        test.abortAndAwait(cause);
+        test.verify(cause);
 
         // Try to abort again, which should do nothing.
-        test.abortAndAwait();
-        test.verify();
+        test.abortAndAwait(cause);
+        test.verify(cause);
     }
 
     /**
@@ -60,25 +71,31 @@ class PublisherBasedStreamMessageTest {
      * {@link Subscriber#onSubscribe(Subscription)} was invoked by the delegate {@link Publisher} after
      * {@link PublisherBasedStreamMessage#abort()} is called.
      */
-    @Test
-    void testAbortWithLateOnSubscribe() {
+    @ParameterizedTest
+    @ArgumentsSource(AbortCauseArgumentProvider.class)
+    void testAbortWithLateOnSubscribe(@Nullable Throwable cause) {
         final AbortTest test = new AbortTest();
         test.prepare();
-        test.abort();
+        test.abort(cause);
         test.invokeOnSubscribe();
-        test.awaitAbort();
-        test.verify();
+        test.awaitAbort(cause);
+        test.verify(cause);
     }
 
     /**
      * Tests if {@link PublisherBasedStreamMessage#abort()} prohibits further subscription.
      */
-    @Test
-    void testAbortWithoutSubscriber() {
+    @ParameterizedTest
+    @ArgumentsSource(AbortCauseArgumentProvider.class)
+    void testAbortWithoutSubscriber(@Nullable Throwable cause) {
         @SuppressWarnings("unchecked")
         final Publisher<Integer> delegate = mock(Publisher.class);
         final PublisherBasedStreamMessage<Integer> p = new PublisherBasedStreamMessage<>(delegate);
-        p.abort();
+        if (cause == null) {
+            p.abort();
+        } else {
+            p.abort(cause);
+        }
 
         // Publisher should not be involved at all because we are aborting without subscribing.
         verify(delegate, never()).subscribe(any());
@@ -156,28 +173,54 @@ class PublisherBasedStreamMessageTest {
             subscriberWrapper.onSubscribe(subscription);
         }
 
-        void abort() {
-            publisher.abort();
+        void abort(@Nullable Throwable cause) {
+            if (cause == null) {
+                publisher.abort();
+            } else {
+                publisher.abort(cause);
+            }
         }
 
-        void abortAndAwait() {
-            abort();
-            awaitAbort();
+        void abortAndAwait(@Nullable Throwable cause) {
+            abort(cause);
+            awaitAbort(cause);
         }
 
-        void awaitAbort() {
-            assertThatThrownBy(() -> publisher.completionFuture().join())
-                    .hasCauseInstanceOf(AbortedStreamException.class);
+        void awaitAbort(@Nullable Throwable cause) {
+            if (cause == null) {
+                assertThatThrownBy(() -> publisher.completionFuture().join())
+                        .hasCauseInstanceOf(AbortedStreamException.class);
+            } else {
+                assertThatThrownBy(() -> publisher.completionFuture().join())
+                        .hasCauseInstanceOf(cause.getClass());
+            }
         }
 
-        void verify() {
+        void verify(@Nullable Throwable cause) {
             // Ensure subscription.cancel() has been invoked.
             Mockito.verify(subscription).cancel();
 
             // Ensure completionFuture is complete exceptionally.
             assertThat(publisher.completionFuture()).isCompletedExceptionally();
-            assertThatThrownBy(() -> publisher.completionFuture().get())
-                    .hasCauseExactlyInstanceOf(AbortedStreamException.class);
+            if (cause == null) {
+                assertThatThrownBy(() -> publisher.completionFuture().get())
+                        .hasCauseExactlyInstanceOf(AbortedStreamException.class);
+            } else {
+                assertThatThrownBy(() -> publisher.completionFuture().get())
+                        .hasCauseExactlyInstanceOf(cause.getClass());
+            }
+        }
+    }
+
+    private static class AbortCauseArgumentProvider implements ArgumentsProvider {
+
+        @Override
+        public Stream<? extends Arguments> provideArguments(final ExtensionContext extensionContext)
+                throws Exception {
+            return Arrays.asList(null,
+                                 new IllegalStateException("abort stream with a specified cause"))
+                         .stream()
+                         .map(Arguments::of);
         }
     }
 }

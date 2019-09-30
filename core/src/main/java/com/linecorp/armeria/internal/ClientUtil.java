@@ -100,7 +100,7 @@ public final class ClientUtil {
 
             final HttpRequest req = ctx.request();
             if (req != null) {
-                req.abort();
+                req.abort(cause);
             }
         }
         logBuilder.endResponse(cause);

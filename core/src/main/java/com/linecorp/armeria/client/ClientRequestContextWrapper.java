@@ -92,8 +92,19 @@ public class ClientRequestContextWrapper
     }
 
     @Override
+    @Nullable
+    public Runnable responseTimeoutHandler() {
+        return delegate().responseTimeoutHandler();
+    }
+
+    @Override
     public void setResponseTimeout(Duration responseTimeout) {
         delegate().setResponseTimeout(responseTimeout);
+    }
+
+    @Override
+    public void setResponseTimeoutHandler(Runnable responseTimeoutHandler) {
+       delegate().setResponseTimeoutHandler(responseTimeoutHandler);
     }
 
     @Override

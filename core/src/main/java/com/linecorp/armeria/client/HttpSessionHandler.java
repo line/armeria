@@ -34,6 +34,7 @@ import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.Http2ObjectEncoder;
@@ -181,7 +182,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         // The response has been closed even before its request is sent.
         assert protocol != null;
 
-        req.abort();
+        req.abort(CancelledSubscriptionException.get());
         ctx.logBuilder().startRequest(channel, protocol);
         ctx.logBuilder().requestHeaders(req.headers());
         req.completionFuture().handle((unused, cause) -> {

@@ -58,10 +58,9 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
                     DeferredStreamMessage.class, "subscribedToDelegate");
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicIntegerFieldUpdater<DeferredStreamMessage>
-            abortPendingUpdater =
-            AtomicIntegerFieldUpdater.newUpdater(
-                    DeferredStreamMessage.class, "abortPending");
+    private static final AtomicReferenceFieldUpdater<DeferredStreamMessage, Throwable>
+            abortCauseUpdater = AtomicReferenceFieldUpdater.newUpdater(
+                    DeferredStreamMessage.class, Throwable.class, "abortCause");
 
     @Nullable
     @SuppressWarnings("unused") // Updated only via delegateUpdater
@@ -81,8 +80,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     // Only accessed from subscription's executor.
     private long pendingDemand;
 
-    @SuppressWarnings("unused")
-    private volatile int abortPending; // 0 - false, 1 - true
+    private volatile Throwable abortCause;
 
     // Only accessed from subscription's executor.
     private boolean cancelPending;
@@ -100,8 +98,8 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             throw new IllegalStateException("delegate set already");
         }
 
-        if (abortPending != 0) {
-            delegate.abort();
+        if (abortCause != null) {
+            delegate.abort(abortCause);
         }
 
         if (!completionFuture().isDone()) {
@@ -276,24 +274,42 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
 
     @Override
     public void abort() {
-        if (!abortPendingUpdater.compareAndSet(this, 0, 1)) {
+        abort0(AbortedStreamException.get());
+    }
+
+    @Override
+    public void abort(Throwable cause) {
+        requireNonNull(cause, "cause");
+        abort0(cause);
+    }
+
+    private void abort0(Throwable cause) {
+        if (!abortCauseUpdater.compareAndSet(this, null, cause)) {
             return;
         }
 
         final SubscriptionImpl newSubscription = new SubscriptionImpl(
-                this, AbortingSubscriber.get(), ImmediateEventExecutor.INSTANCE, false, false);
+                this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, false, false);
         subscriptionUpdater.compareAndSet(this, null, newSubscription);
 
         final StreamMessage<T> delegate = this.delegate;
         if (delegate != null) {
-            delegate.abort();
+            delegate.abort(cause);
+            return;
+        }
+
+        final CloseEvent closeEvent;
+        if (cause == AbortedStreamException.INSTANCE) {
+            closeEvent = ABORTED_CLOSE;
         } else {
-            if (subscription.needsDirectInvocation()) {
-                ABORTED_CLOSE.notifySubscriber(subscription, completionFuture());
-            } else {
-                subscription.executor().execute(
-                        () -> ABORTED_CLOSE.notifySubscriber(subscription, completionFuture()));
-            }
+            closeEvent = new CloseEvent(cause);
+        }
+
+        if (subscription.needsDirectInvocation()) {
+            closeEvent.notifySubscriber(subscription, completionFuture());
+        } else {
+            subscription.executor().execute(
+                    () -> closeEvent.notifySubscriber(subscription, completionFuture()));
         }
     }
 

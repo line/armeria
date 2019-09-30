@@ -150,6 +150,12 @@ public class ServiceRequestContextWrapper
         delegate().setRequestTimeout(requestTimeout);
     }
 
+    @Nullable
+    @Override
+    public Runnable requestTimeoutHandler() {
+        return delegate().requestTimeoutHandler();
+    }
+
     @Override
     public void setRequestTimeoutHandler(Runnable requestTimeoutHandler) {
         delegate().setRequestTimeoutHandler(requestTimeoutHandler);

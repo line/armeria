@@ -44,7 +44,7 @@ public final class Http2GoAwayHandler {
     private static final long CODE_INTERNAL_ERROR = Http2Error.INTERNAL_ERROR.code();
 
     private boolean goAwaySent;
-    private long goAwayReceived; // -1 if not received, errorCode if received.
+    private long goAwayReceived = -1; // -1 if not received, errorCode if received.
 
     /**
      * Returns {@code true} if the connection has sent a GOAWAY frame.

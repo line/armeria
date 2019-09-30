@@ -34,6 +34,8 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.logging.DefaultRequestLog;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamWriter;
@@ -192,12 +194,24 @@ abstract class HttpResponseDecoder {
 
         @Override
         public void run() {
-            final ResponseTimeoutException cause = ResponseTimeoutException.get();
-            delegate.close(cause);
-            logBuilder.endResponse(cause);
+            final Runnable responseTimeoutHandler;
+            if (logBuilder instanceof DefaultRequestLog) {
+                responseTimeoutHandler =
+                        ((ClientRequestContext) ((RequestLog) logBuilder).context()).responseTimeoutHandler();
+            } else {
+                responseTimeoutHandler = null;
+            }
 
-            if (request != null) {
-                request.abort();
+            if (responseTimeoutHandler != null) {
+                responseTimeoutHandler.run();
+            } else {
+                final ResponseTimeoutException cause = ResponseTimeoutException.get();
+                delegate.close(cause);
+                logBuilder.endResponse(cause);
+
+                if (request != null) {
+                    request.abort(cause);
+                }
             }
         }
 
@@ -277,7 +291,11 @@ abstract class HttpResponseDecoder {
             cancelTimeoutOrLog(cause, actionOnTimeoutCancelled);
 
             if (request != null) {
-                request.abort();
+                if (cause == null) {
+                    request.abort();
+                } else {
+                    request.abort(cause);
+                }
             }
         }
 

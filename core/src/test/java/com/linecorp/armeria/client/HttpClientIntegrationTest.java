@@ -30,6 +30,8 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntFunction;
 
@@ -49,6 +51,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -100,7 +104,7 @@ class HttpClientIntegrationTest {
     private static final AtomicReference<ByteBuf> releasedByteBuf = new AtomicReference<>();
 
     // Used to communicate with test when the response can't be used.
-    private static final AtomicReference<Boolean> completed = new AtomicReference<>();
+    private static final AtomicBoolean completed = new AtomicBoolean();
 
     private static final class PoolUnawareDecorator extends SimpleDecoratingService<HttpRequest, HttpResponse> {
 
@@ -339,6 +343,12 @@ class HttpClientIntegrationTest {
                 } else {
                     return HttpResponse.of(HttpStatus.OK);
                 }
+            });
+
+            sb.service("/client-aborted", (ctx, req) -> {
+                // Don't need to return a real response since the client will timeout.
+                completed.compareAndSet(false, true);
+                return HttpResponse.streaming();
             });
 
             sb.disableServerHeader();
@@ -619,7 +629,7 @@ class HttpClientIntegrationTest {
         req.write(HttpData.ofUtf8("not finishing this stream, sorry."));
         await().untilAsserted(() -> assertThat(obj).hasValue(ResponseHeaders.of(HttpStatus.OK)));
         factory.close();
-        await().untilAsserted(() -> assertThat(completed).hasValue(true));
+        await().untilAsserted(() -> assertThat(completed));
     }
 
     @Test
@@ -722,6 +732,39 @@ class HttpClientIntegrationTest {
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
 
         clientFactory.close();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    void requestAbortWithException(boolean isAbort) {
+        final HttpClient client = HttpClient.of(server.httpUri("/"));
+        final HttpRequestWriter request = HttpRequest.streaming(HttpMethod.GET, "/client-aborted");
+
+        final HttpResponse response = client.execute(request);
+        final IllegalStateException badState = new IllegalStateException("bad state");
+        if (isAbort) {
+            request.abort(badState);
+        } else {
+            request.close(badState);
+        }
+        // request cause is obtained immediately
+        assertThatThrownBy(() -> response.aggregate().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCause(badState);
+    }
+
+    @Test
+    void responseAbortWithException() throws InterruptedException {
+        final HttpClient client = HttpClient.of(server.httpUri("/"));
+        final HttpRequest request = HttpRequest.streaming(HttpMethod.GET, "/client-aborted");
+        final HttpResponse response = client.execute(request);
+        await().untilTrue(completed);
+        final IllegalStateException badState = new IllegalStateException("bad state");
+        response.abort(badState);
+        // response cause is obtained immediately
+        assertThatThrownBy(() -> response.aggregate().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCause(badState);
     }
 
     @Nested

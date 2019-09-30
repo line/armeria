@@ -26,7 +26,7 @@ final class StreamMessageUtil {
 
     static Throwable abortedOrLate(Subscriber<?> oldSubscriber) {
         if (oldSubscriber instanceof AbortingSubscriber) {
-            return AbortedStreamException.get();
+            return ((AbortingSubscriber<?>) oldSubscriber).cause();
         }
 
         return new IllegalStateException("subscribed by other subscriber already");

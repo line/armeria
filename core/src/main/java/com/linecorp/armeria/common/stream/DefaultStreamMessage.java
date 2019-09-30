@@ -28,9 +28,6 @@ import javax.annotation.Nullable;
 import org.jctools.queues.MpscChunkedArrayQueue;
 import org.reactivestreams.Subscriber;
 
-import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.util.Sampler;
-
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
@@ -41,7 +38,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  * to control the rate of production so that the {@link Queue} does not grow up infinitely.
  *
  * <pre>{@code
- * void stream(QueueBasedPublished<Integer> pub, int start, int end) {
+ * void stream(DefaultStreamMessage<Integer> pub, int start, int end) {
  *     // Write 100 integers at most.
  *     int actualEnd = (int) Math.min(end, start + 100L);
  *     int i;
@@ -57,7 +54,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  *     pub.onDemand(() -> stream(pub, i, end));
  * }
  *
- * final QueueBasedPublisher<Integer> myPub = new QueueBasedPublisher<>();
+ * final DefaultStreamMessage<Integer> myPub = new DefaultStreamMessage<>();
  * stream(myPub, 0, Integer.MAX_VALUE);
  * }</pre>
  *
@@ -131,19 +128,28 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
     @Override
     public void abort() {
+        abort0(AbortedStreamException.get());
+    }
+
+    @Override
+    public void abort(Throwable cause) {
+        requireNonNull(cause, "cause");
+        abort0(cause);
+    }
+
+    private void abort0(Throwable cause) {
         final SubscriptionImpl currentSubscription = subscription;
         if (currentSubscription != null) {
-            cancelOrAbort(false);
+            cancelOrAbort(cause);
             return;
         }
-
         final SubscriptionImpl newSubscription = new SubscriptionImpl(
-                this, AbortingSubscriber.get(), ImmediateEventExecutor.INSTANCE, false, false);
+                this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, false, false);
         if (subscriptionUpdater.compareAndSet(this, null, newSubscription)) {
             // We don't need to invoke onSubscribe() for AbortingSubscriber because it's just a placeholder.
             invokedOnSubscribe = true;
         }
-        cancelOrAbort(false);
+        cancelOrAbort(cause);
     }
 
     @Override
@@ -185,7 +191,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
     @Override
     void cancel() {
-        cancelOrAbort(true);
+        cancelOrAbort(CancelledSubscriptionException.get());
     }
 
     @Override
@@ -199,16 +205,15 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         }
     }
 
-    private void cancelOrAbort(boolean cancel) {
+    private void cancelOrAbort(Throwable cause) {
         if (setState(State.OPEN, State.CLEANUP)) {
             final CloseEvent closeEvent;
-            final Sampler<Class<? extends Throwable>> sampler = Flags.verboseExceptionSampler();
-            if (cancel) {
-                closeEvent = sampler.isSampled(CancelledSubscriptionException.class) ?
-                             new CloseEvent(new CancelledSubscriptionException()) : CANCELLED_CLOSE;
+            if (cause == CancelledSubscriptionException.INSTANCE) {
+                closeEvent = CANCELLED_CLOSE;
+            } else if (cause == AbortedStreamException.INSTANCE) {
+                closeEvent = ABORTED_CLOSE;
             } else {
-                closeEvent = sampler.isSampled(AbortedStreamException.class) ?
-                             new CloseEvent(new AbortedStreamException()) : ABORTED_CLOSE;
+                closeEvent = new CloseEvent(cause);
             }
             addObjectOrEvent(closeEvent);
             return;
