@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.File;
+import java.security.Key;
 import java.security.KeyStore;
 import java.security.cert.CertificateException;
 import java.util.Arrays;
@@ -157,6 +158,9 @@ class ServerTlsTest {
         File file = new File(getClass().getResource("keystore.jks").toURI());
         keyStore.load(file.toURI().toURL().openStream(), keyPass != null ? keyPass.toCharArray() : null);
 
+        //keystore password is not given to keyStore but no exception occurs
+        Key key = keyStore.getKey("mykey", "keypassword".toCharArray());
+
         KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         kmf.init(keyStore, "keypassword".toCharArray());
 
@@ -181,6 +185,9 @@ class ServerTlsTest {
         KeyStore keyStore = KeyStore.getInstance("PKCS12");
         File file = new File(getClass().getResource("keystore.p12").toURI());
         keyStore.load(file.toURI().toURL().openStream(), keyPass != null ? keyPass.toCharArray() : null);
+
+        //keystore password is not given to keyStore but no exception occurs
+        Key key = keyStore.getKey("mykey", "password".toCharArray());
 
         KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         kmf.init(keyStore, "password".toCharArray());
