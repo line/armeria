@@ -46,39 +46,36 @@ const HomePage: React.FunctionComponent<Props> = ({ versions }) => {
   const tableRows: JSX.Element[] = [];
 
   if (versions) {
-    versions
-      .getVersions()
-      .sort((a, b) => a.artifactId.localeCompare(b.artifactId))
-      .forEach((version) => {
-        tableRows.push(
-          <TableRow>
-            <TableCell>{version.artifactId}</TableCell>
-            <TableCell>
-              {version.artifactVersion}
-              {versions.getArmeriaArtifactVersion() !== version.artifactVersion
-                ? '(!)'
-                : ''}
-            </TableCell>
-            <TableCell>
-              <Tooltip title={convertLongToUTCDate(version.commitTimeMillis)}>
-                <Typography variant="body2">
-                  {formatReadableTime(version.commitTimeMillis)}
-                </Typography>
-              </Tooltip>
-            </TableCell>
-            <TableCell>
+    versions.getVersions().forEach((version) => {
+      tableRows.push(
+        <TableRow>
+          <TableCell>{version.artifactId}</TableCell>
+          <TableCell>
+            {version.artifactVersion}
+            {versions.getArmeriaArtifactVersion() !== version.artifactVersion
+              ? '(!)'
+              : ''}
+          </TableCell>
+          <TableCell>
+            <Tooltip title={convertLongToUTCDate(version.commitTimeMillis)}>
               <Typography variant="body2">
-                <a
-                  href={`https://github.com/line/armeria/commit/${version.longCommitHash}`}
-                >
-                  {version.shortCommitHash}
-                </a>
+                {formatReadableTime(version.commitTimeMillis)}
               </Typography>
-            </TableCell>
-            <TableCell>{version.repositoryStatus}</TableCell>
-          </TableRow>,
-        );
-      });
+            </Tooltip>
+          </TableCell>
+          <TableCell>
+            <Typography variant="body2">
+              <a
+                href={`https://github.com/line/armeria/commit/${version.longCommitHash}`}
+              >
+                {version.shortCommitHash}
+              </a>
+            </Typography>
+          </TableCell>
+          <TableCell>{version.repositoryStatus}</TableCell>
+        </TableRow>,
+      );
+    });
   }
 
   return (
