@@ -5,6 +5,11 @@
 #
 # https://github.com/sormuras/sormuras.github.io/blob/master/.travis.yml
 
-export JAVA_TEST_HOME=$JAVA_HOME
 wget https://github.com/sormuras/bach/raw/master/install-jdk.sh || exit $?
+
+if [ ! -z "$1" ]; then
+  source ./install-jdk.sh --feature $1
+fi
+
+export JAVA_TEST_HOME=$JAVA_HOME
 source ./install-jdk.sh --feature 11
