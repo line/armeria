@@ -66,10 +66,10 @@ final class DefaultExceptionHandler implements ExceptionHandlerFunction {
         return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    private static void log(Consumer<Logger> logSupplier) {
+    private static void log(Consumer<Logger> logConsumer) {
         if (Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.UNHANDLED &&
             logger.isWarnEnabled()) {
-            logSupplier.accept(logger);
+            logConsumer.accept(logger);
         }
     }
 }
