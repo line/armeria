@@ -4,7 +4,7 @@ import KeyValueTable from '../KeyValueTable';
 import { Row, ValueListContext } from './valueListContext';
 
 interface KeyValueEditorProps {
-  defaultValue: Row[] | undefined;
+  defaultValue?: Row[];
 }
 enum DisplayType {
   KeyValue,
@@ -15,7 +15,15 @@ const KeyValueEditor: React.FunctionComponent<KeyValueEditorProps> = ({
   defaultValue,
 }) => {
   const [displayType, setDisplayType] = useState(DisplayType.Plain);
-  const [rowList, setRowList] = useState(defaultValue);
+  const [rowList, setRowList] = useState<Row[]>(
+    defaultValue || [
+      {
+        index: 0,
+        key: '',
+        value: '',
+      },
+    ],
+  );
 
   const DisplayTypeButton: React.FunctionComponent = () => {
     switch (displayType) {
@@ -33,8 +41,6 @@ const KeyValueEditor: React.FunctionComponent<KeyValueEditorProps> = ({
       </Button>
     );
   };
-  // tslint:disable-next-line
-  console.log(rowList);
   return (
     <ValueListContext.Provider value={[rowList, setRowList]}>
       <DisplayTypeButton />

@@ -1,5 +1,5 @@
 import { Input } from '@material-ui/core';
-import React, { Dispatch, SetStateAction, useContext, useState } from 'react';
+import React, { Dispatch, SetStateAction, useContext } from 'react';
 
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
@@ -9,49 +9,16 @@ import TableRow from '@material-ui/core/TableRow';
 import { Row, ValueListContext } from '../KeyValueEditor/valueListContext';
 
 interface RowProps {
-  value?: Row;
-  id: number;
+  row: Row;
   onRowChange: (index: number, key: string, value: string) => void;
 }
 
-const useKeyValueList = (
-  defaultKeyValueList: Row[],
-): {
-  rowList: Row[];
-  onRowChange: (index: number, name: string, value: string) => void;
-} => {
-  const resultArr:
-    | [Row[], Dispatch<SetStateAction<Row[]>>]
-    | undefined = useContext(ValueListContext);
-  if (!resultArr) throw new Error('KeyValueTable : RowList가 없습니다.');
-
-  const [rowList, setRowList] = resultArr;
-
-  setRowList(defaultKeyValueList);
-
-  const onRowChange = (index: number, name: string, value: string) => {
-    if (rowList) {
-      setRowList(
-        rowList.map((row, i) =>
-          i === index ? { ...row, [name]: value } : row,
-        ),
-      );
-    }
-  };
-  return {
-    rowList,
-    onRowChange,
-  };
-};
-
 const KeyValueTableRow: React.FunctionComponent<RowProps> = ({
-  value,
-  id,
+  row,
   onRowChange,
 }) => {
-  const [row] = useState<Row>({ ...value, index: id });
   const onChange = (rkey: string, rvalue: string) => {
-    onRowChange(id, rkey, rvalue);
+    onRowChange(row.index, rkey, rvalue);
   };
 
   return (
@@ -79,9 +46,33 @@ interface KeyValueTableProps {
 const KeyValueTable: React.FunctionComponent<KeyValueTableProps> = ({
   defaultKeyValueList,
 }) => {
-  const { rowList, onRowChange } = useKeyValueList(
-    defaultKeyValueList as Row[],
+  const resultArr:
+    | [Row[], Dispatch<SetStateAction<Row[]>>]
+    | undefined = useContext(ValueListContext);
+
+  if (!resultArr) throw new Error('KeyValueTable : RowList가 없습니다.');
+
+  const [rowList, setRowList] = resultArr;
+
+  setRowList(
+    defaultKeyValueList || [
+      {
+        index: 0,
+        key: '',
+        value: '',
+      },
+    ],
   );
+
+  const onRowChange = (index: number, name: string, value: string) => {
+    if (rowList) {
+      setRowList(
+        rowList.map((row, i) =>
+          i === index ? { ...row, [name]: value } : row,
+        ),
+      );
+    }
+  };
   // tslint:disable-next-line
   console.log(rowList);
   return (
@@ -97,9 +88,12 @@ const KeyValueTable: React.FunctionComponent<KeyValueTableProps> = ({
         {rowList &&
           rowList.map((v, i) => (
             <KeyValueTableRow
-              value={v}
               key={i}
-              id={i}
+              row={{
+                index: i,
+                key: v.key,
+                value: v.value,
+              }}
               onRowChange={onRowChange}
             />
           ))}

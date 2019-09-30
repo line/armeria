@@ -22,6 +22,7 @@ import Typography from '@material-ui/core/Typography';
 import React, { ChangeEvent } from 'react';
 import Dropdown, { Option } from 'react-dropdown';
 
+import KeyValueEditor from '../../components/KeyValueEditor';
 import jsonPrettify from '../../lib/json-prettify';
 
 const jsonPlaceHolder = jsonPrettify('{"foo":"bar"}');
@@ -56,6 +57,8 @@ const HttpHeaders: React.FunctionComponent<Props> = (props) => (
           </>
         )}
         <Typography variant="body2" paragraph />
+        <KeyValueEditor />
+        zzz
         <TextField
           multiline
           fullWidth
