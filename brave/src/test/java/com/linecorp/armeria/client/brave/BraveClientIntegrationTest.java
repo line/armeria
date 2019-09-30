@@ -64,7 +64,7 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
     }
 
     // Hide currentTraceContext in ITHttpClient
-    private final CurrentTraceContext currentTraceContext = super.currentTraceContext =
+    private final CurrentTraceContext currentTraceContext =
             RequestContextCurrentTraceContext.builder()
                                              .addScopeDecorator(StrictScopeDecorator.create())
                                              .build();
@@ -140,6 +140,18 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
     @Test
     public void redirect() throws Exception {
         throw new AssumptionViolatedException("Armeria does not support client redirect.");
+    }
+
+    @Override
+    public void supportsPortableCustomization() throws Exception {
+        // TODO(adriancole): Figure out why super.currentTraceContext has to be overridden.
+        final CurrentTraceContext oldSuperCurrentTraceContext = super.currentTraceContext;
+        super.currentTraceContext = currentTraceContext;
+        try {
+            super.supportsPortableCustomization();
+        } finally {
+            super.currentTraceContext = oldSuperCurrentTraceContext;
+        }
     }
 
     @Override

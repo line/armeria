@@ -50,7 +50,7 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
     private Server server;
 
     // Hide currentTraceContext in ITHttpServer
-    private final CurrentTraceContext currentTraceContext = super.currentTraceContext =
+    private final CurrentTraceContext currentTraceContext =
             RequestContextCurrentTraceContext.builder()
                                              .addScopeDecorator(StrictScopeDecorator.create())
                                              .build();
@@ -86,6 +86,18 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
 
         server = sb.build();
         server.start().join();
+    }
+
+    @Override
+    public void supportsPortableCustomization() throws Exception {
+        // TODO(adriancole): Figure out why super.currentTraceContext has to be overridden.
+        final CurrentTraceContext oldSuperCurrentTraceContext = super.currentTraceContext;
+        super.currentTraceContext = currentTraceContext;
+        try {
+            super.supportsPortableCustomization();
+        } finally {
+            super.currentTraceContext = oldSuperCurrentTraceContext;
+        }
     }
 
     @Override
