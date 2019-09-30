@@ -24,9 +24,6 @@ import java.util.concurrent.ConcurrentMap;
 
 import javax.annotation.Nullable;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
@@ -41,9 +38,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * the {@link AggregatedHttpRequest} to an object by {@link ObjectMapper}.
  */
 public class JacksonRequestConverterFunction implements RequestConverterFunction {
-
-    private static final Logger logger = LoggerFactory.getLogger(JacksonRequestConverterFunction.class);
-    private static final String CONVERSION_ERROR_MESSAGE = "failed to parse a JSON document: ";
 
     private static final ObjectMapper defaultObjectMapper = new ObjectMapper();
 
@@ -86,9 +80,8 @@ public class JacksonRequestConverterFunction implements RequestConverterFunction
                         expectedResultType == CharSequence.class) {
                         return RequestConverterFunction.fallthrough();
                     }
-                    logger.error(CONVERSION_ERROR_MESSAGE, e);
 
-                    throw new IllegalArgumentException(CONVERSION_ERROR_MESSAGE + e, e);
+                    throw new IllegalArgumentException("failed to parse a JSON document: " + e, e);
                 }
             }
         }

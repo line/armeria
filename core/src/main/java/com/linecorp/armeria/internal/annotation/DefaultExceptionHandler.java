@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.internal.annotation;
 
+import java.util.function.Consumer;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,6 +49,7 @@ final class DefaultExceptionHandler implements ExceptionHandlerFunction {
     @Override
     public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
         if (cause instanceof IllegalArgumentException) {
+            log(log -> log.warn("{} failed processing request", ctx, cause));
             return HttpResponse.of(HttpStatus.BAD_REQUEST);
         }
 
@@ -58,11 +61,15 @@ final class DefaultExceptionHandler implements ExceptionHandlerFunction {
             return ((HttpResponseException) cause).httpResponse();
         }
 
-        if (Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.UNHANDLED &&
-            logger.isWarnEnabled()) {
-            logger.warn("{} Unhandled exception from an annotated service:", ctx, cause);
-        }
+        log(log -> log.warn("{} Unhandled exception from an annotated service:", ctx, cause));
 
         return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    private static void log(Consumer<Logger> logSupplier) {
+        if (Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.UNHANDLED &&
+            logger.isWarnEnabled()) {
+            logSupplier.accept(logger);
+        }
     }
 }
