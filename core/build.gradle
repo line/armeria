@@ -9,7 +9,7 @@ String releaseFlagFromVersion(String src) {
 
 def mrJarVersions = [9]
 
-mrJarVersions.each {version->
+mrJarVersions.each { version->
     sourceSets {
         "java${version}" {
             java {
@@ -51,7 +51,7 @@ tasks.withType(JavaCompile) {
 }
 
 tasks.withType(Jar) {
-    mrJarVersions.each {version->
+    mrJarVersions.each { version->
         into("META-INF/versions/${version}") {
             from sourceSets."java${version}".output
         }
@@ -75,7 +75,7 @@ tasks.trimShadedJar.doLast {
 tasks.shadedTest.exclude 'META-INF/versions/**'
 
 dependencies {
-    mrJarVersions.each {version->
+    mrJarVersions.each { version->
         // Common to reference classes in main sourceset from Java 9 one (e.g., to return a common interface)
         "java${version}Implementation" files(sourceSets.main.output.classesDirs) { builtBy compileJava }
     }
