@@ -15,4 +15,4 @@ fi
 
 export JAVA_TEST_HOME="$JAVA_HOME"
 export JAVA_HOME="$HOME/openjdk11"
-./install-jdk.sh --feature 11 --target "$JAVA_HOME"
+bash ./install-jdk.sh --feature 11 --target "$JAVA_HOME"
