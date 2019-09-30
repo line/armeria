@@ -1,0 +1,46 @@
+buildscript {
+    ext.kotlin_version = '1.3.50'
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.springframework.boot:spring-boot-gradle-plugin:${managedVersions['org.springframework.boot:spring-boot-gradle-plugin']}"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+apply plugin: 'org.springframework.boot'
+apply plugin: 'kotlin'
+
+springBoot {
+    mainClassName = 'example.springframework.boot.minimal.Main'
+}
+
+dependencies {
+    compile project(':spring:boot-starter')
+    compile 'org.hibernate.validator:hibernate-validator'
+
+    compileOnly 'org.springframework.boot:spring-boot-configuration-processor'
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
+    runtime project(':spring:boot-actuator-starter')
+
+    testCompile 'junit:junit'
+    testCompile 'net.javacrumbs.json-unit:json-unit-fluent'
+    testCompile 'org.springframework.boot:spring-boot-starter-test'
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+}
+repositories {
+    mavenCentral()
+}
+compileKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
+compileTestKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
