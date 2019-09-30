@@ -212,7 +212,7 @@ public final class MyClass {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
         ... usual type check ...
         // OK
         return name.equals(((MyClass) obj).name);

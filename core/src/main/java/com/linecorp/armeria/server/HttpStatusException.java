@@ -42,7 +42,7 @@ public final class HttpStatusException extends RuntimeException {
     public static HttpStatusException of(int statusCode) {
         if (statusCode < 0 || statusCode >= 1000) {
             final HttpStatus status = HttpStatus.valueOf(statusCode);
-            if (Flags.verboseExceptions()) {
+            if (Flags.verboseExceptionSampler().isSampled(HttpStatusException.class)) {
                 return new HttpStatusException(status);
             } else {
                 return new HttpStatusException(status, false);

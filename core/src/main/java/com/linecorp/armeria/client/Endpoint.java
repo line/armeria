@@ -643,7 +643,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
         if (this == obj) {
             return true;
         }

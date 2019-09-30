@@ -81,7 +81,7 @@ public class HttpResponseException extends RuntimeException {
 
     @Override
     public Throwable fillInStackTrace() {
-        if (Flags.verboseExceptions()) {
+        if (Flags.verboseExceptionSampler().isSampled(getClass())) {
             return super.fillInStackTrace();
         }
         return this;

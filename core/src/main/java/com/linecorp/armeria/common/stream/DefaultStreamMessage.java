@@ -29,6 +29,7 @@ import org.jctools.queues.MpscChunkedArrayQueue;
 import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.util.Sampler;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
@@ -201,12 +202,13 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     private void cancelOrAbort(boolean cancel) {
         if (setState(State.OPEN, State.CLEANUP)) {
             final CloseEvent closeEvent;
+            final Sampler<Class<? extends Throwable>> sampler = Flags.verboseExceptionSampler();
             if (cancel) {
-                closeEvent = Flags.verboseExceptions() ?
-                             new CloseEvent(CancelledSubscriptionException.get()) : CANCELLED_CLOSE;
+                closeEvent = sampler.isSampled(CancelledSubscriptionException.class) ?
+                             new CloseEvent(new CancelledSubscriptionException()) : CANCELLED_CLOSE;
             } else {
-                closeEvent = Flags.verboseExceptions() ?
-                             new CloseEvent(AbortedStreamException.get()) : ABORTED_CLOSE;
+                closeEvent = sampler.isSampled(AbortedStreamException.class) ?
+                             new CloseEvent(new AbortedStreamException()) : ABORTED_CLOSE;
             }
             addObjectOrEvent(closeEvent);
             return;

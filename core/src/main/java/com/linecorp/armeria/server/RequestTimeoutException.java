@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.TimeoutException;
 
 /**
@@ -25,16 +26,19 @@ public final class RequestTimeoutException extends TimeoutException {
 
     private static final long serialVersionUID = 2556616197251937869L;
 
-    private static final RequestTimeoutException INSTANCE = new RequestTimeoutException();
+    private static final RequestTimeoutException INSTANCE = new RequestTimeoutException(false);
 
     /**
      * Returns a singleton {@link RequestTimeoutException}.
      */
     public static RequestTimeoutException get() {
-        return INSTANCE;
+        return Flags.verboseExceptionSampler().isSampled(RequestTimeoutException.class) ?
+               new RequestTimeoutException() : INSTANCE;
     }
 
-    private RequestTimeoutException() {
+    private RequestTimeoutException() {}
+
+    private RequestTimeoutException(@SuppressWarnings("unused") boolean dummy) {
         super(null, null, false, false);
     }
 }

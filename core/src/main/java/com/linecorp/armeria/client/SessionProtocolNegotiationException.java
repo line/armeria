@@ -22,6 +22,7 @@ import java.util.Optional;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 
 /**
@@ -72,6 +73,9 @@ public final class SessionProtocolNegotiationException extends RuntimeException 
 
     @Override
     public Throwable fillInStackTrace() {
+        if (Flags.verboseExceptionSampler().isSampled(getClass())) {
+            return super.fillInStackTrace();
+        }
         return this;
     }
 }

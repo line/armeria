@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.TimeoutException;
 
 /**
@@ -25,16 +26,19 @@ public final class ResponseTimeoutException extends TimeoutException {
 
     private static final long serialVersionUID = 2556616197251937869L;
 
-    private static final ResponseTimeoutException INSTANCE = new ResponseTimeoutException();
+    private static final ResponseTimeoutException INSTANCE = new ResponseTimeoutException(false);
 
     /**
      * Returns a singleton {@link ResponseTimeoutException}.
      */
     public static ResponseTimeoutException get() {
-        return INSTANCE;
+        return Flags.verboseExceptionSampler().isSampled(ResponseTimeoutException.class) ?
+               new ResponseTimeoutException() : INSTANCE;
     }
 
-    private ResponseTimeoutException() {
+    private ResponseTimeoutException() {}
+
+    private ResponseTimeoutException(@SuppressWarnings("unused") boolean dummy) {
         super(null, null, false, false);
     }
 }

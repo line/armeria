@@ -37,58 +37,57 @@ interface OwnProps {
 
 type Props = OwnProps & RouteComponentProps<{ name: string }>;
 
-export default class EnumPage extends React.PureComponent<Props> {
-  public render() {
-    const { specification } = this.props;
-    const data = specification.getEnumByName(this.props.match.params.name);
-    if (!data) {
-      return <>Not found.</>;
-    }
-
-    const hasIntValue = data.values.some((value) => !!value.intValue);
-    const hasDocString = data.values.some((value) => !!value.docString);
-
-    return (
-      <>
-        <Typography variant="h5">
-          <code>{simpleName(data.name)}</code>
-        </Typography>
-        <Typography variant="subtitle1" paragraph>
-          <code>{packageName(data.name)}</code>
-        </Typography>
-        <Typography variant="body2" paragraph>
-          {data.docString}
-        </Typography>
-        <Section>
-          <Typography variant="h6">Values</Typography>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Name</TableCell>
-                {hasIntValue && <TableCell>Int Value</TableCell>}
-                {hasDocString && <TableCell>Description</TableCell>}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {data.values.length > 0 ? (
-                data.values.map((value) => (
-                  <TableRow key={value.name}>
-                    <TableCell>
-                      <code>{value.name}</code>
-                    </TableCell>
-                    {hasIntValue && <TableCell>{value.intValue}</TableCell>}
-                    {hasDocString && <TableCell>{value.docString}</TableCell>}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={2}>There are no values.</TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </Section>
-      </>
-    );
+const EnumPage: React.FunctionComponent<Props> = ({ match, specification }) => {
+  const data = specification.getEnumByName(match.params.name);
+  if (!data) {
+    return <>Not found.</>;
   }
-}
+
+  const hasIntValue = data.values.some((value) => !!value.intValue);
+  const hasDocString = data.values.some((value) => !!value.docString);
+
+  return (
+    <>
+      <Typography variant="h5">
+        <code>{simpleName(data.name)}</code>
+      </Typography>
+      <Typography variant="subtitle1" paragraph>
+        <code>{packageName(data.name)}</code>
+      </Typography>
+      <Typography variant="body2" paragraph>
+        {data.docString}
+      </Typography>
+      <Section>
+        <Typography variant="h6">Values</Typography>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Name</TableCell>
+              {hasIntValue && <TableCell>Int Value</TableCell>}
+              {hasDocString && <TableCell>Description</TableCell>}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {data.values.length > 0 ? (
+              data.values.map((value) => (
+                <TableRow key={value.name}>
+                  <TableCell>
+                    <code>{value.name}</code>
+                  </TableCell>
+                  {hasIntValue && <TableCell>{value.intValue}</TableCell>}
+                  {hasDocString && <TableCell>{value.docString}</TableCell>}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={2}>There are no values.</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </Section>
+    </>
+  );
+};
+
+export default React.memo(EnumPage);

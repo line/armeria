@@ -389,7 +389,7 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     @Nullable
-    private HttpHeaders parseGrpcWebTrailers(ByteBuf buf) {
+    private static HttpHeaders parseGrpcWebTrailers(ByteBuf buf) {
         final HttpHeadersBuilder trailers = HttpHeaders.builder();
         while (buf.readableBytes() > 0) {
             int start = buf.forEachByte(ByteProcessor.FIND_NON_LINEAR_WHITESPACE);

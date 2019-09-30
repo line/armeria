@@ -23,7 +23,7 @@ import javax.annotation.Nullable;
  */
 public class ArmeriaStatusException extends RuntimeException {
 
-    public static final long serialVersionUID = -8370257107063108923L;
+    private static final long serialVersionUID = -8370257107063108923L;
 
     private final int code;
 

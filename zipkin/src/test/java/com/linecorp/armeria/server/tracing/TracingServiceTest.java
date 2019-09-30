@@ -27,6 +27,8 @@ import static org.mockito.Mockito.when;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.annotation.Nullable;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -87,7 +89,8 @@ class TracingServiceTest {
                 RequestContextCurrentTraceContext.DEFAULT, 1.0f);
 
         // check span name
-        final Span span = reporter.spans().take();
+        final Span span = reporter.spans().poll(10, TimeUnit.SECONDS);
+        assertThat(span).isNotNull();
         assertThat(span.name()).isEqualTo(TEST_METHOD);
 
         // check kind
@@ -130,7 +133,7 @@ class TracingServiceTest {
         final SpanCollectingReporter reporter = testServiceInvocation(traceContext, 1.0f);
 
         // check span name
-        final Span span = reporter.spans().take();
+        final Span span = reporter.spans().poll(10, TimeUnit.SECONDS);
 
         // check tags
         assertTags(span);
@@ -152,6 +155,7 @@ class TracingServiceTest {
                                        .build();
 
         final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/trustin",
+                                                                 HttpHeaderNames.SCHEME, "http",
                                                                  HttpHeaderNames.AUTHORITY, "foo.com"));
         final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(req)
                                                                       .build();
@@ -181,7 +185,8 @@ class TracingServiceTest {
         return reporter;
     }
 
-    private static void assertTags(Span span) {
+    private static void assertTags(@Nullable Span span) {
+        assertThat(span).isNotNull();
         assertThat(span.tags()).containsEntry("http.host", "foo.com")
                                .containsEntry("http.method", "POST")
                                .containsEntry("http.path", "/hello/trustin")
