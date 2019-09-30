@@ -7,11 +7,11 @@
 
 wget https://github.com/sormuras/bach/raw/master/install-jdk.sh || exit $?
 
-if [ -n "$1" ]; then
+if [[ -n "$1" ]]; then
   # Can't source twice from install-jdk.sh in same build
-  export JAVA_HOME=$HOME/openjdk13
-  ./install-jdk.sh --feature $1 --target $JAVA_HOME
+  export JAVA_HOME="$HOME/openjdk13"
+  ./install-jdk.sh --feature "$1" --target "$JAVA_HOME"
 fi
 
-export JAVA_TEST_HOME=$JAVA_HOME
+export JAVA_TEST_HOME="$JAVA_HOME"
 source ./install-jdk.sh --feature 11
