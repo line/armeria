@@ -108,7 +108,7 @@ The user can customize the server by defining a bean of the type in the configur
 
                 // You can also bind asynchronous RPC services such as Thrift and gRPC:
                 // builder.service(THttpService.of(...));
-                // builder.service(new GrpcServiceBuilder()...build());
+                // builder.service(GrpcService.builder()...build());
             };
         }
     }
@@ -143,7 +143,8 @@ in your configuration as follows:
             return builder -> {
                 // Use a circuit breaker for each remote host.
                 final CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
-                builder.decorator(CircuitBreakerHttpClient.builder(strategy).newDecorator());
+                builder.decorator(CircuitBreakerHttpClient.builder(strategy)
+                                                          .newDecorator());
 
                 // Set a custom client factory.
                 builder.factory(clientFactory);

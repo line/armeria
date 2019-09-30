@@ -41,7 +41,6 @@ Now, you can specify :api:`BraveService` using :ref:`server-decorator` with the 
 
     import com.linecorp.armeria.common.HttpResponse;
     import com.linecorp.armeria.server.Server;
-    import com.linecorp.armeria.server.ServerBuilder;
     import com.linecorp.armeria.server.brave.BraveService;
 
     Tracing tracing = ...
@@ -100,13 +99,14 @@ For example, you can use it with `Kafka <https://kafka.apache.org/>`_ producer:
 
     Producer<String, String> kafkaProducer = kafkaTracing.producer(new KafkaProducer<>(props));
 
-    Server server = Server.builder().http(8081)
-            .service("/", (ctx, req) -> {
-                kafkaProducer.send(new ProducerRecord<>("test", "foo", "bar"));
-                return HttpResponse.of(200);
-            })
-            .decorator(BraveService.newDecorator(tracing))
-            .build();
+    Server server = Server.builder()
+                          .http(8081)
+                          .service("/", (ctx, req) -> {
+                                        kafkaProducer.send(new ProducerRecord<>("test", "foo", "bar"));
+                                        return HttpResponse.of(200);
+                           })
+                          .decorator(BraveService.newDecorator(tracing))
+                          .build();
 
 This will trace all the requests sent from the client to the above example server to
 `Kafka <https://kafka.apache.org/>`_, and report timing data using the ``spanReporter`` you specified.

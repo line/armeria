@@ -30,7 +30,7 @@ public final class Main {
                      .tlsSelfSigned()
                      // Serve an individual file.
                      .service("/favicon.ico", HttpFile.ofResource(Main.class.getClassLoader(), "favicon.ico")
-                                                 .asService())
+                                                      .asService())
                      // Serve the files under the current user's home directory.
                      .service("prefix:/", HttpFileServiceBuilder.forFileSystem(System.getProperty("user.home"))
                                                            .autoIndex(true)

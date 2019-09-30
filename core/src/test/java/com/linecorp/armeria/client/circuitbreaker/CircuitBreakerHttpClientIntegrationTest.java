@@ -44,10 +44,10 @@ class CircuitBreakerHttpClientIntegrationTest {
     void abortOnFailFast() throws Exception {
         final AtomicLong tickerValue = new AtomicLong();
         final CircuitBreaker circuitBreaker = CircuitBreaker.builder()
-                .ticker(tickerValue::get)
-                .counterUpdateInterval(Duration.ofSeconds(1))
-                .minimumRequestThreshold(0)
-                .build();
+                                                            .ticker(tickerValue::get)
+                                                            .counterUpdateInterval(Duration.ofSeconds(1))
+                                                            .minimumRequestThreshold(0)
+                                                            .build();
 
         final HttpClient client = new HttpClientBuilder()
                 .decorator(CircuitBreakerHttpClient.newDecorator(

@@ -32,7 +32,7 @@ import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
+import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.grpc.Status;
@@ -63,9 +63,10 @@ public class GrpcStatusCauseTest {
     public static final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.serviceUnder("/", new GrpcServiceBuilder()
-                    .addService(new TestServiceImpl())
-                    .build());
+            sb.serviceUnder("/",
+                            GrpcService.builder()
+                                       .addService(new TestServiceImpl())
+                                       .build());
         }
     };
 

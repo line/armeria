@@ -98,7 +98,7 @@ import com.linecorp.armeria.internal.grpc.TestServiceImpl;
 import com.linecorp.armeria.internal.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
+import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
@@ -111,6 +111,7 @@ import io.grpc.ServerCall.Listener;
 import io.grpc.ServerCallHandler;
 import io.grpc.ServerInterceptor;
 import io.grpc.ServerInterceptors;
+import io.grpc.ServerServiceDefinition;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.grpc.StatusException;
@@ -140,50 +141,54 @@ public class GrpcClientTest {
             sb.maxRequestLength(MAX_MESSAGE_SIZE);
             sb.idleTimeoutMillis(0);
 
-            sb.serviceUnder("/", new GrpcServiceBuilder()
-                    .addService(
-                            ServerInterceptors.intercept(
-                                    new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()),
-                                    new ServerInterceptor() {
-                                        @Override
-                                        public <REQ, RESP> Listener<REQ> interceptCall(
-                                                ServerCall<REQ, RESP> call,
-                                                Metadata requestHeaders,
-                                                ServerCallHandler<REQ, RESP> next) {
-                                            HttpHeadersBuilder fromClient = HttpHeaders.builder();
-                                            MetadataUtil.fillHeaders(requestHeaders, fromClient);
-                                            CLIENT_HEADERS_CAPTURE.set(fromClient.build());
-                                            return next.startCall(
-                                                    new SimpleForwardingServerCall<REQ, RESP>(call) {
-                                                        @Override
-                                                        public void close(Status status, Metadata trailers) {
-                                                            trailers.merge(requestHeaders);
-                                                            super.close(status, trailers);
-                                                        }
-                                                    }, requestHeaders);
-                                        }
-                                    }))
-                    .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
-                    .setMaxOutboundMessageSizeBytes(MAX_MESSAGE_SIZE)
-                    .build()
-                    .decorate((client, ctx, req) -> {
-                        final HttpResponse res = client.serve(ctx, req);
-                        return new FilteredHttpResponse(res) {
-                            private boolean headersReceived;
-
-                            @Override
-                            protected HttpObject filter(HttpObject obj) {
-                                if (obj instanceof HttpHeaders) {
-                                    if (!headersReceived) {
-                                        headersReceived = true;
-                                    } else {
-                                        SERVER_TRAILERS_CAPTURE.set((HttpHeaders) obj);
-                                    }
+            final ServerServiceDefinition interceptService =
+                    ServerInterceptors.intercept(
+                            new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()),
+                            new ServerInterceptor() {
+                                @Override
+                                public <REQ, RESP> Listener<REQ> interceptCall(
+                                        ServerCall<REQ, RESP> call,
+                                        Metadata requestHeaders,
+                                        ServerCallHandler<REQ, RESP> next) {
+                                    HttpHeadersBuilder fromClient = HttpHeaders.builder();
+                                    MetadataUtil.fillHeaders(requestHeaders, fromClient);
+                                    CLIENT_HEADERS_CAPTURE.set(fromClient.build());
+                                    return next.startCall(
+                                            new SimpleForwardingServerCall<REQ, RESP>(call) {
+                                                @Override
+                                                public void close(Status status, Metadata trailers) {
+                                                    trailers.merge(requestHeaders);
+                                                    super.close(status, trailers);
+                                                }
+                                            }, requestHeaders);
                                 }
-                                return obj;
-                            }
-                        };
-                    }));
+                            });
+
+            sb.serviceUnder("/",
+                            GrpcService.builder()
+                                       .addService(interceptService)
+                                       .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
+                                       .setMaxOutboundMessageSizeBytes(MAX_MESSAGE_SIZE)
+                                       .build()
+                                       .decorate((client, ctx, req) -> {
+                                           final HttpResponse res = client.serve(ctx, req);
+                                           return new FilteredHttpResponse(res) {
+                                               private boolean headersReceived;
+
+                                               @Override
+                                               protected HttpObject filter(HttpObject obj) {
+                                                            if (obj instanceof HttpHeaders) {
+                                                                    if (!headersReceived) {
+                                                                            headersReceived = true;
+                                                                    } else {
+                                                                            SERVER_TRAILERS_CAPTURE.set(
+                                                                                    (HttpHeaders) obj);
+                                                                    }
+                                                            }
+                                                            return obj;
+                                               }
+                                           };
+                                       }));
         }
     };
 

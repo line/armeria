@@ -78,7 +78,6 @@ You can use the ``decorator()`` method in :api:`ClientBuilder` to build a :api:`
     import com.linecorp.armeria.client.circuitbreaker.CircuitBreaker;
     import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerHttpClient;
     import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerStrategy;
-    import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerHttpClientBuilder;
     import com.linecorp.armeria.client.HttpClientBuilder;
     import com.linecorp.armeria.client.HttpClient;
     import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -87,7 +86,8 @@ You can use the ``decorator()`` method in :api:`ClientBuilder` to build a :api:`
 
     final CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
     final HttpClient client = new HttpClientBuilder(...)
-            .decorator(CircuitBreakerHttpClient.builder(strategy).newDecorator())
+            .decorator(CircuitBreakerHttpClient.builder(strategy)
+                                               .newDecorator())
             .build();
 
     final AggregatedHttpResponse res = client.execute(...).aggregate().join(); // Send requests on and on.
@@ -191,7 +191,8 @@ you should implement :api:`CircuitBreakerStrategyWithContent` and specify it whe
             };
 
     final HttpClient client = new HttpClientBuilder(...)
-            .decorator(CircuitBreakerHttpClient.builder(myStrategy).newDecorator()) // Specify the strategy
+            .decorator(CircuitBreakerHttpClient.builder(myStrategy)
+                                               .newDecorator()) // Specify the strategy
             .build();
 
     final AggregatedHttpResponse res = client.execute(...).aggregate().join();
@@ -319,7 +320,8 @@ If you use :api:`CircuitBreakerBuilder`, you can configure the parameters which 
 
         final MetricCollectingCircuitBreakerListener listener =
                 new MetricCollectingCircuitBreakerListener(Metrics.globalRegistry);
-        final CircuitBreakerBuilder builder = CircuitBreaker.builder().listener(listener);
+        final CircuitBreakerBuilder builder = CircuitBreaker.builder()
+                                                            .listener(listener);
 
 .. _circuit-breaker-with-non-armeria-client:
 

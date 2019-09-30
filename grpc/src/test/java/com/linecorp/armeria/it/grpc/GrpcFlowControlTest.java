@@ -45,7 +45,7 @@ import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
+import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.grpc.stub.ClientCallStreamObserver;
@@ -190,10 +190,11 @@ public class GrpcFlowControlTest {
             sb.maxRequestLength(0);
             sb.requestTimeoutMillis(0);
 
-            sb.serviceUnder("/", new GrpcServiceBuilder()
-                    .addService(new FlowControlService())
-                    .setMaxInboundMessageSizeBytes(Integer.MAX_VALUE)
-                    .build());
+            sb.serviceUnder("/",
+                            GrpcService.builder()
+                                       .addService(new FlowControlService())
+                                       .setMaxInboundMessageSizeBytes(Integer.MAX_VALUE)
+                                       .build());
         }
     };
 

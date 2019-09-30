@@ -52,18 +52,18 @@ public final class Main {
 
     static Server newBackendServer(int port, int frameIntervalMillis) throws Exception {
         return Server.builder()
-                .http(port)
-                // Disable timeout to serve infinite streaming response.
-                .requestTimeoutMillis(0)
-                // Serve /index.html file.
-                .service("/", HttpFileBuilder.ofResource(Main.class.getClassLoader(), "index.html")
-                                             .cacheControl(ServerCacheControl.REVALIDATED)
-                                             .build()
-                                             .asService())
-                .service("/animation", new AnimationService(frameIntervalMillis))
-                // Serve health check.
-                .service("/internal/l7check", new HttpHealthCheckService())
-                .build();
+                     .http(port)
+                     // Disable timeout to serve infinite streaming response.
+                     .requestTimeoutMillis(0)
+                     // Serve /index.html file.
+                     .service("/", HttpFileBuilder.ofResource(Main.class.getClassLoader(), "index.html")
+                                                 .cacheControl(ServerCacheControl.REVALIDATED)
+                                                 .build()
+                                                 .asService())
+                     .service("/animation", new AnimationService(frameIntervalMillis))
+                     // Serve health check.
+                     .service("/internal/l7check", new HttpHealthCheckService())
+                     .build();
     }
 
     static Server newProxyServer(int httpPort, int httpsPort) throws Exception {

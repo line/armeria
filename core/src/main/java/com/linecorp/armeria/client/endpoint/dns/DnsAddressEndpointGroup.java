@@ -55,7 +55,7 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
      * @param hostname the hostname to query DNS queries for
      */
     public static DnsAddressEndpointGroup of(String hostname) {
-        return new DnsAddressEndpointGroupBuilder(hostname).build();
+        return DnsAddressEndpointGroup.builder(hostname).build();
     }
 
     /**
@@ -66,7 +66,7 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
      * @param port     the port of the {@link Endpoint}s
      */
     public static DnsAddressEndpointGroup of(String hostname, int port) {
-        return new DnsAddressEndpointGroupBuilder(hostname).port(port).build();
+        return DnsAddressEndpointGroup.builder(hostname).port(port).build();
     }
 
     /**

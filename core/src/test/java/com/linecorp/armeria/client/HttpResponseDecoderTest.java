@@ -70,7 +70,9 @@ class HttpResponseDecoderTest {
                 // for notifying RESPONSE_END to listeners.
                 .contentPreview(100)
                 // In order to use a different thread to to subscribe to the response.
-                .decorator(RetryingHttpClient.builder(strategy).maxTotalAttempts(2).newDecorator())
+                .decorator(RetryingHttpClient.builder(strategy)
+                                             .maxTotalAttempts(2)
+                                             .newDecorator())
                 .decorator((delegate, ctx, req) -> {
                     final AtomicReference<Thread> responseStartedThread = new AtomicReference<>();
                     ctx.log().addListener(log -> {

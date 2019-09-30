@@ -78,10 +78,12 @@ public class MessageConverterService {
      *                 new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT)
      *                                   .enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS));
      * // Register the converter when adding an annotated service to the ServerBuilder.
-     * final Server = Server.builder().port(0, SessionProtocol.HTTP)
-     *                                   .annotatedService("/messageConverter", new MessageConverterService(),
-     *                                                     requestConverterFunction)
-     *                                   .build();
+     * final Server = Server.builder()
+     *                      .port(0, SessionProtocol.HTTP)
+     *                      .annotatedService("/messageConverter",
+     *                                        new MessageConverterService(),
+     *                                        requestConverterFunction)
+     *                      .build();
      * }</pre>
      */
     @Post("/obj/obj")

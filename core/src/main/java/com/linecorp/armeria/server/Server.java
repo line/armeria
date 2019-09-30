@@ -87,6 +87,13 @@ public final class Server implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
 
+    /**
+     * Creates a new {@link ServerBuilder}.
+     */
+    public static ServerBuilder builder() {
+        return new ServerBuilder();
+    }
+
     private final ServerConfig config;
     @Nullable
     private final DomainNameMapping<SslContext> sslContexts;
@@ -98,13 +105,6 @@ public final class Server implements AutoCloseable {
 
     @Nullable
     private ServerBootstrap serverBootstrap;
-
-    /**
-     * Creates a new {@link ServerBuilder}.
-     */
-    public static ServerBuilder builder() {
-        return new ServerBuilder();
-    }
 
     Server(ServerConfig config, @Nullable DomainNameMapping<SslContext> sslContexts) {
         this.config = requireNonNull(config, "config");

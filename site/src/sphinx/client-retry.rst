@@ -140,7 +140,6 @@ using :api:`RetryingHttpClientBuilder`:
 
 .. code-block:: java
 
-    import com.linecorp.armeria.client.retry.RetryingHttpClientBuilder;
     import com.linecorp.armeria.client.retry.RetryStrategyWithContent;
 
     final RetryStrategyWithContent<HttpResponse> strategy =
@@ -169,7 +168,8 @@ using :api:`RetryingHttpClientBuilder`:
 
     // Create an HttpClient with a custom strategy.
     final HttpClient client = new HttpClientBuilder(...)
-            .decorator(RetryingHttpClient.builder(strategy).newDecorator())
+            .decorator(RetryingHttpClient.builder(strategy)
+                                         .newDecorator())
             .build();
 
     final AggregatedHttpResponse res = client.execute(...).aggregate().join();
@@ -387,8 +387,10 @@ You might want to use :ref:`client-circuit-breaker` with :api:`RetryingHttpClien
     RetryStrategy myRetryStrategy = new RetryStrategy() { ... };
 
     HttpClient client = new HttpClientBuilder(...)
-            .decorator(CircuitBreakerHttpClient.builder(cbStrategy).newDecorator())
-            .decorator(RetryingHttpClient.builder(myRetryStrategy).newDecorator())
+            .decorator(CircuitBreakerHttpClient.builder(cbStrategy)
+                                               .newDecorator())
+            .decorator(RetryingHttpClient.builder(myRetryStrategy)
+                                         .newDecorator())
             .build();
 
     final AggregatedHttpResponse res = client.execute(...).aggregate().join();

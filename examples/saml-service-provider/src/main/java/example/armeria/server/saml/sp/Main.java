@@ -80,16 +80,18 @@ public class Main {
 
     public static void main(String[] args) throws Exception {
         final SamlServiceProvider ssp = samlServiceProvider();
-        final Server server = Server.builder()
-                .https(8443)
-                // You can add this certificate to your trust store in order to make your web browser happy.
-                .tls(new File(ClassLoader.getSystemResource("localhost.crt").toURI()),
-                     new File(ClassLoader.getSystemResource("localhost.key").toURI()))
-                // Decorate you service with SAML decorator.
-                .annotatedService("/", new MyService(), ssp.newSamlDecorator())
-                // Add SAML service to your server which handles a SAML response and a metadata request.
-                .service(ssp.newSamlService())
-                .build();
+        final Server server =
+                Server.builder()
+                      .https(8443)
+                      // You can add this certificate to your trust store
+                      // in order to make your web browser happy.
+                      .tls(new File(ClassLoader.getSystemResource("localhost.crt").toURI()),
+                           new File(ClassLoader.getSystemResource("localhost.key").toURI()))
+                      // Decorate you service with SAML decorator.
+                      .annotatedService("/", new MyService(), ssp.newSamlDecorator())
+                      // Add SAML service to your server which handles a SAML response and a metadata request.
+                      .service(ssp.newSamlService())
+                      .build();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             server.stop().join();

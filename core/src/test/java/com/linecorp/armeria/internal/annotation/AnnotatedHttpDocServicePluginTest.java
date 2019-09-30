@@ -332,9 +332,9 @@ public class AnnotatedHttpDocServicePluginTest {
 
     private static Map<String, ServiceInfo> services(DocServiceFilter include, DocServiceFilter exclude) {
         final Server server = Server.builder()
-                .annotatedService(new FooClass())
-                .annotatedService(new BarClass())
-                .build();
+                                    .annotatedService(new FooClass())
+                                    .annotatedService(new BarClass())
+                                    .build();
         final ServiceSpecification specification =
                 plugin.generateSpecification(ImmutableSet.copyOf(server.serviceConfigs()),
                                              unifyFilter(include, exclude));

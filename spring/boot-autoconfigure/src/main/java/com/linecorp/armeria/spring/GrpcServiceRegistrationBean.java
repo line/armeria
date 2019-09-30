@@ -33,11 +33,11 @@ import com.linecorp.armeria.server.docs.DocService;
  * > public GrpcServiceRegistrationBean helloService() {
  * >     return new GrpcServiceRegistrationBean()
  * >             .setServiceName("helloService")
- * >             .setService(new GrpcServiceBuilder()
- * >                                 .addService(new HelloService())
- * >                                 .supportedSerializationFormats(GrpcSerializationFormats.values())
- * >                                 .enableUnframedRequests(true)
- * >                                 .build())
+ * >             .setService(GrpcService.builder()
+ * >                                    .addService(new HelloService())
+ * >                                    .supportedSerializationFormats(GrpcSerializationFormats.values())
+ * >                                    .enableUnframedRequests(true)
+ * >                                    .build())
  * >             .setDecorators(LoggingService.newDecorator())
  * >             .setExampleRequests(List.of(GrpcExampleRequest.of(HelloServiceGrpc.SERVICE_NAME,
  * >                                                               "Hello",

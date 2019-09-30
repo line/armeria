@@ -51,9 +51,9 @@ import com.linecorp.armeria.server.TransientService;
  * <h2>Example:</h2>
  * <pre>{@code
  * Server server = Server.builder()
- *         .service("/services", myService)
- *         .service("/health", new HttpHealthCheckService())
- *         .build();
+ *                       .service("/services", myService)
+ *                       .service("/health", new HttpHealthCheckService())
+ *                       .build();
  * }</pre>
  *
  * <p>You can also specify additional {@link HealthChecker}s at construction time. It will respond with a
@@ -64,9 +64,9 @@ import com.linecorp.armeria.server.TransientService;
  * <pre>{@code
  * SettableHealthChecker healthChecker = new SettableHealthChecker();
  * Server server = Server.builder()
- *         .service("/services", myService)
- *         .service("/health", new HttpHealthCheckService(healthChecker))
- *         .build();
+ *                       .service("/services", myService)
+ *                       .service("/health", new HttpHealthCheckService(healthChecker))
+ *                       .build();
  * }</pre>
  *
  * @deprecated Use {@link HealthCheckService}.

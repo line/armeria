@@ -42,7 +42,7 @@ public class HelloConfiguration {
             // You can also bind annotated HTTP services and asynchronous RPC services such as Thrift and gRPC:
             // builder.annotatedService("/rest", service);
             // builder.service("/thrift", THttpService.of(...));
-            // builder.service(new GrpcServiceBuilder()...build());
+            // builder.service(GrpcService.builder()...build());
         };
     }
 
@@ -68,7 +68,8 @@ public class HelloConfiguration {
         return builder -> {
             // Use a circuit breaker for each remote host.
             final CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
-            builder.decorator(CircuitBreakerHttpClient.builder(strategy).newDecorator());
+            builder.decorator(CircuitBreakerHttpClient.builder(strategy)
+                                                      .newDecorator());
 
             // Set a custom client factory.
             builder.factory(clientFactory);

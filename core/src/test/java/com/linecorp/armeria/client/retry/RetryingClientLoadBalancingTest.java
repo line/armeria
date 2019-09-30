@@ -100,23 +100,25 @@ class RetryingClientLoadBalancingTest {
         final String groupName = "loadBalancedRetry";
         EndpointGroupRegistry.register(groupName, group, EndpointSelectionStrategy.ROUND_ROBIN);
         try {
-            final HttpClient c = new HttpClientBuilder("h2c://group:" + groupName)
-                    .decorator(RetryingHttpClient.builder((RetryStrategy) (ctx, cause) -> {
-                        // Get the response status.
-                        final HttpStatus status;
-                        if (ctx.log().isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
-                            status = ctx.log().responseHeaders().status();
-                        } else {
-                            status = null;
-                        }
+            final RetryStrategy retryStrategy = (ctx, cause) -> {
+                // Get the response status.
+                final HttpStatus status;
+                if (ctx.log().isAvailable(RequestLogAvailability.RESPONSE_HEADERS)) {
+                    status = ctx.log().responseHeaders().status();
+                } else {
+                    status = null;
+                }
 
-                        // Retry only once on failure.
-                        if (!HttpStatus.OK.equals(status) && RetryingClient.getTotalAttempts(ctx) <= 1) {
-                            return CompletableFuture.completedFuture(Backoff.withoutDelay());
-                        } else {
-                            return CompletableFuture.completedFuture(null);
-                        }
-                    }).newDecorator())
+                // Retry only once on failure.
+                if (!HttpStatus.OK.equals(status) && RetryingClient.getTotalAttempts(ctx) <= 1) {
+                    return CompletableFuture.completedFuture(Backoff.withoutDelay());
+                } else {
+                    return CompletableFuture.completedFuture(null);
+                }
+            };
+            final HttpClient c = new HttpClientBuilder("h2c://group:" + groupName)
+                    .decorator(RetryingHttpClient.builder(retryStrategy)
+                                                 .newDecorator())
                     .build();
 
             for (int i = 0; i < NUM_PORTS; i++) {

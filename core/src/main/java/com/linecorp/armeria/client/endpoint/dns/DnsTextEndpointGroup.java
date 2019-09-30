@@ -52,7 +52,7 @@ public final class DnsTextEndpointGroup extends DnsEndpointGroup {
      *                if the record contains unsupported content.
      */
     public static DnsTextEndpointGroup of(String hostname, Function<byte[], Endpoint> mapping) {
-        return new DnsTextEndpointGroupBuilder(hostname, mapping).build();
+        return DnsTextEndpointGroup.builder(hostname, mapping).build();
     }
 
     /**

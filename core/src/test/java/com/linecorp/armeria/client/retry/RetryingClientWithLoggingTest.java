@@ -99,16 +99,17 @@ public class RetryingClientWithLoggingTest {
     @Test
     public void retryingThenLogging() {
         successLogIndex = 5;
+        final RetryStrategyWithContent<HttpResponse> retryStrategy =
+                        (ctx, response) -> response.aggregate().handle((msg, cause) -> {
+                            if ("hello".equals(msg.contentUtf8())) {
+                                return null;
+                            }
+                            return Backoff.ofDefault();
+                        });
         final HttpClient client = new HttpClientBuilder(server.uri("/"))
                 .decorator(loggingDecorator())
-                .decorator(RetryingHttpClient.builder(
-                        (RetryStrategyWithContent<HttpResponse>)
-                                (ctx, response) -> response.aggregate().handle((msg, cause) -> {
-                                    if ("hello".equals(msg.contentUtf8())) {
-                                        return null;
-                                    }
-                                    return Backoff.ofDefault();
-                                })).newDecorator())
+                .decorator(RetryingHttpClient.builder(retryStrategy)
+                                             .newDecorator())
                 .build();
         assertThat(client.get("/hello").aggregate().join().contentUtf8()).isEqualTo("hello");
 

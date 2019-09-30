@@ -122,10 +122,15 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
  *
  * <pre>{@code
  * // Build an HTTP server that runs on an ephemeral TCP/IP port.
- * Server httpServer = Server.builder().service(...).build();
+ * Server httpServer = Server.builder()
+ *                           .service(...)
+ *                           .build();
  *
  * // Build an HTTPS server that runs on an ephemeral TCP/IP port.
- * Server httpsServer = Server.builder().tls(...).service(...).build();
+ * Server httpsServer = Server.builder()
+ *                            .tls(...)
+ *                            .service(...)
+ *                            .build();
  * }</pre>
  *
  * @see VirtualHostBuilder

@@ -135,12 +135,20 @@ public class ProxyProtocolEnabledServerTest {
                 return "";
             }
         };
-        assertThat(Server.builder().tlsSelfSigned().port(0, PROXY, HTTP, HTTPS)
-                                      .annotatedService(service).build()).isNotNull();
-        assertThat(Server.builder().tlsSelfSigned().port(0, PROXY, HTTPS)
-                                      .annotatedService(service).build()).isNotNull();
-        assertThat(Server.builder().port(0, PROXY, HTTP)
-                                      .annotatedService(service).build()).isNotNull();
+        assertThat(Server.builder()
+                         .tlsSelfSigned()
+                         .port(0, PROXY, HTTP, HTTPS)
+                         .annotatedService(service)
+                         .build()).isNotNull();
+        assertThat(Server.builder()
+                         .tlsSelfSigned()
+                         .port(0, PROXY, HTTPS)
+                         .annotatedService(service)
+                         .build()).isNotNull();
+        assertThat(Server.builder()
+                         .port(0, PROXY, HTTP)
+                         .annotatedService(service)
+                         .build()).isNotNull();
     }
 
     private static void checkResponse(BufferedReader reader) throws IOException {

@@ -34,7 +34,8 @@ public class WithDuplicator extends RetryingHttpClientBase {
                 (ctx, response) -> response.aggregate().handle((unused1, unused2) -> null);
 
         return new HttpClientBuilder(baseUrl())
-                .decorator(RetryingHttpClient.builder(retryStrategy).newDecorator())
+                .decorator(RetryingHttpClient.builder(retryStrategy)
+                                             .newDecorator())
                 .build();
     }
 }

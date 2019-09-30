@@ -56,11 +56,12 @@ public class DnsAddressEndpointGroupTest {
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1"))
                                          .addRecord(ANSWER, newAddressRecord("unrelated.com", "1.2.3.4"))
         ))) {
-            try (DnsAddressEndpointGroup group = DnsAddressEndpointGroup.builder("foo.com")
-                    .port(8080)
-                    .serverAddresses(server.addr())
-                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
-                    .build()) {
+            try (DnsAddressEndpointGroup group =
+                         DnsAddressEndpointGroup.builder("foo.com")
+                                                .port(8080)
+                                                .serverAddresses(server.addr())
+                                                .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                                                .build()) {
 
                 assertThat(group.awaitInitialEndpoints()).containsExactly(
                         Endpoint.of("foo.com", 8080).withIpAddr("1.1.1.1"));
@@ -77,11 +78,12 @@ public class DnsAddressEndpointGroupTest {
                                          .addRecord(ANSWER, newAddressRecord("bar.com.",
                                                                              "2404:6800:4004:806::2013"))
         ))) {
-            try (DnsAddressEndpointGroup group = DnsAddressEndpointGroup.builder("bar.com")
-                    .port(8080)
-                    .serverAddresses(server.addr())
-                    .resolvedAddressTypes(ResolvedAddressTypes.IPV6_ONLY)
-                    .build()) {
+            try (DnsAddressEndpointGroup group =
+                         DnsAddressEndpointGroup.builder("bar.com")
+                                                .port(8080)
+                                                .serverAddresses(server.addr())
+                                                .resolvedAddressTypes(ResolvedAddressTypes.IPV6_ONLY)
+                                                .build()) {
 
                 assertThat(group.awaitInitialEndpoints(10, TimeUnit.SECONDS)).containsExactly(
                         Endpoint.of("bar.com", 8080).withIpAddr("2404:6800:4004:806::2013"),
@@ -99,11 +101,12 @@ public class DnsAddressEndpointGroupTest {
                 new DefaultDnsQuestion("baz.com.", AAAA),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("baz.com.", "::1"))
         ))) {
-            try (DnsAddressEndpointGroup group = DnsAddressEndpointGroup.builder("baz.com")
-                    .port(8080)
-                    .serverAddresses(server.addr())
-                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
-                    .build()) {
+            try (DnsAddressEndpointGroup group =
+                         DnsAddressEndpointGroup.builder("baz.com")
+                                                .port(8080)
+                                                .serverAddresses(server.addr())
+                                                .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
+                                                .build()) {
 
                 assertThat(group.awaitInitialEndpoints()).containsExactly(
                         Endpoint.of("baz.com", 8080).withIpAddr("1.1.1.1"),
@@ -120,10 +123,11 @@ public class DnsAddressEndpointGroupTest {
                 new DefaultDnsQuestion("baz.com.", AAAA),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("baz.com.", "::1"))
         ))) {
-            try (DnsAddressEndpointGroup group = DnsAddressEndpointGroup.builder("baz.com")
-                    .port(8080)
-                    .serverAddresses(server.addr())
-                    .build()) {
+            try (DnsAddressEndpointGroup group =
+                         DnsAddressEndpointGroup.builder("baz.com")
+                                                .port(8080)
+                                                .serverAddresses(server.addr())
+                                                .build()) {
 
                 assertThat(group.awaitInitialEndpoints()).contains(
                         Endpoint.of("baz.com", 8080).withIpAddr("1.1.1.1"));
@@ -143,11 +147,12 @@ public class DnsAddressEndpointGroupTest {
                                          .addRecord(ANSWER, newCnameRecord("a.com.", "b.com."))
                                          .addRecord(ANSWER, newAddressRecord("b.com.", "::1"))
         ))) {
-            try (DnsAddressEndpointGroup group = DnsAddressEndpointGroup.builder("a.com")
-                    .port(8080)
-                    .serverAddresses(server.addr())
-                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
-                    .build()) {
+            try (DnsAddressEndpointGroup group =
+                         DnsAddressEndpointGroup.builder("a.com")
+                                                .port(8080)
+                                                .serverAddresses(server.addr())
+                                                .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
+                                                .build()) {
 
                 assertThat(group.awaitInitialEndpoints()).containsExactly(
                         Endpoint.of("a.com", 8080).withIpAddr("1.1.1.1"),
@@ -164,11 +169,12 @@ public class DnsAddressEndpointGroupTest {
                 new DefaultDnsQuestion("foo.com.", AAAA),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "::1"))
         ))) {
-            try (DnsAddressEndpointGroup group = DnsAddressEndpointGroup.builder("foo.com")
-                    .port(8080)
-                    .serverAddresses(server.addr())
-                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
-                    .build()) {
+            try (DnsAddressEndpointGroup group =
+                         DnsAddressEndpointGroup.builder("foo.com")
+                                                .port(8080)
+                                                .serverAddresses(server.addr())
+                                                .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
+                                                .build()) {
 
                 assertThat(group.awaitInitialEndpoints()).containsExactly(
                         Endpoint.of("foo.com", 8080).withIpAddr("127.0.0.1"));
@@ -185,11 +191,12 @@ public class DnsAddressEndpointGroupTest {
                                          .addRecord(ANSWER, newMappedAddressRecord("bar.com.", "1.1.1.1"))
                                          .addRecord(ANSWER, newMappedAddressRecord("bar.com.", "1.1.1.3"))
         ))) {
-            try (DnsAddressEndpointGroup group = DnsAddressEndpointGroup.builder("bar.com")
-                    .port(8080)
-                    .serverAddresses(server.addr())
-                    .resolvedAddressTypes(ResolvedAddressTypes.IPV6_ONLY)
-                    .build()) {
+            try (DnsAddressEndpointGroup group =
+                         DnsAddressEndpointGroup.builder("bar.com")
+                                                .port(8080)
+                                                .serverAddresses(server.addr())
+                                                .resolvedAddressTypes(ResolvedAddressTypes.IPV6_ONLY)
+                                                .build()) {
 
                 assertThat(group.awaitInitialEndpoints()).containsExactly(
                         Endpoint.of("bar.com", 8080).withIpAddr("1.1.1.1"),
@@ -205,10 +212,11 @@ public class DnsAddressEndpointGroupTest {
                 new DefaultDnsQuestion("no-port.com.", A),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("no-port.com", "1.1.1.1"))
         ))) {
-            try (DnsAddressEndpointGroup group = DnsAddressEndpointGroup.builder("no-port.com")
-                    .serverAddresses(server.addr())
-                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
-                    .build()) {
+            try (DnsAddressEndpointGroup group =
+                         DnsAddressEndpointGroup.builder("no-port.com")
+                                                .serverAddresses(server.addr())
+                                                .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
+                                                .build()) {
 
                 assertThat(group.awaitInitialEndpoints()).containsExactly(
                         Endpoint.of("no-port.com").withIpAddr("1.1.1.1"));
@@ -219,11 +227,12 @@ public class DnsAddressEndpointGroupTest {
     @Test
     public void backoff() throws Exception {
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of())) { // Respond nothing.
-            try (DnsAddressEndpointGroup group = DnsAddressEndpointGroup.builder("backoff.com")
-                    .serverAddresses(server.addr())
-                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
-                    .backoff(Backoff.fixed(500))
-                    .build()) {
+            try (DnsAddressEndpointGroup group =
+                         DnsAddressEndpointGroup.builder("backoff.com")
+                                                .serverAddresses(server.addr())
+                                                .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
+                                                .backoff(Backoff.fixed(500))
+                                                .build()) {
 
                 await().untilAsserted(() -> assertThat(group.attemptsSoFar).isGreaterThan(2));
                 assertThat(group.endpoints()).isEmpty();
@@ -249,11 +258,12 @@ public class DnsAddressEndpointGroupTest {
                 new DefaultDnsQuestion("empty.com.", A), new DefaultDnsResponse(0),
                 new DefaultDnsQuestion("empty.com.", AAAA), new DefaultDnsResponse(0)
         ))) {
-            try (DnsAddressEndpointGroup group = DnsAddressEndpointGroup.builder("empty.com")
-                    .serverAddresses(server.addr())
-                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
-                    .backoff(Backoff.fixed(500))
-                    .build()) {
+            try (DnsAddressEndpointGroup group =
+                         DnsAddressEndpointGroup.builder("empty.com")
+                                                .serverAddresses(server.addr())
+                                                .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
+                                                .backoff(Backoff.fixed(500))
+                                                .build()) {
 
                 await().untilAsserted(() -> assertThat(group.attemptsSoFar).isGreaterThan(2));
                 assertThat(group.endpoints()).isEmpty();
@@ -279,11 +289,12 @@ public class DnsAddressEndpointGroupTest {
                 new DefaultDnsQuestion("partial.com.", A),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("partial.com", "1.1.1.1"))
         ))) {
-            try (DnsAddressEndpointGroup group = DnsAddressEndpointGroup.builder("partial.com")
-                    .serverAddresses(server.addr())
-                    .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
-                    .backoff(Backoff.fixed(500))
-                    .build()) {
+            try (DnsAddressEndpointGroup group =
+                         DnsAddressEndpointGroup.builder("partial.com")
+                                                .serverAddresses(server.addr())
+                                                .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
+                                                .backoff(Backoff.fixed(500))
+                                                .build()) {
 
                 assertThat(group.awaitInitialEndpoints()).containsExactly(
                         Endpoint.of("partial.com").withIpAddr("1.1.1.1"));

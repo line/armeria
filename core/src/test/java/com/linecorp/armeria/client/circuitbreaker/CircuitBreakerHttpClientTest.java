@@ -136,20 +136,21 @@ public class CircuitBreakerHttpClientTest {
         final Duration counterSlidingWindow = Duration.ofSeconds(180);
         final Duration counterUpdateInterval = Duration.ofMillis(1);
 
-        final CircuitBreaker circuitBreaker = CircuitBreaker.builder(remoteServiceName)
-                .minimumRequestThreshold(minimumRequestThreshold)
-                .circuitOpenWindow(circuitOpenWindow)
-                .counterSlidingWindow(counterSlidingWindow)
-                .counterUpdateInterval(counterUpdateInterval)
-                .ticker(ticker::get)
-                .listener(new CircuitBreakerListenerAdapter() {
-                    @Override
-                    public void onEventCountUpdated(String circuitBreakerName, EventCount eventCount)
-                            throws Exception {
-                        ticker.addAndGet(Duration.ofMillis(1).toNanos());
-                    }
-                })
-                .build();
+        final CircuitBreaker circuitBreaker =
+                CircuitBreaker.builder(remoteServiceName)
+                              .minimumRequestThreshold(minimumRequestThreshold)
+                              .circuitOpenWindow(circuitOpenWindow)
+                              .counterSlidingWindow(counterSlidingWindow)
+                              .counterUpdateInterval(counterUpdateInterval)
+                              .ticker(ticker::get)
+                              .listener(new CircuitBreakerListenerAdapter() {
+                                  @Override
+                                  public void onEventCountUpdated(String circuitBreakerName,
+                                                                  EventCount eventCount) throws Exception {
+                                                            ticker.addAndGet(Duration.ofMillis(1).toNanos());
+                                  }
+                              })
+                              .build();
 
         final CircuitBreakerMapping mapping = (ctx, req) -> circuitBreaker;
         final HttpClient client = new HttpClientBuilder(server.uri("/"))

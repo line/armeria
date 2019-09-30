@@ -81,7 +81,8 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
      */
     public static Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient>
     newDecorator(RetryStrategy retryStrategy) {
-        return RetryingHttpClient.builder(retryStrategy).newDecorator();
+        return RetryingHttpClient.builder(retryStrategy)
+                                 .newDecorator();
     }
 
     /**

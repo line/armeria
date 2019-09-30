@@ -65,7 +65,6 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
     }
 
     @Override
-
     protected void init() throws Exception {
         final ServerBuilder sb = Server.builder();
         sb.service("/", (ctx, req) -> {

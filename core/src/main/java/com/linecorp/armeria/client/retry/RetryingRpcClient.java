@@ -40,7 +40,8 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
      */
     public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
     newDecorator(RetryStrategyWithContent<RpcResponse> retryStrategyWithContent) {
-        return RetryingRpcClient.builder(retryStrategyWithContent).newDecorator();
+        return RetryingRpcClient.builder(retryStrategyWithContent)
+                                .newDecorator();
     }
 
     /**
@@ -51,8 +52,9 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
      */
     public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
     newDecorator(RetryStrategyWithContent<RpcResponse> retryStrategyWithContent, int maxTotalAttempts) {
-        return RetryingRpcClient.builder(retryStrategyWithContent).maxTotalAttempts(maxTotalAttempts)
-                                                                     .newDecorator();
+        return RetryingRpcClient.builder(retryStrategyWithContent)
+                                .maxTotalAttempts(maxTotalAttempts)
+                                .newDecorator();
     }
 
     /**
@@ -67,8 +69,9 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
     newDecorator(RetryStrategyWithContent<RpcResponse> retryStrategyWithContent,
                  int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
         return RetryingRpcClient.builder(retryStrategyWithContent)
-                .maxTotalAttempts(maxTotalAttempts)
-                .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt).newDecorator();
+                                .maxTotalAttempts(maxTotalAttempts)
+                                .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt)
+                                .newDecorator();
     }
 
     /**

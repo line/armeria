@@ -160,12 +160,18 @@ public class ThriftDocServicePluginTest {
     }
 
     private static Map<String, ServiceInfo> services(DocServiceFilter include, DocServiceFilter exclude) {
-        final Server server = Server.builder()
-                .service(Route.builder().exact("/hello").build(), THttpService.of(mock(AsyncIface.class)))
-                .service(Route.builder().exact("/foo").build(),
-                         THttpService.ofFormats(mock(FooService.AsyncIface.class),
-                                                ThriftSerializationFormats.COMPACT))
-                .build();
+        final Server server =
+                Server.builder()
+                      .service(Route.builder()
+                                    .exact("/hello")
+                                    .build(),
+                               THttpService.of(mock(AsyncIface.class)))
+                      .service(Route.builder()
+                                    .exact("/foo")
+                                    .build(),
+                               THttpService.ofFormats(mock(FooService.AsyncIface.class),
+                                                      ThriftSerializationFormats.COMPACT))
+                      .build();
 
         // Generate the specification with the ServiceConfigs.
         final ServiceSpecification specification = generator.generateSpecification(

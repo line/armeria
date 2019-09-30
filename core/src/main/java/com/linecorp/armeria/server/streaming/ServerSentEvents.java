@@ -42,17 +42,18 @@ import com.linecorp.armeria.common.sse.ServerSentEvent;
  *
  * <p>A user simply creates a streaming {@link HttpResponse} which emits Server-Sent Events, e.g.
  * <pre>{@code
- * Server server = Server.builder()
- *         // Emit Server-Sent Events with the SeverSentEvent instances published by a publisher.
- *         .service("/sse1",
- *                  (ctx, req) -> ServerSentEvents.fromPublisher(
- *                          Flux.just(ServerSentEvent.ofData("foo"), ServerSentEvent.ofData("bar"))))
- *         // Emit Server-Sent Events with converting instances published by a publisher into
- *         // ServerSentEvent instances.
- *         .service("/sse2",
- *                  (ctx, req) -> ServerSentEvents.fromPublisher(
- *                          Flux.just("foo", "bar"), ServerSentEvent::ofData))
- *         .build();
+ * Server server =
+ *          Server.builder()
+ *                // Emit Server-Sent Events with the SeverSentEvent instances published by a publisher.
+ *                .service("/sse1",
+ *                        (ctx, req) -> ServerSentEvents.fromPublisher(
+ *                                  Flux.just(ServerSentEvent.ofData("foo"), ServerSentEvent.ofData("bar"))))
+ *                // Emit Server-Sent Events with converting instances published by a publisher into
+ *                // ServerSentEvent instances.
+ *                .service("/sse2",
+ *                        (ctx, req) -> ServerSentEvents.fromPublisher(
+ *                                  Flux.just("foo", "bar"), ServerSentEvent::ofData))
+ *                .build();
  * }</pre>
  */
 public final class ServerSentEvents {

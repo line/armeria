@@ -100,14 +100,14 @@ attach it to your :api:`Server`.
             .build();
 
     Server server = Server.builder()
-            .https(8443)
-            // Configure TLS with your key and certificate.
-            .tls(new File("your-certificate-file-path"), new File("your-key-file-path"))
-            // Decorate you service with SAML decorator.
-            .annotatedService("/", new MyService(), ssp.newSamlDecorator())
-            // Add SAML service to your server which handles a SAML response and a metadata request.
-            .service(ssp.newSamlService())
-            .build();
+                          .https(8443)
+                          // Configure TLS with your key and certificate.
+                          .tls(new File("your-certificate-file-path"), new File("your-key-file-path"))
+                          // Decorate you service with SAML decorator.
+                          .annotatedService("/", new MyService(), ssp.newSamlDecorator())
+                          // Add SAML service to your server which handles a SAML response and a metadata request.
+                          .service(ssp.newSamlService())
+                          .build();
 
 How to handle the authentication response
 -----------------------------------------

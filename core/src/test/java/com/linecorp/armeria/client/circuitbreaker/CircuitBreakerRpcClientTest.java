@@ -120,8 +120,9 @@ class CircuitBreakerRpcClientTest {
 
     @Test
     void testDelegate() throws Exception {
-        final CircuitBreaker circuitBreaker = CircuitBreaker.builder(remoteServiceName).ticker(() -> 0)
-                                                                                          .build();
+        final CircuitBreaker circuitBreaker = CircuitBreaker.builder(remoteServiceName)
+                                                            .ticker(() -> 0)
+                                                            .build();
 
         @SuppressWarnings("unchecked")
         final Client<RpcRequest, RpcResponse> delegate = mock(Client.class);

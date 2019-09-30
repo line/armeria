@@ -15,7 +15,6 @@ First, add :api:`DocService` to the :api:`ServerBuilder`:
 
     import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
     import com.linecorp.armeria.server.docs.DocService;
-    import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
     import com.linecorp.armeria.server.ServerBuilder;
     import com.linecorp.armeria.server.thrift.THttpService;
 
@@ -27,11 +26,11 @@ First, add :api:`DocService` to the :api:`ServerBuilder`:
 
     // Add a gRPC service which implements 'GrpcHelloService'.
     // Unlike Thrift, you must enable gRPC-Web and unframed requests explicitly.
-    sb.service(new GrpcServiceBuilder().addService(new MyGrpcHelloService())
-                                       .supportedSerializationFormats(
-                                               GrpcSerializationFormats.values())
-                                       .enableUnframedRequests(true)
-                                       .build());
+    sb.service(GrpcService.builder()
+                          .addService(new MyGrpcHelloService())
+                          .supportedSerializationFormats(GrpcSerializationFormats.values())
+                          .enableUnframedRequests(true)
+                          .build());
 
     // Add an annotated HTTP service.
     sb.annotatedService("/service", new MyAnnotatedService());

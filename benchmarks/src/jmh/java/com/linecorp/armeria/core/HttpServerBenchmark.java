@@ -64,10 +64,10 @@ public class HttpServerBenchmark {
     @Setup
     public void startServer() throws Exception {
         server = Server.builder()
-                .service("/empty", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                .requestTimeout(Duration.ZERO)
-                .meterRegistry(NoopMeterRegistry.get())
-                .build();
+                       .service("/empty", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                       .requestTimeout(Duration.ZERO)
+                       .meterRegistry(NoopMeterRegistry.get())
+                       .build();
         server.start().join();
         final ServerPort httpPort = server.activePorts().values().stream()
                                           .filter(ServerPort::hasHttp).findAny()

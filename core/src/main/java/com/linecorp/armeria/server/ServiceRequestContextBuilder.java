@@ -138,9 +138,10 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         }
 
         // Build a fake server which never starts up.
-        final ServerBuilder serverBuilder = Server.builder().meterRegistry(meterRegistry())
-                                                               .workerGroup(eventLoop(), false)
-                                                               .service(path(), service);
+        final ServerBuilder serverBuilder = Server.builder()
+                                                  .meterRegistry(meterRegistry())
+                                                  .workerGroup(eventLoop(), false)
+                                                  .service(path(), service);
         serverConfigurators.forEach(configurator -> configurator.accept(serverBuilder));
 
         final Server server = serverBuilder.build();

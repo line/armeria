@@ -172,7 +172,8 @@ public class RetryingRpcClientTest {
         final HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift"))
                 .responseTimeoutMillis(10000)
                 .factory(factory)
-                .rpcDecorator(RetryingRpcClient.builder(strategy).newDecorator())
+                .rpcDecorator(RetryingRpcClient.builder(strategy)
+                                               .newDecorator())
                 .build(HelloService.Iface.class);
         when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
 
@@ -204,7 +205,8 @@ public class RetryingRpcClientTest {
     public void doNotRetryWhenResponseIsCancelled() throws Exception {
         final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
         final HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift"))
-                .rpcDecorator(RetryingRpcClient.builder(retryAlways).newDecorator())
+                .rpcDecorator(RetryingRpcClient.builder(retryAlways)
+                                               .newDecorator())
                 .rpcDecorator((delegate, ctx, req) -> {
                     context.set(ctx);
                     final RpcResponse res = delegate.execute(ctx, req);

@@ -419,8 +419,9 @@ public class RetryingHttpClientTest {
                 .factory(factory)
                 .responseTimeoutMillis(10000)
                 .decorator(RetryingHttpClient.builder(
-                        // Retry after 8000 which is slightly less than responseTimeoutMillis(10000).
-                        RetryStrategy.onServerErrorStatus(Backoff.fixed(8000))).newDecorator())
+                           // Retry after 8000 which is slightly less than responseTimeoutMillis(10000).
+                           RetryStrategy.onServerErrorStatus(Backoff.fixed(8000)))
+                                             .newDecorator())
                 .decorator(LoggingClient.newDecorator())
                 .build();
 

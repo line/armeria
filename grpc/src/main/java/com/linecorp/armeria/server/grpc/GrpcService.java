@@ -89,6 +89,13 @@ public final class GrpcService extends AbstractHttpService
 
     static final int NO_MAX_INBOUND_MESSAGE_SIZE = -1;
 
+    /**
+     * Returns a new {@link GrpcServiceBuilder}.
+     */
+    public static GrpcServiceBuilder builder() {
+        return new GrpcServiceBuilder();
+    }
+
     private final HandlerRegistry registry;
     private final Set<Route> routes;
     private final DecompressorRegistry decompressorRegistry;

@@ -136,8 +136,9 @@ class CompositeServiceTest {
     @Test
     void failWhenThePathIsNotPrefix() {
         Assertions.assertThrows(IllegalStateException.class,
-                                () -> Server.builder().service("/exact", new TestCompositeService())
-                                                         .build());
+                                () -> Server.builder()
+                                            .service("/exact", new TestCompositeService())
+                                            .build());
     }
 
     private static final class TestCompositeService
