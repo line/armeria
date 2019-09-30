@@ -61,21 +61,21 @@ public class GrpcServiceRegistrationBean
     }
 
     /**
-     * Adds an example HTTP header.
+     * Adds an example HTTP header for all service methods.
      */
     public GrpcServiceRegistrationBean addExampleHeaders(String serviceName, HttpHeaders exampleHeaders) {
         return addExampleHeaders(GrpcExampleHeader.of(serviceName, exampleHeaders));
     }
 
     /**
-     * Adds an example HTTP header.
+     * Adds an example HTTP header for all service methods.
      */
     public GrpcServiceRegistrationBean addExampleHeaders(String serviceName, CharSequence name, String value) {
         return addExampleHeaders(GrpcExampleHeader.of(serviceName, name, value));
     }
 
     /**
-     * Adds an example HTTP header for the method.
+     * Adds an example HTTP header for the specified method.
      */
     public GrpcServiceRegistrationBean addExampleHeaders(
             String serviceName, String methodName, CharSequence name, String value) {
@@ -83,7 +83,7 @@ public class GrpcServiceRegistrationBean
     }
 
     /**
-     * Adds an example HTTP header for the method.
+     * Adds an example HTTP header for the specified method.
      */
     public GrpcServiceRegistrationBean addExampleHeaders(
             String serviceName, String methodName, HttpHeaders exampleHeaders) {
@@ -91,7 +91,7 @@ public class GrpcServiceRegistrationBean
     }
 
     /**
-     * Adds example HTTP headers for the method.
+     * Adds example HTTP headers for the specified method.
      */
     public GrpcServiceRegistrationBean addExampleHeaders(
             String serviceName, String methodName, @NotNull Iterable<? extends HttpHeaders> exampleHeaders) {
@@ -100,7 +100,7 @@ public class GrpcServiceRegistrationBean
     }
 
     /**
-     * Adds example HTTP headers for the method.
+     * Adds example HTTP headers for the specified method.
      */
     public GrpcServiceRegistrationBean addExampleHeaders(
             String serviceName, String methodName, @NotNull HttpHeaders... exampleHeaders) {

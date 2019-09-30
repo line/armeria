@@ -208,7 +208,7 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
     }
 
     /**
-     * Returns example HTTP headers.
+     * Returns example HTTP headers for all service methods.
      */
     @NotNull
     public Collection<? extends W> getExampleHeaders() {
@@ -216,7 +216,7 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
     }
 
     /**
-     * Sets example HTTP headers.
+     * Sets example HTTP headers for all service methods.
      */
     public U setExampleHeaders(@NotNull Collection<? extends W> exampleHeaders) {
         this.exampleHeaders = ImmutableList.copyOf(exampleHeaders);
@@ -224,21 +224,21 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
     }
 
     /**
-     * Sets example HTTP headers.
+     * Sets example HTTP headers for all service methods.
      */
     public U setExampleHeaders(@NotNull Iterable<? extends W> exampleHeaders) {
         return setExampleHeaders(ImmutableList.copyOf(exampleHeaders));
     }
 
     /**
-     * Sets example HTTP headers.
+     * Sets example HTTP headers for all service methods.
      */
     public U setExampleHeaders(@NotNull W... exampleHeaders) {
         return setExampleHeaders(ImmutableList.copyOf(exampleHeaders));
     }
 
     /**
-     * Adds example HTTP headers.
+     * Adds example HTTP headers for all service methods.
      */
     public U addExampleHeaders(@NotNull Iterable<? extends W> exampleHeaders) {
         this.exampleHeaders = ImmutableList.<W>builder().addAll(this.exampleHeaders)
@@ -248,14 +248,14 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
     }
 
     /**
-     * Adds example HTTP headers.
+     * Adds example HTTP headers for all service methods.
      */
     public U addExampleHeaders(@NotNull W... exampleHeaders) {
         return addExampleHeaders(ImmutableList.copyOf(exampleHeaders));
     }
 
     /**
-     * Adds an example HTTP header.
+     * Adds an example HTTP header for all service methods.
      */
     public U addExampleHeaders(@NotNull W exampleHeaders) {
         this.exampleHeaders = ImmutableList.<W>builder().addAll(this.exampleHeaders)

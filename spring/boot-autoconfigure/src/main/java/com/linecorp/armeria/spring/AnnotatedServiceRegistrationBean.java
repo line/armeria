@@ -171,21 +171,21 @@ public class AnnotatedServiceRegistrationBean
     }
 
     /**
-     * Adds an example HTTP header.
+     * Adds an example HTTP header for all service methods.
      */
     public AnnotatedServiceRegistrationBean addExampleHeaders(CharSequence name, String value) {
         return addExampleHeaders(ExampleHeader.of(name, value));
     }
 
     /**
-     * Adds an example HTTP header for the method.
+     * Adds an example HTTP header for the specified method.
      */
     public AnnotatedServiceRegistrationBean addExampleHeaders(String methodName, HttpHeaders exampleHeaders) {
         return addExampleHeaders(ExampleHeader.of(methodName, exampleHeaders));
     }
 
     /**
-     * Adds an example HTTP header for the method.
+     * Adds an example HTTP header for the specified method.
      */
     public AnnotatedServiceRegistrationBean addExampleHeaders(String methodName, CharSequence name,
                                                               String value) {
@@ -193,7 +193,7 @@ public class AnnotatedServiceRegistrationBean
     }
 
     /**
-     * Adds example HTTP headers for the method.
+     * Adds example HTTP headers for the specified method.
      */
     public AnnotatedServiceRegistrationBean addExampleHeaders(
             String methodName, @NotNull Iterable<? extends HttpHeaders> exampleHeaders) {
@@ -202,7 +202,7 @@ public class AnnotatedServiceRegistrationBean
     }
 
     /**
-     * Adds example HTTP headers for the method.
+     * Adds example HTTP headers for the specified method.
      */
     public AnnotatedServiceRegistrationBean addExampleHeaders(String methodName,
                                                               @NotNull HttpHeaders... exampleHeaders) {
