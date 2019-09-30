@@ -146,4 +146,55 @@ class ServerTlsTest {
                                          .build();
         });
     }
+
+    @Test
+    void testJksKeyStoreWithNullPassword() throws Exception {
+        //keytool -genkeypair -keyalg RSA -keysize 2048 -storetype JKS -keystore keystore.jks -validity 3650
+        //key-store-password=password
+        //key-password=keypassword
+        String keyPass = null;
+        KeyStore keyStore = KeyStore.getInstance("JKS");
+        File file = new File(getClass().getResource("keystore.jks").toURI());
+        keyStore.load(file.toURI().toURL().openStream(), keyPass != null ? keyPass.toCharArray() : null);
+
+        KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        kmf.init(keyStore, "keypassword".toCharArray());
+
+        TrustManagerFactory tmf
+                = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        tmf.init(keyStore);
+
+        Server server
+                = new ServerBuilder().service("/", (ctx, res) -> HttpResponse.of(HttpStatus.OK))
+                                     .tls(kmf, sslContextBuilder -> {
+                                         sslContextBuilder.keyManager(kmf);
+                                         sslContextBuilder.trustManager(tmf);
+                                     })
+                                     .build();
+    }
+
+    @Test
+    void testPkcs12KeyStoreWithNullPassword() throws Exception {
+        //keytool -genkeypair -keyalg RSA -keysize 2048 -storetype PKCS12 -keystore keystore.p12 -validity 3650
+        //keystorepassword=password
+        String keyPass = null;
+        KeyStore keyStore = KeyStore.getInstance("PKCS12");
+        File file = new File(getClass().getResource("keystore.p12").toURI());
+        keyStore.load(file.toURI().toURL().openStream(), keyPass != null ? keyPass.toCharArray() : null);
+
+        KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        kmf.init(keyStore, "password".toCharArray());
+
+        TrustManagerFactory tmf
+                = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        tmf.init(keyStore);
+
+        Server server
+                = new ServerBuilder().service("/", (ctx, res) -> HttpResponse.of(HttpStatus.OK))
+                                     .tls(kmf, sslContextBuilder -> {
+                                         sslContextBuilder.keyManager(kmf);
+                                         sslContextBuilder.trustManager(tmf);
+                                     })
+                                     .build();
+    }
 }
