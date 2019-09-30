@@ -14,4 +14,5 @@ if [[ -n "$1" ]]; then
 fi
 
 export JAVA_TEST_HOME="$JAVA_HOME"
-source ./install-jdk.sh --feature 11
+export JAVA_HOME="$HOME/openjdk11"
+./install-jdk.sh --feature 11 --target "$JAVA_HOME"
