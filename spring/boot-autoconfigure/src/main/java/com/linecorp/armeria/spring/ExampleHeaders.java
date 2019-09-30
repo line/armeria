@@ -25,67 +25,67 @@ import com.linecorp.armeria.common.HttpHeaders;
  * Used as an example header object in {@link AnnotatedServiceRegistrationBean}
  * and {@link ThriftServiceRegistrationBean}.
  */
-public final class ExampleHeader {
+public final class ExampleHeaders {
 
     /**
-     * Returns a new {@link ExampleHeader} for the method with the specified {@code methodName}
-     * and {@code exampleHeaders}.
+     * Returns a new {@link ExampleHeaders} for the method with the specified {@code methodName}
+     * and {@code headers}.
      */
-    public static ExampleHeader of(@NotNull String methodName, @NotNull HttpHeaders exampleHeaders) {
-        return new ExampleHeader(methodName, exampleHeaders);
+    public static ExampleHeaders of(@NotNull String methodName, @NotNull HttpHeaders headers) {
+        return new ExampleHeaders(methodName, headers);
     }
 
     /**
-     * Returns a new {@link ExampleHeader} for the method with the specified {@code methodName}, {@code name}
+     * Returns a new {@link ExampleHeaders} for the method with the specified {@code methodName}, {@code name}
      * and {@code value}.
      */
-    public static ExampleHeader of(@NotNull String methodName, @NotNull CharSequence name,
-                                   @NotNull String value) {
+    public static ExampleHeaders of(@NotNull String methodName, @NotNull CharSequence name,
+                                    @NotNull String value) {
         return of(methodName, HttpHeaders.of(name, value));
     }
 
     /**
-     * Returns a new {@link ExampleHeader} with the specified {@code serviceType}
-     * and {@code exampleHeaders}.
+     * Returns a new {@link ExampleHeaders} with the specified {@code serviceType}
+     * and {@code headers}.
      */
-    public static ExampleHeader of(@NotNull HttpHeaders exampleHeaders) {
-        return new ExampleHeader("", exampleHeaders);
+    public static ExampleHeaders of(@NotNull HttpHeaders headers) {
+        return new ExampleHeaders("", headers);
     }
 
     /**
-     * Returns a new {@link ExampleHeader} with the specified {@code name} and {@code value}.
+     * Returns a new {@link ExampleHeaders} with the specified {@code name} and {@code value}.
      */
-    public static ExampleHeader of(@NotNull CharSequence name, @NotNull String value) {
+    public static ExampleHeaders of(@NotNull CharSequence name, @NotNull String value) {
         return of(HttpHeaders.of(name, value));
     }
 
     private final String methodName;
-    private final HttpHeaders exampleHeaders;
+    private final HttpHeaders headers;
 
-    private ExampleHeader(String methodName, HttpHeaders exampleHeaders) {
+    private ExampleHeaders(String methodName, HttpHeaders headers) {
         this.methodName = methodName;
-        this.exampleHeaders = exampleHeaders;
+        this.headers = headers;
     }
 
     /**
-     * Returns the method name of this {@link ExampleHeader}.
+     * Returns the method name of this {@link ExampleHeaders}.
      */
     public String getMethodName() {
         return methodName;
     }
 
     /**
-     * Returns the example headers of this {@link ExampleHeader}.
+     * Returns the headers of this {@link ExampleHeaders}.
      */
-    public HttpHeaders getExampleHeaders() {
-        return exampleHeaders;
+    public HttpHeaders getHeaders() {
+        return headers;
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("methodName", methodName)
-                          .add("exampleHeaders", exampleHeaders)
+                          .add("headers", headers)
                           .toString();
     }
 }

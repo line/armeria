@@ -77,8 +77,8 @@ import com.linecorp.armeria.spring.AnnotatedExampleRequest;
 import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
-import com.linecorp.armeria.spring.ExampleHeader;
-import com.linecorp.armeria.spring.GrpcExampleHeader;
+import com.linecorp.armeria.spring.ExampleHeaders;
+import com.linecorp.armeria.spring.GrpcExampleHeaders;
 import com.linecorp.armeria.spring.GrpcExampleRequest;
 import com.linecorp.armeria.spring.GrpcServiceRegistrationBean;
 import com.linecorp.armeria.spring.HttpServiceRegistrationBean;
@@ -241,7 +241,7 @@ public final class ArmeriaConfigurationUtil {
         requireNonNull(beans, "beans");
 
         final List<TBase<?, ?>> docServiceRequests = new ArrayList<>();
-        final Map<String, Collection<? extends ExampleHeader>> docServiceHeaders = new HashMap<>();
+        final Map<String, Collection<? extends ExampleHeaders>> docServiceHeaders = new HashMap<>();
         beans.forEach(bean -> {
             Service<HttpRequest, HttpResponse> service = bean.getService();
             for (Function<Service<HttpRequest, HttpResponse>, ? extends Service<HttpRequest, HttpResponse>>
@@ -297,7 +297,7 @@ public final class ArmeriaConfigurationUtil {
         requireNonNull(beans, "beans");
 
         final List<GrpcExampleRequest> docServiceRequests = new ArrayList<>();
-        final List<GrpcExampleHeader> docServiceHeaders = new ArrayList<>();
+        final List<GrpcExampleHeaders> docServiceHeaders = new ArrayList<>();
         beans.forEach(bean -> {
             final ServiceWithRoutes<HttpRequest, HttpResponse> serviceWithRoutes =
                     bean.getService();
@@ -326,10 +326,10 @@ public final class ArmeriaConfigurationUtil {
                 exampleReq -> docServiceBuilder.exampleRequestForMethod(exampleReq.getServiceType(),
                                                                         exampleReq.getMethodName(),
                                                                         exampleReq.getExampleRequest()));
-        docServiceHeaders.forEach(exampleHeader -> configureExampleHeader(docServiceBuilder,
-                                                                          exampleHeader.getServiceType(),
-                                                                          exampleHeader.getMethodName(),
-                                                                          exampleHeader.getExampleHeaders()));
+        docServiceHeaders.forEach(exampleHeader -> configureHeaders(docServiceBuilder,
+                                                                    exampleHeader.getServiceType(),
+                                                                    exampleHeader.getMethodName(),
+                                                                    exampleHeader.getHeaders()));
     }
 
     /**
@@ -345,7 +345,7 @@ public final class ArmeriaConfigurationUtil {
         requireNonNull(beans, "beans");
 
         final Map<String, Collection<? extends AnnotatedExampleRequest>> docServiceRequests = new HashMap<>();
-        final Map<String, Collection<? extends ExampleHeader>> docServiceHeaders = new HashMap<>();
+        final Map<String, Collection<? extends ExampleHeaders>> docServiceHeaders = new HashMap<>();
         beans.forEach(bean -> {
             Function<Service<HttpRequest, HttpResponse>,
                     ? extends Service<HttpRequest, HttpResponse>> decorator = Function.identity();
@@ -411,31 +411,29 @@ public final class ArmeriaConfigurationUtil {
     }
 
     private static void configureExampleHeaders(DocServiceBuilder docServiceBuilder,
-                                                Map<String, Collection<? extends ExampleHeader>> docServiceHeaders) {
+                                                Map<String, Collection<? extends ExampleHeaders>> docServiceHeaders) {
         requireNonNull(docServiceBuilder, "docServiceBuilder");
         requireNonNull(docServiceHeaders, "docServiceHeaders");
 
-        for (Entry<String, Collection<? extends ExampleHeader>> entry : docServiceHeaders.entrySet()) {
-            for (ExampleHeader exampleHeader : entry.getValue()) {
-                configureExampleHeader(docServiceBuilder, entry.getKey(), exampleHeader.getMethodName(),
-                                       exampleHeader.getExampleHeaders());
+        for (Entry<String, Collection<? extends ExampleHeaders>> entry : docServiceHeaders.entrySet()) {
+            for (ExampleHeaders exampleHeaders : entry.getValue()) {
+                configureHeaders(docServiceBuilder, entry.getKey(), exampleHeaders.getMethodName(),
+                                 exampleHeaders.getHeaders());
             }
         }
     }
 
-    private static void configureExampleHeader(DocServiceBuilder docServiceBuilder,
-                                               String serviceName,
-                                               String methodName,
-                                               HttpHeaders exampleHeaders) {
+    private static void configureHeaders(DocServiceBuilder docServiceBuilder, String serviceName,
+                                         String methodName, HttpHeaders headers) {
         requireNonNull(docServiceBuilder, "docServiceBuilder");
         requireNonNull(serviceName, "serviceName");
         requireNonNull(methodName, "methodName");
-        requireNonNull(exampleHeaders, "exampleHeaders");
+        requireNonNull(headers, "headers");
 
         if (Strings.isNullOrEmpty(methodName)) {
-            docServiceBuilder.exampleHttpHeaders(serviceName, exampleHeaders);
+            docServiceBuilder.exampleHttpHeaders(serviceName, headers);
         } else {
-            docServiceBuilder.exampleHttpHeaders(serviceName, methodName, exampleHeaders);
+            docServiceBuilder.exampleHttpHeaders(serviceName, methodName, headers);
         }
     }
 

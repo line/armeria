@@ -42,13 +42,13 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
  * >             .setRequestConverters(new MyRequestConverter())
  * >             .setResponseConverters(new MyResponseConverter())
  * >             .addExampleRequests(AnnotatedExampleRequest.of("myMethod", "{\"foo\":\"bar\"}"))
- * >             .addExampleHeaders(ExampleHeader.of("my-header", "headerVal"));
+ * >             .addExampleHeaders(ExampleHeaders.of("my-header", "headerVal"));
  * > }
  * }</pre>
  */
 public class AnnotatedServiceRegistrationBean
         extends AbstractServiceRegistrationBean<Object, AnnotatedServiceRegistrationBean,
-        AnnotatedExampleRequest, ExampleHeader> {
+        AnnotatedExampleRequest, ExampleHeaders> {
 
     /**
      * The path prefix of the annotated service object.
@@ -174,14 +174,14 @@ public class AnnotatedServiceRegistrationBean
      * Adds an example HTTP header for all service methods.
      */
     public AnnotatedServiceRegistrationBean addExampleHeaders(CharSequence name, String value) {
-        return addExampleHeaders(ExampleHeader.of(name, value));
+        return addExampleHeaders(ExampleHeaders.of(name, value));
     }
 
     /**
      * Adds an example HTTP header for the specified method.
      */
     public AnnotatedServiceRegistrationBean addExampleHeaders(String methodName, HttpHeaders exampleHeaders) {
-        return addExampleHeaders(ExampleHeader.of(methodName, exampleHeaders));
+        return addExampleHeaders(ExampleHeaders.of(methodName, exampleHeaders));
     }
 
     /**
@@ -189,7 +189,7 @@ public class AnnotatedServiceRegistrationBean
      */
     public AnnotatedServiceRegistrationBean addExampleHeaders(String methodName, CharSequence name,
                                                               String value) {
-        return addExampleHeaders(ExampleHeader.of(methodName, name, value));
+        return addExampleHeaders(ExampleHeaders.of(methodName, name, value));
     }
 
     /**
