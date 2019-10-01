@@ -49,7 +49,7 @@ final class DefaultExceptionHandler implements ExceptionHandlerFunction {
     @Override
     public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
         if (cause instanceof IllegalArgumentException) {
-            log(log -> log.warn("{} failed processing request:", ctx, cause));
+            log(log -> log.warn("{} Failed processing a request:", ctx, cause));
             return HttpResponse.of(HttpStatus.BAD_REQUEST);
         }
 
