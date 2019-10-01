@@ -116,7 +116,7 @@ final class Java9RequestContextAwareMinimalStage<T> implements CompletionStage<T
                                                          BiConsumer<? super T, ? super U> action,
                                                          Executor executor) {
         return new Java9RequestContextAwareMinimalStage(delegate.thenAcceptBothAsync(other, action,
-                                                                                               executor));
+                                                                                     executor));
     }
 
     @Override
@@ -133,7 +133,7 @@ final class Java9RequestContextAwareMinimalStage<T> implements CompletionStage<T
     public CompletionStage<Void> runAfterBothAsync(CompletionStage<?> other, Runnable action,
                                                    Executor executor) {
         return new Java9RequestContextAwareMinimalStage(delegate.runAfterBothAsync(other, action,
-                                                                                             executor));
+                                                                                   executor));
     }
 
     @Override
@@ -171,7 +171,7 @@ final class Java9RequestContextAwareMinimalStage<T> implements CompletionStage<T
     public CompletionStage<Void> acceptEitherAsync(CompletionStage<? extends T> other,
                                                    Consumer<? super T> action, Executor executor) {
         return new Java9RequestContextAwareMinimalStage(delegate.acceptEitherAsync(other, action,
-                                                                                             executor));
+                                                                                   executor));
     }
 
     @Override
@@ -189,7 +189,7 @@ final class Java9RequestContextAwareMinimalStage<T> implements CompletionStage<T
                                                      Runnable action,
                                                      Executor executor) {
         return new Java9RequestContextAwareMinimalStage(delegate.runAfterEitherAsync(other, action,
-                                                                                               executor));
+                                                                                     executor));
     }
 
     @Override
