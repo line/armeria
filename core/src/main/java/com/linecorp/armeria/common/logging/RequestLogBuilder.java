@@ -185,7 +185,7 @@ public interface RequestLogBuilder {
 
     /**
      * Sets the {@link RequestLog#requestContent()} and the {@link RequestLog#rawRequestContent()}.
-     * If the specified {@code requestContent} is a {@link RpcRequest} and
+     * If the specified {@code requestContent} is an {@link RpcRequest} and
      * the {@link RequestContext#rpcRequest()} is {@code null}, this method will call
      * {@link RequestContext#updateRpcRequest(RpcRequest)}.
      */

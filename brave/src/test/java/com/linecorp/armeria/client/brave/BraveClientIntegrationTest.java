@@ -47,7 +47,6 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 
 import brave.Tracing.Builder;
-import brave.propagation.CurrentTraceContext;
 import brave.propagation.StrictScopeDecorator;
 import brave.sampler.Sampler;
 import brave.test.http.ITHttpAsyncClient;
@@ -63,12 +62,6 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
         return ImmutableList.of(SessionProtocol.H1C, SessionProtocol.H2C);
     }
 
-    // Hide currentTraceContext in ITHttpClient
-    private final CurrentTraceContext currentTraceContext =
-            RequestContextCurrentTraceContext.builder()
-                                             .addScopeDecorator(StrictScopeDecorator.create())
-                                             .build();
-
     private final List<Protocol> protocols;
     private final SessionProtocol sessionProtocol;
 
@@ -82,8 +75,14 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
     }
 
     @Before
-    public void setupServer() {
+    @Override
+    public void setup() {
+        currentTraceContext =
+                RequestContextCurrentTraceContext.builder()
+                                                 .addScopeDecorator(StrictScopeDecorator.create())
+                                                 .build();
         server.setProtocols(protocols);
+        super.setup();
     }
 
     @Override
@@ -140,18 +139,6 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
     @Test
     public void redirect() throws Exception {
         throw new AssumptionViolatedException("Armeria does not support client redirect.");
-    }
-
-    @Override
-    public void supportsPortableCustomization() throws Exception {
-        // TODO(adriancole): Figure out why super.currentTraceContext has to be overridden.
-        final CurrentTraceContext oldSuperCurrentTraceContext = super.currentTraceContext;
-        super.currentTraceContext = currentTraceContext;
-        try {
-            super.supportsPortableCustomization();
-        } finally {
-            super.currentTraceContext = oldSuperCurrentTraceContext;
-        }
     }
 
     @Override
