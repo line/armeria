@@ -22,5 +22,6 @@ fi
 NEW_JAVA_HOME="$HOME/openjdk11"
 bash ./install-jdk.sh --feature 11 --target "$NEW_JAVA_HOME"
 export JAVA_HOME="$NEW_JAVA_HOME"
+export PATH="$JAVA_HOME/bin:$PATH"
 env
 export
