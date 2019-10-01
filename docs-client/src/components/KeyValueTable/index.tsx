@@ -43,9 +43,7 @@ interface KeyValueTableProps {
   defaultKeyValueList?: Row[];
 }
 
-const KeyValueTable: React.FunctionComponent<KeyValueTableProps> = ({
-  defaultKeyValueList,
-}) => {
+const KeyValueTable: React.FunctionComponent<KeyValueTableProps> = ({}) => {
   const resultArr:
     | [Row[], Dispatch<SetStateAction<Row[]>>]
     | undefined = useContext(ValueListContext);
@@ -53,16 +51,6 @@ const KeyValueTable: React.FunctionComponent<KeyValueTableProps> = ({
   if (!resultArr) throw new Error('KeyValueTable : RowList가 없습니다.');
 
   const [rowList, setRowList] = resultArr;
-
-  setRowList(
-    defaultKeyValueList || [
-      {
-        index: 0,
-        key: '',
-        value: '',
-      },
-    ],
-  );
 
   const onRowChange = (index: number, name: string, value: string) => {
     if (rowList) {
@@ -81,7 +69,6 @@ const KeyValueTable: React.FunctionComponent<KeyValueTableProps> = ({
         <TableRow>
           <TableCell>KEY</TableCell>
           <TableCell>VALUE</TableCell>
-          <TableCell>DESCRIPTION</TableCell>
         </TableRow>
       </TableHead>
       <TableBody>
