@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server.brave;
 
-import java.net.SocketAddress;
-
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.brave.SpanTags;
@@ -53,31 +51,32 @@ final class ArmeriaHttpServerParser extends HttpServerParser {
     }
 
     @Override
+    public <T> void request(HttpAdapter<T, ?> rawAdapter, T req, SpanCustomizer customizer) {
+        super.request(rawAdapter, req, customizer);
+        if (!(req instanceof ServiceRequestContext)) {
+            return;
+        }
+
+        final ServiceRequestContext ctx = (ServiceRequestContext) req;
+        customizer.tag(SpanTags.TAG_HTTP_HOST, ctx.request().authority())
+                  .tag(SpanTags.TAG_HTTP_URL, ctx.request().uri().toString())
+                  .tag(SpanTags.TAG_HTTP_PROTOCOL, ctx.sessionProtocol().uriText())
+                  .tag(SpanTags.TAG_ADDRESS_REMOTE, ctx.remoteAddress().toString())
+                  .tag(SpanTags.TAG_ADDRESS_LOCAL, ctx.localAddress().toString());
+    }
+
+    @Override
     public <T> void response(HttpAdapter<?, T> rawAdapter, T res, Throwable error, SpanCustomizer customizer) {
         super.response(rawAdapter, res, error, customizer);
         if (!(res instanceof ServiceRequestContext)) {
             return;
         }
+
         final ServiceRequestContext ctx = (ServiceRequestContext) res;
-
         final RequestLog requestLog = ctx.log();
-        customizer.tag(SpanTags.TAG_HTTP_HOST, ServiceRequestContextAdapter.authority(requestLog))
-                  .tag(SpanTags.TAG_HTTP_URL, SpanTags.generateUrl(requestLog))
-                  .tag(SpanTags.TAG_HTTP_PROTOCOL, ServiceRequestContextAdapter.protocol(requestLog));
-
         final String serFmt = ServiceRequestContextAdapter.serializationFormat(requestLog);
         if (serFmt != null) {
             customizer.tag(SpanTags.TAG_HTTP_SERIALIZATION_FORMAT, serFmt);
-        }
-
-        final SocketAddress raddr = ctx.remoteAddress();
-        if (raddr != null) {
-            customizer.tag(SpanTags.TAG_ADDRESS_REMOTE, raddr.toString());
-        }
-
-        final SocketAddress laddr = ctx.localAddress();
-        if (laddr != null) {
-            customizer.tag(SpanTags.TAG_ADDRESS_LOCAL, laddr.toString());
         }
 
         final String rpcMethod = ServiceRequestContextAdapter.rpcMethod(requestLog);

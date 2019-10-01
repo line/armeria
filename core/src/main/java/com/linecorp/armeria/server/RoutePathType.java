@@ -48,7 +48,7 @@ public enum RoutePathType {
     /**
      * The path which has the prefix and the regex.
      *
-     * @see RouteBuilder#pathWithPrefix(String, String)
+     * @see RouteBuilder#path(String, String)
      */
     REGEX_WITH_PREFIX(false);
 

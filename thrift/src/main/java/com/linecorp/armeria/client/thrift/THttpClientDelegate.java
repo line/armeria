@@ -140,6 +140,7 @@ final class THttpClientDelegate
                                   .build(),
                     new ByteBufHttpData(buf, true));
 
+            ctx.updateRequest(httpReq);
             ctx.logBuilder().deferResponseContent();
 
             final CompletableFuture<AggregatedHttpResponse> future =

@@ -29,6 +29,28 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 final class ServiceConfigBuilder {
 
+    static ServiceConfigBuilder copyOf(ServiceConfigBuilder original) {
+        final ServiceConfigBuilder builder = new ServiceConfigBuilder(original.route, original.service)
+                .requestContentPreviewerFactory(original.requestContentPreviewerFactory)
+                .responseContentPreviewerFactory(original.requestContentPreviewerFactory);
+        if (original.accessLogWriter != null) {
+            builder.accessLogWriter(original.accessLogWriter, original.shutdownAccessLogWriterOnStop);
+        }
+        if (original.loggerName != null) {
+            builder.loggerName(original.loggerName);
+        }
+        if (original.requestTimeoutMillis != null) {
+            builder.requestTimeoutMillis(original.requestTimeoutMillis);
+        }
+        if (original.maxRequestLength != null) {
+            builder.maxRequestLength(original.maxRequestLength);
+        }
+        if (original.verboseResponses != null) {
+            builder.verboseResponses(original.verboseResponses);
+        }
+        return builder;
+    }
+
     private final Route route;
     private final Service<HttpRequest, HttpResponse> service;
     @Nullable

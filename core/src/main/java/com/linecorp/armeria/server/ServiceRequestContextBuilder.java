@@ -149,13 +149,16 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         // Retrieve the ServiceConfig of the fake service.
         final ServiceConfig serviceCfg = findServiceConfig(server, path(), service);
 
-        // Build a fake object related with path mapping.
+        // Build the fake objects related with path mapping.
+        final HttpRequest req = request();
+        assert req != null;
+
         final RoutingContext routingCtx = DefaultRoutingContext.of(
                 server.config().defaultVirtualHost(),
                 localAddress().getHostString(),
                 path(),
                 query(),
-                ((HttpRequest) request()).headers(),
+                req.headers(),
                 false);
 
         final RoutingResult routingResult =
@@ -166,12 +169,12 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         if (isRequestStartTimeSet()) {
             return new DefaultServiceRequestContext(
                     serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), routingCtx,
-                    routingResult, request(), sslSession(), proxiedAddresses, clientAddress,
+                    routingResult, req, sslSession(), proxiedAddresses, clientAddress,
                     requestStartTimeNanos(), requestStartTimeMicros());
         } else {
             return new DefaultServiceRequestContext(
                     serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), routingCtx,
-                    routingResult, request(), sslSession(), proxiedAddresses, clientAddress);
+                    routingResult, req, sslSession(), proxiedAddresses, clientAddress);
         }
     }
 

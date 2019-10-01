@@ -279,7 +279,7 @@ public final class AnnotatedHttpServiceFactory {
         final String computedPathPrefix = computePathPrefix(clazz, pathPrefix);
 
         final Route route = Route.builder()
-                                 .pathWithPrefix(computedPathPrefix, pattern)
+                                 .path(computedPathPrefix, pattern)
                                  .methods(methods)
                                  .consumes(consumableMediaTypes(method, clazz))
                                  .produces(producibleMediaTypes(method, clazz))

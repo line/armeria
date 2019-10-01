@@ -16,40 +16,19 @@
 
 package com.linecorp.armeria.server;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.common.HttpMethod.CONNECT;
-import static com.linecorp.armeria.common.HttpMethod.DELETE;
-import static com.linecorp.armeria.common.HttpMethod.GET;
-import static com.linecorp.armeria.common.HttpMethod.HEAD;
-import static com.linecorp.armeria.common.HttpMethod.OPTIONS;
-import static com.linecorp.armeria.common.HttpMethod.PATCH;
-import static com.linecorp.armeria.common.HttpMethod.POST;
-import static com.linecorp.armeria.common.HttpMethod.PUT;
-import static com.linecorp.armeria.common.HttpMethod.TRACE;
-import static com.linecorp.armeria.server.HttpHeaderUtil.ensureUniqueMediaTypes;
 import static com.linecorp.armeria.server.ServerConfig.validateMaxRequestLength;
 import static com.linecorp.armeria.server.ServerConfig.validateRequestTimeoutMillis;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
 import java.time.Duration;
-import java.util.EnumSet;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
+import java.util.List;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-
-import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
@@ -61,17 +40,7 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
  * @see ServiceBindingBuilder
  * @see VirtualHostServiceBindingBuilder
  */
-abstract class AbstractServiceBindingBuilder {
-
-    @Nullable
-    private RouteBuilder defaultRouteBuilder;
-
-    private Set<HttpMethod> methods = HttpMethod.knownMethods();
-
-    private final Map<RouteBuilder, Set<HttpMethod>> routeBuilders = new LinkedHashMap<>();
-
-    private Set<MediaType> consumeTypes = ImmutableSet.of();
-    private Set<MediaType> produceTypes = ImmutableSet.of();
+abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder {
 
     @Nullable
     private Long requestTimeoutMillis;
@@ -88,197 +57,6 @@ abstract class AbstractServiceBindingBuilder {
     @Nullable
     private AccessLogWriter accessLogWriter;
     private boolean shutdownAccessLogWriterOnStop;
-
-    /**
-     * Sets the path pattern that a {@link Service} will be bound to.
-     *
-     * @throws IllegalArgumentException if the specified path pattern is invalid
-     */
-    public AbstractServiceBindingBuilder path(String pathPattern) {
-        defaultRouteBuilder = Route.builder().path(requireNonNull(pathPattern, "pathPattern"));
-        return this;
-    }
-
-    /**
-     * Sets the specified prefix which is a directory that a {@link Service} will be bound under.
-     *
-     * @throws IllegalArgumentException if the specified path pattern is invalid
-     */
-    public AbstractServiceBindingBuilder pathUnder(String prefix) {
-        defaultRouteBuilder = Route.builder().prefix(requireNonNull(prefix, "prefix"));
-        return this;
-    }
-
-    /**
-     * Sets the {@link HttpMethod}s that a {@link Service} will support. If not set,
-     * {@link HttpMethod#knownMethods()}s are set.
-     *
-     * @see #path(String)
-     * @see #pathUnder(String)
-     */
-    public AbstractServiceBindingBuilder methods(HttpMethod... methods) {
-        return methods(ImmutableSet.copyOf(requireNonNull(methods, "methods")));
-    }
-
-    /**
-     * Sets the {@link HttpMethod}s that a {@link Service} will support. If not set,
-     * {@link HttpMethod#knownMethods()}s are set.
-     *
-     * @see #path(String)
-     * @see #pathUnder(String)
-     */
-    public AbstractServiceBindingBuilder methods(Iterable<HttpMethod> methods) {
-        requireNonNull(methods, "methods");
-        checkArgument(!Iterables.isEmpty(methods), "methods can't be empty");
-        this.methods = ImmutableSet.copyOf(methods);
-        return this;
-    }
-
-    /**
-     * Sets the path pattern and {@link HttpMethod#GET} that a {@link Service} will be bound to and support.
-     *
-     * @throws IllegalArgumentException if the specified path pattern is invalid
-     */
-    public AbstractServiceBindingBuilder get(String pathPattern) {
-        addRouteBuilder(pathPattern, EnumSet.of(GET));
-        return this;
-    }
-
-    private void addRouteBuilder(String pathPattern, Set<HttpMethod> methods) {
-        addRouteBuilder(Route.builder().path(requireNonNull(pathPattern, "pathPattern")), methods);
-    }
-
-    private void addRouteBuilder(RouteBuilder routeBuilder, Set<HttpMethod> methods) {
-        final Set<HttpMethod> methodSet = routeBuilders.computeIfAbsent(
-                routeBuilder, key -> EnumSet.noneOf(HttpMethod.class));
-
-        for (HttpMethod method : methods) {
-            if (!methodSet.add(method)) {
-                throw new IllegalArgumentException("duplicate HTTP method: " + method +
-                                                   ", for: " + routeBuilder);
-            }
-        }
-    }
-
-    /**
-     * Sets the path pattern and {@link HttpMethod#POST} that a {@link Service} will be bound to and support.
-     *
-     * @throws IllegalArgumentException if the specified path pattern is invalid
-     */
-    public AbstractServiceBindingBuilder post(String pathPattern) {
-        addRouteBuilder(pathPattern, EnumSet.of(POST));
-        return this;
-    }
-
-    /**
-     * Sets the path pattern and {@link HttpMethod#PUT} that a {@link Service} will be bound to and support.
-     *
-     * @throws IllegalArgumentException if the specified path pattern is invalid
-     */
-    public AbstractServiceBindingBuilder put(String pathPattern) {
-        addRouteBuilder(pathPattern, EnumSet.of(PUT));
-        return this;
-    }
-
-    /**
-     * Sets the path pattern and {@link HttpMethod#PATCH} that a {@link Service} will be bound to and support.
-     *
-     * @throws IllegalArgumentException if the specified path pattern is invalid
-     */
-    public AbstractServiceBindingBuilder patch(String pathPattern) {
-        addRouteBuilder(pathPattern, EnumSet.of(PATCH));
-        return this;
-    }
-
-    /**
-     * Sets the path pattern and {@link HttpMethod#DELETE} that a {@link Service} will be bound to and support.
-     *
-     * @throws IllegalArgumentException if the specified path pattern is invalid
-     */
-    public AbstractServiceBindingBuilder delete(String pathPattern) {
-        addRouteBuilder(pathPattern, EnumSet.of(DELETE));
-        return this;
-    }
-
-    /**
-     * Sets the path pattern and {@link HttpMethod#OPTIONS} that a {@link Service} will be bound to and support.
-     *
-     * @throws IllegalArgumentException if the specified path pattern is invalid
-     */
-    public AbstractServiceBindingBuilder options(String pathPattern) {
-        addRouteBuilder(pathPattern, EnumSet.of(OPTIONS));
-        return this;
-    }
-
-    /**
-     * Sets the path pattern and {@link HttpMethod#HEAD} that a {@link Service} will be bound to and support.
-     *
-     * @throws IllegalArgumentException if the specified path pattern is invalid
-     */
-    public AbstractServiceBindingBuilder head(String pathPattern) {
-        addRouteBuilder(pathPattern, EnumSet.of(HEAD));
-        return this;
-    }
-
-    /**
-     * Sets the path pattern and {@link HttpMethod#TRACE} that a {@link Service} will be bound to and support.
-     *
-     * @throws IllegalArgumentException if the specified path pattern is invalid
-     */
-    public AbstractServiceBindingBuilder trace(String pathPattern) {
-        addRouteBuilder(pathPattern, EnumSet.of(TRACE));
-        return this;
-    }
-
-    /**
-     * Sets the path pattern and {@link HttpMethod#CONNECT} that a {@link Service} will be bound to and support.
-     *
-     * @throws IllegalArgumentException if the specified path pattern is invalid
-     */
-    public AbstractServiceBindingBuilder connect(String pathPattern) {
-        addRouteBuilder(pathPattern, EnumSet.of(CONNECT));
-        return this;
-    }
-
-    /**
-     * Sets {@link MediaType}s that a {@link Service} will consume. If not set, the {@link Service}
-     * will accept all media types.
-     */
-    public AbstractServiceBindingBuilder consumes(MediaType... consumeTypes) {
-        consumes(ImmutableSet.copyOf(requireNonNull(consumeTypes, "consumeTypes")));
-        return this;
-    }
-
-    /**
-     * Sets {@link MediaType}s that a {@link Service} will consume. If not set, the {@link Service}
-     * will accept all media types.
-     */
-    public AbstractServiceBindingBuilder consumes(Iterable<MediaType> consumeTypes) {
-        ensureUniqueMediaTypes(consumeTypes, "consumeTypes");
-        this.consumeTypes = ImmutableSet.copyOf(consumeTypes);
-        return this;
-    }
-
-    /**
-     * Sets {@link MediaType}s that a {@link Service} will produce to be used in
-     * content negotiation. See <a href="https://tools.ietf.org/html/rfc7231#section-5.3.2">Accept header</a>
-     * for more information.
-     */
-    public AbstractServiceBindingBuilder produces(MediaType... produceTypes) {
-        produces(ImmutableSet.copyOf(requireNonNull(produceTypes, "produceTypes")));
-        return this;
-    }
-
-    /**
-     * Sets {@link MediaType}s that a {@link Service} will produce to be used in
-     * content negotiation. See <a href="https://tools.ietf.org/html/rfc7231#section-5.3.2">Accept header</a>
-     * for more information.
-     */
-    public AbstractServiceBindingBuilder produces(Iterable<MediaType> produceTypes) {
-        ensureUniqueMediaTypes(produceTypes, "produceTypes");
-        this.produceTypes = ImmutableSet.copyOf(produceTypes);
-        return this;
-    }
 
     /**
      * Sets the timeout of an HTTP request. If not set, {@link VirtualHost#requestTimeoutMillis()}
@@ -437,19 +215,9 @@ abstract class AbstractServiceBindingBuilder {
     abstract void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder);
 
     final void build0(Service<HttpRequest, HttpResponse> service) {
-        if (defaultRouteBuilder != null) {
-            addRouteBuilder(defaultRouteBuilder, methods);
-        }
-        checkState(!routeBuilders.isEmpty(),
-                   "Should set a path that the service is bound to before calling this.");
+        final List<Route> routes = buildRouteList();
 
-        for (Entry<RouteBuilder, Set<HttpMethod>> entry : routeBuilders.entrySet()) {
-            final Route route = entry.getKey()
-                                     .methods(entry.getValue())
-                                     .consumes(consumeTypes)
-                                     .produces(produceTypes)
-                                     .build();
-
+        for (Route route : routes) {
             final ServiceConfigBuilder serviceConfigBuilder =
                     new ServiceConfigBuilder(route, decorate(service));
             if (requestTimeoutMillis != null) {
