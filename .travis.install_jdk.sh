@@ -12,16 +12,14 @@ wget https://github.com/sormuras/bach/raw/master/install-jdk.sh
 if [[ -n "$1" ]]; then
   FEATURE="$1"
   shift 1
-  # Can't source twice from install-jdk.sh in same build
+  # Can't source twice from install-jdk.sh in same build so we go ahead and manually set up variables.
   export JAVA_TEST_HOME="$HOME/.jdk/openjdk$FEATURE"
-  bash ./install-jdk.sh --feature "$FEATURE" --target "$JAVA_TEST_HOME"
+  bash ./install-jdk.sh --feature "$FEATURE" --target "$JAVA_TEST_HOME" --workspace "/tmp/openjdk$FEATURE"
 else
   export JAVA_TEST_HOME="$JAVA_HOME"
 fi
 
 NEW_JAVA_HOME="$HOME/.jdk/openjdk11"
-bash ./install-jdk.sh --feature 11 --target "$NEW_JAVA_HOME"
+bash ./install-jdk.sh --feature 11 --target "$NEW_JAVA_HOME" --workspace "/tmp/openjdk11"
 export JAVA_HOME="$NEW_JAVA_HOME"
 export PATH="$JAVA_HOME/bin:$PATH"
-env
-export
