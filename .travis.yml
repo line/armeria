@@ -4,9 +4,7 @@ matrix:
     - name: Java 11
       jdk: openjdk11
     - name: Java 13
-      before_install:
-      - source ./.travis.install_jdk.sh 13
-      - echo $JAVA_HOME
+      before_install: source ./.travis.install_jdk.sh 13
     - name: Java 8
       jdk: openjdk8
       before_install: source ./.travis.install_jdk.sh
