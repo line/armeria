@@ -19,4 +19,6 @@ fi
 
 export JAVA_TEST_HOME="$JAVA_HOME"
 source ./install-jdk.sh --feature 11
+export JAVA_HOME PATH
 env
+export
