@@ -18,7 +18,7 @@ See [Requirements](https://line.github.io/armeria/setup.html#requirements) for m
 ## How to build
 
 We use [Gradle](https://gradle.org/) and Java 11 or later to build Armeria.
-The following command will compile Armeria and generate JARs and web site:
+The following command will compile Armeria and generate JAR s and web site:
 
 ```bash
 $ ./gradlew build
