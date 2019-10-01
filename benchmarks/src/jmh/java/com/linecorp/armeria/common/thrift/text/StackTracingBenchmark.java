@@ -28,8 +28,9 @@ import org.openjdk.jmh.infra.Blackhole;
 import com.linecorp.armeria.thrift.services.HelloService.hello_args;
 
 /**
- * Compare performance of {@link Thread#getStackTrace} vs StackWalker vs StackWalker with Option
- * find getCurrentThriftMessageClass.
+ * Compares the performance between {@link Thread#getStackTrace()}, {@code StackWalker}
+ * and {@code StackWalker} with the {@code RETAIN_CLASS_REFERENCE} option when finding
+ * the current Thrift message class.
  *
  * <p>20190928 Macbook Pro 2018 2.2 GHz Intel Core i7
  * <pre>
@@ -39,7 +40,6 @@ import com.linecorp.armeria.thrift.services.HelloService.hello_args;
  * StackTracingBenchmark.defaultStackTrace           thrpt   25   65969.836 ±  4714.734  ops/s
  * StackTracingBenchmark.usingStackWalker            thrpt   25  131919.125 ±  7730.472  ops/s
  * StackTracingBenchmark.usingStackWalkerWithOption  thrpt   25  325797.300 ± 33808.269  ops/s
- *
  * </pre>
  */
 
