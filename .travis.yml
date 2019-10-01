@@ -33,6 +33,8 @@ install:
 - true
 script:
 - echo $JAVA_HOME
+- java -version
+- which java
 - "./gradlew --version"
 - "./gradlew --no-daemon --stacktrace --warning-mode=all -Pcoverage checkstyle check build"
 before_cache:
