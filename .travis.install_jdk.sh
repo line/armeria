@@ -13,12 +13,14 @@ if [[ -n "$1" ]]; then
   FEATURE="$1"
   shift 1
   # Can't source twice from install-jdk.sh in same build
-  export JAVA_HOME="$HOME/openjdk13"
-  bash ./install-jdk.sh --feature "$FEATURE" --target "$JAVA_HOME"
+  export JAVA_TEST_HOME="$HOME/openjdk13"
+  bash ./install-jdk.sh --feature "$FEATURE" --target "$JAVA_TEST_HOME"
+else
+  export JAVA_TEST_HOME="$JAVA_HOME"
 fi
 
-export JAVA_TEST_HOME="$JAVA_HOME"
-source ./install-jdk.sh --feature 11
-export JAVA_HOME PATH
+NEW_JAVA_HOME="$HOME/openjdk11"
+bash ./install-jdk.sh --feature 11 --target "$NEW_JAVA_HOME"
+export JAVA_HOME="$NEW_JAVA_HOME"
 env
 export
