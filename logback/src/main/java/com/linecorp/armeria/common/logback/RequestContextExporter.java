@@ -58,7 +58,6 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -237,9 +236,9 @@ final class RequestContextExporter {
             }
         }
 
-        final Request origReq = ctx.request();
-        if (origReq instanceof HttpRequest) {
-            final String authority = getAuthority(ctx, ((HttpRequest) origReq).headers());
+        final HttpRequest origReq = ctx.request();
+        if (origReq != null) {
+            final String authority = getAuthority(ctx, origReq.headers());
             if (authority != null) {
                 out.put(REQ_AUTHORITY.mdcKey, authority);
                 return;

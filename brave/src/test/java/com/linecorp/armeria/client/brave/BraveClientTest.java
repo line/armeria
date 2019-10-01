@@ -215,6 +215,7 @@ class BraveClientTest {
         final RpcResponse rpcRes = RpcResponse.of("Hello, Armeria!");
         final ClientRequestContext ctx = ClientRequestContextBuilder.of(req).build();
         final HttpRequest actualReq = ctx.request();
+        assertThat(actualReq).isNotNull();
 
         ctx.logBuilder().requestFirstBytesTransferred();
         ctx.logBuilder().requestContent(rpcReq, actualReq);

@@ -292,25 +292,29 @@ public class BraveIntegrationTest {
         assertThat(clientQuxSpan.localServiceName()).isEqualTo("client/qux");
         assertThat(serviceQuxSpan.localServiceName()).isEqualTo("service/qux");
 
+        // Check RPC request can update http request.
+        assertThat(clientFooSpan.tags().get("http.protocol")).isEqualTo("h2c");
+        assertThat(clientFooSpan.tags().get("http.host")).startsWith("127.0.0.1");
+
         // Check the span names.
         assertThat(spans).allMatch(s -> "hello".equals(s.name()));
 
         // Check wire times
         final long clientStartTime = clientFooSpan.timestampAsLong();
         final long clientWireSendTime = clientFooSpan.annotations().stream()
-                                                     .filter(a -> a.value().equals("ws"))
+                                                     .filter(a -> "ws".equals(a.value()))
                                                      .findFirst().get().timestamp();
         final long clientWireReceiveTime = clientFooSpan.annotations().stream()
-                                                        .filter(a -> a.value().equals("wr"))
+                                                        .filter(a -> "wr".equals(a.value()))
                                                         .findFirst().get().timestamp();
         final long clientEndTime = clientStartTime + clientFooSpan.durationAsLong();
 
         final long serverStartTime = serviceFooSpan.timestampAsLong();
         final long serverWireSendTime = serviceFooSpan.annotations().stream()
-                                                      .filter(a -> a.value().equals("ws"))
+                                                      .filter(a -> "ws".equals(a.value()))
                                                       .findFirst().get().timestamp();
         final long serverWireReceiveTime = serviceFooSpan.annotations().stream()
-                                                         .filter(a -> a.value().equals("wr"))
+                                                         .filter(a -> "wr".equals(a.value()))
                                                          .findFirst().get().timestamp();
         final long serverEndTime = serverStartTime + serviceFooSpan.durationAsLong();
 

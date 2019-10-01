@@ -259,7 +259,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
     /**
      * Creates a new instance from an existing {@link HttpRequest} replacing its {@link RequestHeaders}
      * with the specified {@code newHeaders}. Make sure to update {@link RequestContext#request()} with
-     * {@link RequestContext#updateRequest(Request)} if you are intercepting an {@link HttpRequest}
+     * {@link RequestContext#updateRequest(HttpRequest)} if you are intercepting an {@link HttpRequest}
      * in a decorator. For example:
      * <pre>{@code
      * > public class MyService extends SimpleDecoratingService<HttpRequest, HttpResponse> {

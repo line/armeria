@@ -30,6 +30,7 @@ import org.mockito.Mock;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RpcRequest;
@@ -74,12 +75,10 @@ class ServerRequestContextAdapterTest {
 
     @Test
     void url() {
-        when(ctx.log()).thenReturn(requestLog);
-        when(requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)).thenReturn(true);
-        when(requestLog.requestHeaders()).thenReturn(
+        when(ctx.request()).thenReturn(HttpRequest.of(
                 RequestHeaders.of(HttpMethod.GET, "/foo?name=hoge",
                                   HttpHeaderNames.SCHEME, "http",
-                                  HttpHeaderNames.AUTHORITY, "example.com"));
+                                  HttpHeaderNames.AUTHORITY, "example.com")));
         assertThat(request.url()).isEqualTo("http://example.com/foo?name=hoge");
     }
 
@@ -99,20 +98,6 @@ class ServerRequestContextAdapterTest {
         when(ctx.log()).thenReturn(requestLog);
         when(requestLog.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)).thenReturn(false);
         assertThat(response.statusCode()).isEqualTo(0);
-    }
-
-    @Test
-    void authority() {
-        when(requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)).thenReturn(true);
-        when(requestLog.authority()).thenReturn("example.com");
-        assertThat(ServiceRequestContextAdapter.authority(requestLog)).isEqualTo("example.com");
-    }
-
-    @Test
-    void protocol() {
-        when(requestLog.isAvailable(RequestLogAvailability.SCHEME)).thenReturn(true);
-        when(requestLog.scheme()).thenReturn(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP));
-        assertThat(ServiceRequestContextAdapter.protocol(requestLog)).isEqualTo("http");
     }
 
     @Test

@@ -21,6 +21,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -47,12 +48,42 @@ public abstract class AbstractRequestContext implements RequestContext {
     private boolean timedOut;
 
     @Override
+    public final Executor executor() {
+        return RequestContext.super.executor();
+    }
+
+    @Override
+    public final Executor contextAwareExecutor() {
+        return RequestContext.super.contextAwareExecutor();
+    }
+
+    @Override
     public final EventLoop contextAwareEventLoop() {
         return RequestContext.super.contextAwareEventLoop();
     }
 
     @Override
+    public final SafeCloseable push() {
+        return RequestContext.super.push();
+    }
+
+    @Override
+    public final SafeCloseable push(boolean runCallbacks) {
+        return RequestContext.super.push(runCallbacks);
+    }
+
+    @Override
+    public final SafeCloseable pushIfAbsent() {
+        return RequestContext.super.pushIfAbsent();
+    }
+
+    @Override
     public final Executor makeContextAware(Executor executor) {
+        return RequestContext.super.makeContextAware(executor);
+    }
+
+    @Override
+    public final ExecutorService makeContextAware(ExecutorService executor) {
         return RequestContext.super.makeContextAware(executor);
     }
 
