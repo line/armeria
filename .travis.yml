@@ -3,6 +3,8 @@ matrix:
   include:
     - name: Java 11
       jdk: openjdk11
+      after_success:
+        - bash <(curl -s https://codecov.io/bash)
     - name: Java 13
       before_install: source ./.travis.install_jdk.sh 13
     - name: Java 8
@@ -26,19 +28,14 @@ cache:
   - "$HOME/.gradle/caches/modules-2"
   - "$HOME/.gradle/caches/package-lists"
   - "$HOME/.gradle/caches/sphinx-binary"
+  - "$HOME/.jdk"
 env:
   global:
   - "_JAVA_OPTIONS=-Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts"
 install:
 - true
 script:
-- echo $JAVA_HOME
-- java -version
-- $JAVA_HOME/bin/java -version
-- which java
 - "./gradlew --version"
 - "./gradlew --no-daemon --stacktrace --warning-mode=all -Pcoverage checkstyle check build"
 before_cache:
 - find $HOME/.gradle/caches -name '*.lock' -delete
-after_success:
-- bash <(curl -s https://codecov.io/bash)
