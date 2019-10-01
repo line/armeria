@@ -12,7 +12,9 @@ wget https://github.com/sormuras/bach/raw/master/install-jdk.sh
 if [[ -n "$1" ]]; then
   FEATURE="$1"
   shift 1
-  source ./install-jdk.sh --feature "$FEATURE"
+  # Can't source twice from install-jdk.sh in same build
+  export JAVA_HOME="$HOME/openjdk13"
+  bash ./install-jdk.sh --feature "$FEATURE" --target "$JAVA_HOME"
 fi
 
 export JAVA_TEST_HOME="$JAVA_HOME"
