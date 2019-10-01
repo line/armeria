@@ -3,13 +3,16 @@ matrix:
   include:
     - name: Java 11
       jdk: openjdk11
+      env: TEST_JAVA_VERSION=11
       after_success:
         - bash <(curl -s https://codecov.io/bash)
     - name: Java 13
       before_install: source ./.travis.install_jdk.sh 13
+      env: TEST_JAVA_VERSION=13
     - name: Java 8
       jdk: openjdk8
       before_install: source ./.travis.install_jdk.sh
+      env: TEST_JAVA_VERSION=8
 sudo: false
 os:
 - linux
