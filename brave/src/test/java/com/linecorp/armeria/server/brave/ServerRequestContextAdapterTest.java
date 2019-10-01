@@ -170,13 +170,13 @@ class ServerRequestContextAdapterTest {
 
     @Test
     void route_pathWithPrefix_glob() {
-        when(ctx.route()).thenReturn(Route.builder().pathWithPrefix("/foo/", "glob:bar").build());
+        when(ctx.route()).thenReturn(Route.builder().path("/foo/", "glob:bar").build());
         assertThat(response.route()).isEqualTo("/foo/**/bar");
     }
 
     @Test
     void route_pathWithPrefix_regex() {
-        when(ctx.route()).thenReturn(Route.builder().pathWithPrefix("/foo/", "regex:(bar|baz)").build());
+        when(ctx.route()).thenReturn(Route.builder().path("/foo/", "regex:(bar|baz)").build());
         assertThat(response.route()).isEqualTo("/foo/(bar|baz)");
     }
 }
