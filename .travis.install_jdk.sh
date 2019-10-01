@@ -9,13 +9,12 @@ set -eo pipefail
 
 wget https://github.com/sormuras/bach/raw/master/install-jdk.sh
 
-OLD_JAVA_HOME="$JAVA_HOME"
-source ./install-jdk.sh --feature 11
-
 if [[ -n "$1" ]]; then
-  # Can't source twice from install-jdk.sh in same build
-  export JAVA_TEST_HOME="$HOME/openjdk13"
-  bash ./install-jdk.sh --feature "$1" --target "$JAVA_TEST_HOME"
-else
-  export JAVA_TEST_HOME="$OLD_JAVA_HOME"
+  FEATURE="$1"
+  shift 1
+  source ./install-jdk.sh --feature "$FEATURE"
 fi
+
+export JAVA_TEST_HOME="$JAVA_HOME"
+source ./install-jdk.sh --feature 11
+env
