@@ -38,9 +38,9 @@ import com.linecorp.armeria.server.ServiceWithRoutes;
  * >                                 .enableUnframedRequests(true)
  * >                                 .build())
  * >             .setDecorators(LoggingService.newDecorator())
- * >             .addExampleRequests(GrpcExampleRequest.of(HelloServiceGrpc.SERVICE_NAME,
- * >                                                       "Hello",
- * >                                                       HelloRequest.newBuilder().setName("Armeria").build()))
+ * >             .addExampleRequests(GrpcExampleRequest.of(
+ * >                    HelloServiceGrpc.SERVICE_NAME, "Hello",
+ * >                    HelloRequest.newBuilder().setName("Armeria").build()))
  * >             .addExampleHeaders(GrpcExampleHeaders.of(HelloServiceGrpc.SERVICE_NAME,
  * >                                                      HttpHeaders.of("my-header", "headerVal")));
  * > }
