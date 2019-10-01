@@ -63,7 +63,7 @@ public class JavaVersionSpecific {
     /**
      * Returns a {@link CompletableFuture} which executes all callbacks with the {@link RequestContext}.
      */
-    public <T> CompletableFuture<T> newRequestContextCompletableFuture(RequestContext ctx) {
+    public <T> CompletableFuture<T> newRequestContextAwareFuture(RequestContext ctx) {
         return new RequestContextAwareCompletableFuture<>(ctx);
     }
 }

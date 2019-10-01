@@ -128,7 +128,7 @@ public abstract class AbstractRequestContext implements RequestContext {
 
     @Override
     public final <T> CompletionStage<T> makeContextAware(CompletionStage<T> stage) {
-        final CompletableFuture<T> future = JavaVersionSpecific.get().newRequestContextCompletableFuture(this);
+        final CompletableFuture<T> future = JavaVersionSpecific.get().newRequestContextAwareFuture(this);
         stage.handle((result, cause) -> {
             try (SafeCloseable ignored = pushIfAbsent()) {
                 if (cause != null) {
