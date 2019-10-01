@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
@@ -68,6 +69,8 @@ import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceElement;
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -190,6 +193,7 @@ public final class ServerBuilder {
     private ContentPreviewerFactory responseContentPreviewerFactory = ContentPreviewerFactory.disabled();
 
     private final List<RouteDecoratingService> routeDecoratingServices = new ArrayList<>();
+    private final List<ServiceConfigBuilder> serviceConfigBuilders = new ArrayList<>();
 
     private Function<VirtualHost, Logger> accessLoggerMapper = host -> LoggerFactory.getLogger(
             defaultAccessLoggerName(host.hostnamePattern()));
@@ -822,8 +826,7 @@ public final class ServerBuilder {
      * Binds the specified {@link Service} under the specified directory of the default {@link VirtualHost}.
      */
     public ServerBuilder serviceUnder(String pathPrefix, Service<HttpRequest, HttpResponse> service) {
-        defaultVirtualHostBuilder.serviceUnder(pathPrefix, service);
-        return this;
+        return service(Route.builder().pathPrefix(pathPrefix).build(), service);
     }
 
     /**
@@ -842,8 +845,7 @@ public final class ServerBuilder {
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
     public ServerBuilder service(String pathPattern, Service<HttpRequest, HttpResponse> service) {
-        defaultVirtualHostBuilder.service(pathPattern, service);
-        return this;
+        return service(Route.builder().path(pathPattern).build(), service);
     }
 
     /**
@@ -851,7 +853,7 @@ public final class ServerBuilder {
      * {@link VirtualHost}.
      */
     public ServerBuilder service(Route route, Service<HttpRequest, HttpResponse> service) {
-        defaultVirtualHostBuilder.service(route, service);
+        serviceConfigBuilders.add(new ServiceConfigBuilder(route, service));
         return this;
     }
 
@@ -866,7 +868,20 @@ public final class ServerBuilder {
             ServiceWithRoutes<HttpRequest, HttpResponse> serviceWithRoutes,
             Iterable<Function<? super Service<HttpRequest, HttpResponse>,
                     ? extends Service<HttpRequest, HttpResponse>>> decorators) {
-        defaultVirtualHostBuilder.service(serviceWithRoutes, decorators);
+        requireNonNull(serviceWithRoutes, "serviceWithRoutes");
+        requireNonNull(serviceWithRoutes.routes(), "serviceWithRoutes.routes()");
+        requireNonNull(decorators, "decorators");
+
+        Service<HttpRequest, HttpResponse> decorated = serviceWithRoutes;
+        for (Function<? super Service<HttpRequest, HttpResponse>,
+                ? extends Service<HttpRequest, HttpResponse>> d : decorators) {
+            checkNotNull(d, "decorators contains null: %s", decorators);
+            decorated = d.apply(decorated);
+            checkNotNull(decorated, "A decorator returned null: %s", d);
+        }
+
+        final Service<HttpRequest, HttpResponse> decorator = decorated;
+        serviceWithRoutes.routes().forEach(route -> service(route, decorator));
         return this;
     }
 
@@ -882,8 +897,7 @@ public final class ServerBuilder {
             ServiceWithRoutes<HttpRequest, HttpResponse> serviceWithRoutes,
             Function<? super Service<HttpRequest, HttpResponse>,
                     ? extends Service<HttpRequest, HttpResponse>>... decorators) {
-        defaultVirtualHostBuilder.service(serviceWithRoutes, decorators);
-        return this;
+        return service(serviceWithRoutes, ImmutableList.copyOf(requireNonNull(decorators, "decorators")));
     }
 
     /**
@@ -989,13 +1003,27 @@ public final class ServerBuilder {
         requireNonNull(decorator, "decorator");
         requireNonNull(exceptionHandlersAndConverters, "exceptionHandlersAndConverters");
 
-        defaultVirtualHostBuilder.annotatedService(pathPrefix, service, decorator,
-                                                   exceptionHandlersAndConverters);
+        final List<AnnotatedHttpServiceElement> elements =
+                AnnotatedHttpServiceFactory.find(pathPrefix, service, exceptionHandlersAndConverters);
+        elements.forEach(e -> {
+            Service<HttpRequest, HttpResponse> s = e.service();
+            // Apply decorators which are specified in the service class.
+            s = e.decorator().apply(s);
+            // Apply decorators which are passed via annotatedService() methods.
+            s = decorator.apply(s);
+
+            // If there is a decorator, we should add one more decorator which handles an exception
+            // raised from decorators.
+            if (s != e.service()) {
+                s = e.service().exceptionHandlingDecorator().apply(s);
+            }
+            service(e.route(), s);
+        });
         return this;
     }
 
     ServerBuilder serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder) {
-        defaultVirtualHostBuilder.serviceConfigBuilder(serviceConfigBuilder);
+        serviceConfigBuilders.add(serviceConfigBuilder);
         return this;
     }
 
@@ -1510,13 +1538,14 @@ public final class ServerBuilder {
         } else {
             decorator = null;
         }
+
+        defaultVirtualHostBuilder.serviceConfigBuilders(serviceConfigBuilders);
         final List<VirtualHost> virtualHosts = virtualHostBuilders
                 .stream()
                 .map(vhb -> vhb.routeDecoratingServices(routeDecoratingServices))
-                .map(vhb -> vhb.serviceConfigBuilders(defaultVirtualHostBuilder
-                                                              .serviceConfigBuilders().stream()
-                                                              .map(ServiceConfigBuilder::copyOf)
-                                                              .collect(toImmutableList())))
+                .map(vhb -> vhb.serviceConfigBuilders(serviceConfigBuilders.stream()
+                                                                           .map(ServiceConfigBuilder::copyOf)
+                                                                           .collect(toImmutableList())))
                 .map(VirtualHostBuilder::build)
                 .collect(toImmutableList());
 
