@@ -143,9 +143,9 @@ public class PooledResponseBufferBenchmark {
         final ServerBuilder sb =
                 Server.builder()
                       .service("/a", THttpService.of((AsyncIface) (name, cb) -> cb.onComplete(RESPONSE))
-                                           .decorate(PooledDecoratingService::new))
+                                                 .decorate(PooledDecoratingService::new))
                       .service("/b", THttpService.of((AsyncIface) (name, cb) -> cb.onComplete(RESPONSE))
-                                           .decorate(UnpooledDecoratingService::new));
+                                                 .decorate(UnpooledDecoratingService::new));
         server = sb.build();
         server.start().join();
 
