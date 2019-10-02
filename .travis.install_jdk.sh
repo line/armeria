@@ -11,7 +11,7 @@ wget https://github.com/sormuras/bach/raw/master/install-jdk.sh
 
 if [[ -n "$1" ]]; then
   FEATURE="$1"
-  shift 1
+  shift
   # Can't source twice from install-jdk.sh in same build so we go ahead and manually set up variables.
   export JAVA_TEST_HOME="$HOME/.jdk/openjdk$FEATURE"
   if [[ ! -d "$JAVA_TEST_HOME" ]]; then
