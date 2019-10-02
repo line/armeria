@@ -27,6 +27,7 @@ import static com.linecorp.armeria.server.VirtualHost.normalizeHostnamePattern;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.security.cert.CertificateException;
 import java.time.Duration;
@@ -834,7 +835,7 @@ public final class VirtualHostBuilder {
             try {
                 validateSslContext(sslContext);
             } catch (Exception e) {
-                throw new RuntimeException("failed to validate SSL/TLS configuration", e);
+                throw new RuntimeException("failed to validate SSL/TLS configuration : " + e.toString(), e);
             }
         }
 
@@ -851,17 +852,31 @@ public final class VirtualHostBuilder {
         return decorator != null ? virtualHost.decorate(decorator) : virtualHost;
     }
 
-    void validateSslContext(SslContext sslContext) throws SSLException {
-        SSLEngine engine = sslContext.newEngine(ByteBufAllocator.DEFAULT);
-        engine.setUseClientMode(false);
+    void validateSslContext(SslContext sslContext) throws Exception {
+        final SSLEngine serverEngine = sslContext.newEngine(ByteBufAllocator.DEFAULT);
+        serverEngine.setUseClientMode(false);
+        serverEngine.setNeedClientAuth(true);
 
-        if (engine.getEnabledProtocols().length == 0) {
-            throw new RuntimeException("failed to enable protocols");
-        }
+        final SelfSignedCertificate ssc = new SelfSignedCertificate("foo.com");
+        final SslContext sslContextClient
+                = buildSslContext(() -> SslContextBuilder.forClient()
+                                                         .keyManager(ssc.certificate(), ssc.privateKey()),
+                                           sslContextBuilder -> {
+                    sslContextBuilder.keyManager(ssc.certificate(), ssc.privateKey());
+                    sslContextBuilder.trustManager(ssc.certificate());
+        });
+        final SSLEngine clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
+        clientEngine.setUseClientMode(true);
 
-        if (engine.getEnabledCipherSuites().length == 0) {
-            throw new RuntimeException("failed to enable cipher suites");
-        }
+        clientEngine.beginHandshake();
+        serverEngine.beginHandshake();
+
+        ByteBuffer clientPacket = ByteBuffer.allocate(clientEngine.getSession().getApplicationBufferSize());
+        clientEngine.wrap(clientPacket, clientPacket);
+        clientPacket.flip();
+
+        ByteBuffer serverPacket = ByteBuffer.allocate(serverEngine.getSession().getApplicationBufferSize());
+        serverEngine.unwrap(clientPacket, serverPacket);
     }
 
     @Override
