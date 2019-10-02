@@ -62,7 +62,7 @@ public final class HttpFileServiceConfig {
         try {
             CaffeineSpec.parse(entryCacheSpec.get());
         } catch (Exception e) {
-            throw new IllegalArgumentException("invalid cache spec. entryCacheSpec=" + entryCacheSpec, e);
+            throw new IllegalArgumentException("invalid cache spec: " + entryCacheSpec, e);
         }
         return entryCacheSpec;
     }

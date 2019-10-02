@@ -84,6 +84,8 @@ public final class HttpFileServiceBuilder {
     private int maxCacheEntrySizeBytes = DEFAULT_MAX_CACHE_ENTRY_SIZE_BYTES;
     private boolean serveCompressedFiles;
     private boolean autoIndex;
+    private boolean enableMaxCacheEntries = true;
+    private boolean enableEntryCacheSpec = true;
     @Nullable
     private HttpHeadersBuilder headers;
 
@@ -112,7 +114,11 @@ public final class HttpFileServiceBuilder {
      */
     @Deprecated
     public HttpFileServiceBuilder maxCacheEntries(int maxCacheEntries) {
+        if (!enableMaxCacheEntries) {
+            throw new IllegalStateException("already configured for the http file service: " + entryCacheSpec);
+        }
         entryCacheSpec = HttpFileServiceConfig.validateMaxCacheEntries(maxCacheEntries);
+        enableEntryCacheSpec = false;
         return this;
     }
 
@@ -122,7 +128,12 @@ public final class HttpFileServiceBuilder {
      */
     public HttpFileServiceBuilder entryCacheSpec(String entryCacheSpec) {
         requireNonNull(entryCacheSpec, "entryCacheSpec");
+        if (!enableEntryCacheSpec) {
+            throw new IllegalStateException(
+                    "already configured for the http file service: " + this.entryCacheSpec);
+        }
         this.entryCacheSpec = HttpFileServiceConfig.validateEntryCacheSpec(Optional.of(entryCacheSpec));
+        enableMaxCacheEntries = false;
         return this;
     }
 
