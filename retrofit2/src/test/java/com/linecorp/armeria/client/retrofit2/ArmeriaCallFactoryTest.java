@@ -91,7 +91,7 @@ class ArmeriaCallFactoryTest {
         }
 
         @Override
-        public boolean equals(Object o) {
+        public boolean equals(@Nullable Object o) {
             if (o == this) {
                 return true;
             }

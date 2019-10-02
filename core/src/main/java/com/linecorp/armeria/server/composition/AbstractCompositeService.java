@@ -25,9 +25,11 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
@@ -155,8 +157,9 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
 
         if (result.route().pathType() == RoutePathType.PREFIX) {
             assert ctx.route().pathType() == RoutePathType.PREFIX;
-            final Route newRoute = Route.builder().prefix(ctx.route().paths().get(0) +
-                                                          result.route().paths().get(0).substring(1)).build();
+            final Route newRoute = Route.builder()
+                                        .pathPrefix(ctx.route().paths().get(0) +
+                                                    result.route().paths().get(0).substring(1)).build();
 
             final ServiceRequestContext newCtx = new CompositeServiceRequestContext(
                     ctx, newRoute, result.routingResult().path());
@@ -182,17 +185,8 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
         }
 
         @Override
-        public ServiceRequestContext newDerivedContext() {
-            return newDerivedContext(super.newDerivedContext());
-        }
-
-        @Override
-        public ServiceRequestContext newDerivedContext(Request request) {
-            return newDerivedContext(super.newDerivedContext(request));
-        }
-
-        private ServiceRequestContext newDerivedContext(ServiceRequestContext derivedCtx) {
-            return new CompositeServiceRequestContext(derivedCtx, route, mappedPath);
+        public ServiceRequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
+            return new CompositeServiceRequestContext(super.newDerivedContext(req, rpcReq), route, mappedPath);
         }
 
         @Override

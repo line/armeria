@@ -35,6 +35,8 @@ import java.util.BitSet;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * This sampler is appropriate for low-traffic instrumentation (ex servers that each receive <100K
  * requests), or those who do not provision random trace ids. It is not appropriate for collectors
@@ -48,29 +50,30 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * <p>Forked from brave-core 5.6.3 at d4cbd86e1df75687339da6ec2964d42ab3a8cf14
  */
-final class CountingSampler implements Sampler {
+final class CountingSampler<T> implements Sampler<T> {
 
     /**
      * Creates a new instance.
      *
-     * @param rate {@code 0.0} means never sample, {@code 1.0} means always sample. Otherwise minimum sampling
-     *             rate is between {@code 0.01} and {@code 1.0}.
+     * @param probability {@code 0.0} means never sample, {@code 1.0} means always sample.
+     *                    Otherwise minimum probability is between {@code 0.01} and {@code 1.0}.
      */
-    static Sampler create(final double rate) {
-        final int percent = (int) (rate * 100.0);
+    static <T> Sampler<T> create(double probability) {
+        final int percent = (int) (probability * 100.0);
         checkArgument(percent >= 0 && percent <= 100,
-                      "rate: %s (expected: 0.0 <= rate <= 1.0)", rate);
+                      "probability: %s (expected: 0.0 <= probability <= 1.0)", probability);
         if (percent == 0) {
             return Sampler.never();
         }
         if (percent == 100) {
             return Sampler.always();
         }
-        return new CountingSampler(percent);
+        return new CountingSampler<>(percent);
     }
 
     private final AtomicInteger counter;
-    private final BitSet sampleDecisions;
+    @VisibleForTesting
+    final BitSet sampleDecisions;
 
     /** Fills a bitset with decisions according to the supplied percent. */
     CountingSampler(int percent) {

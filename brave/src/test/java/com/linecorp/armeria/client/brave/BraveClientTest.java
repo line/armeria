@@ -36,7 +36,6 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextBuilder;
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -96,7 +95,8 @@ class BraveClientTest {
         final RequestLog requestLog = testRemoteInvocation(tracing, null);
 
         // check span name
-        final Span span = reporter.spans().take();
+        final Span span = reporter.spans().poll(10, TimeUnit.SECONDS);
+        assertThat(span).isNotNull();
         assertThat(span.name()).isEqualTo(TEST_SPAN);
 
         // check kind
@@ -134,9 +134,10 @@ class BraveClientTest {
         testRemoteInvocation(tracing, "fooService");
 
         // check span name
-        final Span span = reporter.spans().take();
+        final Span span = reporter.spans().poll(10, TimeUnit.SECONDS);
 
         // check tags
+        assertThat(span).isNotNull();
         assertThat(span.tags()).containsEntry("http.host", "foo.com")
                                .containsEntry("http.method", "POST")
                                .containsEntry("http.path", "/hello/armeria")
@@ -172,7 +173,7 @@ class BraveClientTest {
         testRemoteInvocation(tracing, null);
 
         // check span name
-        final Span span = reporter.spans().take();
+        final Span span = reporter.spans().poll(10, TimeUnit.SECONDS);
 
         // check tags
         assertTags(span);
@@ -207,17 +208,17 @@ class BraveClientTest {
 
         // prepare parameters
         final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/armeria",
+                                                                 HttpHeaderNames.SCHEME, "http",
                                                                  HttpHeaderNames.AUTHORITY, "foo.com"));
         final RpcRequest rpcReq = RpcRequest.of(HelloService.Iface.class, "hello", "Armeria");
         final HttpResponse res = HttpResponse.of(HttpStatus.OK);
         final RpcResponse rpcRes = RpcResponse.of("Hello, Armeria!");
-        final ClientRequestContext ctx =
-                ClientRequestContextBuilder.of(req)
-                                           .endpoint(Endpoint.of("localhost", 8080))
-                                           .build();
+        final ClientRequestContext ctx = ClientRequestContextBuilder.of(req).build();
+        final HttpRequest actualReq = ctx.request();
+        assertThat(actualReq).isNotNull();
 
         ctx.logBuilder().requestFirstBytesTransferred();
-        ctx.logBuilder().requestContent(rpcReq, req);
+        ctx.logBuilder().requestContent(rpcReq, actualReq);
         ctx.logBuilder().endRequest();
 
         try (SafeCloseable ignored = ctx.push()) {
@@ -227,7 +228,7 @@ class BraveClientTest {
 
             final BraveClient stub = BraveClient.newDecorator(httpTracing).apply(delegate);
             // do invoke
-            final HttpResponse actualRes = stub.execute(ctx, req);
+            final HttpResponse actualRes = stub.execute(ctx, actualReq);
 
             assertThat(actualRes).isEqualTo(res);
 
@@ -246,7 +247,8 @@ class BraveClientTest {
         return ctx.log();
     }
 
-    private static void assertTags(Span span) {
+    private static void assertTags(@Nullable Span span) {
+        assertThat(span).isNotNull();
         assertThat(span.tags()).containsEntry("http.host", "foo.com")
                                .containsEntry("http.method", "POST")
                                .containsEntry("http.path", "/hello/armeria")

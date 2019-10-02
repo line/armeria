@@ -37,8 +37,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -54,10 +52,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.ResourceUtils;
 
-import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.json.MetricsModule;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Ascii;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
@@ -67,26 +61,24 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceWithRoutes;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
+import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
-import com.linecorp.armeria.server.healthcheck.HttpHealthCheckService;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
-import com.linecorp.armeria.server.metric.PrometheusExpositionService;
 import com.linecorp.armeria.spring.AbstractServiceRegistrationBean;
 import com.linecorp.armeria.spring.AnnotatedExampleRequest;
 import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
+import com.linecorp.armeria.spring.ExampleHeaders;
+import com.linecorp.armeria.spring.GrpcExampleHeaders;
 import com.linecorp.armeria.spring.GrpcExampleRequest;
 import com.linecorp.armeria.spring.GrpcServiceRegistrationBean;
 import com.linecorp.armeria.spring.HttpServiceRegistrationBean;
@@ -95,14 +87,10 @@ import com.linecorp.armeria.spring.Ssl;
 import com.linecorp.armeria.spring.ThriftServiceRegistrationBean;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
-import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
-import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.SupportedCipherSuiteFilter;
 import io.netty.util.NetUtil;
-import io.prometheus.client.CollectorRegistry;
 
 /**
  * A utility class which is used to configure a {@link ServerBuilder} with the {@link ArmeriaSettings} and
@@ -111,7 +99,6 @@ import io.prometheus.client.CollectorRegistry;
 public final class ArmeriaConfigurationUtil {
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaConfigurationUtil.class);
 
-    private static final HealthChecker[] EMPTY_HEALTH_CHECKERS = new HealthChecker[0];
     private static final String[] EMPTY_PROTOCOL_NAMES = new String[0];
 
     private static final String METER_TYPE = "server";
@@ -144,39 +131,31 @@ public final class ArmeriaConfigurationUtil {
 
         final String healthCheckPath = settings.getHealthCheckPath();
         if (!Strings.isNullOrEmpty(healthCheckPath)) {
-            server.service(healthCheckPath,
-                           new HttpHealthCheckService(healthCheckers.toArray(EMPTY_HEALTH_CHECKERS)));
+            server.service(healthCheckPath, HealthCheckService.of(healthCheckers));
         }
 
         server.meterRegistry(meterRegistry);
 
         if (settings.isEnableMetrics() && !Strings.isNullOrEmpty(settings.getMetricsPath())) {
-            if (meterRegistry instanceof CompositeMeterRegistry) {
-                final Set<MeterRegistry> childRegistries =
-                        ((CompositeMeterRegistry) meterRegistry).getRegistries();
-                childRegistries.stream()
-                               .filter(PrometheusMeterRegistry.class::isInstance)
-                               .map(PrometheusMeterRegistry.class::cast)
-                               .findAny()
-                               .ifPresent(r -> addPrometheusExposition(settings, server, r));
-            } else if (meterRegistry instanceof PrometheusMeterRegistry) {
-                addPrometheusExposition(settings, server, (PrometheusMeterRegistry) meterRegistry);
-            } else if (meterRegistry instanceof DropwizardMeterRegistry) {
-                final MetricRegistry dropwizardRegistry =
-                        ((DropwizardMeterRegistry) meterRegistry).getDropwizardRegistry();
-                final ObjectMapper objectMapper = new ObjectMapper()
-                        .enable(SerializationFeature.INDENT_OUTPUT)
-                        .registerModule(new MetricsModule(TimeUnit.SECONDS, TimeUnit.MILLISECONDS, true));
-                server.service(
-                        settings.getMetricsPath(),
-                        new AbstractHttpService() {
-                            @Override
-                            protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
-                                    throws Exception {
-                                return HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8,
-                                                       objectMapper.writeValueAsBytes(dropwizardRegistry));
-                            }
-                        });
+            final boolean hasPrometheus = hasAllClasses(
+                    "io.micrometer.prometheus.PrometheusMeterRegistry",
+                    "io.prometheus.client.CollectorRegistry");
+
+            final boolean addedPrometheusExposition;
+            if (hasPrometheus) {
+                addedPrometheusExposition = PrometheusSupport.addExposition(settings, server, meterRegistry);
+            } else {
+                addedPrometheusExposition = false;
+            }
+
+            if (!addedPrometheusExposition) {
+                final boolean hasDropwizard = hasAllClasses(
+                        "io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry",
+                        "com.codahale.metrics.MetricRegistry",
+                        "com.codahale.metrics.json.MetricsModule");
+                if (hasDropwizard) {
+                    DropwizardSupport.addExposition(settings, server, meterRegistry);
+                }
             }
         }
 
@@ -190,6 +169,17 @@ public final class ArmeriaConfigurationUtil {
                                                       compression.getExcludedUserAgents(),
                                                       parseDataSize(compression.getMinResponseSize())));
         }
+    }
+
+    private static boolean hasAllClasses(String... classNames) {
+        for (String className : classNames) {
+            try {
+                Class.forName(className, false, ArmeriaConfigurationUtil.class.getClassLoader());
+            } catch (Throwable t) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -251,7 +241,7 @@ public final class ArmeriaConfigurationUtil {
         requireNonNull(beans, "beans");
 
         final List<TBase<?, ?>> docServiceRequests = new ArrayList<>();
-        final Map<String, Collection<HttpHeaders>> docServiceHeaders = new HashMap<>();
+        final Map<String, Collection<? extends ExampleHeaders>> docServiceHeaders = new HashMap<>();
         beans.forEach(bean -> {
             Service<HttpRequest, HttpResponse> service = bean.getService();
             for (Function<Service<HttpRequest, HttpResponse>, ? extends Service<HttpRequest, HttpResponse>>
@@ -262,15 +252,19 @@ public final class ArmeriaConfigurationUtil {
             server.service(bean.getPath(), service);
             docServiceRequests.addAll(bean.getExampleRequests());
             ThriftServiceUtils.serviceNames(bean.getService())
-                              .forEach(serviceName -> docServiceHeaders
-                                      .put(serviceName,
-                                           bean.getExampleHeaders()));
+                              .forEach(serviceName ->
+                                               docServiceHeaders.put(serviceName, bean.getExampleHeaders()));
         });
 
-        if (!Strings.isNullOrEmpty(docsPath)) {
-            docServiceBuilder.exampleRequest(docServiceRequests);
-            for (Entry<String, Collection<HttpHeaders>> entry : docServiceHeaders.entrySet()) {
-                docServiceBuilder.exampleHttpHeaders(entry.getKey(), entry.getValue());
+        if (Strings.isNullOrEmpty(docsPath)) {
+            return;
+        }
+
+        docServiceBuilder.exampleRequest(docServiceRequests);
+        for (Entry<String, Collection<? extends ExampleHeaders>> entry : docServiceHeaders.entrySet()) {
+            for (ExampleHeaders exampleHeaders : entry.getValue()) {
+                configureExampleHeaders(docServiceBuilder, entry.getKey(), exampleHeaders.getMethodName(),
+                                        exampleHeaders.getHeaders());
             }
         }
     }
@@ -308,10 +302,12 @@ public final class ArmeriaConfigurationUtil {
         requireNonNull(beans, "beans");
 
         final List<GrpcExampleRequest> docServiceRequests = new ArrayList<>();
+        final List<GrpcExampleHeaders> docServiceHeaders = new ArrayList<>();
         beans.forEach(bean -> {
             final ServiceWithRoutes<HttpRequest, HttpResponse> serviceWithRoutes =
                     bean.getService();
             docServiceRequests.addAll(bean.getExampleRequests());
+            docServiceHeaders.addAll(bean.getExampleHeaders());
             serviceWithRoutes.routes().forEach(
                     route -> {
                         Service<HttpRequest, HttpResponse> service = bean.getService();
@@ -327,12 +323,18 @@ public final class ArmeriaConfigurationUtil {
             );
         });
 
-        if (!Strings.isNullOrEmpty(docsPath)) {
-            docServiceRequests.forEach(
-                    exampleReq -> docServiceBuilder.exampleRequestForMethod(exampleReq.getServiceType(),
-                                                                            exampleReq.getMethodName(),
-                                                                            exampleReq.getExampleRequest()));
+        if (Strings.isNullOrEmpty(docsPath)) {
+            return;
         }
+
+        docServiceRequests.forEach(
+                exampleReq -> docServiceBuilder.exampleRequestForMethod(exampleReq.getServiceType(),
+                                                                        exampleReq.getMethodName(),
+                                                                        exampleReq.getExampleRequest()));
+        docServiceHeaders.forEach(exampleHeader -> configureExampleHeaders(docServiceBuilder,
+                                                                           exampleHeader.getServiceType(),
+                                                                           exampleHeader.getMethodName(),
+                                                                           exampleHeader.getHeaders()));
     }
 
     /**
@@ -347,7 +349,8 @@ public final class ArmeriaConfigurationUtil {
         requireNonNull(docServiceBuilder, "docServiceBuilder");
         requireNonNull(beans, "beans");
 
-        final List<AnnotatedExampleRequest> docServiceRequests = new ArrayList<>();
+        final Map<String, Collection<? extends AnnotatedExampleRequest>> docServiceRequests = new HashMap<>();
+        final Map<String, Collection<? extends ExampleHeaders>> docServiceHeaders = new HashMap<>();
         beans.forEach(bean -> {
             Function<Service<HttpRequest, HttpResponse>,
                     ? extends Service<HttpRequest, HttpResponse>> decorator = Function.identity();
@@ -365,25 +368,37 @@ public final class ArmeriaConfigurationUtil {
                                  .addAll(bean.getRequestConverters())
                                  .addAll(bean.getResponseConverters())
                                  .build();
-            docServiceRequests.addAll(bean.getExampleRequests());
+            final String serviceName = bean.getService().getClass().getName();
+            docServiceRequests.put(serviceName, bean.getExampleRequests());
+            docServiceHeaders.put(serviceName, bean.getExampleHeaders());
             server.annotatedService(bean.getPathPrefix(), bean.getService(), decorator,
                                     exceptionHandlersAndConverters);
-
-            if (!Strings.isNullOrEmpty(docsPath)) {
-                docServiceRequests.forEach(
-                        exampleReq -> {
-                            final String serviceName = bean.getService().getClass().getName();
-                            docServiceBuilder.exampleRequestForMethod(serviceName,
-                                                                      exampleReq.getMethodName(),
-                                                                      exampleReq.getExampleRequest());
-                        });
-            }
         });
+
+        if (Strings.isNullOrEmpty(docsPath)) {
+            return;
+        }
+
+        for (Entry<String, Collection<? extends AnnotatedExampleRequest>> entry
+                : docServiceRequests.entrySet()) {
+            for (AnnotatedExampleRequest exampleRequest : entry.getValue()) {
+                docServiceBuilder.exampleRequestForMethod(entry.getKey(),
+                                                          exampleRequest.getMethodName(),
+                                                          exampleRequest.getExampleRequest());
+            }
+        }
+
+        for (Entry<String, Collection<? extends ExampleHeaders>> entry : docServiceHeaders.entrySet()) {
+            for (ExampleHeaders exampleHeaders : entry.getValue()) {
+                configureExampleHeaders(docServiceBuilder, entry.getKey(), exampleHeaders.getMethodName(),
+                                        exampleHeaders.getHeaders());
+            }
+        }
     }
 
     private static Service<HttpRequest, HttpResponse> setupMetricCollectingService(
             Service<HttpRequest, HttpResponse> service,
-            AbstractServiceRegistrationBean<?, ?> bean,
+            AbstractServiceRegistrationBean<?, ?, ?, ?> bean,
             @Nullable MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory) {
         requireNonNull(service, "service");
         requireNonNull(bean, "bean");
@@ -396,7 +411,7 @@ public final class ArmeriaConfigurationUtil {
 
     private static Function<Service<HttpRequest, HttpResponse>,
             MetricCollectingService<HttpRequest, HttpResponse>> metricCollectingServiceDecorator(
-            AbstractServiceRegistrationBean<?, ?> bean,
+            AbstractServiceRegistrationBean<?, ?, ?, ?> bean,
             MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory) {
         requireNonNull(bean, "bean");
         requireNonNull(meterIdPrefixFunctionFactory, "meterIdPrefixFunctionFactory");
@@ -405,19 +420,18 @@ public final class ArmeriaConfigurationUtil {
                 meterIdPrefixFunctionFactory.get(METER_TYPE, bean.getServiceName()));
     }
 
-    private static void addPrometheusExposition(ArmeriaSettings armeriaSettings, ServerBuilder server,
-                                                PrometheusMeterRegistry registry) {
-        requireNonNull(armeriaSettings, "armeriaSettings");
-        requireNonNull(server, "server");
-        requireNonNull(registry, "registry");
+    private static void configureExampleHeaders(DocServiceBuilder docServiceBuilder, String serviceName,
+                                                String methodName, HttpHeaders headers) {
+        requireNonNull(docServiceBuilder, "docServiceBuilder");
+        requireNonNull(serviceName, "serviceName");
+        requireNonNull(methodName, "methodName");
+        requireNonNull(headers, "headers");
 
-        final String metricsPath = armeriaSettings.getMetricsPath();
-        if (metricsPath == null) {
-            return;
+        if (Strings.isNullOrEmpty(methodName)) {
+            docServiceBuilder.exampleHttpHeaders(serviceName, headers);
+        } else {
+            docServiceBuilder.exampleHttpHeaders(serviceName, methodName, headers);
         }
-
-        final CollectorRegistry prometheusRegistry = registry.getPrometheusRegistry();
-        server.service(metricsPath, new PrometheusExpositionService(prometheusRegistry));
     }
 
     /**

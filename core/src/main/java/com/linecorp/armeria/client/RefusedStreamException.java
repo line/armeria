@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client;
 
+import com.linecorp.armeria.common.Flags;
+
 /**
  * A {@link RuntimeException} raised when a server set
  * HTTP/2 <a href="https://httpwg.org/specs/rfc7540.html#SETTINGS_MAX_CONCURRENT_STREAMS">{@code MAX_CONCURRENT_STREAMS}</a> to 0,
@@ -25,16 +27,19 @@ public final class RefusedStreamException extends RuntimeException {
 
     private static final long serialVersionUID = 4865362114731585884L;
 
-    private static final RefusedStreamException INSTANCE = new RefusedStreamException();
+    private static final RefusedStreamException INSTANCE = new RefusedStreamException(false);
 
     /**
      * Returns a singleton {@link RefusedStreamException}.
      */
     public static RefusedStreamException get() {
-        return INSTANCE;
+        return Flags.verboseExceptionSampler().isSampled(RefusedStreamException.class) ?
+               new RefusedStreamException() : INSTANCE;
     }
 
-    private RefusedStreamException() {
+    private RefusedStreamException() {}
+
+    private RefusedStreamException(@SuppressWarnings("unused") boolean dummy) {
         super(null, null, false, false);
     }
 }

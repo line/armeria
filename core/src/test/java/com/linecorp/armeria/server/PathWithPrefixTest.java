@@ -24,36 +24,36 @@ class PathWithPrefixTest {
 
     @Test
     void prefix() {
-        Route route = Route.builder().pathWithPrefix("/foo/", "glob:/bar/**").build();
+        Route route = Route.builder().path("/foo/", "glob:/bar/**").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.REGEX);
         assertThat(route.paths()).containsExactly("^/foo/bar/(.*)$", "/foo/bar/**");
 
-        route = Route.builder().pathWithPrefix("/foo/", "glob:bar").build();
+        route = Route.builder().path("/foo/", "glob:bar").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.REGEX);
         assertThat(route.paths()).containsExactly("^/foo/(?:.+/)?bar$", "/foo/**/bar");
     }
 
     @Test
     void testLoggerName() {
-        Route route = Route.builder().pathWithPrefix("/foo/", "glob:/bar/**").build();
+        Route route = Route.builder().path("/foo/", "glob:/bar/**").build();
         assertThat(route.loggerName()).isEqualTo("foo.bar.__");
 
-        route = Route.builder().pathWithPrefix("/foo/", "glob:bar").build();
+        route = Route.builder().path("/foo/", "glob:bar").build();
         assertThat(route.loggerName()).isEqualTo("foo.__.bar");
 
-        route = Route.builder().pathWithPrefix("/foo/", "regex:/(foo|bar)").build();
+        route = Route.builder().path("/foo/", "regex:/(foo|bar)").build();
         assertThat(route.loggerName()).isEqualTo("foo.regex.__foo_bar_");
     }
 
     @Test
     void testMetricName() {
-        Route route = Route.builder().pathWithPrefix("/foo/", "glob:/bar/**").build();
+        Route route = Route.builder().path("/foo/", "glob:/bar/**").build();
         assertThat(route.meterTag()).isEqualTo("glob:/foo/bar/**");
 
-        route = Route.builder().pathWithPrefix("/foo/", "glob:bar").build();
+        route = Route.builder().path("/foo/", "glob:bar").build();
         assertThat(route.meterTag()).isEqualTo("glob:/foo/**/bar");
 
-        route = Route.builder().pathWithPrefix("/foo/", "regex:/(foo|bar)").build();
+        route = Route.builder().path("/foo/", "regex:/(foo|bar)").build();
         assertThat(route.meterTag()).isEqualTo("prefix:/foo/,regex:/(foo|bar)");
     }
 }

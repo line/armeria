@@ -2,6 +2,15 @@
 
 A collection of JMH benchmarks which may be useful for measuring Armeria performance.
 
+## Always prepend `--no-daemon` and `clean`
+
+You must prepend `--no-daemon` and `clean` to your benchmark command due to
+[a known bug in jmh-gradle-plugin](https://github.com/melix/jmh-gradle-plugin/issues/132):
+
+```
+$ ./gradlew --no-daemon :benchmarks:clean :benchmarks:jmh ...
+```
+
 ## Options
 
 - `-Pjmh.include=<pattern>`
@@ -54,7 +63,7 @@ $ make
 When running a benchmark, specify `-Pjmh.profilers` option:
 
 ```
-$ ./gradlew :benchmarks:jmh \
+$ ./gradlew --no-daemon :benchmarks:clean :benchmarks:jmh \
   "-Pjmh.profilers=jmh.extras.Async:asyncProfilerDir=$HOME/async-profiler;flameGraphDir=$HOME/FlameGraph"
 ```
 

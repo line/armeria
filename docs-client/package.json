@@ -13,7 +13,6 @@
     "@material-ui/icons": "^4.2.1",
     "core-js": "^3.0.0",
     "dayjs": "^1.8.15",
-    "immutability-helper": "^3.0.1",
     "jsonminify": "^0.4.1",
     "react": "^16.6.0",
     "react-dom": "^16.6.0",

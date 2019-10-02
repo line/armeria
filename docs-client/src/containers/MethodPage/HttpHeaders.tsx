@@ -37,51 +37,49 @@ interface Props {
   onStickyHeadersChange: () => void;
 }
 
-const HttpHeaders: React.SFC<Props> = (props) => {
-  return (
-    <>
-      <Typography variant="body2" paragraph />
-      <Button color="secondary" onClick={props.onEditHttpHeadersClick}>
-        HTTP headers
-      </Button>
-      {props.additionalHeadersOpen && (
-        <>
-          {props.exampleHeaders.length > 0 && (
-            <>
-              <Typography variant="body2" paragraph />
-              <Dropdown
-                placeholder="Select an example headers..."
-                options={props.exampleHeaders}
-                onChange={props.onSelectedHeadersChange}
-              />
-            </>
-          )}
-          <Typography variant="body2" paragraph />
-          <TextField
-            multiline
-            fullWidth
-            rows={8}
-            value={props.additionalHeaders}
-            placeholder={jsonPlaceHolder}
-            onChange={props.onHeadersFormChange}
-            inputProps={{
-              className: 'code',
-            }}
-          />
-          <Typography variant="body2" paragraph />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={props.stickyHeaders}
-                onChange={props.onStickyHeadersChange}
-              />
-            }
-            label="Use these HTTP headers for all functions."
-          />
-        </>
-      )}
-    </>
-  );
-};
+const HttpHeaders: React.FunctionComponent<Props> = (props) => (
+  <>
+    <Typography variant="body2" paragraph />
+    <Button color="secondary" onClick={props.onEditHttpHeadersClick}>
+      HTTP headers
+    </Button>
+    {props.additionalHeadersOpen && (
+      <>
+        {props.exampleHeaders.length > 0 && (
+          <>
+            <Typography variant="body2" paragraph />
+            <Dropdown
+              placeholder="Select an example headers..."
+              options={props.exampleHeaders}
+              onChange={props.onSelectedHeadersChange}
+            />
+          </>
+        )}
+        <Typography variant="body2" paragraph />
+        <TextField
+          multiline
+          fullWidth
+          rows={8}
+          value={props.additionalHeaders}
+          placeholder={jsonPlaceHolder}
+          onChange={props.onHeadersFormChange}
+          inputProps={{
+            className: 'code',
+          }}
+        />
+        <Typography variant="body2" paragraph />
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={props.stickyHeaders}
+              onChange={props.onStickyHeadersChange}
+            />
+          }
+          label="Use these HTTP headers for all functions."
+        />
+      </>
+    )}
+  </>
+);
 
-export default HttpHeaders;
+export default React.memo(HttpHeaders);

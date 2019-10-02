@@ -181,12 +181,12 @@ public class GrpcDocServicePluginTest {
 
         // The case where a GrpcService is added to ServerBuilder with a prefix.
         serverBuilder.service(
-                Route.builder().prefix("/test").build(),
+                Route.builder().pathPrefix("/test").build(),
                 new GrpcServiceBuilder().addService(mock(UnitTestServiceImplBase.class)).build());
 
         // Another GrpcService with a different prefix.
         serverBuilder.service(
-                Route.builder().prefix("/reconnect").build(),
+                Route.builder().pathPrefix("/reconnect").build(),
                 new GrpcServiceBuilder().addService(mock(ReconnectServiceImplBase.class)).build());
 
         // Make sure all services and their endpoints exist in the specification.

@@ -15,15 +15,14 @@
  */
 package com.linecorp.armeria.spring;
 
-import java.util.ArrayList;
-import java.util.Collection;
-
 import javax.validation.constraints.NotNull;
 
+import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.ServiceWithRoutes;
-import com.linecorp.armeria.server.docs.DocService;
 
 /**
  * A bean with information for registering a gRPC service.
@@ -39,57 +38,70 @@ import com.linecorp.armeria.server.docs.DocService;
  * >                                 .enableUnframedRequests(true)
  * >                                 .build())
  * >             .setDecorators(LoggingService.newDecorator())
- * >             .setExampleRequests(List.of(GrpcExampleRequest.of(HelloServiceGrpc.SERVICE_NAME,
- * >                                                               "Hello",
- * >                                                               HelloRequest.newBuilder()
- * >                                                                           .setName("Armeria")
- * >                                                                           .build())));
+ * >             .addExampleRequests(GrpcExampleRequest.of(
+ * >                    HelloServiceGrpc.SERVICE_NAME, "Hello",
+ * >                    HelloRequest.newBuilder().setName("Armeria").build()))
+ * >             .addExampleHeaders(GrpcExampleHeaders.of(HelloServiceGrpc.SERVICE_NAME,
+ * >                                                      HttpHeaders.of("my-header", "headerVal")));
  * > }
  * }</pre>
  */
 public class GrpcServiceRegistrationBean
         extends AbstractServiceRegistrationBean<ServiceWithRoutes<HttpRequest, HttpResponse>,
-        GrpcServiceRegistrationBean> {
+        GrpcServiceRegistrationBean, GrpcExampleRequest, GrpcExampleHeaders> {
 
     /**
-     * Sample requests to populate debug forms in {@link DocService}.
-     * This should be a list of request objects which correspond to methods
-     * in this gRPC service.
+     * Adds an example request for {@link #getService()}.
      */
-    @NotNull
-    private final Collection<GrpcExampleRequest> exampleRequests = new ArrayList<>();
-
-    /**
-     * Returns sample requests of {@link #getService()}.
-     */
-    @NotNull
-    public Collection<GrpcExampleRequest> getExampleRequests() {
-        return exampleRequests;
+    public GrpcServiceRegistrationBean addExampleRequests(String serviceName, String methodName,
+                                                          Object exampleRequest) {
+        return addExampleRequests(GrpcExampleRequest.of(serviceName, methodName, exampleRequest));
     }
 
     /**
-     * Sets sample requests for {@link #getService()}.
+     * Adds an example HTTP header for all service methods.
      */
-    public GrpcServiceRegistrationBean setExampleRequests(
-            @NotNull Collection<GrpcExampleRequest> exampleRequests) {
-        this.exampleRequests.addAll(exampleRequests);
+    public GrpcServiceRegistrationBean addExampleHeaders(String serviceName, HttpHeaders exampleHeaders) {
+        return addExampleHeaders(GrpcExampleHeaders.of(serviceName, exampleHeaders));
+    }
+
+    /**
+     * Adds an example HTTP header for all service methods.
+     */
+    public GrpcServiceRegistrationBean addExampleHeaders(String serviceName, CharSequence name, String value) {
+        return addExampleHeaders(GrpcExampleHeaders.of(serviceName, name, value));
+    }
+
+    /**
+     * Adds an example HTTP header for the specified method.
+     */
+    public GrpcServiceRegistrationBean addExampleHeaders(
+            String serviceName, String methodName, CharSequence name, String value) {
+        return addExampleHeaders(GrpcExampleHeaders.of(serviceName, methodName, name, value));
+    }
+
+    /**
+     * Adds an example HTTP header for the specified method.
+     */
+    public GrpcServiceRegistrationBean addExampleHeaders(
+            String serviceName, String methodName, HttpHeaders exampleHeaders) {
+        return addExampleHeaders(GrpcExampleHeaders.of(serviceName, methodName, exampleHeaders));
+    }
+
+    /**
+     * Adds example HTTP headers for the specified method.
+     */
+    public GrpcServiceRegistrationBean addExampleHeaders(
+            String serviceName, String methodName, @NotNull Iterable<? extends HttpHeaders> exampleHeaders) {
+        exampleHeaders.forEach(h -> addExampleHeaders(serviceName, methodName, h));
         return this;
     }
 
     /**
-     * Adds a sample request for {@link #getService()}.
+     * Adds example HTTP headers for the specified method.
      */
-    public GrpcServiceRegistrationBean addExampleRequest(@NotNull GrpcExampleRequest exampleRequest) {
-        exampleRequests.add(exampleRequest);
-        return this;
-    }
-
-    /**
-     * Adds a sample request for {@link #getService()}.
-     */
-    public GrpcServiceRegistrationBean addExampleRequest(@NotNull String serviceType,
-                                                         @NotNull String methodName,
-                                                         @NotNull Object exampleRequest) {
-        return addExampleRequest(GrpcExampleRequest.of(serviceType, methodName, exampleRequest));
+    public GrpcServiceRegistrationBean addExampleHeaders(
+            String serviceName, String methodName, @NotNull HttpHeaders... exampleHeaders) {
+        return addExampleHeaders(serviceName, methodName, ImmutableList.copyOf(exampleHeaders));
     }
 }

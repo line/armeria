@@ -56,7 +56,7 @@ public final class UnprocessedRequestException extends RuntimeException {
 
     @Override
     public Throwable fillInStackTrace() {
-        if (Flags.verboseExceptions()) {
+        if (Flags.verboseExceptionSampler().isSampled(getClass())) {
             super.fillInStackTrace();
         }
         return this;

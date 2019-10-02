@@ -25,6 +25,7 @@ import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.DefaultRpcResponse;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 
@@ -103,7 +104,7 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
             return;
         }
 
-        final ClientRequestContext derivedCtx = newDerivedContext(ctx, req, initialAttempt);
+        final ClientRequestContext derivedCtx = newDerivedContext(ctx, null, req, initialAttempt);
         ctx.logBuilder().addChild(derivedCtx.log());
 
         if (!initialAttempt) {
@@ -118,21 +119,29 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
                 if (backoff != null) {
                     final long nextDelay = getNextDelay(derivedCtx, backoff);
                     if (nextDelay < 0) {
-                        onRetryingComplete(ctx);
-                        future.complete(res);
+                        onRetryComplete(ctx, derivedCtx, res, future);
                         return null;
                     }
 
                     scheduleNextRetry(ctx, cause -> handleException(ctx, future, cause, false),
                                       () -> doExecute0(ctx, req, returnedRes, future), nextDelay);
                 } else {
-                    onRetryingComplete(ctx);
-                    future.complete(res);
+                    onRetryComplete(ctx, derivedCtx, res, future);
                 }
                 return null;
             });
             return null;
         });
+    }
+
+    private static void onRetryComplete(ClientRequestContext ctx, ClientRequestContext derivedCtx,
+                                        RpcResponse res, CompletableFuture<RpcResponse> future) {
+        onRetryingComplete(ctx);
+        final HttpRequest actualHttpReq = derivedCtx.request();
+        if (actualHttpReq != null) {
+            ctx.updateRequest(actualHttpReq);
+        }
+        future.complete(res);
     }
 
     private static void handleException(ClientRequestContext ctx, CompletableFuture<RpcResponse> future,

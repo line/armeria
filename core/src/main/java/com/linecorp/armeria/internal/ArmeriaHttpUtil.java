@@ -810,7 +810,7 @@ public final class ArmeriaHttpUtil {
             for (Entry<AsciiString, String> entry : in) {
                 final AsciiString name = entry.getKey();
                 final String value = entry.getValue();
-                if (name.isEmpty() || HTTP_TRAILER_BLACKLIST.contains(name)) {
+                if (name.isEmpty() || isTrailerBlacklisted(name)) {
                     continue;
                 }
                 out.add(name, value);
@@ -871,7 +871,7 @@ public final class ArmeriaHttpUtil {
                     continue;
                 }
 
-                if (isTrailer && HTTP_TRAILER_BLACKLIST.contains(name)) {
+                if (isTrailer && isTrailerBlacklisted(name)) {
                     continue;
                 }
 
@@ -975,6 +975,13 @@ public final class ArmeriaHttpUtil {
             return converted;
         }
         return value.toString();
+    }
+
+    /**
+     * Returns {@code true} if the specified header name is not allowed for HTTP tailers.
+     */
+    public static boolean isTrailerBlacklisted(AsciiString name) {
+        return HTTP_TRAILER_BLACKLIST.contains(name);
     }
 
     private static final class CharSequenceMap

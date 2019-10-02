@@ -41,11 +41,11 @@ import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -131,11 +131,16 @@ final class THttpClientDelegate
                 Exceptions.throwUnsafely(t);
             }
 
+            final Endpoint endpoint = ctx.endpoint();
             final HttpRequest httpReq = HttpRequest.of(
-                    RequestHeaders.of(HttpMethod.POST, ctx.path(),
-                                      HttpHeaderNames.CONTENT_TYPE, mediaType),
+                    RequestHeaders.builder(HttpMethod.POST, ctx.path())
+                                  .scheme(ctx.sessionProtocol())
+                                  .authority(endpoint != null ? endpoint.authority() : "UNKNOWN")
+                                  .contentType(mediaType)
+                                  .build(),
                     new ByteBufHttpData(buf, true));
 
+            ctx.updateRequest(httpReq);
             ctx.logBuilder().deferResponseContent();
 
             final CompletableFuture<AggregatedHttpResponse> future =

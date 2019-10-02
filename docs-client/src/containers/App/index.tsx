@@ -24,19 +24,13 @@ import IconButton from '@material-ui/core/IconButton';
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
-import {
-  createStyles,
-  Theme,
-  withStyles,
-  WithStyles,
-} from '@material-ui/core/styles';
+import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
 import Toolbar from '@material-ui/core/Toolbar';
 import Typography from '@material-ui/core/Typography';
 import ExpandLess from '@material-ui/icons/ExpandLess';
 import ExpandMore from '@material-ui/icons/ExpandMore';
 import MenuIcon from '@material-ui/icons/Menu';
-import update from 'immutability-helper';
-import React from 'react';
+import React, { useCallback, useEffect, useReducer, useState } from 'react';
 import Helmet from 'react-helmet';
 import { hot } from 'react-hot-loader/root';
 import { Route, RouteComponentProps, withRouter } from 'react-router-dom';
@@ -69,7 +63,7 @@ if (process.env.WEBPACK_DEV === 'true') {
   }
 }
 
-const styles = (theme: Theme) =>
+const useStyles = makeStyles((theme: Theme) =>
   createStyles({
     root: {
       flexGrow: 1,
@@ -143,22 +137,12 @@ const styles = (theme: Theme) =>
       textDecoration: 'none',
       color: 'white',
     },
-  });
+  }),
+);
 
-interface State {
-  mobileDrawerOpen: boolean;
-  specification?: Specification;
-  versions?: Versions;
-  servicesSectionOpen: boolean;
-  openServices: { [key: string]: boolean };
-  enumsSectionOpen: boolean;
-  structsSectionOpen: boolean;
-  exceptionsOpen: boolean;
-}
+type Props = RouteComponentProps<{}>;
 
-type Props = WithStyles<typeof styles> & RouteComponentProps<{}>;
-
-interface AppDrawerProps extends WithStyles<typeof styles> {
+interface AppDrawerProps {
   specification: Specification;
   navigateTo: (url: string) => void;
   httpMethodClass: (httpMethod: string) => string;
@@ -167,11 +151,14 @@ interface AppDrawerProps extends WithStyles<typeof styles> {
   enumsSectionOpen: boolean;
   structsSectionOpen: boolean;
   exceptionsOpen: boolean;
-  handleCollapse: (itemName: string) => void;
+  toggleServicesOpen: React.Dispatch<unknown>;
+  toggleEnumsOpen: React.Dispatch<unknown>;
+  toggleStructsOpen: React.Dispatch<unknown>;
+  toggleExceptionsOpen: React.Dispatch<unknown>;
   handleServiceCollapse: (serviceName: string) => void;
 }
 
-function AppDrawer({
+const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
   navigateTo,
   httpMethodClass,
   specification,
@@ -180,14 +167,17 @@ function AppDrawer({
   enumsSectionOpen,
   structsSectionOpen,
   exceptionsOpen,
-  handleCollapse,
+  toggleServicesOpen,
+  toggleEnumsOpen,
+  toggleStructsOpen,
+  toggleExceptionsOpen,
   handleServiceCollapse,
-}: AppDrawerProps) {
+}) => {
   return (
     <List component="nav">
       {specification.getServices().length > 0 && (
         <>
-          <ListItem button onClick={() => handleCollapse('services')}>
+          <ListItem button onClick={toggleServicesOpen}>
             <ListItemText disableTypography>
               <Typography variant="h5">Services</Typography>
             </ListItemText>
@@ -247,7 +237,7 @@ function AppDrawer({
       )}
       {specification.getEnums().length > 0 && (
         <>
-          <ListItem button onClick={() => handleCollapse('enums')}>
+          <ListItem button onClick={toggleEnumsOpen}>
             <ListItemText disableTypography>
               <Typography variant="h5">Enums</Typography>
             </ListItemText>
@@ -276,7 +266,7 @@ function AppDrawer({
       )}
       {specification.getStructs().length > 0 && (
         <>
-          <ListItem button onClick={() => handleCollapse('structs')}>
+          <ListItem button onClick={toggleStructsOpen}>
             <ListItemText disableTypography>
               <Typography variant="h5">Structs</Typography>
             </ListItemText>
@@ -305,7 +295,7 @@ function AppDrawer({
       )}
       {specification.getExceptions().length > 0 && (
         <>
-          <ListItem button onClick={() => handleCollapse('exceptions')}>
+          <ListItem button onClick={toggleExceptionsOpen}>
             <ListItemText disableTypography>
               <Typography variant="h5">Exceptions</Typography>
             </ListItemText>
@@ -334,261 +324,230 @@ function AppDrawer({
       )}
     </List>
   );
+};
+
+interface OpenServices {
+  [name: string]: boolean;
 }
 
-class App extends React.PureComponent<Props, State> {
-  public state: State = {
-    mobileDrawerOpen: false,
-    specification: undefined,
-    versions: undefined,
-    servicesSectionOpen: true,
-    openServices: {},
-    enumsSectionOpen: true,
-    structsSectionOpen: true,
-    exceptionsOpen: true,
-  };
+const toggle = (current: boolean) => !current;
 
-  public componentWillMount() {
-    this.initSpecification();
-    this.initVersion();
+const App: React.FunctionComponent<Props> = (props) => {
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [specification, setSpecification] = useState<
+    Specification | undefined
+  >();
+  const [versions, setVersions] = useState<Versions | undefined>();
+  const [openServices, toggleOpenService] = useReducer(
+    (current: OpenServices, serviceName: string) => ({
+      ...current,
+      [serviceName]: !current[serviceName],
+    }),
+    {},
+  );
+  const [servicesOpen, toggleServicesOpen] = useReducer(toggle, true);
+  const [enumsOpen, toggleEnumsOpen] = useReducer(toggle, true);
+  const [structsOpen, toggleStructsOpen] = useReducer(toggle, true);
+  const [exceptionsOpen, toggleExceptionsOpen] = useReducer(toggle, true);
+
+  useEffect(() => {
+    (async () => {
+      const httpResponse = await fetch('specification.json');
+      const specificationData: SpecificationData = await httpResponse.json();
+      const initialSpecification = new Specification(specificationData);
+      initialSpecification.getServices().forEach((service) => {
+        toggleOpenService(service.name);
+      });
+      setSpecification(initialSpecification);
+    })();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      const httpResponse = await fetch('versions.json');
+      const versionsData: Version[] = await httpResponse.json();
+      const initialVersions = new Versions(versionsData);
+      setVersions(initialVersions);
+    })();
+  }, []);
+
+  const classes = useStyles();
+
+  const navigateTo = useCallback(
+    (to: string) => {
+      const params = new URLSearchParams(props.location.search);
+      params.delete('args');
+      const url = params.has('http_headers_sticky')
+        ? `${to}?${params.toString()}`
+        : to;
+      props.history.push(url);
+      setMobileDrawerOpen(false);
+    },
+    [props.location.search, props.history],
+  );
+
+  const toggleMobileDrawer = useCallback(() => {
+    setMobileDrawerOpen(!mobileDrawerOpen);
+  }, [mobileDrawerOpen]);
+
+  const httpMethodClass = useCallback(
+    (httpMethod: string) => {
+      let methodClass;
+      if (httpMethod === 'OPTIONS') {
+        methodClass = classes.httpMethodOptions;
+      }
+      if (httpMethod === 'GET') {
+        methodClass = classes.httpMethodGet;
+      }
+      if (httpMethod === 'HEAD') {
+        methodClass = classes.httpMethodHead;
+      }
+      if (httpMethod === 'POST') {
+        methodClass = classes.httpMethodPost;
+      }
+      if (httpMethod === 'PUT') {
+        methodClass = classes.httpMethodPut;
+      }
+      if (httpMethod === 'PATCH') {
+        methodClass = classes.httpMethodPatch;
+      }
+      if (httpMethod === 'DELETE') {
+        methodClass = classes.httpMethodDelete;
+      }
+      if (httpMethod === 'TRACE') {
+        methodClass = classes.httpMethodTrace;
+      }
+
+      if (methodClass === undefined) {
+        throw new Error(`unsupported http method: ${httpMethod}`);
+      }
+      return `${classes.httpMethodCommon} ${methodClass}`;
+    },
+    [classes],
+  );
+
+  if (!specification) {
+    return null;
   }
 
-  public render() {
-    const { classes } = this.props;
-    const { specification } = this.state;
-    const { versions } = this.state;
+  const { pathname, search } = props.location;
+  if (pathname.startsWith('/method/')) {
+    const redirectPath = `/methods${pathname.substring(
+      pathname.indexOf('/', 2),
+    )}`;
+    props.history.push(`${redirectPath}${search || ''}`);
+    return null;
+  }
+  if (pathname.startsWith('/namedType')) {
+    const name = pathname.substring(pathname.indexOf('/', 2) + 1);
+    const redirectBase = specification.getStructByName(name)
+      ? '/structs/'
+      : '/enums/';
+    props.history.push(`${redirectBase}${name}${search || ''}`);
+    return null;
+  }
 
-    if (!specification) {
-      return null;
-    }
-
-    const { pathname, search } = this.props.location;
-    if (pathname.startsWith('/method/')) {
-      const redirectPath = `/methods${pathname.substring(
-        pathname.indexOf('/', 2),
-      )}`;
-      this.props.history.push(`${redirectPath}${search || ''}`);
-      return null;
-    }
-    if (pathname.startsWith('/namedType')) {
-      const name = pathname.substring(pathname.indexOf('/', 2) + 1);
-      const redirectBase = specification.getStructByName(name)
-        ? '/structs/'
-        : '/enums/';
-      this.props.history.push(`${redirectBase}${name}${search || ''}`);
-      return null;
-    }
-
-    return (
-      <div className={classes.root}>
-        <Helmet>
-          <script src="injected.js" />
-        </Helmet>
-        <CssBaseline />
-        <AppBar className={classes.appBar}>
-          <Toolbar disableGutters>
-            <Hidden mdUp>
-              <IconButton color="inherit" onClick={this.toggleMobileDrawer}>
-                <MenuIcon />
-              </IconButton>
-            </Hidden>
-            <Typography
-              className={classes.title}
-              variant="h6"
-              color="inherit"
-              noWrap
-            >
-              <a href="#" className={classes.mainHeader}>
-                Armeria documentation service {''}
-                {versions
-                  ? extractSimpleArtifactVersion(
-                      versions.getArmeriaArtifactVersion(),
-                    )
-                  : ''}
-              </a>
-            </Typography>
-            <div style={{ flex: 1 }} />
-            <GotoSelect
-              specification={specification}
-              navigateTo={this.navigateTo}
-            />
-          </Toolbar>
-        </AppBar>
-        <Hidden smDown>
-          <Drawer variant="permanent" classes={{ paper: classes.drawerPaper }}>
-            <div className={classes.toolbar} />
-            <AppDrawer
-              classes={classes}
-              specification={specification}
-              navigateTo={this.navigateTo}
-              httpMethodClass={this.httpMethodClass}
-              servicesSectionOpen={this.state.servicesSectionOpen}
-              openServices={this.state.openServices}
-              enumsSectionOpen={this.state.enumsSectionOpen}
-              structsSectionOpen={this.state.structsSectionOpen}
-              exceptionsOpen={this.state.exceptionsOpen}
-              handleCollapse={this.handleCollapse}
-              handleServiceCollapse={this.handleServiceCollapse}
-            />
-          </Drawer>
-        </Hidden>
-        <Hidden mdUp>
-          <Drawer
-            variant="temporary"
-            open={this.state.mobileDrawerOpen}
-            onClose={this.toggleMobileDrawer}
-            classes={{ paper: classes.drawerPaper }}
-            ModalProps={{
-              keepMounted: true,
-            }}
+  return (
+    <div className={classes.root}>
+      <Helmet>
+        <script src="injected.js" />
+      </Helmet>
+      <CssBaseline />
+      <AppBar className={classes.appBar}>
+        <Toolbar disableGutters>
+          <Hidden mdUp>
+            <IconButton color="inherit" onClick={toggleMobileDrawer}>
+              <MenuIcon />
+            </IconButton>
+          </Hidden>
+          <Typography
+            className={classes.title}
+            variant="h6"
+            color="inherit"
+            noWrap
           >
-            <AppDrawer
-              classes={classes}
-              specification={specification}
-              navigateTo={this.navigateTo}
-              httpMethodClass={this.httpMethodClass}
-              servicesSectionOpen={this.state.servicesSectionOpen}
-              openServices={this.state.openServices}
-              enumsSectionOpen={this.state.enumsSectionOpen}
-              structsSectionOpen={this.state.structsSectionOpen}
-              exceptionsOpen={this.state.exceptionsOpen}
-              handleCollapse={this.handleCollapse}
-              handleServiceCollapse={this.handleServiceCollapse}
-            />
-          </Drawer>
-        </Hidden>
-        <main className={classes.content}>
+            <a href="#" className={classes.mainHeader}>
+              Armeria documentation service
+              {versions
+                ? ` ${extractSimpleArtifactVersion(
+                    versions.getArmeriaArtifactVersion(),
+                  )}`
+                : ''}
+            </a>
+          </Typography>
+          <div style={{ flex: 1 }} />
+          <GotoSelect specification={specification} navigateTo={navigateTo} />
+        </Toolbar>
+      </AppBar>
+      <Hidden smDown>
+        <Drawer variant="permanent" classes={{ paper: classes.drawerPaper }}>
           <div className={classes.toolbar} />
-          <Route
-            exact
-            path="/"
-            render={(props) => <HomePage {...props} versions={versions} />}
+          <AppDrawer
+            specification={specification}
+            navigateTo={navigateTo}
+            httpMethodClass={httpMethodClass}
+            servicesSectionOpen={servicesOpen}
+            openServices={openServices}
+            enumsSectionOpen={enumsOpen}
+            structsSectionOpen={structsOpen}
+            exceptionsOpen={exceptionsOpen}
+            toggleServicesOpen={toggleServicesOpen}
+            toggleEnumsOpen={toggleEnumsOpen}
+            toggleStructsOpen={toggleStructsOpen}
+            toggleExceptionsOpen={toggleExceptionsOpen}
+            handleServiceCollapse={toggleOpenService}
           />
-          <Route
-            path="/enums/:name"
-            render={(props) => (
-              <EnumPage {...props} specification={specification} />
-            )}
+        </Drawer>
+      </Hidden>
+      <Hidden mdUp>
+        <Drawer
+          variant="temporary"
+          open={mobileDrawerOpen}
+          onClose={toggleMobileDrawer}
+          classes={{ paper: classes.drawerPaper }}
+          ModalProps={{
+            keepMounted: true,
+          }}
+        >
+          <AppDrawer
+            specification={specification}
+            navigateTo={navigateTo}
+            httpMethodClass={httpMethodClass}
+            servicesSectionOpen={servicesOpen}
+            openServices={openServices}
+            enumsSectionOpen={enumsOpen}
+            structsSectionOpen={structsOpen}
+            exceptionsOpen={exceptionsOpen}
+            toggleServicesOpen={toggleServicesOpen}
+            toggleEnumsOpen={toggleEnumsOpen}
+            toggleStructsOpen={toggleStructsOpen}
+            toggleExceptionsOpen={toggleExceptionsOpen}
+            handleServiceCollapse={toggleOpenService}
           />
-          <Route
-            path="/methods/:serviceName/:methodName/:httpMethod"
-            render={(props) => (
-              <MethodPage {...props} specification={specification} />
-            )}
-          />
-          <Route
-            path="/structs/:name"
-            render={(props) => (
-              <StructPage {...props} specification={specification} />
-            )}
-          />
-        </main>
-      </div>
-    );
-  }
+        </Drawer>
+      </Hidden>
+      <main className={classes.content}>
+        <div className={classes.toolbar} />
+        <Route
+          exact
+          path="/"
+          render={(p) => <HomePage {...p} versions={versions} />}
+        />
+        <Route
+          path="/enums/:name"
+          render={(p) => <EnumPage {...p} specification={specification} />}
+        />
+        <Route
+          path="/methods/:serviceName/:methodName/:httpMethod"
+          render={(p) => <MethodPage {...p} specification={specification} />}
+        />
+        <Route
+          path="/structs/:name"
+          render={(p) => <StructPage {...p} specification={specification} />}
+        />
+      </main>
+    </div>
+  );
+};
 
-  private navigateTo = (to: string) => {
-    const params = new URLSearchParams(this.props.location.search);
-    params.delete('args');
-    const url = params.has('http_headers_sticky')
-      ? `${to}?${params.toString()}`
-      : to;
-    this.props.history.push(url);
-    this.setState({
-      mobileDrawerOpen: false,
-    });
-  };
-
-  private httpMethodClass = (httpMethod: string) => {
-    const classes = this.props.classes;
-    let httpMethodClass;
-    if (httpMethod === 'OPTIONS') {
-      httpMethodClass = classes.httpMethodOptions;
-    }
-    if (httpMethod === 'GET') {
-      httpMethodClass = classes.httpMethodGet;
-    }
-    if (httpMethod === 'HEAD') {
-      httpMethodClass = classes.httpMethodHead;
-    }
-    if (httpMethod === 'POST') {
-      httpMethodClass = classes.httpMethodPost;
-    }
-    if (httpMethod === 'PUT') {
-      httpMethodClass = classes.httpMethodPut;
-    }
-    if (httpMethod === 'PATCH') {
-      httpMethodClass = classes.httpMethodPatch;
-    }
-    if (httpMethod === 'DELETE') {
-      httpMethodClass = classes.httpMethodDelete;
-    }
-    if (httpMethod === 'TRACE') {
-      httpMethodClass = classes.httpMethodTrace;
-    }
-
-    if (httpMethodClass === undefined) {
-      throw new Error(`unsupported http method: ${httpMethod}`);
-    }
-    return `${classes.httpMethodCommon} ${httpMethodClass}`;
-  };
-
-  private initSpecification = async () => {
-    const httpResponse = await fetch('specification.json');
-    const specificationData: SpecificationData = await httpResponse.json();
-    const specification = new Specification(specificationData);
-    let openServices = {};
-    specification.getServices().forEach((service) => {
-      openServices = { ...openServices, [service.name]: true };
-    });
-    this.setState({ specification, openServices });
-  };
-
-  private initVersion = async () => {
-    const httpResponse = await fetch('versions.json');
-    const versionsData: Version[] = await httpResponse.json();
-    const versions = new Versions(versionsData);
-    this.setState({ versions });
-  };
-
-  private toggleMobileDrawer = () => {
-    this.setState({
-      mobileDrawerOpen: !this.state.mobileDrawerOpen,
-    });
-  };
-
-  private handleCollapse = (itemName: string) => {
-    switch (itemName) {
-      case 'services':
-        this.setState({
-          servicesSectionOpen: !this.state.servicesSectionOpen,
-        });
-        break;
-      case 'enums':
-        this.setState({
-          enumsSectionOpen: !this.state.enumsSectionOpen,
-        });
-        break;
-      case 'structs':
-        this.setState({
-          structsSectionOpen: !this.state.structsSectionOpen,
-        });
-        break;
-      case 'exceptions':
-        this.setState({
-          exceptionsOpen: !this.state.exceptionsOpen,
-        });
-        break;
-    }
-  };
-
-  private handleServiceCollapse = (serviceName: string) => {
-    this.setState({
-      openServices: update(this.state.openServices, {
-        [serviceName]: { $set: !this.state.openServices[serviceName] },
-      }),
-    });
-  };
-}
-
-export default withRouter(withStyles(styles)(hot(App)));
+export default withRouter(hot(App));

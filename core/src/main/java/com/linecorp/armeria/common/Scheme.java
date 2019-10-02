@@ -145,7 +145,7 @@ public final class Scheme implements Comparable<Scheme> {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
         return this == obj;
     }
 
