@@ -57,9 +57,9 @@ public final class Main {
                      .requestTimeoutMillis(0)
                      // Serve /index.html file.
                      .service("/", HttpFileBuilder.ofResource(Main.class.getClassLoader(), "index.html")
-                                                 .cacheControl(ServerCacheControl.REVALIDATED)
-                                                 .build()
-                                                 .asService())
+                                                  .cacheControl(ServerCacheControl.REVALIDATED)
+                                                  .build()
+                                                  .asService())
                      .service("/animation", new AnimationService(frameIntervalMillis))
                      // Serve health check.
                      .service("/internal/l7check", new HttpHealthCheckService())
