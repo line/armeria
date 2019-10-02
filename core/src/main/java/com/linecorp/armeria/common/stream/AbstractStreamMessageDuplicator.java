@@ -73,7 +73,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  * you do not need the contents anymore, otherwise memory leak might happen.</p>
  *
  * @param <T> the type of elements
- * @param <U> the type of the publisher and duplicated stream messages
+ * @param <U> the type of the upstream {@link StreamMessage} and duplicated {@link StreamMessage}s
  */
 public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage<T>>
         implements SafeCloseable {
@@ -83,16 +83,18 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
     private final EventExecutor duplicatorExecutor;
 
     /**
-     * Creates a new instance wrapping a {@code publisher} and publishing to multiple subscribers.
-     * @param publisher the publisher who will publish data to subscribers
+     * Creates a new instance which subscribes to the specified upstream {@link StreamMessage} and
+     * publishes to multiple subscribers.
+     *
+     * @param upstream the {@link StreamMessage} who will publish data to subscribers
      * @param signalLengthGetter the signal length getter that produces the length of signals
      * @param executor the executor to use for upstream signals
      * @param maxSignalLength the maximum length of signals. {@code 0} disables the length limit
      */
     protected AbstractStreamMessageDuplicator(
-            U publisher, SignalLengthGetter<? super T> signalLengthGetter,
+            U upstream, SignalLengthGetter<? super T> signalLengthGetter,
             @Nullable EventExecutor executor, long maxSignalLength) {
-        requireNonNull(publisher, "publisher");
+        requireNonNull(upstream, "upstream");
         requireNonNull(signalLengthGetter, "signalLengthGetter");
         checkArgument(maxSignalLength >= 0,
                       "maxSignalLength: %s (expected: >= 0)", maxSignalLength);
@@ -105,22 +107,23 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             duplicatorExecutor = currentExecutor;
         }
 
-        processor = new StreamMessageProcessor<>(publisher, signalLengthGetter,
+        processor = new StreamMessageProcessor<>(upstream, signalLengthGetter,
                                                  duplicatorExecutor, maxSignalLength);
     }
 
     /**
-     * Creates a new {@link StreamMessage} that duplicates the publisher specified when creating this
-     * duplicator.
+     * Creates a new {@link StreamMessage} that duplicates the upstream {@link StreamMessage} specified when
+     * creating this duplicator.
      */
     public StreamMessage<T> duplicateStream() {
         return duplicateStream(false);
     }
 
     /**
-     * Creates a new {@link StreamMessage} that duplicates the publisher specified when creating this
-     * duplicator. If you specify the {@code lastStream} as {@code true}, it will prevent further
-     * creation of duplicate stream.
+     * Creates a new {@link StreamMessage} that duplicates the upstream {@link StreamMessage} specified when
+     * creating this duplicator.
+     *
+     * @param lastStream whether to prevent further duplication
      */
     public StreamMessage<T> duplicateStream(boolean lastStream) {
         if (!processor.isDuplicable()) {
@@ -138,12 +141,12 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
     }
 
     /**
-     * Closes this duplicator and makes this not duplicable. You will get an {@link IllegalStateException} if
-     * you call {@link AbstractStreamMessageDuplicator#duplicateStream()} after this is invoked.
-     * The {@linkplain AbstractStreamMessageDuplicator#duplicateStream() duplicated streams} are still
-     * publishing data until the original {@code publisher} is closed.
-     * All the data published from the {@code publisher} are cleaned up when all
-     * of the {@linkplain AbstractStreamMessageDuplicator#duplicateStream() duplicated streams} are completed.
+     * Closes this duplicator and prevents it from further duplication.
+     * {@link #duplicateStream()} will raise an {@link IllegalStateException} after
+     * this method is invoked. Note that the previously {@linkplain #duplicateStream() duplicated streams}
+     * will not be closed but will continue publishing data until the upstream {@link StreamMessage}
+     * is closed. All the data published from the upstream {@link StreamMessage} are cleaned up when
+     * all {@linkplain #duplicateStream() duplicated streams} are complete.
      */
     @Override
     public void close() {
@@ -151,9 +154,8 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
     }
 
     /**
-     * Closes this duplicator and aborts all stream messages who are invoked by
-     * {@link AbstractStreamMessageDuplicator#duplicateStream()}. This will also, clean up the data published
-     * from {@code publisher}.
+     * Closes this duplicator and aborts all stream messages returned by {@link #duplicateStream()}.
+     * This will also clean up the data published from the upstream {@link StreamMessage}.
      */
     public void abort() {
         processor.abort();
@@ -453,7 +455,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                 state = State.CLOSED;
                 doCancelUpstreamSubscription();
                 // Do not call 'upstream.abort();', but 'upstream.cancel()' because this is not aborting
-                // the original publisher, but aborting duplicator.
+                // the upstream StreamMessage, but aborting duplicator.
                 doCleanup();
             }
         }
