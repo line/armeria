@@ -29,12 +29,12 @@ sending a response with `Server-Sent Events`_.
                   // Emit Server-Sent Events with the SeverSentEvent instances published by a publisher.
                   .service("/sse1",
                            (ctx, req) -> ServerSentEvents.fromPublisher(
-                                     Flux.just(ServerSentEvent.ofData("foo"), ServerSentEvent.ofData("bar"))))
-                   // Emit Server-Sent Events with converting instances published by a publisher into
-                   // ServerSentEvent instances.
+                                   Flux.just(ServerSentEvent.ofData("foo"), ServerSentEvent.ofData("bar"))))
+                  // Emit Server-Sent Events with converting instances published by a publisher into
+                  // ServerSentEvent instances.
                   .service("/sse2",
                            (ctx, req) -> ServerSentEvents.fromPublisher(
-                                     Flux.just("foo", "bar"), ServerSentEvent::ofData))
+                                   Flux.just("foo", "bar"), ServerSentEvent::ofData))
                   .build();
 
 Of course, Armeria provides :api:`@ProducesEventStream` annotation in order to convert the result objects
@@ -77,13 +77,13 @@ which you want to adjust timeout for.
             Server.builder()
                   // This service infinitely sends numbers as the data of events every second.
                   .service("/long-sse", (ctx, req) -> {
-                            // Note that you MUST adjust the request timeout if you want to send events for a
-                            // longer period than the configured request timeout. The timeout can be disabled by
-                            // setting 0 like the below, but it is NOT RECOMMENDED in the real world application,
-                            // because it can leave a lot of unfinished requests.
-                            ctx.setRequestTimeout(Duration.ZERO);
-                            return ServerSentEvents.fromPublisher(
-                                    Flux.interval(Duration.ofSeconds(1))
-                                    .map(sequence -> ServerSentEvent.ofData(Long.toString(sequence))));
-                })
-                .build();
+                      // Note that you MUST adjust the request timeout if you want to send events for a
+                      // longer period than the configured request timeout. The timeout can be disabled by
+                      // setting 0 like the below, but it is NOT RECOMMENDED in the real world application,
+                      // because it can leave a lot of unfinished requests.
+                      ctx.setRequestTimeout(Duration.ZERO);
+                      return ServerSentEvents.fromPublisher(
+                              Flux.interval(Duration.ofSeconds(1))
+                                  .map(sequence -> ServerSentEvent.ofData(Long.toString(sequence))));
+                  })
+                  .build();
