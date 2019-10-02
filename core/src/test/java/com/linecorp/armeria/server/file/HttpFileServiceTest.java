@@ -119,7 +119,7 @@ class HttpFileServiceTest {
                                           .entryCacheSpec("off")
                                           .build()
                                           .orElse(HttpFileServiceBuilder.forClassPath(baseResourceDir + "bar")
-                                                                        .maxCacheEntries(0)
+                                                                        .entryCacheSpec("off")
                                                                         .build()));
 
             sb.decorator(LoggingService.newDecorator());
