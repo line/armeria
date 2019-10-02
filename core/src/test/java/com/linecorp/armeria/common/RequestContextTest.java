@@ -17,7 +17,6 @@
 package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.when;
@@ -28,7 +27,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -309,88 +307,6 @@ public class RequestContextTest {
     }
 
     @Test
-    public void minimalCompletionStageUsingToCompletableFutureMutable() throws Exception {
-        final RequestContext context = createContext(false);
-        final CompletableFuture<Integer> originalFuture = new CompletableFuture<>();
-        final RequestContextAwareCompletableFuture<Integer> contextAwareFuture =
-                (RequestContextAwareCompletableFuture<Integer>) context.makeContextAware(originalFuture);
-        final CompletionStage<Integer> completionStage = contextAwareFuture.minimalCompletionStage();
-
-        assertThat(contextAwareFuture.complete(1)).isTrue();
-        assertThat(contextAwareFuture.join()).isEqualTo(1);
-        assertThat(contextAwareFuture.getNow(null)).isEqualTo(1);
-        assertThat(contextAwareFuture.get()).isEqualTo(1);
-        assertThat(completionStage.toCompletableFuture().get()).isEqualTo(1);
-    }
-
-    @Test
-    public void minimalCompletionStageUsingWhenComplete() throws Exception {
-        final RequestContext context = createContext(false);
-        final CompletableFuture<Integer> originalFuture = new CompletableFuture<>();
-        final RequestContextAwareCompletableFuture<Integer> contextAwareFuture =
-                (RequestContextAwareCompletableFuture<Integer>) context.makeContextAware(originalFuture);
-        final CompletionStage<Integer> completionStage = contextAwareFuture.minimalCompletionStage();
-
-        final AtomicInteger atomicInteger = new AtomicInteger();
-        final AtomicReference<Throwable> causeCaptor = new AtomicReference<>();
-        completionStage.whenComplete((result, error) -> {
-            if (error != null) {
-                causeCaptor.set(error);
-            } else {
-                atomicInteger.set(result);
-            }
-        });
-        contextAwareFuture.complete(1);
-
-        assertThat(contextAwareFuture.join()).isEqualTo(1);
-        assertThat(contextAwareFuture.getNow(null)).isEqualTo(1);
-        assertThat(contextAwareFuture.get()).isEqualTo(1);
-        assertThat(atomicInteger.get()).isEqualTo(1);
-        assertThat(causeCaptor.get()).isNull();
-    }
-
-    @Test
-    public void makeContextAwareCompletableFutureUsingCompleteAsync() throws Exception {
-        final RequestContext context = createContext(false);
-        final CompletableFuture<String> originalFuture = new CompletableFuture<>();
-        final RequestContextAwareCompletableFuture<String> contextAwareFuture =
-                (RequestContextAwareCompletableFuture<String>) context.makeContextAware(originalFuture);
-        final CompletableFuture<String> resultFuture = contextAwareFuture.completeAsync(() -> "success");
-
-        originalFuture.complete("success");
-        assertDepth(0);
-        assertThat(resultFuture.get()).isEqualTo("success");
-    }
-
-    @Test
-    public void makeContextAwareCompletableFutureUsingCompleteAsyncWithExecutor() throws Exception {
-        final ExecutorService executor = Executors.newFixedThreadPool(2);
-        final RequestContext context = createContext(false);
-        final CompletableFuture<String> originalFuture = new CompletableFuture<>();
-        final RequestContextAwareCompletableFuture<String> contextAwareFuture =
-                (RequestContextAwareCompletableFuture<String>) context.makeContextAware(originalFuture);
-        final CompletableFuture<String> resultFuture = contextAwareFuture.completeAsync(() -> "success",
-                                                                                        executor);
-
-        originalFuture.complete("success");
-        assertDepth(0);
-        assertThat(resultFuture.get()).isEqualTo("success");
-    }
-
-    @Test
-    public void makeContextAwareCompletableFutureWithDifferentContext() {
-        final RequestContext context1 = createContext();
-        final CompletableFuture<Void> originalFuture = CompletableFuture.completedFuture(null);
-        final CompletableFuture<Void> future1 = context1.makeContextAware(originalFuture);
-
-        final RequestContext context2 = createContext();
-        final CompletableFuture<Void> future2 = context2.makeContextAware(future1);
-
-        assertThat(future2).isCompletedExceptionally();
-        assertThatThrownBy(future2::join).hasCauseInstanceOf(IllegalStateException.class);
-    }
-
-    @Test
     public void contextPropagationSameContextAlreadySet() {
         final RequestContext context = createContext();
         try (SafeCloseable ignored = context.push(false)) {
@@ -526,16 +442,12 @@ public class RequestContextTest {
     private class DummyRequestContext extends NonWrappingRequestContext {
         DummyRequestContext() {
             super(NoopMeterRegistry.get(), SessionProtocol.HTTP,
-                  HttpMethod.GET, "/", null, HttpRequest.streaming(HttpMethod.GET, "/"));
+                  HttpMethod.GET, "/", null, HttpRequest.streaming(HttpMethod.GET, "/"), null);
         }
 
         @Override
-        public RequestContext newDerivedContext() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public RequestContext newDerivedContext(Request request) {
+        public RequestContext newDerivedContext(@Nullable HttpRequest req,
+                                                @Nullable RpcRequest rpcReq) {
             throw new UnsupportedOperationException();
         }
 

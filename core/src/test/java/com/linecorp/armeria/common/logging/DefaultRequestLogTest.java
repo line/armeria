@@ -20,6 +20,10 @@ import static com.linecorp.armeria.common.logging.DefaultRequestLog.REQUEST_STRI
 import static com.linecorp.armeria.common.logging.DefaultRequestLog.RESPONSE_STRING_BUILDER_CAPACITY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import org.junit.Before;
@@ -41,6 +45,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -112,6 +117,22 @@ public class DefaultRequestLogTest {
     public void endResponseWithoutHeaders() {
         log.endResponse();
         assertThat(log.responseHeaders().status()).isEqualTo(HttpStatus.UNKNOWN);
+    }
+
+    @Test
+    public void rpcRequestIsPropagatedToContext() {
+        final RpcRequest req = RpcRequest.of(Object.class, "foo");
+        when(ctx.rpcRequest()).thenReturn(null);
+        log.requestContent(req, null);
+        verify(ctx, times(1)).updateRpcRequest(req);
+    }
+
+    @Test
+    public void rpcRequestIsNotPropagatedToContext() {
+        final RpcRequest req = RpcRequest.of(Object.class, "foo");
+        when(ctx.rpcRequest()).thenReturn(RpcRequest.of(Object.class, "bar"));
+        log.requestContent(req, null);
+        verify(ctx, never()).updateRpcRequest(any());
     }
 
     @Test

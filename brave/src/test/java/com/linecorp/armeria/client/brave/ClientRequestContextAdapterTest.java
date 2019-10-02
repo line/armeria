@@ -28,6 +28,7 @@ import org.mockito.Mock;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
@@ -72,12 +73,10 @@ class ClientRequestContextAdapterTest {
 
     @Test
     void url() {
-        when(ctx.log()).thenReturn(requestLog);
-        when(requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)).thenReturn(true);
-        when(requestLog.requestHeaders()).thenReturn(
+        when(ctx.request()).thenReturn(HttpRequest.of(
                 RequestHeaders.of(HttpMethod.GET, "/foo?name=hoge",
                                   HttpHeaderNames.SCHEME, "http",
-                                  HttpHeaderNames.AUTHORITY, "example.com"));
+                                  HttpHeaderNames.AUTHORITY, "example.com")));
         assertThat(request.url()).isEqualTo("http://example.com/foo?name=hoge");
     }
 
@@ -97,13 +96,6 @@ class ClientRequestContextAdapterTest {
         when(ctx.log()).thenReturn(requestLog);
         when(requestLog.isAvailable(RequestLogAvailability.RESPONSE_HEADERS)).thenReturn(false);
         assertThat(response.statusCode()).isEqualTo(0);
-    }
-
-    @Test
-    void authority() {
-        when(requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)).thenReturn(true);
-        when(requestLog.authority()).thenReturn("example.com");
-        assertThat(ClientRequestContextAdapter.authority(requestLog)).isEqualTo("example.com");
     }
 
     @Test

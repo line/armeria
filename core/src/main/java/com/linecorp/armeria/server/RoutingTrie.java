@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.server.RoutingTrie.Node.convertKey;
 import static com.linecorp.armeria.server.RoutingTrie.Node.validatePath;
 import static java.util.Objects.requireNonNull;
@@ -65,7 +66,14 @@ import com.google.common.collect.Maps;
  */
 final class RoutingTrie<V> {
 
+    private static final Node<?> CONTINUE_WALKING = new Node<>(null, Type.CATCH_ALL, "");
+
     private final Node<V> root;
+
+    @SuppressWarnings("unchecked")
+    private Node<V> continueWalking() {
+        return (Node<V>) CONTINUE_WALKING;
+    }
 
     private RoutingTrie(Node<V> root) {
         requireNonNull(root, "root");
@@ -75,16 +83,26 @@ final class RoutingTrie<V> {
     /**
      * Returns the list of values which is mapped to the given {@code path}.
      */
-    @Nullable
     List<V> find(String path) {
         final Node<V> node = findNode(path, false);
         return node == null ? ImmutableList.of() : node.values();
     }
 
     /**
+     * Returns the list of values which is mapped to the given {@code path}.
+     */
+    List<V> findAll(String path) {
+        return findAllNodes(path, false)
+                .stream()
+                .flatMap(n -> n.values().stream())
+                .collect(toImmutableList());
+    }
+
+    /**
      * Returns a {@link Node} which is mapped to the given {@code path}.
      */
     @Nullable
+    @VisibleForTesting
     Node<V> findNode(String path) {
         return findNode(path, false);
     }
@@ -97,7 +115,7 @@ final class RoutingTrie<V> {
     @VisibleForTesting
     Node<V> findNode(String path, boolean exact) {
         requireNonNull(path, "path");
-        return findNode(root, path, 0, exact);
+        return findFirstNode(root, path, 0, exact, new IntHolder());
     }
 
     /**
@@ -105,8 +123,76 @@ final class RoutingTrie<V> {
      * to visit the children of the given node. Returns {@code null} if there is no {@link Node} to find.
      */
     @Nullable
-    private Node<V> findNode(Node<V> node, String path, int begin, boolean exact) {
-        final int next;
+    private Node<V> findFirstNode(Node<V> node, String path, int begin, boolean exact, IntHolder nextHolder) {
+        final Node<V> checked = checkNode(node, path, begin, exact, nextHolder);
+        if (checked != continueWalking()) {
+            return checked;
+        }
+
+        // The path is not matched to this node, but it is possible to be matched on my children
+        // because the path starts with the path of this node. So we need to visit children as the
+        // following sequences:
+        //  - The child which is able to consume the next character of the path.
+        //  - The child which has a path variable.
+        //  - The child which is able to consume every remaining path. (catch-all)
+        final int next = nextHolder.value;
+        Node<V> child = node.child(path.charAt(next));
+        if (child != null) {
+            final Node<V> found = findFirstNode(child, path, next, exact, nextHolder);
+            if (found != null) {
+                return found;
+            }
+        }
+        child = node.parameterChild();
+        if (child != null) {
+            final Node<V> found = findFirstNode(child, path, next, exact, nextHolder);
+            if (found != null) {
+                return found;
+            }
+        }
+        return node.catchAllChild();
+    }
+
+    private List<Node<V>> findAllNodes(String path, boolean exact) {
+        final ImmutableList.Builder<Node<V>> accumulator = ImmutableList.builder();
+        findAllNodes(root, path, 0, exact, accumulator, new IntHolder());
+        return accumulator.build();
+    }
+
+    private void findAllNodes(Node<V> node, String path, int begin, boolean exact,
+                              ImmutableList.Builder<Node<V>> accumulator,
+                              IntHolder nextHolder) {
+        final Node<V> checked = checkNode(node, path, begin, exact, nextHolder);
+        if (checked != continueWalking()) {
+            if (checked != null) {
+                accumulator.add(checked);
+            }
+            return;
+        }
+
+        final int next = nextHolder.value;
+        // find the nearest child node from root to preserve the access order
+        Node<V> child = node.catchAllChild();
+        if (child != null) {
+            accumulator.add(child);
+        }
+        child = node.parameterChild();
+        if (child != null) {
+            findAllNodes(child, path, next, exact, accumulator, nextHolder);
+        }
+        child = node.child(path.charAt(next));
+        if (child != null) {
+            findAllNodes(child, path, next, exact, accumulator, nextHolder);
+        }
+    }
+
+    /**
+     * Checks a {@link Node} which is mapped to the given {@code path}.
+     * Returns {@code null} if the given {@code path} does not start with the path of this {@link Node}.
+     * Returns {@link #continueWalking()} if the given {@code path} has to visit {@link Node#children}.
+     */
+    @Nullable
+    private Node<V> checkNode(Node<V> node, String path, int begin, boolean exact, IntHolder next) {
         switch (node.type()) {
             case EXACT:
                 final int len = node.path().length();
@@ -122,7 +208,7 @@ final class RoutingTrie<V> {
                     return exact || node.hasValues() || !node.hasCatchAllChild() ? node
                                                                                  : node.catchAllChild();
                 }
-                next = begin + len;
+                next.value = begin + len;
                 break;
             case PARAMETER:
                 // Consume characters until the delimiter '/' as a path variable.
@@ -135,39 +221,12 @@ final class RoutingTrie<V> {
                     final Node<V> trailingSlashNode = node.child('/');
                     return trailingSlashNode != null ? trailingSlashNode : node;
                 }
-                next = delim;
+                next.value = delim;
                 break;
             default:
                 throw new Error("Should not reach here");
         }
-
-        // The path is not matched to this node, but it is possible to be matched on my children
-        // because the path starts with the path of this node. So we need to visit children as the
-        // following sequences:
-        //  - The child which is able to consume the next character of the path.
-        //  - The child which has a path variable.
-        //  - The child which is able to consume every remaining path. (catch-all)
-
-        Node<V> child = node.child(path.charAt(next));
-        if (child != null) {
-            final Node<V> found = findNode(child, path, next, exact);
-            if (found != null) {
-                return found;
-            }
-        }
-        child = node.parameterChild();
-        if (child != null) {
-            final Node<V> found = findNode(child, path, next, exact);
-            if (found != null) {
-                return found;
-            }
-        }
-        child = node.catchAllChild();
-        if (child != null) {
-            return child;
-        }
-
-        return null;
+        return continueWalking();
     }
 
     public void dump(OutputStream output) {
@@ -563,5 +622,9 @@ final class RoutingTrie<V> {
                           "A path should not contain %s: %s",
                           Integer.toHexString(KEY_CATCH_ALL), path);
         }
+    }
+
+    private static class IntHolder {
+        int value;
     }
 }

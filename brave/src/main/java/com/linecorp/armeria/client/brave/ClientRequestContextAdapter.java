@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.brave;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -26,7 +27,6 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.brave.SpanContextUtil;
-import com.linecorp.armeria.internal.brave.SpanTags;
 
 import brave.http.HttpClientAdapter;
 
@@ -40,6 +40,7 @@ final class ClientRequestContextAdapter {
         return new HttpClientRequest(ctx, headersBuilder);
     }
 
+    @SuppressWarnings("ClassNameSameAsAncestorName")
     private static final class HttpClientRequest extends brave.http.HttpClientRequest {
         private final ClientRequestContext ctx;
         private final RequestHeadersBuilder headersBuilder;
@@ -74,7 +75,8 @@ final class ClientRequestContextAdapter {
         @Override
         @Nullable
         public String url() {
-            return SpanTags.generateUrl(ctx.log());
+            final HttpRequest req = ctx.request();
+            return req != null ? req.uri().toString() : null;
         }
 
         @Override
@@ -104,6 +106,7 @@ final class ClientRequestContextAdapter {
         return new HttpClientResponse(ctx);
     }
 
+    @SuppressWarnings("ClassNameSameAsAncestorName")
     private static final class HttpClientResponse extends brave.http.HttpClientResponse {
         private final ClientRequestContext ctx;
 
@@ -131,17 +134,6 @@ final class ClientRequestContextAdapter {
             }
             return SpanContextUtil.wallTimeMicros(ctx.log(), ctx.log().responseEndTimeNanos());
         }
-    }
-
-    /**
-     * Returns the authority of the {@link RequestLog}.
-     */
-    @Nullable
-    static String authority(RequestLog requestLog) {
-        if (!requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)) {
-            return null;
-        }
-        return requestLog.authority();
     }
 
     /**
@@ -179,6 +171,5 @@ final class ClientRequestContextAdapter {
         return requestContent instanceof RpcRequest ? ((RpcRequest) requestContent).method() : null;
     }
 
-    private ClientRequestContextAdapter() {
-    }
+    private ClientRequestContextAdapter() {}
 }

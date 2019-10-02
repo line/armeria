@@ -39,14 +39,13 @@ import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
-import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -98,14 +97,15 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      *
      * @param eventLoop the {@link EventLoop} associated with this context
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
-     * @param request the request associated with this context
+     * @param req the {@link HttpRequest} associated with this context
+     * @param rpcReq the {@link RpcRequest} associated with this context
      */
     public DefaultClientRequestContext(
             EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
-            ClientOptions options, Request request) {
+            ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
         this(null, requireNonNull(eventLoop, "eventLoop"), meterRegistry, sessionProtocol,
-             method, path, query, fragment, options, request);
+             method, path, query, fragment, options, req, rpcReq);
     }
 
     /**
@@ -114,21 +114,23 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      *
      * @param factory the {@link ClientFactory} which is used to acquire an {@link EventLoop}
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
-     * @param request the request associated with this context
+     * @param req the {@link HttpRequest} associated with this context
+     * @param rpcReq the {@link RpcRequest} associated with this context
      */
     public DefaultClientRequestContext(
             ClientFactory factory, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
-            ClientOptions options, Request request) {
+            ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
         this(requireNonNull(factory, "factory"), null, meterRegistry, sessionProtocol,
-             method, path, query, fragment, options, request);
+             method, path, query, fragment, options, req, rpcReq);
     }
 
     private DefaultClientRequestContext(
             @Nullable ClientFactory factory, @Nullable EventLoop eventLoop, MeterRegistry meterRegistry,
             SessionProtocol sessionProtocol, HttpMethod method, String path, @Nullable String query,
-            @Nullable String fragment, ClientOptions options, Request request) {
-        super(meterRegistry, sessionProtocol, method, path, query, request);
+            @Nullable String fragment, ClientOptions options,
+            @Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
+        super(meterRegistry, sessionProtocol, method, path, query, req, rpcReq);
 
         this.factory = factory;
         this.eventLoop = eventLoop;
@@ -217,32 +219,47 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
         logBuilder.endRequest(wrapped);
         logBuilder.endResponse(wrapped);
 
-        final Request req = request();
-        if (req instanceof StreamMessage) {
+        final HttpRequest req = request();
+        if (req != null) {
             autoFillSchemeAndAuthority();
-            ((StreamMessage<?>) req).abort();
+            req.abort();
         }
     }
 
     private void autoFillSchemeAndAuthority() {
-        final Request req = request();
-        if (req instanceof HttpRequest) {
-            final HttpRequest httpReq = (HttpRequest) req;
-            final RequestHeaders headers = httpReq.headers();
-            final String authority = endpoint != null ? endpoint.authority() : "UNKNOWN";
-            if (headers.scheme() == null || !authority.equals(headers.authority())) {
-                unsafeUpdateRequest(HttpRequest.of(
-                        httpReq,
-                        headers.toBuilder()
-                               .authority(authority)
-                               .scheme(sessionProtocol())
-                               .build()));
-            }
+        final HttpRequest req = request();
+        if (req == null) {
+            return;
+        }
+
+        final RequestHeaders headers = req.headers();
+        final String authority = endpoint != null ? endpoint.authority() : "UNKNOWN";
+        if (headers.scheme() == null || !authority.equals(headers.authority())) {
+            unsafeUpdateRequest(HttpRequest.of(
+                    req,
+                    headers.toBuilder()
+                           .authority(authority)
+                           .scheme(sessionProtocol())
+                           .build()));
         }
     }
 
-    private DefaultClientRequestContext(DefaultClientRequestContext ctx, Request request, Endpoint endpoint) {
-        super(ctx.meterRegistry(), ctx.sessionProtocol(), ctx.method(), ctx.path(), ctx.query(), request);
+    /**
+     * Creates a derived context.
+     */
+    private DefaultClientRequestContext(DefaultClientRequestContext ctx,
+                                        @Nullable HttpRequest req,
+                                        @Nullable RpcRequest rpcReq,
+                                        Endpoint endpoint) {
+        super(ctx.meterRegistry(), ctx.sessionProtocol(), ctx.method(), ctx.path(), ctx.query(), req, rpcReq);
+
+        // The new requests cannot be null if it was previously non-null.
+        if (ctx.request() != null) {
+            requireNonNull(req, "req");
+        }
+        if (ctx.rpcRequest() != null) {
+            requireNonNull(rpcReq, "rpcReq");
+        }
 
         eventLoop = ctx.eventLoop();
         options = ctx.options();
@@ -271,19 +288,9 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     }
 
     @Override
-    public ClientRequestContext newDerivedContext() {
-        return newDerivedContext(request());
-    }
-
-    @Override
-    public ClientRequestContext newDerivedContext(Request request) {
-        checkState(endpoint != null, "endpoint not available");
-        return newDerivedContext(request, endpoint);
-    }
-
-    @Override
-    public ClientRequestContext newDerivedContext(Request request, Endpoint endpoint) {
-        return new DefaultClientRequestContext(this, request, endpoint);
+    public ClientRequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
+                                                  Endpoint endpoint) {
+        return new DefaultClientRequestContext(this, req, rpcReq, endpoint);
     }
 
     @Override

@@ -170,6 +170,7 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwrappable
                 uri().getRawQuery(),
                 null,
                 options(),
-                req);
+                req,
+                null);
     }
 }

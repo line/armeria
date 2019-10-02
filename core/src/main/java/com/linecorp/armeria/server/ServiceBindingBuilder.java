@@ -71,9 +71,19 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
         return (ServiceBindingBuilder) super.path(pathPattern);
     }
 
+    /**
+     * {@inheritDoc}
+     * @deprecated Use {@link #pathPrefix(String)}.
+     */
     @Override
+    @Deprecated
     public ServiceBindingBuilder pathUnder(String prefix) {
-        return (ServiceBindingBuilder) super.pathUnder(prefix);
+        return (ServiceBindingBuilder) super.pathPrefix(prefix);
+    }
+
+    @Override
+    public ServiceBindingBuilder pathPrefix(String prefix) {
+        return (ServiceBindingBuilder) super.pathPrefix(prefix);
     }
 
     @Override
