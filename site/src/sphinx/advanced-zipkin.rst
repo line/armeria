@@ -102,9 +102,9 @@ For example, you can use it with `Kafka <https://kafka.apache.org/>`_ producer:
     Server server = Server.builder()
                           .http(8081)
                           .service("/", (ctx, req) -> {
-                                        kafkaProducer.send(new ProducerRecord<>("test", "foo", "bar"));
-                                        return HttpResponse.of(200);
-                           })
+                              kafkaProducer.send(new ProducerRecord<>("test", "foo", "bar"));
+                              return HttpResponse.of(200);
+                          })
                           .decorator(BraveService.newDecorator(tracing))
                           .build();
 
