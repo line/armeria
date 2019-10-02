@@ -100,12 +100,12 @@ public class RetryingClientWithLoggingTest {
     public void retryingThenLogging() {
         successLogIndex = 5;
         final RetryStrategyWithContent<HttpResponse> retryStrategy =
-                        (ctx, response) -> response.aggregate().handle((msg, cause) -> {
-                            if ("hello".equals(msg.contentUtf8())) {
-                                return null;
-                            }
-                            return Backoff.ofDefault();
-                        });
+                (ctx, response) -> response.aggregate().handle((msg, cause) -> {
+                    if ("hello".equals(msg.contentUtf8())) {
+                        return null;
+                    }
+                    return Backoff.ofDefault();
+                });
         final HttpClient client = new HttpClientBuilder(server.uri("/"))
                 .decorator(loggingDecorator())
                 .decorator(RetryingHttpClient.builder(retryStrategy)
