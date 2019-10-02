@@ -92,7 +92,12 @@ const scrollToDebugForm = () => {
   }
 };
 
-const toggle = (value: boolean) => !value;
+const toggle = (prev: boolean, override: unknown) => {
+  if (typeof override === 'boolean') {
+    return override;
+  }
+  return !prev;
+};
 const escapeSingleQuote = (text: string) => text.replace(/'/g, `'\\''`);
 
 const DebugPage: React.FunctionComponent<Props> = ({
@@ -158,21 +163,12 @@ const DebugPage: React.FunctionComponent<Props> = ({
     setDebugResponse('');
     setSnackbarOpen(false);
     setRequestBody(urlRequestBody || method.exampleRequests[0] || '');
-    if (urlQueries) {
-      setAdditionalQueries(urlQueries);
-      if (!additionalQueriesOpen) {
-        toggleAdditionalQueriesOpen(undefined);
-      }
-    }
-    if (urlEndpointPath) {
-      setEndpointPath(urlEndpointPath);
-      if (!endpointPathOpen) {
-        toggleEndpointPathOpen(undefined);
-      }
-    }
-    if (headersOpen && !additionalHeadersOpen) {
-      toggleAdditionalHeadersOpen(undefined);
-    }
+    setAdditionalHeaders(urlHeaders || stateHeaders || '');
+    setAdditionalQueries(urlQueries);
+    toggleAdditionalQueriesOpen(!!urlQueries);
+    setEndpointPath(urlEndpointPath);
+    toggleEndpointPathOpen(!!urlEndpointPath);
+    toggleAdditionalHeadersOpen(headersOpen);
 
     if (urlParams.has('http_headers_sticky') && !stickyHeaders) {
       toggleStickyHeaders(undefined);
