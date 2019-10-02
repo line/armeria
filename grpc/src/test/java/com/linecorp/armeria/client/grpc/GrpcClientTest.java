@@ -177,15 +177,14 @@ public class GrpcClientTest {
 
                                                @Override
                                                protected HttpObject filter(HttpObject obj) {
-                                                            if (obj instanceof HttpHeaders) {
-                                                                    if (!headersReceived) {
-                                                                            headersReceived = true;
-                                                                    } else {
-                                                                            SERVER_TRAILERS_CAPTURE.set(
-                                                                                    (HttpHeaders) obj);
-                                                                    }
-                                                            }
-                                                            return obj;
+                                                   if (obj instanceof HttpHeaders) {
+                                                       if (!headersReceived) {
+                                                           headersReceived = true;
+                                                       } else {
+                                                           SERVER_TRAILERS_CAPTURE.set((HttpHeaders) obj);
+                                                       }
+                                                   }
+                                                   return obj;
                                                }
                                            };
                                        }));
