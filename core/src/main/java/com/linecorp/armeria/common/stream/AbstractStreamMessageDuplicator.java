@@ -138,17 +138,23 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
     }
 
     /**
-     * Closes this factory and stream messages who are invoked by
-     * {@link AbstractStreamMessageDuplicator#duplicateStream()}.
-     * Also, clean up the data published from {@code publisher}. If {@link #duplicateStream(boolean)} with
-     * {@code true} is called already, invoking this method does not affect and cleaning up occurs when all
-     * of the {@link Subscription}s are completed or cancelled.
+     * Closes this duplicator and makes this not duplicable. You will get an {@link IllegalStateException} if
+     * you call {@link AbstractStreamMessageDuplicator#duplicateStream()} after this is invoked.
+     * The {@linkplain AbstractStreamMessageDuplicator#duplicateStream() duplicated streams} are still
+     * publishing data until the original {@code publisher} is closed.
+     * All the data published from the {@code publisher} are cleaned up when all
+     * of the {@linkplain AbstractStreamMessageDuplicator#duplicateStream() duplicated streams} are completed.
      */
     @Override
     public void close() {
         processor.close();
     }
 
+    /**
+     * Closes this duplicator and aborts all stream messages who are invoked by
+     * {@link AbstractStreamMessageDuplicator#duplicateStream()}. This will also, clean up the data published
+     * from {@code publisher}.
+     */
     public void abort() {
         processor.abort();
     }
@@ -327,7 +333,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             final Subscriber<?> lateSubscriber = subscription.subscriber();
             lateSubscriber.onSubscribe(NoopSubscription.INSTANCE);
             lateSubscriber.onError(
-                    new IllegalStateException("duplicator is closed or last downstream is added."));
+                    new IllegalStateException("duplicator is closed or no more downstream can be added."));
         }
 
         void unsubscribe(DownstreamSubscription<T> subscription, @Nullable Throwable cause) {
