@@ -17,6 +17,7 @@
 package com.linecorp.armeria.internal;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -25,14 +26,21 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 
 class RequestContextAwareCompletableFutureTest {
+
+    @BeforeAll
+    static void checkEnv() {
+        assumeThat(SystemInfo.javaVersion()).isGreaterThanOrEqualTo(9);
+    }
 
     @Test
     void minimalCompletionStageUsingToCompletableFutureMutable() throws Exception {
