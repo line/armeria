@@ -303,19 +303,18 @@ abstract class HttpResponseDecoder {
                                         Consumer<Throwable> actionOnTimeoutCancelled) {
 
             final ScheduledFuture<?> responseTimeoutFuture = this.responseTimeoutFuture;
-            if (responseTimeoutFuture != null) {
-                this.responseTimeoutFuture = null;
-                if (responseTimeoutFuture.cancel(false)) {
-                    // Response is not timed out yet.
-                    actionOnTimeoutCancelled.accept(cause);
-                    return;
-                }
+            this.responseTimeoutFuture = null;
 
-                // Response has been timed out already.
-                // Log only when it's not a ResponseTimeoutException.
-                if (cause instanceof ResponseTimeoutException) {
-                    return;
-                }
+            if (responseTimeoutFuture == null || responseTimeoutFuture.cancel(false)) {
+                // There's no timeout or the response has not been timed out.
+                actionOnTimeoutCancelled.accept(cause);
+                return;
+            }
+
+            // Response has been timed out already.
+            // Log only when it's not a ResponseTimeoutException.
+            if (cause instanceof ResponseTimeoutException) {
+                return;
             }
 
             if (cause == null || !logger.isWarnEnabled() || Exceptions.isExpected(cause)) {
