@@ -26,6 +26,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -37,7 +38,7 @@ import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 
 class RequestContextAwareCompletableFutureTest {
 
-    @BeforeEach
+    @BeforeAll
     void checkEnv() {
         assumeThat(SystemInfo.javaVersion()).isGreaterThanOrEqualTo(9);
     }
