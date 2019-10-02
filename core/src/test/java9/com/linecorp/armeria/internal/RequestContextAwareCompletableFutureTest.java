@@ -38,7 +38,7 @@ import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 class RequestContextAwareCompletableFutureTest {
 
     @BeforeAll
-    void checkEnv() {
+    static void checkEnv() {
         assumeThat(SystemInfo.javaVersion()).isGreaterThanOrEqualTo(9);
     }
 
