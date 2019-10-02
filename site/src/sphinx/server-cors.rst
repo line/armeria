@@ -139,7 +139,7 @@ You can also configure CORS for :ref:`server-annotated-service` using the :api:`
     import com.linecorp.armeria.server.annotation.Get;
     import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
 
-    Object annotatedController = new Object() {
+    Object annotatedService = new Object() {
         @Get("/get")
         @CorsDecorator(origins = "http://example.com", credentialsAllowed = true,
                        nullOriginAllowed = true, exposedHeaders = "expose_header",
@@ -163,7 +163,7 @@ You can also configure CORS for :ref:`server-annotated-service` using the :api:`
     };
 
     Server s = Server.builder()
-                     .annotatedService("/example", annotatedController)
+                     .annotatedService("/example", annotatedService)
                      .build();
 
 You can also use :api:`@CorsDecorator` at the class level to apply the decorator to all service methods in the class.
