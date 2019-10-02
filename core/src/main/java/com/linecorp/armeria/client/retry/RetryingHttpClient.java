@@ -197,7 +197,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
                                           .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator,
                                                                 originalReq, returnedRes, future,
                                                                 resDuplicator.duplicateStream(true),
-                                                                resDuplicator::close));
+                                                                resDuplicator::abort));
             } else {
                 final Throwable responseCause =
                         log.isAvailable(RequestLogAvailability.RESPONSE_END) ? log.responseCause() : null;
@@ -216,7 +216,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
         }
         ctx.logBuilder().endResponse(cause);
         future.completeExceptionally(cause);
-        rootReqDuplicator.close();
+        rootReqDuplicator.abort();
     }
 
     private static int maxSignalLength(long maxResponseLength) {
