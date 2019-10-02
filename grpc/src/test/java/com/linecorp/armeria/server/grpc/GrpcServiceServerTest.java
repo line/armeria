@@ -389,8 +389,8 @@ class GrpcServiceServerTest {
                     GrpcService.builder()
                                .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
                                .addService(ServerInterceptors.intercept(
-                                    new UnitTestServiceImpl(),
-                                    REPLACE_EXCEPTION, ADD_TO_CONTEXT))
+                                       new UnitTestServiceImpl(),
+                                       REPLACE_EXCEPTION, ADD_TO_CONTEXT))
                                .enableUnframedRequests(true)
                                .supportedSerializationFormats(GrpcSerializationFormats.values())
                                .build(),
@@ -430,18 +430,19 @@ class GrpcServiceServerTest {
                             GrpcService.builder()
                                        .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
                                        .addService(ServerInterceptors.intercept(
-                                                              new UnitTestServiceImpl(),
-                                                              REPLACE_EXCEPTION, ADD_TO_CONTEXT))
+                                               new UnitTestServiceImpl(),
+                                               REPLACE_EXCEPTION, ADD_TO_CONTEXT))
                                        .enableUnframedRequests(true)
                                        .supportedSerializationFormats(
-                                                              GrpcSerializationFormats.values())
+                                               GrpcSerializationFormats.values())
                                        .useBlockingTaskExecutor(true)
                                        .build()
-                    .decorate(LoggingService.newDecorator())
-                    .decorate((delegate, ctx, req) -> {
-                        ctx.log().addListener(requestLogQueue::add, RequestLogAvailability.COMPLETE);
-                        return delegate.serve(ctx, req);
-                    }));
+                                       .decorate(LoggingService.newDecorator())
+                                       .decorate((delegate, ctx, req) -> {
+                                           ctx.log().addListener(requestLogQueue::add, 
+                                                                 RequestLogAvailability.COMPLETE);
+                                           return delegate.serve(ctx, req);
+                                       }));
         }
     };
 
@@ -458,8 +459,8 @@ class GrpcServiceServerTest {
                                        .build()
                                        .decorate(LoggingService.newDecorator())
                                        .decorate((delegate, ctx, req) -> {
-                                           ctx.log().addListener(
-                                                   requestLogQueue::add, RequestLogAvailability.COMPLETE);
+                                           ctx.log().addListener(requestLogQueue::add,
+                                                                 RequestLogAvailability.COMPLETE);
                                            return delegate.serve(ctx, req);
                                        }));
         }
