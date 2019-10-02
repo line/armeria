@@ -20,14 +20,16 @@ To configure CORS Service allowing any origin (*), use ``CorsServiceBuilder.forA
     import com.linecorp.armeria.server.cors.CorsServiceBuilder;
 
     HttpService myService = (ctx, req) -> ...;
-    ServerBuilder sb = new ServerBuilder().service("/message", myService.decorate(
+    Function<Service<HttpRequest, HttpResponse>, CorsService> corsService =
             CorsServiceBuilder.forAnyOrigin()
                               .allowCredentials()
                               .allowRequestMethods(HttpMethod.POST, HttpMethod.GET)
                               .allowRequestHeaders("allow_request_header")
                               .exposeHeaders("expose_header_1", "expose_header_2")
                               .preflightResponseHeader("x-preflight-cors", "Hello CORS")
-                              .newDecorator()));
+                              .newDecorator();
+    ServerBuilder sb = Server.builder()
+                             .service("/message", myService.decorate(corsService));
 
 Allowing specific origins
 -------------------------
@@ -37,7 +39,7 @@ To configure CORS Service allowing specific origins, use ``CorsServiceBuilder.fo
 .. code-block:: java
 
     HttpService myService = (ctx, req) -> ...;
-    ServerBuilder sb = new ServerBuilder().service("/message", myService.decorate(
+    Function<Service<HttpRequest, HttpResponse>, CorsService> corsService =
             CorsServiceBuilder.forOrigins("http://example.com")
                               .allowCredentials()
                               .allowNullOrigin() // 'Origin: null' will be accepted.
@@ -45,7 +47,9 @@ To configure CORS Service allowing specific origins, use ``CorsServiceBuilder.fo
                               .allowRequestHeaders("allow_request_header")
                               .exposeHeaders("expose_header_1", "expose_header_2")
                               .preflightResponseHeader("x-preflight-cors", "Hello CORS")
-                              .newDecorator()));
+                              .newDecorator();
+    ServerBuilder sb = Server.builder()
+                             .service("/message", myService.decorate(corsService));
 
 
 Applying different policies for different origins
@@ -57,7 +61,7 @@ Call ``and()`` to return to :api:`CorsServiceBuilder` once you are done with bui
 .. code-block:: java
 
     HttpService myService = (ctx, req) -> ...;
-    ServerBuilder sb = new ServerBuilder().service("/message", myService.decorate(
+    Function<Service<HttpRequest, HttpResponse>, CorsService> corsService =
             CorsServiceBuilder.forOrigins("http://example.com")
                               .allowCredentials()
                               .allowNullOrigin() // 'Origin: null' will be accepted.
@@ -72,7 +76,9 @@ Call ``and()`` to return to :api:`CorsServiceBuilder` once you are done with bui
                               .allowRequestHeaders("allow_request_header2")
                               .exposeHeaders("expose_header_3", "expose_header_4")
                               .and()
-                              .newDecorator()));
+                              .newDecorator();
+    ServerBuilder sb = Server.builder()
+                             .service("/message", myService.decorate(corsService));
 
 You can also directly add a :api:`CorsPolicy` created by a :api:`CorsPolicyBuilder`, e.g.
 
@@ -81,7 +87,7 @@ You can also directly add a :api:`CorsPolicy` created by a :api:`CorsPolicyBuild
     import com.linecorp.armeria.server.cors.CorsPolicyBuilder;
 
     HttpService myService = (ctx, req) -> ...;
-    ServerBuilder sb = new ServerBuilder().service("/message", myService.decorate(
+    Function<Service<HttpRequest, HttpResponse>, CorsService> corsService =
             CorsServiceBuilder.forOrigins("http://example.com")
                               .allowCredentials()
                               .allowNullOrigin() // 'Origin: null' will be accepted.
@@ -91,12 +97,14 @@ You can also directly add a :api:`CorsPolicy` created by a :api:`CorsPolicyBuild
                               .preflightResponseHeader("x-preflight-cors", "Hello CORS")
                               .maxAge(3600)
                               .addPolicy(new CorsPolicyBuilder("http://example2.com")
-                                            .allowCredentials()
-                                            .allowRequestMethods(HttpMethod.GET)
-                                            .allowRequestHeaders("allow_request_header2")
-                                            .exposeHeaders("expose_header_3", "expose_header_4")
-                                            .build())
-                              .newDecorator()));
+                                                 .allowCredentials()
+                                                 .allowRequestMethods(HttpMethod.GET)
+                                                 .allowRequestHeaders("allow_request_header2")
+                                                 .exposeHeaders("expose_header_3", "expose_header_4")
+                                                 .build())
+                              .newDecorator();
+    ServerBuilder sb = Server.builder()
+                             .service("/message", myService.decorate(corsService));
 
 Applying a policy to the specific paths
 ---------------------------------------
@@ -107,12 +115,14 @@ a policy is applied to, e.g.
 .. code-block:: java
 
     HttpService myService = (ctx, req) -> ...;
-    ServerBuilder sb = new ServerBuilder().service("/message", myService.decorate(
+    Function<Service<HttpRequest, HttpResponse>, CorsService> corsService =
             CorsServiceBuilder.forOrigins("http://example.com")
                               // CORS policy will be applied for the path that starts with '/message/web/api/'.
                               .route("prefix:/message/web/api/")
                               .allowRequestMethods(HttpMethod.POST, HttpMethod.GET)
-                              .newDecorator()));
+                              .newDecorator();
+    ServerBuilder sb = Server.builder()
+                             .service("/message", myService.decorate(corsService));
 
 .. note::
 
@@ -129,7 +139,7 @@ You can also configure CORS for :ref:`server-annotated-service` using the :api:`
     import com.linecorp.armeria.server.annotation.Get;
     import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
 
-    Server s = new ServerBuilder().annotatedService("/example", new Object() {
+    Object annotatedService = new Object() {
         @Get("/get")
         @CorsDecorator(origins = "http://example.com", credentialsAllowed = true,
                        nullOriginAllowed = true, exposedHeaders = "expose_header",
@@ -150,7 +160,11 @@ You can also configure CORS for :ref:`server-annotated-service` using the :api:`
         public HttpResponse post() {
             return HttpResponse.of(HttpStatus.OK)
         }
-    }).build();
+    };
+
+    Server s = Server.builder()
+                     .annotatedService("/example", annotatedService)
+                     .build();
 
 You can also use :api:`@CorsDecorator` at the class level to apply the decorator to all service methods in the class.
 Note that the :api:`@CorsDecorator` annotation specified at the method level takes precedence over what's specified at the class level:

@@ -58,8 +58,8 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
     }
 
     @Override
-    protected void init() {
-        final ServerBuilder sb = new ServerBuilder();
+    protected void init() throws Exception {
+        final ServerBuilder sb = Server.builder();
         sb.service("/", (ctx, req) -> {
             if (req.method() == HttpMethod.OPTIONS) {
                 return HttpResponse.of(OK, MediaType.PLAIN_TEXT_UTF_8, "");

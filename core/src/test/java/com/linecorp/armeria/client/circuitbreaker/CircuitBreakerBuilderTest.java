@@ -43,19 +43,19 @@ public class CircuitBreakerBuilderTest {
     }
 
     private static CircuitBreakerBuilder builder() {
-        return new CircuitBreakerBuilder(remoteServiceName);
+        return CircuitBreaker.builder(remoteServiceName);
     }
 
     @Test
     public void testConstructor() {
-        assertThat(new CircuitBreakerBuilder(remoteServiceName).build().name()).isEqualTo(remoteServiceName);
-        assertThat(new CircuitBreakerBuilder().build().name()).startsWith("circuit-breaker-");
+        assertThat(CircuitBreaker.builder(remoteServiceName).build().name()).isEqualTo(remoteServiceName);
+        assertThat(CircuitBreaker.builder().build().name()).startsWith("circuit-breaker-");
     }
 
     @Test
     public void testConstructorWithInvalidArgument() {
-        throwsException(() -> new CircuitBreakerBuilder(null));
-        throwsException(() -> new CircuitBreakerBuilder(""));
+        throwsException(() -> CircuitBreaker.builder(null));
+        throwsException(() -> CircuitBreaker.builder(""));
     }
 
     CircuitBreakerConfig confOf(CircuitBreaker circuitBreaker) {

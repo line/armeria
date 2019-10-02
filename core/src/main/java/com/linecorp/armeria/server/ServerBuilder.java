@@ -93,7 +93,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
  * Builds a new {@link Server} and its {@link ServerConfig}.
  * <h2>Example</h2>
  * <pre>{@code
- * ServerBuilder sb = new ServerBuilder();
+ * ServerBuilder sb = Server.builder();
  * // Add a port to listen
  * sb.http(8080);
  * // Add services to the default virtual host.
@@ -105,7 +105,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
  *
  * <h2>Example 2</h2>
  * <pre>{@code
- * ServerBuilder sb = new ServerBuilder();
+ * ServerBuilder sb = Server.builder();
  * Server server =
  *     sb.http(8080) // Add a port to listen
  *       .defaultVirtualHost() // Add services to the default virtual host.
@@ -125,10 +125,15 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
  *
  * <pre>{@code
  * // Build an HTTP server that runs on an ephemeral TCP/IP port.
- * Server httpServer = new ServerBuilder().service(...).build();
+ * Server httpServer = Server.builder()
+ *                           .service(...)
+ *                           .build();
  *
  * // Build an HTTPS server that runs on an ephemeral TCP/IP port.
- * Server httpsServer = new ServerBuilder().tls(...).service(...).build();
+ * Server httpsServer = Server.builder()
+ *                            .tls(...)
+ *                            .service(...)
+ *                            .build();
  * }</pre>
  *
  * @see VirtualHostBuilder
@@ -199,6 +204,14 @@ public final class ServerBuilder {
             defaultAccessLoggerName(host.hostnamePattern()));
 
     /**
+     * Returns a new {@link ServerBuilder}.
+     *
+     * @deprecated Use {@link Server#builder()}.
+     */
+    @Deprecated
+    public ServerBuilder() {}
+
+    /**
      * Adds an HTTP port that listens on all available network interfaces.
      *
      * @param port the HTTP port number.
@@ -264,7 +277,7 @@ public final class ServerBuilder {
      * one protocol on the same port:
      *
      * <pre>{@code
-     * ServerBuilder sb = new ServerBuilder();
+     * ServerBuilder sb = Server.builder();
      * // Serve both HTTP and HTTPS at port 8080.
      * sb.port(8080,
      *         SessionProtocol.HTTP,
@@ -285,7 +298,7 @@ public final class ServerBuilder {
      * one protocol on the same port:
      *
      * <pre>{@code
-     * ServerBuilder sb = new ServerBuilder();
+     * ServerBuilder sb = Server.builder();
      * // Serve both HTTP and HTTPS at port 8080.
      * sb.port(8080,
      *         Arrays.asList(SessionProtocol.HTTP,
@@ -316,7 +329,7 @@ public final class ServerBuilder {
      * {@link SessionProtocol}s. Specify multiple protocols to serve more than one protocol on the same port:
      *
      * <pre>{@code
-     * ServerBuilder sb = new ServerBuilder();
+     * ServerBuilder sb = Server.builder();
      * // Serve both HTTP and HTTPS at port 8080.
      * sb.port(new InetSocketAddress(8080),
      *         SessionProtocol.HTTP,
@@ -336,7 +349,7 @@ public final class ServerBuilder {
      * {@link SessionProtocol}s. Specify multiple protocols to serve more than one protocol on the same port:
      *
      * <pre>{@code
-     * ServerBuilder sb = new ServerBuilder();
+     * ServerBuilder sb = Server.builder();
      * // Serve both HTTP and HTTPS at port 8080.
      * sb.port(new InetSocketAddress(8080),
      *         Arrays.asList(SessionProtocol.HTTP,
@@ -366,7 +379,7 @@ public final class ServerBuilder {
      * Note that the previously added option will be overridden if the same option is set again.
      *
      * <pre>{@code
-     * ServerBuilder sb = new ServerBuilder();
+     * ServerBuilder sb = Server.builder();
      * sb.channelOption(ChannelOption.BACKLOG, 1024);
      * }</pre>
      */
@@ -385,7 +398,7 @@ public final class ServerBuilder {
      * Note that the previously added option will be overridden if the same option is set again.
      *
      * <pre>{@code
-     * ServerBuilder sb = new ServerBuilder();
+     * ServerBuilder sb = Server.builder();
      * sb.childChannelOption(ChannelOption.SO_REUSEADDR, true)
      *   .childChannelOption(ChannelOption.SO_KEEPALIVE, true);
      * }</pre>

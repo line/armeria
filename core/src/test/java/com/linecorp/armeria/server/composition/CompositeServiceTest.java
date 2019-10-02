@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.internal.metric.MicrometerUtil;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
@@ -135,8 +136,9 @@ class CompositeServiceTest {
     @Test
     void failWhenThePathIsNotPrefix() {
         Assertions.assertThrows(IllegalStateException.class,
-                                () -> new ServerBuilder().service("/exact", new TestCompositeService())
-                                                         .build());
+                                () -> Server.builder()
+                                            .service("/exact", new TestCompositeService())
+                                            .build());
     }
 
     private static final class TestCompositeService

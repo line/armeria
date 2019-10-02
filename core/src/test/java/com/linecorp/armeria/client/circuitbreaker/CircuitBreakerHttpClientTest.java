@@ -118,7 +118,7 @@ public class CircuitBreakerHttpClientTest {
     @Test
     public void strategyWithoutContent() {
         final CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
-        circuitBreakerIsOpenOnServerError(new CircuitBreakerHttpClientBuilder(strategy));
+        circuitBreakerIsOpenOnServerError(CircuitBreakerHttpClient.builder(strategy));
     }
 
     @Test
@@ -126,7 +126,7 @@ public class CircuitBreakerHttpClientTest {
         final CircuitBreakerStrategyWithContent<HttpResponse> strategy =
                 (ctx, response) -> response.aggregate().handle(
                         (msg, unused1) -> msg.status().codeClass() != HttpStatusClass.SERVER_ERROR);
-        circuitBreakerIsOpenOnServerError(new CircuitBreakerHttpClientBuilder(strategy));
+        circuitBreakerIsOpenOnServerError(CircuitBreakerHttpClient.builder(strategy));
     }
 
     private static void circuitBreakerIsOpenOnServerError(CircuitBreakerHttpClientBuilder builder) {
@@ -136,20 +136,21 @@ public class CircuitBreakerHttpClientTest {
         final Duration counterSlidingWindow = Duration.ofSeconds(180);
         final Duration counterUpdateInterval = Duration.ofMillis(1);
 
-        final CircuitBreaker circuitBreaker = new CircuitBreakerBuilder(remoteServiceName)
-                .minimumRequestThreshold(minimumRequestThreshold)
-                .circuitOpenWindow(circuitOpenWindow)
-                .counterSlidingWindow(counterSlidingWindow)
-                .counterUpdateInterval(counterUpdateInterval)
-                .ticker(ticker::get)
-                .listener(new CircuitBreakerListenerAdapter() {
-                    @Override
-                    public void onEventCountUpdated(String circuitBreakerName, EventCount eventCount)
-                            throws Exception {
-                        ticker.addAndGet(Duration.ofMillis(1).toNanos());
-                    }
-                })
-                .build();
+        final CircuitBreaker circuitBreaker =
+                CircuitBreaker.builder(remoteServiceName)
+                              .minimumRequestThreshold(minimumRequestThreshold)
+                              .circuitOpenWindow(circuitOpenWindow)
+                              .counterSlidingWindow(counterSlidingWindow)
+                              .counterUpdateInterval(counterUpdateInterval)
+                              .ticker(ticker::get)
+                              .listener(new CircuitBreakerListenerAdapter() {
+                                  @Override
+                                  public void onEventCountUpdated(String circuitBreakerName,
+                                                                  EventCount eventCount) throws Exception {
+                                      ticker.addAndGet(Duration.ofMillis(1).toNanos());
+                                  }
+                              })
+                              .build();
 
         final CircuitBreakerMapping mapping = (ctx, req) -> circuitBreaker;
         final HttpClient client = new HttpClientBuilder(server.uri("/"))

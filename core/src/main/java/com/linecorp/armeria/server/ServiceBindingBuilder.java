@@ -38,7 +38,7 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
  * <p>Call {@link #build(Service)} to build the {@link Service} and return to the {@link ServerBuilder}.
  *
  * <pre>{@code
- * ServerBuilder sb = new ServerBuilder();
+ * ServerBuilder sb = Server.builder();
  *
  * sb.route()                                      // Configure the first service.
  *   .post("/foo/bar")

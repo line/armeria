@@ -111,12 +111,13 @@ public class UnframedGrpcServiceTest {
     }
 
     private static UnframedGrpcService buildUnframedGrpcService(BindableService bindableService) {
-        return (UnframedGrpcService) new GrpcServiceBuilder()
-                .addService(bindableService)
-                .setMaxInboundMessageSizeBytes(MAX_MESSAGE_BYTES)
-                .setMaxOutboundMessageSizeBytes(MAX_MESSAGE_BYTES)
-                .supportedSerializationFormats(GrpcSerializationFormats.values())
-                .enableUnframedRequests(true)
-                .build();
+        return (UnframedGrpcService) GrpcService.builder()
+                                                .addService(bindableService)
+                                                .setMaxInboundMessageSizeBytes(MAX_MESSAGE_BYTES)
+                                                .setMaxOutboundMessageSizeBytes(MAX_MESSAGE_BYTES)
+                                                .supportedSerializationFormats(
+                                                        GrpcSerializationFormats.values())
+                                                .enableUnframedRequests(true)
+                                                .build();
     }
 }

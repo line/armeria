@@ -41,7 +41,8 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
      */
     public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
     newDecorator(RetryStrategyWithContent<RpcResponse> retryStrategyWithContent) {
-        return new RetryingRpcClientBuilder(retryStrategyWithContent).newDecorator();
+        return RetryingRpcClient.builder(retryStrategyWithContent)
+                                .newDecorator();
     }
 
     /**
@@ -52,8 +53,9 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
      */
     public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
     newDecorator(RetryStrategyWithContent<RpcResponse> retryStrategyWithContent, int maxTotalAttempts) {
-        return new RetryingRpcClientBuilder(retryStrategyWithContent).maxTotalAttempts(maxTotalAttempts)
-                                                                     .newDecorator();
+        return RetryingRpcClient.builder(retryStrategyWithContent)
+                                .maxTotalAttempts(maxTotalAttempts)
+                                .newDecorator();
     }
 
     /**
@@ -67,9 +69,18 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
     public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
     newDecorator(RetryStrategyWithContent<RpcResponse> retryStrategyWithContent,
                  int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
-        return new RetryingRpcClientBuilder(retryStrategyWithContent)
-                .maxTotalAttempts(maxTotalAttempts)
-                .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt).newDecorator();
+        return RetryingRpcClient.builder(retryStrategyWithContent)
+                                .maxTotalAttempts(maxTotalAttempts)
+                                .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt)
+                                .newDecorator();
+    }
+
+    /**
+     * Returns a new {@link RetryingRpcClientBuilder} with the specified {@link RetryStrategyWithContent}.
+     */
+    public static RetryingRpcClientBuilder builder(
+            RetryStrategyWithContent<RpcResponse> retryStrategyWithContent) {
+        return new RetryingRpcClientBuilder(retryStrategyWithContent);
     }
 
     /**

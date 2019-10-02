@@ -24,7 +24,7 @@
  * Iface helloClient = new ClientBuilder("tbinary+http://127.0.0.1:8080/hello")
  *                     .decorator(
  *                         CircuitBreakerClient.newDecorator(
- *                             new CircuitBreakerBuilder("hello").build()
+ *                             CircuitBreaker.builder("hello").build()
  *                         )
  *                     )
  *                     .build(Iface.class);
@@ -44,7 +44,7 @@
  * AsyncIface helloClient = new ClientBuilder("tbinary+http://127.0.0.1:8080/hello")
  *                          .decorator(
  *                              CircuitBreakerClient.newPerMethodDecorator(
- *                                  method -> new CircuitBreakerBuilder(method).build()
+ *                                  method -> CircuitBreaker.builder(method).build()
  *                              )
  *                          )
  *                          .build(AsyncIface.class);

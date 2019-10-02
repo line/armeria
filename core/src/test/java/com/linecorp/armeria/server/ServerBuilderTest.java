@@ -76,12 +76,12 @@ class ServerBuilderTest {
 
     @Test
     void acceptDuplicatePort() throws Exception {
-        final Server server = new ServerBuilder()
-                .http(8080)
-                .https(8080)
-                .tlsSelfSigned()
-                .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                .build();
+        final Server server = Server.builder()
+                                    .http(8080)
+                                    .https(8080)
+                                    .tlsSelfSigned()
+                                    .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                    .build();
 
         final List<ServerPort> ports = server.config().ports();
         assertThat(ports.size()).isOne(); // merged
@@ -91,13 +91,13 @@ class ServerBuilderTest {
 
     @Test
     void treatAsSeparatePortIfZeroIsSpecifiedManyTimes() throws Exception {
-        final Server server = new ServerBuilder()
-                .http(0)
-                .http(0)
-                .https(0)
-                .tlsSelfSigned()
-                .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                .build();
+        final Server server = Server.builder()
+                                    .http(0)
+                                    .http(0)
+                                    .https(0)
+                                    .tlsSelfSigned()
+                                    .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                    .build();
 
         final List<ServerPort> ports = server.config().ports();
         assertThat(ports.size()).isEqualTo(3);
@@ -108,7 +108,7 @@ class ServerBuilderTest {
 
     @Test
     void numMaxConnections() {
-        final ServerBuilder sb = new ServerBuilder();
+        final ServerBuilder sb = Server.builder();
         assertThat(sb.maxNumConnections()).isEqualTo(Integer.MAX_VALUE);
     }
 
@@ -117,23 +117,23 @@ class ServerBuilderTest {
      */
     @Test
     void setAccessLoggerTest1() {
-        final Server sb = new ServerBuilder()
-                .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                .accessLogger(LoggerFactory.getLogger("default"))
-                .virtualHost("*.example.com")
-                .and()
-                .virtualHost("*.example2.com")
-                .accessLogger("com.ex2")
-                .and()
-                .virtualHost("*.example3.com")
-                .accessLogger(host -> LoggerFactory.getLogger("com.ex3"))
-                .and()
-                .virtualHost("def.example4.com", "*.example4.com")
-                .and()
-                .virtualHost("def.example5.com", "*.example5.com")
-                .accessLogger("com.ex5")
-                .and()
-                .build();
+        final Server sb = Server.builder()
+                                .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                .accessLogger(LoggerFactory.getLogger("default"))
+                                .virtualHost("*.example.com")
+                                .and()
+                                .virtualHost("*.example2.com")
+                                .accessLogger("com.ex2")
+                                .and()
+                                .virtualHost("*.example3.com")
+                                .accessLogger(host -> LoggerFactory.getLogger("com.ex3"))
+                                .and()
+                                .virtualHost("def.example4.com", "*.example4.com")
+                                .and()
+                                .virtualHost("def.example5.com", "*.example5.com")
+                                .accessLogger("com.ex5")
+                                .and()
+                                .build();
         assertThat(sb.config().defaultVirtualHost()).isNotNull();
         assertThat(sb.config().defaultVirtualHost().accessLogger().getName()).isEqualTo("default");
 
@@ -159,12 +159,12 @@ class ServerBuilderTest {
      */
     @Test
     void setAccessLoggerTest2() {
-        final Server sb = new ServerBuilder()
-                .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                .accessLogger("test.default")
-                .virtualHost("*.example.com")
-                .and()
-                .build();
+        final Server sb = Server.builder()
+                                .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                .accessLogger("test.default")
+                                .virtualHost("*.example.com")
+                                .and()
+                                .build();
         assertThat(sb.config().defaultVirtualHost().accessLogger().getName())
                 .isEqualTo("test.default");
         assertThat(sb.config().findVirtualHost("*.example.com").accessLogger().getName())
@@ -177,13 +177,13 @@ class ServerBuilderTest {
      */
     @Test
     void defaultAccessLoggerTest() {
-        final Server sb = new ServerBuilder()
-                .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                .virtualHost("*.example.com")
-                .and()
-                .virtualHost("*.example2.com")
-                .and()
-                .build();
+        final Server sb = Server.builder()
+                                .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                .virtualHost("*.example.com")
+                                .and()
+                                .virtualHost("*.example2.com")
+                                .and()
+                                .build();
         assertThat(sb.config().findVirtualHost("*.example.com").accessLogger().getName())
                 .isEqualTo("com.linecorp.armeria.logging.access.com.example");
         assertThat(sb.config().findVirtualHost("*.example2.com").accessLogger().getName())
@@ -196,19 +196,20 @@ class ServerBuilderTest {
      */
     @Test
     void buildIllegalExceptionTest() {
-        final ServerBuilder sb = new ServerBuilder()
-                .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                .accessLogger(host -> null);
+        final ServerBuilder sb = Server.builder()
+                                       .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                       .accessLogger(host -> null);
         assertThatThrownBy(sb::build).isInstanceOf(IllegalStateException.class);
-        final ServerBuilder sb2 = new ServerBuilder()
-                .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                .accessLogger(host -> {
-                    if ("*.example.com".equals(host.hostnamePattern())) {
-                        return null;
-                    }
-                    return LoggerFactory.getLogger("default");
-                })
-                .virtualHost("*.example.com").and();
+        final ServerBuilder sb2 =
+                Server.builder()
+                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                      .accessLogger(host -> {
+                          if ("*.example.com".equals(host.hostnamePattern())) {
+                            return null;
+                          }
+                          return LoggerFactory.getLogger("default");
+                      })
+                      .virtualHost("*.example.com").and();
         assertThatThrownBy(sb2::build).isInstanceOf(IllegalStateException.class);
     }
 

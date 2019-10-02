@@ -38,7 +38,7 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
  * <p>Call {@link #build(Service)} to build the {@link Service} and return to the {@link VirtualHostBuilder}.
  *
  * <pre>{@code
- * ServerBuilder sb = new ServerBuilder();
+ * ServerBuilder sb = Server.builder();
  * sb.virtualHost("example.com")
  *   .route()                                      // Configure the first service in "example.com".
  *   .post("/foo/bar")

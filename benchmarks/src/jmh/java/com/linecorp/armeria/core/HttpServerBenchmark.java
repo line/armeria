@@ -33,7 +33,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.shared.AsyncCounters;
 
@@ -64,11 +63,11 @@ public class HttpServerBenchmark {
 
     @Setup
     public void startServer() throws Exception {
-        server = new ServerBuilder()
-                .service("/empty", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                .requestTimeout(Duration.ZERO)
-                .meterRegistry(NoopMeterRegistry.get())
-                .build();
+        server = Server.builder()
+                       .service("/empty", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                       .requestTimeout(Duration.ZERO)
+                       .meterRegistry(NoopMeterRegistry.get())
+                       .build();
         server.start().join();
         final ServerPort httpPort = server.activePorts().values().stream()
                                           .filter(ServerPort::hasHttp).findAny()

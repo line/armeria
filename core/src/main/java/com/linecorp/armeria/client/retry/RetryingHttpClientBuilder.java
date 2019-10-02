@@ -44,7 +44,10 @@ public class RetryingHttpClientBuilder
 
     /**
      * Creates a new builder with the specified {@link RetryStrategy}.
+     *
+     * @deprecated Use {@link RetryingHttpClient#builder(RetryStrategy)}.
      */
+    @Deprecated
     public RetryingHttpClientBuilder(RetryStrategy retryStrategy) {
         super(retryStrategy);
         needsContentInStrategy = false;
@@ -52,7 +55,10 @@ public class RetryingHttpClientBuilder
 
     /**
      * Creates a new builder with the specified {@link RetryStrategyWithContent}.
+     *
+     * @deprecated Use {@link RetryingHttpClient#builder(RetryStrategyWithContent)}.
      */
+    @Deprecated
     public RetryingHttpClientBuilder(RetryStrategyWithContent<HttpResponse> retryStrategyWithContent) {
         super(retryStrategyWithContent);
         needsContentInStrategy = true;

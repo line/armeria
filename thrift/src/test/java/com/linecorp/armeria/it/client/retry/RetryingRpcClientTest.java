@@ -134,7 +134,6 @@ public class RetryingRpcClientTest {
                 (ctx, response) -> CompletableFuture.completedFuture(Backoff.fixed(10000000));
         final HelloService.Iface client = helloClient(strategy, 100, logQueue);
         when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
-
         final Throwable thrown = catchThrowable(() -> client.hello("hello"));
         assertThat(thrown).isInstanceOf(TApplicationException.class);
         assertThat(((TApplicationException) thrown).getType()).isEqualTo(TApplicationException.INTERNAL_ERROR);
@@ -151,9 +150,9 @@ public class RetryingRpcClientTest {
     private HelloService.Iface helloClient(RetryStrategyWithContent<RpcResponse> strategy,
                                            int maxAttempts) {
         return new ClientBuilder(server.uri(BINARY, "/thrift"))
-                .rpcDecorator(new RetryingRpcClientBuilder(strategy)
-                                      .maxTotalAttempts(maxAttempts)
-                                      .newDecorator())
+                .rpcDecorator(RetryingRpcClient.builder(strategy)
+                                               .maxTotalAttempts(maxAttempts)
+                                               .newDecorator())
                 .build(HelloService.Iface.class);
     }
 
@@ -198,7 +197,8 @@ public class RetryingRpcClientTest {
         final HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift"))
                 .responseTimeoutMillis(10000)
                 .factory(factory)
-                .rpcDecorator(new RetryingRpcClientBuilder(strategy).newDecorator())
+                .rpcDecorator(RetryingRpcClient.builder(strategy)
+                                               .newDecorator())
                 .build(HelloService.Iface.class);
         when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
 
@@ -230,7 +230,8 @@ public class RetryingRpcClientTest {
     public void doNotRetryWhenResponseIsCancelled() throws Exception {
         final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
         final HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift"))
-                .rpcDecorator(new RetryingRpcClientBuilder(retryAlways).newDecorator())
+                .rpcDecorator(RetryingRpcClient.builder(retryAlways)
+                                               .newDecorator())
                 .rpcDecorator((delegate, ctx, req) -> {
                     context.set(ctx);
                     final RpcResponse res = delegate.execute(ctx, req);

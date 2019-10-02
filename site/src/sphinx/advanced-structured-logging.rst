@@ -286,7 +286,7 @@ You can enable it when you configure :api:`Server`, :api:`VirtualHost` or :api:`
 
     import com.linecorp.armeria.server.ServerBuilder;
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     ...
     // Enable previewing the content with the maximum length of 100 for textual content.
     sb.contentPreview(100);
@@ -323,7 +323,7 @@ and the hex dump preview of first 100 bytes for other types:
     import com.linecorp.armeria.common.MediaType;
     import com.linecorp.armeria.common.logging.ContentPreviewer;
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
 
     sb.contentPreviewerFactory((ctx, headers) -> {
         MediaType contentType = headers.contentType();
@@ -378,7 +378,7 @@ You can write your own :api:`ContentPreviewer` to change the way to make the pre
         }
     }
     ...
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     ...
     sb.contentPreviewerFactory((ctx, headers) -> new HexDumpContentPreviewer());
 

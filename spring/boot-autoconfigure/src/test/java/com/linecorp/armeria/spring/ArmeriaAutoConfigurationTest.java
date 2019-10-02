@@ -64,7 +64,7 @@ import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.StringRequestConverterFunction;
-import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
+import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.spring.ArmeriaAutoConfigurationTest.TestConfiguration;
@@ -122,11 +122,11 @@ public class ArmeriaAutoConfigurationTest {
         public GrpcServiceRegistrationBean helloGrpcService() {
             return new GrpcServiceRegistrationBean()
                     .setServiceName("helloGrpcService")
-                    .setService(new GrpcServiceBuilder()
-                                        .addService(new HelloGrpcService())
-                                        .supportedSerializationFormats(GrpcSerializationFormats.values())
-                                        .enableUnframedRequests(true)
-                                        .build())
+                    .setService(GrpcService.builder()
+                                           .addService(new HelloGrpcService())
+                                           .supportedSerializationFormats(GrpcSerializationFormats.values())
+                                           .enableUnframedRequests(true)
+                                           .build())
                     .setDecorators(LoggingService.newDecorator())
                     .addExampleRequests(HelloServiceGrpc.SERVICE_NAME,
                                         "Hello",
