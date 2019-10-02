@@ -31,10 +31,10 @@ interface Props {
   additionalHeadersOpen: boolean;
   additionalHeaders: string;
   stickyHeaders: boolean;
-  onEditHttpHeadersClick: () => void;
+  onEditHttpHeadersClick: React.Dispatch<unknown>;
   onSelectedHeadersChange: (selectedHeaders: Option) => void;
   onHeadersFormChange: (e: ChangeEvent<HTMLInputElement>) => void;
-  onStickyHeadersChange: () => void;
+  onStickyHeadersChange: React.Dispatch<unknown>;
 }
 
 const HttpHeaders: React.FunctionComponent<Props> = (props) => (

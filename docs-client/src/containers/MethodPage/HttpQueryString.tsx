@@ -24,7 +24,7 @@ const queryPlaceHolder = 'foo=bar&baz=qux';
 interface Props {
   additionalQueriesOpen: boolean;
   additionalQueries: string;
-  onEditHttpQueriesClick: () => void;
+  onEditHttpQueriesClick: React.Dispatch<unknown>;
   onQueriesFormChange: (e: ChangeEvent<HTMLInputElement>) => void;
 }
 
