@@ -191,8 +191,8 @@ you should implement :api:`CircuitBreakerStrategyWithContent` and specify it whe
             };
 
     final HttpClient client = new HttpClientBuilder(...)
-            .decorator(CircuitBreakerHttpClient.builder(myStrategy)
-                                               .newDecorator()) // Specify the strategy
+            .decorator(CircuitBreakerHttpClient.builder(myStrategy) // Specify the strategy
+                                               .newDecorator())
             .build();
 
     final AggregatedHttpResponse res = client.execute(...).aggregate().join();
