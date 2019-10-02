@@ -46,38 +46,38 @@ public final class Main {
                      .https(httpsPort)
                      .tlsSelfSigned()
                      .service("/long", (ctx, req) -> {
-                        // Note that you MUST adjust the request timeout if you want to send events for a
-                        // longer period than the configured request timeout. The timeout can be disabled by
-                        // setting 0 like the below, but it is NOT RECOMMENDED in the real world application,
-                        // because it can leave a lot of unfinished requests.
-                        ctx.setRequestTimeout(Duration.ZERO);
-                        return ServerSentEvents.fromPublisher(
-                                Flux.interval(sendingInterval)
-                                    .take(eventCount)
-                                    .map(unused -> ServerSentEvent.ofData(randomStringSupplier.get())));
+                         // Note that you MUST adjust the request timeout if you want to send events for a
+                         // longer period than the configured request timeout. The timeout can be disabled by
+                         // setting 0 like the below, but it is NOT RECOMMENDED in the real world application,
+                         // because it can leave a lot of unfinished requests.
+                         ctx.setRequestTimeout(Duration.ZERO);
+                         return ServerSentEvents.fromPublisher(
+                                 Flux.interval(sendingInterval)
+                                     .take(eventCount)
+                                     .map(unused -> ServerSentEvent.ofData(randomStringSupplier.get())));
                      })
                      .annotatedService(new Object() {
-                        // This shows how you can send events in the annotated HTTP service.
-                        @Get("/short")
-                        @ProducesEventStream
-                        public Publisher<ServerSentEvent> sendEvents() {
-                            // The event stream will be closed after
-                            // the request timed out (10 seconds by default).
-                            return Flux.interval(sendingInterval)
-                                       .take(eventCount)
-                                       // A user can use a builder to build a Server-Sent Event.
-                                       .map(id -> new ServerSentEventBuilder()
-                                               .id(Long.toString(id))
-                                               .data(randomStringSupplier.get())
-                                               // The client will reconnect to this server after 5 seconds
-                                               // when the on-going stream is closed.
-                                               .retry(Duration.ofSeconds(5))
-                                               .build());
-                        }
-                })
-                .service("/", HttpFile.ofResource(Main.class.getClassLoader(), "index.html").asService())
-                .decorator(LoggingService.newDecorator())
-                .build();
+                         // This shows how you can send events in the annotated HTTP service.
+                         @Get("/short")
+                         @ProducesEventStream
+                         public Publisher<ServerSentEvent> sendEvents() {
+                             // The event stream will be closed after
+                             // the request timed out (10 seconds by default).
+                             return Flux.interval(sendingInterval)
+                                        .take(eventCount)
+                                        // A user can use a builder to build a Server-Sent Event.
+                                        .map(id -> new ServerSentEventBuilder()
+                                                .id(Long.toString(id))
+                                                .data(randomStringSupplier.get())
+                                                // The client will reconnect to this server after 5 seconds
+                                                // when the on-going stream is closed.
+                                                .retry(Duration.ofSeconds(5))
+                                                .build());
+                         }
+                     })
+                     .service("/", HttpFile.ofResource(Main.class.getClassLoader(), "index.html").asService())
+                     .decorator(LoggingService.newDecorator())
+                     .build();
     }
 
     private Main() {}
