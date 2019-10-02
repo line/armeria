@@ -70,10 +70,10 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
 
         private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(2);
         private final ServiceWithRoutes<HttpRequest, HttpResponse> grpcService =
-                        GrpcService.builder()
-                                   .addService(ServerInterceptors.intercept(new TestServiceImpl(executor),
-                                                                            TestServiceImpl.interceptors()))
-                                   .build();
+                GrpcService.builder()
+                           .addService(ServerInterceptors.intercept(new TestServiceImpl(executor),
+                                                                    TestServiceImpl.interceptors()))
+                           .build();
 
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
@@ -87,10 +87,10 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
             });
             sb.maxRequestLength(16 * 1024 * 1024);
             sb.serviceUnder("/", grpcService.decorate((delegate, ctx, req) -> {
-                                                    ctxCapture.set(ctx);
-                                                    return delegate.serve(ctx, req);
-                            }));
-            }
+                ctxCapture.set(ctx);
+                return delegate.serve(ctx, req);
+            }));
+        }
     };
 
     @After
