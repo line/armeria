@@ -18,12 +18,13 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Duration;
 import java.util.List;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,13 +36,14 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.testing.internal.MockAddressResolverGroup;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-public class ServerBuilderTest {
+class ServerBuilderTest {
 
     private static ClientFactory clientFactory;
-    @ClassRule
-    public static final ServerRule server = new ServerRule() {
+
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
@@ -60,20 +62,20 @@ public class ServerBuilderTest {
         }
     };
 
-    @BeforeClass
-    public static void init() {
+    @BeforeAll
+    static void init() {
         clientFactory = new ClientFactoryBuilder()
                 .addressResolverGroupFactory(eventLoopGroup -> MockAddressResolverGroup.localhost())
                 .build();
     }
 
-    @AfterClass
-    public static void destroy() {
+    @AfterAll
+    static void destroy() {
         clientFactory.close();
     }
 
     @Test
-    public void acceptDuplicatePort() throws Exception {
+    void acceptDuplicatePort() throws Exception {
         final Server server = Server.builder()
                                     .http(8080)
                                     .https(8080)
@@ -88,7 +90,7 @@ public class ServerBuilderTest {
     }
 
     @Test
-    public void treatAsSeparatePortIfZeroIsSpecifiedManyTimes() throws Exception {
+    void treatAsSeparatePortIfZeroIsSpecifiedManyTimes() throws Exception {
         final Server server = Server.builder()
                                     .http(0)
                                     .http(0)
@@ -105,7 +107,7 @@ public class ServerBuilderTest {
     }
 
     @Test
-    public void numMaxConnections() {
+    void numMaxConnections() {
         final ServerBuilder sb = Server.builder();
         assertThat(sb.maxNumConnections()).isEqualTo(Integer.MAX_VALUE);
     }
@@ -114,7 +116,7 @@ public class ServerBuilderTest {
      * Makes sure each virtual host can have its custom logger name.
      */
     @Test
-    public void setAccessLoggerTest1() {
+    void setAccessLoggerTest1() {
         final Server sb = Server.builder()
                                 .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                                 .accessLogger(LoggerFactory.getLogger("default"))
@@ -156,7 +158,7 @@ public class ServerBuilderTest {
      * when a user specifies the default access logger via {@link ServerBuilder#accessLogger(String)}.
      */
     @Test
-    public void setAccessLoggerTest2() {
+    void setAccessLoggerTest2() {
         final Server sb = Server.builder()
                                 .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                                 .accessLogger("test.default")
@@ -174,7 +176,7 @@ public class ServerBuilderTest {
      * when a user doesn't specify it.
      */
     @Test
-    public void defaultAccessLoggerTest() {
+    void defaultAccessLoggerTest() {
         final Server sb = Server.builder()
                                 .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                                 .virtualHost("*.example.com")
@@ -193,7 +195,7 @@ public class ServerBuilderTest {
      * when the access logger of a {@link VirtualHost} set by a user is {@code null}.
      */
     @Test
-    public void buildIllegalExceptionTest() {
+    void buildIllegalExceptionTest() {
         final ServerBuilder sb = Server.builder()
                                        .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                                        .accessLogger(host -> null);
@@ -217,7 +219,7 @@ public class ServerBuilderTest {
      * its own services.
      */
     @Test
-    public void decoratorTest() throws Exception {
+    void decoratorTest() throws Exception {
         final HttpClient client = HttpClient.of(server.uri("/"));
         final AggregatedHttpResponse res = client.get("/").aggregate().get();
         assertThat(res.headers().get("global_decorator")).isEqualTo("true");
@@ -231,5 +233,67 @@ public class ServerBuilderTest {
         final AggregatedHttpResponse res3 = vhostClient.get("/").aggregate().get();
         assertThat(res3.headers().get("global_decorator")).isEqualTo("true");
         assertThat(res3.headers().get("virtualhost_decorator")).isEqualTo("true");
+    }
+
+    @Test
+    void serveWithDefaultVirtualHostServiceIfNotExists() {
+        final Server server = new ServerBuilder()
+                .serviceUnder("/", (ctx, req) -> HttpResponse.of("default"))
+                .service("/abc", (ctx, req) -> HttpResponse.of("default_abc"))
+                .virtualHost("foo.com")
+                .service("/", (ctx, req) -> HttpResponse.of("foo"))
+                .service("/abc", (ctx, req) -> HttpResponse.of("foo_abc"))
+                .and().build();
+        server.start().join();
+
+        final HttpClient client = HttpClient.of(clientFactory, "http://127.0.0.1:" + server.activeLocalPort());
+        final HttpClient fooClient = HttpClient.of(clientFactory, "http://foo.com:" + server.activeLocalPort());
+
+        assertThat(client.get("/").aggregate().join().contentUtf8()).isEqualTo("default");
+        assertThat(client.get("/abc").aggregate().join().contentUtf8()).isEqualTo("default_abc");
+
+        assertThat(fooClient.get("/").aggregate().join().contentUtf8()).isEqualTo("foo");
+        assertThat(fooClient.get("/abc").aggregate().join().contentUtf8()).isEqualTo("foo_abc");
+
+        // should route to a service of default virtual host
+        assertThat(fooClient.get("/unknown").aggregate().join().contentUtf8()).isEqualTo("default");
+    }
+
+    @Test
+    void serviceConfigurationPriority() {
+        final Server server = new ServerBuilder()
+                .requestTimeoutMillis(100)     // for default virtual host
+                .service("/default_virtual_host",
+                         (ctx, req) -> HttpResponse.delayed(
+                                 HttpResponse.of(HttpStatus.OK), Duration.ofMillis(200))
+                )
+                .route().get("/service_config")
+                .requestTimeoutMillis(200)     // for service
+                .build((ctx, req) -> HttpResponse
+                        .delayed(HttpResponse.of(HttpStatus.OK), Duration.ofMillis(250)))
+                .virtualHost("foo.com")
+                .service("/custom_virtual_host", (ctx, req) -> HttpResponse.delayed(
+                        HttpResponse.of(HttpStatus.OK), Duration.ofMillis(150)))
+                .requestTimeoutMillis(300)    // for custom virtual host
+                .and().build();
+        server.start().join();
+
+        final HttpClient client = HttpClient.of(clientFactory, "http://127.0.0.1:" + server.activeLocalPort());
+        final HttpClient fooClient = HttpClient.of(clientFactory, "http://foo.com:" + server.activeLocalPort());
+
+        assertThat(client.get("/default_virtual_host").aggregate().join().status())
+                .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(client.get("/service_config").aggregate().join().status())
+                .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+
+        // choose from 'foo.com' virtual host
+        assertThat(fooClient.get("/default_virtual_host").aggregate().join().status())
+                .isEqualTo(HttpStatus.OK);
+        // choose from service config
+        assertThat(fooClient.get("/service_config").aggregate().join().status())
+                .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        // choose from 'foo.com' virtual host
+        assertThat(fooClient.get("/custom_virtual_host").aggregate().join().status())
+                .isEqualTo(HttpStatus.OK);
     }
 }

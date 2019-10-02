@@ -243,7 +243,7 @@ public final class GrpcService extends AbstractHttpService
         }
 
         if (protoReflectionService != null) {
-            Map<String, ServerServiceDefinition> grpcServices =
+            final Map<String, ServerServiceDefinition> grpcServices =
                     cfg.server().config().virtualHosts().stream()
                        .flatMap(host -> host.serviceConfigs().stream())
                        .map(serviceConfig -> serviceConfig.service().as(GrpcService.class))

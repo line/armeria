@@ -143,6 +143,27 @@ You might be interested in decorating a service using other decorators, for exam
 
 You can also use an arbitrary object that's annotated by the ``@Path`` annotation using ``annotatedService()``.
 
+Path patterns
+-------------
+
+You can use the following path patterns to map an HTTP request path to a service or a decorator.
+
++------------------------------------------+---------------------------------------+
+| Pattern                                  | Example                               |
++==========================================+=======================================+
+| Exact match                              | ``/foo/bar`` or ``exact:/foo/bar``    |
++------------------------------------------+---------------------------------------+
+| Curly-brace style path variables         | ``/users/{userId}``                   |
++------------------------------------------+---------------------------------------+
+| Colon style path variables               | ``/list/:productType/by/:ordering``   |
++------------------------------------------+---------------------------------------+
+| Prefix match                             | ``prefix:/files``                     |
++------------------------------------------+---------------------------------------+
+| Glob pattern                             | ``glob:/*/downloads/**``              |
++------------------------------------------+---------------------------------------+
+| Regular expression                       | ``regex:^/files/(?<filePath>.\*)$``   |
++------------------------------------------+---------------------------------------+
+
 Per service configuration
 -------------------------
 

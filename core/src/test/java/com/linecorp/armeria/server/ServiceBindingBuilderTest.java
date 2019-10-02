@@ -65,7 +65,7 @@ public class ServiceBindingBuilderTest {
         assertThat(route.paths()).containsExactly("/foo/bar", "/foo/bar");
         assertThat(route.consumes()).containsExactly(JSON, PLAIN_TEXT_UTF_8);
         assertThat(route.produces()).containsExactly(JSON_UTF_8,
-                                                               PLAIN_TEXT_UTF_8);
+                                                     PLAIN_TEXT_UTF_8);
         assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(10);
         assertThat(serviceConfig.maxRequestLength()).isEqualTo(8192);
         assertThat(serviceConfig.verboseResponses()).isEqualTo(true);
@@ -94,7 +94,7 @@ public class ServiceBindingBuilderTest {
         assertThat(route.paths()).containsExactly("/foo/bar", "/foo/bar");
         assertThat(route.consumes()).containsExactly(JSON, PLAIN_TEXT_UTF_8);
         assertThat(route.produces()).containsExactly(JSON_UTF_8,
-                                                               PLAIN_TEXT_UTF_8);
+                                                     PLAIN_TEXT_UTF_8);
         assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(10);
         assertThat(serviceConfig.maxRequestLength()).isEqualTo(8192);
         assertThat(serviceConfig.verboseResponses()).isEqualTo(true);

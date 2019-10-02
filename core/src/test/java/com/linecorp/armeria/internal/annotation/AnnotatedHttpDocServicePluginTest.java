@@ -191,7 +191,7 @@ public class AnnotatedHttpDocServicePluginTest {
                         .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8, MediaType.JSON_UTF_8)
                         .build());
 
-        route = withMethodAndTypes(Route.builder().pathWithPrefix("/glob/", "glob:/home/*/files/**"));
+        route = withMethodAndTypes(Route.builder().path("/glob/", "glob:/home/*/files/**"));
         endpointInfo = endpointInfo(route, hostnamePattern);
         assertThat(endpointInfo).isEqualTo(
                 new EndpointInfoBuilder("*", "regex:^/glob/home/([^/]+)/files/(.*)$")
@@ -199,7 +199,7 @@ public class AnnotatedHttpDocServicePluginTest {
                         .build());
 
         route = withMethodAndTypes(Route.builder()
-                                        .pathWithPrefix("/prefix: regex:/", "regex:^/files/(?<filePath>.*)$"));
+                                        .path("/prefix: regex:/", "regex:^/files/(?<filePath>.*)$"));
         endpointInfo = endpointInfo(route, hostnamePattern);
         assertThat(endpointInfo).isEqualTo(
                 new EndpointInfoBuilder("*", "regex:^/files/(?<filePath>.*)$")

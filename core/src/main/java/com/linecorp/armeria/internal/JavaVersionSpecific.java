@@ -16,10 +16,13 @@
 
 package com.linecorp.armeria.internal;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.linecorp.armeria.common.RequestContext;
 
 /**
  * Contains APIs that are implemented differently based on the version of Java being run. This class implements
@@ -29,12 +32,14 @@ import org.slf4j.LoggerFactory;
  */
 public class JavaVersionSpecific {
 
-    private static Logger logger = LoggerFactory.getLogger(JavaVersionSpecific.class);
+    private static final Logger logger = LoggerFactory.getLogger(JavaVersionSpecific.class);
 
     private static final JavaVersionSpecific CURRENT = CurrentJavaVersionSpecific.get();
 
     static {
-        logger.info("Using version specific APIs from {}", CURRENT.getClass().getSimpleName());
+        if (CURRENT.getClass() != JavaVersionSpecific.class) {
+            logger.info("Using the APIs optimized for: {}", CURRENT.name());
+        }
     }
 
     /**
@@ -44,10 +49,21 @@ public class JavaVersionSpecific {
         return CURRENT;
     }
 
+    String name() {
+        return "Java 8";
+    }
+
     /**
      * Returns the number of microseconds since the epoch (00:00:00, 01-Jan-1970, GMT).
      */
     public long currentTimeMicros() {
         return TimeUnit.MILLISECONDS.toMicros(System.currentTimeMillis());
+    }
+
+    /**
+     * Returns a {@link CompletableFuture} which executes all callbacks with the {@link RequestContext}.
+     */
+    public <T> CompletableFuture<T> newRequestContextAwareFuture(RequestContext ctx) {
+        return new RequestContextAwareCompletableFuture<>(ctx);
     }
 }

@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
 import com.linecorp.armeria.common.CommonPools;
@@ -36,10 +36,10 @@ import com.linecorp.armeria.internal.InboundTrafficController;
 
 import io.netty.channel.Channel;
 
-public class HttpResponseWrapperTest {
+class HttpResponseWrapperTest {
 
     @Test
-    public void headersAndData() throws Exception {
+    void headersAndData() throws Exception {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
@@ -55,7 +55,7 @@ public class HttpResponseWrapperTest {
     }
 
     @Test
-    public void headersAndTrailers() throws Exception {
+    void headersAndTrailers() throws Exception {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
@@ -70,7 +70,7 @@ public class HttpResponseWrapperTest {
     }
 
     @Test
-    public void dataIsIgnoreAfterSecondHeaders() throws Exception {
+    void dataIsIgnoreAfterSecondHeaders() throws Exception {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
@@ -87,7 +87,7 @@ public class HttpResponseWrapperTest {
     }
 
     @Test
-    public void splitTrailersIsIgnored() throws Exception {
+    void splitTrailersIsIgnored() throws Exception {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
@@ -103,7 +103,7 @@ public class HttpResponseWrapperTest {
     }
 
     @Test
-    public void splitTrailersAfterDataIsIgnored() throws Exception {
+    void splitTrailersAfterDataIsIgnored() throws Exception {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
@@ -122,7 +122,7 @@ public class HttpResponseWrapperTest {
     }
 
     @Test
-    public void informationalHeadersHeadersDataAndTrailers() throws Exception {
+    void informationalHeadersHeadersDataAndTrailers() throws Exception {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 

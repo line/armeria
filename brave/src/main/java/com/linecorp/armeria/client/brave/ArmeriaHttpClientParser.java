@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.brave;
 import java.net.SocketAddress;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.brave.SpanTags;
@@ -49,7 +50,24 @@ final class ArmeriaHttpClientParser extends HttpClientParser {
         return INSTANCE;
     }
 
-    private ArmeriaHttpClientParser() {
+    private ArmeriaHttpClientParser() {}
+
+    @Override
+    public <T> void request(HttpAdapter<T, ?> rawAdapter, T req, SpanCustomizer customizer) {
+        super.request(rawAdapter, req, customizer);
+        if (!(req instanceof ClientRequestContext)) {
+            return;
+        }
+
+        final ClientRequestContext ctx = (ClientRequestContext) req;
+        final HttpRequest httpReq = ctx.request();
+        if (httpReq == null) {
+            // Should never reach here because BraveClient is an HTTP-level decorator.
+            return;
+        }
+
+        customizer.tag(SpanTags.TAG_HTTP_HOST, httpReq.authority())
+                  .tag(SpanTags.TAG_HTTP_URL, httpReq.uri().toString());
     }
 
     @Override
@@ -58,14 +76,12 @@ final class ArmeriaHttpClientParser extends HttpClientParser {
         if (!(res instanceof ClientRequestContext)) {
             return;
         }
+
         final ClientRequestContext ctx = (ClientRequestContext) res;
+        final RequestLog log = ctx.log();
+        customizer.tag(SpanTags.TAG_HTTP_PROTOCOL, ClientRequestContextAdapter.protocol(log));
 
-        final RequestLog requestLog = ctx.log();
-        customizer.tag(SpanTags.TAG_HTTP_HOST, ClientRequestContextAdapter.authority(requestLog))
-                  .tag(SpanTags.TAG_HTTP_URL, SpanTags.generateUrl(requestLog))
-                  .tag(SpanTags.TAG_HTTP_PROTOCOL, ClientRequestContextAdapter.protocol(requestLog));
-
-        final String serFmt = ClientRequestContextAdapter.serializationFormat(requestLog);
+        final String serFmt = ClientRequestContextAdapter.serializationFormat(log);
         if (serFmt != null) {
             customizer.tag(SpanTags.TAG_HTTP_SERIALIZATION_FORMAT, serFmt);
         }
@@ -80,7 +96,7 @@ final class ArmeriaHttpClientParser extends HttpClientParser {
             customizer.tag(SpanTags.TAG_ADDRESS_LOCAL, laddr.toString());
         }
 
-        final String rpcMethod = ClientRequestContextAdapter.rpcMethod(requestLog);
+        final String rpcMethod = ClientRequestContextAdapter.rpcMethod(log);
         if (rpcMethod != null) {
             customizer.name(rpcMethod);
         }

@@ -33,7 +33,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.CaffeineSpec;
 import com.google.common.base.Ascii;
 import com.google.common.base.CharMatcher;
@@ -45,9 +44,11 @@ import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingHttpClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.internal.SslContextUtil;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
@@ -73,7 +74,41 @@ public final class Flags {
 
     private static final int NUM_CPU_CORES = Runtime.getRuntime().availableProcessors();
 
-    private static final boolean VERBOSE_EXCEPTIONS = getBoolean("verboseExceptions", false);
+    private static final String DEFAULT_VERBOSE_EXCEPTION_SAMPLER_SPEC = "rate-limited=10";
+    private static final String VERBOSE_EXCEPTION_SAMPLER_SPEC;
+    private static final Sampler<Class<? extends Throwable>> VERBOSE_EXCEPTION_SAMPLER;
+
+    static {
+        final String spec = getNormalized("verboseExceptions", DEFAULT_VERBOSE_EXCEPTION_SAMPLER_SPEC, val -> {
+            if ("true".equals(val) || "false".equals(val)) {
+                return true;
+            }
+
+            try {
+                Sampler.of(val);
+                return true;
+            } catch (Exception e) {
+                // Invalid sampler specification
+                return false;
+            }
+        });
+
+        switch (spec) {
+            case "true":
+            case "always":
+                VERBOSE_EXCEPTION_SAMPLER_SPEC = "always";
+                VERBOSE_EXCEPTION_SAMPLER = Sampler.always();
+                break;
+            case "false":
+            case "never":
+                VERBOSE_EXCEPTION_SAMPLER_SPEC = "never";
+                VERBOSE_EXCEPTION_SAMPLER = Sampler.never();
+                break;
+            default:
+                VERBOSE_EXCEPTION_SAMPLER_SPEC = spec;
+                VERBOSE_EXCEPTION_SAMPLER = new ExceptionSampler(VERBOSE_EXCEPTION_SAMPLER_SPEC);
+        }
+    }
 
     private static final boolean VERBOSE_SOCKET_EXCEPTIONS = getBoolean("verboseSocketExceptions", false);
 
@@ -231,6 +266,10 @@ public final class Flags {
     private static final Optional<String> ROUTE_CACHE_SPEC =
             caffeineSpec("routeCache", DEFAULT_ROUTE_CACHE_SPEC);
 
+    private static final String DEFAULT_ROUTE_DECORATOR_CACHE_SPEC = "maximumSize=4096";
+    private static final Optional<String> ROUTE_DECORATOR_CACHE_SPEC =
+            caffeineSpec("routeDecoratorCache", DEFAULT_ROUTE_DECORATOR_CACHE_SPEC);
+
     private static final String DEFAULT_COMPOSITE_SERVICE_CACHE_SPEC = "maximumSize=256";
     private static final Optional<String> COMPOSITE_SERVICE_CACHE_SPEC =
             caffeineSpec("compositeServiceCache", DEFAULT_COMPOSITE_SERVICE_CACHE_SPEC);
@@ -300,15 +339,29 @@ public final class Flags {
     }
 
     /**
-     * Returns whether the verbose exception mode is enabled. When enabled, the exceptions frequently thrown by
-     * Armeria will have full stack trace. When disabled, such exceptions will have empty stack trace to
-     * eliminate the cost of capturing the stack trace.
+     * Returns the {@link Sampler} that determines whether to retain the stack trace of the exceptions
+     * that are thrown frequently by Armeria.
      *
-     * <p>This flag is disabled by default. Specify the {@code -Dcom.linecorp.armeria.verboseExceptions=true}
-     * JVM option to enable it.
+     * @see #verboseExceptionSamplerSpec()
      */
-    public static boolean verboseExceptions() {
-        return VERBOSE_EXCEPTIONS;
+    public static Sampler<Class<? extends Throwable>> verboseExceptionSampler() {
+        return VERBOSE_EXCEPTION_SAMPLER;
+    }
+
+    /**
+     * Returns the specification string of the {@link Sampler} that determines whether to retain the stack
+     * trace of the exceptions that are thrown frequently by Armeria. A sampled exception will have the stack
+     * trace while the others will have an empty stack trace to eliminate the cost of capturing the stack
+     * trace.
+     *
+     * <p>The default value of this flag is {@value #DEFAULT_VERBOSE_EXCEPTION_SAMPLER_SPEC}, which retains
+     * the stack trace of the exceptions at the maximum rate of 10 exceptions/sec.
+     * Specify the {@code -Dcom.linecorp.armeria.verboseExceptions=<specification>} JVM option to override
+     * the default. See {@link Sampler#of(String)} for the specification string format.</p>
+     */
+    public static String verboseExceptionSamplerSpec() {
+        // XXX(trustin): Is it worth allowing to specify different specs for different exception types?
+        return VERBOSE_EXCEPTION_SAMPLER_SPEC;
     }
 
     /**
@@ -663,12 +716,13 @@ public final class Flags {
 
     /**
      * Returns the value of the {@code routeCache} parameter. It would be used to create a Caffeine
-     * {@link Cache} instance using {@link Caffeine#from(String)} for routing a request. The {@link Cache}
+     * {@link Cache} instance using {@link CaffeineSpec} for routing a request. The {@link Cache}
      * would hold the mappings of {@link RoutingContext} and the designated {@link ServiceConfig}
      * for a request to improve server performance.
      *
      * <p>The default value of this flag is {@value DEFAULT_ROUTE_CACHE_SPEC}. Specify the
      * {@code -Dcom.linecorp.armeria.routeCache=<spec>} JVM option to override the default value.
+     * For example, {@code -Dcom.linecorp.armeria.routeCache=maximumSize=4096,expireAfterAccess=600s}.
      * Also, specify {@code -Dcom.linecorp.armeria.routeCache=off} JVM option to disable it.
      */
     public static Optional<String> routeCacheSpec() {
@@ -676,12 +730,28 @@ public final class Flags {
     }
 
     /**
+     * Returns the value of the {@code routeDecoratorCache} parameter. It would be used to create a Caffeine
+     * {@link Cache} instance using {@link CaffeineSpec} for mapping a route to decorator.
+     * The {@link Cache} would hold the mappings of {@link RoutingContext} and the designated
+     * dispatcher {@link Service}s for a request to improve server performance.
+     *
+     * <p>The default value of this flag is {@value DEFAULT_ROUTE_DECORATOR_CACHE_SPEC}. Specify the
+     * {@code -Dcom.linecorp.armeria.routeDecoratorCache=<spec>} JVM option to override the default value.
+     * For example, {@code -Dcom.linecorp.armeria.routeDecoratorCache=maximumSize=4096,expireAfterAccess=600s}.
+     * Also, specify {@code -Dcom.linecorp.armeria.routeDecoratorCache=off} JVM option to disable it.
+     */
+    public static Optional<String> routeDecoratorCacheSpec() {
+        return ROUTE_DECORATOR_CACHE_SPEC;
+    }
+
+    /**
      * Returns the value of the {@code parsedPathCache} parameter. It would be used to create a Caffeine
-     * {@link Cache} instance using {@link Caffeine#from(String)} mapping raw HTTP paths to parsed pair of
+     * {@link Cache} instance using {@link CaffeineSpec} for mapping raw HTTP paths to parsed pair of
      * path and query, after validation.
      *
      * <p>The default value of this flag is {@value DEFAULT_PARSED_PATH_CACHE_SPEC}. Specify the
      * {@code -Dcom.linecorp.armeria.parsedPathCache=<spec>} JVM option to override the default value.
+     * For example, {@code -Dcom.linecorp.armeria.parsedPathCache=maximumSize=4096,expireAfterAccess=600s}.
      * Also, specify {@code -Dcom.linecorp.armeria.parsedPathCache=off} JVM option to disable it.
      */
     public static Optional<String> parsedPathCacheSpec() {
@@ -690,11 +760,12 @@ public final class Flags {
 
     /**
      * Returns the value of the {@code headerValueCache} parameter. It would be used to create a Caffeine
-     * {@link Cache} instance using {@link Caffeine#from(String)} mapping raw HTTP ascii header values to
+     * {@link Cache} instance using {@link CaffeineSpec} for mapping raw HTTP ASCII header values to
      * {@link String}.
      *
      * <p>The default value of this flag is {@value DEFAULT_HEADER_VALUE_CACHE_SPEC}. Specify the
      * {@code -Dcom.linecorp.armeria.headerValueCache=<spec>} JVM option to override the default value.
+     * For example, {@code -Dcom.linecorp.armeria.headerValueCache=maximumSize=4096,expireAfterAccess=600s}.
      * Also, specify {@code -Dcom.linecorp.armeria.headerValueCache=off} JVM option to disable it.
      */
     public static Optional<String> headerValueCacheSpec() {
@@ -714,12 +785,13 @@ public final class Flags {
 
     /**
      * Returns the value of the {@code compositeServiceCache} parameter. It would be used to create a
-     * Caffeine {@link Cache} instance using {@link Caffeine#from(String)} for routing a request.
+     * Caffeine {@link Cache} instance using {@link CaffeineSpec} for routing a request.
      * The {@link Cache} would hold the mappings of {@link RoutingContext} and the designated
      * {@link ServiceConfig} for a request to improve server performance.
      *
      * <p>The default value of this flag is {@value DEFAULT_COMPOSITE_SERVICE_CACHE_SPEC}. Specify the
      * {@code -Dcom.linecorp.armeria.compositeServiceCache=<spec>} JVM option to override the default value.
+     * For example, {@code -Dcom.linecorp.armeria.compositeServiceCache=maximumSize=256,expireAfterAccess=600s}.
      * Also, specify {@code -Dcom.linecorp.armeria.compositeServiceCache=off} JVM option to disable it.
      */
     public static Optional<String> compositeServiceCacheSpec() {

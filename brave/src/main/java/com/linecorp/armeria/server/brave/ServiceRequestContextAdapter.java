@@ -23,7 +23,6 @@ import javax.annotation.Nullable;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SerializationFormat;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.brave.SpanContextUtil;
@@ -44,6 +43,7 @@ final class ServiceRequestContextAdapter {
         return new HttpServerRequest(ctx);
     }
 
+    @SuppressWarnings("ClassNameSameAsAncestorName")
     private static final class HttpServerRequest extends brave.http.HttpServerRequest {
         private final ServiceRequestContext ctx;
 
@@ -85,7 +85,7 @@ final class ServiceRequestContextAdapter {
         @Override
         @Nullable
         public String url() {
-            return SpanTags.generateUrl(ctx.log());
+            return ctx.request().uri().toString();
         }
 
         @Override
@@ -110,6 +110,7 @@ final class ServiceRequestContextAdapter {
         return new HttpServerResponse(ctx);
     }
 
+    @SuppressWarnings("ClassNameSameAsAncestorName")
     private static final class HttpServerResponse extends brave.http.HttpServerResponse {
         private final ServiceRequestContext ctx;
 
@@ -163,28 +164,6 @@ final class ServiceRequestContextAdapter {
     }
 
     /**
-     * Returns the authority of the {@link RequestLog}.
-     */
-    @Nullable
-    static String authority(RequestLog requestLog) {
-        if (!requestLog.isAvailable(RequestLogAvailability.REQUEST_HEADERS)) {
-            return null;
-        }
-        return requestLog.authority();
-    }
-
-    /**
-     * Returns the {@link SessionProtocol#uriText()} of the {@link RequestLog}.
-     */
-    @Nullable
-    static String protocol(RequestLog requestLog) {
-        if (!requestLog.isAvailable(RequestLogAvailability.SCHEME)) {
-            return null;
-        }
-        return requestLog.scheme().sessionProtocol().uriText();
-    }
-
-    /**
      * Returns the {@link SerializationFormat#uriText()} if it's not {@link SerializationFormat#NONE}.
      */
     @Nullable
@@ -208,6 +187,5 @@ final class ServiceRequestContextAdapter {
         return requestContent instanceof RpcRequest ? ((RpcRequest) requestContent).method() : null;
     }
 
-    private ServiceRequestContextAdapter() {
-    }
+    private ServiceRequestContextAdapter() {}
 }

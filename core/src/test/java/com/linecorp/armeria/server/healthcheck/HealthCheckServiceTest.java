@@ -28,6 +28,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -100,6 +101,20 @@ class HealthCheckServiceTest {
     @BeforeEach
     void clearChecker() {
         checker.setHealthy(true);
+    }
+
+    @AfterEach
+    void ensureNoPendingResponses() {
+        server.server().serviceConfigs().forEach(cfg -> {
+            cfg.service().as(HealthCheckService.class).ifPresent(service -> {
+                if (service.pendingHealthyResponses != null) {
+                    assertThat(service.pendingHealthyResponses).isEmpty();
+                }
+                if (service.pendingUnhealthyResponses != null) {
+                    assertThat(service.pendingUnhealthyResponses).isEmpty();
+                }
+            });
+        });
     }
 
     @Test

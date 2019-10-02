@@ -70,6 +70,7 @@ class ArmeriaHttpUtilTest {
 
         assertThat(concatPaths("/", "a")).isEqualTo("/a");
         assertThat(concatPaths("/", "/a")).isEqualTo("/a");
+        assertThat(concatPaths("/", "/")).isEqualTo("/");
 
         assertThat(concatPaths("/a", "b")).isEqualTo("/a/b");
         assertThat(concatPaths("/a", "/b")).isEqualTo("/a/b");
