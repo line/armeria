@@ -778,7 +778,7 @@ public final class Flags {
 
     /**
      * Returns the value of the {@code httpFileServiceCache} parameter. It would be used to create a Caffeine
-     * {@link Cache} instance using {@link Caffeine#from(String)} for caching file entries.
+     * {@link Cache} instance using {@link CaffeineSpec} for caching file entries.
      *
      * <p>The default value of this flag is {@value DEFAULT_HTTP_FILE_SERVICE_CACHE_SPEC}. Specify the
      * {@code -Dcom.linecorp.armeria.httpFileServiceCache=<spec>} JVM option to override the default value.
