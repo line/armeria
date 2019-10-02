@@ -439,7 +439,7 @@ class GrpcServiceServerTest {
                                        .build()
                                        .decorate(LoggingService.newDecorator())
                                        .decorate((delegate, ctx, req) -> {
-                                           ctx.log().addListener(requestLogQueue::add, 
+                                           ctx.log().addListener(requestLogQueue::add,
                                                                  RequestLogAvailability.COMPLETE);
                                            return delegate.serve(ctx, req);
                                        }));
