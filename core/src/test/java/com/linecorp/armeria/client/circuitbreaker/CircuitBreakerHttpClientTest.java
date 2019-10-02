@@ -147,7 +147,7 @@ public class CircuitBreakerHttpClientTest {
                                   @Override
                                   public void onEventCountUpdated(String circuitBreakerName,
                                                                   EventCount eventCount) throws Exception {
-                                                            ticker.addAndGet(Duration.ofMillis(1).toNanos());
+                                      ticker.addAndGet(Duration.ofMillis(1).toNanos());
                                   }
                               })
                               .build();
