@@ -45,6 +45,12 @@ public final class RoutingResultBuilder {
     @Nullable
     private MediaType negotiatedResponseMediaType;
 
+    RoutingResultBuilder() {}
+
+    RoutingResultBuilder(int expectedNumParams) {
+        pathParams = ImmutableMap.builderWithExpectedSize(expectedNumParams);
+    }
+
     /**
      * Sets the mapped path, encoded as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
      */

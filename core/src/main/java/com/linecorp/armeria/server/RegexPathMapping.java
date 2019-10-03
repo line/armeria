@@ -66,7 +66,7 @@ final class RegexPathMapping extends AbstractPathMapping {
             return null;
         }
 
-        final RoutingResultBuilder builder = RoutingResult.builder()
+        final RoutingResultBuilder builder = RoutingResult.builderWithExpectedNumParams(paramNames.size())
                                                           .path(routingCtx.path())
                                                           .query(routingCtx.query());
         for (String name : paramNames) {
