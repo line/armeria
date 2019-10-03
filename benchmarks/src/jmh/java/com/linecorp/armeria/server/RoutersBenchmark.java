@@ -19,7 +19,7 @@ package com.linecorp.armeria.server;
 import java.util.List;
 
 import org.openjdk.jmh.annotations.Benchmark;
-import org.slf4j.LoggerFactory;
+import org.slf4j.helpers.NOPLogger;
 
 import com.google.common.collect.ImmutableList;
 
@@ -54,8 +54,8 @@ public class RoutersBenchmark {
         );
         HOST = new VirtualHost(
                 "localhost", "localhost", null, SERVICES, RejectedRouteHandler.DISABLED,
-                unused -> LoggerFactory.getLogger(RoutersBenchmark.class),
-                0, 0, false, ContentPreviewerFactory.disabled(), ContentPreviewerFactory.disabled(),
+                unused -> NOPLogger.NOP_LOGGER, 0, 0, false,
+                ContentPreviewerFactory.disabled(), ContentPreviewerFactory.disabled(),
                 AccessLogWriter.disabled(), false);
         ROUTER = Routers.ofVirtualHost(HOST, SERVICES, RejectedRouteHandler.DISABLED);
     }
