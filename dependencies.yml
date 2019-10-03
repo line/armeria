@@ -128,7 +128,7 @@ gradle.plugin.net.davidecavestro:
 io.dropwizard.metrics:
   metrics-core:
     javadocs:
-    - https://metrics.dropwizard.io/4.1.0/apidocs/
+    - https://metrics.dropwizard.io/4.0.0/apidocs/
 
 # Ensure to update the Protobuf version in this file when updating gRPC.
 io.grpc:
