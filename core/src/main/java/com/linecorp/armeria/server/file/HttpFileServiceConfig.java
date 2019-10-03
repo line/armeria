@@ -69,11 +69,12 @@ public final class HttpFileServiceConfig {
 
     @Deprecated
     static Optional<String> validateMaxCacheEntries(int maxCacheEntries) {
+        validateNonNegativeParameter(maxCacheEntries, "maxCacheEntries");
         if (maxCacheEntries == 0) {
             return Optional.empty();
         }
-        return Optional.of(String.format("maximumSize=%d",
-                                         validateNonNegativeParameter(maxCacheEntries, "maxCacheEntries")));
+        final String entryCacheSpec = String.format("maximumSize=%d", maxCacheEntries);
+        return validateEntryCacheSpec(Optional.of(entryCacheSpec));
     }
 
     static int validateMaxCacheEntrySizeBytes(int maxCacheEntrySizeBytes) {
