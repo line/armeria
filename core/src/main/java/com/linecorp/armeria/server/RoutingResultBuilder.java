@@ -38,7 +38,7 @@ public final class RoutingResultBuilder {
     private String query;
 
     @Nullable
-    private ImmutableMap.Builder<String, String> pathParams = null;
+    private ImmutableMap.Builder<String, String> pathParams;
 
     private int score = LOWEST_SCORE;
 
