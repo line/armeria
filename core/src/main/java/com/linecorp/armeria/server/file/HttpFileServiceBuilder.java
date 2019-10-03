@@ -110,7 +110,7 @@ public final class HttpFileServiceBuilder {
      * > HttpFileServiceBuilder.forFileSystem(...)
      * >                       .entryCacheSpec("maximumSize=1024")
      * >                       .build();
-     * }<pre>
+     * }</pre>
      */
     @Deprecated
     public HttpFileServiceBuilder maxCacheEntries(int maxCacheEntries) {
