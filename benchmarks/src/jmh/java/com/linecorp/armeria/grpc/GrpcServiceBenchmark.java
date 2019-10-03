@@ -17,9 +17,15 @@
 package com.linecorp.armeria.grpc;
 
 import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.Level;
+import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
+import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
 
 import com.google.protobuf.Empty;
 
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -29,13 +35,17 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.grpc.shared.GithubApiService;
 import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
+import io.netty.util.ReferenceCountUtil;
 
+@State(Scope.Thread)
 public class GrpcServiceBenchmark {
 
     private static final Service<HttpRequest, HttpResponse> SERVICE =
@@ -58,8 +68,32 @@ public class GrpcServiceBenchmark {
             RequestHeaders.of(HttpMethod.POST, '/' + GithubServiceGrpc.getEmptyMethod().getFullMethodName(),
                               HttpHeaderNames.CONTENT_TYPE, GrpcSerializationFormats.PROTO.mediaType());
 
+    private HttpRequest req;
+    private ServiceRequestContext ctx;
+    private HttpResponse response;
+
+    @Setup(Level.Invocation)
+    public void initBuffers() {
+        req = HttpRequest.of(EMPTY_HEADERS,
+                             HttpData.wrap(ByteBufAllocator.DEFAULT.buffer().writeBytes(FRAMED_EMPTY)));
+        ctx = ServiceRequestContextBuilder.of(req)
+                                          .service(SERVICE)
+                                          .build();
+    }
+
+    @TearDown(Level.Invocation)
+    public void closeResponse() {
+        response.drainAll().join().forEach(ReferenceCountUtil::release);
+    }
+
     @Benchmark
-    public void empty() {
-        final HttpRequest req = HttpRequest.of(EMPTY_HEADERS)
+    public HttpResponse empty() throws Exception {
+        return response = SERVICE.serve(ctx, req);
+    }
+
+    public static void main(String[] args) throws Exception {
+        GrpcServiceBenchmark benchmark = new GrpcServiceBenchmark();
+        benchmark.initBuffers();
+        benchmark.empty();
     }
 }
