@@ -123,9 +123,11 @@ class RoutingContextTest {
 
     static VirtualHost virtualHost() {
         final HttpService service = mock(HttpService.class);
-        final Server server = new ServerBuilder().virtualHost("example.com")
-                                                 .serviceUnder("/", service)
-                                                 .and().build();
+        final Server server = Server.builder()
+                                    .virtualHost("example.com")
+                                    .serviceUnder("/", service)
+                                    .and()
+                                    .build();
         return server.config().findVirtualHost("example.com");
     }
 }

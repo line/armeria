@@ -40,6 +40,7 @@ import com.linecorp.armeria.server.SimpleDecoratingService;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Options;
 import com.linecorp.armeria.server.annotation.Path;
+import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.spring.AnnotatedServiceRegistrationBean;
 import com.linecorp.armeria.spring.MeterIdPrefixFunctionFactory;
@@ -55,15 +56,19 @@ public class ArmeriaConfigurationUtilTest {
                 .setService(new SimpleService())
                 .setDecorators(decorator);
 
-        final ServerBuilder sb1 = new ServerBuilder();
-        configureAnnotatedHttpServices(sb1, ImmutableList.of(bean), MeterIdPrefixFunctionFactory.DEFAULT);
+        final ServerBuilder sb1 = Server.builder();
+        final DocServiceBuilder dsb1 = new DocServiceBuilder();
+        configureAnnotatedHttpServices(sb1, dsb1, ImmutableList.of(bean),
+                                       MeterIdPrefixFunctionFactory.DEFAULT, null);
         verify(decorator).apply(any());
         assertThat(service(sb1).as(MetricCollectingService.class)).isPresent();
 
         reset(decorator);
 
-        final ServerBuilder sb2 = new ServerBuilder();
-        configureAnnotatedHttpServices(sb2, ImmutableList.of(bean), null);
+        final ServerBuilder sb2 = Server.builder();
+        final DocServiceBuilder dsb2 = new DocServiceBuilder();
+        configureAnnotatedHttpServices(sb2, dsb2, ImmutableList.of(bean),
+                                       null, null);
         verify(decorator).apply(any());
         assertThat(service(sb2)).isInstanceOf(AnnotatedHttpService.class);
     }
@@ -77,8 +82,10 @@ public class ArmeriaConfigurationUtilTest {
                 .setService(new SimpleService())
                 .setDecorators(decorator);
 
-        final ServerBuilder sb = new ServerBuilder();
-        configureAnnotatedHttpServices(sb, ImmutableList.of(bean), null);
+        final ServerBuilder sb = Server.builder();
+        final DocServiceBuilder dsb = new DocServiceBuilder();
+        configureAnnotatedHttpServices(sb, dsb, ImmutableList.of(bean),
+                                       null, null);
         verify(decorator).apply(any());
         assertThat(service(sb).as(SimpleDecorator.class)).isPresent();
     }

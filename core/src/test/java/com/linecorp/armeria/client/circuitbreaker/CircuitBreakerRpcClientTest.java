@@ -21,25 +21,26 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
-import org.junit.Test;
-
-import com.google.common.testing.FakeTicker;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.Ticker;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
 
-public class CircuitBreakerRpcClientTest {
+class CircuitBreakerRpcClientTest {
 
     private static final String remoteServiceName = "testService";
 
@@ -60,7 +61,7 @@ public class CircuitBreakerRpcClientTest {
     private static final int minimumRequestThreshold = 2;
 
     @Test
-    public void testSingletonDecorator() {
+    void testSingletonDecorator() {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
         when(circuitBreaker.canRequest()).thenReturn(false);
 
@@ -70,7 +71,7 @@ public class CircuitBreakerRpcClientTest {
     }
 
     @Test
-    public void testPerMethodDecorator() {
+    void testPerMethodDecorator() {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
         when(circuitBreaker.canRequest()).thenReturn(false);
 
@@ -86,7 +87,7 @@ public class CircuitBreakerRpcClientTest {
     }
 
     @Test
-    public void testPerHostDecorator() {
+    void testPerHostDecorator() {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
         when(circuitBreaker.canRequest()).thenReturn(false);
 
@@ -102,7 +103,7 @@ public class CircuitBreakerRpcClientTest {
     }
 
     @Test
-    public void testPerHostAndMethodDecorator() {
+    void testPerHostAndMethodDecorator() {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
         when(circuitBreaker.canRequest()).thenReturn(false);
 
@@ -118,10 +119,10 @@ public class CircuitBreakerRpcClientTest {
     }
 
     @Test
-    public void testDelegate() throws Exception {
-        final FakeTicker ticker = new FakeTicker();
-        final CircuitBreaker circuitBreaker = new CircuitBreakerBuilder(remoteServiceName).ticker(ticker)
-                                                                                          .build();
+    void testDelegate() throws Exception {
+        final CircuitBreaker circuitBreaker = CircuitBreaker.builder(remoteServiceName)
+                                                            .ticker(() -> 0)
+                                                            .build();
 
         @SuppressWarnings("unchecked")
         final Client<RpcRequest, RpcResponse> delegate = mock(Client.class);
@@ -136,7 +137,7 @@ public class CircuitBreakerRpcClientTest {
     }
 
     @Test
-    public void testDelegateIfFailToGetCircuitBreaker() throws Exception {
+    void testDelegateIfFailToGetCircuitBreaker() throws Exception {
         @SuppressWarnings("unchecked")
         final Client<RpcRequest, RpcResponse> delegate = mock(Client.class);
         when(delegate.execute(any(), any())).thenReturn(successRes);
@@ -153,9 +154,9 @@ public class CircuitBreakerRpcClientTest {
     }
 
     @Test
-    public void testStateTransition() throws Exception {
-        final FakeTicker ticker = new FakeTicker();
-        final CircuitBreaker circuitBreaker = buildCircuitBreaker(ticker);
+    void testStateTransition() throws Exception {
+        final AtomicLong ticker = new AtomicLong();
+        final CircuitBreaker circuitBreaker = buildCircuitBreaker(ticker::get);
 
         @SuppressWarnings("unchecked")
         final Client<RpcRequest, RpcResponse> delegate = mock(Client.class);
@@ -170,13 +171,13 @@ public class CircuitBreakerRpcClientTest {
             // Need to call execute() one more to change the state of the circuit breaker.
 
             assertThat(stub.execute(ctxA, reqA).cause()).isInstanceOf(AnticipatedException.class);
-            ticker.advance(Duration.ofMillis(1).toNanos());
+            ticker.addAndGet(Duration.ofMillis(1).toNanos());
         }
 
         // OPEN
         assertThatThrownBy(() -> stub.execute(ctxA, reqA)).isInstanceOf(FailFastException.class);
 
-        ticker.advance(circuitOpenWindow.toNanos());
+        ticker.addAndGet(circuitOpenWindow.toNanos());
 
         // return success future
         when(delegate.execute(ctxA, reqA)).thenReturn(successRes);
@@ -189,16 +190,14 @@ public class CircuitBreakerRpcClientTest {
     }
 
     @Test
-    public void testServiceScope() throws Exception {
-        final FakeTicker ticker = new FakeTicker();
-        final CircuitBreaker circuitBreaker = buildCircuitBreaker(ticker);
+    void testServiceScope() throws Exception {
+        final AtomicLong ticker = new AtomicLong();
+        final CircuitBreaker circuitBreaker = buildCircuitBreaker(ticker::get);
 
         @SuppressWarnings("unchecked")
         final Client<RpcRequest, RpcResponse> delegate = mock(Client.class);
         // Always return failed future for methodA
         when(delegate.execute(ctxA, reqA)).thenReturn(failureRes);
-        // Always return success future for methodB
-        when(delegate.execute(ctxB, reqB)).thenReturn(successRes);
 
         final CircuitBreakerRpcClient stub =
                 new CircuitBreakerRpcClient(delegate, (ctx, req) -> circuitBreaker, strategy());
@@ -209,7 +208,7 @@ public class CircuitBreakerRpcClientTest {
 
             assertThatThrownBy(() -> stub.execute(ctxA, reqA).join())
                     .hasCauseInstanceOf(AnticipatedException.class);
-            ticker.advance(Duration.ofMillis(1).toNanos());
+            ticker.addAndGet(Duration.ofMillis(1).toNanos());
         }
 
         // OPEN (methodA)
@@ -217,12 +216,15 @@ public class CircuitBreakerRpcClientTest {
 
         // OPEN (methodB)
         assertThatThrownBy(() -> stub.execute(ctxB, reqB)).isInstanceOf(FailFastException.class);
+
+        // methodB must not be invoked.
+        verify(delegate, never()).execute(ctxB, reqB);
     }
 
     @Test
-    public void testPerMethodScope() throws Exception {
-        final FakeTicker ticker = new FakeTicker();
-        final Function<String, CircuitBreaker> factory = method -> buildCircuitBreaker(ticker);
+    void testPerMethodScope() throws Exception {
+        final AtomicLong ticker = new AtomicLong();
+        final Function<String, CircuitBreaker> factory = method -> buildCircuitBreaker(ticker::get);
 
         @SuppressWarnings("unchecked")
         final Client<RpcRequest, RpcResponse> delegate = mock(Client.class);
@@ -240,7 +242,7 @@ public class CircuitBreakerRpcClientTest {
 
             assertThatThrownBy(() -> stub.execute(ctxA, reqA).join())
                     .hasCauseInstanceOf(AnticipatedException.class);
-            ticker.advance(Duration.ofMillis(1).toNanos());
+            ticker.addAndGet(Duration.ofMillis(1).toNanos());
         }
 
         // OPEN (methodA)
@@ -250,14 +252,14 @@ public class CircuitBreakerRpcClientTest {
         assertThat(stub.execute(ctxB, reqB).join()).isNull();
     }
 
-    private static CircuitBreaker buildCircuitBreaker(FakeTicker ticker) {
-        return new CircuitBreakerBuilder(remoteServiceName)
-                .minimumRequestThreshold(minimumRequestThreshold)
-                .circuitOpenWindow(circuitOpenWindow)
-                .counterSlidingWindow(counterSlidingWindow)
-                .counterUpdateInterval(counterUpdateInterval)
-                .ticker(ticker)
-                .build();
+    private static CircuitBreaker buildCircuitBreaker(Ticker ticker) {
+        return CircuitBreaker.builder(remoteServiceName)
+                             .minimumRequestThreshold(minimumRequestThreshold)
+                             .circuitOpenWindow(circuitOpenWindow)
+                             .counterSlidingWindow(counterSlidingWindow)
+                             .counterUpdateInterval(counterUpdateInterval)
+                             .ticker(ticker)
+                             .build();
     }
 
     private static void failFastInvocation(

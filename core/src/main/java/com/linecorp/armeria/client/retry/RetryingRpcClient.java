@@ -25,6 +25,7 @@ import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.DefaultRpcResponse;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 
@@ -40,7 +41,8 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
      */
     public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
     newDecorator(RetryStrategyWithContent<RpcResponse> retryStrategyWithContent) {
-        return new RetryingRpcClientBuilder(retryStrategyWithContent).newDecorator();
+        return RetryingRpcClient.builder(retryStrategyWithContent)
+                                .newDecorator();
     }
 
     /**
@@ -51,8 +53,9 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
      */
     public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
     newDecorator(RetryStrategyWithContent<RpcResponse> retryStrategyWithContent, int maxTotalAttempts) {
-        return new RetryingRpcClientBuilder(retryStrategyWithContent).maxTotalAttempts(maxTotalAttempts)
-                                                                     .newDecorator();
+        return RetryingRpcClient.builder(retryStrategyWithContent)
+                                .maxTotalAttempts(maxTotalAttempts)
+                                .newDecorator();
     }
 
     /**
@@ -66,9 +69,18 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
     public static Function<Client<RpcRequest, RpcResponse>, RetryingRpcClient>
     newDecorator(RetryStrategyWithContent<RpcResponse> retryStrategyWithContent,
                  int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
-        return new RetryingRpcClientBuilder(retryStrategyWithContent)
-                .maxTotalAttempts(maxTotalAttempts)
-                .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt).newDecorator();
+        return RetryingRpcClient.builder(retryStrategyWithContent)
+                                .maxTotalAttempts(maxTotalAttempts)
+                                .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt)
+                                .newDecorator();
+    }
+
+    /**
+     * Returns a new {@link RetryingRpcClientBuilder} with the specified {@link RetryStrategyWithContent}.
+     */
+    public static RetryingRpcClientBuilder builder(
+            RetryStrategyWithContent<RpcResponse> retryStrategyWithContent) {
+        return new RetryingRpcClientBuilder(retryStrategyWithContent);
     }
 
     /**
@@ -90,22 +102,23 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
 
     private void doExecute0(ClientRequestContext ctx, RpcRequest req,
                             RpcResponse returnedRes, CompletableFuture<RpcResponse> future) {
+        final int totalAttempts = getTotalAttempts(ctx);
+        final boolean initialAttempt = totalAttempts <= 1;
         if (returnedRes.isDone()) {
             // The response has been cancelled by the client before it receives a response, so stop retrying.
             handleException(ctx, future, new CancellationException(
-                    "the response returned to the client has been cancelled"));
+                    "the response returned to the client has been cancelled"), initialAttempt);
             return;
         }
         if (!setResponseTimeout(ctx)) {
-            handleException(ctx, future, ResponseTimeoutException.get());
+            handleException(ctx, future, ResponseTimeoutException.get(), initialAttempt);
             return;
         }
 
-        final int totalAttempts = getTotalAttempts(ctx);
-        final ClientRequestContext derivedCtx = newDerivedContext(ctx, req, totalAttempts);
+        final ClientRequestContext derivedCtx = newDerivedContext(ctx, null, req, initialAttempt);
         ctx.logBuilder().addChild(derivedCtx.log());
 
-        if (totalAttempts > 1) {
+        if (!initialAttempt) {
             derivedCtx.setAdditionalRequestHeader(ARMERIA_RETRY_COUNT, Integer.toString(totalAttempts - 1));
         }
 
@@ -117,16 +130,14 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
                 if (backoff != null) {
                     final long nextDelay = getNextDelay(derivedCtx, backoff);
                     if (nextDelay < 0) {
-                        onRetryingComplete(ctx);
-                        future.complete(res);
+                        onRetryComplete(ctx, derivedCtx, res, future);
                         return null;
                     }
 
-                    scheduleNextRetry(ctx, cause -> handleException(ctx, future, cause),
+                    scheduleNextRetry(ctx, cause -> handleException(ctx, future, cause, false),
                                       () -> doExecute0(ctx, req, returnedRes, future), nextDelay);
                 } else {
-                    onRetryingComplete(ctx);
-                    future.complete(res);
+                    onRetryComplete(ctx, derivedCtx, res, future);
                 }
                 return null;
             });
@@ -134,9 +145,22 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
         });
     }
 
-    private static void handleException(ClientRequestContext ctx, CompletableFuture<RpcResponse> future,
-                                        Throwable cause) {
+    private static void onRetryComplete(ClientRequestContext ctx, ClientRequestContext derivedCtx,
+                                        RpcResponse res, CompletableFuture<RpcResponse> future) {
         onRetryingComplete(ctx);
+        final HttpRequest actualHttpReq = derivedCtx.request();
+        if (actualHttpReq != null) {
+            ctx.updateRequest(actualHttpReq);
+        }
+        future.complete(res);
+    }
+
+    private static void handleException(ClientRequestContext ctx, CompletableFuture<RpcResponse> future,
+                                        Throwable cause, boolean endRequestLog) {
+        if (endRequestLog) {
+            ctx.logBuilder().endRequest(cause);
+        }
+        ctx.logBuilder().endResponse(cause);
         future.completeExceptionally(cause);
     }
 }

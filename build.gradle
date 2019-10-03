@@ -115,6 +115,11 @@ configure(projectsWithFlags('java')) {
     }
 }
 
+def javaTestHome = System.env.JAVA_TEST_HOME
+if (javaTestHome) {
+    logger.quiet("Overriding JVM for tests with ${javaTestHome}")
+}
+
 // Configure the Javadoc tasks of all projects.
 allprojects {
     tasks.withType(Javadoc) {
@@ -129,6 +134,12 @@ allprojects {
             exclude '**/internal/**'
             exclude '**/thrift/v1/**'
             exclude '**/reactor/core/scheduler/**'
+        }
+    }
+
+    if (javaTestHome) {
+        tasks.withType(Test) {
+            executable "${javaTestHome}/bin/java"
         }
     }
 }

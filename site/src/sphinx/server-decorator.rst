@@ -30,7 +30,7 @@ a decorating service. It enables you to write a decorating service with a single
     import com.linecorp.armeria.common.HttpStatus;
     import com.linecorp.armeria.server.HttpService;
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     HttpService service = ...;
     sb.serviceUnder("/web", service.decorate((delegate, ctx, req) -> {
         if (!authenticate(req)) {
@@ -74,7 +74,7 @@ If your decorator is expected to be reusable, it is recommended to define a new 
         }
     }
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     // Using a lambda expression:
     sb.serviceUnder("/web", service.decorate(delegate -> new AuthService(delegate)));
     // Using reflection:
@@ -175,7 +175,7 @@ routes for a single service. It has a method called ``routes()`` which returns a
         }
     }
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     // No path is specified.
     sb.service(new MyServiceWithRoutes());
     // Override the path provided by routes().
@@ -189,7 +189,7 @@ register it without specifying a path explicitly, because a decorated service is
 
     import com.linecorp.armeria.server.logging.LoggingService;
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
 
     // Works.
     ServiceWithRoutes<HttpRequest, HttpResponse> service =
@@ -208,7 +208,7 @@ Therefore, you need to specify the decorators as extra parameters:
 
 .. code-block:: java
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     // Register a service decorated with two decorators at multiple routes.
     sb.service(new MyServiceWithRoutes(),
                MyDecoratedService::new,
@@ -216,6 +216,82 @@ Therefore, you need to specify the decorators as extra parameters:
 
 A good real-world example of :api:`ServiceWithRoutes` is :api:`GrpcService`.
 See :ref:`server-grpc-decorator` for more information.
+
+Decorating multiple services by path mapping
+--------------------------------------------
+
+If you want to decorate multiple :apiplural:`Service` by path mapping or router matching, you can specify
+decorators using ``decoratorUnder(pathPrefix, ...)`` or ``decorator(Route, ...)``.
+
+.. code-block:: java
+
+    import com.linecorp.armeria.common.HttpHeaderNames;
+
+    VipService vipService = ...;
+    MemberService memberService = ...;
+    HtmlService htmlService = ...;
+    JsService jsService = ...;
+
+    ServerBuilder sb = new ServerBuilder();
+
+    // Register vipService and memberService under '/users' path
+    sb.annotatedService("/users/vip", vipService)
+      .annotatedService("/users/members", memberService);
+
+    // Decorate all services under '/users' path
+    sb.decoratorUnder("/users", (delegate, ctx, req) -> {
+        if (!authenticate(req)) {
+            return HttpResponse.of(HttpStatus.UNAUTHORIZED);
+        }
+        return delegate.serve(ctx, req);
+    });
+
+    // Register htmlService and jsService under '/public' path
+    sb.serviceUnder("/public/html", htmlService)
+      .serviceUnder("/public/js", jsService);
+
+    // Decorate services only when a request method is 'GET'
+    sb.decorator(Route.builder().get("/public").build(), (delegate, ctx, req) -> {
+        final HttpResponse response = delegate.serve(ctx, req);
+        ctx.addAdditionalResponseHeader(HttpHeaderNames.CACHE_CONTROL, "public");
+        return response;
+    });
+
+You can also use fluent route builder with ``routeDecorator()`` to match services being decorated.
+
+.. code-block:: java
+
+    ServerBuilder sb = new ServerBuilder();
+
+    // Register vipService and memberService under '/users' path
+    sb.annotatedService("/users/vip", vipService)
+      .annotatedService("/users/members", memberService);
+
+    // Decorate services under '/users' path with fluent route builder
+    sb.routeDecorator()
+      .pathPrefix("/users")
+      .build((delegate, ctx, req) -> {
+          if (!authenticate(req)) {
+              return HttpResponse.of(HttpStatus.UNAUTHORIZED);
+          }
+          return delegate.serve(ctx, req);
+      });
+
+    // Register htmlService and jsService under '/public' path
+    sb.serviceUnder("/public/html", htmlService)
+      .serviceUnder("/public/js", jsService);
+
+    // Decorate services under '/public' path using 'get' method with path pattern
+    sb.routeDecorator()
+      .get("prefix:/public")
+      .build((delegate, ctx, req) -> {
+          final HttpResponse response = delegate.serve(ctx, req);
+          ctx.addAdditionalResponseHeader(HttpHeaderNames.CACHE_CONTROL, "public");
+          return response;
+      });
+
+
+Please refer to :api:`DecoratingServiceBindingBuilder` for more information.
 
 See also
 --------

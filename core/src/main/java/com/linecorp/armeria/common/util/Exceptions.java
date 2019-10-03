@@ -62,18 +62,6 @@ public final class Exceptions {
     private static final StackTraceElement[] EMPTY_STACK_TRACE = new StackTraceElement[0];
 
     /**
-     * Returns whether the verbose exception mode is enabled. When enabled, the exceptions frequently thrown by
-     * Armeria will have full stack trace. When disabled, such exceptions will have empty stack trace to
-     * eliminate the cost of capturing the stack trace.
-     *
-     * @deprecated Use {@link Flags#verboseExceptions()} instead.
-     */
-    @Deprecated
-    public static boolean isVerbose() {
-        return Flags.verboseExceptions();
-    }
-
-    /**
      * Logs the specified exception if it is {@linkplain #isExpected(Throwable) unexpected}.
      */
     public static void logIfUnexpected(Logger logger, Channel ch, Throwable cause) {

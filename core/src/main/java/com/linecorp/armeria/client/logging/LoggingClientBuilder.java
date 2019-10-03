@@ -16,18 +16,41 @@
 
 package com.linecorp.armeria.client.logging;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
+
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.Client;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.LoggingDecoratorBuilder;
-import com.linecorp.armeria.internal.logging.Sampler;
+import com.linecorp.armeria.common.util.Sampler;
 
 /**
  * Builds a new {@link LoggingClient}.
  */
 public class LoggingClientBuilder extends LoggingDecoratorBuilder<LoggingClientBuilder> {
+    private Sampler<? super ClientRequestContext> sampler = Sampler.always();
+
+    /**
+     * Sets the {@link Sampler} that determines which request needs logging.
+     */
+    public LoggingClientBuilder sampler(Sampler<? super ClientRequestContext> sampler) {
+        this.sampler = requireNonNull(sampler, "sampler");
+        return this;
+    }
+
+    /**
+     * Sets the rate at which to sample requests to log. Any number between {@code 0.0} and {@code 1.0} will
+     * cause a random sample of the requests to be logged.
+     */
+    public LoggingClientBuilder samplingRate(float samplingRate) {
+        checkArgument(0.0 <= samplingRate && samplingRate <= 1.0,
+                      "samplingRate: %s (expected: 0.0 <= samplingRate <= 1.0)", samplingRate);
+        return sampler(Sampler.random(samplingRate));
+    }
 
     /**
      * Returns a newly-created {@link LoggingClient} decorating {@code delegate} based on the properties of
@@ -45,7 +68,7 @@ public class LoggingClientBuilder extends LoggingDecoratorBuilder<LoggingClientB
                                    responseContentSanitizer(),
                                    responseTrailersSanitizer(),
                                    responseCauseSanitizer(),
-                                   Sampler.create(samplingRate()));
+                                   sampler);
     }
 
     /**

@@ -27,12 +27,11 @@ import static org.mockito.Mockito.when;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 import org.junit.ClassRule;
 import org.junit.Test;
-
-import com.google.common.testing.FakeTicker;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -119,7 +118,7 @@ public class CircuitBreakerHttpClientTest {
     @Test
     public void strategyWithoutContent() {
         final CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
-        circuitBreakerIsOpenOnServerError(new CircuitBreakerHttpClientBuilder(strategy));
+        circuitBreakerIsOpenOnServerError(CircuitBreakerHttpClient.builder(strategy));
     }
 
     @Test
@@ -127,44 +126,45 @@ public class CircuitBreakerHttpClientTest {
         final CircuitBreakerStrategyWithContent<HttpResponse> strategy =
                 (ctx, response) -> response.aggregate().handle(
                         (msg, unused1) -> msg.status().codeClass() != HttpStatusClass.SERVER_ERROR);
-        circuitBreakerIsOpenOnServerError(new CircuitBreakerHttpClientBuilder(strategy));
+        circuitBreakerIsOpenOnServerError(CircuitBreakerHttpClient.builder(strategy));
     }
 
     private static void circuitBreakerIsOpenOnServerError(CircuitBreakerHttpClientBuilder builder) {
-        final FakeTicker ticker = new FakeTicker();
+        final AtomicLong ticker = new AtomicLong();
         final int minimumRequestThreshold = 2;
         final Duration circuitOpenWindow = Duration.ofSeconds(60);
         final Duration counterSlidingWindow = Duration.ofSeconds(180);
         final Duration counterUpdateInterval = Duration.ofMillis(1);
 
-        final CircuitBreaker circuitBreaker = new CircuitBreakerBuilder(remoteServiceName)
-                .minimumRequestThreshold(minimumRequestThreshold)
-                .circuitOpenWindow(circuitOpenWindow)
-                .counterSlidingWindow(counterSlidingWindow)
-                .counterUpdateInterval(counterUpdateInterval)
-                .ticker(ticker)
-                .listener(new CircuitBreakerListenerAdapter() {
-                    @Override
-                    public void onEventCountUpdated(String circuitBreakerName, EventCount eventCount)
-                            throws Exception {
-                        ticker.advance(Duration.ofMillis(1).toNanos());
-                    }
-                })
-                .build();
+        final CircuitBreaker circuitBreaker =
+                CircuitBreaker.builder(remoteServiceName)
+                              .minimumRequestThreshold(minimumRequestThreshold)
+                              .circuitOpenWindow(circuitOpenWindow)
+                              .counterSlidingWindow(counterSlidingWindow)
+                              .counterUpdateInterval(counterUpdateInterval)
+                              .ticker(ticker::get)
+                              .listener(new CircuitBreakerListenerAdapter() {
+                                  @Override
+                                  public void onEventCountUpdated(String circuitBreakerName,
+                                                                  EventCount eventCount) throws Exception {
+                                      ticker.addAndGet(Duration.ofMillis(1).toNanos());
+                                  }
+                              })
+                              .build();
 
         final CircuitBreakerMapping mapping = (ctx, req) -> circuitBreaker;
         final HttpClient client = new HttpClientBuilder(server.uri("/"))
                 .decorator(builder.mapping(mapping).newDecorator())
                 .build();
 
-        ticker.advance(Duration.ofMillis(1).toNanos());
+        ticker.addAndGet(Duration.ofMillis(1).toNanos());
         // CLOSED
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
             // Need to call execute() one more to change the state of the circuit breaker.
-            final long currentTime = ticker.read();
+            final long currentTime = ticker.get();
             assertThat(client.get("/unavailable").aggregate().join().status())
                     .isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
-            await().until(() -> currentTime != ticker.read());
+            await().until(() -> currentTime != ticker.get());
         }
 
         await().untilAsserted(() -> assertThat(circuitBreaker.canRequest()).isFalse());
@@ -178,8 +178,8 @@ public class CircuitBreakerHttpClientTest {
             HttpMethod method, int count) {
 
         for (int i = 0; i < count; i++) {
-            assertThatThrownBy(() -> invoke(decorator, HttpRequest.of(method, "/")))
-                    .isInstanceOf(FailFastException.class);
+            final HttpRequest req = HttpRequest.of(method, "/");
+            assertThatThrownBy(() -> invoke(decorator, req)).isInstanceOf(FailFastException.class);
         }
     }
 

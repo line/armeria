@@ -112,26 +112,36 @@ public interface RequestContext extends AttributeMap {
     }
 
     /**
-     * Returns the {@link Request} associated with this context.
+     * Returns the {@link HttpRequest} associated with this context, or {@code null} if there's no
+     * {@link HttpRequest} associated with this context yet.
      */
-    <T extends Request> T request();
+    @Nullable
+    HttpRequest request();
 
     /**
-     * Replaces the {@link Request} associated with this context with the specified one. This method is useful
-     * to a decorator that manipulates HTTP request headers or RPC call parameters.
+     * Returns the {@link RpcRequest} associated with this context, or {@code null} if there's no
+     * {@link RpcRequest} associated with this context.
+     */
+    @Nullable
+    RpcRequest rpcRequest();
+
+    /**
+     * Replaces the {@link HttpRequest} associated with this context with the specified one.
+     * This method is useful to a decorator that manipulates HTTP request headers.
      *
      * <p>Note that it is a bad idea to change the values of the pseudo headers ({@code ":method"},
      * {@code ":path"}, {@code ":scheme"} and {@code ":authority"}) when replacing an {@link HttpRequest},
      * because the properties of this context, such as {@link #path()}, are unaffected by such an attempt.</p>
      *
-     * <p>It is not allowed to replace an {@link RpcRequest} with an {@link HttpRequest} or vice versa.
-     * This method will reject such an attempt and return {@code false}.</p>
-     *
-     * @return {@code true} if the {@link Request} of this context has been replaced. {@code false} otherwise.
-     *
      * @see HttpRequest#of(HttpRequest, RequestHeaders)
      */
-    boolean updateRequest(Request req);
+    void updateRequest(HttpRequest req);
+
+    /**
+     * Replaces the {@link RpcRequest} associated with this context with the specified one.
+     * This method is useful to a decorator that manipulates an RPC call.
+     */
+    void updateRpcRequest(RpcRequest rpcReq);
 
     /**
      * Returns the {@link SessionProtocol} of the current {@link Request}.
@@ -632,11 +642,14 @@ public interface RequestContext extends AttributeMap {
      * Creates a new {@link RequestContext} whose properties and {@link Attribute}s are copied from this
      * {@link RequestContext}, except having its own {@link RequestLog}.
      */
-    RequestContext newDerivedContext();
+    default RequestContext newDerivedContext() {
+        return newDerivedContext(request(), rpcRequest());
+    }
 
     /**
      * Creates a new {@link RequestContext} whose properties and {@link Attribute}s are copied from this
-     * {@link RequestContext}, except having a different {@link Request} and its own {@link RequestLog}.
+     * {@link RequestContext}, except having a different pair of {@link HttpRequest} and {@link RpcRequest}
+     * and its own {@link RequestLog}.
      */
-    RequestContext newDerivedContext(Request request);
+    RequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq);
 }

@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.client.brave;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.util.List;
 
 import javax.annotation.Nullable;
@@ -40,27 +38,21 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
-import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 
-import brave.SpanCustomizer;
 import brave.Tracing.Builder;
-import brave.http.HttpAdapter;
-import brave.http.HttpClientParser;
-import brave.propagation.CurrentTraceContext;
 import brave.propagation.StrictScopeDecorator;
 import brave.sampler.Sampler;
 import brave.test.http.ITHttpAsyncClient;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import okhttp3.Protocol;
-import okhttp3.mockwebserver.MockResponse;
-import zipkin2.Span;
 
 @RunWith(Parameterized.class)
 public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
@@ -69,12 +61,6 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
     public static List<SessionProtocol> sessionProtocols() {
         return ImmutableList.of(SessionProtocol.H1C, SessionProtocol.H2C);
     }
-
-    // // Hide currentTraceContext in ITHttpClient
-    private final CurrentTraceContext currentTraceContext =
-            RequestContextCurrentTraceContext.builder()
-                                             .addScopeDecorator(StrictScopeDecorator.create())
-                                             .build();
 
     private final List<Protocol> protocols;
     private final SessionProtocol sessionProtocol;
@@ -89,8 +75,14 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
     }
 
     @Before
-    public void setupServer() {
+    @Override
+    public void setup() {
+        currentTraceContext =
+                RequestContextCurrentTraceContext.builder()
+                                                 .addScopeDecorator(StrictScopeDecorator.create())
+                                                 .build();
         server.setProtocols(protocols);
+        super.setup();
     }
 
     @Override
@@ -150,66 +142,6 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
     }
 
     @Override
-    @Test
-    public void addsErrorTagOnTransportException() throws Exception {
-        if (sessionProtocol == SessionProtocol.H1C) {
-            // TODO https://github.com/line/armeria/issues/1914
-            throw new AssumptionViolatedException("Armeria does not preserve the error in HTTP/1.1.");
-        }
-        super.addsErrorTagOnTransportException();
-    }
-
-    @Override
-    @Test
-    public void supportsPortableCustomization() throws Exception {
-        String uri = "/foo?z=2&yAA=1";
-
-        close();
-        httpTracing =
-                httpTracing.toBuilder()
-                           .clientParser(new HttpClientParser() {
-                               @Override
-                               public <T> void request(HttpAdapter<T, ?> adapter, T req,
-                                                       SpanCustomizer customizer) {
-                                   customizer.name(
-                                           adapter.method(req).toLowerCase() + ' ' + adapter.path(req));
-                                   customizer.tag("context.visible",
-                                                  String.valueOf(currentTraceContext.get() != null));
-                                   customizer.tag("request_customizer.is_span",
-                                                  String.valueOf(customizer instanceof brave.Span));
-                               }
-
-                               @Override
-                               public <T> void response(HttpAdapter<?, T> adapter, T res,
-                                                        Throwable error,
-                                                        SpanCustomizer customizer) {
-                                   super.response(adapter, res, error, customizer);
-                                   customizer.tag("response_customizer.is_span",
-                                                  String.valueOf(customizer instanceof brave.Span));
-                                   customizer.tag("http.url",
-                                                  ((ArmeriaHttpClientAdapter) adapter).url((RequestLog) res));
-                               }
-                           }).build().clientOf("remote-service");
-
-        client = newClient(server.getPort());
-        server.enqueue(new MockResponse());
-        get(client, uri);
-
-        final Span span = takeSpan();
-        assertThat(span.name())
-                .isEqualTo("get /foo");
-
-        assertThat(span.remoteServiceName())
-                .isEqualTo("remote-service");
-
-        assertThat(span.tags())
-                .containsEntry("http.url", url(uri))
-                .containsEntry("context.visible", "true")
-                .containsEntry("request_customizer.is_span", "false")
-                .containsEntry("response_customizer.is_span", "false");
-    }
-
-    @Override
     protected void closeClient(HttpClient client) {
     }
 
@@ -228,19 +160,15 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
         client.get(pathIncludingQuery);
     }
 
-    private class DummyRequestContext extends NonWrappingRequestContext {
+    private static class DummyRequestContext extends NonWrappingRequestContext {
         DummyRequestContext() {
             super(NoopMeterRegistry.get(), SessionProtocol.HTTP,
-                  HttpMethod.GET, "/", null, HttpRequest.streaming(HttpMethod.GET, "/"));
+                  HttpMethod.GET, "/", null, HttpRequest.streaming(HttpMethod.GET, "/"), null);
         }
 
         @Override
-        public RequestContext newDerivedContext() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public RequestContext newDerivedContext(Request request) {
+        public RequestContext newDerivedContext(@Nullable HttpRequest req,
+                                                @Nullable RpcRequest rpcReq) {
             throw new UnsupportedOperationException();
         }
 

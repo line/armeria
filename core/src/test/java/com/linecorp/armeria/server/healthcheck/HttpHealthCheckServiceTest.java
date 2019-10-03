@@ -110,7 +110,7 @@ public class HttpHealthCheckServiceTest {
 
     @Test
     public void testGet() throws Exception {
-        final ServerBuilder builder = new ServerBuilder();
+        final ServerBuilder builder = Server.builder();
         builder.service("/l7check", new HttpHealthCheckService());
         final Server server = builder.build();
         try {
@@ -137,7 +137,7 @@ public class HttpHealthCheckServiceTest {
 
     @Test
     public void testHead() throws Exception {
-        final ServerBuilder builder = new ServerBuilder();
+        final ServerBuilder builder = Server.builder();
         builder.service("/l7check", new HttpHealthCheckService());
         final Server server = builder.build();
         try {

@@ -16,7 +16,7 @@ with an HTTP ``GET`` method.
 
 .. code-block:: java
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
     sb.annotatedService(new Object() {
         @Get("/hello/{name}")
         public HttpResponse hello(@Param("name") String name) {
@@ -778,7 +778,7 @@ more response types which can be used in the annotated service.
 
       public class MyAnnotatedService {
           @Get("/users")
-          public HttpResult<User> getUsers(@Param int start) {
+          public HttpResult<List<User>> getUsers(@Param int start) {
               List<User> users = ...;
               ResponseHeaders headers = ResponseHeaders.builder()
                   .status(HttpStatus.OK)

@@ -23,7 +23,9 @@ import java.net.StandardProtocolFamily;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
@@ -31,9 +33,11 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.net.HostAndPort;
 import com.google.common.net.InternetDomainName;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -52,7 +56,7 @@ import io.netty.util.NetUtil;
  * in the authority part of a URI. It can be resolved into a host endpoint with
  * {@link #resolve(ClientRequestContext)}.
  */
-public final class Endpoint implements Comparable<Endpoint> {
+public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
     private static final Comparator<Endpoint> NON_GROUP_COMPARATOR =
             Comparator.comparing(Endpoint::host)
@@ -169,6 +173,7 @@ public final class Endpoint implements Comparable<Endpoint> {
     private final String ipAddr;
     private final int port;
     private final int weight;
+    private final List<Endpoint> endpoints;
     @Nullable // null if this endpoint is a group.
     private final HostType hostType;
     @Nullable
@@ -181,6 +186,7 @@ public final class Endpoint implements Comparable<Endpoint> {
         port = 0;
         weight = 0;
         hostType = null;
+        endpoints = ImmutableList.of(this);
     }
 
     private Endpoint(String host, @Nullable String ipAddr, int port, int weight, HostType hostType) {
@@ -190,6 +196,7 @@ public final class Endpoint implements Comparable<Endpoint> {
         this.weight = weight;
         this.hostType = hostType;
         groupName = null;
+        endpoints = ImmutableList.of(this);
 
         // hostType must be HOSTNAME_ONLY when ipAddr is null and vice versa.
         assert ipAddr == null && hostType == HostType.HOSTNAME_ONLY ||
@@ -216,6 +223,16 @@ public final class Endpoint implements Comparable<Endpoint> {
         } else {
             return this;
         }
+    }
+
+    @Override
+    public List<Endpoint> endpoints() {
+        return endpoints;
+    }
+
+    @Override
+    public CompletableFuture<List<Endpoint>> initialEndpointsFuture() {
+        return CompletableFuture.completedFuture(endpoints);
     }
 
     /**
@@ -626,7 +643,7 @@ public final class Endpoint implements Comparable<Endpoint> {
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
         if (this == obj) {
             return true;
         }

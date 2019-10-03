@@ -87,6 +87,13 @@ public final class Server implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
 
+    /**
+     * Creates a new {@link ServerBuilder}.
+     */
+    public static ServerBuilder builder() {
+        return new ServerBuilder();
+    }
+
     private final ServerConfig config;
     @Nullable
     private final DomainNameMapping<SslContext> sslContexts;
@@ -250,7 +257,7 @@ public final class Server implements AutoCloseable {
      * Note that the startup procedure is asynchronous and thus this method returns immediately. To wait until
      * this {@link Server} is fully started up, wait for the returned {@link CompletableFuture}:
      * <pre>{@code
-     * ServerBuilder builder = new ServerBuilder();
+     * ServerBuilder builder = Server.builder();
      * ...
      * Server server = builder.build();
      * server.start().get();

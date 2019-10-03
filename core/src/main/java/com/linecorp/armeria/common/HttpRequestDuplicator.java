@@ -136,7 +136,8 @@ public class HttpRequestDuplicator extends AbstractStreamMessageDuplicator<HttpO
         @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
-                              .addValue(headers()).toString();
+                              .add("headers", headers)
+                              .toString();
         }
     }
 }

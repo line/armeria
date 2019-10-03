@@ -18,6 +18,8 @@ package com.linecorp.armeria.common;
 
 import java.util.List;
 
+import javax.annotation.Nullable;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
@@ -59,7 +61,7 @@ final class DefaultAggregatedHttpResponse extends AbstractAggregatedHttpMessage
     }
 
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
         if (this == obj) {
             return true;
         }

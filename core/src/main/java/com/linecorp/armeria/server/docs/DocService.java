@@ -49,6 +49,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ServerCacheControl;
+import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerConfig;
@@ -80,6 +81,7 @@ import com.linecorp.armeria.server.file.HttpFileService;
 public class DocService extends AbstractCompositeService<HttpRequest, HttpResponse> {
 
     private static final int SPECIFICATION_INDEX = 0;
+    private static final int VERSIONS_INDEX = 1;
 
     private static final ObjectMapper jsonMapper = new ObjectMapper()
             .setSerializationInclusion(Include.NON_ABSENT);
@@ -110,6 +112,7 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
                DocServiceFilter filter) {
 
         super(ofExact("/specification.json", HttpFileService.forVfs(new DocServiceVfs())),
+              ofExact("/versions.json", HttpFileService.forVfs(new DocServiceVfs())),
               ofExact("/injected.js",
                       (ctx, req) -> HttpResponse.of(MediaType.JAVASCRIPT_UTF_8,
                                                     injectedScriptSuppliers.stream()
@@ -161,8 +164,13 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
                 spec = addDocStrings(spec, services);
                 spec = addExamples(spec);
 
+                final List<Version> versions = ImmutableList.copyOf(
+                        Version.identify(DocService.class.getClassLoader()).values());
+
                 vfs(SPECIFICATION_INDEX).setContent(jsonMapper.writerWithDefaultPrettyPrinter()
                                                               .writeValueAsBytes(spec));
+                vfs(VERSIONS_INDEX).setContent(jsonMapper.writerWithDefaultPrettyPrinter()
+                                                         .writeValueAsBytes(versions));
             }
         });
     }
@@ -245,6 +253,7 @@ public class DocService extends AbstractCompositeService<HttpRequest, HttpRespon
     private static EnumValueInfo addEnumValueDocString(EnumInfo e, EnumValueInfo v,
                                                        Map<String, String> docStrings) {
         return new EnumValueInfo(v.name(),
+                                 v.intValue(),
                                  docString(e.name() + '/' + v.name(), v.docString(), docStrings));
     }
 

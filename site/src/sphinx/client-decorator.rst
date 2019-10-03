@@ -46,7 +46,7 @@ If your decorator is expected to be reusable, it is recommended to define a new 
 .. code-block:: java
 
     public class AuditClient extends SimpleDecoratingClient<HttpRequest, HttpResponse> {
-        public AuditClient(Service<HttpRequest, HttpResponse> delegate) {
+        public AuditClient(Client<HttpRequest, HttpResponse> delegate) {
             super(delegate);
         }
 

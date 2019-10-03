@@ -104,11 +104,12 @@ public class GrpcDocServiceTest {
             if (TestUtil.isDocServiceDemoMode()) {
                 sb.http(8080);
             }
-            sb.serviceUnder("/test", new GrpcServiceBuilder()
-                    .addService(new TestService())
-                    .supportedSerializationFormats(GrpcSerializationFormats.values())
-                    .enableUnframedRequests(true)
-                    .build());
+            sb.serviceUnder("/test",
+                            GrpcService.builder()
+                                       .addService(new TestService())
+                                       .supportedSerializationFormats(GrpcSerializationFormats.values())
+                                       .enableUnframedRequests(true)
+                                       .build());
             sb.serviceUnder(
                     "/docs/",
                     new DocServiceBuilder()
@@ -128,9 +129,10 @@ public class GrpcDocServiceTest {
             sb.serviceUnder("/excludeAll/", new DocServiceBuilder()
                     .exclude(DocServiceFilter.ofGrpc())
                     .build());
-            sb.serviceUnder("/", new GrpcServiceBuilder()
-                    .addService(mock(ReconnectServiceImplBase.class))
-                    .build());
+            sb.serviceUnder("/",
+                            GrpcService.builder()
+                                       .addService(mock(ReconnectServiceImplBase.class))
+                                       .build());
         }
     };
 

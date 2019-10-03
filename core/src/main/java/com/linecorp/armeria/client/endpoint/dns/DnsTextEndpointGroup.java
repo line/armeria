@@ -52,7 +52,20 @@ public final class DnsTextEndpointGroup extends DnsEndpointGroup {
      *                if the record contains unsupported content.
      */
     public static DnsTextEndpointGroup of(String hostname, Function<byte[], Endpoint> mapping) {
-        return new DnsTextEndpointGroupBuilder(hostname, mapping).build();
+        return DnsTextEndpointGroup.builder(hostname, mapping).build();
+    }
+
+    /**
+     * Returns a new {@link DnsTextEndpointGroupBuilder} with
+     * the specified hostname and {@link Function} mapping.
+     *
+     * @param hostname the hostname to query DNS queries for
+     * @param mapping the {@link Function} that maps the content of a {@code TXT} record into
+     *                an {@link Endpoint}. The {@link Function} is expected to return {@code null}
+     *                if the record contains unsupported content.
+     */
+    public static DnsTextEndpointGroupBuilder builder(String hostname, Function<byte[], Endpoint> mapping) {
+        return new DnsTextEndpointGroupBuilder(hostname, mapping);
     }
 
     private final Function<byte[], Endpoint> mapping;

@@ -39,7 +39,7 @@ import com.linecorp.armeria.server.Service;
  * Builds a new {@link CorsService} or its decorator function.
  * <h2>Example</h2>
  * <pre>{@code
- * ServerBuilder sb = new ServerBuilder();
+ * ServerBuilder sb = Server.builder();
  * sb.service("/cors", myService.decorate(
  *          CorsServiceBuilder.forOrigins("http://example.com", "http://example2.com")
  *                            .shortCircuit()
@@ -220,7 +220,7 @@ public final class CorsServiceBuilder {
      *
      * <p>The headers that are available by default are:
      * <ul>
-     *   <li>{@code Cahce-Control}</li>
+     *   <li>{@code Cache-Control}</li>
      *   <li>{@code Content-Language}</li>
      *   <li>{@code Content-Type}</li>
      *   <li>{@code Expires}</li>

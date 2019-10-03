@@ -102,6 +102,15 @@ public final class CircuitBreakerRpcClient extends CircuitBreakerClient<RpcReque
     }
 
     /**
+     * Returns a new {@link CircuitBreakerRpcClientBuilder} with
+     * the specified {@link CircuitBreakerStrategyWithContent}.
+     */
+    public static CircuitBreakerRpcClientBuilder builder(
+            CircuitBreakerStrategyWithContent<RpcResponse> strategyWithContent) {
+        return new CircuitBreakerRpcClientBuilder(strategyWithContent);
+    }
+
+    /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
     CircuitBreakerRpcClient(Client<RpcRequest, RpcResponse> delegate, CircuitBreakerMapping mapping,

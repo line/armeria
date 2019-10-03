@@ -24,6 +24,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.StringJoiner;
 
+import javax.annotation.Nullable;
+
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
@@ -271,7 +273,7 @@ final class DefaultRoute implements Route {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (this == o) {
             return true;
         }

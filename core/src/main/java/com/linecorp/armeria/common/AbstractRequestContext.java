@@ -21,12 +21,16 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.JavaVersionSpecific;
 import com.linecorp.armeria.server.DefaultServiceRequestContext;
 
 import io.netty.channel.ChannelFutureListener;
@@ -44,12 +48,42 @@ public abstract class AbstractRequestContext implements RequestContext {
     private boolean timedOut;
 
     @Override
+    public final Executor executor() {
+        return RequestContext.super.executor();
+    }
+
+    @Override
+    public final Executor contextAwareExecutor() {
+        return RequestContext.super.contextAwareExecutor();
+    }
+
+    @Override
     public final EventLoop contextAwareEventLoop() {
         return RequestContext.super.contextAwareEventLoop();
     }
 
     @Override
+    public final SafeCloseable push() {
+        return RequestContext.super.push();
+    }
+
+    @Override
+    public final SafeCloseable push(boolean runCallbacks) {
+        return RequestContext.super.push(runCallbacks);
+    }
+
+    @Override
+    public final SafeCloseable pushIfAbsent() {
+        return RequestContext.super.pushIfAbsent();
+    }
+
+    @Override
     public final Executor makeContextAware(Executor executor) {
+        return RequestContext.super.makeContextAware(executor);
+    }
+
+    @Override
+    public final ExecutorService makeContextAware(ExecutorService executor) {
         return RequestContext.super.makeContextAware(executor);
     }
 
@@ -125,7 +159,7 @@ public abstract class AbstractRequestContext implements RequestContext {
 
     @Override
     public final <T> CompletionStage<T> makeContextAware(CompletionStage<T> stage) {
-        final CompletableFuture<T> future = new RequestContextAwareCompletableFuture<>(this);
+        final CompletableFuture<T> future = JavaVersionSpecific.get().newRequestContextAwareFuture(this);
         stage.handle((result, cause) -> {
             try (SafeCloseable ignored = pushIfAbsent()) {
                 if (cause != null) {
@@ -195,7 +229,7 @@ public abstract class AbstractRequestContext implements RequestContext {
     }
 
     @Override
-    public final boolean equals(Object obj) {
+    public final boolean equals(@Nullable Object obj) {
         return super.equals(obj);
     }
 }

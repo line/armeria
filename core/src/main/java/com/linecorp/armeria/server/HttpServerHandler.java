@@ -49,11 +49,11 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.ProtocolViolationException;
-import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -65,7 +65,6 @@ import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.AbstractHttp2ConnectionHandler;
-import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.ChannelUtil;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.Http2ObjectEncoder;
@@ -529,7 +528,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             return;
         }
 
-        if (reqCtx.method() == HttpMethod.HEAD || ArmeriaHttpUtil.isContentAlwaysEmpty(status)) {
+        if (reqCtx.method() == HttpMethod.HEAD || status.isContentAlwaysEmpty()) {
             resContent = null;
         } else if (resContent == null) {
             resContent = status.toHttpData();
@@ -566,7 +565,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         assert resContent == null || !resContent.isEmpty() : resContent;
 
         // No need to consume further since the response is ready.
-        final DecodedHttpRequest req = reqCtx.request();
+        final DecodedHttpRequest req = (DecodedHttpRequest) reqCtx.request();
+        assert req != null;
         req.close();
 
         final boolean hasContent = resContent != null;
@@ -624,7 +624,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         // https://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.4
         // prohibits to send message body for below cases.
         // and in those cases, content should be empty.
-        if (req.method() == HttpMethod.HEAD || ArmeriaHttpUtil.isContentAlwaysEmpty(headers.status())) {
+        if (req.method() == HttpMethod.HEAD || headers.status().isContentAlwaysEmpty()) {
             return;
         }
         headers.setInt(HttpHeaderNames.CONTENT_LENGTH, contentLength);
@@ -685,22 +685,18 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         EarlyRespondingRequestContext(Channel channel, MeterRegistry meterRegistry,
                                       SessionProtocol sessionProtocol, HttpMethod method, String path,
-                                      @Nullable String query, Request request) {
-            super(meterRegistry, sessionProtocol, method, path, query, request);
+                                      @Nullable String query, HttpRequest request) {
+            super(meterRegistry, sessionProtocol, method, path, query, request, null);
             this.channel = requireNonNull(channel, "channel");
             requestLog = new DefaultRequestLog(this);
         }
 
         @Override
-        public RequestContext newDerivedContext() {
-            return newDerivedContext(request());
-        }
-
-        @Override
-        public RequestContext newDerivedContext(Request request) {
+        public RequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
             // There are no attributes which should be copied to a new instance.
+            requireNonNull(req, "req");
             return new EarlyRespondingRequestContext(channel, meterRegistry(), sessionProtocol(),
-                                                     method(), path(), query(), request);
+                                                     method(), path(), query(), req);
         }
 
         @Override

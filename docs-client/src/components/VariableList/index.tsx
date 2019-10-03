@@ -22,9 +22,16 @@ import TableRow from '@material-ui/core/TableRow';
 import Typography from '@material-ui/core/Typography';
 import ExpandLess from '@material-ui/icons/ExpandLess';
 import ExpandMore from '@material-ui/icons/ExpandMore';
-import React from 'react';
+import React, { useReducer } from 'react';
 
+import { makeStyles } from '@material-ui/core';
 import { Specification } from '../../lib/specification';
+
+const useStyles = makeStyles({
+  hidden: {
+    display: 'none',
+  },
+});
 
 interface Variable {
   name: string;
@@ -38,20 +45,22 @@ interface Variable {
 interface Props {
   title: string;
   variables: Variable[];
-  hasLocation: boolean;
   specification: Specification;
 }
 
-export default function({
-  title,
-  variables,
-  hasLocation,
-  specification,
-}: Props) {
+export default function({ title, variables, specification }: Props) {
   const hasBean = variables.some(
     (variable) =>
       !!variable.childFieldInfos && variable.childFieldInfos.length > 0,
   );
+
+  const hasLocation = variables.some(
+    (variable) =>
+      variable.location &&
+      variable.location.length > 0 &&
+      variable.location !== 'UNSPECIFIED',
+  );
+
   return (
     <>
       <Typography variant="h6">{title}</Typography>
@@ -68,13 +77,11 @@ export default function({
         </TableHead>
         <TableBody>
           <FieldInfos
+            hasLocation={hasLocation}
             indent={0}
             title={title}
-            hasLocation={hasLocation}
             variables={variables}
             specification={specification}
-            hasBean={hasBean}
-            childIndex={0}
           />
         </TableBody>
       </Table>
@@ -83,168 +90,135 @@ export default function({
   );
 }
 
-interface State {
-  isEmpty: boolean;
-  isBeans: boolean[];
-  openBeans: boolean[];
-  colSpanLength: number;
-  childStates: { [key: number]: State };
-}
-
 interface OwnProps {
   indent: number;
-  hasBean: boolean;
-  state?: State;
-  setChildStateInParent?: (index: number, childState: State) => void;
-  childIndex: number;
+  hasLocation: boolean;
+  hidden?: boolean;
 }
 
 type FieldInfosProps = OwnProps & Props;
 
-class FieldInfos extends React.Component<FieldInfosProps, State> {
-  private static generateKey(pre: string): string {
-    return `${pre}_${new Date().getTime()}`;
-  }
-
-  private static indentString(indent: number, s: string): string {
-    return `${'\xa0'.repeat(indent)}${s}`;
-  }
-
-  private static formatLocation(s: string): string {
-    return this.formatRequirement(s);
-  }
-
-  private static formatRequirement(s: string): string {
-    const lowerCase = s.toLowerCase();
-    if ('unspecified' === lowerCase) {
-      return '-';
-    }
-
-    return lowerCase;
-  }
-
-  constructor(props: FieldInfosProps) {
-    super(props);
-
-    this.setChildStateInParent = this.setChildStateInParent.bind(this);
-
-    if (props.state) {
-      this.state = props.state;
-      return;
-    }
-
-    const fieldInfos = props.variables;
-
-    const isEmpty = fieldInfos.length === 0;
-    let isBeans: boolean[] = [];
-    let openBeans: boolean[] = [];
-    if (!isEmpty) {
-      isBeans = fieldInfos.map(
-        ({ childFieldInfos }) =>
-          !!childFieldInfos && childFieldInfos.length > 0,
-      );
-
-      openBeans = Array(fieldInfos.length).fill(false);
-    }
-
-    let colSpanLength = 4;
-    if (this.props.hasLocation) {
-      colSpanLength += 1;
-    }
-    if (this.props.hasBean) {
-      colSpanLength += 1;
-    }
-
-    const childStates = {};
-    this.state = {
-      isEmpty,
-      isBeans,
-      openBeans,
-      colSpanLength,
-      childStates,
-    };
-  }
-
-  public render() {
-    return (
-      <>
-        {!this.state.isEmpty ? (
-          this.props.variables.map((variable, index) => (
-            <React.Fragment key={FieldInfos.generateKey(variable.name)}>
-              <TableRow onClick={() => this.handleCollapse(index)}>
-                <TableCell>
-                  <code>
-                    {FieldInfos.indentString(this.props.indent, variable.name)}
-                  </code>
-                </TableCell>
-                {this.props.hasLocation && variable.location && (
-                  <TableCell>
-                    <code>{FieldInfos.formatLocation(variable.location)}</code>
-                  </TableCell>
-                )}
-                <TableCell>
-                  <code>
-                    {FieldInfos.formatRequirement(variable.requirement)}
-                  </code>
-                </TableCell>
-                <TableCell>
-                  <code>
-                    {this.props.specification.getTypeSignatureHtml(
-                      variable.typeSignature,
-                    )}
-                  </code>
-                </TableCell>
-                <TableCell>{variable.docString}</TableCell>
-                {this.props.hasBean && this.showExpandIfBean(index)}
-              </TableRow>
-              {this.state.openBeans[index] && (
-                <FieldInfos
-                  {...this.props}
-                  indent={this.props.indent + 2}
-                  variables={variable.childFieldInfos!}
-                  state={this.state.childStates[index]}
-                  childIndex={index}
-                  setChildStateInParent={this.setChildStateInParent}
-                />
-              )}
-            </React.Fragment>
-          ))
-        ) : (
-          <TableRow>
-            <TableCell colSpan={this.state.colSpanLength}>
-              There are no {this.props.title.toLowerCase()}
-            </TableCell>
-          </TableRow>
-        )}
-      </>
-    );
-  }
-
-  private setChildStateInParent(index: number, childState: State) {
-    this.state.childStates[index] = childState;
-  }
-
-  private showExpandIfBean(index: number) {
-    return (
-      <>
-        <TableCell>
-          {this.state.isBeans[index] &&
-            (this.state.openBeans[index] ? <ExpandLess /> : <ExpandMore />)}
-        </TableCell>
-      </>
-    );
-  }
-
-  private handleCollapse = (index: number) => {
-    const state = this.state;
-    if (!state.isBeans[index]) {
-      return;
-    }
-    state.openBeans[index] = !state.openBeans[index];
-    this.setState(state);
-
-    if (this.props.setChildStateInParent) {
-      this.props.setChildStateInParent(this.props.childIndex, state);
-    }
-  };
+interface FieldInfoProps {
+  hasLocation: boolean;
+  hidden?: boolean;
+  indent: number;
+  variable: Variable;
+  specification: Specification;
+  title: string;
 }
+
+const indentString = (indent: number, s: string): string => {
+  return `${'\xa0'.repeat(indent)}${s}`;
+};
+
+const formatRequirement = (s: string): string => {
+  const lowerCase = s.toLowerCase();
+  if ('unspecified' === lowerCase) {
+    return '-';
+  }
+
+  return lowerCase;
+};
+
+// Same formatting for location as requirement at least for now.
+const formatLocation = formatRequirement;
+
+const FieldInfo: React.FunctionComponent<FieldInfoProps> = ({
+  hasLocation,
+  hidden,
+  indent,
+  specification,
+  title,
+  variable,
+}) => {
+  const styles = useStyles();
+
+  const [expanded, toggleExpanded] = useReducer((value) => !value, false);
+
+  const hasChildren =
+    variable.childFieldInfos && variable.childFieldInfos.length > 0;
+
+  return (
+    <>
+      <TableRow
+        onClick={toggleExpanded}
+        className={hidden ? styles.hidden : ''}
+      >
+        <TableCell>
+          <code>{indentString(indent, variable.name)}</code>
+        </TableCell>
+        {hasLocation && variable.location && (
+          <TableCell>
+            <code>{formatLocation(variable.location)}</code>
+          </TableCell>
+        )}
+        <TableCell>
+          <code>{formatRequirement(variable.requirement)}</code>
+        </TableCell>
+        <TableCell>
+          <code>
+            {specification.getTypeSignatureHtml(variable.typeSignature)}
+          </code>
+        </TableCell>
+        <TableCell>{variable.docString}</TableCell>
+        {hasChildren && (
+          <TableCell>{expanded ? <ExpandLess /> : <ExpandMore />}</TableCell>
+        )}
+      </TableRow>
+      {hasChildren && (
+        <FieldInfos
+          hasLocation={hasLocation}
+          hidden={hidden || !expanded}
+          indent={indent + 2}
+          variables={variable.childFieldInfos!}
+          specification={specification}
+          title={title}
+        />
+      )}
+    </>
+  );
+};
+
+const FieldInfos: React.FunctionComponent<FieldInfosProps> = (props) => {
+  const styles = useStyles();
+
+  const isEmpty = props.variables.length === 0;
+
+  let colSpanLength = 4;
+
+  if (props.variables.some((variable) => !!variable.location)) {
+    colSpanLength += 1;
+  }
+
+  if (
+    props.variables.some(
+      (variable) =>
+        variable.childFieldInfos && variable.childFieldInfos.length > 0,
+    )
+  ) {
+    colSpanLength += 1;
+  }
+  return (
+    <>
+      {!isEmpty ? (
+        props.variables.map((variable, index) => (
+          <FieldInfo
+            hasLocation={props.hasLocation}
+            hidden={props.hidden}
+            key={`${variable.name}-${index}`}
+            indent={props.indent}
+            variable={variable}
+            specification={props.specification}
+            title={props.title}
+          />
+        ))
+      ) : (
+        <TableRow className={props.hidden ? styles.hidden : ''}>
+          <TableCell colSpan={colSpanLength}>
+            There are no {props.title.toLowerCase()}
+          </TableCell>
+        </TableRow>
+      )}
+    </>
+  );
+};

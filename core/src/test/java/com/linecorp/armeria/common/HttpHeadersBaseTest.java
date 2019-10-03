@@ -33,6 +33,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.Assert.fail;
 
+import java.net.URI;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -689,6 +690,12 @@ public class HttpHeadersBaseTest {
         assertThat(headers.contains("name1", "Value2")).isFalse();
         assertThat(headers.contains("name2", "value3")).isTrue();
         assertThat(headers.contains("name2", "Value3")).isFalse();
+    }
+
+    @Test
+    public void testUri() {
+        final HttpHeadersBase headers = newHttp2Headers();
+        assertThat(headers.uri()).isEqualTo(URI.create("https://netty.io/index.html"));
     }
 
     private static void verifyAllPseudoHeadersPresent(HttpHeadersBase headers) {

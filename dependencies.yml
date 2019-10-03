@@ -2,6 +2,16 @@
 # NB: Update NOTICE.txt and add/remove LICENSE.*.txt when adding/removing a dependency.
 #
 
+boms:
+  - com.fasterxml.jackson:jackson-bom:2.10.0
+  - io.dropwizard.metrics:metrics-bom:4.1.0
+  - io.grpc:grpc-bom:1.24.0
+  # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
+  - io.netty:netty-bom:4.1.42.Final
+  - io.zipkin.brave:brave-bom:5.7.0
+  - org.eclipse.jetty:jetty-bom:9.4.21.v20190926
+  - org.junit:junit-bom:5.5.2
+
 cglib:
   cglib: { version: '3.3.0' }
 
@@ -13,23 +23,20 @@ ch.qos.logback:
 
 com.auth0:
   java-jwt:
-    version: '3.8.1'
+    version: '3.8.3'
     javadocs:
-    - https://static.javadoc.io/com.auth0/java-jwt/3.8.1/
+    - https://static.javadoc.io/com.auth0/java-jwt/3.8.3/
 
 com.fasterxml.jackson.core:
   jackson-annotations:
-    version: &JACKSON_VERSION '2.9.9'
     javadocs:
-    - https://fasterxml.github.io/jackson-annotations/javadoc/2.9/
+    - https://fasterxml.github.io/jackson-annotations/javadoc/2.10/
   jackson-core:
-    version: *JACKSON_VERSION
     javadocs:
-    - https://fasterxml.github.io/jackson-core/javadoc/2.9/
+    - https://fasterxml.github.io/jackson-core/javadoc/2.10/
   jackson-databind:
-    version: *JACKSON_VERSION
     javadocs:
-    - https://fasterxml.github.io/jackson-databind/javadoc/2.9/
+    - https://fasterxml.github.io/jackson-databind/javadoc/2.10/
 
 com.github.ben-manes.caffeine:
   caffeine:
@@ -46,14 +53,14 @@ com.github.jengelman.gradle.plugins:
   shadow: { version: '5.1.0' }
 
 com.google.api:
-  gax-grpc: { version: '1.47.1' }
+  gax-grpc: { version: '1.49.0' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
 
 com.google.guava:
   guava:
-    version: &GUAVA_VERSION '28.0-jre'
+    version: &GUAVA_VERSION '28.1-jre'
     exclusions:
     - com.google.errorprone:error_prone_annotations
     - com.google.j2objc:j2objc-annotations
@@ -99,7 +106,7 @@ com.moowork.gradle:
   gradle-node-plugin: { version: '1.3.1' }
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.23' }
+  checkstyle: { version: '8.25' }
 
 com.spotify:
   completable-futures:
@@ -110,7 +117,7 @@ com.spotify:
 
 com.squareup.retrofit2:
   retrofit:
-    version: &RETROFIT2_VERSION '2.6.1'
+    version: &RETROFIT2_VERSION '2.6.2'
     javadocs:
     - https://square.github.io/retrofit/2.x/retrofit/
   converter-jackson: { version: *RETROFIT2_VERSION }
@@ -120,25 +127,19 @@ gradle.plugin.net.davidecavestro:
 
 io.dropwizard.metrics:
   metrics-core:
-    version: &DROPWIZARD_VERSION '4.1.0'
     javadocs:
-    - https://metrics.dropwizard.io/4.0.0/apidocs/
-  metrics-json: { version: *DROPWIZARD_VERSION }
+    - https://metrics.dropwizard.io/4.1.0/apidocs/
 
 # Ensure to update the Protobuf version in this file when updating gRPC.
 io.grpc:
   grpc-core:
-    version: &GRPC_VERSION '1.23.0'
     javadocs:
     - https://grpc.io/grpc-java/javadoc/
     - https://developers.google.com/protocol-buffers/docs/reference/java/
     exclusions:
     - com.google.errorprone:error_prone_annotations
     - org.codehaus.mojo:animal-sniffer-annotations
-  grpc-alts: { version: *GRPC_VERSION }
-  grpc-auth: { version: *GRPC_VERSION }
   grpc-interop-testing:
-    version: *GRPC_VERSION
     exclusions:
     - com.google.errorprone:error_prone_annotations
     - com.google.guava:guava-jdk5
@@ -150,76 +151,55 @@ io.grpc:
     - io.netty:netty-transport
     - io.netty:netty-tcnative-boringssl-static
     - io.grpc:grpc-alts
-  grpc-netty-shaded: { version: *GRPC_VERSION }
-  grpc-okhttp: { version: *GRPC_VERSION }
-  grpc-protobuf: { version: *GRPC_VERSION }
-  grpc-services: { version: *GRPC_VERSION }
-  grpc-stub: { version: *GRPC_VERSION }
-  grpc-testing: { version: *GRPC_VERSION }
 
 io.micrometer:
   micrometer-core:
-    version: &MICROMETER_VERSION '1.2.0'
+    version: &MICROMETER_VERSION '1.3.0'
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-core/1.2.0/
+    - https://static.javadoc.io/io.micrometer/micrometer-core/1.3.0/
   micrometer-registry-prometheus:
     version: *MICROMETER_VERSION
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.2.0/
+    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.3.0/
   micrometer-spring-legacy:
     version: *MICROMETER_VERSION
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.2.0/
+    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.3.0/
     exclusions:
     - org.springframework:spring-web
     - org.springframework:spring-webmvc
 
 io.netty:
   netty-common:
-    version: &NETTY_VERSION '4.1.39.Final'
     javadocs:
     - https://netty.io/4.1/api/
-  netty-buffer: { version: *NETTY_VERSION }
-  netty-codec: { version: *NETTY_VERSION }
-  netty-codec-dns: { version: *NETTY_VERSION }
-  netty-codec-http: { version: *NETTY_VERSION }
-  netty-codec-http2: { version: *NETTY_VERSION }
-  netty-codec-haproxy: { version: *NETTY_VERSION }
-  netty-handler: { version: *NETTY_VERSION }
-  netty-resolver: { version: *NETTY_VERSION }
-  netty-resolver-dns: { version: *NETTY_VERSION }
-  netty-transport: { version: *NETTY_VERSION }
-  netty-transport-native-epoll: { version: *NETTY_VERSION }
-  netty-transport-native-unix-common: { version: *NETTY_VERSION }
-  netty-tcnative-boringssl-static: { version: '2.0.25.Final' }
+  # TODO: get netty-bom to claim this version!
+  netty-tcnative-boringssl-static: { version: '2.0.26.Final' }
 
 io.projectreactor:
   reactor-core:
-    version: &REACTOR_VERSION '3.2.11.RELEASE'
+    version: &REACTOR_VERSION '3.3.0.RELEASE'
     javadocs:
     - https://projectreactor.io/docs/core/release/api/
   reactor-test: { version: *REACTOR_VERSION }
 
 io.prometheus:
   simpleclient_common:
-    version: '0.6.0'
+    version: '0.7.0'
     javadocs:
     - https://prometheus.github.io/client_java/
 
 io.reactivex.rxjava2:
   rxjava:
-    version: '2.2.11'
+    version: '2.2.12'
     javadocs:
     - http://reactivex.io/RxJava/2.x/javadoc/
 
 io.zipkin.brave:
   brave:
-    version: &BRAVE_VERSION '5.6.10'
     # ':site:javadoc' fails when we use a newer version of Javadoc.
     javadocs:
     - https://static.javadoc.io/io.zipkin.brave/brave/5.6.3/
-  brave-instrumentation-http: { version: *BRAVE_VERSION }
-  brave-instrumentation-http-tests: { version: *BRAVE_VERSION }
 
 it.unimi.dsi:
   fastutil:
@@ -229,7 +209,7 @@ it.unimi.dsi:
       to: com.linecorp.armeria.internal.shaded.fastutil
 
 jakarta.annotation:
-  jakarta.annotation-api: { version: '1.3.4' }
+  jakarta.annotation-api: { version: '1.3.5' }
 
 javax.inject:
   javax.inject: { version: '1' }
@@ -245,24 +225,16 @@ junit:
 
 org.junit.jupiter:
   junit-jupiter-api:
-    version: &JUNIT_JUPITER_VERSION '5.5.1'
     javadocs:
-    - https://junit.org/junit5/docs/5.5.1/api/
-  junit-jupiter-engine:
-    version: *JUNIT_JUPITER_VERSION
-  junit-jupiter-params:
-    version: *JUNIT_JUPITER_VERSION
+    - https://junit.org/junit5/docs/5.5.2/api/
 org.junit.platform:
   junit-platform-commons:
-    version: &JUNIT_PLATFORM_VERSION '1.5.1'
+    version: &JUNIT_PLATFORM_VERSION '1.5.2'
   junit-platform-launcher:
     version: *JUNIT_PLATFORM_VERSION
-org.junit.vintage:
-  junit-vintage-engine:
-    version: *JUNIT_JUPITER_VERSION
 
 kr.motd.gradle:
-  sphinx-gradle-plugin: { version: '2.6.0' }
+  sphinx-gradle-plugin: { version: '2.6.1' }
 
 # We do not depend on log4j. We just need this to stop dependency-management-plugin from
 # complaining about its bad POM.
@@ -274,14 +246,14 @@ me.champeau.gradle:
   jmh-gradle-plugin: { version: '0.5.0-rc-2' }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION '2.8.0' }
+  json-unit: { version: &JSON_UNIT_VERSION '2.8.1' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 net.sf.proguard:
   proguard-gradle: { version: '6.1.1' }
 
 net.shibboleth.utilities:
-  java-support: { version: '7.3.0' }
+  java-support: { version: '7.5.0' }
 
 org.apache.curator:
   curator-recipes:
@@ -302,7 +274,7 @@ org.apache.hbase:
 
 org.apache.httpcomponents:
   httpclient:
-    version: '4.5.9'
+    version: '4.5.10'
     exclusions:
     - commons-logging:commons-logging
 
@@ -323,7 +295,7 @@ org.apache.thrift:
 
 org.apache.tomcat.embed:
   tomcat-embed-core:
-    version: &TOMCAT_VERSION '9.0.22'
+    version: &TOMCAT_VERSION '9.0.26'
     javadocs:
     - https://tomcat.apache.org/tomcat-9.0-doc/api/
   tomcat-embed-jasper: { version: *TOMCAT_VERSION }
@@ -341,11 +313,11 @@ org.assertj:
   assertj-core: { version: '3.13.2' }
 
 org.awaitility:
-  awaitility: { version: '3.1.6' }
+  awaitility: { version: '4.0.1' }
 
 org.bouncycastle:
   bcprov-jdk15on:
-    version: '1.62'
+    version: '1.63'
     relocations:
     - from: org.bouncycastle
       to: com.linecorp.armeria.internal.shaded.bouncycastle
@@ -365,24 +337,17 @@ org.dmonix.junit:
   zookeeper-junit: { version: '1.2' }
 
 org.eclipse.jetty:
-  apache-jsp: { version: &JETTY_VERSION '9.4.19.v20190610' }
-  apache-jstl: { version: *JETTY_VERSION }
   jetty-annotations:
-    version: *JETTY_VERSION
     exclusions:
     - org.ow2.asm:asm
     - org.ow2.asm:asm-commons
   jetty-server:
-    version: *JETTY_VERSION
     javadocs:
     - https://www.eclipse.org/jetty/javadoc/current/
-  jetty-webapp: { version: *JETTY_VERSION }
 
 org.eclipse.jetty.alpn:
   alpn-api: { version: '1.1.3.v20160715' }
 
-org.eclipse.jetty.http2:
-  http2-server: { version: *JETTY_VERSION }
 
 org.hibernate.validator:
   hibernate-validator: { version: '6.0.17.Final' }
@@ -398,7 +363,7 @@ org.jsoup:
   jsoup: { version: '1.12.1' }
 
 org.mockito:
-  mockito-core: { version: &MOCKITO_VERSION '3.0.0' }
+  mockito-core: { version: &MOCKITO_VERSION '3.1.0' }
   mockito-junit-jupiter: { version: *MOCKITO_VERSION }
 
 org.mortbay.jetty.alpn:
@@ -409,7 +374,7 @@ org.openjdk.jmh:
   jmh-generator-annprocess: { version: *JMH_VERSION }
 
 org.opensaml:
-  opensaml-core: { version: &OPENSAML_VERSION '3.3.0' }
+  opensaml-core: { version: &OPENSAML_VERSION '3.4.3' }
   opensaml-saml-api: { version: *OPENSAML_VERSION }
   opensaml-saml-impl: { version: *OPENSAML_VERSION }
   opensaml-messaging-api: { version: *OPENSAML_VERSION }
@@ -418,7 +383,7 @@ org.opensaml:
   opensaml-soap-impl: { version: *OPENSAML_VERSION }
 
 org.reactivestreams:
-  reactive-streams: { version: &REACTIVE_STREAMS_VERSION '1.0.2' }
+  reactive-streams: { version: &REACTIVE_STREAMS_VERSION '1.0.3' }
   reactive-streams-tck:
     version: *REACTIVE_STREAMS_VERSION
     exclusions:
@@ -443,7 +408,7 @@ org.slf4j:
 
 org.springframework.boot:
   spring-boot-starter:
-    version: &SPRING_BOOT_VERSION '2.1.7.RELEASE'
+    version: &SPRING_BOOT_VERSION '2.1.8.RELEASE'
     javadocs:
     - https://docs.spring.io/spring/docs/current/javadoc-api/
   spring-boot-actuator-autoconfigure: { version: *SPRING_BOOT_VERSION }

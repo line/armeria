@@ -18,6 +18,8 @@ package com.linecorp.armeria.common.grpc.protocol;
 
 import java.util.concurrent.CompletableFuture;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.ClientOption;
@@ -27,12 +29,13 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.ByteBufOrStream;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.Listener;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
 
@@ -91,19 +94,29 @@ public class UnaryGrpcClient {
                                          "Non-successful HTTP response code: " + msg.status());
                              }
 
-                             final String grpcStatus = msg.headers().get(GrpcHeaderNames.GRPC_STATUS);
-                             if (grpcStatus != null && !"0".equals(grpcStatus)) {
-                                 String grpcMessage = msg.headers().get(GrpcHeaderNames.GRPC_MESSAGE);
-                                 if (grpcMessage != null) {
-                                     grpcMessage = StatusMessageEscaper.unescape(grpcMessage);
-                                 }
-                                 throw new ArmeriaStatusException(
-                                         Integer.parseInt(grpcStatus),
-                                         grpcMessage);
+                             // Status can either be in the headers or trailers depending on error
+                             String grpcStatus = msg.headers().get(GrpcHeaderNames.GRPC_STATUS);
+                             if (grpcStatus != null) {
+                                 checkGrpcStatus(grpcStatus, msg.headers());
+                             } else {
+                                 grpcStatus = msg.trailers().get(GrpcHeaderNames.GRPC_STATUS);
+                                 checkGrpcStatus(grpcStatus, msg.trailers());
                              }
 
                              return msg.content().array();
                          });
+    }
+
+    private void checkGrpcStatus(@Nullable String grpcStatus, HttpHeaders headers) {
+        if (grpcStatus != null && !"0".equals(grpcStatus)) {
+            String grpcMessage = headers.get(GrpcHeaderNames.GRPC_MESSAGE);
+            if (grpcMessage != null) {
+                grpcMessage = StatusMessageEscaper.unescape(grpcMessage);
+            }
+            throw new ArmeriaStatusException(
+                    Integer.parseInt(grpcStatus),
+                    grpcMessage);
+        }
     }
 
     private static final class GrpcFramingDecorator extends SimpleDecoratingHttpClient {
@@ -153,7 +166,7 @@ public class UnaryGrpcClient {
 
                            try (ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(new Listener() {
                                @Override
-                               public void messageRead(ByteBufOrStream unframed) {
+                               public void messageRead(DeframedMessage unframed) {
                                    final ByteBuf buf = unframed.buf();
                                    // Compression not supported.
                                    assert buf != null;

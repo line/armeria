@@ -204,12 +204,6 @@ class GrpcServiceServerTest {
             metadata.put(CUSTOM_VALUE_KEY, "custom value");
 
             final ServiceRequestContext ctx = ServiceRequestContext.current();
-            // Metadata takes priority, this trailer will not be written since it has the same name.
-            ctx.addAdditionalResponseTrailer(
-                    STRING_VALUE_KEY.name(),
-                    Base64.getEncoder().encodeToString(
-                            StringValue.newBuilder().setValue("context trailer 1").build().toByteArray()));
-
             // gRPC wire format allow comma-separated binary headers.
             ctx.addAdditionalResponseTrailer(
                     INT_32_VALUE_KEY.name(),
@@ -392,14 +386,14 @@ class GrpcServiceServerTest {
             sb.maxRequestLength(0);
 
             sb.service(
-                    new GrpcServiceBuilder()
-                            .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
-                            .addService(ServerInterceptors.intercept(
-                                    new UnitTestServiceImpl(),
-                                    REPLACE_EXCEPTION, ADD_TO_CONTEXT))
-                            .enableUnframedRequests(true)
-                            .supportedSerializationFormats(GrpcSerializationFormats.values())
-                            .build(),
+                    GrpcService.builder()
+                               .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
+                               .addService(ServerInterceptors.intercept(
+                                       new UnitTestServiceImpl(),
+                                       REPLACE_EXCEPTION, ADD_TO_CONTEXT))
+                               .enableUnframedRequests(true)
+                               .supportedSerializationFormats(GrpcSerializationFormats.values())
+                               .build(),
                     service -> service
                             .decorate(LoggingService.newDecorator())
                             .decorate((delegate, ctx, req) -> {
@@ -410,16 +404,17 @@ class GrpcServiceServerTest {
             // For simplicity, mount onto a subpath with custom options
             sb.serviceUnder(
                     "/json-preserving/",
-                    new GrpcServiceBuilder()
-                            .addService(new UnitTestServiceImpl())
-                            .supportedSerializationFormats(GrpcSerializationFormats.values())
-                            .jsonMarshallerCustomizer(marshaller -> marshaller.preservingProtoFieldNames(true))
-                            .build());
+                    GrpcService.builder()
+                               .addService(new UnitTestServiceImpl())
+                               .supportedSerializationFormats(GrpcSerializationFormats.values())
+                               .jsonMarshallerCustomizer(
+                                       marshaller -> marshaller.preservingProtoFieldNames(true))
+                               .build());
 
             sb.service(
-                    new GrpcServiceBuilder()
-                            .addService(ProtoReflectionService.newInstance())
-                            .build(),
+                    GrpcService.builder()
+                               .addService(ProtoReflectionService.newInstance())
+                               .build(),
                     service -> service.decorate(LoggingService.newDecorator()));
         }
     };
@@ -431,20 +426,23 @@ class GrpcServiceServerTest {
             sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
             sb.maxRequestLength(0);
 
-            sb.serviceUnder("/", new GrpcServiceBuilder()
-                    .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
-                    .addService(ServerInterceptors.intercept(
-                            new UnitTestServiceImpl(),
-                            REPLACE_EXCEPTION, ADD_TO_CONTEXT))
-                    .enableUnframedRequests(true)
-                    .supportedSerializationFormats(GrpcSerializationFormats.values())
-                    .useBlockingTaskExecutor(true)
-                    .build()
-                    .decorate(LoggingService.newDecorator())
-                    .decorate((delegate, ctx, req) -> {
-                        ctx.log().addListener(requestLogQueue::add, RequestLogAvailability.COMPLETE);
-                        return delegate.serve(ctx, req);
-                    }));
+            sb.serviceUnder("/",
+                            GrpcService.builder()
+                                       .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
+                                       .addService(ServerInterceptors.intercept(
+                                               new UnitTestServiceImpl(),
+                                               REPLACE_EXCEPTION, ADD_TO_CONTEXT))
+                                       .enableUnframedRequests(true)
+                                       .supportedSerializationFormats(
+                                               GrpcSerializationFormats.values())
+                                       .useBlockingTaskExecutor(true)
+                                       .build()
+                                       .decorate(LoggingService.newDecorator())
+                                       .decorate((delegate, ctx, req) -> {
+                                           ctx.log().addListener(requestLogQueue::add,
+                                                                 RequestLogAvailability.COMPLETE);
+                                           return delegate.serve(ctx, req);
+                                       }));
         }
     };
 
@@ -455,14 +453,16 @@ class GrpcServiceServerTest {
             sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
             sb.maxRequestLength(0);
 
-            sb.serviceUnder("/", new GrpcServiceBuilder()
-                    .addService(new UnitTestServiceImpl())
-                    .build()
-                    .decorate(LoggingService.newDecorator())
-                    .decorate((delegate, ctx, req) -> {
-                        ctx.log().addListener(requestLogQueue::add, RequestLogAvailability.COMPLETE);
-                        return delegate.serve(ctx, req);
-                    }));
+            sb.serviceUnder("/",
+                            GrpcService.builder()
+                                       .addService(new UnitTestServiceImpl())
+                                       .build()
+                                       .decorate(LoggingService.newDecorator())
+                                       .decorate((delegate, ctx, req) -> {
+                                           ctx.log().addListener(requestLogQueue::add,
+                                                                 RequestLogAvailability.COMPLETE);
+                                           return delegate.serve(ctx, req);
+                                       }));
         }
     };
 
@@ -473,14 +473,16 @@ class GrpcServiceServerTest {
             sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
             sb.maxRequestLength(Long.MAX_VALUE);
 
-            sb.serviceUnder("/", new GrpcServiceBuilder()
-                    .addService(new UnitTestServiceImpl())
-                    .build()
-                    .decorate(LoggingService.newDecorator())
-                    .decorate((delegate, ctx, req) -> {
-                        ctx.log().addListener(requestLogQueue::add, RequestLogAvailability.COMPLETE);
-                        return delegate.serve(ctx, req);
-                    }));
+            sb.serviceUnder("/",
+                            GrpcService.builder()
+                                       .addService(new UnitTestServiceImpl())
+                                       .build()
+                                       .decorate(LoggingService.newDecorator())
+                                       .decorate((delegate, ctx, req) -> {
+                                           ctx.log().addListener(requestLogQueue::add,
+                                                                 RequestLogAvailability.COMPLETE);
+                                           return delegate.serve(ctx, req);
+                                       }));
         }
     };
 

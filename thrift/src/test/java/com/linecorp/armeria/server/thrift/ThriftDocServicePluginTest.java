@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.thrift;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.docs.DocServiceUtil.unifyFilter;
+import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newEnumInfo;
 import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newExceptionInfo;
 import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newFieldInfo;
 import static com.linecorp.armeria.server.thrift.ThriftDocServicePlugin.newStructInfo;
@@ -45,7 +46,6 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.EnumInfo;
@@ -160,12 +160,18 @@ public class ThriftDocServicePluginTest {
     }
 
     private static Map<String, ServiceInfo> services(DocServiceFilter include, DocServiceFilter exclude) {
-        final Server server = new ServerBuilder()
-                .service(Route.builder().exact("/hello").build(), THttpService.of(mock(AsyncIface.class)))
-                .service(Route.builder().exact("/foo").build(),
-                         THttpService.ofFormats(mock(FooService.AsyncIface.class),
-                                                ThriftSerializationFormats.COMPACT))
-                .build();
+        final Server server =
+                Server.builder()
+                      .service(Route.builder()
+                                    .exact("/hello")
+                                    .build(),
+                               THttpService.of(mock(AsyncIface.class)))
+                      .service(Route.builder()
+                                    .exact("/foo")
+                                    .build(),
+                               THttpService.ofFormats(mock(FooService.AsyncIface.class),
+                                                      ThriftSerializationFormats.COMPACT))
+                      .build();
 
         // Generate the specification with the ServiceConfigs.
         final ServiceSpecification specification = generator.generateSpecification(
@@ -187,12 +193,12 @@ public class ThriftDocServicePluginTest {
 
     @Test
     public void testNewEnumInfo() {
-        final EnumInfo enumInfo = new EnumInfo(FooEnum.class);
+        final EnumInfo enumInfo = newEnumInfo(FooEnum.class);
 
         assertThat(enumInfo).isEqualTo(new EnumInfo(FooEnum.class.getName(),
-                                                    Arrays.asList(new EnumValueInfo("VAL1"),
-                                                                  new EnumValueInfo("VAL2"),
-                                                                  new EnumValueInfo("VAL3"))));
+                                                    Arrays.asList(new EnumValueInfo("VAL1", 1),
+                                                                  new EnumValueInfo("VAL2", 2),
+                                                                  new EnumValueInfo("VAL3", 3))));
     }
 
     @Test

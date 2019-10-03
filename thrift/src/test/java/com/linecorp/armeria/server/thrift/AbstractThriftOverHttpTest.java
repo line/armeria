@@ -93,7 +93,7 @@ public abstract class AbstractThriftOverHttpTest {
     }
 
     static {
-        final ServerBuilder sb = new ServerBuilder();
+        final ServerBuilder sb = Server.builder();
         try {
             sb.http(0);
             sb.https(0);

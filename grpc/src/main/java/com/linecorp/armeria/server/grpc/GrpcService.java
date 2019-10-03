@@ -89,6 +89,13 @@ public final class GrpcService extends AbstractHttpService
 
     static final int NO_MAX_INBOUND_MESSAGE_SIZE = -1;
 
+    /**
+     * Returns a new {@link GrpcServiceBuilder}.
+     */
+    public static GrpcServiceBuilder builder() {
+        return new GrpcServiceBuilder();
+    }
+
     private final HandlerRegistry registry;
     private final Set<Route> routes;
     private final DecompressorRegistry decompressorRegistry;
@@ -236,7 +243,7 @@ public final class GrpcService extends AbstractHttpService
         }
 
         if (protoReflectionService != null) {
-            Map<String, ServerServiceDefinition> grpcServices =
+            final Map<String, ServerServiceDefinition> grpcServices =
                     cfg.server().config().virtualHosts().stream()
                        .flatMap(host -> host.serviceConfigs().stream())
                        .map(serviceConfig -> serviceConfig.service().as(GrpcService.class))

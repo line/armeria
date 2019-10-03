@@ -28,10 +28,7 @@ import java.net.InetAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Clock;
-import java.time.Instant;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import javax.annotation.Nullable;
@@ -40,6 +37,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Ascii;
+
+import com.linecorp.armeria.internal.JavaVersionSpecific;
 
 /**
  * Provides utilities for accessing the information about the current system and process.
@@ -152,14 +151,7 @@ public final class SystemInfo {
      * Java 8.
      */
     public static long currentTimeMicros() {
-        if (javaVersion() == 8) {
-            return TimeUnit.MILLISECONDS.toMicros(System.currentTimeMillis());
-        } else {
-            // Java 9+ support higher precision wall time.
-            final Instant now = Clock.systemUTC().instant();
-            return TimeUnit.SECONDS.toMicros(now.getEpochSecond()) + TimeUnit.NANOSECONDS.toMicros(
-                    now.getNano());
-        }
+        return JavaVersionSpecific.get().currentTimeMicros();
     }
 
     private static boolean isLinux() {
@@ -295,7 +287,7 @@ public final class SystemInfo {
                         logger.info("PID: {} (from VMManagement.getProcessId())", pid);
                     }
                 } catch (Throwable t) {
-                    logFailure("VMManagment.getProcessId()", false, t);
+                    logFailure("VMManagement.getProcessId()", false, t);
                 }
             }
 

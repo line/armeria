@@ -47,7 +47,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerConfig;
 
 import io.netty.channel.Channel;
@@ -71,6 +70,7 @@ class ArmeriaHttpUtilTest {
 
         assertThat(concatPaths("/", "a")).isEqualTo("/a");
         assertThat(concatPaths("/", "/a")).isEqualTo("/a");
+        assertThat(concatPaths("/", "/")).isEqualTo("/");
 
         assertThat(concatPaths("/a", "b")).isEqualTo("/a/b");
         assertThat(concatPaths("/a", "/b")).isEqualTo("/a/b");
@@ -492,9 +492,10 @@ class ArmeriaHttpUtilTest {
     }
 
     private static ServerConfig serverConfig() {
-        final Server server = new ServerBuilder().defaultHostname("foo")
-                                                 .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                                                 .build();
+        final Server server = Server.builder()
+                                    .defaultHostname("foo")
+                                    .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                    .build();
         return server.config();
     }
 }

@@ -30,6 +30,7 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -97,7 +98,7 @@ import com.linecorp.armeria.internal.grpc.TestServiceImpl;
 import com.linecorp.armeria.internal.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
+import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
@@ -110,6 +111,7 @@ import io.grpc.ServerCall.Listener;
 import io.grpc.ServerCallHandler;
 import io.grpc.ServerInterceptor;
 import io.grpc.ServerInterceptors;
+import io.grpc.ServerServiceDefinition;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.grpc.StatusException;
@@ -139,50 +141,53 @@ public class GrpcClientTest {
             sb.maxRequestLength(MAX_MESSAGE_SIZE);
             sb.idleTimeoutMillis(0);
 
-            sb.serviceUnder("/", new GrpcServiceBuilder()
-                    .addService(
-                            ServerInterceptors.intercept(
-                                    new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()),
-                                    new ServerInterceptor() {
-                                        @Override
-                                        public <REQ, RESP> Listener<REQ> interceptCall(
-                                                ServerCall<REQ, RESP> call,
-                                                Metadata requestHeaders,
-                                                ServerCallHandler<REQ, RESP> next) {
-                                            HttpHeadersBuilder fromClient = HttpHeaders.builder();
-                                            MetadataUtil.fillHeaders(requestHeaders, fromClient);
-                                            CLIENT_HEADERS_CAPTURE.set(fromClient.build());
-                                            return next.startCall(
-                                                    new SimpleForwardingServerCall<REQ, RESP>(call) {
-                                                        @Override
-                                                        public void close(Status status, Metadata trailers) {
-                                                            trailers.merge(requestHeaders);
-                                                            super.close(status, trailers);
-                                                        }
-                                                    }, requestHeaders);
-                                        }
-                                    }))
-                    .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
-                    .setMaxOutboundMessageSizeBytes(MAX_MESSAGE_SIZE)
-                    .build()
-                    .decorate((client, ctx, req) -> {
-                        final HttpResponse res = client.serve(ctx, req);
-                        return new FilteredHttpResponse(res) {
-                            private boolean headersReceived;
-
-                            @Override
-                            protected HttpObject filter(HttpObject obj) {
-                                if (obj instanceof HttpHeaders) {
-                                    if (!headersReceived) {
-                                        headersReceived = true;
-                                    } else {
-                                        SERVER_TRAILERS_CAPTURE.set((HttpHeaders) obj);
-                                    }
+            final ServerServiceDefinition interceptService =
+                    ServerInterceptors.intercept(
+                            new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()),
+                            new ServerInterceptor() {
+                                @Override
+                                public <REQ, RESP> Listener<REQ> interceptCall(
+                                        ServerCall<REQ, RESP> call,
+                                        Metadata requestHeaders,
+                                        ServerCallHandler<REQ, RESP> next) {
+                                    HttpHeadersBuilder fromClient = HttpHeaders.builder();
+                                    MetadataUtil.fillHeaders(requestHeaders, fromClient);
+                                    CLIENT_HEADERS_CAPTURE.set(fromClient.build());
+                                    return next.startCall(
+                                            new SimpleForwardingServerCall<REQ, RESP>(call) {
+                                                @Override
+                                                public void close(Status status, Metadata trailers) {
+                                                    trailers.merge(requestHeaders);
+                                                    super.close(status, trailers);
+                                                }
+                                            }, requestHeaders);
                                 }
-                                return obj;
-                            }
-                        };
-                    }));
+                            });
+
+            sb.serviceUnder("/",
+                            GrpcService.builder()
+                                       .addService(interceptService)
+                                       .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
+                                       .setMaxOutboundMessageSizeBytes(MAX_MESSAGE_SIZE)
+                                       .build()
+                                       .decorate((client, ctx, req) -> {
+                                           final HttpResponse res = client.serve(ctx, req);
+                                           return new FilteredHttpResponse(res) {
+                                               private boolean headersReceived;
+
+                                               @Override
+                                               protected HttpObject filter(HttpObject obj) {
+                                                   if (obj instanceof HttpHeaders) {
+                                                       if (!headersReceived) {
+                                                           headersReceived = true;
+                                                       } else {
+                                                           SERVER_TRAILERS_CAPTURE.set((HttpHeaders) obj);
+                                                       }
+                                                   }
+                                                   return obj;
+                                               }
+                                           };
+                                       }));
         }
     };
 
@@ -226,6 +231,13 @@ public class GrpcClientTest {
             assertThat(rpcReq.params()).containsExactly(EMPTY);
             assertThat(rpcRes.get()).isEqualTo(EMPTY);
         });
+    }
+
+    @Test
+    public void emptyUnary_grpcWeb() throws Exception {
+        TestServiceBlockingStub stub = new ClientBuilder("gproto-web+" + server.httpUri("/"))
+                .build(TestServiceBlockingStub.class);
+        assertThat(stub.emptyCall(EMPTY)).isEqualTo(EMPTY);
     }
 
     @Test
@@ -350,6 +362,45 @@ public class GrpcClientTest {
         recorder.awaitCompletion();
         assertSuccess(recorder);
         assertThat(recorder.getValues()).containsExactlyElementsOf(goldenResponses);
+
+        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+            assertThat(rpcReq.params()).containsExactly(request);
+            assertThat(rpcRes.get()).isEqualTo(goldenResponses.get(0));
+        });
+    }
+
+    @Test
+    public void serverStreaming_blocking() throws Exception {
+        final StreamingOutputCallRequest request =
+                StreamingOutputCallRequest.newBuilder()
+                                          .setResponseType(COMPRESSABLE)
+                                          .addResponseParameters(
+                                                  ResponseParameters.newBuilder()
+                                                                    .setSize(31415)
+                                                                    .setIntervalUs(1000))
+                                          .addResponseParameters(ResponseParameters.newBuilder()
+                                                                                   .setSize(9)
+                                                                                   .setIntervalUs(1000))
+                                          .build();
+        final List<StreamingOutputCallResponse> goldenResponses = Arrays.asList(
+                StreamingOutputCallResponse.newBuilder()
+                                           .setPayload(Payload.newBuilder()
+                                                              .setType(COMPRESSABLE)
+                                                              .setBody(ByteString.copyFrom(new byte[31415])))
+                                           .build(),
+                StreamingOutputCallResponse.newBuilder()
+                                           .setPayload(Payload.newBuilder()
+                                                              .setType(COMPRESSABLE)
+                                                              .setBody(ByteString.copyFrom(new byte[9])))
+                                           .build());
+
+        final List<StreamingOutputCallResponse> responses = new ArrayList<>();
+        final Iterator<StreamingOutputCallResponse> it = blockingStub.streamingOutputCall(request);
+        while (it.hasNext()) {
+            responses.add(it.next());
+        }
+
+        assertThat(responses).containsExactlyElementsOf(goldenResponses);
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
             assertThat(rpcReq.params()).containsExactly(request);

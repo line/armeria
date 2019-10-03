@@ -35,7 +35,7 @@ public class Main {
      * @param port the port that the server is to be bound to
      */
     static Server newServer(int port) {
-        final ServerBuilder sb = new ServerBuilder();
+        final ServerBuilder sb = Server.builder();
         return sb.http(port)
                  .annotatedService("/pathPattern", new PathPatternService())
                  .annotatedService("/injection", new InjectionService())

@@ -18,7 +18,7 @@ package com.linecorp.armeria.shared;
 
 import java.util.concurrent.Executor;
 
-import com.linecorp.armeria.common.util.EventLoopThreadFactory;
+import com.linecorp.armeria.common.util.ThreadFactories;
 
 import io.netty.channel.DefaultEventLoop;
 import io.netty.channel.DefaultEventLoopGroup;
@@ -53,8 +53,8 @@ public class EventLoopJmhExecutor extends MultithreadEventLoopGroup {
         return CURRENT_EVENT_LOOP.get();
     }
 
-    public EventLoopJmhExecutor(int numThreads, String threadPrefix) {
-        super(numThreads, new EventLoopThreadFactory(threadPrefix));
+    public EventLoopJmhExecutor(int numThreads, String threadNamePrefix) {
+        super(numThreads, ThreadFactories.builder(threadNamePrefix).eventLoop(true).build());
     }
 
     @Override

@@ -130,7 +130,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
 
     @Override
     public WebServer getWebServer(HttpHandler httpHandler) {
-        final ServerBuilder sb = new ServerBuilder();
+        final ServerBuilder sb = Server.builder();
 
         final SessionProtocol protocol;
         final Ssl ssl = getSsl();
@@ -241,8 +241,10 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                               findBeans(HttpServiceRegistrationBean.class),
                               meterIdPrefixFunctionFactory);
         configureAnnotatedHttpServices(sb,
+                                       docServiceBuilder,
                                        findBeans(AnnotatedServiceRegistrationBean.class),
-                                       meterIdPrefixFunctionFactory);
+                                       meterIdPrefixFunctionFactory,
+                                       settings.getDocsPath());
         configureServerWithArmeriaSettings(sb, settings,
                                            findBean(MeterRegistry.class).orElse(Metrics.globalRegistry),
                                            findBeans(HealthChecker.class));

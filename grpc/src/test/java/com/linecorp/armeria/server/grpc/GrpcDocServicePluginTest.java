@@ -49,6 +49,7 @@ import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceImplBase;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceWithRoutes;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
@@ -172,22 +173,24 @@ public class GrpcDocServicePluginTest {
     }
 
     private static Map<String, ServiceInfo> services(DocServiceFilter include, DocServiceFilter exclude) {
-        final ServerBuilder serverBuilder = new ServerBuilder();
+        final ServerBuilder serverBuilder = Server.builder();
 
         // The case where a GrpcService is added to ServerBuilder without a prefix.
         final ServiceWithRoutes<HttpRequest, HttpResponse> prefixlessService =
-                new GrpcServiceBuilder().addService(mock(TestServiceImplBase.class)).build();
+                GrpcService.builder()
+                           .addService(mock(TestServiceImplBase.class))
+                           .build();
         serverBuilder.service(prefixlessService);
 
         // The case where a GrpcService is added to ServerBuilder with a prefix.
         serverBuilder.service(
-                Route.builder().prefix("/test").build(),
-                new GrpcServiceBuilder().addService(mock(UnitTestServiceImplBase.class)).build());
+                Route.builder().pathPrefix("/test").build(),
+                GrpcService.builder().addService(mock(UnitTestServiceImplBase.class)).build());
 
         // Another GrpcService with a different prefix.
         serverBuilder.service(
-                Route.builder().prefix("/reconnect").build(),
-                new GrpcServiceBuilder().addService(mock(ReconnectServiceImplBase.class)).build());
+                Route.builder().pathPrefix("/reconnect").build(),
+                GrpcService.builder().addService(mock(ReconnectServiceImplBase.class)).build());
 
         // Make sure all services and their endpoints exist in the specification.
         final ServiceSpecification specification = generator.generateSpecification(
@@ -211,9 +214,9 @@ public class GrpcDocServicePluginTest {
         final EnumInfo enumInfo = generator.newEnumInfo(CompressionType.getDescriptor());
         assertThat(enumInfo).isEqualTo(new EnumInfo(
                 "armeria.grpc.testing.CompressionType",
-                ImmutableList.of(new EnumValueInfo("NONE"),
-                                 new EnumValueInfo("GZIP"),
-                                 new EnumValueInfo("DEFLATE"))));
+                ImmutableList.of(new EnumValueInfo("NONE", 0),
+                                 new EnumValueInfo("GZIP", 1),
+                                 new EnumValueInfo("DEFLATE", 3))));
     }
 
     @Test

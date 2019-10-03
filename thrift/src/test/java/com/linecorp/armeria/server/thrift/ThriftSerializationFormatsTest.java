@@ -134,7 +134,7 @@ public class ThriftSerializationFormatsTest {
 
     @Test
     public void contentTypeNotThrift() throws Exception {
-        // Browser clients often send a non-thrift content type.
+        // Browser clients often send a non-Thrift content type.
         final HttpHeaders headers = HttpHeaders.of(HttpHeaderNames.CONTENT_TYPE,
                                                    "text/plain; charset=utf-8");
         final HelloService.Iface client =

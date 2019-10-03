@@ -18,18 +18,19 @@ package com.linecorp.armeria.client.retry;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.client.retry.DefaultBackoffHolder.defaultBackoff;
 import static com.linecorp.armeria.client.retry.FixedBackoff.NO_DELAY;
-import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
 
+import com.linecorp.armeria.common.util.Unwrappable;
+
 /**
  * Controls back off between attempts in a single retry operation.
  */
 @FunctionalInterface
-public interface Backoff {
+public interface Backoff extends Unwrappable {
 
     /**
      * Returns the default {@link Backoff}.
@@ -96,8 +97,8 @@ public interface Backoff {
      * Creates a new {@link Backoff} that computes backoff delay using one of
      * {@link #exponential(long, long, double)}, {@link #fibonacci(long, long)}, {@link #fixed(long)}
      * and {@link #random(long, long)} chaining with {@link #withJitter(double, double)} and
-     * {@link #withMaxAttempts(int)} from the {@code specification}.
-     * This is the format for the {@code specification}:
+     * {@link #withMaxAttempts(int)} from the {@code specification} string that conforms to
+     * the following format:
      * <ul>
      *   <li>{@code exponential=[initialDelayMillis:maxDelayMillis:multiplier]} is for
      *       {@link Backoff#exponential(long, long, double)} (multiplier will be 2.0 if it's omitted)</li>
@@ -111,8 +112,7 @@ public interface Backoff {
      * </ul>
      * The order of options does not matter, and the {@code specification} needs at least one option.
      * If you don't specify the base option exponential backoff will be used. If you only specify
-     * a base option, jitter and maxAttempts will be set by default values.
-     * These are a few examples:
+     * a base option, jitter and maxAttempts will be set by default values. For example:
      * <ul>
      *   <li>{@code exponential=200:10000:2.0,jitter=0.2} (default)</li>
      *   <li>{@code exponential=200:10000,jitter=0.2,maxAttempts=50} (multiplier omitted)</li>
@@ -121,7 +121,7 @@ public interface Backoff {
      *   <li>{@code random=200:1000} (jitter and maxAttempts will be set by default values)</li>
      * </ul>
      *
-     * @param specification the specification used to create the {@link Backoff}
+     * @param specification the specification used to create a {@link Backoff}
      */
     static Backoff of(String specification) {
         return BackoffSpec.parse(specification).build();
@@ -142,16 +142,17 @@ public interface Backoff {
 
     /**
      * Undecorates this {@link Backoff} to find the {@link Backoff} which is an instance of the specified
-     * {@code backoffType}.
+     * {@code type}.
      *
-     * @param backoffType the type of the desired {@link Backoff}
-     * @return the {@link Backoff} which is an instance of {@code backoffType} if this {@link Backoff}
+     * @param type the type of the desired {@link Backoff}
+     * @return the {@link Backoff} which is an instance of {@code type} if this {@link Backoff}
      *         decorated such a {@link Backoff}. {@link Optional#empty()} otherwise.
+     *
+     * @see Unwrappable
      */
-    default <T> Optional<T> as(Class<T> backoffType) {
-        requireNonNull(backoffType, "backoffType");
-        return backoffType.isInstance(this) ? Optional.of(backoffType.cast(this))
-                                            : Optional.empty();
+    @Override
+    default <T> Optional<T> as(Class<T> type) {
+        return Unwrappable.super.as(type);
     }
 
     /**

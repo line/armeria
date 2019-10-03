@@ -20,11 +20,6 @@ import javax.annotation.Nullable;
 
 /**
  * A {@link RuntimeException} that is raised when a requested invocation did not complete before its deadline.
- *
- * <p>Note that this exception does not provide a stack trace even if
- * {@linkplain Flags#verboseExceptions() the verbose exception mode} is enabled
- * because timeouts often occur massively when the system is under high load and
- * capturing the stack trace is an expensive operation that only makes the situation worse.</p>
  */
 public class TimeoutException extends RuntimeException {
     private static final long serialVersionUID = 2887898788270995289L;
@@ -62,10 +57,5 @@ public class TimeoutException extends RuntimeException {
     protected TimeoutException(@Nullable String message, @Nullable Throwable cause,
                                boolean enableSuppression, boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
-    }
-
-    @Override
-    public final Throwable fillInStackTrace() {
-        return this;
     }
 }

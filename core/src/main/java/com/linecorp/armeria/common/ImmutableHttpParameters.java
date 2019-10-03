@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import javax.annotation.Nullable;
+
 import io.netty.handler.codec.Headers;
 
 final class ImmutableHttpParameters implements HttpParameters {
@@ -510,7 +512,7 @@ final class ImmutableHttpParameters implements HttpParameters {
 
     @Override
     @SuppressWarnings("EqualsWhichDoesntCheckParameterClass")
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
         return delegate.equals(obj);
     }
 

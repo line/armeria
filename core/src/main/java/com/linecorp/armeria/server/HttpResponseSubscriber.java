@@ -16,7 +16,10 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isTrailerBlacklisted;
+
 import java.nio.channels.ClosedChannelException;
+import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -27,10 +30,13 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableSet;
+
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
@@ -40,13 +46,13 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
-import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2Error;
+import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 
 final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTimeoutChangeListener {
@@ -57,6 +63,9 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
             AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
     private static final AggregatedHttpResponse SERVICE_UNAVAILABLE_MESSAGE =
             AggregatedHttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
+
+    private static final Set<AsciiString> ADDITIONAL_HEADER_BLACKLIST = ImmutableSet.of(
+            HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD, HttpHeaderNames.PATH);
 
     enum State {
         NEEDS_HEADERS,
@@ -166,7 +175,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                     break;
                 }
 
-                if (req.method() == HttpMethod.HEAD || ArmeriaHttpUtil.isContentAlwaysEmpty(status)) {
+                if (req.method() == HttpMethod.HEAD || status.isContentAlwaysEmpty()) {
                     // We're done with the response if it is a response to a HEAD request or one of the
                     // no-content response statuses.
                     endOfStream = true;
@@ -179,8 +188,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
                 final ResponseHeadersBuilder newHeaders = fillAdditionalHeaders(headers, additionalHeaders);
 
-                if (endOfStream && !additionalTrailers.isEmpty()) {
-                    newHeaders.setIfAbsent(additionalTrailers);
+                if (endOfStream) {
+                    fillAdditionalTrailers(newHeaders, additionalTrailers);
                 }
 
                 if (newHeaders.contains(HttpHeaderNames.CONTENT_LENGTH) &&
@@ -281,7 +290,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         }
 
         if (state != State.DONE) {
-            final HttpHeaders additionalTrailers = reqCtx.additionalResponseTrailers();
+            final HttpHeaders additionalTrailers =
+                    fillAdditionalTrailers(HttpHeaders.of(), reqCtx.additionalResponseTrailers());
             if (!additionalTrailers.isEmpty()) {
                 write(additionalTrailers, true);
             } else {
@@ -437,11 +447,17 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
     private static ResponseHeadersBuilder fillAdditionalHeaders(ResponseHeaders headers,
                                                                 HttpHeaders additionalHeaders) {
-        if (additionalHeaders.isEmpty()) {
-            return headers.toBuilder();
+        final ResponseHeadersBuilder builder = headers.toBuilder();
+        if (!additionalHeaders.isEmpty()) {
+            for (AsciiString name : additionalHeaders.names()) {
+                if (!ADDITIONAL_HEADER_BLACKLIST.contains(name)) {
+                    builder.remove(name);
+                    additionalHeaders.forEachValue(name, value -> builder.add(name, value));
+                }
+            }
         }
 
-        return headers.toBuilder().setIfAbsent(additionalHeaders);
+        return builder;
     }
 
     private static HttpHeaders fillAdditionalTrailers(HttpHeaders trailers, HttpHeaders additionalTrailers) {
@@ -449,7 +465,22 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
             return trailers;
         }
 
-        return trailers.toBuilder().setIfAbsent(additionalTrailers).build();
+        return fillAdditionalTrailers(trailers.toBuilder(), additionalTrailers).build();
+    }
+
+    private static HttpHeadersBuilder fillAdditionalTrailers(HttpHeadersBuilder builder,
+                                                             HttpHeaders additionalTrailers) {
+        if (!additionalTrailers.isEmpty()) {
+            for (AsciiString name : additionalTrailers.names()) {
+                if (!ADDITIONAL_HEADER_BLACKLIST.contains(name) &&
+                    !isTrailerBlacklisted(name)) {
+                    builder.remove(name);
+                    additionalTrailers.forEachValue(name, value -> builder.add(name, value));
+                }
+            }
+        }
+
+        return builder;
     }
 
     private boolean cancelTimeout() {

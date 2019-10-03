@@ -15,13 +15,17 @@
  */
 package com.linecorp.armeria.common;
 
+import java.net.URI;
+
 import javax.annotation.Nullable;
 
-@SuppressWarnings("checkstyle:EqualsHashCode")
+@SuppressWarnings({ "checkstyle:EqualsHashCode", "EqualsAndHashcode" })
 final class DefaultRequestHeaders extends DefaultHttpHeaders implements RequestHeaders {
 
     @Nullable
     private HttpMethod method;
+    @Nullable
+    private URI uri;
 
     DefaultRequestHeaders(HttpHeadersBase headers) {
         super(headers);
@@ -29,6 +33,16 @@ final class DefaultRequestHeaders extends DefaultHttpHeaders implements RequestH
 
     DefaultRequestHeaders(HttpHeaderGetters headers) {
         super(headers);
+    }
+
+    @Override
+    public URI uri() {
+        final URI uri = this.uri;
+        if (uri != null) {
+            return uri;
+        }
+
+        return this.uri = super.uri();
     }
 
     @Override
@@ -64,7 +78,7 @@ final class DefaultRequestHeaders extends DefaultHttpHeaders implements RequestH
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         return o instanceof RequestHeaders && super.equals(o);
     }
 }

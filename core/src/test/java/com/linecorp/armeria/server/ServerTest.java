@@ -324,22 +324,22 @@ public class ServerTest {
         // Known to fail on WSL (Windows Subsystem for Linux)
         assumeTrue(System.getenv("WSLENV") == null);
 
-        final Server duplicatedPortServer = new ServerBuilder()
-                .http(server.httpPort())
-                .service("/", (ctx, res) -> HttpResponse.of(""))
-                .build();
+        final Server duplicatedPortServer = Server.builder()
+                                                  .http(server.httpPort())
+                                                  .service("/", (ctx, res) -> HttpResponse.of(""))
+                                                  .build();
         assertThatThrownBy(() -> duplicatedPortServer.start().join())
                 .hasCauseInstanceOf(IOException.class);
     }
 
     @Test
     public void testActiveLocalPort() throws Exception {
-        final Server server = new ServerBuilder()
-                .http(0)
-                .https(0)
-                .tlsSelfSigned()
-                .service("/", (ctx, res) -> HttpResponse.of(""))
-                .build();
+        final Server server = Server.builder()
+                                    .http(0)
+                                    .https(0)
+                                    .tlsSelfSigned()
+                                    .service("/", (ctx, res) -> HttpResponse.of(""))
+                                    .build();
 
         // not started yet
         assertThatThrownBy(server::activeLocalPort)
@@ -373,11 +373,11 @@ public class ServerTest {
         final Queue<Thread> threads = new LinkedTransferQueue<>();
         final String prefix = getClass().getName() + "#customStartStopExecutor";
         final ExecutorService executor = Executors.newSingleThreadExecutor(new EventLoopThreadFactory(prefix));
-        final Server server = new ServerBuilder()
-                .startStopExecutor(executor)
-                .service("/", (ctx, req) -> HttpResponse.of(200))
-                .serverListener(new ThreadRecordingServerListener(threads))
-                .build();
+        final Server server = Server.builder()
+                                    .startStopExecutor(executor)
+                                    .service("/", (ctx, req) -> HttpResponse.of(200))
+                                    .serverListener(new ThreadRecordingServerListener(threads))
+                                    .build();
 
         threads.add(server.start().thenApply(unused -> Thread.currentThread()).join());
         threads.add(server.stop().thenApply(unused -> Thread.currentThread()).join());
@@ -389,7 +389,7 @@ public class ServerTest {
     public void gracefulShutdownBlockingTaskExecutor() {
         final ExecutorService executor = Executors.newSingleThreadExecutor();
 
-        final Server server = new ServerBuilder()
+        final Server server = Server.builder()
                 .blockingTaskExecutor(executor, true)
                 .service("/", (ctx, req) -> HttpResponse.of(200))
                 .build();
@@ -414,7 +414,7 @@ public class ServerTest {
     public void notGracefulShutdownBlockingTaskExecutor() {
         final ExecutorService executor = Executors.newSingleThreadExecutor();
 
-        final Server server = new ServerBuilder()
+        final Server server = Server.builder()
                 .blockingTaskExecutor(executor, false)
                 .service("/", (ctx, req) -> HttpResponse.of(200))
                 .build();

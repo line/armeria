@@ -244,7 +244,7 @@ public final class ClientCacheControl extends CacheControl {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (!super.equals(o)) {
             return false;
         }

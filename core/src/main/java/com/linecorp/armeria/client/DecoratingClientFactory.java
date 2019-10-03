@@ -26,6 +26,7 @@ import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -69,8 +70,8 @@ public class DecoratingClientFactory extends AbstractClientFactory {
     }
 
     @Override
-    public ReleasableHolder<EventLoop> acquireEventLoop(Endpoint endpoint) {
-        return delegate().acquireEventLoop(endpoint);
+    public ReleasableHolder<EventLoop> acquireEventLoop(Endpoint endpoint, SessionProtocol sessionProtocol) {
+        return delegate().acquireEventLoop(endpoint, sessionProtocol);
     }
 
     @Override
@@ -97,6 +98,11 @@ public class DecoratingClientFactory extends AbstractClientFactory {
     @Override
     public <T> Optional<ClientBuilderParams> clientBuilderParams(T client) {
         return delegate().clientBuilderParams(client);
+    }
+
+    @Override
+    public <T> Optional<T> unwrap(Object client, Class<T> type) {
+        return delegate().unwrap(client, type);
     }
 
     @Override

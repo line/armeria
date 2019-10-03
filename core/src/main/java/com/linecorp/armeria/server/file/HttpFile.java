@@ -37,7 +37,7 @@ import io.netty.buffer.ByteBufAllocator;
  * A file-like HTTP resource which yields an {@link HttpResponse}.
  * <pre>{@code
  * HttpFile faviconFile = HttpFile.of(new File("/var/www/favicon.ico"));
- * ServerBuilder builder = new ServerBuilder();
+ * ServerBuilder builder = Server.builder();
  * builder.service("/favicon.ico", faviconFile.asService());
  * Server server = builder.build();
  * }</pre>

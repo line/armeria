@@ -175,16 +175,6 @@ abstract class HttpResponseDecoder {
                     this, responseTimeoutMillis, TimeUnit.MILLISECONDS);
         }
 
-        boolean cancelTimeout() {
-            final ScheduledFuture<?> responseTimeoutFuture = this.responseTimeoutFuture;
-            if (responseTimeoutFuture == null) {
-                return true;
-            }
-
-            this.responseTimeoutFuture = null;
-            return responseTimeoutFuture.cancel(false);
-        }
-
         long maxContentLength() {
             return maxContentLength;
         }
@@ -283,13 +273,8 @@ abstract class HttpResponseDecoder {
         private void close(@Nullable Throwable cause,
                            Consumer<Throwable> actionOnTimeoutCancelled) {
             state = State.DONE;
-            if (cancelTimeout()) {
-                actionOnTimeoutCancelled.accept(cause);
-            } else {
-                if (cause != null && !Exceptions.isExpected(cause)) {
-                    logger.warn("Unexpected exception:", cause);
-                }
-            }
+
+            cancelTimeoutOrLog(cause, actionOnTimeoutCancelled);
 
             if (request != null) {
                 request.abort();
@@ -312,6 +297,39 @@ abstract class HttpResponseDecoder {
             } else {
                 logBuilder.endResponse();
             }
+        }
+
+        private void cancelTimeoutOrLog(@Nullable Throwable cause,
+                                        Consumer<Throwable> actionOnTimeoutCancelled) {
+
+            final ScheduledFuture<?> responseTimeoutFuture = this.responseTimeoutFuture;
+            this.responseTimeoutFuture = null;
+
+            if (responseTimeoutFuture == null || responseTimeoutFuture.cancel(false)) {
+                // There's no timeout or the response has not been timed out.
+                actionOnTimeoutCancelled.accept(cause);
+                return;
+            }
+
+            // Response has been timed out already.
+            // Log only when it's not a ResponseTimeoutException.
+            if (cause instanceof ResponseTimeoutException) {
+                return;
+            }
+
+            if (cause == null || !logger.isWarnEnabled() || Exceptions.isExpected(cause)) {
+                return;
+            }
+
+            final StringBuilder logMsg = new StringBuilder("Unexpected exception while closing a request");
+            if (request != null) {
+                final String authority = request.authority();
+                if (authority != null) {
+                    logMsg.append(" to ").append(authority);
+                }
+            }
+
+            logger.warn(logMsg.append(':').toString(), cause);
         }
 
         @Override

@@ -19,6 +19,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 
+import javax.annotation.Nullable;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -136,6 +138,20 @@ public class ArmeriaWebClientTest {
     }
 
     @Test
+    public void getConflictUsingBodyToMono() {
+        final Mono<String> response =
+                webClient.get()
+                         .uri(uri("/conflict"))
+                         .retrieve()
+                         .onStatus(HttpStatus::isError,
+                                   resp -> resp.bodyToMono(String.class).map(Exception::new))
+                         .bodyToMono(String.class);
+        StepVerifier.create(response)
+                    .expectError()
+                    .verify(Duration.ofSeconds(10));
+    }
+
+    @Test
     public void getResource() {
         final Flux<DataBuffer> body =
                 webClient.get()
@@ -187,7 +203,7 @@ public class ArmeriaWebClientTest {
         }
 
         @Override
-        public boolean equals(Object o) {
+        public boolean equals(@Nullable Object o) {
             if (this == o) {
                 return true;
             }

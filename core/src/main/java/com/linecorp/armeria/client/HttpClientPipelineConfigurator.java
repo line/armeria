@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
@@ -208,7 +209,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                     protocol = H2;
                 } else {
                     if (httpPreference != HttpPreference.HTTP1_REQUIRED) {
-                        SessionProtocolNegotiationCache.setUnsupported(ctx.channel().remoteAddress(), H2);
+                        SessionProtocolNegotiationCache.setUnsupported(remoteAddress(ctx), H2);
                     }
 
                     if (httpPreference == HttpPreference.HTTP2_REQUIRED) {
@@ -239,6 +240,14 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 ctx.close();
             }
         });
+    }
+
+    /**
+     * {@code channel().remoteAddress()} can return {@code null} if the connection is closed
+     * before {@code channel().remoteAddress()} is called which caches the address in it.
+     */
+    private SocketAddress remoteAddress(ChannelHandlerContext ctx) {
+        return firstNonNull(ctx.channel().remoteAddress(), remoteAddress);
     }
 
     /**
@@ -500,7 +509,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             if (needsToClose) {
                 // Server wants us to close the connection, which means we cannot use this connection
                 // to send the request that contains the actual invocation.
-                SessionProtocolNegotiationCache.setUnsupported(ctx.channel().remoteAddress(), H2C);
+                SessionProtocolNegotiationCache.setUnsupported(remoteAddress(ctx), H2C);
 
                 if (httpPreference == HttpPreference.HTTP2_REQUIRED) {
                     finishWithNegotiationFailure(ctx, H2C, H1C,
@@ -515,7 +524,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             if (success) {
                 finishSuccessfully(p, H2C);
             } else {
-                SessionProtocolNegotiationCache.setUnsupported(ctx.channel().remoteAddress(), H2C);
+                SessionProtocolNegotiationCache.setUnsupported(remoteAddress(ctx), H2C);
 
                 if (httpPreference == HttpPreference.HTTP2_REQUIRED) {
                     finishWithNegotiationFailure(ctx, H2C, H1C, "upgrade request rejected");
@@ -548,7 +557,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             if (!isSettingsFrame(in)) { // The first frame must be a settings frame.
                 // Http2ConnectionHandler sent the connection preface, but the server responded with
                 // something else, which means the server does not support HTTP/2.
-                SessionProtocolNegotiationCache.setUnsupported(ctx.channel().remoteAddress(), H2C);
+                SessionProtocolNegotiationCache.setUnsupported(remoteAddress(ctx), H2C);
                 if (httpPreference == HttpPreference.HTTP2_REQUIRED) {
                     finishWithNegotiationFailure(
                             ctx, H2C, H1C, "received a non-HTTP/2 response for the HTTP/2 connection preface");

@@ -30,31 +30,29 @@ interface Props {
   onDebugFormChange: (e: ChangeEvent<HTMLInputElement>) => void;
 }
 
-const RequestBody: React.SFC<Props> = (props) => {
-  return (
-    <>
-      <Typography variant="body2" paragraph />
-      <Button color="secondary" onClick={props.onEditRequestBodyClick}>
-        Request body
-      </Button>
-      {props.requestBodyOpen && (
-        <>
-          <Typography variant="body2" paragraph />
-          <TextField
-            multiline
-            fullWidth
-            rows={15}
-            value={props.requestBody}
-            placeholder={jsonPlaceHolder}
-            onChange={props.onDebugFormChange}
-            inputProps={{
-              className: 'code',
-            }}
-          />
-        </>
-      )}
-    </>
-  );
-};
+const RequestBody: React.FunctionComponent<Props> = (props) => (
+  <>
+    <Typography variant="body2" paragraph />
+    <Button color="secondary" onClick={props.onEditRequestBodyClick}>
+      Request body
+    </Button>
+    {props.requestBodyOpen && (
+      <>
+        <Typography variant="body2" paragraph />
+        <TextField
+          multiline
+          fullWidth
+          rows={15}
+          value={props.requestBody}
+          placeholder={jsonPlaceHolder}
+          onChange={props.onDebugFormChange}
+          inputProps={{
+            className: 'code',
+          }}
+        />
+      </>
+    )}
+  </>
+);
 
-export default RequestBody;
+export default React.memo(RequestBody);

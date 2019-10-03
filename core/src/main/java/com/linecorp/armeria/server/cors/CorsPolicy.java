@@ -164,7 +164,7 @@ public final class CorsPolicy {
      * }</pre>
      * The headers that are available by default are:
      * <ul>
-     *   <li>{@code Cahce-Control}</li>
+     *   <li>{@code Cache-Control}</li>
      *   <li>{@code Content-Language}</li>
      *   <li>{@code Content-Type}</li>
      *   <li>{@code Expires}</li>

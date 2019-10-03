@@ -24,11 +24,12 @@ import java.util.function.BiFunction;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.common.util.ReleasableHolder;
+import com.linecorp.armeria.common.util.AbstractUnwrappable;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
@@ -43,10 +44,11 @@ import io.netty.channel.EventLoop;
  * @param <I> the request type
  * @param <O> the response type
  */
-public abstract class UserClient<I extends Request, O extends Response> implements ClientBuilderParams {
+public abstract class UserClient<I extends Request, O extends Response>
+        extends AbstractUnwrappable<Client<I, O>>
+        implements ClientBuilderParams {
 
     private final ClientBuilderParams params;
-    private final Client<I, O> delegate;
     private final MeterRegistry meterRegistry;
     private final SessionProtocol sessionProtocol;
     private final Endpoint endpoint;
@@ -62,8 +64,8 @@ public abstract class UserClient<I extends Request, O extends Response> implemen
      */
     protected UserClient(ClientBuilderParams params, Client<I, O> delegate, MeterRegistry meterRegistry,
                          SessionProtocol sessionProtocol, Endpoint endpoint) {
+        super(delegate);
         this.params = params;
-        this.delegate = delegate;
         this.meterRegistry = meterRegistry;
         this.sessionProtocol = sessionProtocol;
         this.endpoint = endpoint;
@@ -87,14 +89,6 @@ public abstract class UserClient<I extends Request, O extends Response> implemen
     @Override
     public final ClientOptions options() {
         return params.options();
-    }
-
-    /**
-     * Returns the {@link Client} that will process {@link Request}s.
-     */
-    @SuppressWarnings("unchecked")
-    protected final <U extends Client<I, O>> U delegate() {
-        return (U) delegate;
     }
 
     /**
@@ -145,15 +139,22 @@ public abstract class UserClient<I extends Request, O extends Response> implemen
                               HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
                               I req, BiFunction<ClientRequestContext, Throwable, O> fallback) {
         final DefaultClientRequestContext ctx;
+        final HttpRequest httpReq;
+        final RpcRequest rpcReq;
+        if (req instanceof HttpRequest) {
+            httpReq = (HttpRequest) req;
+            rpcReq = null;
+        } else {
+            httpReq = null;
+            rpcReq = (RpcRequest) req;
+        }
+
         if (eventLoop == null) {
-            final ReleasableHolder<EventLoop> releasableEventLoop = factory().acquireEventLoop(endpoint);
-            ctx = new DefaultClientRequestContext(
-                    releasableEventLoop.get(), meterRegistry, sessionProtocol,
-                    method, path, query, fragment, options(), req);
-            ctx.log().addListener(log -> releasableEventLoop.release(), RequestLogAvailability.COMPLETE);
+            ctx = new DefaultClientRequestContext(factory(), meterRegistry, sessionProtocol,
+                                                  method, path, query, fragment, options(), httpReq, rpcReq);
         } else {
             ctx = new DefaultClientRequestContext(eventLoop, meterRegistry, sessionProtocol,
-                                                  method, path, query, fragment, options(), req);
+                                                  method, path, query, fragment, options(), httpReq, rpcReq);
         }
 
         return initContextAndExecuteWithFallback(delegate(), ctx, endpoint, fallback);

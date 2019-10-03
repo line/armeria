@@ -18,7 +18,6 @@ package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.common.HttpResponseUtil.delegateWhenStageComplete;
-import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isContentAlwaysEmpty;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.setOrRemoveContentLength;
 import static java.util.Objects.requireNonNull;
 
@@ -158,7 +157,7 @@ public interface HttpResponse extends Response, StreamMessage<HttpObject> {
         checkArgument(status.codeClass() != HttpStatusClass.INFORMATIONAL,
                       "status: %s (expected: a non-1xx status");
 
-        if (isContentAlwaysEmpty(status)) {
+        if (status.isContentAlwaysEmpty()) {
             return new OneElementFixedHttpResponse(ResponseHeaders.of(status));
         } else {
             return of(status, MediaType.PLAIN_TEXT_UTF_8, status.toHttpData());

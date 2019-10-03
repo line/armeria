@@ -62,6 +62,7 @@ export interface Service {
 
 export interface Value {
   name: string;
+  intValue?: number;
   docString?: DocString;
 }
 

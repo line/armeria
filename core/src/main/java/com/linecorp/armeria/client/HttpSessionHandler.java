@@ -22,6 +22,7 @@ import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
 import static java.util.Objects.requireNonNull;
 
+import java.net.SocketAddress;
 import java.util.concurrent.ScheduledFuture;
 
 import javax.annotation.Nullable;
@@ -66,6 +67,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private final Channel channel;
     private final Promise<Channel> sessionPromise;
     private final ScheduledFuture<?> sessionTimeoutFuture;
+    private final SocketAddress remoteAddress;
 
     /**
      * Whether the current channel is active or not.
@@ -105,6 +107,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
         this.channelPool = requireNonNull(channelPool, "channelPool");
         this.channel = requireNonNull(channel, "channel");
+        final SocketAddress remoteAddress = channel.remoteAddress();
+        this.remoteAddress = requireNonNull(remoteAddress, "remoteAddress");
         this.sessionPromise = requireNonNull(sessionPromise, "sessionPromise");
         this.sessionTimeoutFuture = requireNonNull(sessionTimeoutFuture, "sessionTimeoutFuture");
     }
@@ -155,7 +159,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                 responseDecoder.addResponse(numRequestsSent, req, res, ctx.logBuilder(),
                                             responseTimeoutMillis, maxContentLength);
         req.subscribe(
-                new HttpRequestSubscriber(channel, requestEncoder,
+                new HttpRequestSubscriber(channel, remoteAddress, requestEncoder,
                                           numRequestsSent, req, wrappedRes, ctx,
                                           writeTimeoutMillis),
                 channel.eventLoop(), WITH_POOLED_OBJECTS);

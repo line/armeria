@@ -40,9 +40,10 @@ import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 // Tests error cases, success cases are checked in ArmeriaGrpcServiceInteropTest
 class GrpcServiceTest {
 
-    private final GrpcService grpcService = (GrpcService) new GrpcServiceBuilder()
-            .addService(mock(TestServiceImplBase.class))
-            .build();
+    private final GrpcService grpcService =
+            (GrpcService) GrpcService.builder()
+                                     .addService(mock(TestServiceImplBase.class))
+                                     .build();
 
     @Test
     void missingContentType() throws Exception {

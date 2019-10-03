@@ -15,7 +15,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 
 /**
@@ -26,7 +26,7 @@ public class ValidationExceptionHandler implements ExceptionHandlerFunction {
     private final ObjectMapper mapper = new ObjectMapper();
 
     @Override
-    public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
+    public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
         if (cause instanceof ValidationException) {
             try {
                 final HttpStatus status = HttpStatus.BAD_REQUEST;

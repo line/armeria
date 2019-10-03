@@ -1,4 +1,3 @@
-@import url('https://cdnjs.cloudflare.com/ajax/libs/github-fork-ribbon-css/0.2.2/gh-fork-ribbon.min.css');
 @import url('https://fonts.googleapis.com/css?family=Lato:400,400i,700,700i|Merriweather:700,700i');
 @import url('https://cdn.jsdelivr.net/npm/hack-font@3/build/web/hack.css');
 
@@ -79,20 +78,6 @@ html, body, .wy-grid-for-nav {
   display: inline;
   padding: 0;
   height: 1.45em;
-}
-
-/* Hide the Github fork ribbon on mobile view. */
-@media screen and (max-width: 768px) {
-  .github-fork-ribbon {
-    display: none;
-  }
-}
-
-/* Move the right-side breadcrumb a little bit left so that it does not overlap with the Github fork ribbon. */
-@media screen and (min-width: 769px) {
-  .wy-breadcrumbs-aside {
-    padding-right: 64px;
-  }
 }
 
 .wy-breadcrumbs-aside {
@@ -291,6 +276,43 @@ td.hljs-ln-code {
   padding-left: 8px !important;
 }
 /* highlightjs style ends */
+
+/* GitHub Corners style begins. */
+.github-corner svg {
+  position: absolute;
+  top: 0;
+  right: 0;
+  border: 0;
+}
+.github-corner:hover .octo-arm {
+  animation: octocat-wave 560ms ease-in-out
+}
+@keyframes octocat-wave {
+  0%, 100% {
+    transform: rotate(0)
+  }
+  20%, 60% {
+    transform: rotate(-25deg)
+  }
+  40%, 80% {
+    transform: rotate(10deg)
+  }
+}
+@media (max-width: 500px) {
+  .github-corner:hover .octo-arm {
+    animation: none
+  }
+  .github-corner .octo-arm {
+    animation: octocat-wave 560ms ease-in-out
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .github-corner > svg {
+    top: 50px;
+  }
+}
+/* GitHub Corners style ends */
 
 /* Armeria branding begins. */
 .wy-nav-top, .wy-side-nav-search {

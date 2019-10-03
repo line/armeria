@@ -29,7 +29,6 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerBuilder;
 
 @State(Scope.Thread)
 public class DnsEndpointGroupBenchmark {
@@ -41,9 +40,9 @@ public class DnsEndpointGroupBenchmark {
 
     @Setup(Level.Trial)
     public void startServer() {
-        server = new ServerBuilder()
-                .service("/health", (ctx, req) -> HttpResponse.of(OK))
-                .build();
+        server = Server.builder()
+                       .service("/health", (ctx, req) -> HttpResponse.of(OK))
+                       .build();
         server.start().join();
     }
 

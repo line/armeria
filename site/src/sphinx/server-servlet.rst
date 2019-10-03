@@ -22,7 +22,7 @@ Add a :api:`TomcatService` to a :api:`ServerBuilder`:
     import com.linecorp.armeria.server.ServerBuilder;
     import com.linecorp.armeria.server.tomcat.TomcatService;
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
 
     sb.serviceUnder("/tomcat/api/rest/v2/",
                     TomcatService.forCurrentClassPath("/webapp"));
@@ -54,7 +54,7 @@ Unlike Apache Tomcat, you need more dependencies and bootstrap code due to its m
     import org.eclipse.jetty.util.resource.Resource;
     import org.eclipse.jetty.webapp.WebAppContext;
 
-    ServerBuilder sb = new ServerBuilder();
+    ServerBuilder sb = Server.builder();
 
     sb.serviceUnder("/jetty/api/rest/v2/",
                     new JettyServiceBuilder().handler(newWebAppContext("/webapp"))
