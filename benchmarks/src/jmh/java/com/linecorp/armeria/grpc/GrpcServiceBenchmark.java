@@ -90,10 +90,4 @@ public class GrpcServiceBenchmark {
     public HttpResponse empty() throws Exception {
         return response = SERVICE.serve(ctx, req);
     }
-
-    public static void main(String[] args) throws Exception {
-        GrpcServiceBenchmark benchmark = new GrpcServiceBenchmark();
-        benchmark.initBuffers();
-        benchmark.empty();
-    }
 }
