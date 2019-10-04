@@ -42,7 +42,9 @@ class EndpointGroupTest {
     void orElse() {
         final EndpointGroup emptyEndpointGroup = EndpointGroup.empty();
         final EndpointGroup endpointGroup1 = EndpointGroup.of(Endpoint.of("127.0.0.1", 1234));
-        final EndpointGroup endpointGroup2 = EndpointGroup.of(Endpoint.of("127.0.0.1", 2345));
+        // Make sure factory that takes an Iterable accepts a list of Endpoint (subclass).
+        final List<Endpoint> endpoint2Endpoints = ImmutableList.of(Endpoint.of("127.0.0.1", 2345));
+        final EndpointGroup endpointGroup2 = EndpointGroup.of(endpoint2Endpoints);
 
         assertThat(emptyEndpointGroup.orElse(endpointGroup2).endpoints())
                 .isEqualTo(endpointGroup2.endpoints());
