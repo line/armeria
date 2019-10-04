@@ -115,11 +115,9 @@ public final class Flags {
     private static final boolean VERBOSE_RESPONSES = getBoolean("verboseResponses", false);
 
     private static final boolean HAS_WSLENV = System.getenv("WSLENV") != null;
-    private static final boolean USE_EPOLL = getBoolean("useEpoll", isEpollAvailable(),
-                                                        value -> isEpollAvailable() || !value);
+    private static final boolean USE_EPOLL = getBoolean("useEpoll", false);
 
-    private static final boolean USE_OPENSSL = getBoolean("useOpenSsl", OpenSsl.isAvailable(),
-                                                          value -> OpenSsl.isAvailable() || !value);
+    private static final boolean USE_OPENSSL = getBoolean("useOpenSsl", false);
 
     private static final boolean DUMP_OPENSSL_INFO = getBoolean("dumpOpenSslInfo", false);
 
