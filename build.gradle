@@ -48,7 +48,7 @@ allprojects {
 task checkJavaVersion {
     doLast {
         if (JavaVersion.current().majorVersion.toInteger() < 12) {
-            throw new GradleException("The java version used ${JavaVersion.current()} is too old to " +
+            throw new GradleException("The Java version used (${JavaVersion.current()}) is too old to " +
                     "build Armeria. Please use at least JDK 12. You can download a compatible JDK from " +
                     "https://adoptopenjdk.net/")
         }
