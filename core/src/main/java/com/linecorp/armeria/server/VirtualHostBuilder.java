@@ -73,6 +73,7 @@ import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.ReferenceCountUtil;
 
 /**
  * Builds a new {@link VirtualHost}.
@@ -835,7 +836,7 @@ public final class VirtualHostBuilder {
             try {
                 validateSslContext(sslContext);
             } catch (Exception e) {
-                throw new RuntimeException("failed to validate SSL/TLS configuration : " + e.toString(), e);
+                throw new RuntimeException("failed to validate SSL/TLS configuration: " + e.toString(), e);
             }
         }
 
@@ -852,31 +853,37 @@ public final class VirtualHostBuilder {
         return decorator != null ? virtualHost.decorate(decorator) : virtualHost;
     }
 
-    void validateSslContext(SslContext sslContext) throws Exception {
-        final SSLEngine serverEngine = sslContext.newEngine(ByteBufAllocator.DEFAULT);
-        serverEngine.setUseClientMode(false);
-        serverEngine.setNeedClientAuth(true);
+    private void validateSslContext(SslContext sslContext) throws Exception {
+        SSLEngine serverEngine = null;
+        SSLEngine clientEngine = null;
 
-        final SelfSignedCertificate ssc = new SelfSignedCertificate("foo.com");
-        final SslContext sslContextClient
-                = buildSslContext(() -> SslContextBuilder.forClient()
-                                                         .keyManager(ssc.certificate(), ssc.privateKey()),
-                                           sslContextBuilder -> {
-                    sslContextBuilder.keyManager(ssc.certificate(), ssc.privateKey());
-                    sslContextBuilder.trustManager(ssc.certificate());
-        });
-        final SSLEngine clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
-        clientEngine.setUseClientMode(true);
+        try {
+            serverEngine = sslContext.newEngine(ByteBufAllocator.DEFAULT);
+            serverEngine.setUseClientMode(false);
+            serverEngine.setNeedClientAuth(false);
 
-        clientEngine.beginHandshake();
-        serverEngine.beginHandshake();
+            final SelfSignedCertificate ssc = new SelfSignedCertificate("foo.com");
+            final SslContext sslContextClient =
+                    buildSslContext(() -> SslContextBuilder.forClient()
+                                                           .keyManager(ssc.certificate(), ssc.privateKey()),
+                                    sslContextBuilder -> {});
+            clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
+            clientEngine.setUseClientMode(true);
 
-        ByteBuffer clientPacket = ByteBuffer.allocate(clientEngine.getSession().getApplicationBufferSize());
-        clientEngine.wrap(clientPacket, clientPacket);
-        clientPacket.flip();
+            clientEngine.beginHandshake();
+            serverEngine.beginHandshake();
 
-        ByteBuffer serverPacket = ByteBuffer.allocate(serverEngine.getSession().getApplicationBufferSize());
-        serverEngine.unwrap(clientPacket, serverPacket);
+            ByteBuffer appBuf = ByteBuffer.allocate(clientEngine.getSession().getApplicationBufferSize());
+            ByteBuffer packetBuf = ByteBuffer.allocate(clientEngine.getSession().getPacketBufferSize());
+
+            clientEngine.wrap(appBuf, packetBuf);
+            appBuf.clear();
+            packetBuf.flip();
+            serverEngine.unwrap(packetBuf, appBuf);
+        } finally {
+            ReferenceCountUtil.release(serverEngine);
+            ReferenceCountUtil.release(clientEngine);
+        }
     }
 
     @Override
