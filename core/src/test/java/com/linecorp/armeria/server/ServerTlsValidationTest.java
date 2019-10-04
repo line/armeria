@@ -53,8 +53,7 @@ class ServerTlsValidationTest {
 
             final Server server = Server.builder()
                                         .service("/", (ctx, res) -> HttpResponse.of(HttpStatus.OK))
-                                        .tls(kmf, sslContextBuilder -> {
-                                        })
+                                        .tls(kmf, sslContextBuilder -> {})
                                         .build();
         }).isInstanceOf(RuntimeException.class)
           .hasMessageContaining("failed to validate SSL/TLS configuration");
