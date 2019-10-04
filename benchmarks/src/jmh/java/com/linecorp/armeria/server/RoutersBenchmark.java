@@ -34,7 +34,7 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 public class RoutersBenchmark {
 
     private static final Service<HttpRequest, HttpResponse> SERVICE =
-            ((ctx, req) -> HttpResponse.of(HttpStatus.OK));
+            (ctx, req) -> HttpResponse.of(HttpStatus.OK);
 
     private static final List<ServiceConfig> SERVICES;
     private static final VirtualHost HOST;
@@ -64,7 +64,7 @@ public class RoutersBenchmark {
     public Routed<ServiceConfig> exactMatch() {
         final RoutingContext ctx = DefaultRoutingContext.of(HOST, "localhost", METHOD1_HEADERS.path(),
                                                             null, METHOD1_HEADERS, false);
-        Routed<ServiceConfig> routed = ROUTER.find(ctx);
+        final Routed<ServiceConfig> routed = ROUTER.find(ctx);
         if (routed.value() != SERVICES.get(0)) {
             throw new IllegalStateException("Routing error");
         }
