@@ -147,7 +147,7 @@ public final class GrpcService extends AbstractHttpService
         defaultHeaders = supportedSerializationFormats
                 .stream()
                 .map(format -> {
-                    ResponseHeadersBuilder builder =
+                    final ResponseHeadersBuilder builder =
                             ResponseHeaders
                                     .builder(HttpStatus.OK)
                                     .contentType(format.mediaType())
