@@ -133,6 +133,8 @@
                 value="CLASS_DEF, METHOD_DEF, CTOR_DEF, LITERAL_FOR, LITERAL_WHILE, STATIC_INIT, INSTANCE_INIT"/>
     </module>
 
+    <module name="FinalLocalVariable"/>
+
     <module name="FinalClass"/>
     <module name="HideUtilityClassConstructor"/>
     <module name="OneTopLevelClass"/>

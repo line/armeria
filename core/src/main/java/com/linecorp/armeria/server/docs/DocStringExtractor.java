@@ -75,7 +75,7 @@ public abstract class DocStringExtractor {
                 .getResources(this::acceptFile).stream()
                 .map(f -> {
                     try {
-                        URL url = classLoader.getResource(f);
+                        final URL url = classLoader.getResource(f);
                         if (url == null) {
                             throw new IllegalStateException("not found: " + f);
                         }
