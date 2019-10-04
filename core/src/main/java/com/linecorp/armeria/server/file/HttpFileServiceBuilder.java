@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.file;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
@@ -38,7 +39,7 @@ import com.linecorp.armeria.common.HttpResponse;
  */
 public final class HttpFileServiceBuilder {
 
-    private static final Optional<String> DEFAULT_ENTRY_CACHE_SPEC = Flags.httpFileServiceCacheSpec();
+    private static final Optional<String> DEFAULT_ENTRY_CACHE_SPEC = Flags.fileServiceCacheSpec();
     private static final int DEFAULT_MAX_CACHE_ENTRY_SIZE_BYTES = 65536;
 
     /**
@@ -84,8 +85,8 @@ public final class HttpFileServiceBuilder {
     private int maxCacheEntrySizeBytes = DEFAULT_MAX_CACHE_ENTRY_SIZE_BYTES;
     private boolean serveCompressedFiles;
     private boolean autoIndex;
-    private boolean enableMaxCacheEntries = true;
-    private boolean enableEntryCacheSpec = true;
+    private boolean canSetMaxCacheEntries = true;
+    private boolean canSetEntryCacheSpec = true;
     @Nullable
     private HttpHeadersBuilder headers;
 
@@ -102,7 +103,7 @@ public final class HttpFileServiceBuilder {
     }
 
     /**
-     * Sets the maximum allowed number of cached file entries. If not set, {@code DEFAULT_ENTRY_CACHE_SPEC}
+     * Sets the maximum allowed number of cached file entries. If not set, {@code "maximumSize=1024"}
      * is used by default.
      *
      * @deprecated Use {@link #entryCacheSpec(String)}.
@@ -114,26 +115,22 @@ public final class HttpFileServiceBuilder {
      */
     @Deprecated
     public HttpFileServiceBuilder maxCacheEntries(int maxCacheEntries) {
-        if (!enableMaxCacheEntries) {
-            throw new IllegalStateException("already configured for the http file service: " + entryCacheSpec);
-        }
+        checkState(canSetMaxCacheEntries,
+                   "Cannot call maxCacheEntries() if called entryCacheSpec() already.");
         entryCacheSpec = HttpFileServiceConfig.validateMaxCacheEntries(maxCacheEntries);
-        enableEntryCacheSpec = false;
+        canSetEntryCacheSpec = false;
         return this;
     }
 
     /**
-     * Sets the cache spec for caching file entries. If not set, {@code DEFAULT_ENTRY_CACHE_SPEC}
-     * is used by default.
+     * Sets the cache spec for caching file entries. If not set, {@code "maximumSize=1024"} is used by default.
      */
     public HttpFileServiceBuilder entryCacheSpec(String entryCacheSpec) {
         requireNonNull(entryCacheSpec, "entryCacheSpec");
-        if (!enableEntryCacheSpec) {
-            throw new IllegalStateException(
-                    "already configured for the http file service: " + this.entryCacheSpec);
-        }
+        checkState(canSetEntryCacheSpec,
+                   "Cannot call entryCacheSpec() if called maxCacheEntries() already.");
         this.entryCacheSpec = HttpFileServiceConfig.validateEntryCacheSpec(Optional.of(entryCacheSpec));
-        enableMaxCacheEntries = false;
+        canSetMaxCacheEntries = false;
         return this;
     }
 
