@@ -25,7 +25,7 @@ function addBadges(parent) {
   addBadge(div, 'https://img.shields.io/github/stars/line/armeria.svg?style=social');
   addBadge(div, 'https://img.shields.io/twitter/follow/armeria_project.svg?label=Follow');
   addBadge(div, 'https://img.shields.io/badge/chat-on%20slack-brightgreen.svg?style=social',
-    'https://join.slack.com/t/line-armeria/shared_invite/enQtNjIxNDU1ODU1MTI2LTgwMzk0MzVhOGRhZjJiY2ExODc0MzNhYzIxZDFlYjM5OGRjNTE1MzYzYzQ4MzNhNGY2ZDM0NThhMTRmZmQ3ZjQ');
+    'https://join.slack.com/t/line-armeria/shared_invite/enQtNjIxNDU1ODU1MTI2LWRlMGRjMzIwOTIzMzA2NDA1NGMwMTg2MTA3MzE4MDYyMjUxMjRlNWRiZTc1N2Q3ZGRjNDA5ZDZhZTI1NGEwODk');
   addBadge(div, 'https://img.shields.io/travis/line/armeria/master.svg?style=flat-square',
     'https://travis-ci.org/line/armeria');
   addBadge(div, 'https://img.shields.io/appveyor/ci/line/armeria/master.svg?label=appveyor&style=flat-square',
