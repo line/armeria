@@ -23,9 +23,9 @@ else
   export JAVA_TEST_HOME="$JAVA_HOME"
 fi
 
-NEW_JAVA_HOME="$HOME/.jdk/openjdk11"
+NEW_JAVA_HOME="$HOME/.jdk/openjdk12"
 if [[ ! -d "$NEW_JAVA_HOME" ]]; then
-  bash ./install-jdk.sh --feature 11 --target "$NEW_JAVA_HOME"
+  bash ./install-jdk.sh --feature 12 --target "$NEW_JAVA_HOME"
   rm -f jdk.tar.gz
 fi
 export JAVA_HOME="$NEW_JAVA_HOME"

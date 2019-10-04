@@ -3,6 +3,7 @@ matrix:
   include:
     - name: Java 11
       jdk: openjdk11
+      before_install: source ./.travis.install_jdk.sh
       env:
       - TEST_JAVA_VERSION=11
       - TRAVIS_GRADLE_PROPERTIES=-Pcoverage
