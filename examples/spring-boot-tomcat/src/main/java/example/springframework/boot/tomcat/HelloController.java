@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class HelloController {
     @RequestMapping(method = RequestMethod.GET, path = "/")
     String index() {
-        return "index1";
+        return "index";
     }
 
     @RequestMapping(method = RequestMethod.GET, path = "/hello")
