@@ -60,11 +60,11 @@ public final class CompositeServiceEntry<I extends Request, O extends Response> 
      * Creates a new {@link CompositeServiceEntry} whose {@link Service} is bound under the specified
      * directory.
      *
-     * @see RouteBuilder#prefix(String)
+     * @see RouteBuilder#pathPrefix(String)
      */
     public static <I extends Request, O extends Response>
     CompositeServiceEntry<I, O> ofPrefix(String pathPrefix, Service<I, O> service) {
-        return new CompositeServiceEntry<>(Route.builder().prefix(pathPrefix).build(), service);
+        return new CompositeServiceEntry<>(Route.builder().pathPrefix(pathPrefix).build(), service);
     }
 
     /**

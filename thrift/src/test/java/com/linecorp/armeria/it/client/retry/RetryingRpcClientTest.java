@@ -29,9 +29,11 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -49,6 +51,7 @@ import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryStrategyWithContent;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClientBuilder;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
@@ -126,23 +129,43 @@ public class RetryingRpcClientTest {
 
     @Test
     public void propagateLastResponseWhenNextRetryIsAfterTimeout() throws Exception {
+        final BlockingQueue<RequestLog> logQueue = new LinkedTransferQueue<>();
         final RetryStrategyWithContent<RpcResponse> strategy =
                 (ctx, response) -> CompletableFuture.completedFuture(Backoff.fixed(10000000));
-        final HelloService.Iface client = helloClient(strategy, 100);
+        final HelloService.Iface client = helloClient(strategy, 100, logQueue);
         when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
-
         final Throwable thrown = catchThrowable(() -> client.hello("hello"));
         assertThat(thrown).isInstanceOf(TApplicationException.class);
         assertThat(((TApplicationException) thrown).getType()).isEqualTo(TApplicationException.INTERNAL_ERROR);
         verify(serviceHandler, only()).hello("hello");
+
+        // Make sure the last HTTP request is set to the parent's HTTP request.
+        final RequestLog log = logQueue.poll(10, TimeUnit.SECONDS);
+        assertThat(log).isNotNull();
+        assertThat(log.children()).isNotEmpty();
+        final HttpRequest lastHttpReq = log.children().get(log.children().size() - 1).context().request();
+        assertThat(lastHttpReq).isSameAs(log.context().request());
     }
 
     private HelloService.Iface helloClient(RetryStrategyWithContent<RpcResponse> strategy,
                                            int maxAttempts) {
         return new ClientBuilder(server.uri(BINARY, "/thrift"))
+                .rpcDecorator(RetryingRpcClient.builder(strategy)
+                                               .maxTotalAttempts(maxAttempts)
+                                               .newDecorator())
+                .build(HelloService.Iface.class);
+    }
+
+    private HelloService.Iface helloClient(RetryStrategyWithContent<RpcResponse> strategy,
+                                           int maxAttempts, BlockingQueue<RequestLog> logQueue) {
+        return new ClientBuilder(server.uri(BINARY, "/thrift"))
                 .rpcDecorator(new RetryingRpcClientBuilder(strategy)
                                       .maxTotalAttempts(maxAttempts)
                                       .newDecorator())
+                .rpcDecorator((delegate, ctx, req) -> {
+                    ctx.log().addListener(logQueue::add, RequestLogAvailability.COMPLETE);
+                    return delegate.execute(ctx, req);
+                })
                 .build(HelloService.Iface.class);
     }
 
@@ -174,7 +197,8 @@ public class RetryingRpcClientTest {
         final HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift"))
                 .responseTimeoutMillis(10000)
                 .factory(factory)
-                .rpcDecorator(new RetryingRpcClientBuilder(strategy).newDecorator())
+                .rpcDecorator(RetryingRpcClient.builder(strategy)
+                                               .newDecorator())
                 .build(HelloService.Iface.class);
         when(serviceHandler.hello(anyString())).thenThrow(new IllegalArgumentException());
 
@@ -206,7 +230,8 @@ public class RetryingRpcClientTest {
     public void doNotRetryWhenResponseIsCancelled() throws Exception {
         final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
         final HelloService.Iface client = new ClientBuilder(server.uri(BINARY, "/thrift"))
-                .rpcDecorator(new RetryingRpcClientBuilder(retryAlways).newDecorator())
+                .rpcDecorator(RetryingRpcClient.builder(retryAlways)
+                                               .newDecorator())
                 .rpcDecorator((delegate, ctx, req) -> {
                     context.set(ctx);
                     final RpcResponse res = delegate.execute(ctx, req);

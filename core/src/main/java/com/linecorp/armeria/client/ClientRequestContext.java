@@ -137,25 +137,50 @@ public interface ClientRequestContext extends RequestContext {
     }
 
     /**
+     * {@inheritDoc} For example, when you send an RPC request, this method will return {@code null} until
+     * the RPC request is translated into an HTTP request.
+     */
+    @Nullable
+    @Override
+    HttpRequest request();
+
+    /**
+     * {@inheritDoc} For example, this method will return {@code null} when you are not sending an RPC request
+     * but just a plain HTTP request.
+     */
+    @Nullable
+    @Override
+    RpcRequest rpcRequest();
+
+    /**
      * Creates a new {@link ClientRequestContext} whose properties and {@link Attribute}s are copied from this
      * {@link ClientRequestContext}, except having its own {@link RequestLog}.
      */
     @Override
-    ClientRequestContext newDerivedContext();
+    default ClientRequestContext newDerivedContext() {
+        final Endpoint endpoint = endpoint();
+        checkState(endpoint != null, "endpoint not available");
+        return newDerivedContext(request(), rpcRequest(), endpoint);
+    }
 
     /**
      * Creates a new {@link ClientRequestContext} whose properties and {@link Attribute}s are copied from this
      * {@link ClientRequestContext}, except having a different {@link Request} and its own {@link RequestLog}.
      */
     @Override
-    ClientRequestContext newDerivedContext(Request request);
+    default ClientRequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
+        final Endpoint endpoint = endpoint();
+        checkState(endpoint != null, "endpoint not available");
+        return newDerivedContext(req, rpcReq, endpoint);
+    }
 
     /**
      * Creates a new {@link ClientRequestContext} whose properties and {@link Attribute}s are copied from this
      * {@link ClientRequestContext}, except having different {@link Request}, {@link Endpoint} and its own
      * {@link RequestLog}.
      */
-    ClientRequestContext newDerivedContext(Request request, Endpoint endpoint);
+    ClientRequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
+                                           Endpoint endpoint);
 
     /**
      * Returns the {@link EndpointSelector} used for the current {@link Request}.

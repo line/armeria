@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.client.endpoint.dns;
 
 import static io.netty.handler.codec.dns.DnsRecordType.CNAME;
@@ -55,8 +54,10 @@ public class DnsServiceEndpointGroupTest {
                                          .addRecord(ANSWER, newTooShortSrvRecord("foo.com."))
                                          .addRecord(ANSWER, newBadNameSrvRecord("foo.com."))
         ))) {
-            try (DnsServiceEndpointGroup group = new DnsServiceEndpointGroupBuilder("foo.com")
-                    .serverAddresses(server.addr()).build()) {
+            try (DnsServiceEndpointGroup group =
+                         DnsServiceEndpointGroup.builder("foo.com")
+                                                .serverAddresses(server.addr())
+                                                .build()) {
 
                 assertThat(group.awaitInitialEndpoints()).containsExactly(
                         Endpoint.of("a.foo.com", 2).withWeight(1),
@@ -72,8 +73,10 @@ public class DnsServiceEndpointGroupTest {
                 new DefaultDnsResponse(0).addRecord(ANSWER, newCnameRecord("bar.com.", "baz.com."))
                                          .addRecord(ANSWER, newSrvRecord("baz.com.", 5, 6, "c.baz.com."))
         ))) {
-            try (DnsServiceEndpointGroup group = new DnsServiceEndpointGroupBuilder("bar.com")
-                    .serverAddresses(server.addr()).build()) {
+            try (DnsServiceEndpointGroup group =
+                         DnsServiceEndpointGroup.builder("bar.com")
+                                                .serverAddresses(server.addr())
+                                                .build()) {
 
                 assertThat(group.awaitInitialEndpoints()).containsExactly(
                         Endpoint.of("c.baz.com", 6).withWeight(5));
@@ -87,9 +90,9 @@ public class DnsServiceEndpointGroupTest {
                 new DefaultDnsQuestion("no-port.com.", SRV),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newSrvRecord("no-port.com.", 7, 0, "d.no-port.com"))
         ))) {
-            try (DnsServiceEndpointGroup group = new DnsServiceEndpointGroupBuilder("no-port.com")
-                    .serverAddresses(server.addr()).build()) {
-
+            try (DnsServiceEndpointGroup group =
+                         DnsServiceEndpointGroup.builder("no-port.com")
+                                                .serverAddresses(server.addr()).build()) {
                 assertThat(group.awaitInitialEndpoints()).containsExactly(
                         Endpoint.of("d.no-port.com"));
             }

@@ -38,7 +38,7 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
  * <p>Call {@link #build(Service)} to build the {@link Service} and return to the {@link ServerBuilder}.
  *
  * <pre>{@code
- * ServerBuilder sb = new ServerBuilder();
+ * ServerBuilder sb = Server.builder();
  *
  * sb.route()                                      // Configure the first service.
  *   .post("/foo/bar")
@@ -71,9 +71,19 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
         return (ServiceBindingBuilder) super.path(pathPattern);
     }
 
+    /**
+     * {@inheritDoc}
+     * @deprecated Use {@link #pathPrefix(String)}.
+     */
     @Override
+    @Deprecated
     public ServiceBindingBuilder pathUnder(String prefix) {
-        return (ServiceBindingBuilder) super.pathUnder(prefix);
+        return (ServiceBindingBuilder) super.pathPrefix(prefix);
+    }
+
+    @Override
+    public ServiceBindingBuilder pathPrefix(String prefix) {
+        return (ServiceBindingBuilder) super.pathPrefix(prefix);
     }
 
     @Override

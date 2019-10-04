@@ -60,7 +60,10 @@ public abstract class AbstractRequestContextBuilder {
     private static final String FALLBACK_AUTHORITY = "127.0.0.1";
 
     private final boolean server;
-    private final Request request;
+    @Nullable
+    private final HttpRequest req;
+    @Nullable
+    private final RpcRequest rpcReq;
     private SessionProtocol sessionProtocol;
     private HttpMethod method;
     private final String authority;
@@ -88,19 +91,20 @@ public abstract class AbstractRequestContextBuilder {
      * Creates a new builder with the specified {@link HttpRequest}.
      *
      * @param server whether this builder will build a server-side context.
-     * @param request the {@link HttpRequest}.
+     * @param req the {@link HttpRequest}.
      */
-    protected AbstractRequestContextBuilder(boolean server, HttpRequest request) {
+    protected AbstractRequestContextBuilder(boolean server, HttpRequest req) {
         this.server = server;
-        this.request = requireNonNull(request, "request");
+        this.req = requireNonNull(req, "req");
+        rpcReq = null;
         sessionProtocol = SessionProtocol.H2C;
 
-        method = request.headers().method();
-        authority = firstNonNull(request.headers().authority(), FALLBACK_AUTHORITY);
+        method = req.headers().method();
+        authority = firstNonNull(req.headers().authority(), FALLBACK_AUTHORITY);
 
-        final String pathAndQueryStr = request.headers().path();
+        final String pathAndQueryStr = req.headers().path();
         final PathAndQuery pathAndQuery = PathAndQuery.parse(pathAndQueryStr);
-        checkArgument(pathAndQuery != null, "request.path is not valid: %s", request);
+        checkArgument(pathAndQuery != null, "request.path is not valid: %s", req);
         path = pathAndQuery.path();
         query = pathAndQuery.query();
     }
@@ -109,12 +113,13 @@ public abstract class AbstractRequestContextBuilder {
      * Creates a new builder with the specified {@link RpcRequest} and {@link URI}.
      *
      * @param server whether this builder will build a server-side context.
-     * @param request the {@link RpcRequest}.
+     * @param rpcReq the {@link RpcRequest}.
      * @param uri the {@link URI} of the request endpoint.
      */
-    protected AbstractRequestContextBuilder(boolean server, RpcRequest request, URI uri) {
+    protected AbstractRequestContextBuilder(boolean server, RpcRequest rpcReq, URI uri) {
         this.server = server;
-        this.request = requireNonNull(request, "request");
+        req = null;
+        this.rpcReq = requireNonNull(rpcReq, "rpcReq");
         method = HttpMethod.POST;
 
         requireNonNull(uri, "uri");
@@ -192,11 +197,19 @@ public abstract class AbstractRequestContextBuilder {
     }
 
     /**
-     * Returns the {@link Request} of the context.
+     * Returns the {@link HttpRequest} of the context.
      */
-    @SuppressWarnings("unchecked")
-    protected final <T extends Request> T request() {
-        return (T) request;
+    @Nullable
+    protected final HttpRequest request() {
+        return req;
+    }
+
+    /**
+     * Returns the {@link RpcRequest} of the context.
+     */
+    @Nullable
+    protected final RpcRequest rpcRequest() {
+        return rpcReq;
     }
 
     /**
@@ -216,7 +229,7 @@ public abstract class AbstractRequestContextBuilder {
      */
     public AbstractRequestContextBuilder sessionProtocol(SessionProtocol sessionProtocol) {
         requireNonNull(sessionProtocol, "sessionProtocol");
-        if (request instanceof RpcRequest) {
+        if (rpcReq != null) {
             checkArgument(sessionProtocol == this.sessionProtocol,
                           "sessionProtocol: %s (expected: same as the session protocol specified in 'uri')",
                           sessionProtocol);
@@ -397,8 +410,8 @@ public abstract class AbstractRequestContextBuilder {
      */
     protected AbstractRequestContextBuilder method(HttpMethod method) {
         requireNonNull(method, "method");
-        if (request instanceof HttpRequest) {
-            checkArgument(method == ((HttpRequest) request).method(),
+        if (req != null) {
+            checkArgument(method == req.method(),
                           "method: %s (expected: same as request.method)", method);
         } else {
             this.method = method;

@@ -45,6 +45,16 @@ allprojects {
     }
 }
 
+task checkJavaVersion {
+    doLast {
+        if (JavaVersion.current().majorVersion.toInteger() < 12) {
+            throw new GradleException("The Java version used (${JavaVersion.current()}) is too old to " +
+                    "build Armeria. Please use at least JDK 12. You can download a compatible JDK from " +
+                    "https://adoptopenjdk.net/")
+        }
+    }
+}
+
 // Configure all Java projects
 configure(projectsWithFlags('java')) {
     // Common dependencies
@@ -109,10 +119,15 @@ configure(projectsWithFlags('java')) {
 
     // Target Java 8.
     tasks.withType(JavaCompile) {
-        if (JavaVersion.current() >= JavaVersion.VERSION_1_9) {
-            options.compilerArgs += ['--release', '8']
-        }
+        options.compilerArgs += ['--release', '8']
+
+        dependsOn checkJavaVersion
     }
+}
+
+def javaTestHome = System.env.JAVA_TEST_HOME
+if (javaTestHome) {
+    logger.quiet("Overriding JVM for tests with ${javaTestHome}")
 }
 
 // Configure the Javadoc tasks of all projects.
@@ -131,11 +146,17 @@ allprojects {
             exclude '**/reactor/core/scheduler/**'
         }
     }
+
+    if (javaTestHome) {
+        tasks.withType(Test) {
+            executable "${javaTestHome}/bin/java"
+        }
+    }
 }
 
-// Require to use JDK 11 when releasing.
+// Require to use JDK 12 when releasing.
 tasks.release.doFirst {
-    if (JavaVersion.current() != JavaVersion.VERSION_11) {
-        throw new IllegalStateException("You must release using JDK 11.");
+    if (JavaVersion.current() != JavaVersion.VERSION_12) {
+        throw new IllegalStateException("You must release using JDK 12.");
     }
 }

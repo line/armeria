@@ -34,7 +34,7 @@ class SamplerTest {
         assertThat(Sampler.of("never")).isSameAs(Sampler.never());
         assertThat(Sampler.of(" never ")).isSameAs(Sampler.never());
 
-        // 'random=<rate>'
+        // 'random=<probability>'
         assertThat(Sampler.of("random=0")).isSameAs(Sampler.never());
         assertThat(Sampler.of("random=1")).isSameAs(Sampler.always());
         assertThat(Sampler.of("random=0.1")).isInstanceOfSatisfying(CountingSampler.class, sampler -> {

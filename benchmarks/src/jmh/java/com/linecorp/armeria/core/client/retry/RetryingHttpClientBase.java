@@ -25,7 +25,6 @@ import org.openjdk.jmh.annotations.TearDown;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
 
 @State(Scope.Benchmark)
@@ -36,10 +35,10 @@ public abstract class RetryingHttpClientBase {
 
     @Setup
     public void start() {
-        server = new ServerBuilder()
-                .http(0)
-                .service("/empty", (ctx, req) -> HttpResponse.of("\"\""))
-                .build();
+        server = Server.builder()
+                       .http(0)
+                       .service("/empty", (ctx, req) -> HttpResponse.of("\"\""))
+                       .build();
         server.start().join();
         client = newClient();
     }

@@ -56,7 +56,7 @@ public class ArmeriaConfigurationUtilTest {
                 .setService(new SimpleService())
                 .setDecorators(decorator);
 
-        final ServerBuilder sb1 = new ServerBuilder();
+        final ServerBuilder sb1 = Server.builder();
         final DocServiceBuilder dsb1 = new DocServiceBuilder();
         configureAnnotatedHttpServices(sb1, dsb1, ImmutableList.of(bean),
                                        MeterIdPrefixFunctionFactory.DEFAULT, null);
@@ -65,7 +65,7 @@ public class ArmeriaConfigurationUtilTest {
 
         reset(decorator);
 
-        final ServerBuilder sb2 = new ServerBuilder();
+        final ServerBuilder sb2 = Server.builder();
         final DocServiceBuilder dsb2 = new DocServiceBuilder();
         configureAnnotatedHttpServices(sb2, dsb2, ImmutableList.of(bean),
                                        null, null);
@@ -82,7 +82,7 @@ public class ArmeriaConfigurationUtilTest {
                 .setService(new SimpleService())
                 .setDecorators(decorator);
 
-        final ServerBuilder sb = new ServerBuilder();
+        final ServerBuilder sb = Server.builder();
         final DocServiceBuilder dsb = new DocServiceBuilder();
         configureAnnotatedHttpServices(sb, dsb, ImmutableList.of(bean),
                                        null, null);

@@ -35,12 +35,12 @@ class VirtualHostServiceBindingBuilderTest {
 
     @Test
     void serviceBindingBuilder() {
-        final ServerBuilder sb = new ServerBuilder();
+        final ServerBuilder sb = Server.builder();
         final ContentPreviewerFactory requestFactory = mock(ContentPreviewerFactory.class);
         final ContentPreviewerFactory responseFactory = mock(ContentPreviewerFactory.class);
 
         sb.virtualHost("example.com")
-          .route().pathUnder("/foo/bar")
+          .route().pathPrefix("/foo/bar")
           .methods(HttpMethod.GET)
           .consumes(JSON, PLAIN_TEXT_UTF_8)
           .produces(JSON_UTF_8, PLAIN_TEXT_UTF_8)
@@ -60,7 +60,7 @@ class VirtualHostServiceBindingBuilderTest {
         assertThat(route.paths()).containsExactly("/foo/bar/", "/foo/bar/*");
         assertThat(route.consumes()).containsExactly(JSON, PLAIN_TEXT_UTF_8);
         assertThat(route.produces()).containsExactly(JSON_UTF_8,
-                                                               PLAIN_TEXT_UTF_8);
+                                                     PLAIN_TEXT_UTF_8);
         assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(10);
         assertThat(serviceConfig.maxRequestLength()).isEqualTo(8192);
         assertThat(serviceConfig.verboseResponses()).isEqualTo(true);
@@ -70,10 +70,10 @@ class VirtualHostServiceBindingBuilderTest {
 
     @Test
     void withRoute() {
-        final ServerBuilder sb = new ServerBuilder();
+        final ServerBuilder sb = Server.builder();
 
         sb.virtualHost("example.com").withRoute(builder -> {
-            builder.pathUnder("/foo/bar")
+            builder.pathPrefix("/foo/bar")
                    .methods(HttpMethod.GET)
                    .consumes(JSON, PLAIN_TEXT_UTF_8)
                    .produces(JSON_UTF_8, PLAIN_TEXT_UTF_8)
@@ -92,7 +92,7 @@ class VirtualHostServiceBindingBuilderTest {
         assertThat(route.paths()).containsExactly("/foo/bar/", "/foo/bar/*");
         assertThat(route.consumes()).containsExactly(JSON, PLAIN_TEXT_UTF_8);
         assertThat(route.produces()).containsExactly(JSON_UTF_8,
-                                                               PLAIN_TEXT_UTF_8);
+                                                     PLAIN_TEXT_UTF_8);
         assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(10);
         assertThat(serviceConfig.maxRequestLength()).isEqualTo(8192);
         assertThat(serviceConfig.verboseResponses()).isEqualTo(true);

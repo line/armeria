@@ -1,6 +1,21 @@
 language: java
-jdk:
-- openjdk11
+matrix:
+  include:
+    - name: Java 11
+      jdk: openjdk11
+      before_install: source ./.travis.install_jdk.sh
+      env:
+      - TEST_JAVA_VERSION=11
+      - TRAVIS_GRADLE_PROPERTIES=-Pcoverage
+      after_success:
+        - bash <(curl -s https://codecov.io/bash)
+    - name: Java 13
+      before_install: source ./.travis.install_jdk.sh 13
+      env: TEST_JAVA_VERSION=13
+    - name: Java 8
+      jdk: openjdk8
+      before_install: source ./.travis.install_jdk.sh
+      env: TEST_JAVA_VERSION=8
 sudo: false
 os:
 - linux
@@ -19,16 +34,14 @@ cache:
   - "$HOME/.gradle/caches/modules-2"
   - "$HOME/.gradle/caches/package-lists"
   - "$HOME/.gradle/caches/sphinx-binary"
+  - "$HOME/.jdk"
 env:
   global:
   - "_JAVA_OPTIONS=-Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts"
-before_install:
-- "./gradlew --version"
 install:
 - true
 script:
-- "./gradlew --no-daemon --stacktrace --warning-mode=all -Pcoverage checkstyle check build"
+- "./gradlew --version"
+- "./gradlew --no-daemon --stacktrace --warning-mode=all ${TRAVIS_GRADLE_PROPERTIES} checkstyle check build"
 before_cache:
 - find $HOME/.gradle/caches -name '*.lock' -delete
-after_success:
-- bash <(curl -s https://codecov.io/bash)

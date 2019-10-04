@@ -18,6 +18,7 @@ package com.linecorp.armeria.spring;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
 
@@ -25,9 +26,11 @@ import javax.validation.constraints.NotNull;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.docs.DocService;
 
 /**
  * An abstract bean with information for registering a service object.
@@ -35,8 +38,10 @@ import com.linecorp.armeria.server.Service;
  *
  * @param <T> the type of the service object to be registered
  * @param <U> the type of the implementation of this bean
+ * @param <V> the type of the example request object to be registered
+ * @param <W> the type of the example header object to be registered
  */
-public class AbstractServiceRegistrationBean<T, U> {
+public class AbstractServiceRegistrationBean<T, U, V, W> {
     /**
      * The annotated service object to register.
      */
@@ -55,6 +60,20 @@ public class AbstractServiceRegistrationBean<T, U> {
     @NotNull
     private List<Function<Service<HttpRequest, HttpResponse>,
             ? extends Service<HttpRequest, HttpResponse>>> decorators = new ArrayList<>();
+
+    /**
+     * Example requests to populate debug forms in {@link DocService}.
+     * This should be a list of request objects which correspond to methods
+     * in each service.
+     */
+    @NotNull
+    private Collection<? extends V> exampleRequests = ImmutableList.of();
+
+    /**
+     * Example {@link HttpHeaders} being used in debug forms.
+     */
+    @NotNull
+    private Collection<? extends W> exampleHeaders = ImmutableList.of();
 
     /**
      * Returns the annotated service object registered to this bean.
@@ -128,6 +147,120 @@ public class AbstractServiceRegistrationBean<T, U> {
             List<Function<Service<HttpRequest, HttpResponse>,
                     ? extends Service<HttpRequest, HttpResponse>>> decorators) {
         this.decorators = requireNonNull(decorators, "decorators");
+        return self();
+    }
+
+    /**
+     * Returns example requests of {@link #getService()}.
+     */
+    @NotNull
+    public Collection<? extends V> getExampleRequests() {
+        return exampleRequests;
+    }
+
+    /**
+     * Sets example requests for {@link #getService()}.
+     */
+    public U setExampleRequests(@NotNull Iterable<? extends V> exampleRequests) {
+        this.exampleRequests = ImmutableList.copyOf(exampleRequests);
+        return self();
+    }
+
+    /**
+     * Sets example requests for {@link #getService()}.
+     */
+    public U setExampleRequests(@NotNull Collection<? extends V> exampleRequests) {
+        return setExampleRequests((Iterable<? extends V>) exampleRequests);
+    }
+
+    /**
+     * Sets example requests for {@link #getService()}.
+     */
+    public U setExampleRequests(@NotNull V... exampleRequests) {
+        return setExampleRequests(ImmutableList.copyOf(exampleRequests));
+    }
+
+    /**
+     * Adds example requests for {@link #getService()}.
+     */
+    public U addExampleRequests(@NotNull Iterable<? extends V> exampleRequests) {
+        this.exampleRequests = ImmutableList.<V>builder().addAll(this.exampleRequests)
+                                                         .addAll(exampleRequests)
+                                                         .build();
+        return self();
+    }
+
+    /**
+     * Adds example requests for {@link #getService()}.
+     */
+    public U addExampleRequests(@NotNull V... exampleRequests) {
+        return addExampleRequests(ImmutableList.copyOf(exampleRequests));
+    }
+
+    /**
+     * Adds an example request for {@link #getService()}.
+     */
+    public U addExampleRequests(@NotNull V exampleRequest) {
+        exampleRequests = ImmutableList.<V>builder().addAll(exampleRequests)
+                                                    .add(exampleRequest)
+                                                    .build();
+        return self();
+    }
+
+    /**
+     * Returns example HTTP headers for all service methods.
+     */
+    @NotNull
+    public Collection<? extends W> getExampleHeaders() {
+        return exampleHeaders;
+    }
+
+    /**
+     * Sets example HTTP headers for all service methods.
+     */
+    public U setExampleHeaders(@NotNull Iterable<? extends W> exampleHeaders) {
+        this.exampleHeaders = ImmutableList.copyOf(exampleHeaders);
+        return self();
+    }
+
+    /**
+     * Sets example HTTP headers for all service methods.
+     */
+    public U setExampleHeaders(@NotNull Collection<? extends W> exampleHeaders) {
+        return setExampleHeaders((Iterable<? extends W>) exampleHeaders);
+    }
+
+    /**
+     * Sets example HTTP headers for all service methods.
+     */
+    public U setExampleHeaders(@NotNull W... exampleHeaders) {
+        return setExampleHeaders(ImmutableList.copyOf(exampleHeaders));
+    }
+
+    /**
+     * Adds example HTTP headers for all service methods.
+     */
+    public U addExampleHeaders(@NotNull Iterable<? extends W> exampleHeaders) {
+        this.exampleHeaders = ImmutableList.<W>builder().addAll(this.exampleHeaders)
+                                                        .addAll(exampleHeaders)
+                                                        .build();
+        return self();
+    }
+
+    /**
+     * Adds example HTTP headers for all service methods.
+     */
+    public U addExampleHeaders(@NotNull W... exampleHeaders) {
+        return addExampleHeaders(ImmutableList.copyOf(exampleHeaders));
+    }
+
+    /**
+     * Adds an example HTTP header for all service methods.
+     */
+    public U addExampleHeaders(@NotNull W exampleHeaders) {
+        this.exampleHeaders = ImmutableList.<W>builder().addAll(this.exampleHeaders)
+                                                        .add(exampleHeaders)
+                                                        .build();
         return self();
     }
 

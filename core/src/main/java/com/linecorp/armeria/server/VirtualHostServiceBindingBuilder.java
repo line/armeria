@@ -38,7 +38,7 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
  * <p>Call {@link #build(Service)} to build the {@link Service} and return to the {@link VirtualHostBuilder}.
  *
  * <pre>{@code
- * ServerBuilder sb = new ServerBuilder();
+ * ServerBuilder sb = Server.builder();
  * sb.virtualHost("example.com")
  *   .route()                                      // Configure the first service in "example.com".
  *   .post("/foo/bar")
@@ -71,9 +71,19 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
         return (VirtualHostServiceBindingBuilder) super.path(pathPattern);
     }
 
+    /**
+     * {@inheritDoc}
+     * @deprecated Use {@link #pathPrefix(String)}.
+     */
     @Override
+    @Deprecated
     public VirtualHostServiceBindingBuilder pathUnder(String prefix) {
-        return (VirtualHostServiceBindingBuilder) super.pathUnder(prefix);
+        return (VirtualHostServiceBindingBuilder) super.pathPrefix(prefix);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder pathPrefix(String prefix) {
+        return (VirtualHostServiceBindingBuilder) super.pathPrefix(prefix);
     }
 
     @Override

@@ -41,11 +41,11 @@ import java.security.PrivilegedAction;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.TreeMap;
 
 import javax.annotation.Nullable;
 
@@ -134,7 +134,7 @@ public final class Version {
             artifactIds.add(artifactId);
         }
 
-        final Map<String, Version> versions = new HashMap<>();
+        final Map<String, Version> versions = new TreeMap<>();
         for (String artifactId: artifactIds) {
             versions.put(
                     artifactId,

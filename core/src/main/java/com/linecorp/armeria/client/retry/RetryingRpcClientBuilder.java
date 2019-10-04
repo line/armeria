@@ -31,7 +31,10 @@ public class RetryingRpcClientBuilder
 
     /**
      * Creates a new builder with the specified {@link RetryStrategyWithContent}.
+     *
+     * @deprecated Use {@link RetryingRpcClient#builder(RetryStrategyWithContent)}.
      */
+    @Deprecated
     public RetryingRpcClientBuilder(RetryStrategyWithContent<RpcResponse> retryStrategyWithContent) {
         super(retryStrategyWithContent);
     }

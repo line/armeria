@@ -280,9 +280,9 @@ public class RetryingHttpClientTest {
     public void retryWhenContentMatched() {
         final HttpClient client = new HttpClientBuilder(server.uri("/"))
                 .factory(clientFactory)
-                .decorator(new RetryingHttpClientBuilder(new RetryIfContentMatch("Need to retry"))
-                                   .contentPreviewLength(1024)
-                                   .newDecorator())
+                .decorator(RetryingHttpClient.builder(new RetryIfContentMatch("Need to retry"))
+                                             .contentPreviewLength(1024)
+                                             .newDecorator())
                 .build();
 
         final AggregatedHttpResponse res = client.get("/retry-content").aggregate().join();
@@ -418,7 +418,7 @@ public class RetryingHttpClientTest {
         final HttpClient client = new HttpClientBuilder(server.uri("/"))
                 .factory(factory)
                 .responseTimeoutMillis(10000)
-                .decorator(new RetryingHttpClientBuilder(
+                .decorator(RetryingHttpClient.builder(
                         // Retry after 8000 which is slightly less than responseTimeoutMillis(10000).
                         RetryStrategy.onServerErrorStatus(Backoff.fixed(8000))).newDecorator())
                 .decorator(LoggingClient.newDecorator())
@@ -564,11 +564,11 @@ public class RetryingHttpClientTest {
                               long responseTimeoutForEach, int maxTotalAttempts) {
         return new HttpClientBuilder(server.uri("/"))
                 .factory(clientFactory).responseTimeoutMillis(responseTimeoutMillis)
-                .decorator(new RetryingHttpClientBuilder(strategy)
-                                   .responseTimeoutMillisForEachAttempt(responseTimeoutForEach)
-                                   .useRetryAfter(true)
-                                   .maxTotalAttempts(maxTotalAttempts)
-                                   .newDecorator())
+                .decorator(RetryingHttpClient.builder(strategy)
+                                             .responseTimeoutMillisForEachAttempt(responseTimeoutForEach)
+                                             .useRetryAfter(true)
+                                             .maxTotalAttempts(maxTotalAttempts)
+                                             .newDecorator())
                 .build();
     }
 

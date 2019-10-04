@@ -54,7 +54,6 @@ import com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePluginTes
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RouteBuilder;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
@@ -192,7 +191,7 @@ public class AnnotatedHttpDocServicePluginTest {
                         .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8, MediaType.JSON_UTF_8)
                         .build());
 
-        route = withMethodAndTypes(Route.builder().pathWithPrefix("/glob/", "glob:/home/*/files/**"));
+        route = withMethodAndTypes(Route.builder().path("/glob/", "glob:/home/*/files/**"));
         endpointInfo = endpointInfo(route, hostnamePattern);
         assertThat(endpointInfo).isEqualTo(
                 new EndpointInfoBuilder("*", "regex:^/glob/home/([^/]+)/files/(.*)$")
@@ -200,7 +199,7 @@ public class AnnotatedHttpDocServicePluginTest {
                         .build());
 
         route = withMethodAndTypes(Route.builder()
-                                        .pathWithPrefix("/prefix: regex:/", "regex:^/files/(?<filePath>.*)$"));
+                                        .path("/prefix: regex:/", "regex:^/files/(?<filePath>.*)$"));
         endpointInfo = endpointInfo(route, hostnamePattern);
         assertThat(endpointInfo).isEqualTo(
                 new EndpointInfoBuilder("*", "regex:^/files/(?<filePath>.*)$")
@@ -332,10 +331,10 @@ public class AnnotatedHttpDocServicePluginTest {
     }
 
     private static Map<String, ServiceInfo> services(DocServiceFilter include, DocServiceFilter exclude) {
-        final Server server = new ServerBuilder()
-                .annotatedService(new FooClass())
-                .annotatedService(new BarClass())
-                .build();
+        final Server server = Server.builder()
+                                    .annotatedService(new FooClass())
+                                    .annotatedService(new BarClass())
+                                    .build();
         final ServiceSpecification specification =
                 plugin.generateSpecification(ImmutableSet.copyOf(server.serviceConfigs()),
                                              unifyFilter(include, exclude));

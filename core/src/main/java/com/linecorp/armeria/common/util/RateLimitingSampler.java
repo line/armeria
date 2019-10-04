@@ -63,14 +63,15 @@ import com.google.common.annotations.VisibleForTesting;
  *
  * <p>Forked from brave-core 5.6.9 at b8c00c594cbf75a33788d3dc990f94b9c6f41c01
  */
-final class RateLimitingSampler implements Sampler {
-    static Sampler create(int samplesPerSecond) {
+final class RateLimitingSampler<T> implements Sampler<T> {
+
+    static <T> Sampler<T> create(int samplesPerSecond) {
         checkArgument(samplesPerSecond >= 0,
                       "samplesPerSecond: %s (expected: >= 0)", samplesPerSecond);
         if (samplesPerSecond == 0) {
             return Sampler.never();
         }
-        return new RateLimitingSampler(samplesPerSecond);
+        return new RateLimitingSampler<>(samplesPerSecond);
     }
 
     static final long NANOS_PER_SECOND = TimeUnit.SECONDS.toNanos(1);

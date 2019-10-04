@@ -24,6 +24,7 @@ import java.util.function.Function;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientOptionsBuilder;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -37,6 +38,13 @@ public class HealthCheckedEndpointGroupBuilder extends AbstractHealthCheckedEndp
     private final String path;
     private boolean useGet;
 
+    /**
+     * Returns a newly created {@link HealthCheckedEndpointGroupBuilder} that builds
+     * a {@link HealthCheckedEndpointGroup} which sends HTTP {@code HEAD} health check requests.
+     *
+     * @param delegate the {@link EndpointGroup} that provides the candidate {@link Endpoint}s
+     * @param path     the HTTP request path, e.g. {@code "/internal/l7check"}
+     */
     HealthCheckedEndpointGroupBuilder(EndpointGroup delegate, String path) {
         super(delegate);
         this.path = requireNonNull(path, "path");

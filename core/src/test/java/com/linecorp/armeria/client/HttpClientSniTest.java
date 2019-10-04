@@ -54,7 +54,7 @@ class HttpClientSniTest {
 
     static {
         try {
-            final ServerBuilder sb = new ServerBuilder();
+            final ServerBuilder sb = Server.builder();
             sscA = new SelfSignedCertificate("a.com");
             sscB = new SelfSignedCertificate("b.com");
 

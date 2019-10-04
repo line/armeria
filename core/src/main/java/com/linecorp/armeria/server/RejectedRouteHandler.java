@@ -23,7 +23,7 @@ import org.slf4j.LoggerFactory;
  * a certain {@link Route}. For example, the following code will trigger this handler:
  *
  * <pre>{@code
- * ServerBuilder sb = new ServerBuilder();
+ * ServerBuilder sb = Server.builder();
  * sb.service("/hello", serviceA);
  * sb.service("/hello", serviceB); // Tried to bind at the same path again.
  * sb.build();

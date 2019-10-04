@@ -88,6 +88,14 @@ public final class GrpcServiceBuilder {
     private ProtoReflectionService protoReflectionService;
 
     /**
+     * Creates a new {@link GrpcServiceBuilder}.
+     *
+     * @deprecated Use {@link GrpcService}.
+     */
+    @Deprecated
+    public GrpcServiceBuilder() {}
+
+    /**
      * Adds a gRPC {@link ServerServiceDefinition} to this {@link GrpcServiceBuilder}, such as
      * what's returned by {@link BindableService#bindService()}.
      */
