@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.grpc.interop;
 
+import static org.junit.Assume.assumeFalse;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
@@ -120,6 +122,14 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
     protected boolean metricsExpected() {
         // Armeria handles metrics using micrometer and does not support opencensus.
         return false;
+    }
+
+    @Override
+    public void deadlineExceeded() throws Exception {
+        // FIXME(trustin): Re-enable this test on Windows once we fix #2008
+        //                 https://github.com/line/armeria/issues/2008
+        assumeFalse(System.getProperty("os.name", "").startsWith("win"));
+        super.deadlineExceeded();
     }
 
     // This base implementation is to check that the client sends the timeout as a request header, not that the
