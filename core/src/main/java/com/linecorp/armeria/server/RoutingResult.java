@@ -53,6 +53,13 @@ public final class RoutingResult {
         return new RoutingResultBuilder();
     }
 
+    /**
+     * Returns a new builder, with a hint on the number of path params that will be added.
+     */
+    static RoutingResultBuilder builderWithExpectedNumParams(int numParams) {
+        return new RoutingResultBuilder(numParams);
+    }
+
     @Nullable
     private final String path;
     @Nullable
