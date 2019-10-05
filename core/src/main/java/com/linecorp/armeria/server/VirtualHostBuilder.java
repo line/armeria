@@ -245,8 +245,53 @@ public final class VirtualHostBuilder {
         requireNonNull(keyManagerFactory, "keyManagerFactory");
         requireNonNull(tlsCustomizer, "tlsCustomizer");
 
-        tls(buildSslContext(() -> SslContextBuilder.forServer(keyManagerFactory), tlsCustomizer));
+        final SslContext sslContext = buildSslContext(() -> SslContextBuilder.forServer(keyManagerFactory),
+                                                      tlsCustomizer);
+        try {
+            validateKeyStoreNullPassword(sslContext);
+        } catch (Exception e) {
+            throw new RuntimeException("failed to validate SSL/TLS configuration: " + e.toString(), e);
+        }
+
+        tls(sslContext);
         return this;
+    }
+
+    /**
+     * Validate key store which is used for building {@code sslContext}.
+     * If key store is initialized with null password, an exception will be raised.
+     */
+    private void validateKeyStoreNullPassword(SslContext sslContext) throws Exception {
+        SSLEngine serverEngine = null;
+        SSLEngine clientEngine = null;
+
+        try {
+            serverEngine = sslContext.newEngine(ByteBufAllocator.DEFAULT);
+            serverEngine.setUseClientMode(false);
+            serverEngine.setNeedClientAuth(false);
+
+            final SelfSignedCertificate ssc = new SelfSignedCertificate("foo.com");
+            final SslContext sslContextClient =
+                    buildSslContext(() -> SslContextBuilder.forClient()
+                                                           .keyManager(ssc.certificate(), ssc.privateKey()),
+                                    sslContextBuilder -> {});
+            clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
+            clientEngine.setUseClientMode(true);
+
+            clientEngine.beginHandshake();
+            serverEngine.beginHandshake();
+
+            ByteBuffer appBuf = ByteBuffer.allocate(clientEngine.getSession().getApplicationBufferSize());
+            ByteBuffer packetBuf = ByteBuffer.allocate(clientEngine.getSession().getPacketBufferSize());
+
+            clientEngine.wrap(appBuf, packetBuf);
+            appBuf.clear();
+            packetBuf.flip();
+            serverEngine.unwrap(packetBuf, appBuf);
+        } finally {
+            ReferenceCountUtil.release(serverEngine);
+            ReferenceCountUtil.release(clientEngine);
+        }
     }
 
     private static SslContext buildSslContext(
@@ -920,14 +965,6 @@ public final class VirtualHostBuilder {
             }
         }
 
-        if (sslContext != null) {
-            try {
-                validateSslContext(sslContext);
-            } catch (Exception e) {
-                throw new RuntimeException("failed to validate SSL/TLS configuration: " + e.toString(), e);
-            }
-        }
-
         final Function<VirtualHost, Logger> accessLoggerMapper =
                 this.accessLoggerMapper != null ? this.accessLoggerMapper : serverBuilder.accessLoggerMapper();
 
@@ -947,39 +984,6 @@ public final class VirtualHostBuilder {
                                 responseContentPreviewerFactory, accessLogWriter,
                                 shutdownAccessLogWriterOnStop);
         return decorator != null ? virtualHost.decorate(decorator) : virtualHost;
-    }
-
-    private void validateSslContext(SslContext sslContext) throws Exception {
-        SSLEngine serverEngine = null;
-        SSLEngine clientEngine = null;
-
-        try {
-            serverEngine = sslContext.newEngine(ByteBufAllocator.DEFAULT);
-            serverEngine.setUseClientMode(false);
-            serverEngine.setNeedClientAuth(false);
-
-            final SelfSignedCertificate ssc = new SelfSignedCertificate("foo.com");
-            final SslContext sslContextClient =
-                    buildSslContext(() -> SslContextBuilder.forClient()
-                                                           .keyManager(ssc.certificate(), ssc.privateKey()),
-                                    sslContextBuilder -> {});
-            clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
-            clientEngine.setUseClientMode(true);
-
-            clientEngine.beginHandshake();
-            serverEngine.beginHandshake();
-
-            ByteBuffer appBuf = ByteBuffer.allocate(clientEngine.getSession().getApplicationBufferSize());
-            ByteBuffer packetBuf = ByteBuffer.allocate(clientEngine.getSession().getPacketBufferSize());
-
-            clientEngine.wrap(appBuf, packetBuf);
-            appBuf.clear();
-            packetBuf.flip();
-            serverEngine.unwrap(packetBuf, appBuf);
-        } finally {
-            ReferenceCountUtil.release(serverEngine);
-            ReferenceCountUtil.release(clientEngine);
-        }
     }
 
     @Override

@@ -36,7 +36,7 @@ class ServerTlsValidationTest {
     //       happens and this test needs to be updated when investigation completes.
     @Ignore
     @Test
-    void testJksKeyStoreWithNullPassword() throws Exception {
+    void testJksKeyStoreWithNullPassword() {
         /*
          * Dummy keystore generation
          * keytool -genkeypair -keyalg RSA -keysize 2048 -storetype JKS -keystore keystore.jks -validity 3650
