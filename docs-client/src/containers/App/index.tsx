@@ -38,6 +38,7 @@ import { Route, RouteComponentProps, withRouter } from 'react-router-dom';
 import EnumPage from '../EnumPage';
 import HomePage from '../HomePage';
 import MethodPage from '../MethodPage';
+import { DebugScroll } from '../MethodPage/DebugScroll';
 import StructPage from '../StructPage';
 
 import {
@@ -47,7 +48,6 @@ import {
 } from '../../lib/specification';
 
 import GotoSelect from '../../components/GotoSelect';
-
 import {
   extractSimpleArtifactVersion,
   Version,
@@ -330,19 +330,24 @@ interface OpenServices {
   [name: string]: boolean;
 }
 
-const toggle = (current: boolean) => !current;
-
 const App: React.FunctionComponent<Props> = (props) => {
+  const toggle = (current: boolean) => {
+    DebugScroll.setIsScroll(false);
+    return !current;
+  };
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [specification, setSpecification] = useState<
     Specification | undefined
   >();
   const [versions, setVersions] = useState<Versions | undefined>();
   const [openServices, toggleOpenService] = useReducer(
-    (current: OpenServices, serviceName: string) => ({
-      ...current,
-      [serviceName]: !current[serviceName],
-    }),
+    (current: OpenServices, serviceName: string) => {
+      DebugScroll.setIsScroll(false);
+      return {
+        ...current,
+        [serviceName]: !current[serviceName],
+      };
+    },
     {},
   );
   const [servicesOpen, toggleServicesOpen] = useReducer(toggle, true);
@@ -358,6 +363,7 @@ const App: React.FunctionComponent<Props> = (props) => {
       initialSpecification.getServices().forEach((service) => {
         toggleOpenService(service.name);
       });
+      DebugScroll.setIsScroll(true);
       setSpecification(initialSpecification);
     })();
   }, []);
@@ -381,6 +387,7 @@ const App: React.FunctionComponent<Props> = (props) => {
         ? `${to}?${params.toString()}`
         : to;
       props.history.push(url);
+      DebugScroll.setIsScroll(true);
       setMobileDrawerOpen(false);
     },
     [props.location.search, props.history],

@@ -37,6 +37,7 @@ import { docServiceDebug } from '../../lib/header-provider';
 import jsonPrettify from '../../lib/json-prettify';
 import { Method } from '../../lib/specification';
 import { TRANSPORTS } from '../../lib/transports';
+import { DebugScroll } from './DebugScroll';
 import EndpointPath from './EndpointPath';
 import HttpHeaders from './HttpHeaders';
 import HttpQueryString from './HttpQueryString';
@@ -115,7 +116,10 @@ class DebugPage extends React.PureComponent<Props, State> {
   }
 
   public componentDidUpdate(prevProps: Props) {
-    if (this.props.match.params !== prevProps.match.params) {
+    if (
+      this.props.match.params !== prevProps.match.params &&
+      DebugScroll.getIsScroll()
+    ) {
       this.initializeState();
     }
   }
