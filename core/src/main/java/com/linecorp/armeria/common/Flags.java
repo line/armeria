@@ -777,7 +777,7 @@ public final class Flags {
     }
 
     /**
-     * Returns the value of the {@code httpFileServiceCache} parameter. It would be used to create a Caffeine
+     * Returns the value of the {@code fileServiceCache} parameter. It would be used to create a Caffeine
      * {@link Cache} instance using {@link CaffeineSpec} for caching file entries.
      *
      * <p>The default value of this flag is {@value DEFAULT_FILE_SERVICE_CACHE_SPEC}. Specify the

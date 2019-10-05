@@ -92,7 +92,7 @@ By default, :api:`HttpFileService` caches up to 1024 files whose length is less 
 
 The cache can also be disabled by specifying ``off`` for ``entryCacheSpec()``.
 Or, you can override the default value of ``maximumSize=1024`` using the JVM system property
-``-Dcom.linecorp.armeria.httpFileServiceCache=<spec>``.
+``-Dcom.linecorp.armeria.fileServiceCache=<spec>``.
 
 Serving pre-compressed files
 ----------------------------
