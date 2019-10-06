@@ -82,7 +82,7 @@ if [[ -d /var/cache/appveyor ]] && \
     # Fetch the home directory from the cache directory.
     if [[ -d "$CACHE_DIR" ]]; then
       touch "$CACHE_DIR"
-      msg "Restoring $HOME from the pull request build cache: $CACHE_DIR .."
+      msg "Restoring $HOME from the build cache: $CACHE_DIR .."
       echo_and_run rsync -a --stats "$CACHE_DIR/" "$HOME"
     elif [[ -d "$BRANCH_CACHE_DIR" ]]; then
       touch "$BRANCH_CACHE_DIR"
