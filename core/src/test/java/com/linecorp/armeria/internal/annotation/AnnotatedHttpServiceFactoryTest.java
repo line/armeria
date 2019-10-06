@@ -53,6 +53,7 @@ import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Head;
 import com.linecorp.armeria.server.annotation.Options;
 import com.linecorp.armeria.server.annotation.Patch;
+import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.PathPrefix;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.Put;
@@ -178,6 +179,33 @@ public class AnnotatedHttpServiceFactoryTest {
                 create("/", serviceObject, method, Lists.emptyList(), Lists.emptyList(), Lists.emptyList());
             }).isInstanceOf(IllegalArgumentException.class)
               .hasMessage("A path pattern should be specified by @Path or HTTP method annotations.");
+        });
+    }
+
+    @Test
+    public void testMultiPathSingleMappingService() {
+        final MultiPathSingleMappingService serviceObject = new MultiPathSingleMappingService();
+
+        final List<AnnotatedHttpServiceElement> annotatedHttpServiceElements = getMethods(
+                MultiPathSingleMappingService.class, HttpResponse.class).flatMap(method -> {
+            final List<AnnotatedHttpServiceElement> annotatedHttpServices = create(
+                    "/", serviceObject, method, Lists.emptyList(), Lists.emptyList(), Lists.emptyList());
+            return annotatedHttpServices.stream();
+        }).collect(Collectors.toList());
+
+        annotatedHttpServiceElements.forEach(element -> {
+            assertThat(element.route().methods()).hasSize(1);
+        });
+    }
+
+    @Test
+    public void testMultiPathNoMappingService() {
+        final MultiPathNoMappingService serviceObject = new MultiPathNoMappingService();
+
+        getMethods(MultiPathNoMappingService.class, HttpResponse.class).forEach(method -> {
+            assertThatThrownBy(() -> {
+                create("/", serviceObject, method, Lists.emptyList(), Lists.emptyList(), Lists.emptyList());
+            }).isInstanceOf(IllegalArgumentException.class);
         });
     }
 
@@ -356,6 +384,44 @@ public class AnnotatedHttpServiceFactoryTest {
 
         @Trace
         public HttpResponse trace() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+    }
+
+    static class MultiPathSingleMappingService {
+
+        @Get("/get")
+        @Post("/post")
+        public HttpResponse pathOnHttpMethods() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Get("/get")
+        @Post("/post")
+        @Path("/path")
+        public HttpResponse pathOnHttpMethodsAndPath() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Get
+        @Post
+        @Path("/path")
+        public HttpResponse noPathOnHttpMethods() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+    }
+
+    static class MultiPathNoMappingService {
+
+        @Get
+        @Post
+        public HttpResponse noPathOnAllMethods() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Get("/get")
+        @Post
+        public HttpResponse noPathOnSingleHttpMethod() {
             return HttpResponse.of(HttpStatus.OK);
         }
     }

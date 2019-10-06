@@ -18,7 +18,6 @@ package com.linecorp.armeria.internal.annotation;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.Sets.toImmutableEnumSet;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.RouteUtil.ensureAbsolutePath;
 import static com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.toRequestObjectResolvers;
@@ -42,11 +41,11 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -211,8 +210,9 @@ public final class AnnotatedHttpServiceFactory {
 
         final List<Method> methods = requestMappingMethods(object);
         return methods.stream()
-                      .map((Method method) -> create(pathPrefix, object, method, exceptionHandlerFunctions,
-                                                     requestConverterFunctions, responseConverterFunctions))
+                      .flatMap((Method method) ->
+                                       create(pathPrefix, object, method, exceptionHandlerFunctions,
+                                              requestConverterFunctions, responseConverterFunctions).stream())
                       .collect(toImmutableList());
     }
 
@@ -255,35 +255,39 @@ public final class AnnotatedHttpServiceFactory {
     }
 
     /**
-     * Returns an {@link AnnotatedHttpService} instance defined to {@code method} of {@code object} using
-     * {@link Path} annotation.
+     * Returns a list of {@link AnnotatedHttpService} instances. A single {@link AnnotatedHttpService} is
+     * created per each {@link Route} associated with the {@code method}.
      */
     @VisibleForTesting
-    static AnnotatedHttpServiceElement create(String pathPrefix, Object object, Method method,
-                                              List<ExceptionHandlerFunction> baseExceptionHandlers,
-                                              List<RequestConverterFunction> baseRequestConverters,
-                                              List<ResponseConverterFunction> baseResponseConverters) {
+    static List<AnnotatedHttpServiceElement> create(String pathPrefix, Object object, Method method,
+                                                    List<ExceptionHandlerFunction> baseExceptionHandlers,
+                                                    List<RequestConverterFunction> baseRequestConverters,
+                                                    List<ResponseConverterFunction> baseResponseConverters) {
 
         final Set<Annotation> methodAnnotations = httpMethodAnnotations(method);
         if (methodAnnotations.isEmpty()) {
             throw new IllegalArgumentException("HTTP Method specification is missing: " + method.getName());
         }
 
-        final Set<HttpMethod> methods = toHttpMethods(methodAnnotations);
-        if (methods.isEmpty()) {
-            throw new IllegalArgumentException(method.getDeclaringClass().getName() + '#' + method.getName() +
-                                               " must have an HTTP method annotation.");
-        }
         final Class<?> clazz = object.getClass();
-        final String pattern = findPattern(method, methodAnnotations);
+        final Map<HttpMethod, Set<String>> httpMethodPatternsMap = getHttpMethodPatternsMap(method,
+                                                                                            methodAnnotations);
         final String computedPathPrefix = computePathPrefix(clazz, pathPrefix);
+        final Set<MediaType> consumableMediaTypes = consumableMediaTypes(method, clazz);
+        final Set<MediaType> producibleMediaTypes = producibleMediaTypes(method, clazz);
 
-        final Route route = Route.builder()
-                                 .path(computedPathPrefix, pattern)
-                                 .methods(methods)
-                                 .consumes(consumableMediaTypes(method, clazz))
-                                 .produces(producibleMediaTypes(method, clazz))
-                                 .build();
+        final Set<Route> routes = httpMethodPatternsMap.entrySet().stream().flatMap(
+                pattern -> {
+                    final HttpMethod httpMethod = pattern.getKey();
+                    final Set<String> pathMappings = pattern.getValue();
+                    return pathMappings.stream().map(
+                            pathMapping -> Route.builder()
+                                                .path(computedPathPrefix, pathMapping)
+                                                .methods(httpMethod)
+                                                .consumes(consumableMediaTypes)
+                                                .produces(producibleMediaTypes)
+                                                .build());
+                }).collect(Collectors.toSet());
 
         final List<ExceptionHandlerFunction> eh =
                 getAnnotatedInstances(method, clazz, ExceptionHandler.class, ExceptionHandlerFunction.class)
@@ -294,41 +298,6 @@ public final class AnnotatedHttpServiceFactory {
         final List<ResponseConverterFunction> res =
                 getAnnotatedInstances(method, clazz, ResponseConverter.class, ResponseConverterFunction.class)
                         .addAll(baseResponseConverters).build();
-
-        List<AnnotatedValueResolver> resolvers;
-        try {
-            resolvers = AnnotatedValueResolver.ofServiceMethod(method, route.paramNames(),
-                                                               toRequestObjectResolvers(req));
-        } catch (NoParameterException ignored) {
-            // Allow no parameter like below:
-            //
-            // @Get("/")
-            // public String method1() { ... }
-            //
-            resolvers = ImmutableList.of();
-        }
-
-        final Set<String> expectedParamNames = route.paramNames();
-        final Set<String> requiredParamNames =
-                resolvers.stream()
-                         .filter(AnnotatedValueResolver::isPathVariable)
-                         .map(AnnotatedValueResolver::httpElementName)
-                         .collect(Collectors.toSet());
-
-        if (!expectedParamNames.containsAll(requiredParamNames)) {
-            final Set<String> missing = Sets.difference(requiredParamNames, expectedParamNames);
-            throw new IllegalArgumentException("cannot find path variables: " + missing);
-        }
-
-        // Warn unused path variables only if there's no '@RequestObject' annotation.
-        if (resolvers.stream().noneMatch(r -> r.annotationType() == RequestObject.class) &&
-            !requiredParamNames.containsAll(expectedParamNames)) {
-            final Set<String> missing = Sets.difference(expectedParamNames, requiredParamNames);
-            logger.warn("Some path variables of the method '" + method.getName() +
-                        "' of the class '" + clazz.getName() +
-                        "' do not have their corresponding parameters annotated with @Param. " +
-                        "They would not be automatically injected: " + missing);
-        }
 
         final Optional<HttpStatus> defaultResponseStatus = findFirst(method, StatusCode.class)
                 .map(code -> {
@@ -358,14 +327,30 @@ public final class AnnotatedHttpServiceFactory {
                         defaultHeaders.status().code(), methodAlias);
         }
 
-        // A CORS preflight request can be received because we handle it specially. The following
-        // decorator will prevent the service from an unexpected request which has OPTIONS method.
-        final Function<Service<HttpRequest, HttpResponse>,
-                ? extends Service<HttpRequest, HttpResponse>> initialDecorator;
-        if (methods.contains(HttpMethod.OPTIONS)) {
-            initialDecorator = Function.identity();
+        final ResponseHeaders responseHeaders = defaultHeaders.build();
+        final HttpHeaders responseTrailers = defaultTrailers.build();
+
+        return routes.stream().map(route -> {
+            final List<AnnotatedValueResolver> resolvers = getAnnotatedValueResolvers(req, route, method,
+                                                                                      clazz);
+            return new AnnotatedHttpServiceElement(
+                    route,
+                    new AnnotatedHttpService(object, method, resolvers, eh, res, route, responseHeaders,
+                                             responseTrailers),
+                    decorator(method, clazz, getInitialDecorator(route.methods())));
+        }).collect(Collectors.toList());
+    }
+
+    /**
+     * A CORS preflight request can be received because we handle it specially. The following
+     * decorator will prevent the service from an unexpected request which has OPTIONS method.
+     */
+    private static Function<Service<HttpRequest, HttpResponse>, ? extends Service<HttpRequest, HttpResponse>>
+            getInitialDecorator(Set<HttpMethod> httpMethods) {
+        if (httpMethods.contains(HttpMethod.OPTIONS)) {
+            return Function.identity();
         } else {
-            initialDecorator = delegate -> new SimpleDecoratingHttpService(delegate) {
+            return delegate -> new SimpleDecoratingHttpService(delegate) {
                 @Override
                 public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                     if (req.method() == HttpMethod.OPTIONS) {
@@ -376,11 +361,47 @@ public final class AnnotatedHttpServiceFactory {
                 }
             };
         }
-        return new AnnotatedHttpServiceElement(route, new AnnotatedHttpService(object, method, resolvers,
-                                                                               eh, res, route,
-                                                                               defaultHeaders.build(),
-                                                                               defaultTrailers.build()),
-                                               decorator(method, clazz, initialDecorator));
+    }
+
+    private static List<AnnotatedValueResolver> getAnnotatedValueResolvers(List<RequestConverterFunction> req,
+                                                                           Route route, Method method,
+                                                                           Class<?> clazz) {
+        final Set<String> expectedParamNames = route.paramNames();
+        List<AnnotatedValueResolver> resolvers;
+        try {
+            resolvers = AnnotatedValueResolver.ofServiceMethod(method, expectedParamNames,
+                                                               toRequestObjectResolvers(req));
+        } catch (NoParameterException ignored) {
+            // Allow no parameter like below:
+            //
+            // @Get("/")
+            // public String method1() { ... }
+            //
+            resolvers = ImmutableList.of();
+        }
+
+        final Set<String> requiredParamNames =
+                resolvers.stream()
+                         .filter(AnnotatedValueResolver::isPathVariable)
+                         .map(AnnotatedValueResolver::httpElementName)
+                         .collect(Collectors.toSet());
+
+        if (!expectedParamNames.containsAll(requiredParamNames)) {
+            final Set<String> missing = Sets.difference(requiredParamNames, expectedParamNames);
+            throw new IllegalArgumentException("cannot find path variables: " + missing);
+        }
+
+        // Warn unused path variables only if there's no '@RequestObject' annotation.
+        if (resolvers.stream().noneMatch(r -> r.annotationType() == RequestObject.class) &&
+            !requiredParamNames.containsAll(expectedParamNames)) {
+            final Set<String> missing = Sets.difference(expectedParamNames, requiredParamNames);
+            logger.warn("Some path variables of the method '" + method.getName() +
+                        "' of the class '" + clazz.getName() +
+                        "' do not have their corresponding parameters annotated with @Param. " +
+                        "They would not be automatically injected: " + missing);
+        }
+
+        return resolvers;
     }
 
     /**
@@ -426,25 +447,6 @@ public final class AnnotatedHttpServiceFactory {
                 .stream()
                 .filter(annotation -> HTTP_METHOD_MAP.containsKey(annotation.annotationType()))
                 .collect(Collectors.toSet());
-    }
-
-    /**
-     * Returns {@link Set} of {@link HttpMethod}s mapped to HTTP method annotations.
-     *
-     * @see Options
-     * @see Get
-     * @see Head
-     * @see Post
-     * @see Put
-     * @see Patch
-     * @see Delete
-     * @see Trace
-     */
-    private static Set<HttpMethod> toHttpMethods(Set<Annotation> annotations) {
-        return annotations.stream()
-                          .map(annotation -> HTTP_METHOD_MAP.get(annotation.annotationType()))
-                          .filter(Objects::nonNull)
-                          .collect(toImmutableEnumSet());
     }
 
     /**
@@ -509,26 +511,38 @@ public final class AnnotatedHttpServiceFactory {
     }
 
     /**
-     * Returns a specified path pattern. The path pattern might be specified by {@link Path} or
-     * HTTP method annotations such as {@link Get} and {@link Post}.
+     * Returns path patterns for each {@link HttpMethod}. The path pattern might be specified by
+     * {@link Path} or HTTP method annotations such as {@link Get} and {@link Post}.
      */
-    private static String findPattern(Method method, Set<Annotation> methodAnnotations) {
-        String pattern = findFirst(method, Path.class).map(Path::value)
-                                                      .orElse(null);
-        for (Annotation a : methodAnnotations) {
-            final String p = (String) invokeValueMethod(a);
-            if (DefaultValues.isUnspecified(p)) {
-                continue;
+    private static Map<HttpMethod, Set<String>> getHttpMethodPatternsMap(Method method,
+                                                                         Set<Annotation> methodAnnotations) {
+        final Map<HttpMethod, Set<String>> httpMethodPatternMap = new EnumMap<>(HttpMethod.class);
+        final Set<String> pathPatterns = findAll(method, Path.class).stream().map(Path::value)
+                                                                .collect(Collectors.toSet());
+        methodAnnotations.stream()
+                         .filter(annotation -> HTTP_METHOD_MAP.containsKey(annotation.annotationType()))
+                         .forEach(annotation -> {
+                             final HttpMethod httpMethod = HTTP_METHOD_MAP.get(annotation.annotationType());
+                             final String value = (String) invokeValueMethod(annotation);
+                             final Set<String> patterns = httpMethodPatternMap
+                                     .computeIfAbsent(httpMethod, ignored -> new HashSet<>());
+                             if (DefaultValues.isSpecified(value)) {
+                                 patterns.add(value);
+                             }
+                         });
+        final Set<HttpMethod> methods = httpMethodPatternMap.keySet();
+        if (methods.isEmpty()) {
+            throw new IllegalArgumentException(method.getDeclaringClass().getName() + '#' + method.getName() +
+                                               " must have an HTTP method annotation.");
+        }
+        httpMethodPatternMap.forEach((k, v) -> v.addAll(pathPatterns));
+        httpMethodPatternMap.values().forEach(paths -> {
+            if (paths.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "A path pattern should be specified by @Path or HTTP method annotations.");
             }
-            checkArgument(pattern == null,
-                          "Only one path can be specified. (" + pattern + ", " + p + ')');
-            pattern = p;
-        }
-        if (pattern == null || pattern.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "A path pattern should be specified by @Path or HTTP method annotations.");
-        }
-        return pattern;
+        });
+        return httpMethodPatternMap;
     }
 
     /**
