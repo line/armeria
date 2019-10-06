@@ -128,7 +128,7 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
     public void deadlineExceeded() throws Exception {
         // FIXME(trustin): Re-enable this test on Windows once we fix #2008
         //                 https://github.com/line/armeria/issues/2008
-        assumeFalse(System.getProperty("os.name", "").startsWith("win"));
+        assumeFalse(System.getProperty("os.name", "").startsWith("Win"));
         super.deadlineExceeded();
     }
 
