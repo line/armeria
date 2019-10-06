@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.streaming;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import org.junit.ClassRule;
@@ -40,6 +41,9 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
+import io.reactivex.BackpressureStrategy;
+import io.reactivex.Flowable;
+import io.reactivex.Observable;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
@@ -53,6 +57,16 @@ public class JsonTextSequencesTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/seq/publisher",
                        (ctx, req) -> JsonTextSequences.fromPublisher(Flux.just("foo", "bar", "baz", "qux")))
+              .service("/seq/publisher-error-observable",
+                       (ctx, req) -> {
+                           final Flowable<JsonSerializeError> observer = Observable
+                                   .zip(Observable.interval(1000, TimeUnit.MILLISECONDS)
+                                                  .take(Integer.MAX_VALUE - 1),
+                                        Observable.range(1, Integer.MAX_VALUE).map(JsonSerializeError::new),
+                                        (ignore, json) -> json)
+                                   .toFlowable(BackpressureStrategy.BUFFER);
+                           return JsonTextSequences.fromPublisher(observer);
+                       })
               .service("/seq/stream",
                        (ctx, req) -> JsonTextSequences.fromStream(
                                Stream.of("foo", "bar", "baz", "qux"), MoreExecutors.directExecutor()))
@@ -84,6 +98,16 @@ public class JsonTextSequencesTest {
     }
 
     @Test
+    public void fromPublisherObservableZipError() {
+        final HttpClient client = HttpClient.of(rule.uri("/"));
+        StepVerifier.create(client.get("/seq/publisher-error-observable"))
+                    .expectNext(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR,
+                                                   HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_SEQ))
+                    .expectComplete()
+                    .verify();
+    }
+
+    @Test
     public void singleSequence() {
         final AggregatedHttpResponse response =
                 HttpClient.of(rule.uri("/seq")).get("/single").aggregate().join();
@@ -110,6 +134,14 @@ public class JsonTextSequencesTest {
         } catch (IOException e) {
             // Always false.
             assertThat(e).isNull();
+        }
+    }
+
+    private static final class JsonSerializeError {
+        final int id;
+
+        private JsonSerializeError(int id) {
+            this.id = id;
         }
     }
 }
