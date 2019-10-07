@@ -26,10 +26,11 @@ $ ./gradlew build
 
 ## How to ask a question
 
-Just [create a new issue](https://github.com/line/armeria/issues/new) to ask a question, and browse
-[the list of previous questions](https://github.com/line/armeria/issues?q=label%3Aquestion).
+Ask a question tagged with `armeria` at [StackOverflow](https://stackoverflow.com/questions/tagged/armeria).
 
-We also have [a Slack workspace](https://join.slack.com/t/line-armeria/shared_invite/enQtNjIxNDU1ODU1MTI2LWRlMGRjMzIwOTIzMzA2NDA1NGMwMTg2MTA3MzE4MDYyMjUxMjRlNWRiZTc1N2Q3ZGRjNDA5ZDZhZTI1NGEwODk).
+## How to chat with us
+
+Join [our Slack workspace](https://join.slack.com/t/line-armeria/shared_invite/enQtNjIxNDU1ODU1MTI2LWRlMGRjMzIwOTIzMzA2NDA1NGMwMTg2MTA3MzE4MDYyMjUxMjRlNWRiZTc1N2Q3ZGRjNDA5ZDZhZTI1NGEwODk).
 
 ## How to contribute
 
