@@ -92,7 +92,7 @@ By default, :api:`HttpFileService` caches up to 1024 files whose length is less 
 
 The cache can be disabled by specifying ``0`` for ``maxCacheEntries()``.
 You can also specify a custom cache specification using ``entryCacheSpec()``,
-as defined in `Caffeine documentation <https://static.javadoc.io/com.github.ben-manes.caffeine/caffeine/2.6.0/com/github/benmanes/caffeine/cache/CaffeineSpec.html>`_.
+as defined in `Caffeine documentation <https://static.javadoc.io/com.github.ben-manes.caffeine/caffeine/2.8.0/com/github/benmanes/caffeine/cache/CaffeineSpec.html>`_.
 Or, you can override the default cache specification of ``maximumSize=1024`` using
 the JVM property ``-Dcom.linecorp.armeria.fileServiceCache=<spec>``.
 
