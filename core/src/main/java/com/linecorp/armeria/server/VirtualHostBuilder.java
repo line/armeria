@@ -278,8 +278,8 @@ public final class VirtualHostBuilder {
             clientEngine.beginHandshake();
             serverEngine.beginHandshake();
 
-            ByteBuffer appBuf = ByteBuffer.allocate(clientEngine.getSession().getApplicationBufferSize());
-            ByteBuffer packetBuf = ByteBuffer.allocate(clientEngine.getSession().getPacketBufferSize());
+            final ByteBuffer appBuf = ByteBuffer.allocate(clientEngine.getSession().getApplicationBufferSize());
+            final ByteBuffer packetBuf = ByteBuffer.allocate(clientEngine.getSession().getPacketBufferSize());
 
             clientEngine.wrap(appBuf, packetBuf);
             appBuf.clear();
