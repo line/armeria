@@ -22,7 +22,7 @@ import java.security.KeyStore;
 
 import javax.net.ssl.KeyManagerFactory;
 
-import org.junit.Ignore;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpResponse;
@@ -34,7 +34,7 @@ class ServerTlsValidationTest {
     //       Server.builder().build() method is called. But when users use JKS key store, the exception is never
     //       raised. (In case of PKCS12 key store, the exception is raised as expected.) Not sure why this
     //       happens and this test needs to be updated when investigation completes.
-    @Ignore
+    @Disabled
     @Test
     void testJksKeyStoreWithNullPassword() {
         /*
