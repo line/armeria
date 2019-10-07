@@ -22,8 +22,10 @@ import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.util.AbstractMap.SimpleImmutableEntry;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -44,6 +46,8 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
@@ -58,6 +62,7 @@ import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceWithRoutes;
 
+import io.grpc.Codec.Identity;
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
 import io.grpc.Metadata;
@@ -110,6 +115,8 @@ public final class GrpcService extends AbstractHttpService
     @Nullable
     private final ProtoReflectionService protoReflectionService;
 
+    private final Map<SerializationFormat, ResponseHeaders> defaultHeaders;
+
     private int maxInboundMessageSizeBytes;
 
     GrpcService(HandlerRegistry registry,
@@ -136,6 +143,21 @@ public final class GrpcService extends AbstractHttpService
         this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
 
         advertisedEncodingsHeader = String.join(",", decompressorRegistry.getAdvertisedMessageEncodings());
+
+        defaultHeaders = supportedSerializationFormats
+                .stream()
+                .map(format -> {
+                    final ResponseHeadersBuilder builder =
+                            ResponseHeaders
+                                    .builder(HttpStatus.OK)
+                                    .contentType(format.mediaType())
+                                    .add(GrpcHeaderNames.GRPC_ENCODING, Identity.NONE.getMessageEncoding());
+                    if (!advertisedEncodingsHeader.isEmpty()) {
+                        builder.add(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, advertisedEncodingsHeader);
+                    }
+                    return new SimpleImmutableEntry<>(format, builder.build());
+                })
+                .collect(toImmutableMap(Entry::getKey, Entry::getValue));
     }
 
     @Override
@@ -214,7 +236,8 @@ public final class GrpcService extends AbstractHttpService
                 jsonMarshaller,
                 unsafeWrapRequestBuffers,
                 useBlockingTaskExecutor,
-                advertisedEncodingsHeader);
+                advertisedEncodingsHeader,
+                defaultHeaders.get(serializationFormat));
         final ServerCall.Listener<I> listener;
         try (SafeCloseable ignored = ctx.push()) {
             listener = methodDef.getServerCallHandler().startCall(call, MetadataUtil.copyFromHeaders(headers));

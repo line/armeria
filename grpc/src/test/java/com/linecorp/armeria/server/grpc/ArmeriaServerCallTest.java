@@ -44,6 +44,8 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer.DeframedMessage;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
@@ -116,7 +118,10 @@ public class ArmeriaServerCallTest {
                 MessageMarshaller.builder().build(),
                 false,
                 false,
-                "gzip");
+                "gzip",
+                ResponseHeaders.builder(HttpStatus.OK)
+                               .contentType(GrpcSerializationFormats.PROTO.mediaType())
+                               .build());
         call.setListener(listener);
         call.messageReader().onSubscribe(subscription);
 
@@ -169,7 +174,10 @@ public class ArmeriaServerCallTest {
                 MessageMarshaller.builder().build(),
                 true,
                 false,
-                "gzip");
+                "gzip",
+                ResponseHeaders.builder(HttpStatus.OK)
+                               .contentType(GrpcSerializationFormats.PROTO.mediaType())
+                               .build());
 
         final ByteBuf buf = GrpcTestUtil.requestByteBuf();
         call.messageRead(new DeframedMessage(buf, 0));
