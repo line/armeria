@@ -65,7 +65,7 @@ if [[ -d /var/cache/appveyor ]] && \
       -exec echo 'Purging:' {} ';' \
       -exec rm -fr {} ';'
   # Delete the empty directories.
-  msg "Deleting the empry directories in the build cache .."
+  msg "Deleting the empty directories in the build cache .."
   find /var/cache/appveyor -mindepth 1 -maxdepth 4 -type d -empty \
       -exec echo 'Deleting:' {} ';' \
       -delete
