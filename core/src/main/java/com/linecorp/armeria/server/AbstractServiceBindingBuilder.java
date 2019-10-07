@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
-/**
+/**	public abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder implements ServiceBuilder {
  * A builder class for binding a {@link Service} fluently.
  *
  * @see ServiceBindingBuilder
