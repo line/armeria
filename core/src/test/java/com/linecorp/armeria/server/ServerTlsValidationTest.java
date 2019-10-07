@@ -36,21 +36,21 @@ class ServerTlsValidationTest {
     //       happens and this test needs to be updated when investigation completes.
     @Disabled
     @Test
-    void testJksKeyStoreWithNullPassword() {
+    void testJksKeyStoreWithNullPassword() throws Exception {
         /*
          * Dummy keystore generation
          * keytool -genkeypair -keyalg RSA -keysize 2048 -storetype JKS -keystore keystore.jks -validity 3650
          * key store password = password
          * key password = keypassword
          */
+        final KeyStore keyStore = KeyStore.getInstance("JKS");
+        keyStore.load(getClass().getResource("keystore.jks").openStream(), null);
+
+        final KeyManagerFactory kmf =
+                KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        kmf.init(keyStore, "keypassword".toCharArray());
+
         assertThatThrownBy(() -> {
-            final KeyStore keyStore = KeyStore.getInstance("JKS");
-            keyStore.load(getClass().getResource("keystore.jks").openStream(), null);
-
-            final KeyManagerFactory kmf = KeyManagerFactory.getInstance(
-                    KeyManagerFactory.getDefaultAlgorithm());
-            kmf.init(keyStore, "keypassword".toCharArray());
-
             final Server server = Server.builder()
                                         .service("/", (ctx, res) -> HttpResponse.of(HttpStatus.OK))
                                         .tls(kmf, sslContextBuilder -> {})
@@ -66,14 +66,13 @@ class ServerTlsValidationTest {
          * keytool -genkeypair -keyalg RSA -keysize 2048 -storetype PKCS12 -keystore keystore.p12 -validity 3650
          * keypassword = keystorepassword = password
          */
+        final KeyStore keyStore = KeyStore.getInstance("PKCS12");
+        keyStore.load(getClass().getResource("keystore.p12").openStream(), null);
+
+        final KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        kmf.init(keyStore, "password".toCharArray());
+
         assertThatThrownBy(() -> {
-            final KeyStore keyStore = KeyStore.getInstance("PKCS12");
-            keyStore.load(getClass().getResource("keystore.p12").openStream(), null);
-
-            final KeyManagerFactory kmf =
-                    KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-            kmf.init(keyStore, "password".toCharArray());
-
             final Server server = Server.builder()
                                         .service("/", (ctx, res) -> HttpResponse.of(HttpStatus.OK))
                                         .tls(kmf, sslContextBuilder -> {})
