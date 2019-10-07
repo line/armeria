@@ -17,17 +17,16 @@
 package com.linecorp.armeria.common.metric;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.Tag;
@@ -97,12 +96,12 @@ public final class MeterIdPrefix {
             return ImmutableList.of();
         }
 
-        tags.sort(comparing(Tag::getKey));
+        Collections.sort(tags);
         return ImmutableList.copyOf(tags);
     }
 
     private static ImmutableList<Tag> copyAndSort(Iterable<Tag> tags) {
-        return sort(Lists.newArrayList(tags));
+        return ImmutableList.sortedCopyOf(tags);
     }
 
     /**
