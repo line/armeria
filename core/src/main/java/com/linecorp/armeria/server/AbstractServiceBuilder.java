@@ -15,7 +15,7 @@ import java.time.Duration;
 import java.util.function.Function;
 import javax.annotation.Nullable;
 
-public class AbstractServiceBindingBuilder0 implements ServiceBindingBuilder0 {
+public abstract class AbstractServiceBuilder implements ServiceBuilder {
     @Nullable
     private Long requestTimeoutMillis;
     @Nullable
@@ -40,7 +40,7 @@ public class AbstractServiceBindingBuilder0 implements ServiceBindingBuilder0 {
      * @param requestTimeout the timeout. {@code 0} disables the timeout.
      */
     @Override
-    public AbstractServiceBindingBuilder0 requestTimeout(Duration requestTimeout) {
+    public AbstractServiceBuilder requestTimeout(Duration requestTimeout) {
         return requestTimeoutMillis(requireNonNull(requestTimeout, "requestTimeout").toMillis());
     }
 
@@ -50,7 +50,8 @@ public class AbstractServiceBindingBuilder0 implements ServiceBindingBuilder0 {
      *
      * @param requestTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
      */
-    public AbstractServiceBindingBuilder0 requestTimeoutMillis(long requestTimeoutMillis) {
+    @Override
+    public AbstractServiceBuilder requestTimeoutMillis(long requestTimeoutMillis) {
         this.requestTimeoutMillis = validateRequestTimeoutMillis(requestTimeoutMillis);
         return this;
     }
@@ -61,7 +62,8 @@ public class AbstractServiceBindingBuilder0 implements ServiceBindingBuilder0 {
      *
      * @param maxRequestLength the maximum allowed length. {@code 0} disables the length limit.
      */
-    public AbstractServiceBindingBuilder0 maxRequestLength(long maxRequestLength) {
+    @Override
+    public AbstractServiceBuilder maxRequestLength(long maxRequestLength) {
         this.maxRequestLength = validateMaxRequestLength(maxRequestLength);
         return this;
     }
@@ -72,7 +74,8 @@ public class AbstractServiceBindingBuilder0 implements ServiceBindingBuilder0 {
      * insecure. When disabled, the service response will not expose such server-side details to the client.
      * If not set, {@link VirtualHost#verboseResponses()} is used.
      */
-    public AbstractServiceBindingBuilder0 verboseResponses(boolean verboseResponses) {
+    @Override
+    public AbstractServiceBuilder verboseResponses(boolean verboseResponses) {
         this.verboseResponses = verboseResponses;
         return this;
     }
@@ -82,7 +85,8 @@ public class AbstractServiceBindingBuilder0 implements ServiceBindingBuilder0 {
      * If not set, {@link VirtualHost#requestContentPreviewerFactory()}
      * is used.
      */
-    public AbstractServiceBindingBuilder0 requestContentPreviewerFactory(ContentPreviewerFactory factory) {
+    @Override
+    public AbstractServiceBuilder requestContentPreviewerFactory(ContentPreviewerFactory factory) {
         requestContentPreviewerFactory = requireNonNull(factory, "factory");
         return this;
     }
@@ -92,7 +96,8 @@ public class AbstractServiceBindingBuilder0 implements ServiceBindingBuilder0 {
      * If not set, {@link VirtualHost#responseContentPreviewerFactory()}
      * is used.
      */
-    public AbstractServiceBindingBuilder0 responseContentPreviewerFactory(ContentPreviewerFactory factory) {
+    @Override
+    public AbstractServiceBuilder responseContentPreviewerFactory(ContentPreviewerFactory factory) {
         responseContentPreviewerFactory = requireNonNull(factory, "factory");
         return this;
     }
@@ -110,7 +115,8 @@ public class AbstractServiceBindingBuilder0 implements ServiceBindingBuilder0 {
      * </ul>
      * @param length the maximum length of the preview.
      */
-    public AbstractServiceBindingBuilder0 contentPreview(int length) {
+    @Override
+    public AbstractServiceBuilder contentPreview(int length) {
         return contentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
     }
 
@@ -129,14 +135,16 @@ public class AbstractServiceBindingBuilder0 implements ServiceBindingBuilder0 {
      * @param defaultCharset the default charset used when a charset is not specified in the
      *                       {@code "content-type"} header
      */
-    public AbstractServiceBindingBuilder0 contentPreview(int length, Charset defaultCharset) {
+    @Override
+    public AbstractServiceBuilder contentPreview(int length, Charset defaultCharset) {
         return contentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
     }
 
     /**
      * Sets the {@link ContentPreviewerFactory} for an HTTP request/response of a {@link Service}.
      */
-    public AbstractServiceBindingBuilder0 contentPreviewerFactory(ContentPreviewerFactory factory) {
+    @Override
+    public AbstractServiceBuilder contentPreviewerFactory(ContentPreviewerFactory factory) {
         requestContentPreviewerFactory(factory);
         responseContentPreviewerFactory(factory);
         return this;
@@ -146,7 +154,8 @@ public class AbstractServiceBindingBuilder0 implements ServiceBindingBuilder0 {
      * Sets the format of this {@link Service}'s access log. The specified {@code accessLogFormat} would be
      * parsed by {@link AccessLogWriter#custom(String)}.
      */
-    public AbstractServiceBindingBuilder0 accessLogFormat(String accessLogFormat) {
+    @Override
+    public AbstractServiceBuilder accessLogFormat(String accessLogFormat) {
         return accessLogWriter(AccessLogWriter.custom(requireNonNull(accessLogFormat, "accessLogFormat")),
             true);
     }
@@ -157,8 +166,9 @@ public class AbstractServiceBindingBuilder0 implements ServiceBindingBuilder0 {
      *
      * @param shutdownOnStop whether to shut down the {@link AccessLogWriter} when the {@link Server} stops
      */
-    public AbstractServiceBindingBuilder0 accessLogWriter(AccessLogWriter accessLogWriter,
-                                                         boolean shutdownOnStop) {
+    @Override
+    public AbstractServiceBuilder accessLogWriter(AccessLogWriter accessLogWriter,
+                                                  boolean shutdownOnStop) {
         this.accessLogWriter = requireNonNull(accessLogWriter, "accessLogWriter");
         shutdownAccessLogWriterOnStop = shutdownOnStop;
         return this;
@@ -171,8 +181,9 @@ public class AbstractServiceBindingBuilder0 implements ServiceBindingBuilder0 {
      * @param <T> the type of the {@link Service} being decorated
      * @param <R> the type of the {@link Service} {@code decorator} will produce
      */
+    @Override
     public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
-    AbstractServiceBindingBuilder0 decorator(Function<T, R> decorator) {
+    AbstractServiceBuilder decorator(Function<T, R> decorator) {
         requireNonNull(decorator, "decorator");
 
         @SuppressWarnings("unchecked")
@@ -188,13 +199,36 @@ public class AbstractServiceBindingBuilder0 implements ServiceBindingBuilder0 {
         return this;
     }
 
-    public Service<HttpRequest, HttpResponse> decorate (Service<HttpRequest, HttpResponse> service){
+    public Service<HttpRequest, HttpResponse> decorate(Service<HttpRequest, HttpResponse> service){
         if (decorator == null) {
             return service;
         }
-
         return service.decorate(decorator);
     }
 
+    final void build0(Route route, Service<HttpRequest, HttpResponse> service) {
+        final ServiceConfigBuilder serviceConfigBuilder = new ServiceConfigBuilder(route, service);
+        if (requestTimeoutMillis != null) {
+            serviceConfigBuilder.requestTimeoutMillis(requestTimeoutMillis);
+        }
+        if (maxRequestLength != null) {
+            serviceConfigBuilder.maxRequestLength(maxRequestLength);
+        }
+        if (verboseResponses != null) {
+            serviceConfigBuilder.verboseResponses(verboseResponses);
+        }
+        if (requestContentPreviewerFactory != null) {
+            serviceConfigBuilder.requestContentPreviewerFactory(requestContentPreviewerFactory);
+        }
+        if (responseContentPreviewerFactory != null) {
+            serviceConfigBuilder.responseContentPreviewerFactory(responseContentPreviewerFactory);
+        }
+        if (accessLogWriter != null) {
+            serviceConfigBuilder.accessLogWriter(accessLogWriter, shutdownAccessLogWriterOnStop);
+        }
+        serviceConfigBuilder(serviceConfigBuilder);
+    }
+
+    abstract void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder);
 
 }
