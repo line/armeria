@@ -150,6 +150,7 @@ fi
 # Update the cache directory.
 if [[ -n "$CACHE_DIR" ]]; then
   msg "Updating the build cache: $CACHE_DIR .."
+  echo_and_run mkdir -p "$CACHE_DIR"
   if [[ ! -d "$CACHE_DIR" ]] && [[ -n "$BRANCH_CACHE_DIR" ]] && [[ -d "$BRANCH_CACHE_DIR" ]]; then
     # Create a hard link to make a differential copy and save disk space.
     echo_and_run cp -al "$BRANCH_CACHE_DIR" "$CACHE_DIR"
