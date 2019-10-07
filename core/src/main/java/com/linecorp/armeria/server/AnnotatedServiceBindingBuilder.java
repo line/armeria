@@ -20,13 +20,17 @@ import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceElement;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverter;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
+import com.linecorp.armeria.server.logging.AccessLogWriter;
 
+import java.nio.charset.Charset;
+import java.time.Duration;
 import java.util.List;
 import java.util.function.Function;
 import javax.annotation.Nullable;
@@ -78,6 +82,61 @@ public class AnnotatedServiceBindingBuilder extends AbstractServiceBuilder {
     public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
     AnnotatedServiceBindingBuilder decorator(Function<T, R> decorator) {
         return (AnnotatedServiceBindingBuilder) super.decorator(decorator);
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder requestTimeout(Duration requestTimeout) {
+        return (AnnotatedServiceBindingBuilder) super.requestTimeout(requestTimeout);
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder requestTimeoutMillis(long requestTimeoutMillis) {
+        return (AnnotatedServiceBindingBuilder) super.requestTimeoutMillis(requestTimeoutMillis);
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder maxRequestLength(long maxRequestLength) {
+        return (AnnotatedServiceBindingBuilder) super.maxRequestLength(maxRequestLength);
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder verboseResponses(boolean verboseResponses) {
+        return (AnnotatedServiceBindingBuilder) super.verboseResponses(verboseResponses);
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder requestContentPreviewerFactory(ContentPreviewerFactory factory) {
+        return (AnnotatedServiceBindingBuilder) super.requestContentPreviewerFactory(factory);
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder responseContentPreviewerFactory(ContentPreviewerFactory factory) {
+        return (AnnotatedServiceBindingBuilder) super.responseContentPreviewerFactory(factory);
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder contentPreview(int length) {
+        return (AnnotatedServiceBindingBuilder) super.contentPreview(length);
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder contentPreview(int length, Charset defaultCharset) {
+        return (AnnotatedServiceBindingBuilder) super.contentPreview(length, defaultCharset);
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder contentPreviewerFactory(ContentPreviewerFactory factory) {
+        return (AnnotatedServiceBindingBuilder) super.contentPreviewerFactory(factory);
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder accessLogFormat(String accessLogFormat) {
+        return (AnnotatedServiceBindingBuilder) super.accessLogFormat(accessLogFormat);
+    }
+
+    @Override
+    public AbstractServiceBuilder accessLogWriter(AccessLogWriter accessLogWriter, boolean shutdownOnStop) {
+        return super.accessLogWriter(accessLogWriter, shutdownOnStop);
     }
 
     public ServerBuilder build(Object service) {
