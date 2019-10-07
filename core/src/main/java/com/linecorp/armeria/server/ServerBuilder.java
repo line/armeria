@@ -697,7 +697,7 @@ public final class ServerBuilder {
     /**
      * Sets the {@link SslContext} of the default {@link VirtualHost}.
      */
-    public ServerBuilder tls(SslContext sslContext) {
+    public ServerBuilder tls(SslContext sslContext) throws SSLException {
         defaultVirtualHostBuilder.tls(sslContext);
         return this;
     }
@@ -761,44 +761,6 @@ public final class ServerBuilder {
      */
     public ServerBuilder tlsSelfSigned() throws SSLException, CertificateException {
         defaultVirtualHostBuilder.tlsSelfSigned();
-        return this;
-    }
-
-    /**
-     * Sets the {@link SslContext} of the default {@link VirtualHost}.
-     *
-     * @deprecated Use {@link #tls(SslContext)}.
-     */
-    @Deprecated
-    public ServerBuilder sslContext(SslContext sslContext) {
-        defaultVirtualHostBuilder.tls(sslContext);
-        return this;
-    }
-
-    /**
-     * Sets the {@link SslContext} of the default {@link VirtualHost} from the specified
-     * {@link SessionProtocol}, {@code keyCertChainFile} and cleartext {@code keyFile}.
-     *
-     * @deprecated Use {@link #tls(File, File)}.
-     */
-    @Deprecated
-    public ServerBuilder sslContext(
-            SessionProtocol protocol, File keyCertChainFile, File keyFile) throws SSLException {
-        defaultVirtualHostBuilder.sslContext(protocol, keyCertChainFile, keyFile);
-        return this;
-    }
-
-    /**
-     * Sets the {@link SslContext} of the default {@link VirtualHost} from the specified
-     * {@link SessionProtocol}, {@code keyCertChainFile}, {@code keyFile} and {@code keyPassword}.
-     *
-     * @deprecated Use {@link #tls(File, File, String)}.
-     */
-    @Deprecated
-    public ServerBuilder sslContext(
-            SessionProtocol protocol,
-            File keyCertChainFile, File keyFile, String keyPassword) throws SSLException {
-        defaultVirtualHostBuilder.sslContext(protocol, keyCertChainFile, keyFile, keyPassword);
         return this;
     }
 

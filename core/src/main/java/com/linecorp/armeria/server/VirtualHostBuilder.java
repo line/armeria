@@ -27,7 +27,6 @@ import static com.linecorp.armeria.server.VirtualHost.normalizeHostnamePattern;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
-import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.security.cert.CertificateException;
 import java.time.Duration;
@@ -39,7 +38,6 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 
 import org.slf4j.Logger;
@@ -50,7 +48,6 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.util.SystemInfo;
@@ -64,7 +61,6 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
@@ -73,7 +69,6 @@ import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.util.ReferenceCountUtil;
 
 /**
  * Builds a new {@link VirtualHost}.
@@ -172,7 +167,7 @@ public final class VirtualHostBuilder {
     /**
      * Configures SSL or TLS of this {@link VirtualHost} with the specified {@link SslContext}.
      */
-    public VirtualHostBuilder tls(SslContext sslContext) {
+    public VirtualHostBuilder tls(SslContext sslContext) throws SSLException {
         checkState(this.sslContext == null, "sslContext is already set: %s", this.sslContext);
 
         this.sslContext = VirtualHost.validateSslContext(requireNonNull(sslContext, "sslContext"));
@@ -245,53 +240,11 @@ public final class VirtualHostBuilder {
         requireNonNull(keyManagerFactory, "keyManagerFactory");
         requireNonNull(tlsCustomizer, "tlsCustomizer");
 
-        final SslContext sslContext = buildSslContext(() -> SslContextBuilder.forServer(keyManagerFactory),
-                                                      tlsCustomizer);
-        try {
-            validateKeyStoreNullPassword(sslContext);
-        } catch (Exception e) {
-            throw new RuntimeException("failed to validate SSL/TLS configuration: " + e.toString(), e);
-        }
-
-        tls(sslContext);
+        tls(buildSslContext(() -> SslContextBuilder.forServer(keyManagerFactory), tlsCustomizer));
         return this;
     }
 
-    /**
-     * Validate key store which is used for building {@code sslContext}.
-     * If key store is initialized with null password, an exception will be raised.
-     */
-    private void validateKeyStoreNullPassword(SslContext sslContext) throws Exception {
-        SSLEngine serverEngine = null;
-        SSLEngine clientEngine = null;
-
-        try {
-            serverEngine = sslContext.newEngine(ByteBufAllocator.DEFAULT);
-            serverEngine.setUseClientMode(false);
-            serverEngine.setNeedClientAuth(false);
-
-            final SslContext sslContextClient =
-                    buildSslContext(() -> SslContextBuilder.forClient(), sslContextBuilder -> {});
-            clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
-            clientEngine.setUseClientMode(true);
-
-            clientEngine.beginHandshake();
-            serverEngine.beginHandshake();
-
-            final ByteBuffer appBuf = ByteBuffer.allocate(clientEngine.getSession().getApplicationBufferSize());
-            final ByteBuffer packetBuf = ByteBuffer.allocate(clientEngine.getSession().getPacketBufferSize());
-
-            clientEngine.wrap(appBuf, packetBuf);
-            appBuf.clear();
-            packetBuf.flip();
-            serverEngine.unwrap(packetBuf, appBuf);
-        } finally {
-            ReferenceCountUtil.release(serverEngine);
-            ReferenceCountUtil.release(clientEngine);
-        }
-    }
-
-    private static SslContext buildSslContext(
+    static SslContext buildSslContext(
             Supplier<SslContextBuilder> builderSupplier,
             Consumer<SslContextBuilder> tlsCustomizer) throws SSLException {
         try {
@@ -313,47 +266,6 @@ public final class VirtualHostBuilder {
     public VirtualHostBuilder tlsSelfSigned() throws SSLException, CertificateException {
         tlsSelfSigned = true;
         return this;
-    }
-
-    /**
-     * Sets the {@link SslContext} of this {@link VirtualHost}.
-     *
-     * @deprecated Use {@link #tls(SslContext)}.
-     */
-    @Deprecated
-    public VirtualHostBuilder sslContext(SslContext sslContext) {
-        return tls(sslContext);
-    }
-
-    /**
-     * Sets the {@link SslContext} of this {@link VirtualHost} from the specified {@link SessionProtocol},
-     * {@code keyCertChainFile} and cleartext {@code keyFile}.
-     *
-     * @deprecated Use {@link #tls(File, File)}.
-     */
-    @Deprecated
-    public VirtualHostBuilder sslContext(
-            SessionProtocol protocol, File keyCertChainFile, File keyFile) throws SSLException {
-        sslContext(protocol, keyCertChainFile, keyFile, null);
-        return this;
-    }
-
-    /**
-     * Sets the {@link SslContext} of this {@link VirtualHost} from the specified {@link SessionProtocol},
-     * {@code keyCertChainFile}, {@code keyFile} and {@code keyPassword}.
-     *
-     * @deprecated Use {@link #tls(File, File, String)}.
-     */
-    @Deprecated
-    public VirtualHostBuilder sslContext(
-            SessionProtocol protocol,
-            File keyCertChainFile, File keyFile, @Nullable String keyPassword) throws SSLException {
-
-        if (requireNonNull(protocol, "protocol") != SessionProtocol.HTTPS) {
-            throw new IllegalArgumentException("unsupported protocol: " + protocol);
-        }
-
-        return tls(keyCertChainFile, keyFile, keyPassword);
     }
 
     /**

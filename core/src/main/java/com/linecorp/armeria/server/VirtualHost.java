@@ -21,12 +21,15 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.net.IDN;
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLException;
 
 import org.slf4j.Logger;
 
@@ -41,9 +44,12 @@ import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.DomainNameMapping;
 import io.netty.util.DomainNameMappingBuilder;
+import io.netty.util.ReferenceCountUtil;
 
 /**
  * A <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>.
@@ -100,7 +106,7 @@ public final class VirtualHost {
 
         this.defaultHostname = defaultHostname;
         this.hostnamePattern = hostnamePattern;
-        this.sslContext = validateSslContext(sslContext);
+        this.sslContext = sslContext;
         this.requestTimeoutMillis = requestTimeoutMillis;
         this.maxRequestLength = maxRequestLength;
         this.verboseResponses = verboseResponses;
@@ -195,10 +201,41 @@ public final class VirtualHost {
     }
 
     @Nullable
-    static SslContext validateSslContext(@Nullable SslContext sslContext) {
+    static SslContext validateSslContext(@Nullable SslContext sslContext) throws SSLException {
         if (sslContext != null && !sslContext.isServer()) {
             throw new IllegalArgumentException("sslContext: " + sslContext + " (expected: server context)");
         }
+
+        SSLEngine serverEngine = null;
+        SSLEngine clientEngine = null;
+
+        try {
+            serverEngine = sslContext.newEngine(ByteBufAllocator.DEFAULT);
+            serverEngine.setUseClientMode(false);
+            serverEngine.setNeedClientAuth(false);
+
+            final SslContext sslContextClient =
+                    VirtualHostBuilder.buildSslContext(SslContextBuilder::forClient, sslContextBuilder -> {});
+            clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
+            clientEngine.setUseClientMode(true);
+
+            clientEngine.beginHandshake();
+            serverEngine.beginHandshake();
+
+            final ByteBuffer appBuf = ByteBuffer.allocate(clientEngine.getSession().getApplicationBufferSize());
+            final ByteBuffer packetBuf = ByteBuffer.allocate(clientEngine.getSession().getPacketBufferSize());
+
+            clientEngine.wrap(appBuf, packetBuf);
+            appBuf.clear();
+            packetBuf.flip();
+            serverEngine.unwrap(packetBuf, appBuf);
+        } catch (SSLException e) {
+            throw new SSLException("failed to validate SSL/TLS configuration: " + e, e);
+        } finally {
+            ReferenceCountUtil.release(serverEngine);
+            ReferenceCountUtil.release(clientEngine);
+        }
+
         return sslContext;
     }
 

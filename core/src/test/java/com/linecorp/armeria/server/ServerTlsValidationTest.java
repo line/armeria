@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.security.KeyStore;
 
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLException;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -30,10 +31,9 @@ import com.linecorp.armeria.common.HttpStatus;
 
 class ServerTlsValidationTest {
 
-    // Note: When key store password is not given to key store, it is expected that an exception occurs when
-    //       Server.builder().build() method is called. But when users use JKS key store, the exception is never
-    //       raised. (In case of PKCS12 key store, the exception is raised as expected.) Not sure why this
-    //       happens and this test needs to be updated when investigation completes.
+    // TODO: Re-enable this test once we figure out why it does not raise an exception. When key store password
+    //       is not given to key store, it is expected that this test raise an exception. For reference, in case
+    //       of PKCS12 key store, an exception is raised when key store password is not given.
     @Disabled
     @Test
     void testJksKeyStoreWithNullPassword() throws Exception {
@@ -55,7 +55,7 @@ class ServerTlsValidationTest {
                                         .service("/", (ctx, res) -> HttpResponse.of(HttpStatus.OK))
                                         .tls(kmf, sslContextBuilder -> {})
                                         .build();
-        }).isInstanceOf(RuntimeException.class)
+        }).isInstanceOf(SSLException.class)
           .hasMessageContaining("failed to validate SSL/TLS configuration");
     }
 
@@ -77,7 +77,7 @@ class ServerTlsValidationTest {
                                         .service("/", (ctx, res) -> HttpResponse.of(HttpStatus.OK))
                                         .tls(kmf, sslContextBuilder -> {})
                                         .build();
-        }).isInstanceOf(RuntimeException.class)
+        }).isInstanceOf(SSLException.class)
           .hasMessageContaining("failed to validate SSL/TLS configuration");
     }
 }
