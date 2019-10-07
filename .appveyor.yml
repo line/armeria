@@ -25,19 +25,12 @@ init:
 build_script:
   - cmd: 'gradlew.bat --version'
   - cmd: 'gradlew.bat %GRADLE_CLI_OPTS% checkstyle check build'
-  - sh: './.appveyor.sh "$PROFILE"'
+  - sh: './.appveyor.build.sh "$PROFILE"'
 
 test: off
 
 on_finish:
-  # Upload the JUnit test results.
-  # See: https://github.com/appveyor/ci/issues/92#issuecomment-307242316
-  - ps: |
-      $wc = New-Object 'System.Net.WebClient'
-      Get-ChildItem . -Name -Recurse 'TEST-*.xml'  |
-      Foreach-Object {
-          $wc.UploadFile("https://ci.appveyor.com/api/testresults/junit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path $_))
-      }
+  - sh: './.appveyor.report.sh "$PROFILE"'
 
 cache:
   - "%USERPROFILE%\\AppData\\Local\\Yarn\\cache"
