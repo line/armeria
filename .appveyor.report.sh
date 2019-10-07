@@ -25,13 +25,17 @@ TARBALL="$TARBALL_BASENAME.tar"
 msg 'Collecting the test reports ..'
 echo_and_run rm -f "$TARBALL"
 echo_and_run find . -path '*/build/reports/tests' -type d \
-  -exec tar rvf "$TARBALL" \
+  -exec tar rf "$TARBALL" \
     --xform="s:./:$TARBALL_BASENAME/:" \
     --xform='s:/build/reports/tests::' \
     {} ';'
 
-msg 'Compressing the test reports ..'
-echo_and_run gzip "$TARBALL"
+if [[ ! -f "$TARBALL" ]]; then
+  msg "Found no test reports."
+else
+  msg 'Compressing the test reports ..'
+  echo_and_run gzip "$TARBALL"
 
-msg 'Uploading the test reports ..'
-echo_and_run curl -F "file=@$TARBALL.gz" 'https://file.io/'
+  msg 'Uploading the test reports ..'
+  echo_and_run curl -F "file=@$TARBALL.gz" 'https://file.io/'
+fi
