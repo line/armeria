@@ -38,4 +38,6 @@ else
 
   msg 'Uploading the test reports ..'
   echo_and_run curl -F "file=@$TARBALL.gz" 'https://file.io/'
+  echo
+  msg 'Download the test reports from the URL above.'
 fi

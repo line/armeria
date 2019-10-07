@@ -29,7 +29,7 @@ build_script:
 
 test: off
 
-on_finish:
+on_failure:
   - sh: './.appveyor.report.sh "$PROFILE"'
 
 cache:
