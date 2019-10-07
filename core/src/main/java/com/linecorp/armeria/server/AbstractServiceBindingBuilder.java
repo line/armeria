@@ -1,19 +1,3 @@
-/*
- * Copyright 2019 LINE Corporation
- *
- * LINE Corporation licenses this file to you under the Apache License,
- * version 2.0 (the "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at:
- *
- *   https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
- */
-
 package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.server.ServerConfig.validateMaxRequestLength;
@@ -34,14 +18,7 @@ import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
-/**
- * A builder class for binding a {@link Service} fluently.
- *
- * @see ServiceBindingBuilder
- * @see VirtualHostServiceBindingBuilder
- */
-abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder {
-
+public abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder implements ServiceBuilder {
     @Nullable
     private Long requestTimeoutMillis;
     @Nullable
@@ -64,6 +41,7 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder {
      *
      * @param requestTimeout the timeout. {@code 0} disables the timeout.
      */
+    @Override
     public AbstractServiceBindingBuilder requestTimeout(Duration requestTimeout) {
         return requestTimeoutMillis(requireNonNull(requestTimeout, "requestTimeout").toMillis());
     }
@@ -74,6 +52,7 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder {
      *
      * @param requestTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
      */
+    @Override
     public AbstractServiceBindingBuilder requestTimeoutMillis(long requestTimeoutMillis) {
         this.requestTimeoutMillis = validateRequestTimeoutMillis(requestTimeoutMillis);
         return this;
@@ -85,6 +64,7 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder {
      *
      * @param maxRequestLength the maximum allowed length. {@code 0} disables the length limit.
      */
+    @Override
     public AbstractServiceBindingBuilder maxRequestLength(long maxRequestLength) {
         this.maxRequestLength = validateMaxRequestLength(maxRequestLength);
         return this;
@@ -96,6 +76,7 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder {
      * insecure. When disabled, the service response will not expose such server-side details to the client.
      * If not set, {@link VirtualHost#verboseResponses()} is used.
      */
+    @Override
     public AbstractServiceBindingBuilder verboseResponses(boolean verboseResponses) {
         this.verboseResponses = verboseResponses;
         return this;
@@ -106,6 +87,7 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder {
      * If not set, {@link VirtualHost#requestContentPreviewerFactory()}
      * is used.
      */
+    @Override
     public AbstractServiceBindingBuilder requestContentPreviewerFactory(ContentPreviewerFactory factory) {
         requestContentPreviewerFactory = requireNonNull(factory, "factory");
         return this;
@@ -116,6 +98,7 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder {
      * If not set, {@link VirtualHost#responseContentPreviewerFactory()}
      * is used.
      */
+    @Override
     public AbstractServiceBindingBuilder responseContentPreviewerFactory(ContentPreviewerFactory factory) {
         responseContentPreviewerFactory = requireNonNull(factory, "factory");
         return this;
@@ -134,6 +117,7 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder {
      * </ul>
      * @param length the maximum length of the preview.
      */
+    @Override
     public AbstractServiceBindingBuilder contentPreview(int length) {
         return contentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
     }
@@ -153,6 +137,7 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder {
      * @param defaultCharset the default charset used when a charset is not specified in the
      *                       {@code "content-type"} header
      */
+    @Override
     public AbstractServiceBindingBuilder contentPreview(int length, Charset defaultCharset) {
         return contentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
     }
@@ -160,6 +145,7 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder {
     /**
      * Sets the {@link ContentPreviewerFactory} for an HTTP request/response of a {@link Service}.
      */
+    @Override
     public AbstractServiceBindingBuilder contentPreviewerFactory(ContentPreviewerFactory factory) {
         requestContentPreviewerFactory(factory);
         responseContentPreviewerFactory(factory);
@@ -170,6 +156,7 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder {
      * Sets the format of this {@link Service}'s access log. The specified {@code accessLogFormat} would be
      * parsed by {@link AccessLogWriter#custom(String)}.
      */
+    @Override
     public AbstractServiceBindingBuilder accessLogFormat(String accessLogFormat) {
         return accessLogWriter(AccessLogWriter.custom(requireNonNull(accessLogFormat, "accessLogFormat")),
                                true);
@@ -181,6 +168,7 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder {
      *
      * @param shutdownOnStop whether to shut down the {@link AccessLogWriter} when the {@link Server} stops
      */
+    @Override
     public AbstractServiceBindingBuilder accessLogWriter(AccessLogWriter accessLogWriter,
                                                          boolean shutdownOnStop) {
         this.accessLogWriter = requireNonNull(accessLogWriter, "accessLogWriter");
@@ -195,6 +183,7 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder {
      * @param <T> the type of the {@link Service} being decorated
      * @param <R> the type of the {@link Service} {@code decorator} will produce
      */
+    @Override
     public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
     AbstractServiceBindingBuilder decorator(Function<T, R> decorator) {
         requireNonNull(decorator, "decorator");
