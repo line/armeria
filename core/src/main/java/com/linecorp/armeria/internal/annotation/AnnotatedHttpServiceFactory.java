@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.annotation;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.RouteUtil.ensureAbsolutePath;
 import static com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.toRequestObjectResolvers;
@@ -287,7 +288,7 @@ public final class AnnotatedHttpServiceFactory {
                                                 .consumes(consumableMediaTypes)
                                                 .produces(producibleMediaTypes)
                                                 .build());
-                }).collect(Collectors.toSet());
+                }).collect(toImmutableSet());
 
         final List<ExceptionHandlerFunction> eh =
                 getAnnotatedInstances(method, clazz, ExceptionHandler.class, ExceptionHandlerFunction.class)
@@ -338,7 +339,7 @@ public final class AnnotatedHttpServiceFactory {
                     new AnnotatedHttpService(object, method, resolvers, eh, res, route, responseHeaders,
                                              responseTrailers),
                     decorator(method, clazz, getInitialDecorator(route.methods())));
-        }).collect(Collectors.toList());
+        }).collect(toImmutableList());
     }
 
     /**
@@ -349,18 +350,17 @@ public final class AnnotatedHttpServiceFactory {
             getInitialDecorator(Set<HttpMethod> httpMethods) {
         if (httpMethods.contains(HttpMethod.OPTIONS)) {
             return Function.identity();
-        } else {
-            return delegate -> new SimpleDecoratingHttpService(delegate) {
-                @Override
-                public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                    if (req.method() == HttpMethod.OPTIONS) {
-                        // This must be a CORS preflight request.
-                        throw HttpStatusException.of(HttpStatus.FORBIDDEN);
-                    }
-                    return delegate().serve(ctx, req);
-                }
-            };
         }
+        return delegate -> new SimpleDecoratingHttpService(delegate) {
+            @Override
+            public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                if (req.method() == HttpMethod.OPTIONS) {
+                    // This must be a CORS preflight request.
+                    throw HttpStatusException.of(HttpStatus.FORBIDDEN);
+                }
+                return delegate().serve(ctx, req);
+            }
+        };
     }
 
     private static List<AnnotatedValueResolver> getAnnotatedValueResolvers(List<RequestConverterFunction> req,
@@ -384,7 +384,7 @@ public final class AnnotatedHttpServiceFactory {
                 resolvers.stream()
                          .filter(AnnotatedValueResolver::isPathVariable)
                          .map(AnnotatedValueResolver::httpElementName)
-                         .collect(Collectors.toSet());
+                         .collect(toImmutableSet());
 
         if (!expectedParamNames.containsAll(requiredParamNames)) {
             final Set<String> missing = Sets.difference(requiredParamNames, expectedParamNames);
@@ -518,7 +518,7 @@ public final class AnnotatedHttpServiceFactory {
                                                                          Set<Annotation> methodAnnotations) {
         final Map<HttpMethod, Set<String>> httpMethodPatternMap = new EnumMap<>(HttpMethod.class);
         final Set<String> pathPatterns = findAll(method, Path.class).stream().map(Path::value)
-                                                                .collect(Collectors.toSet());
+                                                                .collect(toImmutableSet());
         methodAnnotations.stream()
                          .filter(annotation -> HTTP_METHOD_MAP.containsKey(annotation.annotationType()))
                          .forEach(annotation -> {

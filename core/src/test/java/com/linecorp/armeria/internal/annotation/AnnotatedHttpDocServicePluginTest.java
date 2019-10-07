@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.annotation;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.BEAN;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.INT;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.LONG;
@@ -39,7 +40,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
@@ -296,7 +296,7 @@ public class AnnotatedHttpDocServicePluginTest {
                         .collect(toImmutableMap(MethodInfo::name, Function.identity()));
         final Set<String> paths = methods.get("multiGet").endpoints()
                                          .stream().map(EndpointInfo::pathMapping)
-                                         .collect(Collectors.toSet());
+                                         .collect(toImmutableSet());
         assertThat(paths).isEqualTo(ImmutableSet.of("exact:/path1", "exact:/path2"));
     }
 

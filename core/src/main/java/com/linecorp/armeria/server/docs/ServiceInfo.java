@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.docs;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
 
@@ -25,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
@@ -47,30 +47,6 @@ import com.linecorp.armeria.server.Service;
  * Metadata about a {@link Service}.
  */
 public final class ServiceInfo {
-
-    private static final class Pair<L, R> {
-        private final L left;
-        private final R right;
-
-        private Pair(L left, R right) {
-            this.left = left;
-            this.right = right;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (!(obj instanceof Pair)) {
-                return false;
-            }
-            final Pair<L, R> other = (Pair<L, R>) obj;
-            return Objects.equals(left, other.left) && Objects.equals(right, other.right);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(left, right);
-        }
-    }
 
     private final String name;
     private final List<MethodInfo> methods;
@@ -127,16 +103,17 @@ public final class ServiceInfo {
     }
 
     /**
-     * Duplicate {@link MethodInfo} with matching (name, httpMethod) are merged.
-     * Merge targets are endpoints since {@code exampleHttpHeaders}, {@code exampleRequests},
-     * and {@code docString} cannot be different for a single method.
+     * Merges the {@link MethodInfo}s with the same method name and {@link HttpMethod} pair
+     * into a single {@link MethodInfo}. Note that only the {@link EndpointInfo}s are merged
+     * because the {@link MethodInfo}s being merged always have the same
+     * {@code exampleHttpHeaders} and {@code exampleRequests}.
      */
     @VisibleForTesting
-    static Iterable<MethodInfo> mergeEndpoints(Iterable<MethodInfo> methodInfos) {
-        final Map<Pair<String, HttpMethod>, MethodInfo> methodInfoMap = new HashMap<>();
-        for (MethodInfo methodInfo: methodInfos) {
-            final Pair<String, HttpMethod> pair = new Pair<>(methodInfo.name(), methodInfo.httpMethod());
-            methodInfoMap.compute(pair, (key, value) -> {
+    static List<MethodInfo> mergeEndpoints(Iterable<MethodInfo> methodInfos) {
+        final Map<List<Object>, MethodInfo> methodInfoMap = new HashMap<>();
+        for (MethodInfo methodInfo : methodInfos) {
+            final List<Object> mergeKey = ImmutableList.of(methodInfo.name(), methodInfo.httpMethod());
+            methodInfoMap.compute(mergeKey, (key, value) -> {
                 if (value == null) {
                     return methodInfo;
                 } else {
@@ -152,7 +129,7 @@ public final class ServiceInfo {
         }
         return methodInfoMap.values().stream()
                             .sorted(comparing(MethodInfo::name).thenComparing(MethodInfo::httpMethod))
-                            .collect(Collectors.toList());
+                            .collect(toImmutableList());
     }
 
     /**

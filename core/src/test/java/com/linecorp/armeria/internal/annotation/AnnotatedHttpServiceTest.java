@@ -703,7 +703,7 @@ public class AnnotatedHttpServiceTest {
         @Path("/multiGetDiffParam1/{param1}")
         @Path("/multiGetDiffParam2/{param2}")
         public String multiGetDiffParam(RequestContext ctx, @Param String param1, @Param String param2) {
-            return "multiGetDiffParam";
+            return param1 + "_" + param2;
         }
 
         @Get
@@ -711,7 +711,7 @@ public class AnnotatedHttpServiceTest {
         @Path("/multiGetPost1")
         @Path("/multiGetPost2")
         public String multiGetPost(RequestContext ctx) {
-            return "multiGetPost";
+            return ctx.path();
         }
     }
 
@@ -1040,14 +1040,14 @@ public class AnnotatedHttpServiceTest {
             testBody(hc, get("/12/multiGetWithParam2/param"), "param");
 
             testStatusCode(hc, get("/12/multiGetDiffParam1/param1"), 400);
-            testStatusCode(hc, get("/12/multiGetDiffParam1/param1?param2=param2"), 200);
+            testBody(hc, get("/12/multiGetDiffParam1/param1?param2=param2"), "param1_param2");
             testStatusCode(hc, get("/12/multiGetDiffParam2/param2"), 400);
-            testStatusCode(hc, get("/12/multiGetDiffParam2/param2?param1=param1"), 200);
+            testBody(hc, get("/12/multiGetDiffParam2/param2?param1=param1"), "param1_param2");
 
-            testStatusCode(hc, get("/12/multiGetPost1"), 200);
-            testStatusCode(hc, post("/12/multiGetPost1"), 200);
-            testStatusCode(hc, get("/12/multiGetPost2"), 200);
-            testStatusCode(hc, post("/12/multiGetPost2"), 200);
+            testBody(hc, get("/12/multiGetPost1"), "/12/multiGetPost1");
+            testBody(hc, post("/12/multiGetPost1"), "/12/multiGetPost1");
+            testBody(hc, get("/12/multiGetPost2"), "/12/multiGetPost2");
+            testBody(hc, post("/12/multiGetPost2"), "/12/multiGetPost2");
         }
     }
 

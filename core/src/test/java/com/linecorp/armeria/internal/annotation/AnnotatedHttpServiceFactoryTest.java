@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.internal.annotation;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.collectDecorators;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.create;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.find;
@@ -29,6 +30,7 @@ import java.lang.annotation.Target;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -36,6 +38,10 @@ import java.util.stream.Stream;
 import org.assertj.core.util.Lists;
 import org.junit.Test;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -183,19 +189,54 @@ public class AnnotatedHttpServiceFactoryTest {
     }
 
     @Test
-    public void testMultiPathSingleMappingService() {
-        final MultiPathSingleMappingService serviceObject = new MultiPathSingleMappingService();
+    public void testMultiPathHttpMethodMapping() {
+        final List<AnnotatedHttpServiceElement> postServiceElements =
+                getServiceElements(new MultiPathSingleMappingService(), "httpMethodMapping", HttpMethod.POST);
+        assertThat(postServiceElements).hasSize(1);
+        assertThat(postServiceElements.get(0).route().methods()).isEqualTo(ImmutableSet.of(HttpMethod.POST));
+        assertThat(postServiceElements.get(0).route().paths()).isEqualTo(ImmutableList.of("/post", "/post"));
 
-        final List<AnnotatedHttpServiceElement> annotatedHttpServiceElements = getMethods(
-                MultiPathSingleMappingService.class, HttpResponse.class).flatMap(method -> {
-            final List<AnnotatedHttpServiceElement> annotatedHttpServices = create(
-                    "/", serviceObject, method, Lists.emptyList(), Lists.emptyList(), Lists.emptyList());
-            return annotatedHttpServices.stream();
-        }).collect(Collectors.toList());
+        final List<AnnotatedHttpServiceElement> getServiceElements =
+                getServiceElements(new MultiPathSingleMappingService(), "httpMethodMapping", HttpMethod.GET);
+        assertThat(getServiceElements).hasSize(1);
+        assertThat(getServiceElements.get(0).route().methods()).isEqualTo(ImmutableSet.of(HttpMethod.GET));
+        assertThat(getServiceElements.get(0).route().paths()).isEqualTo(ImmutableList.of("/get", "/get"));
+    }
 
-        annotatedHttpServiceElements.forEach(element -> {
-            assertThat(element.route().methods()).hasSize(1);
-        });
+    @Test
+    public void testMultiPathHttpMethodPathMapping() {
+        final List<AnnotatedHttpServiceElement> postServiceElements = getServiceElements(
+                new MultiPathSingleMappingService(), "httpMethodPathMapping", HttpMethod.POST);
+        assertThat(postServiceElements).hasSize(2);
+        assertThat(postServiceElements.get(0).route().methods()).isEqualTo(ImmutableSet.of(HttpMethod.POST));
+        final Set<List<String>> postPaths =
+                postServiceElements.stream().map(element -> element.route().paths()).collect(toImmutableSet());
+        assertThat(postPaths).isEqualTo(ImmutableSet.of(ImmutableList.of("/path", "/path"),
+                                                        ImmutableList.of("/post", "/post")));
+
+        final List<AnnotatedHttpServiceElement> getServiceElements = getServiceElements(
+                new MultiPathSingleMappingService(), "httpMethodPathMapping", HttpMethod.GET);
+        assertThat(getServiceElements).hasSize(2);
+        assertThat(getServiceElements.get(0).route().methods()).isEqualTo(ImmutableSet.of(HttpMethod.GET));
+        final Set<List<String>> getPaths =
+                getServiceElements.stream().map(element -> element.route().paths()).collect(toImmutableSet());
+        assertThat(getPaths).isEqualTo(ImmutableSet.of(ImmutableList.of("/path", "/path"),
+                                                       ImmutableList.of("/get", "/get")));
+    }
+
+    @Test
+    public void testMultiPathPathMappingOnly() {
+        final List<AnnotatedHttpServiceElement> postServiceElements =
+                getServiceElements(new MultiPathSingleMappingService(), "pathMappingOnly", HttpMethod.POST);
+        assertThat(postServiceElements).hasSize(1);
+        assertThat(postServiceElements.get(0).route().methods()).isEqualTo(ImmutableSet.of(HttpMethod.POST));
+        assertThat(postServiceElements.get(0).route().paths()).isEqualTo(ImmutableList.of("/path", "/path"));
+
+        final List<AnnotatedHttpServiceElement> getServiceElements =
+                getServiceElements(new MultiPathSingleMappingService(), "pathMappingOnly", HttpMethod.GET);
+        assertThat(getServiceElements).hasSize(1);
+        assertThat(getServiceElements.get(0).route().methods()).isEqualTo(ImmutableSet.of(HttpMethod.GET));
+        assertThat(getServiceElements.get(0).route().paths()).isEqualTo(ImmutableList.of("/path", "/path"));
     }
 
     @Test
@@ -207,6 +248,21 @@ public class AnnotatedHttpServiceFactoryTest {
                 create("/", serviceObject, method, Lists.emptyList(), Lists.emptyList(), Lists.emptyList());
             }).isInstanceOf(IllegalArgumentException.class);
         });
+    }
+
+    private static List<AnnotatedHttpServiceElement> getServiceElements(
+            Object service, String methodName, HttpMethod httpMethod) {
+        return getMethods(service.getClass(), HttpResponse.class)
+                .filter(method -> method.getName().equals(methodName)).flatMap(
+                        method -> {
+                            final List<AnnotatedHttpServiceElement> annotatedHttpServices = create(
+                                    "/", service, method, Lists.emptyList(), Lists.emptyList(),
+                                    Lists.emptyList());
+                            return annotatedHttpServices.stream();
+                        }
+                )
+                .filter(element -> element.route().methods().contains(httpMethod))
+                .collect(Collectors.toList());
     }
 
     private static List<Class<?>> values(List<DecoratorAndOrder> list) {
@@ -392,21 +448,21 @@ public class AnnotatedHttpServiceFactoryTest {
 
         @Get("/get")
         @Post("/post")
-        public HttpResponse pathOnHttpMethods() {
+        public HttpResponse httpMethodMapping() {
             return HttpResponse.of(HttpStatus.OK);
         }
 
         @Get("/get")
         @Post("/post")
         @Path("/path")
-        public HttpResponse pathOnHttpMethodsAndPath() {
+        public HttpResponse httpMethodPathMapping() {
             return HttpResponse.of(HttpStatus.OK);
         }
 
         @Get
         @Post
         @Path("/path")
-        public HttpResponse noPathOnHttpMethods() {
+        public HttpResponse pathMappingOnly() {
             return HttpResponse.of(HttpStatus.OK);
         }
     }

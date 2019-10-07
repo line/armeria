@@ -39,6 +39,7 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.JacksonRequestConverterFunction;
+import com.linecorp.armeria.server.annotation.Options;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.Post;
@@ -66,14 +67,6 @@ public class AnnotatedHttpServiceBuilderTest {
             @Post
             public void root() {}
         });
-
-        // TODO: Check if we need to keep supporting this
-        //        Server.builder().annotatedService(new Object() {
-        //            @Options
-        //            @Get
-        //            @Post("/")
-        //            public void root() {}
-        //        });
 
         Server.builder().annotatedService(new Object() {
             @Get("/")
@@ -346,6 +339,13 @@ public class AnnotatedHttpServiceBuilderTest {
         assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
             @Get("/test")
             public void root(BeanA a) {}
+        })).isInstanceOf(IllegalArgumentException.class);
+
+        assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
+            @Options
+            @Get
+            @Post("/")
+            public void root() {}
         })).isInstanceOf(IllegalArgumentException.class);
     }
 
