@@ -29,6 +29,16 @@ build_script:
 
 test: off
 
+on_finish:
+  # Upload the JUnit test results.
+  # See: https://github.com/appveyor/ci/issues/92#issuecomment-307242316
+  - ps: |
+      $wc = New-Object 'System.Net.WebClient'
+      Get-ChildItem . -Name -Recurse 'TEST-*.xml'  |
+      Foreach-Object {
+          $wc.UploadFile("https://ci.appveyor.com/api/testresults/junit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path $_))
+      }
+
 cache:
   - "%USERPROFILE%\\AppData\\Local\\Yarn\\cache"
   - "%USERPROFILE%\\.gradle\\wrapper\\dists"
