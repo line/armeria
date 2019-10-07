@@ -913,127 +913,15 @@ public final class ServerBuilder {
         return service(serviceWithRoutes, ImmutableList.copyOf(requireNonNull(decorators, "decorators")));
     }
 
-    /**
-     * Binds the specified annotated service object under the path prefix {@code "/"}.
-     */
-    public ServerBuilder annotatedService(Object service) {
-        return annotatedService("/", service, Function.identity(), ImmutableList.of());
-    }
 
     /**
-     * Binds the specified annotated service object under the path prefix {@code "/"}.
+     * Returns a {@link AnnotatedServiceBindingBuilder} to build annotated service.
      *
-     * @param exceptionHandlersAndConverters instances of {@link ExceptionHandlerFunction},
-     *                                       {@link RequestConverterFunction} and/or
-     *                                       {@link ResponseConverterFunction}
      */
-    public ServerBuilder annotatedService(Object service,
-                                          Object... exceptionHandlersAndConverters) {
-        return annotatedService("/", service, Function.identity(),
-                                ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
-                                                                    "exceptionHandlersAndConverters")));
+    public AnnotatedServiceBindingBuilder annotatedService() {
+        return new AnnotatedServiceBindingBuilder(this);
     }
 
-    /**
-     * Binds the specified annotated service object under the path prefix {@code "/"}.
-     *
-     * @param exceptionHandlersAndConverters instances of {@link ExceptionHandlerFunction},
-     *                                       {@link RequestConverterFunction} and/or
-     *                                       {@link ResponseConverterFunction}
-     */
-    public ServerBuilder annotatedService(Object service,
-                                          Function<Service<HttpRequest, HttpResponse>,
-                                                  ? extends Service<HttpRequest, HttpResponse>> decorator,
-                                          Object... exceptionHandlersAndConverters) {
-        return annotatedService("/", service, decorator,
-                                ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
-                                                                    "exceptionHandlersAndConverters")));
-    }
-
-    /**
-     * Binds the specified annotated service object under the specified path prefix.
-     */
-    public ServerBuilder annotatedService(String pathPrefix, Object service) {
-        return annotatedService(pathPrefix, service, Function.identity(), ImmutableList.of());
-    }
-
-    /**
-     * Binds the specified annotated service object under the specified path prefix.
-     *
-     * @param exceptionHandlersAndConverters instances of {@link ExceptionHandlerFunction},
-     *                                       {@link RequestConverterFunction} and/or
-     *                                       {@link ResponseConverterFunction}
-     */
-    public ServerBuilder annotatedService(String pathPrefix, Object service,
-                                          Object... exceptionHandlersAndConverters) {
-        return annotatedService(pathPrefix, service, Function.identity(),
-                                ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
-                                                                    "exceptionHandlersAndConverters")));
-    }
-
-    /**
-     * Binds the specified annotated service object under the specified path prefix.
-     *
-     * @param exceptionHandlersAndConverters instances of {@link ExceptionHandlerFunction},
-     *                                       {@link RequestConverterFunction} and/or
-     *                                       {@link ResponseConverterFunction}
-     */
-    public ServerBuilder annotatedService(String pathPrefix, Object service,
-                                          Function<Service<HttpRequest, HttpResponse>,
-                                                  ? extends Service<HttpRequest, HttpResponse>> decorator,
-                                          Object... exceptionHandlersAndConverters) {
-
-        return annotatedService(pathPrefix, service, decorator,
-                                ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
-                                                                    "exceptionHandlersAndConverters")));
-    }
-
-    /**
-     * Binds the specified annotated service object under the specified path prefix.
-     *
-     * @param exceptionHandlersAndConverters an iterable object of {@link ExceptionHandlerFunction},
-     *                                       {@link RequestConverterFunction} and/or
-     *                                       {@link ResponseConverterFunction}
-     */
-    public ServerBuilder annotatedService(String pathPrefix, Object service,
-                                          Iterable<?> exceptionHandlersAndConverters) {
-        return annotatedService(pathPrefix, service, Function.identity(), exceptionHandlersAndConverters);
-    }
-
-    /**
-     * Binds the specified annotated service object under the specified path prefix.
-     *
-     * @param exceptionHandlersAndConverters an iterable object of {@link ExceptionHandlerFunction},
-     *                                       {@link RequestConverterFunction} and/or
-     *                                       {@link ResponseConverterFunction}
-     */
-    public ServerBuilder annotatedService(String pathPrefix, Object service,
-                                          Function<Service<HttpRequest, HttpResponse>,
-                                                  ? extends Service<HttpRequest, HttpResponse>> decorator,
-                                          Iterable<?> exceptionHandlersAndConverters) {
-        requireNonNull(pathPrefix, "pathPrefix");
-        requireNonNull(service, "service");
-        requireNonNull(decorator, "decorator");
-        requireNonNull(exceptionHandlersAndConverters, "exceptionHandlersAndConverters");
-
-        final List<AnnotatedHttpServiceElement> elements =
-                AnnotatedHttpServiceFactory.find(pathPrefix, service, exceptionHandlersAndConverters);
-        elements.forEach(e -> {
-            Service<HttpRequest, HttpResponse> s = e.service();
-            // Apply decorators which are specified in the service class.
-            s = e.decorator().apply(s);
-            // Apply decorators which are passed via annotatedService() methods.
-            s = decorator.apply(s);
-
-            // If there is a decorator, we should add one more decorator which handles an exception
-            // raised from decorators.
-            if (s != e.service()) {
-                s = e.service().exceptionHandlingDecorator().apply(s);
-            }
-            service(e.route(), s);
-        });
-        return this;
-    }
 
     ServerBuilder serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder) {
         serviceConfigBuilders.add(serviceConfigBuilder);
