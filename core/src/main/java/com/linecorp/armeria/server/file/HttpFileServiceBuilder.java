@@ -105,15 +105,7 @@ public final class HttpFileServiceBuilder {
     /**
      * Sets the maximum allowed number of cached file entries. If not set, {@code "maximumSize=1024"}
      * is used by default.
-     *
-     * @deprecated Use {@link #entryCacheSpec(String)}.
-     * <pre>{@code
-     * > HttpFileServiceBuilder.forFileSystem(...)
-     * >                       .entryCacheSpec("maximumSize=1024")
-     * >                       .build();
-     * }</pre>
      */
-    @Deprecated
     public HttpFileServiceBuilder maxCacheEntries(int maxCacheEntries) {
         checkState(canSetMaxCacheEntries,
                    "Cannot call maxCacheEntries() if called entryCacheSpec() already.");

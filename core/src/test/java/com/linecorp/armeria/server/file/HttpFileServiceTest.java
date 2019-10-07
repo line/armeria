@@ -84,7 +84,7 @@ class HttpFileServiceTest {
             sb.serviceUnder(
                     "/uncached/fs/",
                     HttpFileServiceBuilder.forFileSystem(tmpDir)
-                                          .entryCacheSpec("off")
+                                          .maxCacheEntries(0)
                                           .autoIndex(true)
                                           .build());
 
@@ -97,7 +97,7 @@ class HttpFileServiceTest {
                     "/uncached/compressed/",
                     HttpFileServiceBuilder.forClassPath(baseResourceDir + "foo")
                                           .serveCompressedFiles(true)
-                                          .entryCacheSpec("off")
+                                          .maxCacheEntries(0)
                                           .build());
 
             sb.serviceUnder(
@@ -106,7 +106,7 @@ class HttpFileServiceTest {
             sb.serviceUnder(
                     "/uncached/classes/",
                     HttpFileServiceBuilder.forClassPath("/")
-                                          .entryCacheSpec("off")
+                                          .maxCacheEntries(0)
                                           .build());
 
             sb.serviceUnder(
@@ -116,10 +116,10 @@ class HttpFileServiceTest {
             sb.serviceUnder(
                     "/uncached/",
                     HttpFileServiceBuilder.forClassPath(baseResourceDir + "foo")
-                                          .entryCacheSpec("off")
+                                          .maxCacheEntries(0)
                                           .build()
                                           .orElse(HttpFileServiceBuilder.forClassPath(baseResourceDir + "bar")
-                                                                        .entryCacheSpec("off")
+                                                                        .maxCacheEntries(0)
                                                                         .build()));
 
             sb.decorator(LoggingService.newDecorator());

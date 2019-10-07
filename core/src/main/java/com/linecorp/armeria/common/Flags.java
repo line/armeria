@@ -782,6 +782,7 @@ public final class Flags {
      *
      * <p>The default value of this flag is {@value DEFAULT_FILE_SERVICE_CACHE_SPEC}. Specify the
      * {@code -Dcom.linecorp.armeria.fileServiceCache=<spec>} JVM option to override the default value.
+     * For example, {@code -Dcom.linecorp.armeria.fileServiceCache=maximumSize=1024,expireAfterAccess=600s}.
      * Also, specify {@code -Dcom.linecorp.armeria.fileServiceCache=off} JVM option to disable it.
      */
     public static Optional<String> fileServiceCacheSpec() {
