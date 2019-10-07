@@ -270,11 +270,8 @@ public final class VirtualHostBuilder {
             serverEngine.setUseClientMode(false);
             serverEngine.setNeedClientAuth(false);
 
-            final SelfSignedCertificate ssc = new SelfSignedCertificate("foo.com");
             final SslContext sslContextClient =
-                    buildSslContext(() -> SslContextBuilder.forClient()
-                                                           .keyManager(ssc.certificate(), ssc.privateKey()),
-                                    sslContextBuilder -> {});
+                    buildSslContext(() -> SslContextBuilder.forClient(), sslContextBuilder -> {});
             clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
             clientEngine.setUseClientMode(true);
 
