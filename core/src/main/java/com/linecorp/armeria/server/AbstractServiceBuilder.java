@@ -207,7 +207,7 @@ public abstract class AbstractServiceBuilder implements ServiceBuilder {
     }
 
     final void build0(Route route, Service<HttpRequest, HttpResponse> service) {
-        final ServiceConfigBuilder serviceConfigBuilder = new ServiceConfigBuilder(route, decorate(service));
+        final ServiceConfigBuilder serviceConfigBuilder = new ServiceConfigBuilder(route, service);
         if (requestTimeoutMillis != null) {
             serviceConfigBuilder.requestTimeoutMillis(requestTimeoutMillis);
         }
