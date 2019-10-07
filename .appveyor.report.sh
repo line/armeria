@@ -24,7 +24,11 @@ TARBALL="$TARBALL_BASENAME.tar"
 
 msg 'Collecting the test reports ..'
 echo_and_run rm -f "$TARBALL"
-echo_and_run find . -path '*/build/reports/tests' -type d -exec tar rvf "$TARBALL" --xform="s:./:$TARBALL_BASENAME/:" {} ';'
+echo_and_run find . -path '*/build/reports/tests' -type d \
+  -exec tar rvf "$TARBALL" \
+    --xform="s:./:$TARBALL_BASENAME/:" \
+    --xform='s:/build/reports/tests::' \
+    {} ';'
 
 msg 'Compressing the test reports ..'
 echo_and_run gzip "$TARBALL"
