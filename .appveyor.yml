@@ -1,13 +1,31 @@
-version: "{branch}.{build}"
+version: '{branch}.{build}'
+environment:
+  GRADLE_CLI_OPTS: '--no-daemon --console=verbose --stacktrace'
+  matrix:
+    - PROFILE: 'java8'
+      APPVEYOR_BUILD_WORKER_IMAGE: 'bionic'
+      APPVEYOR_BUILD_WORKER_CLOUD: 'verda'
+    - PROFILE: 'java11'
+      APPVEYOR_BUILD_WORKER_IMAGE: 'bionic'
+      APPVEYOR_BUILD_WORKER_CLOUD: 'verda'
+    - PROFILE: 'java13'
+      APPVEYOR_BUILD_WORKER_IMAGE: 'bionic'
+      APPVEYOR_BUILD_WORKER_CLOUD: 'verda'
+    - PROFILE: 'windows'
+      APPVEYOR_BUILD_WORKER_IMAGE: 'Visual Studio 2019'
+      JAVA_HOME: 'C:\Program Files\Java\jdk12'
+
+matrix:
+  fast_finish: false
 
 init:
-  - git config --global core.autocrlf true
-
-build:
-  verbosity: detailed
+  - cmd: 'git config --global core.autocrlf true'
+  - sh: 'git config --global core.autocrlf input'
 
 build_script:
-  - gradlew.bat --no-daemon --stacktrace --warning-mode=all checkstyle check build
+  - cmd: 'gradlew.bat --version'
+  - cmd: 'gradlew.bat %GRADLE_CLI_OPTS% checkstyle check build'
+  - sh: './.appveyor.sh "$PROFILE"'
 
 test: off
 
@@ -18,12 +36,6 @@ cache:
   - "%USERPROFILE%\\.gradle\\caches\\modules-2"
   - "%USERPROFILE%\\.gradle\\caches\\package-lists"
   - "%USERPROFILE%\\.gradle\\caches\\sphinx-binary"
-
-environment:
-  JAVA_HOME: C:\Program Files\Java\jdk11
-
-matrix:
-  fast_finish: true
 
 notifications:
   - provider: Slack

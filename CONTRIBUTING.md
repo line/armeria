@@ -11,7 +11,7 @@ source projects you are aware of. It will be amazing if you could help us by doi
 
 ### Build requirements
 
-- [OpenJDK 11 (or later)](https://adoptopenjdk.net/)
+- [OpenJDK 12 (or later)](https://adoptopenjdk.net/)
 
 ### Contributor license agreement
 
