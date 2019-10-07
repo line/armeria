@@ -68,7 +68,7 @@ class HttpServerHandlerTest {
         final AggregatedHttpResponse res = client.delete("/hello").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.METHOD_NOT_ALLOWED);
         await().untilAsserted(() -> assertThat(logHolder.get().path()).isEqualTo("/hello"));
-        assertThat(logHolder.get().requestCause()).isExactlyInstanceOf(HttpStatusException.class);
+        assertThat(logHolder.get().requestCause()).isNull();
     }
 
     @Test
@@ -81,16 +81,16 @@ class HttpServerHandlerTest {
     }
 
     @Test
-    void httpStatusException() {
+    void httpStatusExceptionIsNotLoggedAsRequestCause() {
         final HttpClient client = HttpClient.of(server.uri("/"));
         final AggregatedHttpResponse res = client.get("/httpStatusException").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.CREATED);
         await().untilAsserted(() -> assertThat(logHolder.get().path()).isEqualTo("/httpStatusException"));
-        assertThat(logHolder.get().requestCause()).isExactlyInstanceOf(HttpStatusException.class);
+        assertThat(logHolder.get().requestCause()).isNull();
     }
 
     @Test
-    void httpResponseException() {
+    void httpResponseExceptionIsNotLoggedAsRequestCause() {
         final HttpClient client = HttpClient.of(server.uri("/"));
         final AggregatedHttpResponse res = client.get("/httpResponseException").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.CREATED);
