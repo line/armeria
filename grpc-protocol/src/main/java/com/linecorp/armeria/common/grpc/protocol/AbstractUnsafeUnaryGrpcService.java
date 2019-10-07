@@ -76,7 +76,7 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
                    .exceptionally(t -> {
                        final HttpHeadersBuilder trailers;
                        if (t instanceof ArmeriaStatusException) {
-                           ArmeriaStatusException statusException = (ArmeriaStatusException) t;
+                           final ArmeriaStatusException statusException = (ArmeriaStatusException) t;
                            trailers = GrpcTrailersUtil.statusToTrailers(
                                    statusException.getCode(), statusException.getMessage(), false);
                        } else {
