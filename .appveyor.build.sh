@@ -140,7 +140,7 @@ echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 checkstyle
 # Run 'trimShadedJar' alone because it pollutes the console if other tasks are running in parallel.
 echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 trimShadedJar
 # Run the remaining tasks.
-echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 build
+echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 build -xtrimShadedJar
 
 if [[ "$COVERAGE" -eq 1 ]]; then
   # Send coverage reports to CodeCov.io.
