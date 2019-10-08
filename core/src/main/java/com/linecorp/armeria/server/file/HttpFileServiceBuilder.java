@@ -17,6 +17,9 @@
 package com.linecorp.armeria.server.file;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.server.file.HttpFileServiceConfig.validateEntryCacheSpec;
+import static com.linecorp.armeria.server.file.HttpFileServiceConfig.validateMaxCacheEntrySizeBytes;
+import static com.linecorp.armeria.server.file.HttpFileServiceConfig.validateNonNegativeParameter;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
@@ -109,21 +112,14 @@ public final class HttpFileServiceBuilder {
     public HttpFileServiceBuilder maxCacheEntries(int maxCacheEntries) {
         checkState(canSetMaxCacheEntries,
                    "Cannot call maxCacheEntries() if called entryCacheSpec() already.");
-        entryCacheSpec = validateMaxCacheEntries(maxCacheEntries);
+        validateNonNegativeParameter(maxCacheEntries, "maxCacheEntries");
+        if (maxCacheEntries == 0) {
+            entryCacheSpec = Optional.empty();
+        } else {
+            entryCacheSpec = Optional.of(String.format("maximumSize=%d", maxCacheEntries));
+        }
         canSetEntryCacheSpec = false;
         return this;
-    }
-
-    /**
-     * Validates the maximum allowed number of cached file entries in the specified {@code maxCacheEntries}.
-     */
-    private static Optional<String> validateMaxCacheEntries(int maxCacheEntries) {
-        HttpFileServiceConfig.validateNonNegativeParameter(maxCacheEntries, "maxCacheEntries");
-        if (maxCacheEntries == 0) {
-            return Optional.empty();
-        }
-        final String entryCacheSpec = String.format("maximumSize=%d", maxCacheEntries);
-        return HttpFileServiceConfig.validateEntryCacheSpec(Optional.of(entryCacheSpec));
     }
 
     /**
@@ -133,7 +129,7 @@ public final class HttpFileServiceBuilder {
         requireNonNull(entryCacheSpec, "entryCacheSpec");
         checkState(canSetEntryCacheSpec,
                    "Cannot call entryCacheSpec() if called maxCacheEntries() already.");
-        this.entryCacheSpec = HttpFileServiceConfig.validateEntryCacheSpec(Optional.of(entryCacheSpec));
+        this.entryCacheSpec = validateEntryCacheSpec(Optional.of(entryCacheSpec));
         canSetMaxCacheEntries = false;
         return this;
     }
@@ -158,8 +154,7 @@ public final class HttpFileServiceBuilder {
      * cached. If not set, {@value #DEFAULT_MAX_CACHE_ENTRY_SIZE_BYTES} is used by default.
      */
     public HttpFileServiceBuilder maxCacheEntrySizeBytes(int maxCacheEntrySizeBytes) {
-        this.maxCacheEntrySizeBytes =
-                HttpFileServiceConfig.validateMaxCacheEntrySizeBytes(maxCacheEntrySizeBytes);
+        this.maxCacheEntrySizeBytes = validateMaxCacheEntrySizeBytes(maxCacheEntrySizeBytes);
         return this;
     }
 
