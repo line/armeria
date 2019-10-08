@@ -182,5 +182,7 @@ if (tasks.findByName('trimShadedJar')) {
         // Do not optimize the dependencies that access some fields via sun.misc.Unsafe or reflection only.
         keep "class com.linecorp.armeria.internal.shaded.caffeine.** { *; }"
         keep "class com.linecorp.armeria.internal.shaded.jctools.** { *; }"
+
+        dontnote
     }
 }
