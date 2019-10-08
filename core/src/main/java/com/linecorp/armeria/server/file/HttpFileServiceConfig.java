@@ -67,21 +67,11 @@ public final class HttpFileServiceConfig {
         return entryCacheSpec;
     }
 
-    @Deprecated
-    static Optional<String> validateMaxCacheEntries(int maxCacheEntries) {
-        validateNonNegativeParameter(maxCacheEntries, "maxCacheEntries");
-        if (maxCacheEntries == 0) {
-            return Optional.empty();
-        }
-        final String entryCacheSpec = String.format("maximumSize=%d", maxCacheEntries);
-        return validateEntryCacheSpec(Optional.of(entryCacheSpec));
-    }
-
     static int validateMaxCacheEntrySizeBytes(int maxCacheEntrySizeBytes) {
         return validateNonNegativeParameter(maxCacheEntrySizeBytes, "maxCacheEntrySizeBytes");
     }
 
-    private static int validateNonNegativeParameter(int value, String name) {
+    static int validateNonNegativeParameter(int value, String name) {
         if (value < 0) {
             throw new IllegalArgumentException(name + ": " + value + " (expected: >= 0)");
         }
@@ -103,7 +93,7 @@ public final class HttpFileServiceConfig {
     }
 
     /**
-     * Returns the cache spec for file entry cache.
+     * Returns the cache spec of the file entry cache, as defined in {@link CaffeineSpec}.
      */
     public Optional<String> entryCacheSpec() {
         return entryCacheSpec;

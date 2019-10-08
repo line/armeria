@@ -103,15 +103,27 @@ public final class HttpFileServiceBuilder {
     }
 
     /**
-     * Sets the maximum allowed number of cached file entries. If not set, {@code "maximumSize=1024"}
-     * is used by default.
+     * Sets the maximum allowed number of cached file entries. If not set, up to {@code 1024} entries
+     * are cached by default.
      */
     public HttpFileServiceBuilder maxCacheEntries(int maxCacheEntries) {
         checkState(canSetMaxCacheEntries,
                    "Cannot call maxCacheEntries() if called entryCacheSpec() already.");
-        entryCacheSpec = HttpFileServiceConfig.validateMaxCacheEntries(maxCacheEntries);
+        entryCacheSpec = validateMaxCacheEntries(maxCacheEntries);
         canSetEntryCacheSpec = false;
         return this;
+    }
+
+    /**
+     * Validates the maximum allowed number of cached file entries in the specified {@code maxCacheEntries}.
+     */
+    private static Optional<String> validateMaxCacheEntries(int maxCacheEntries) {
+        HttpFileServiceConfig.validateNonNegativeParameter(maxCacheEntries, "maxCacheEntries");
+        if (maxCacheEntries == 0) {
+            return Optional.empty();
+        }
+        final String entryCacheSpec = String.format("maximumSize=%d", maxCacheEntries);
+        return HttpFileServiceConfig.validateEntryCacheSpec(Optional.of(entryCacheSpec));
     }
 
     /**
