@@ -25,9 +25,12 @@ init:
 build_script:
   - cmd: 'gradlew.bat --version'
   - cmd: 'gradlew.bat %GRADLE_CLI_OPTS% checkstyle check build'
-  - sh: './.appveyor.sh "$PROFILE"'
+  - sh: './.appveyor.build.sh "$PROFILE"'
 
 test: off
+
+on_failure:
+  - sh: './.appveyor.report.sh "$PROFILE"'
 
 cache:
   - "%USERPROFILE%\\AppData\\Local\\Yarn\\cache"
