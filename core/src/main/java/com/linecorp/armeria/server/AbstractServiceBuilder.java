@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
 import java.time.Duration;
-import java.util.List;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpRequest;
@@ -28,98 +27,90 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
-/**
- * A builder class for binding a {@link Service} fluently.
- *
- * @see ServiceBindingBuilder
- * @see VirtualHostServiceBindingBuilder
- */
-abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder implements ServiceBuilder {
+abstract class AbstractServiceBuilder implements ServiceBuilder {
 
     private final DefaultServiceBuilder defaultServiceBuilder = new DefaultServiceBuilder();
 
     @Override
-    public AbstractServiceBindingBuilder requestTimeout(Duration requestTimeout) {
-        return requestTimeoutMillis(requireNonNull(requestTimeout, "requestTimeout").toMillis());
+    public AbstractServiceBuilder requestTimeout(Duration requestTimeout) {
+        defaultServiceBuilder.requestTimeout(requestTimeout);
+        return this;
     }
 
     @Override
-    public AbstractServiceBindingBuilder requestTimeoutMillis(long requestTimeoutMillis) {
+    public AbstractServiceBuilder requestTimeoutMillis(long requestTimeoutMillis) {
         defaultServiceBuilder.requestTimeoutMillis(requestTimeoutMillis);
         return this;
     }
 
     @Override
-    public AbstractServiceBindingBuilder maxRequestLength(long maxRequestLength) {
-        defaultServiceBuilder.maxRequestLength(maxRequestLength);
-        return this;
+    public AbstractServiceBuilder maxRequestLength(long maxRequestLength) {
+         defaultServiceBuilder.maxRequestLength(maxRequestLength);
+         return this;
     }
 
     @Override
-    public AbstractServiceBindingBuilder verboseResponses(boolean verboseResponses) {
+    public AbstractServiceBuilder verboseResponses(boolean verboseResponses) {
         defaultServiceBuilder.verboseResponses(verboseResponses);
         return this;
     }
 
     @Override
-    public AbstractServiceBindingBuilder requestContentPreviewerFactory(ContentPreviewerFactory factory) {
+    public AbstractServiceBuilder requestContentPreviewerFactory(ContentPreviewerFactory factory) {
         defaultServiceBuilder.requestContentPreviewerFactory(factory);
         return this;
     }
 
     @Override
-    public AbstractServiceBindingBuilder responseContentPreviewerFactory(ContentPreviewerFactory factory) {
+    public AbstractServiceBuilder responseContentPreviewerFactory(ContentPreviewerFactory factory) {
         defaultServiceBuilder.responseContentPreviewerFactory(factory);
         return this;
     }
 
     @Override
-    public AbstractServiceBindingBuilder contentPreview(int length) {
+    public AbstractServiceBuilder contentPreview(int length) {
         defaultServiceBuilder.contentPreview(length);
         return this;
     }
 
     @Override
-    public AbstractServiceBindingBuilder contentPreview(int length, Charset defaultCharset) {
-        return contentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
+    public AbstractServiceBuilder contentPreview(int length, Charset defaultCharset) {
+        contentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
+        return this;
     }
 
     @Override
-    public AbstractServiceBindingBuilder contentPreviewerFactory(ContentPreviewerFactory factory) {
+    public AbstractServiceBuilder contentPreviewerFactory(ContentPreviewerFactory factory) {
         requestContentPreviewerFactory(factory);
         responseContentPreviewerFactory(factory);
         return this;
     }
 
     @Override
-    public AbstractServiceBindingBuilder accessLogFormat(String accessLogFormat) {
+    public AbstractServiceBuilder accessLogFormat(String accessLogFormat) {
         return accessLogWriter(AccessLogWriter.custom(requireNonNull(accessLogFormat, "accessLogFormat")),
-                               true);
+            true);
     }
 
     @Override
-    public AbstractServiceBindingBuilder accessLogWriter(AccessLogWriter accessLogWriter,
-                                                         boolean shutdownOnStop) {
+    public AbstractServiceBuilder accessLogWriter(AccessLogWriter accessLogWriter,
+                                                  boolean shutdownOnStop) {
         defaultServiceBuilder.accessLogWriter(accessLogWriter, shutdownOnStop);
         return this;
     }
 
     @Override
     public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
-    AbstractServiceBindingBuilder decorator(Function<T, R> decorator) {
+    AbstractServiceBuilder decorator(Function<T, R> decorator) {
         defaultServiceBuilder.decorator(decorator);
         return this;
     }
 
-    abstract void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder);
-
-    final void build0(Service<HttpRequest, HttpResponse> service) {
-        final List<Route> routes = buildRouteList();
-
-        for (Route route : routes) {
-            final ServiceConfigBuilder serviceConfigBuilder = defaultServiceBuilder.serviceConfigBuilder(route,
-                                                                                                         service);
-            serviceConfigBuilder(serviceConfigBuilder);
-        }
+    final void build0(Route route, Service<HttpRequest, HttpResponse> service) {
+        final ServiceConfigBuilder serviceConfigBuilder = defaultServiceBuilder.serviceConfigBuilder(route,
+                                                                                                     service);
+        serviceConfigBuilder(serviceConfigBuilder);
     }
+
+    abstract void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder);
 }
