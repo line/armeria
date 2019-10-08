@@ -437,7 +437,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
         }
       }
     } catch (e) {
-      setDebugResponse(e.toString);
+      setDebugResponse(e.toString());
       return;
     }
 
