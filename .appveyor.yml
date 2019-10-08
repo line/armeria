@@ -24,7 +24,7 @@ init:
 
 build_script:
   - cmd: 'gradlew.bat --version'
-  - cmd: 'gradlew.bat %GRADLE_CLI_OPTS% --parallel --max-workers=2 test testStreaming testNg -xcheckstyle -xcheckstyleMain -xcheckstyleJava9 -xcheckstyleTest -xcheckstyleJava9Test -xcheckstyleJmh'
+  - cmd: 'gradlew.bat %GRADLE_CLI_OPTS% test testStreaming testNg -xcheckstyle -xcheckstyleMain -xcheckstyleJava9 -xcheckstyleTest -xcheckstyleJava9Test -xcheckstyleJmh'
   - sh: './.appveyor.build.sh "$PROFILE"'
 
 test: off
