@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.internal.annotation;
 
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.collectDecorators;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.create;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.find;
@@ -30,7 +29,6 @@ import java.lang.annotation.Target;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -189,64 +187,51 @@ public class AnnotatedHttpServiceFactoryTest {
     }
 
     @Test
-    public void testMultiPathHttpMethodMapping() {
-        final List<AnnotatedHttpServiceElement> postServiceElements =
-                getServiceElements(new MultiPathSingleMappingService(), "httpMethodMapping", HttpMethod.POST);
-        assertThat(postServiceElements).hasSize(1);
-        assertThat(postServiceElements.get(0).route().methods()).isEqualTo(ImmutableSet.of(HttpMethod.POST));
-        assertThat(postServiceElements.get(0).route().paths()).isEqualTo(ImmutableList.of("/post", "/post"));
-
+    public void testMultiPathSuccessGetMapping() {
         final List<AnnotatedHttpServiceElement> getServiceElements =
-                getServiceElements(new MultiPathSingleMappingService(), "httpMethodMapping", HttpMethod.GET);
+                getServiceElements(new MultiPathSuccessService(), "getMapping", HttpMethod.GET);
         assertThat(getServiceElements).hasSize(1);
         assertThat(getServiceElements.get(0).route().methods()).isEqualTo(ImmutableSet.of(HttpMethod.GET));
         assertThat(getServiceElements.get(0).route().paths()).isEqualTo(ImmutableList.of("/get", "/get"));
     }
 
     @Test
-    public void testMultiPathHttpMethodPathMapping() {
-        final List<AnnotatedHttpServiceElement> postServiceElements = getServiceElements(
-                new MultiPathSingleMappingService(), "httpMethodPathMapping", HttpMethod.POST);
-        assertThat(postServiceElements).hasSize(2);
-        assertThat(postServiceElements.get(0).route().methods()).isEqualTo(ImmutableSet.of(HttpMethod.POST));
-        final Set<List<String>> postPaths =
-                postServiceElements.stream().map(element -> element.route().paths()).collect(toImmutableSet());
-        assertThat(postPaths).isEqualTo(ImmutableSet.of(ImmutableList.of("/path", "/path"),
-                                                        ImmutableList.of("/post", "/post")));
-
+    public void testMultiPathSuccessGetPostMapping() {
         final List<AnnotatedHttpServiceElement> getServiceElements = getServiceElements(
-                new MultiPathSingleMappingService(), "httpMethodPathMapping", HttpMethod.GET);
-        assertThat(getServiceElements).hasSize(2);
+                new MultiPathSuccessService(), "getPostMapping", HttpMethod.GET);
+        assertThat(getServiceElements).hasSize(1);
         assertThat(getServiceElements.get(0).route().methods()).isEqualTo(ImmutableSet.of(HttpMethod.GET));
-        final Set<List<String>> getPaths =
-                getServiceElements.stream().map(element -> element.route().paths()).collect(toImmutableSet());
-        assertThat(getPaths).isEqualTo(ImmutableSet.of(ImmutableList.of("/path", "/path"),
-                                                       ImmutableList.of("/get", "/get")));
+        assertThat(getServiceElements.get(0).route().paths()).isEqualTo(ImmutableList.of("/get", "/get"));
+
+        final List<AnnotatedHttpServiceElement> postServiceElements = getServiceElements(
+                new MultiPathSuccessService(), "getPostMapping", HttpMethod.POST);
+        assertThat(postServiceElements).hasSize(1);
+        assertThat(postServiceElements.get(0).route().methods()).isEqualTo(ImmutableSet.of(HttpMethod.POST));
+        assertThat(postServiceElements.get(0).route().paths()).isEqualTo(ImmutableList.of("/post", "/post"));
     }
 
     @Test
-    public void testMultiPathPathMappingOnly() {
-        final List<AnnotatedHttpServiceElement> postServiceElements =
-                getServiceElements(new MultiPathSingleMappingService(), "pathMappingOnly", HttpMethod.POST);
-        assertThat(postServiceElements).hasSize(1);
-        assertThat(postServiceElements.get(0).route().methods()).isEqualTo(ImmutableSet.of(HttpMethod.POST));
-        assertThat(postServiceElements.get(0).route().paths()).isEqualTo(ImmutableList.of("/path", "/path"));
-
-        final List<AnnotatedHttpServiceElement> getServiceElements =
-                getServiceElements(new MultiPathSingleMappingService(), "pathMappingOnly", HttpMethod.GET);
+    public void testMultiPathSuccessNoGetPostMappingPathMapping() {
+        final List<AnnotatedHttpServiceElement> getServiceElements = getServiceElements(
+                new MultiPathSuccessService(), "noGetPostMappingPathMapping", HttpMethod.GET);
         assertThat(getServiceElements).hasSize(1);
         assertThat(getServiceElements.get(0).route().methods()).isEqualTo(ImmutableSet.of(HttpMethod.GET));
         assertThat(getServiceElements.get(0).route().paths()).isEqualTo(ImmutableList.of("/path", "/path"));
+
+        final List<AnnotatedHttpServiceElement> postServiceElements = getServiceElements(
+                new MultiPathSuccessService(), "noGetPostMappingPathMapping", HttpMethod.POST);
+        assertThat(postServiceElements).hasSize(1);
+        assertThat(postServiceElements.get(0).route().methods()).isEqualTo(ImmutableSet.of(HttpMethod.POST));
+        assertThat(postServiceElements.get(0).route().paths()).isEqualTo(ImmutableList.of("/path", "/path"));
     }
 
     @Test
-    public void testMultiPathNoMappingService() {
-        final MultiPathNoMappingService serviceObject = new MultiPathNoMappingService();
-
-        getMethods(MultiPathNoMappingService.class, HttpResponse.class).forEach(method -> {
+    public void testMultiPathFailingService() {
+        final MultiPathFailingService serviceObject = new MultiPathFailingService();
+        getMethods(MultiPathFailingService.class, HttpResponse.class).forEach(method -> {
             assertThatThrownBy(() -> {
                 create("/", serviceObject, method, Lists.emptyList(), Lists.emptyList(), Lists.emptyList());
-            }).isInstanceOf(IllegalArgumentException.class);
+            }, method.getName()).isInstanceOf(IllegalArgumentException.class);
         });
     }
 
@@ -444,40 +429,62 @@ public class AnnotatedHttpServiceFactoryTest {
         }
     }
 
-    static class MultiPathSingleMappingService {
+    static class MultiPathSuccessService {
 
         @Get("/get")
-        @Post("/post")
-        public HttpResponse httpMethodMapping() {
+        public HttpResponse getMapping() {
             return HttpResponse.of(HttpStatus.OK);
         }
 
         @Get("/get")
         @Post("/post")
-        @Path("/path")
-        public HttpResponse httpMethodPathMapping() {
+        public HttpResponse getPostMapping() {
             return HttpResponse.of(HttpStatus.OK);
         }
 
         @Get
         @Post
         @Path("/path")
-        public HttpResponse pathMappingOnly() {
+        public HttpResponse noGetPostMappingPathMapping() {
             return HttpResponse.of(HttpStatus.OK);
         }
     }
 
-    static class MultiPathNoMappingService {
+    static class MultiPathFailingService {
+
+        @Get
+        public HttpResponse noGetMapping() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
 
         @Get
         @Post
-        public HttpResponse noPathOnAllMethods() {
+        public HttpResponse noGetPostMapping() {
             return HttpResponse.of(HttpStatus.OK);
         }
 
         @Get("/get")
         @Post
-        public HttpResponse noPathOnSingleHttpMethod() {
+        public HttpResponse noPostMappingAndGetMapping() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Get("/get")
+        @Path("/path")
+        public HttpResponse getPathMapping() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Get("/get")
+        @Post
+        @Path("/path")
+        public HttpResponse noPostMappingAndGetPathMapping() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        // TODO: will leave this as failing until we decide how to process this
+        @Path("/path")
+        public HttpResponse pathMapping() {
             return HttpResponse.of(HttpStatus.OK);
         }
     }
