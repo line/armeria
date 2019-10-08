@@ -44,5 +44,7 @@ ext {
 }
 
 // Disable checkstyle because it's checked by ':thrift'.
-tasks.checkstyleMain.onlyIf { false }
-tasks.checkstyleTest.onlyIf { false }
+if (!project.hasProperty('noCheckstyle')) {
+    tasks.checkstyleMain.onlyIf { false }
+    tasks.checkstyleTest.onlyIf { false }
+}
