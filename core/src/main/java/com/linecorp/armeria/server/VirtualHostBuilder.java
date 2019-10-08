@@ -119,9 +119,6 @@ public final class VirtualHostBuilder {
             clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
             clientEngine.setUseClientMode(true);
 
-            clientEngine.beginHandshake();
-            serverEngine.beginHandshake();
-
             final ByteBuffer appBuf = ByteBuffer.allocate(clientEngine.getSession().getApplicationBufferSize());
             final ByteBuffer packetBuf = ByteBuffer.allocate(clientEngine.getSession().getPacketBufferSize());
 
