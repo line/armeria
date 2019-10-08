@@ -3,11 +3,10 @@
 First of all, thank you so much for taking your time to contribute! Armeria is not very different from any other open
 source projects you are aware of. It will be amazing if you could help us by doing any of the following:
 
-- File an issue in [the issue tracker](https://github.com/line/armeria/issues) to report bugs and propose new features and
-  improvements.
+- Join [our Slack workspace](https://join.slack.com/t/line-armeria/shared_invite/enQtNjIxNDU1ODU1MTI2LWRlMGRjMzIwOTIzMzA2NDA1NGMwMTg2MTA3MzE4MDYyMjUxMjRlNWRiZTc1N2Q3ZGRjNDA5ZDZhZTI1NGEwODk) to chat with us.
 - Ask a question tagged with `armeria` at [StackOverflow](https://stackoverflow.com/questions/tagged/armeria).
+- File an issue in [the issue tracker](https://github.com/line/armeria/issues) to report bugs or suggest an idea.
 - Contribute your work by sending [a pull request](https://github.com/line/armeria/pulls).
-- Join [our Slack workspace](https://join.slack.com/t/line-armeria/shared_invite/enQtNjIxNDU1ODU1MTI2LWRlMGRjMzIwOTIzMzA2NDA1NGMwMTg2MTA3MzE4MDYyMjUxMjRlNWRiZTc1N2Q3ZGRjNDA5ZDZhZTI1NGEwODk).
 
 ### Build requirements
 
