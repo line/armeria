@@ -96,6 +96,44 @@ public final class VirtualHostBuilder {
             ApplicationProtocolNames.HTTP_2,
             ApplicationProtocolNames.HTTP_1_1);
 
+    private static SslContext validateSslContext(@Nullable SslContext sslContext) throws SSLException {
+        if (sslContext != null && !sslContext.isServer()) {
+            throw new IllegalArgumentException("sslContext: " + sslContext + " (expected: server context)");
+        }
+
+        SSLEngine serverEngine = null;
+        SSLEngine clientEngine = null;
+
+        try {
+            serverEngine = sslContext.newEngine(ByteBufAllocator.DEFAULT);
+            serverEngine.setUseClientMode(false);
+            serverEngine.setNeedClientAuth(false);
+
+            final SslContext sslContextClient =
+                    VirtualHostBuilder.buildSslContext(SslContextBuilder::forClient, sslContextBuilder -> {});
+            clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
+            clientEngine.setUseClientMode(true);
+
+            clientEngine.beginHandshake();
+            serverEngine.beginHandshake();
+
+            final ByteBuffer appBuf = ByteBuffer.allocate(clientEngine.getSession().getApplicationBufferSize());
+            final ByteBuffer packetBuf = ByteBuffer.allocate(clientEngine.getSession().getPacketBufferSize());
+
+            clientEngine.wrap(appBuf, packetBuf);
+            appBuf.clear();
+            packetBuf.flip();
+            serverEngine.unwrap(packetBuf, appBuf);
+        } catch (SSLException e) {
+            throw new SSLException("failed to validate SSL/TLS configuration: " + e.getMessage());
+        } finally {
+            ReferenceCountUtil.release(serverEngine);
+            ReferenceCountUtil.release(clientEngine);
+        }
+
+        return sslContext;
+    }
+    
     private final ServerBuilder serverBuilder;
     private final boolean defaultVirtualHost;
     private final List<ServiceConfigBuilder> serviceConfigBuilders = new ArrayList<>();
@@ -259,44 +297,6 @@ public final class VirtualHostBuilder {
         } catch (Exception e) {
             throw new SSLException("failed to configure TLS: " + e, e);
         }
-    }
-
-    private static SslContext validateSslContext(@Nullable SslContext sslContext) throws SSLException {
-        if (sslContext != null && !sslContext.isServer()) {
-            throw new IllegalArgumentException("sslContext: " + sslContext + " (expected: server context)");
-        }
-
-        SSLEngine serverEngine = null;
-        SSLEngine clientEngine = null;
-
-        try {
-            serverEngine = sslContext.newEngine(ByteBufAllocator.DEFAULT);
-            serverEngine.setUseClientMode(false);
-            serverEngine.setNeedClientAuth(false);
-
-            final SslContext sslContextClient =
-                    VirtualHostBuilder.buildSslContext(SslContextBuilder::forClient, sslContextBuilder -> {});
-            clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
-            clientEngine.setUseClientMode(true);
-
-            clientEngine.beginHandshake();
-            serverEngine.beginHandshake();
-
-            final ByteBuffer appBuf = ByteBuffer.allocate(clientEngine.getSession().getApplicationBufferSize());
-            final ByteBuffer packetBuf = ByteBuffer.allocate(clientEngine.getSession().getPacketBufferSize());
-
-            clientEngine.wrap(appBuf, packetBuf);
-            appBuf.clear();
-            packetBuf.flip();
-            serverEngine.unwrap(packetBuf, appBuf);
-        } catch (SSLException e) {
-            throw new SSLException("failed to validate SSL/TLS configuration: " + e.getMessage());
-        } finally {
-            ReferenceCountUtil.release(serverEngine);
-            ReferenceCountUtil.release(clientEngine);
-        }
-
-        return sslContext;
     }
 
     /**
