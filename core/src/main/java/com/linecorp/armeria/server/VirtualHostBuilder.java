@@ -127,7 +127,7 @@ public final class VirtualHostBuilder {
             packetBuf.flip();
             serverEngine.unwrap(packetBuf, appBuf);
         } catch (SSLException e) {
-            throw new SSLException("failed to validate SSL/TLS configuration: " + e.getMessage());
+            throw new SSLException("failed to validate SSL/TLS configuration: " + e.getMessage(), e);
         } finally {
             ReferenceCountUtil.release(serverEngine);
             ReferenceCountUtil.release(clientEngine);
