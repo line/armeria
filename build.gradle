@@ -51,7 +51,10 @@ allprojects {
         if (javaTestHome) {
             executable "${javaTestHome}/bin/java"
         }
-        maxParallelForks = 2
+        // Parallelize if --parallel is on.
+        if (gradle.startParameter.parallelProjectExecutionEnabled) {
+            maxParallelForks = gradle.startParameter.maxWorkerCount
+        }
     }
 }
 
