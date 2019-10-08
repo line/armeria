@@ -100,7 +100,7 @@ public final class VirtualHost {
 
         this.defaultHostname = defaultHostname;
         this.hostnamePattern = hostnamePattern;
-        this.sslContext = validateSslContext(sslContext);
+        this.sslContext = sslContext;
         this.requestTimeoutMillis = requestTimeoutMillis;
         this.maxRequestLength = maxRequestLength;
         this.verboseResponses = verboseResponses;
@@ -192,14 +192,6 @@ public final class VirtualHost {
             }
         }
         return false;
-    }
-
-    @Nullable
-    static SslContext validateSslContext(@Nullable SslContext sslContext) {
-        if (sslContext != null && !sslContext.isServer()) {
-            throw new IllegalArgumentException("sslContext: " + sslContext + " (expected: server context)");
-        }
-        return sslContext;
     }
 
     /**
