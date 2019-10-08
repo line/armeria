@@ -330,8 +330,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         try {
             routed = host.findServiceConfig(routingCtx);
         } catch (HttpStatusException cause) {
-            // We do not need to handle HttpResponseException here because we do not use it internally.
-            respond(ctx, host.accessLogWriter(), req, pathAndQuery, cause.httpStatus(), null, cause);
+            // There's no chance that an HttpResponseException is raised so we just handle HttpStatusException.
+            // Just pass the null as the cause because we don't want to log HttpStatusException as the cause.
+            respond(ctx, host.accessLogWriter(), req, pathAndQuery, cause.httpStatus(), null, null);
             return;
         } catch (Throwable cause) {
             logger.warn("{} Unexpected exception: {}", ctx.channel(), req, cause);
@@ -374,19 +375,18 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             } catch (HttpResponseException cause) {
                 serviceResponse = cause.httpResponse();
             } catch (Throwable cause) {
-                try {
-                    final HttpStatus status;
-                    if (cause instanceof HttpStatusException) {
-                        status = ((HttpStatusException) cause).httpStatus();
-                    } else {
-                        logger.warn("{} Unexpected exception: {}, {}", reqCtx, service, req, cause);
-                        status = HttpStatus.INTERNAL_SERVER_ERROR;
-                    }
-                    respond(ctx, reqCtx, reqCtx.accessLogWriter(), status, null, cause);
-                } finally {
-                    logBuilder.endRequest(cause);
-                    logBuilder.endResponse(cause);
+                final HttpStatus status;
+                final Throwable newCause;
+                if (cause instanceof HttpStatusException) {
+                    status = ((HttpStatusException) cause).httpStatus();
+                    // We don't want to log HttpStatusException and HttpResponseException as the cause.
+                    newCause = null;
+                } else {
+                    logger.warn("{} Unexpected exception: {}, {}", reqCtx, service, req, cause);
+                    status = HttpStatus.INTERNAL_SERVER_ERROR;
+                    newCause = cause;
                 }
+                respond(ctx, reqCtx, reqCtx.accessLogWriter(), status, null, newCause);
                 return;
             }
             final HttpResponse res = serviceResponse;
@@ -568,9 +568,14 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final DecodedHttpRequest req = (DecodedHttpRequest) reqCtx.request();
         assert req != null;
         req.close();
+        final RequestLogBuilder logBuilder = reqCtx.logBuilder();
+        if (cause == null) {
+            logBuilder.endRequest();
+        } else {
+            logBuilder.endRequest(cause);
+        }
 
         final boolean hasContent = resContent != null;
-        final RequestLogBuilder logBuilder = reqCtx.logBuilder();
 
         logBuilder.startResponse();
         assert responseEncoder != null;
