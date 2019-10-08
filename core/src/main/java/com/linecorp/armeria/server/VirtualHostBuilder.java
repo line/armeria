@@ -99,7 +99,7 @@ public final class VirtualHostBuilder {
     /**
      * Validate {@code sslContext} is configured properly. If {@code sslContext} is configured as client
      * context, or key store password is not given to key store when {@code sslContext} is created using key
-     * manager factory, the validation will fail and a {@link SSLException} will be raised.
+     * manager factory, the validation will fail and an {@link SSLException} will be raised.
      */
     private static SslContext validateSslContext(SslContext sslContext) throws SSLException {
         if (!sslContext.isServer()) {
