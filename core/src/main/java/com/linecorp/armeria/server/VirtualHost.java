@@ -230,7 +230,7 @@ public final class VirtualHost {
             packetBuf.flip();
             serverEngine.unwrap(packetBuf, appBuf);
         } catch (SSLException e) {
-            throw new SSLException("failed to validate SSL/TLS configuration: " + e, e);
+            throw new SSLException("failed to validate SSL/TLS configuration: " + e.getMessage());
         } finally {
             ReferenceCountUtil.release(serverEngine);
             ReferenceCountUtil.release(clientEngine);
