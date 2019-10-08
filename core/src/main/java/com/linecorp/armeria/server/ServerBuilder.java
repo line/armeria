@@ -1000,6 +1000,15 @@ public final class ServerBuilder {
         return this;
     }
 
+    /**
+     * Returns a {@link AnnotatedServiceBindingBuilder} to build annotated service.
+     *
+     */
+    public AnnotatedServiceBindingBuilder annotatedService() {
+        return new AnnotatedServiceBindingBuilder(this);
+    }
+
+
     ServerBuilder serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder) {
         serviceConfigBuilders.add(serviceConfigBuilder);
         return this;
