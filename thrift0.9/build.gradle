@@ -62,7 +62,6 @@ tasks.shadedJar.doLast {
 }
 
 // Disable checkstyle because it's checked by ':thrift'.
-if (!project.hasProperty('noCheckstyle')) {
-    tasks.checkstyleMain.onlyIf { false }
-    tasks.checkstyleTest.onlyIf { false }
+tasks.withType(Checkstyle) {
+    onlyIf { false }
 }

@@ -41,7 +41,6 @@ tasks.compileTestJava.dependsOn(project(':spring:boot-autoconfigure').tasks.comp
 tasks.compileTestJava.dependsOn(project(':spring:boot-autoconfigure').tasks.generateTestProto)
 
 // Disable checkstyle because it's checked by ':spring:boot-autoconfigure'.
-if (!project.hasProperty('noCheckstyle')) {
-    tasks.checkstyleMain.onlyIf { false }
-    tasks.checkstyleTest.onlyIf { false }
+tasks.withType(Checkstyle) {
+    onlyIf { false }
 }
