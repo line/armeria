@@ -97,9 +97,9 @@ public final class VirtualHostBuilder {
             ApplicationProtocolNames.HTTP_1_1);
 
     /*
-     * Validate {@code sslContext} is configured properly. If {@code sslContext} is configured as client context,
-     * or key store password is not given to key store when {@code sslContext} is created using key manager factory,
-     * the validation will fail and an exception will be raised.
+     * Validate {@code sslContext} is configured properly. If {@code sslContext} is configured as client
+     * context, or key store password is not given to key store when {@code sslContext} is created using key
+     * manager factory, the validation will fail and an exception will be raised.
      */
     private static SslContext validateSslContext(SslContext sslContext) throws SSLException {
         if (!sslContext.isServer()) {
@@ -291,7 +291,7 @@ public final class VirtualHostBuilder {
         return this;
     }
 
-    static SslContext buildSslContext(
+    private static SslContext buildSslContext(
             Supplier<SslContextBuilder> builderSupplier,
             Consumer<SslContextBuilder> tlsCustomizer) throws SSLException {
         try {
