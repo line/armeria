@@ -96,8 +96,8 @@ public final class VirtualHostBuilder {
             ApplicationProtocolNames.HTTP_2,
             ApplicationProtocolNames.HTTP_1_1);
 
-    private static SslContext validateSslContext(@Nullable SslContext sslContext) throws SSLException {
-        if (sslContext != null && !sslContext.isServer()) {
+    private static SslContext validateSslContext(SslContext sslContext) throws SSLException {
+        if (!sslContext.isServer()) {
             throw new IllegalArgumentException("sslContext: " + sslContext + " (expected: server context)");
         }
 
@@ -133,7 +133,7 @@ public final class VirtualHostBuilder {
 
         return sslContext;
     }
-    
+
     private final ServerBuilder serverBuilder;
     private final boolean defaultVirtualHost;
     private final List<ServiceConfigBuilder> serviceConfigBuilders = new ArrayList<>();
