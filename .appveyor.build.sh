@@ -136,11 +136,11 @@ fi
 
 msg "Building .."
 # Run 'checkstyle' first so we don't waste our time building ill-formatted code.
-echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=2 checkstyle
+echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=3 checkstyle
 # Run 'trimShadedJar' alone because it pollutes the console if other tasks are running in parallel.
-echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=2 trimShadedJar
+echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=3 trimShadedJar
 # Run the remaining tasks.
-echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=2 build -xtrimShadedJar
+echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=3 build -xtrimShadedJar
 
 if [[ "$COVERAGE" -eq 1 ]]; then
   # Send coverage reports to CodeCov.io.
