@@ -1,6 +1,6 @@
 version: '{branch}.{build}'
 environment:
-  GRADLE_CLI_OPTS: '--stacktrace'
+  GRADLE_CLI_OPTS: '--no-daemon --stacktrace'
   matrix:
     - PROFILE: 'java8'
       APPVEYOR_BUILD_WORKER_IMAGE: 'bionic'
@@ -24,7 +24,7 @@ init:
 
 build_script:
   - cmd: 'gradlew.bat --version'
-  - cmd: 'gradlew.bat %GRADLE_CLI_OPTS% --parallel --max-workers=2 checkstyle check build'
+  - cmd: 'gradlew.bat %GRADLE_CLI_OPTS% --parallel --max-workers=2 test testStreaming testNg -xcheckstyle -xcheckstyleMain -xcheckstyleJava9 -xcheckstyleTest -xcheckstyleJava9Test -xcheckstyleJmh'
   - sh: './.appveyor.build.sh "$PROFILE"'
 
 test: off
