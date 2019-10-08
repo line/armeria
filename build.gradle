@@ -21,6 +21,11 @@ ext {
 
 apply from: "${rootDir}/gradle/scripts/build-flags.gradle"
 
+def javaTestHome = System.env.JAVA_TEST_HOME
+if (javaTestHome) {
+    logger.quiet("Overriding JVM for tests with ${javaTestHome}")
+}
+
 allprojects {
     // Add common JVM options such as max memory and leak detection.
     tasks.withType(JavaForkOptions) {
@@ -41,6 +46,14 @@ allprojects {
         // Pass special system property to tell our tests that we are measuring coverage.
         if (project.hasFlags('coverage')) {
             systemProperty 'com.linecorp.armeria.testing.coverage', 'true'
+        }
+        // Use a different JRE for testing if necessary.
+        if (javaTestHome) {
+            executable "${javaTestHome}/bin/java"
+        }
+        // Parallelize if --parallel is on.
+        if (gradle.startParameter.parallelProjectExecutionEnabled) {
+            maxParallelForks = gradle.startParameter.maxWorkerCount
         }
     }
 }
@@ -125,11 +138,6 @@ configure(projectsWithFlags('java')) {
     }
 }
 
-def javaTestHome = System.env.JAVA_TEST_HOME
-if (javaTestHome) {
-    logger.quiet("Overriding JVM for tests with ${javaTestHome}")
-}
-
 // Configure the Javadoc tasks of all projects.
 allprojects {
     tasks.withType(Javadoc) {
@@ -144,12 +152,6 @@ allprojects {
             exclude '**/internal/**'
             exclude '**/thrift/v1/**'
             exclude '**/reactor/core/scheduler/**'
-        }
-    }
-
-    if (javaTestHome) {
-        tasks.withType(Test) {
-            executable "${javaTestHome}/bin/java"
         }
     }
 }

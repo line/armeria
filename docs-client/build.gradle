@@ -12,6 +12,11 @@ buildscript {
     }
 }
 
+// Do not build if 'noWeb' property exists.
+if (rootProject.hasProperty('noWeb')) {
+    return
+}
+
 apply plugin: 'base'
 apply plugin: 'com.moowork.node'
 

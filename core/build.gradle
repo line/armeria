@@ -128,9 +128,11 @@ dependencies {
     testCompile 'org.eclipse.jetty:jetty-webapp'
 }
 
-sourceSets {
-    main {
-        output.dir project(':docs-client').file('build/javaweb'), builtBy: ':docs-client:copyWeb'
+if (!rootProject.hasProperty('noWeb')) {
+    sourceSets {
+        main {
+            output.dir project(':docs-client').file('build/javaweb'), builtBy: ':docs-client:copyWeb'
+        }
     }
 }
 
@@ -182,5 +184,7 @@ if (tasks.findByName('trimShadedJar')) {
         // Do not optimize the dependencies that access some fields via sun.misc.Unsafe or reflection only.
         keep "class com.linecorp.armeria.internal.shaded.caffeine.** { *; }"
         keep "class com.linecorp.armeria.internal.shaded.jctools.** { *; }"
+
+        dontnote
     }
 }

@@ -1,6 +1,6 @@
 version: '{branch}.{build}'
 environment:
-  GRADLE_CLI_OPTS: '--no-daemon --console=verbose --stacktrace'
+  GRADLE_CLI_OPTS: '--no-daemon --console=rich --stacktrace'
   matrix:
     - PROFILE: 'java8'
       APPVEYOR_BUILD_WORKER_IMAGE: 'bionic'
@@ -24,7 +24,7 @@ init:
 
 build_script:
   - cmd: 'gradlew.bat --version'
-  - cmd: 'gradlew.bat %GRADLE_CLI_OPTS% checkstyle check build'
+  - cmd: 'gradlew.bat %GRADLE_CLI_OPTS% -PnoCheckstyle -PnoWeb :core:test :grpc:test :thrift:test :it:server:test'
   - sh: './.appveyor.build.sh "$PROFILE"'
 
 test: off
