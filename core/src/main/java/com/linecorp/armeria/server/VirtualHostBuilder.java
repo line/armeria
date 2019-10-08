@@ -27,6 +27,7 @@ import static com.linecorp.armeria.server.VirtualHost.normalizeHostnamePattern;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.security.cert.CertificateException;
 import java.time.Duration;
@@ -38,6 +39,7 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 
 import org.slf4j.Logger;
@@ -61,6 +63,7 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
@@ -69,6 +72,7 @@ import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.ReferenceCountUtil;
 
 /**
  * Builds a new {@link VirtualHost}.
@@ -170,7 +174,7 @@ public final class VirtualHostBuilder {
     public VirtualHostBuilder tls(SslContext sslContext) throws SSLException {
         checkState(this.sslContext == null, "sslContext is already set: %s", this.sslContext);
 
-        this.sslContext = VirtualHost.validateSslContext(requireNonNull(sslContext, "sslContext"));
+        this.sslContext = validateSslContext(requireNonNull(sslContext, "sslContext"));
         return this;
     }
 
@@ -255,6 +259,44 @@ public final class VirtualHostBuilder {
         } catch (Exception e) {
             throw new SSLException("failed to configure TLS: " + e, e);
         }
+    }
+
+    private static SslContext validateSslContext(@Nullable SslContext sslContext) throws SSLException {
+        if (sslContext != null && !sslContext.isServer()) {
+            throw new IllegalArgumentException("sslContext: " + sslContext + " (expected: server context)");
+        }
+
+        SSLEngine serverEngine = null;
+        SSLEngine clientEngine = null;
+
+        try {
+            serverEngine = sslContext.newEngine(ByteBufAllocator.DEFAULT);
+            serverEngine.setUseClientMode(false);
+            serverEngine.setNeedClientAuth(false);
+
+            final SslContext sslContextClient =
+                    VirtualHostBuilder.buildSslContext(SslContextBuilder::forClient, sslContextBuilder -> {});
+            clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
+            clientEngine.setUseClientMode(true);
+
+            clientEngine.beginHandshake();
+            serverEngine.beginHandshake();
+
+            final ByteBuffer appBuf = ByteBuffer.allocate(clientEngine.getSession().getApplicationBufferSize());
+            final ByteBuffer packetBuf = ByteBuffer.allocate(clientEngine.getSession().getPacketBufferSize());
+
+            clientEngine.wrap(appBuf, packetBuf);
+            appBuf.clear();
+            packetBuf.flip();
+            serverEngine.unwrap(packetBuf, appBuf);
+        } catch (SSLException e) {
+            throw new SSLException("failed to validate SSL/TLS configuration: " + e.getMessage());
+        } finally {
+            ReferenceCountUtil.release(serverEngine);
+            ReferenceCountUtil.release(clientEngine);
+        }
+
+        return sslContext;
     }
 
     /**
