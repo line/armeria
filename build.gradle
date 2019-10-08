@@ -130,8 +130,8 @@ if (javaTestHome) {
     logger.quiet("Overriding JVM for tests with ${javaTestHome}")
 }
 
-// Configure the Javadoc tasks of all projects.
 allprojects {
+    // Configure the Javadoc tasks of all projects.
     tasks.withType(Javadoc) {
         options {
             // Groups
@@ -147,6 +147,7 @@ allprojects {
         }
     }
 
+    // Configure the Test tasks of all projects.
     if (javaTestHome) {
         tasks.withType(Test) {
             executable "${javaTestHome}/bin/java"

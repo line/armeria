@@ -135,7 +135,12 @@ if [[ "$COVERAGE" -eq 1 ]]; then
 fi
 
 msg "Building .."
-echo_and_run ./gradlew $GRADLE_CLI_OPTS checkstyle check build
+# Make sure to:
+# - Run 'checkstyle' first so we don't waste our time building ill-formatted code.
+# - Run 'trimShadedJar' alone because it pollutes the console if other tasks are running in parallel.
+echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 checkstyle trimShadedJar
+# Run the remaining tasks.
+echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 build
 
 if [[ "$COVERAGE" -eq 1 ]]; then
   # Send coverage reports to CodeCov.io.
