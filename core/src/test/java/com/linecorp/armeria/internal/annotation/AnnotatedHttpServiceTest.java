@@ -679,38 +679,44 @@ public class AnnotatedHttpServiceTest {
     public static class MyAnnotatedService12 {
 
         @Get
-        @Path("/multiGet1")
-        @Path("/multiGet2")
-        public String multipleGet(RequestContext ctx) {
+        @Path("/pathMapping1")
+        @Path("/pathMapping2")
+        public String pathMapping(RequestContext ctx) {
             return "multiGet";
         }
 
         @Get
-        @Path("/duplicateGet")
-        @Path("/duplicateGet")
-        public String duplicateGet(RequestContext ctx) {
-            return "duplicateGet";
+        @Path("/duplicatePath")
+        @Path("/duplicatePath")
+        public String duplicatePath(RequestContext ctx) {
+            return "duplicatePath";
         }
 
         @Get
-        @Path("/multiGetWithParam1/{param}")
-        @Path("/multiGetWithParam2/{param}")
-        public String multiGetWithParam(RequestContext ctx, @Param String param) {
+        @Path("/pathSameParam1/{param}")
+        @Path("/pathSameParam2/{param}")
+        public String pathSameParam(RequestContext ctx, @Param String param) {
             return param;
         }
 
         @Get
-        @Path("/multiGetDiffParam1/{param1}")
-        @Path("/multiGetDiffParam2/{param2}")
-        public String multiGetDiffParam(RequestContext ctx, @Param String param1, @Param String param2) {
-            return param1 + "_" + param2;
+        @Path("/pathDiffParam1/{param1}")
+        @Path("/pathDiffParam2/{param2}")
+        public String pathDiffParam(RequestContext ctx, @Param String param1, @Param String param2) {
+            return param1 + '_' + param2;
         }
 
         @Get
         @Post
-        @Path("/multiGetPost1")
-        @Path("/multiGetPost2")
-        public String multiGetPost(RequestContext ctx) {
+        @Path("/getPostWithPathMapping1")
+        @Path("/getPostWithPathMapping2")
+        public String getPostWithPathMapping(RequestContext ctx) {
+            return ctx.path();
+        }
+
+        @Get("/getMapping")
+        @Post("/postMapping")
+        public String getPostMapping(RequestContext ctx) {
             return ctx.path();
         }
     }
@@ -1031,23 +1037,28 @@ public class AnnotatedHttpServiceTest {
     @Test
     public void testMultiplePaths() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            testStatusCode(hc, get("/12/multiGet1"), 200);
-            testStatusCode(hc, get("/12/multiGet2"), 200);
+            testStatusCode(hc, get("/12/pathMapping1"), 200);
+            testStatusCode(hc, get("/12/pathMapping2"), 200);
 
-            testStatusCode(hc, get("/12/duplicateGet"), 200);
+            testStatusCode(hc, get("/12/duplicatePath"), 200);
 
-            testBody(hc, get("/12/multiGetWithParam1/param"), "param");
-            testBody(hc, get("/12/multiGetWithParam2/param"), "param");
+            testBody(hc, get("/12/pathSameParam1/param"), "param");
+            testBody(hc, get("/12/pathSameParam2/param"), "param");
 
-            testStatusCode(hc, get("/12/multiGetDiffParam1/param1"), 400);
-            testBody(hc, get("/12/multiGetDiffParam1/param1?param2=param2"), "param1_param2");
-            testStatusCode(hc, get("/12/multiGetDiffParam2/param2"), 400);
-            testBody(hc, get("/12/multiGetDiffParam2/param2?param1=param1"), "param1_param2");
+            testStatusCode(hc, get("/12/pathDiffParam1/param1"), 400);
+            testBody(hc, get("/12/pathDiffParam1/param1?param2=param2"), "param1_param2");
+            testStatusCode(hc, get("/12/pathDiffParam2/param2"), 400);
+            testBody(hc, get("/12/pathDiffParam2/param2?param1=param1"), "param1_param2");
 
-            testBody(hc, get("/12/multiGetPost1"), "/12/multiGetPost1");
-            testBody(hc, post("/12/multiGetPost1"), "/12/multiGetPost1");
-            testBody(hc, get("/12/multiGetPost2"), "/12/multiGetPost2");
-            testBody(hc, post("/12/multiGetPost2"), "/12/multiGetPost2");
+            testBody(hc, get("/12/getPostWithPathMapping1"), "/12/getPostWithPathMapping1");
+            testBody(hc, post("/12/getPostWithPathMapping1"), "/12/getPostWithPathMapping1");
+            testBody(hc, get("/12/getPostWithPathMapping2"), "/12/getPostWithPathMapping2");
+            testBody(hc, post("/12/getPostWithPathMapping2"), "/12/getPostWithPathMapping2");
+
+            testBody(hc, get("/12/getMapping"), "/12/getMapping");
+            testStatusCode(hc, post("/12/getMapping"), 405);
+            testStatusCode(hc, get("/12/postMapping"), 405);
+            testBody(hc, post("/12/postMapping"), "/12/postMapping");
         }
     }
 

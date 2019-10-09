@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.docs;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
@@ -26,7 +27,6 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
@@ -43,15 +43,10 @@ class ServiceInfoTest {
 
     @Test
     public void testCollectMethodsWithDifferentMethods() {
-
         final MethodInfo barMethodInfo = createMethodInfo("bar", HttpMethod.GET, "exact:/bar");
         final MethodInfo fooMethodInfo = createMethodInfo("foo", HttpMethod.GET, "exact:/foo");
-
         final List<MethodInfo> inputMethodInfos = ImmutableList.of(barMethodInfo, fooMethodInfo);
-        final List<MethodInfo> collectMethods =
-                ImmutableList.copyOf(ServiceInfo.mergeEndpoints(inputMethodInfos));
-
-        assertEquals(inputMethodInfos, collectMethods);
+        assertThat(ServiceInfo.mergeEndpoints(inputMethodInfos)).isEqualTo(inputMethodInfos);
     }
 
     @Test
@@ -75,9 +70,9 @@ class ServiceInfoTest {
 
         final Function<MethodInfo, Set<String>> getPaths = methodInfo ->
                 methodInfo.endpoints().stream().map(EndpointInfo::pathMapping).collect(Collectors.toSet());
-        assertEquals(ImmutableSet.of("exact:/bar1", "exact:/bar2"), getPaths.apply(collectMethods.get(0)));
-        assertEquals(ImmutableSet.of("exact:/bar3", "exact:/bar4"), getPaths.apply(collectMethods.get(1)));
-        assertEquals(ImmutableSet.of("exact:/foo1", "exact:/foo2"), getPaths.apply(collectMethods.get(2)));
-        assertEquals(ImmutableSet.of("exact:/foo3", "exact:/foo4"), getPaths.apply(collectMethods.get(3)));
+        assertThat(getPaths.apply(collectMethods.get(0))).containsExactly("exact:/bar1", "exact:/bar2");
+        assertThat(getPaths.apply(collectMethods.get(1))).containsExactly("exact:/bar3", "exact:/bar4");
+        assertThat(getPaths.apply(collectMethods.get(2))).containsExactly("exact:/foo1", "exact:/foo2");
+        assertThat(getPaths.apply(collectMethods.get(3))).containsExactly("exact:/foo3", "exact:/foo4");
     }
 }

@@ -39,7 +39,6 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.JacksonRequestConverterFunction;
-import com.linecorp.armeria.server.annotation.Options;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.Post;
@@ -189,13 +188,6 @@ public class AnnotatedHttpServiceBuilderTest {
             @Get
             @Post
             @Path("/a")
-            @Path("/b")
-            public void root(BeanB b) {}
-        });
-
-        Server.builder().annotatedService(new Object() {
-            @Path("/")
-            @Get("/")
             public void root() {}
         });
 
@@ -342,9 +334,25 @@ public class AnnotatedHttpServiceBuilderTest {
         })).isInstanceOf(IllegalArgumentException.class);
 
         assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
-            @Options
             @Get
             @Post("/")
+            public void root() {}
+        })).isInstanceOf(IllegalArgumentException.class);
+
+        assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
+            @Get("/")
+            @Path("/")
+            public void root() {}
+        })).isInstanceOf(IllegalArgumentException.class);
+
+        assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
+            @Path("")
+            public void root() {}
+        })).isInstanceOf(IllegalArgumentException.class);
+
+        // TODO: Check if we must support this
+        assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
+            @Path("/")
             public void root() {}
         })).isInstanceOf(IllegalArgumentException.class);
     }

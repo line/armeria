@@ -47,6 +47,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -512,13 +513,46 @@ public final class AnnotatedHttpServiceFactory {
 
     /**
      * Returns path patterns for each {@link HttpMethod}. The path pattern might be specified by
-     * {@link Path} or HTTP method annotations such as {@link Get} and {@link Post}.
+     * {@link Path} or HTTP method annotations such as {@link Get} and {@link Post}. Path patterns
+     * may be specified by either HTTP method annotations, or {@link Path} annotations but not both
+     * simultaneously.
      */
     private static Map<HttpMethod, Set<String>> getHttpMethodPatternsMap(Method method,
                                                                          Set<Annotation> methodAnnotations) {
-        final Map<HttpMethod, Set<String>> httpMethodPatternMap = new EnumMap<>(HttpMethod.class);
         final Set<String> pathPatterns = findAll(method, Path.class).stream().map(Path::value)
-                                                                .collect(toImmutableSet());
+                                                                    .collect(toImmutableSet());
+        final boolean usePathPatterns = !pathPatterns.isEmpty();
+
+        final Map<HttpMethod, Set<String>> httpMethodAnnotatedPatternMap =
+                getHttpMethodAnnotatedPatternMap(methodAnnotations);
+        if (httpMethodAnnotatedPatternMap.keySet().isEmpty()) {
+            throw new IllegalArgumentException(method.getDeclaringClass().getName() + '#' + method.getName() +
+                                               " must have an HTTP method annotation.");
+        }
+        return httpMethodAnnotatedPatternMap.entrySet().stream().collect(
+                ImmutableMap.toImmutableMap(
+                        Entry::getKey,
+                        entry -> {
+                            final Set<String> httpMethodPaths = entry.getValue();
+                            if (usePathPatterns && !httpMethodPaths.isEmpty()) {
+                                throw new IllegalArgumentException(
+                                        method.getDeclaringClass().getName() + '#' + method.getName() +
+                                        " cannot specify both an HTTP mapping and a Path mapping.");
+                            }
+                            if (usePathPatterns) {
+                                httpMethodPaths.addAll(pathPatterns);
+                            }
+                            if (httpMethodPaths.isEmpty()) {
+                                throw new IllegalArgumentException("A path pattern should be specified by" +
+                                                                   " @Path or HTTP method annotations.");
+                            }
+                            return ImmutableSet.copyOf(httpMethodPaths);
+                        }));
+    }
+
+    private static Map<HttpMethod, Set<String>> getHttpMethodAnnotatedPatternMap(
+            Set<Annotation> methodAnnotations) {
+        final Map<HttpMethod, Set<String>> httpMethodPatternMap = new EnumMap<>(HttpMethod.class);
         methodAnnotations.stream()
                          .filter(annotation -> HTTP_METHOD_MAP.containsKey(annotation.annotationType()))
                          .forEach(annotation -> {
@@ -530,18 +564,6 @@ public final class AnnotatedHttpServiceFactory {
                                  patterns.add(value);
                              }
                          });
-        final Set<HttpMethod> methods = httpMethodPatternMap.keySet();
-        if (methods.isEmpty()) {
-            throw new IllegalArgumentException(method.getDeclaringClass().getName() + '#' + method.getName() +
-                                               " must have an HTTP method annotation.");
-        }
-        httpMethodPatternMap.forEach((k, v) -> v.addAll(pathPatterns));
-        httpMethodPatternMap.values().forEach(paths -> {
-            if (paths.isEmpty()) {
-                throw new IllegalArgumentException(
-                        "A path pattern should be specified by @Path or HTTP method annotations.");
-            }
-        });
         return httpMethodPatternMap;
     }
 

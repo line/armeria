@@ -29,15 +29,13 @@ import java.lang.annotation.Target;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.assertj.core.util.Lists;
 import org.junit.Test;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -46,6 +44,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.DecoratorAndOrder;
 import com.linecorp.armeria.server.DecoratingServiceFunction;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
@@ -190,39 +189,40 @@ public class AnnotatedHttpServiceFactoryTest {
     public void testMultiPathSuccessGetMapping() {
         final List<AnnotatedHttpServiceElement> getServiceElements =
                 getServiceElements(new MultiPathSuccessService(), "getMapping", HttpMethod.GET);
-        assertThat(getServiceElements).hasSize(1);
-        assertThat(getServiceElements.get(0).route().methods()).isEqualTo(ImmutableSet.of(HttpMethod.GET));
-        assertThat(getServiceElements.get(0).route().paths()).isEqualTo(ImmutableList.of("/get", "/get"));
+        final Set<Route> routes = getServiceElements.stream().map(AnnotatedHttpServiceElement::route).collect(
+                Collectors.toSet());
+        assertThat(routes).containsOnly(Route.builder().path("/getMapping").methods(HttpMethod.GET).build());
     }
 
     @Test
     public void testMultiPathSuccessGetPostMapping() {
         final List<AnnotatedHttpServiceElement> getServiceElements = getServiceElements(
                 new MultiPathSuccessService(), "getPostMapping", HttpMethod.GET);
-        assertThat(getServiceElements).hasSize(1);
-        assertThat(getServiceElements.get(0).route().methods()).isEqualTo(ImmutableSet.of(HttpMethod.GET));
-        assertThat(getServiceElements.get(0).route().paths()).isEqualTo(ImmutableList.of("/get", "/get"));
+        final Set<Route> getRoutes = getServiceElements.stream().map(AnnotatedHttpServiceElement::route)
+                                                       .collect(Collectors.toSet());
+        assertThat(getRoutes).containsOnly(Route.builder().path("/getMapping").methods(HttpMethod.GET).build());
 
         final List<AnnotatedHttpServiceElement> postServiceElements = getServiceElements(
                 new MultiPathSuccessService(), "getPostMapping", HttpMethod.POST);
-        assertThat(postServiceElements).hasSize(1);
-        assertThat(postServiceElements.get(0).route().methods()).isEqualTo(ImmutableSet.of(HttpMethod.POST));
-        assertThat(postServiceElements.get(0).route().paths()).isEqualTo(ImmutableList.of("/post", "/post"));
+        final Set<Route> postRoutes = postServiceElements.stream().map(AnnotatedHttpServiceElement::route)
+                                                         .collect(Collectors.toSet());
+        assertThat(postRoutes).containsOnly(Route.builder().path("/postMapping").methods(HttpMethod.POST)
+                                                 .build());
     }
 
     @Test
-    public void testMultiPathSuccessNoGetPostMappingPathMapping() {
+    public void testMultiPathSuccessGetPostMappingByPath() {
         final List<AnnotatedHttpServiceElement> getServiceElements = getServiceElements(
-                new MultiPathSuccessService(), "noGetPostMappingPathMapping", HttpMethod.GET);
-        assertThat(getServiceElements).hasSize(1);
-        assertThat(getServiceElements.get(0).route().methods()).isEqualTo(ImmutableSet.of(HttpMethod.GET));
-        assertThat(getServiceElements.get(0).route().paths()).isEqualTo(ImmutableList.of("/path", "/path"));
+                new MultiPathSuccessService(), "getPostMappingByPath", HttpMethod.GET);
+        final Set<Route> getRoutes = getServiceElements.stream().map(AnnotatedHttpServiceElement::route)
+                                                       .collect(Collectors.toSet());
+        assertThat(getRoutes).containsOnly(Route.builder().path("/path").methods(HttpMethod.GET).build());
 
         final List<AnnotatedHttpServiceElement> postServiceElements = getServiceElements(
-                new MultiPathSuccessService(), "noGetPostMappingPathMapping", HttpMethod.POST);
-        assertThat(postServiceElements).hasSize(1);
-        assertThat(postServiceElements.get(0).route().methods()).isEqualTo(ImmutableSet.of(HttpMethod.POST));
-        assertThat(postServiceElements.get(0).route().paths()).isEqualTo(ImmutableList.of("/path", "/path"));
+                new MultiPathSuccessService(), "getPostMappingByPath", HttpMethod.POST);
+        final Set<Route> postRoutes = postServiceElements.stream().map(AnnotatedHttpServiceElement::route)
+                                                         .collect(Collectors.toSet());
+        assertThat(postRoutes).containsOnly(Route.builder().path("/path").methods(HttpMethod.POST).build());
     }
 
     @Test
@@ -431,13 +431,13 @@ public class AnnotatedHttpServiceFactoryTest {
 
     static class MultiPathSuccessService {
 
-        @Get("/get")
+        @Get("/getMapping")
         public HttpResponse getMapping() {
             return HttpResponse.of(HttpStatus.OK);
         }
 
-        @Get("/get")
-        @Post("/post")
+        @Get("/getMapping")
+        @Post("/postMapping")
         public HttpResponse getPostMapping() {
             return HttpResponse.of(HttpStatus.OK);
         }
@@ -445,7 +445,7 @@ public class AnnotatedHttpServiceFactoryTest {
         @Get
         @Post
         @Path("/path")
-        public HttpResponse noGetPostMappingPathMapping() {
+        public HttpResponse getPostMappingByPath() {
             return HttpResponse.of(HttpStatus.OK);
         }
     }
