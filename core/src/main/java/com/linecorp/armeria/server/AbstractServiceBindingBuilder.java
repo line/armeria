@@ -117,6 +117,7 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
         final List<Route> routes = buildRouteList();
 
         for (Route route : routes) {
+            service = defaultServiceBuilder.decorate(service);
             final ServiceConfigBuilder serviceConfigBuilder = defaultServiceBuilder.serviceConfigBuilder(route,
                                                                                                          service);
             serviceConfigBuilder(serviceConfigBuilder);
