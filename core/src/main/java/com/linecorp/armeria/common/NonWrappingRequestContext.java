@@ -23,6 +23,7 @@ import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -51,6 +52,7 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     @Nullable
     private final String query;
     private volatile Request request;
+    protected UUID uuid;
 
     // Callbacks
     @Nullable
@@ -65,15 +67,17 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
      *
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
      * @param request the request associated with this context
+     * @param uuid the {@link UUID} associated with this context
      */
     protected NonWrappingRequestContext(
             MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            HttpMethod method, String path, @Nullable String query, Request request) {
+            HttpMethod method, String path, UUID uuid, @Nullable String query, Request request) {
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
         this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
         this.method = requireNonNull(method, "method");
         this.path = requireNonNull(path, "path");
+        this.uuid = requireNonNull(uuid, "uuid");
         this.query = query;
         this.request = requireNonNull(request, "request");
     }
@@ -175,6 +179,11 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     @Override
     public final String query() {
         return query;
+    }
+
+    @Override
+    public final UUID uuid() {
+        return uuid;
     }
 
     @Override

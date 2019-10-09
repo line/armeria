@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -98,14 +99,15 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      *
      * @param eventLoop the {@link EventLoop} associated with this context
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
+     * @param uuid the {@link UUID} that contains the information about the current {@link Request}.
      * @param request the request associated with this context
      */
     public DefaultClientRequestContext(
             EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
+            HttpMethod method, String path, UUID uuid, @Nullable String query, @Nullable String fragment,
             ClientOptions options, Request request) {
         this(null, requireNonNull(eventLoop, "eventLoop"), meterRegistry, sessionProtocol,
-             method, path, query, fragment, options, request);
+             method, path, uuid, query, fragment, options, request);
     }
 
     /**
@@ -115,20 +117,21 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      * @param factory the {@link ClientFactory} which is used to acquire an {@link EventLoop}
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
      * @param request the request associated with this context
+     * @param uuid the {@link UUID} that contains the information about the current {@link Request}.
      */
     public DefaultClientRequestContext(
             ClientFactory factory, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
+            HttpMethod method, String path, UUID uuid, @Nullable String query, @Nullable String fragment,
             ClientOptions options, Request request) {
         this(requireNonNull(factory, "factory"), null, meterRegistry, sessionProtocol,
-             method, path, query, fragment, options, request);
+             method, path, uuid, query, fragment, options, request);
     }
 
     private DefaultClientRequestContext(
             @Nullable ClientFactory factory, @Nullable EventLoop eventLoop, MeterRegistry meterRegistry,
-            SessionProtocol sessionProtocol, HttpMethod method, String path, @Nullable String query,
+            SessionProtocol sessionProtocol, HttpMethod method, String path, UUID uuid, @Nullable String query,
             @Nullable String fragment, ClientOptions options, Request request) {
-        super(meterRegistry, sessionProtocol, method, path, query, request);
+        super(meterRegistry, sessionProtocol, method, path, uuid, query, request);
 
         this.factory = factory;
         this.eventLoop = eventLoop;
@@ -242,8 +245,10 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     }
 
     private DefaultClientRequestContext(DefaultClientRequestContext ctx, Request request, Endpoint endpoint) {
-        super(ctx.meterRegistry(), ctx.sessionProtocol(), ctx.method(), ctx.path(), ctx.query(), request);
+        super(ctx.meterRegistry(), ctx.sessionProtocol(), ctx.method(), ctx.path(), ctx.uuid(), ctx.query(), request);
 
+        //the new request change uuid.
+        uuid = UUID.randomUUID();
         eventLoop = ctx.eventLoop();
         options = ctx.options();
         endpointSelector = ctx.endpointSelector();

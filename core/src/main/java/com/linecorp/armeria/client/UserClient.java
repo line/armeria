@@ -19,6 +19,7 @@ package com.linecorp.armeria.client;
 import static com.linecorp.armeria.internal.ClientUtil.initContextAndExecuteWithFallback;
 
 import java.net.URI;
+import java.util.UUID;
 import java.util.function.BiFunction;
 
 import javax.annotation.Nullable;
@@ -139,10 +140,10 @@ public abstract class UserClient<I extends Request, O extends Response>
         final DefaultClientRequestContext ctx;
         if (eventLoop == null) {
             ctx = new DefaultClientRequestContext(factory(), meterRegistry, sessionProtocol,
-                                                  method, path, query, fragment, options(), req);
+                                                  method, path, UUID.randomUUID(), query, fragment, options(), req);
         } else {
             ctx = new DefaultClientRequestContext(eventLoop, meterRegistry, sessionProtocol,
-                                                  method, path, query, fragment, options(), req);
+                                                  method, path, UUID.randomUUID(), query, fragment, options(), req);
         }
 
         return initContextAndExecuteWithFallback(delegate(), ctx, endpoint, fallback);

@@ -23,6 +23,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 import javax.annotation.Nullable;
@@ -65,6 +66,7 @@ public abstract class AbstractRequestContextBuilder {
     private HttpMethod method;
     private final String authority;
     private final String path;
+    private final UUID uuid;
     @Nullable
     private final String query;
 
@@ -103,6 +105,7 @@ public abstract class AbstractRequestContextBuilder {
         checkArgument(pathAndQuery != null, "request.path is not valid: %s", request);
         path = pathAndQuery.path();
         query = pathAndQuery.query();
+        uuid = UUID.randomUUID();
     }
 
     /**
@@ -140,6 +143,7 @@ public abstract class AbstractRequestContextBuilder {
         checkArgument(pathAndQuery != null, "uri.path or uri.query is not valid: %s", uri);
         path = pathAndQuery.path();
         query = pathAndQuery.query();
+        uuid = UUID.randomUUID();
     }
 
     /**
@@ -418,6 +422,13 @@ public abstract class AbstractRequestContextBuilder {
      */
     protected final String path() {
         return path;
+    }
+
+    /**
+     * Returns the {@link UUID} of the request.
+     */
+    protected final UUID uuid() {
+        return uuid;
     }
 
     /**

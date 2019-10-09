@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.SocketAddress;
 import java.util.Iterator;
+import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -104,6 +105,11 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     @Override
     public String decodedPath() {
         return delegate().decodedPath();
+    }
+
+    @Override
+    public UUID uuid() {
+        return delegate().uuid();
     }
 
     @Override

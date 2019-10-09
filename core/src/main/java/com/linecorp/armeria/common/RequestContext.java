@@ -19,6 +19,7 @@ package com.linecorp.armeria.common;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -180,6 +181,11 @@ public interface RequestContext extends AttributeMap {
      */
     @Nullable
     String query();
+
+    /**
+     * Returns the {@link UUID} that contains the information about the current {@link Request}.
+     */
+    UUID uuid();
 
     /**
      * Returns the {@link RequestLog} that contains the information about the current {@link Request}.

@@ -25,6 +25,7 @@ import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -159,7 +160,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
             long requestStartTimeMicros) {
 
         super(meterRegistry, sessionProtocol,
-              requireNonNull(routingContext, "routingContext").method(), routingContext.path(),
+              requireNonNull(routingContext, "routingContext").method(), routingContext.path(), UUID.randomUUID(),
               requireNonNull(routingResult, "routingResult").query(),
               request);
 
