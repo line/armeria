@@ -26,7 +26,8 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 
@@ -40,7 +41,12 @@ class DefaultClientRequestContextTest {
         final DefaultClientRequestContext originalCtx = new DefaultClientRequestContext(
                 mock(EventLoop.class), NoopMeterRegistry.get(), SessionProtocol.H2C,
                 HttpMethod.POST, "/foo", UUID.randomUUID(), null, null,
-                ClientOptions.DEFAULT, mock(Request.class));
+                ClientOptions.DEFAULT,
+                HttpRequest.of(RequestHeaders.of(
+                        HttpMethod.POST, "/foo",
+                        HttpHeaderNames.SCHEME, "http",
+                        HttpHeaderNames.AUTHORITY, "example.com:8080")),
+                null);
         originalCtx.init(Endpoint.of("example.com", 8080));
 
         setAdditionalHeaders(originalCtx);
@@ -48,13 +54,17 @@ class DefaultClientRequestContextTest {
         final AttributeKey<String> foo = AttributeKey.valueOf(DefaultClientRequestContextTest.class, "foo");
         originalCtx.attr(foo).set("foo");
 
-        final Request newRequest = mock(Request.class);
-        final ClientRequestContext derivedCtx = originalCtx.newDerivedContext(newRequest);
+        final HttpRequest newRequest = HttpRequest.of(RequestHeaders.of(
+                HttpMethod.POST, "/foo",
+                HttpHeaderNames.SCHEME, "http",
+                HttpHeaderNames.AUTHORITY, "example.com:8080",
+                "foo", "bar"));
+        final ClientRequestContext derivedCtx = originalCtx.newDerivedContext(newRequest, null);
         assertThat(derivedCtx.endpoint()).isSameAs(originalCtx.endpoint());
         assertThat(derivedCtx.sessionProtocol()).isSameAs(originalCtx.sessionProtocol());
         assertThat(derivedCtx.method()).isSameAs(originalCtx.method());
         assertThat(derivedCtx.options()).isSameAs(originalCtx.options());
-        assertThat(derivedCtx.<Request>request()).isSameAs(newRequest);
+        assertThat(derivedCtx.request()).isSameAs(newRequest);
 
         assertThat(derivedCtx.path()).isEqualTo(originalCtx.path());
         assertThat(derivedCtx.maxResponseLength()).isEqualTo(originalCtx.maxResponseLength());

@@ -4,7 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.file.HttpFile;
 import com.linecorp.armeria.server.file.HttpFileServiceBuilder;
 
@@ -25,18 +24,18 @@ public final class Main {
     }
 
     static Server newServer(int httpPort, int httpsPort) throws Exception {
-        return new ServerBuilder()
-                .http(httpPort)
-                .https(httpsPort)
-                .tlsSelfSigned()
-                // Serve an individual file.
-                .service("/favicon.ico", HttpFile.ofResource(Main.class.getClassLoader(), "favicon.ico")
-                                                 .asService())
-                // Serve the files under the current user's home directory.
-                .service("prefix:/", HttpFileServiceBuilder.forFileSystem(System.getProperty("user.home"))
-                                                           .autoIndex(true)
-                                                           .build())
-                .build();
+        return Server.builder()
+                     .http(httpPort)
+                     .https(httpsPort)
+                     .tlsSelfSigned()
+                     // Serve an individual file.
+                     .service("/favicon.ico", HttpFile.ofResource(Main.class.getClassLoader(), "favicon.ico")
+                                                      .asService())
+                     // Serve the files under the current user's home directory.
+                     .service("prefix:/", HttpFileServiceBuilder.forFileSystem(System.getProperty("user.home"))
+                                                                .autoIndex(true)
+                                                                .build())
+                     .build();
     }
 
     private Main() {}

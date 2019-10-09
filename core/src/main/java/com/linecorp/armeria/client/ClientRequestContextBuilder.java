@@ -113,7 +113,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
 
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
                 eventLoop(), meterRegistry(), sessionProtocol(),
-                method(), path(), uuid(), query(), fragment, options, request());
+                method(), path(), uuid(), query(), fragment, options, request(), rpcRequest());
         ctx.init(endpoint);
 
         if (isRequestStartTimeSet()) {
@@ -123,11 +123,14 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
             ctx.logBuilder().startRequest(fakeChannel(), sessionProtocol(), sslSession());
         }
 
-        if (request() instanceof HttpRequest) {
-            ctx.logBuilder().requestHeaders(((HttpRequest) request()).headers());
-        } else {
-            ctx.logBuilder().requestContent(request(), null);
+        if (request() != null) {
+            ctx.logBuilder().requestHeaders(request().headers());
         }
+
+        if (rpcRequest() != null) {
+            ctx.logBuilder().requestContent(rpcRequest(), null);
+        }
+
         return ctx;
     }
 

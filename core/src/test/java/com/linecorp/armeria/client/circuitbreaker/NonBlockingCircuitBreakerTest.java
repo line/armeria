@@ -42,16 +42,16 @@ class NonBlockingCircuitBreakerTest {
     private static final CircuitBreakerListener listener = mock(CircuitBreakerListener.class);
 
     private static NonBlockingCircuitBreaker create(long minimumRequestThreshold, double failureRateThreshold) {
-        return (NonBlockingCircuitBreaker) new CircuitBreakerBuilder(remoteServiceName)
-                .failureRateThreshold(failureRateThreshold)
-                .minimumRequestThreshold(minimumRequestThreshold)
-                .circuitOpenWindow(circuitOpenWindow)
-                .trialRequestInterval(trialRequestInterval)
-                .counterSlidingWindow(Duration.ofSeconds(10))
-                .counterUpdateInterval(counterUpdateInterval)
-                .listener(listener)
-                .ticker(ticker::get)
-                .build();
+        return (NonBlockingCircuitBreaker) CircuitBreaker.builder(remoteServiceName)
+                                                         .failureRateThreshold(failureRateThreshold)
+                                                         .minimumRequestThreshold(minimumRequestThreshold)
+                                                         .circuitOpenWindow(circuitOpenWindow)
+                                                         .trialRequestInterval(trialRequestInterval)
+                                                         .counterSlidingWindow(Duration.ofSeconds(10))
+                                                         .counterUpdateInterval(counterUpdateInterval)
+                                                         .listener(listener)
+                                                         .ticker(ticker::get)
+                                                         .build();
     }
 
     private static CircuitBreaker closedState(long minimumRequestThreshold, double failureRateThreshold) {

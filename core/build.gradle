@@ -7,17 +7,45 @@ String releaseFlagFromVersion(String src) {
     }
 }
 
-sourceSets {
-    java9 {
-        java {
-            srcDirs = ['src/main/java9']
+def mrJarVersions = [9]
+
+mrJarVersions.each { version->
+    sourceSets {
+        "java${version}" {
+            java {
+                srcDirs = ["src/main/java${version}"]
+            }
+        }
+        "java${version}Test" {
+            java {
+                srcDirs = ["src/test/java${version}"]
+            }
         }
     }
-}
 
-compileJava9Java {
-    sourceCompatibility = 9
-    targetCompatibility = 9
+    "compileJava${version}Java" {
+        sourceCompatibility = version
+        targetCompatibility = version
+    }
+
+    "compileJava${version}TestJava" {
+        sourceCompatibility = version
+        targetCompatibility = version
+    }
+
+    task "testJava${version}"(type: Test, group: 'Verification', description: "Runs unit tests for Java ${version} source set") {
+        testClassesDirs = sourceSets."java${version}Test".output.classesDirs
+        classpath = sourceSets."java${version}Test".runtimeClasspath
+
+        enabled = (Integer.parseInt(JavaVersion.current().getMajorVersion()) >= version) &&
+                (!System.env.TEST_JAVA_VERSION || Integer.parseInt(System.env.TEST_JAVA_VERSION) >= version)
+    }
+    
+    configurations."java${version}Implementation".extendsFrom configurations.implementation
+    configurations."java${version}TestImplementation".extendsFrom configurations.testImplementation
+    configurations."java${version}TestRuntimeClasspath".extendsFrom configurations.testRuntimeClasspath
+
+    check.dependsOn "testJava${version}"
 }
 
 tasks.withType(JavaCompile) {
@@ -26,8 +54,10 @@ tasks.withType(JavaCompile) {
 }
 
 tasks.withType(Jar) {
-    into('META-INF/versions/9') {
-        from sourceSets.java9.output
+    mrJarVersions.each { version->
+        into("META-INF/versions/${version}") {
+            from sourceSets."java${version}".output
+        }
     }
     manifest.attributes(
             'Multi-Release': 'true'
@@ -48,8 +78,10 @@ tasks.trimShadedJar.doLast {
 tasks.shadedTest.exclude 'META-INF/versions/**'
 
 dependencies {
-    // Common to reference classes in main sourceset from Java 9 one (e.g., to return a common interface)
-    java9Implementation files(sourceSets.main.output.classesDirs) { builtBy compileJava }
+    mrJarVersions.each { version->
+        // Common to reference classes in main sourceset from Java 9 one (e.g., to return a common interface)
+        "java${version}Implementation" files(sourceSets.main.output.classesDirs) { builtBy compileJava }
+    }
 
     // cglib
     testCompile 'cglib:cglib'
@@ -96,9 +128,11 @@ dependencies {
     testCompile 'org.eclipse.jetty:jetty-webapp'
 }
 
-sourceSets {
-    main {
-        output.dir project(':docs-client').file('build/javaweb'), builtBy: ':docs-client:copyWeb'
+if (!rootProject.hasProperty('noWeb')) {
+    sourceSets {
+        main {
+            output.dir project(':docs-client').file('build/javaweb'), builtBy: ':docs-client:copyWeb'
+        }
     }
 }
 
@@ -150,5 +184,7 @@ if (tasks.findByName('trimShadedJar')) {
         // Do not optimize the dependencies that access some fields via sun.misc.Unsafe or reflection only.
         keep "class com.linecorp.armeria.internal.shaded.caffeine.** { *; }"
         keep "class com.linecorp.armeria.internal.shaded.jctools.** { *; }"
+
+        dontnote
     }
 }

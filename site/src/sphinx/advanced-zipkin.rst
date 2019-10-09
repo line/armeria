@@ -41,14 +41,14 @@ Now, you can specify :api:`BraveService` using :ref:`server-decorator` with the 
 
     import com.linecorp.armeria.common.HttpResponse;
     import com.linecorp.armeria.server.Server;
-    import com.linecorp.armeria.server.ServerBuilder;
     import com.linecorp.armeria.server.brave.BraveService;
 
     Tracing tracing = ...
-    Server server = new ServerBuilder().http(8081)
-                                       .service("/", (ctx, res) -> HttpResponse.of(200))
-                                       .decorator(BraveService.newDecorator(httpTracing))
-                                       .build();
+    Server server = Server.builder()
+                          .http(8081)
+                          .service("/", (ctx, res) -> HttpResponse.of(200))
+                          .decorator(BraveService.newDecorator(httpTracing))
+                          .build();
 
 If the requests come to Armeria server and go to another backend, you can trace them using
 :api:`BraveClient`:
@@ -65,10 +65,11 @@ If the requests come to Armeria server and go to another backend, you can trace 
             .decorator(BraveClient.newDecorator(httpTracing.clientOf("myBackend")))
             .build();
 
-    Server server = new ServerBuilder().http(8081)
-                                       .service("/", (ctx, res) -> client.get("/api"))
-                                       .decorator(BraveService.newDecorator(httpTracing))
-                                       .build();
+    Server server = Server.builder()
+                          .http(8081)
+                          .service("/", (ctx, res) -> client.get("/api"))
+                          .decorator(BraveService.newDecorator(httpTracing))
+                          .build();
 
 Please note that our ``HttpTracing`` instance used the same ``Tracing`` instance when we
 create :api:`BraveClient` and :api:`BraveService`. Otherwise, there might be problems if the instances are not
@@ -98,14 +99,14 @@ For example, you can use it with `Kafka <https://kafka.apache.org/>`_ producer:
 
     Producer<String, String> kafkaProducer = kafkaTracing.producer(new KafkaProducer<>(props));
 
-    Server server = new ServerBuilder()
-            .http(8081)
-            .service("/", (ctx, req) -> {
-                kafkaProducer.send(new ProducerRecord<>("test", "foo", "bar"));
-                return HttpResponse.of(200);
-            })
-            .decorator(BraveService.newDecorator(tracing))
-            .build();
+    Server server = Server.builder()
+                          .http(8081)
+                          .service("/", (ctx, req) -> {
+                              kafkaProducer.send(new ProducerRecord<>("test", "foo", "bar"));
+                              return HttpResponse.of(200);
+                          })
+                          .decorator(BraveService.newDecorator(tracing))
+                          .build();
 
 This will trace all the requests sent from the client to the above example server to
 `Kafka <https://kafka.apache.org/>`_, and report timing data using the ``spanReporter`` you specified.

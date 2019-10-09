@@ -95,7 +95,7 @@ public class StreamMessageDuplicatorTest {
         processor.onSubscribe(mock(Subscription.class));
         verify(subscriber1).onSubscribe(any(DownstreamSubscription.class));
         verify(subscriber2).onSubscribe(any(DownstreamSubscription.class));
-        duplicator.close();
+        duplicator.abort();
     }
 
     private static Subscriber<String> subscribeWithMock(StreamMessage<String> streamMessage) {
@@ -118,7 +118,7 @@ public class StreamMessageDuplicatorTest {
 
         assertThat(future1.get()).isEqualTo("Armeria is awesome.");
         assertThat(future2.get()).isEqualTo("Armeria is awesome.");
-        duplicator.close();
+        duplicator.abort();
     }
 
     private static void writeData(DefaultStreamMessage<String> publisher) {
@@ -152,7 +152,7 @@ public class StreamMessageDuplicatorTest {
 
         assertThatThrownBy(future1::join).hasCauseInstanceOf(AnticipatedException.class);
         assertThatThrownBy(future2::join).hasCauseInstanceOf(AnticipatedException.class);
-        duplicator.close();
+        duplicator.abort();
     }
 
     @Test
@@ -169,7 +169,7 @@ public class StreamMessageDuplicatorTest {
         // Still subscribable.
         final CompletableFuture<String> future2 = subscribe(duplicator.duplicateStream());
         assertThat(future2.get()).isEqualTo("Armeria is awesome.");
-        duplicator.close();
+        duplicator.abort();
     }
 
     @Test
@@ -193,7 +193,7 @@ public class StreamMessageDuplicatorTest {
 
         subscriber.requestAnother();
         assertThat(future1.get()).isEqualTo("Armeria is awesome.");
-        duplicator.close();
+        duplicator.abort();
     }
 
     @Test
@@ -205,7 +205,7 @@ public class StreamMessageDuplicatorTest {
         publisher.abort();
 
         assertThatThrownBy(future::join).hasCauseInstanceOf(AbortedStreamException.class);
-        duplicator.close();
+        duplicator.abort();
     }
 
     @Test
@@ -217,7 +217,7 @@ public class StreamMessageDuplicatorTest {
         // Completed exceptionally once a subscriber subscribes.
         final CompletableFuture<String> future = subscribe(duplicator.duplicateStream());
         assertThatThrownBy(future::join).hasCauseInstanceOf(AbortedStreamException.class);
-        duplicator.close();
+        duplicator.abort();
     }
 
     @Test
@@ -238,11 +238,11 @@ public class StreamMessageDuplicatorTest {
         assertThat(sm2.isOpen()).isTrue();
         sm2.abort();
         assertThatThrownBy(future2::join).hasCauseInstanceOf(AbortedStreamException.class);
-        duplicator.close();
+        duplicator.abort();
     }
 
     @Test
-    public void closeMulticastStreamFactory() {
+    public void duplicateStreamToClosedDuplicator() {
         final DefaultStreamMessage<String> publisher = new DefaultStreamMessage<>();
         final StreamMessageDuplicator duplicator = new StreamMessageDuplicator(publisher);
 
@@ -334,11 +334,27 @@ public class StreamMessageDuplicatorTest {
         for (int i = 25; i < 30; i++) {  // rest of them are still in the queue.
             assertThat(bufs[i].refCnt()).isOne();
         }
-        duplicator.close();
+        duplicator.abort();
 
-        for (int i = 25; i < 30; i++) {  // rest of them are cleared after calling duplicator.close()
+        for (int i = 25; i < 30; i++) {  // rest of them are cleared after calling duplicator.abort()
             assertThat(bufs[i].refCnt()).isZero();
         }
+    }
+
+    @Test
+    public void closingDuplicatorDoesNotAbortDuplicatedStream() {
+        final DefaultStreamMessage<ByteBuf> publisher = new DefaultStreamMessage<>();
+        final ByteBufDuplicator duplicator = new ByteBufDuplicator(publisher);
+        final ByteBufSubscriber subscriber = new ByteBufSubscriber();
+
+        duplicator.duplicateStream(true).subscribe(subscriber, ImmediateEventExecutor.INSTANCE);
+        duplicator.close();
+        // duplicateStream() is not allowed anymore.
+        assertThatThrownBy(duplicator::duplicateStream).isInstanceOf(IllegalStateException.class);
+
+        assertThat(subscriber.completionFuture().isDone()).isFalse();
+        publisher.close();
+        assertThat(subscriber.completionFuture().isDone()).isTrue();
     }
 
     @Test
@@ -400,6 +416,7 @@ public class StreamMessageDuplicatorTest {
         }, WITH_POOLED_OBJECTS);
 
         await().untilAsserted(() -> assertThat(completed).isTrue());
+        assertThat(data.refCnt()).isOne();
         duplicator.close();
         assertThat(data.refCnt()).isZero();
     }
@@ -445,6 +462,7 @@ public class StreamMessageDuplicatorTest {
         });
 
         await().untilAsserted(() -> assertThat(completed).isTrue());
+        assertThat(data.refCnt()).isOne();
         duplicator.close();
         assertThat(data.refCnt()).isZero();
     }

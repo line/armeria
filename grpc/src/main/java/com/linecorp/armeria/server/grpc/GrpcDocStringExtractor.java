@@ -80,7 +80,7 @@ final class GrpcDocStringExtractor extends DocStringExtractor {
         return files.entrySet().stream()
                     .flatMap(entry -> {
                         try {
-                            FileDescriptorSet descriptors = FileDescriptorSet.parseFrom(entry.getValue());
+                            final FileDescriptorSet descriptors = FileDescriptorSet.parseFrom(entry.getValue());
                             return descriptors.getFileList().stream();
                         } catch (IOException e) {
                             logger.info("Could not parse file at '{}', skipping. " +

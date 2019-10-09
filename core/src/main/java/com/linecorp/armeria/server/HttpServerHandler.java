@@ -50,11 +50,11 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.ProtocolViolationException;
-import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -331,8 +331,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         try {
             routed = host.findServiceConfig(routingCtx);
         } catch (HttpStatusException cause) {
-            // We do not need to handle HttpResponseException here because we do not use it internally.
-            respond(ctx, host.accessLogWriter(), req, pathAndQuery, cause.httpStatus(), null, cause);
+            // There's no chance that an HttpResponseException is raised so we just handle HttpStatusException.
+            // Just pass the null as the cause because we don't want to log HttpStatusException as the cause.
+            respond(ctx, host.accessLogWriter(), req, pathAndQuery, cause.httpStatus(), null, null);
             return;
         } catch (Throwable cause) {
             logger.warn("{} Unexpected exception: {}", ctx.channel(), req, cause);
@@ -375,19 +376,18 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             } catch (HttpResponseException cause) {
                 serviceResponse = cause.httpResponse();
             } catch (Throwable cause) {
-                try {
-                    final HttpStatus status;
-                    if (cause instanceof HttpStatusException) {
-                        status = ((HttpStatusException) cause).httpStatus();
-                    } else {
-                        logger.warn("{} Unexpected exception: {}, {}", reqCtx, service, req, cause);
-                        status = HttpStatus.INTERNAL_SERVER_ERROR;
-                    }
-                    respond(ctx, reqCtx, reqCtx.accessLogWriter(), status, null, cause);
-                } finally {
-                    logBuilder.endRequest(cause);
-                    logBuilder.endResponse(cause);
+                final HttpStatus status;
+                final Throwable newCause;
+                if (cause instanceof HttpStatusException) {
+                    status = ((HttpStatusException) cause).httpStatus();
+                    // We don't want to log HttpStatusException and HttpResponseException as the cause.
+                    newCause = null;
+                } else {
+                    logger.warn("{} Unexpected exception: {}, {}", reqCtx, service, req, cause);
+                    status = HttpStatus.INTERNAL_SERVER_ERROR;
+                    newCause = cause;
                 }
+                respond(ctx, reqCtx, reqCtx.accessLogWriter(), status, null, newCause);
                 return;
             }
             final HttpResponse res = serviceResponse;
@@ -566,11 +566,17 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         assert resContent == null || !resContent.isEmpty() : resContent;
 
         // No need to consume further since the response is ready.
-        final DecodedHttpRequest req = reqCtx.request();
+        final DecodedHttpRequest req = (DecodedHttpRequest) reqCtx.request();
+        assert req != null;
         req.close();
+        final RequestLogBuilder logBuilder = reqCtx.logBuilder();
+        if (cause == null) {
+            logBuilder.endRequest();
+        } else {
+            logBuilder.endRequest(cause);
+        }
 
         final boolean hasContent = resContent != null;
-        final RequestLogBuilder logBuilder = reqCtx.logBuilder();
 
         logBuilder.startResponse();
         assert responseEncoder != null;
@@ -685,22 +691,18 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         EarlyRespondingRequestContext(Channel channel, MeterRegistry meterRegistry,
                                       SessionProtocol sessionProtocol, HttpMethod method, String path,
-                                      @Nullable String query, Request request) {
-            super(meterRegistry, sessionProtocol, method, path, UUID.randomUUID(), query, request);
+                                      @Nullable String query, HttpRequest request) {
+            super(meterRegistry, sessionProtocol, method, path, UUID.randomUUID(), query, request, null);
             this.channel = requireNonNull(channel, "channel");
             requestLog = new DefaultRequestLog(this);
         }
 
         @Override
-        public RequestContext newDerivedContext() {
-            return newDerivedContext(request());
-        }
-
-        @Override
-        public RequestContext newDerivedContext(Request request) {
+        public RequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
             // There are no attributes which should be copied to a new instance.
+            requireNonNull(req, "req");
             return new EarlyRespondingRequestContext(channel, meterRegistry(), sessionProtocol(),
-                                                     method(), path(), query(), request);
+                                                     method(), path(), query(), req);
         }
 
         @Override

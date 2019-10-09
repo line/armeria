@@ -71,21 +71,24 @@ public interface MeterIdPrefixFunction {
         return new MeterIdPrefixFunction() {
             @Override
             public MeterIdPrefix activeRequestPrefix(MeterRegistry registry, RequestLog log) {
-                final ImmutableList.Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(4);
-                buildTags(tagListBuilder, log);
+                // hostNamePattern, method, route
+                final ImmutableList.Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(3);
+                // For optimal performance, add tags in order.
+                buildTags(tagListBuilder, log, false);
                 return new MeterIdPrefix(name, tagListBuilder.build());
             }
 
             @Override
             public MeterIdPrefix apply(MeterRegistry registry, RequestLog log) {
-                // method, hostNamePattern, route, status
+                // hostNamePattern, httpStatus, method, route
                 final ImmutableList.Builder<Tag> tagListBuilder = ImmutableList.builderWithExpectedSize(4);
-                buildTags(tagListBuilder, log);
-                RequestMetricSupport.appendHttpStatusTag(tagListBuilder, log);
+                // For optimal performance, add tags in order.
+                buildTags(tagListBuilder, log, true);
                 return new MeterIdPrefix(name, tagListBuilder.build());
             }
 
-            private void buildTags(ImmutableList.Builder<Tag> tagListBuilder, RequestLog log) {
+            private void buildTags(ImmutableList.Builder<Tag> tagListBuilder, RequestLog log,
+                                   boolean addStatus) {
                 final RequestContext ctx = log.context();
                 final Object requestContent = log.requestContent();
 
@@ -99,11 +102,19 @@ public interface MeterIdPrefixFunction {
                     methodName = requestHeaders.method().name();
                 }
 
+                if (ctx instanceof ServiceRequestContext) {
+                    final ServiceRequestContext sCtx = (ServiceRequestContext) ctx;
+                    tagListBuilder.add(Tag.of("hostnamePattern", sCtx.virtualHost().hostnamePattern()));
+                }
+
+                if (addStatus) {
+                    RequestMetricSupport.appendHttpStatusTag(tagListBuilder, log);
+                }
+
                 tagListBuilder.add(Tag.of("method", methodName));
 
                 if (ctx instanceof ServiceRequestContext) {
                     final ServiceRequestContext sCtx = (ServiceRequestContext) ctx;
-                    tagListBuilder.add(Tag.of("hostnamePattern", sCtx.virtualHost().hostnamePattern()));
                     tagListBuilder.add(Tag.of("route", sCtx.route().meterTag()));
                 }
             }

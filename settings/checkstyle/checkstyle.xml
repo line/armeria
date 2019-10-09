@@ -133,6 +133,8 @@
                 value="CLASS_DEF, METHOD_DEF, CTOR_DEF, LITERAL_FOR, LITERAL_WHILE, STATIC_INIT, INSTANCE_INIT"/>
     </module>
 
+    <module name="FinalLocalVariable"/>
+
     <module name="FinalClass"/>
     <module name="HideUtilityClassConstructor"/>
     <module name="OneTopLevelClass"/>
@@ -184,11 +186,13 @@
       <property name="allowMissingParamTags" value="true"/>
       <property name="allowMissingThrowsTags" value="true"/>
       <property name="allowMissingReturnTag" value="true"/>
-      <property name="minLineCount" value="1"/>
       <property name="allowedAnnotations" value="Override, Test"/>
       <property name="allowThrowsTagsForSubclasses" value="true"/>
       <property name="allowUndeclaredRTE" value="true"/>
       <property name="suppressLoadErrors" value="true"/>
+    </module>
+    <module name="MissingJavadocMethod">
+      <property name="minLineCount" value="1"/>
     </module>
     <module name="JavadocParagraph"/>
     <module name="JavadocTagContinuationIndentation"/>

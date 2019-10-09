@@ -3,10 +3,14 @@
 #
 
 boms:
-  - com.fasterxml.jackson:jackson-bom:2.9.9.20190807
-  - io.zipkin.brave:brave-bom:5.7.0
+  - com.fasterxml.jackson:jackson-bom:2.10.0
+  - io.dropwizard.metrics:metrics-bom:4.1.0
+  - io.grpc:grpc-bom:1.24.0
   # NOTE: When changing this, re-evaluate netty-tcnative-boringssl-static below
   - io.netty:netty-bom:4.1.42.Final
+  - io.zipkin.brave:brave-bom:5.7.0
+  - org.eclipse.jetty:jetty-bom:9.4.21.v20190926
+  - org.junit:junit-bom:5.5.2
 
 cglib:
   cglib: { version: '3.3.0' }
@@ -19,20 +23,20 @@ ch.qos.logback:
 
 com.auth0:
   java-jwt:
-    version: '3.8.2'
+    version: '3.8.3'
     javadocs:
-    - https://static.javadoc.io/com.auth0/java-jwt/3.8.2/
+    - https://static.javadoc.io/com.auth0/java-jwt/3.8.3/
 
 com.fasterxml.jackson.core:
   jackson-annotations:
     javadocs:
-    - https://fasterxml.github.io/jackson-annotations/javadoc/2.9/
+    - https://fasterxml.github.io/jackson-annotations/javadoc/2.10/
   jackson-core:
     javadocs:
-    - https://fasterxml.github.io/jackson-core/javadoc/2.9/
+    - https://fasterxml.github.io/jackson-core/javadoc/2.10/
   jackson-databind:
     javadocs:
-    - https://fasterxml.github.io/jackson-databind/javadoc/2.9/
+    - https://fasterxml.github.io/jackson-databind/javadoc/2.10/
 
 com.github.ben-manes.caffeine:
   caffeine:
@@ -49,7 +53,7 @@ com.github.jengelman.gradle.plugins:
   shadow: { version: '5.1.0' }
 
 com.google.api:
-  gax-grpc: { version: '1.48.1' }
+  gax-grpc: { version: '1.49.0' }
 
 com.google.code.findbugs:
   jsr305: { version: '3.0.2' }
@@ -102,7 +106,7 @@ com.moowork.gradle:
   gradle-node-plugin: { version: '1.3.1' }
 
 com.puppycrawl.tools:
-  checkstyle: { version: '8.24' }
+  checkstyle: { version: '8.25' }
 
 com.spotify:
   completable-futures:
@@ -123,25 +127,19 @@ gradle.plugin.net.davidecavestro:
 
 io.dropwizard.metrics:
   metrics-core:
-    version: &DROPWIZARD_VERSION '4.1.0'
     javadocs:
     - https://metrics.dropwizard.io/4.0.0/apidocs/
-  metrics-json: { version: *DROPWIZARD_VERSION }
 
 # Ensure to update the Protobuf version in this file when updating gRPC.
 io.grpc:
   grpc-core:
-    version: &GRPC_VERSION '1.23.0'
     javadocs:
     - https://grpc.io/grpc-java/javadoc/
     - https://developers.google.com/protocol-buffers/docs/reference/java/
     exclusions:
     - com.google.errorprone:error_prone_annotations
     - org.codehaus.mojo:animal-sniffer-annotations
-  grpc-alts: { version: *GRPC_VERSION }
-  grpc-auth: { version: *GRPC_VERSION }
   grpc-interop-testing:
-    version: *GRPC_VERSION
     exclusions:
     - com.google.errorprone:error_prone_annotations
     - com.google.guava:guava-jdk5
@@ -153,26 +151,20 @@ io.grpc:
     - io.netty:netty-transport
     - io.netty:netty-tcnative-boringssl-static
     - io.grpc:grpc-alts
-  grpc-netty-shaded: { version: *GRPC_VERSION }
-  grpc-okhttp: { version: *GRPC_VERSION }
-  grpc-protobuf: { version: *GRPC_VERSION }
-  grpc-services: { version: *GRPC_VERSION }
-  grpc-stub: { version: *GRPC_VERSION }
-  grpc-testing: { version: *GRPC_VERSION }
 
 io.micrometer:
   micrometer-core:
-    version: &MICROMETER_VERSION '1.2.1'
+    version: &MICROMETER_VERSION '1.3.0'
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-core/1.2.0/
+    - https://static.javadoc.io/io.micrometer/micrometer-core/1.3.0/
   micrometer-registry-prometheus:
     version: *MICROMETER_VERSION
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.2.0/
+    - https://static.javadoc.io/io.micrometer/micrometer-registry-prometheus/1.3.0/
   micrometer-spring-legacy:
     version: *MICROMETER_VERSION
     javadocs:
-    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.2.0/
+    - https://static.javadoc.io/io.micrometer/micrometer-spring-legacy/1.3.0/
     exclusions:
     - org.springframework:spring-web
     - org.springframework:spring-webmvc
@@ -233,21 +225,13 @@ junit:
 
 org.junit.jupiter:
   junit-jupiter-api:
-    version: &JUNIT_JUPITER_VERSION '5.5.2'
     javadocs:
-    - https://junit.org/junit5/docs/5.5.1/api/
-  junit-jupiter-engine:
-    version: *JUNIT_JUPITER_VERSION
-  junit-jupiter-params:
-    version: *JUNIT_JUPITER_VERSION
+    - https://junit.org/junit5/docs/5.5.2/api/
 org.junit.platform:
   junit-platform-commons:
     version: &JUNIT_PLATFORM_VERSION '1.5.2'
   junit-platform-launcher:
     version: *JUNIT_PLATFORM_VERSION
-org.junit.vintage:
-  junit-vintage-engine:
-    version: *JUNIT_JUPITER_VERSION
 
 kr.motd.gradle:
   sphinx-gradle-plugin: { version: '2.6.1' }
@@ -353,24 +337,17 @@ org.dmonix.junit:
   zookeeper-junit: { version: '1.2' }
 
 org.eclipse.jetty:
-  apache-jsp: { version: &JETTY_VERSION '9.4.20.v20190813' }
-  apache-jstl: { version: *JETTY_VERSION }
   jetty-annotations:
-    version: *JETTY_VERSION
     exclusions:
     - org.ow2.asm:asm
     - org.ow2.asm:asm-commons
   jetty-server:
-    version: *JETTY_VERSION
     javadocs:
     - https://www.eclipse.org/jetty/javadoc/current/
-  jetty-webapp: { version: *JETTY_VERSION }
 
 org.eclipse.jetty.alpn:
   alpn-api: { version: '1.1.3.v20160715' }
 
-org.eclipse.jetty.http2:
-  http2-server: { version: *JETTY_VERSION }
 
 org.hibernate.validator:
   hibernate-validator: { version: '6.0.17.Final' }
@@ -386,7 +363,7 @@ org.jsoup:
   jsoup: { version: '1.12.1' }
 
 org.mockito:
-  mockito-core: { version: &MOCKITO_VERSION '3.0.0' }
+  mockito-core: { version: &MOCKITO_VERSION '3.1.0' }
   mockito-junit-jupiter: { version: *MOCKITO_VERSION }
 
 org.mortbay.jetty.alpn:

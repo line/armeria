@@ -32,8 +32,8 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContextWrapper;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -49,10 +49,12 @@ public class ServiceRequestContextWrapper
         super(delegate);
     }
 
+    @Nonnull
     @Override
-    @SuppressWarnings("unchecked")
     public HttpRequest request() {
-        return super.request();
+        final HttpRequest req = super.request();
+        assert req != null;
+        return req;
     }
 
     @Nonnull
@@ -73,13 +75,8 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public ServiceRequestContext newDerivedContext() {
-        return delegate().newDerivedContext();
-    }
-
-    @Override
-    public ServiceRequestContext newDerivedContext(Request request) {
-        return delegate().newDerivedContext(request);
+    public ServiceRequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
+        return delegate().newDerivedContext(req, rpcReq);
     }
 
     @Override

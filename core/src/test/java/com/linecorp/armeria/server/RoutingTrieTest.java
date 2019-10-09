@@ -16,19 +16,27 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.server.RoutingTrie.Node;
 
-public class RoutingTrieTest {
+class RoutingTrieTest {
 
     @Test
-    public void testTrieStructure() {
+    void testTrieStructure() {
         final RoutingTrie.Builder<Object> builder = new RoutingTrie.Builder<>();
 
         final Object value1 = new Object();
@@ -85,7 +93,7 @@ public class RoutingTrieTest {
     }
 
     @Test
-    public void testParameterAndCatchAll() {
+    void testParameterAndCatchAll() {
         final RoutingTrie.Builder<Object> builder = new RoutingTrie.Builder<>();
 
         final Object value0 = new Object();
@@ -112,6 +120,30 @@ public class RoutingTrieTest {
 
         final RoutingTrie<Object> trie = builder.build();
 
+        // Expectation:
+        //                          `/`(exact, values=[])  (root)
+        //                                    |
+        //           +------------------------------------------------------+
+        //           |                        |                             |
+        // `:`(param, values=[8])   `*`(catch, values=[9])   `users/`(exact, values=[])
+        //           |                        |                             |
+        //          Nil                      Nil               `:`(param, values=[0,1])
+        //                                                                  |
+        //                                                        `/`(exact, values=[])
+        //                                                                  |
+        //                           +----------------------------------------------+
+        //                           |                                              |
+        //           `movies`(exact, values=[2])                     `books`(exact, values=[3])
+        //                           |                                              |
+        //                 `/`(exact, values=[])                          `/`(exact, values=[])
+        //                           |                                              |
+        //                `*`(catch, values=[7])               +----------------------------------+
+        //                           |                         |                                  |
+        //                          Nil              `:`(param, values=[6])   `harry_potter`(exact, values=[4])
+        //                                                     |                                  |
+        //                                                    Nil                        `*`(catch, values=[5])
+        //                                                                                        |
+        //                                                                                       Nil
         trie.dump(System.err);
 
         testNodeWithCheckingParentPath(trie, "/users/tom", "users/", value0, value1);
@@ -127,8 +159,48 @@ public class RoutingTrieTest {
         testNodeWithCheckingParentPath(trie, "/", "/", value9);
     }
 
+    @ParameterizedTest
+    @MethodSource("generateFindStrategyData")
+    void testFindAll(String path, int findFirst, List<Integer> findAll) {
+        final ImmutableList<Object> values = IntStream.range(0, 10).mapToObj(i -> new Object() {
+            @Override
+            public String toString() {
+                return "value" + i;
+            }
+        }).collect(toImmutableList());
+
+        final RoutingTrie.Builder<Object> builder = new RoutingTrie.Builder<>();
+        builder.add("/users/:", values.get(0));
+        builder.add("/users/*", values.get(1));
+        builder.add("/users/:/movies", values.get(2));
+        builder.add("/users/:/books", values.get(3));
+        builder.add("/users/:/books/harry_potter", values.get(4));
+        builder.add("/users/:/books/harry_potter*", values.get(5));
+        builder.add("/users/:/books/:", values.get(6));
+        builder.add("/users/:/movies/*", values.get(7));
+        builder.add("/:", values.get(8));
+        builder.add("/*", values.get(9));
+
+        final RoutingTrie<Object> trie = builder.build();
+        List<Object> found;
+        found = trie.find(path);
+        assertThat(found).containsExactly(values.get(findFirst));
+        found = trie.find(path);
+        assertThat(found).containsExactly(values.get(findFirst));
+        found = trie.findAll(path);
+        final List<Object> greedyExpect = findAll.stream().map(values::get).collect(toImmutableList());
+        assertThat(found).containsAll(greedyExpect);
+    }
+
+    static Stream<Arguments> generateFindStrategyData() {
+        return Stream.of(
+                Arguments.of("/users/1", 0, ImmutableList.of(0, 1, 9)),
+                Arguments.of("/users/1/movies/1", 7, ImmutableList.of(7, 1, 9))
+        );
+    }
+
     @Test
-    public void testExceptionalCases() {
+    void testExceptionalCases() {
         assertThatThrownBy(() -> new RoutingTrie.Builder<>().build())
                 .isInstanceOf(IllegalArgumentException.class);
 

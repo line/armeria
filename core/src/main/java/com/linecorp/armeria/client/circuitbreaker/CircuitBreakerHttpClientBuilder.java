@@ -32,7 +32,10 @@ public final class CircuitBreakerHttpClientBuilder
 
     /**
      * Creates a new builder with the specified {@link CircuitBreakerStrategy}.
+     *
+     * @deprecated Use {@link CircuitBreakerHttpClient#builder(CircuitBreakerStrategy)}.
      */
+    @Deprecated
     public CircuitBreakerHttpClientBuilder(CircuitBreakerStrategy strategy) {
         super(strategy);
         needsContentInStrategy = false;
@@ -40,7 +43,10 @@ public final class CircuitBreakerHttpClientBuilder
 
     /**
      * Creates a new builder with the specified {@link CircuitBreakerStrategyWithContent}.
+     *
+     * @deprecated Use {@link CircuitBreakerHttpClient#builder(CircuitBreakerStrategyWithContent)}.
      */
+    @Deprecated
     public CircuitBreakerHttpClientBuilder(
             CircuitBreakerStrategyWithContent<HttpResponse> strategyWithContent) {
         super(strategyWithContent);

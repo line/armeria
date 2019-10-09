@@ -200,7 +200,7 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
             return null;
         }
 
-        final RoutingResultBuilder builder = RoutingResult.builder()
+        final RoutingResultBuilder builder = RoutingResult.builderWithExpectedNumParams(paramNameArray.length)
                                                           .path(routingCtx.path())
                                                           .query(routingCtx.query());
 

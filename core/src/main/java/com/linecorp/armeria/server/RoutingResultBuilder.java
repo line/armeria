@@ -37,12 +37,19 @@ public final class RoutingResultBuilder {
     @Nullable
     private String query;
 
-    private final ImmutableMap.Builder<String, String> pathParams = ImmutableMap.builder();
+    @Nullable
+    private ImmutableMap.Builder<String, String> pathParams;
 
     private int score = LOWEST_SCORE;
 
     @Nullable
     private MediaType negotiatedResponseMediaType;
+
+    RoutingResultBuilder() {}
+
+    RoutingResultBuilder(int expectedNumParams) {
+        pathParams = ImmutableMap.builderWithExpectedSize(expectedNumParams);
+    }
 
     /**
      * Sets the mapped path, encoded as defined in <a href="https://tools.ietf.org/html/rfc3986">RFC3986</a>.
@@ -64,7 +71,7 @@ public final class RoutingResultBuilder {
      * Adds a decoded path parameter.
      */
     public RoutingResultBuilder decodedParam(String name, String value) {
-        pathParams.put(requireNonNull(name, "name"), requireNonNull(value, "value"));
+        pathParams().put(requireNonNull(name, "name"), requireNonNull(value, "value"));
         return this;
     }
 
@@ -72,8 +79,8 @@ public final class RoutingResultBuilder {
      * Adds an encoded path parameter, which will be decoded in UTF-8 automatically.
      */
     public RoutingResultBuilder rawParam(String name, String value) {
-        pathParams.put(requireNonNull(name, "name"),
-                       ArmeriaHttpUtil.decodePath(requireNonNull(value, "value")));
+        pathParams().put(requireNonNull(name, "name"),
+                         ArmeriaHttpUtil.decodePath(requireNonNull(value, "value")));
         return this;
     }
 
@@ -102,6 +109,14 @@ public final class RoutingResultBuilder {
             return RoutingResult.empty();
         }
 
-        return new RoutingResult(path, query, pathParams.build(), score, negotiatedResponseMediaType);
+        return new RoutingResult(path, query, pathParams != null ? pathParams.build() : ImmutableMap.of(),
+                                 score, negotiatedResponseMediaType);
+    }
+
+    private ImmutableMap.Builder<String, String> pathParams() {
+        if (pathParams != null) {
+            return pathParams;
+        }
+        return pathParams = ImmutableMap.builder();
     }
 }

@@ -44,5 +44,6 @@ tasks.sourceJar.from "${tomcatProjectDir}/src/main/resources"
 tasks.javadoc.source "${tomcatProjectDir}/src/main/java"
 
 // Disable checkstyle because it's checked by ':it:spring:boot-tomcat'.
-tasks.checkstyleMain.onlyIf { false }
-tasks.checkstyleTest.onlyIf { false }
+tasks.withType(Checkstyle) {
+    onlyIf { false }
+}
