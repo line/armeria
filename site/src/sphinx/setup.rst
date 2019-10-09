@@ -53,7 +53,8 @@ the list of major Armeria artifacts which might interest you:
 +-----------------------------------------------+-------------------------------------------------------------------+
 | ``armeria-tomcat``                            | Embedded Tomcat Servlet container. See :ref:`server-servlet`.     |
 +-----------------------------------------------+-------------------------------------------------------------------+
-| ``armeria-zipkin``                            | Zipkin distributed tracing support. See :ref:`advanced-zipkin`.   |
+| ``armeria-brave``                             | Brave distributed tracing implementation support.                 |
+|                                               | See :ref:`advanced-zipkin`.                                       |
 +-----------------------------------------------+-------------------------------------------------------------------+
 | ``armeria-zookeeper``                         | ZooKeeper-based service discovery. See :ref:`advanced-zookeeper`. |
 +-----------------------------------------------+-------------------------------------------------------------------+
@@ -86,7 +87,7 @@ You might want to use the following ``build.gradle`` as a starting point when yo
          'armeria-saml',
          'armeria-thrift',
          'armeria-tomcat',
-         'armeria-zipkin',
+         'armeria-brave',
          'armeria-zookeeper'].each {
             compile "com.linecorp.armeria:${it}:\ |release|\ "
         }
@@ -174,7 +175,7 @@ You might want to use the following ``pom.xml`` as a starting point when you set
         </dependency>
         <dependency>
           <groupId>com.linecorp.armeria</groupId>
-          <artifactId>armeria-zipkin</artifactId>
+          <artifactId>armeria-brave</artifactId>
           <version>\ |release|\ </version>
         </dependency>
         <dependency>
