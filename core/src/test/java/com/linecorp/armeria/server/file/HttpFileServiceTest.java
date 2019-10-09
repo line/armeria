@@ -110,6 +110,17 @@ class HttpFileServiceTest {
                                           .build());
 
             sb.serviceUnder(
+                    "/cached/by-entry/classes/",
+                    HttpFileServiceBuilder.forClassPath("/")
+                                          .entryCacheSpec("maximumSize=512")
+                                          .build());
+            sb.serviceUnder(
+                    "/uncached/by-entry/classes/",
+                    HttpFileServiceBuilder.forClassPath("/")
+                                          .entryCacheSpec("off")
+                                          .build());
+
+            sb.serviceUnder(
                     "/cached/",
                     HttpFileService.forClassPath(baseResourceDir + "foo")
                                    .orElse(HttpFileService.forClassPath(baseResourceDir + "bar")));
@@ -171,6 +182,24 @@ class HttpFileServiceTest {
                          hc.execute(new HttpGet(baseUri + "/classes/java/lang/Object.class"))) {
                 assert200Ok(res, null, content -> assertThat(content).isNotEmpty());
             }
+            // Confirm file service paths are cached when cache is enabled.
+            if (baseUri.contains("/cached")) {
+                assertThat(PathAndQuery.cachedPaths()).contains(
+                        "/cached/classes/java/lang/Object.class");
+            }
+        }
+
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            // Read a class from a JDK module (java.base).
+            try (CloseableHttpResponse res =
+                         hc.execute(new HttpGet(baseUri + "/by-entry/classes/java/lang/Object.class"))) {
+                assert200Ok(res, null, content -> assertThat(content).isNotEmpty());
+            }
+            // Confirm file service paths are cached when cache is enabled.
+            if (baseUri.contains("/cached")) {
+                assertThat(PathAndQuery.cachedPaths()).contains(
+                        "/cached/by-entry/classes/java/lang/Object.class");
+            }
         }
     }
 
@@ -182,6 +211,24 @@ class HttpFileServiceTest {
             try (CloseableHttpResponse res =
                          hc.execute(new HttpGet(baseUri + "/classes/io/netty/util/NetUtil.class"))) {
                 assert200Ok(res, null, content -> assertThat(content).isNotEmpty());
+            }
+            // Confirm file service paths are cached when cache is enabled.
+            if (baseUri.contains("/cached")) {
+                assertThat(PathAndQuery.cachedPaths()).contains(
+                        "/cached/classes/io/netty/util/NetUtil.class");
+            }
+        }
+
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            // Read a class from a third-party library JAR.
+            try (CloseableHttpResponse res =
+                         hc.execute(new HttpGet(baseUri + "/by-entry/classes/io/netty/util/NetUtil.class"))) {
+                assert200Ok(res, null, content -> assertThat(content).isNotEmpty());
+            }
+            // Confirm file service paths are cached when cache is enabled.
+            if (baseUri.contains("/cached")) {
+                assertThat(PathAndQuery.cachedPaths()).contains(
+                        "/cached/by-entry/classes/io/netty/util/NetUtil.class");
             }
         }
     }
