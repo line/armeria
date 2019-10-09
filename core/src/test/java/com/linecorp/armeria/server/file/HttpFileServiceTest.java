@@ -157,7 +157,7 @@ class HttpFileServiceTest {
             assert304NotModified(hc, baseUri, "/foo.txt", etag, lastModified);
 
             // Confirm file service paths are cached when cache is enabled.
-            if (baseUri.contains("/cached/")) {
+            if (baseUri.contains("/cached")) {
                 assertThat(PathAndQuery.cachedPaths()).contains("/cached/foo.txt");
             }
         }
