@@ -138,7 +138,7 @@ public class AnnotatedServiceBindingBuilder extends AbstractServiceBuilder {
         return (AnnotatedServiceBindingBuilder) super.accessLogWriter(accessLogWriter, shutdownOnStop);
     }
 
-    public ServerBuilder build(Object service) {
+    public ServerBuilder buildAnnotated(Object service) {
         final ImmutableList<ExceptionHandlerFunction> exceptionHandlerFunctions =
                 exceptionHandlerFunctionBuilder.build();
         final ImmutableList<RequestConverterFunction> requestConverterFunctions =
@@ -156,6 +156,7 @@ public class AnnotatedServiceBindingBuilder extends AbstractServiceBuilder {
             // Apply decorators which are specified in the service class.
             s = e.decorator().apply(s);
 
+            s = decorate(s);
             // If there is a decorator, we should add one more decorator which handles an exception
             // raised from decorators.
             if (s != e.service()) {

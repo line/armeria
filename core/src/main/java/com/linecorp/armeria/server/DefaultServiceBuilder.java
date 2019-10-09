@@ -133,7 +133,7 @@ class DefaultServiceBuilder implements ServiceBuilder {
         return this;
     }
 
-    private Service<HttpRequest, HttpResponse> decorate(Service<HttpRequest, HttpResponse> service) {
+    public Service<HttpRequest, HttpResponse> decorate(Service<HttpRequest, HttpResponse> service) {
         if (decorator == null) {
             return service;
         }
@@ -141,7 +141,7 @@ class DefaultServiceBuilder implements ServiceBuilder {
     }
 
     public ServiceConfigBuilder serviceConfigBuilder(Route route, Service<HttpRequest, HttpResponse> service) {
-        final ServiceConfigBuilder serviceConfigBuilder = new ServiceConfigBuilder(route, decorate(service));
+        final ServiceConfigBuilder serviceConfigBuilder = new ServiceConfigBuilder(route, service);
         if (requestTimeoutMillis != null) {
             serviceConfigBuilder.requestTimeoutMillis(requestTimeoutMillis);
         }
