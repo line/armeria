@@ -30,6 +30,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.IdentityHashMap;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -692,7 +693,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         EarlyRespondingRequestContext(Channel channel, MeterRegistry meterRegistry,
                                       SessionProtocol sessionProtocol, HttpMethod method, String path,
                                       @Nullable String query, HttpRequest request) {
-            super(meterRegistry, sessionProtocol, method, path, query, request, null);
+            super(meterRegistry, sessionProtocol, method, path, UUID.randomUUID(), query, request, null);
             this.channel = requireNonNull(channel, "channel");
             requestLog = new DefaultRequestLog(this);
         }

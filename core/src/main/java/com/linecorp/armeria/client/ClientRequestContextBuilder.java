@@ -113,7 +113,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
 
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
                 eventLoop(), meterRegistry(), sessionProtocol(),
-                method(), path(), query(), fragment, options, request(), rpcRequest());
+                method(), path(), uuid(), query(), fragment, options, request(), rpcRequest());
         ctx.init(endpoint);
 
         if (isRequestStartTimeSet()) {

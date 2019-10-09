@@ -82,6 +82,8 @@ class DefaultServiceRequestContextTest {
         // the attribute is derived as well
         assertThat(derivedCtx.attr(foo).get()).isEqualTo("foo");
 
+        // uuid is different
+        assertThat(derivedCtx.uuid()).isNotSameAs(originalCtx.uuid());
         // log is different
         assertThat(derivedCtx.log()).isNotSameAs(originalCtx.log());
 

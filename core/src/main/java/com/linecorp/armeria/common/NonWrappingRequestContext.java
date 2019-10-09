@@ -23,6 +23,7 @@ import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -54,6 +55,7 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     private volatile HttpRequest req;
     @Nullable
     private volatile RpcRequest rpcReq;
+    protected UUID uuid;
 
     // Callbacks
     @Nullable
@@ -67,18 +69,20 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
      * Creates a new instance.
      *
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
+     * @param uuid the {@link UUID} associated with this context
      * @param req the {@link HttpRequest} associated with this context
      * @param rpcReq the {@link RpcRequest} associated with this context
      */
     protected NonWrappingRequestContext(
             MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            HttpMethod method, String path, @Nullable String query,
+            HttpMethod method, String path, UUID uuid, @Nullable String query,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
         this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
         this.method = requireNonNull(method, "method");
         this.path = requireNonNull(path, "path");
+        this.uuid = requireNonNull(uuid, "uuid");
         this.query = query;
         this.req = req;
         this.rpcReq = rpcReq;
@@ -176,6 +180,11 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     @Override
     public final String query() {
         return query;
+    }
+
+    @Override
+    public final UUID uuid() {
+        return uuid;
     }
 
     @Override

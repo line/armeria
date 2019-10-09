@@ -19,6 +19,8 @@ package com.linecorp.armeria.client;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+import java.util.UUID;
+
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -38,7 +40,7 @@ class DefaultClientRequestContextTest {
     void deriveContext() {
         final DefaultClientRequestContext originalCtx = new DefaultClientRequestContext(
                 mock(EventLoop.class), NoopMeterRegistry.get(), SessionProtocol.H2C,
-                HttpMethod.POST, "/foo", null, null,
+                HttpMethod.POST, "/foo", UUID.randomUUID(), null, null,
                 ClientOptions.DEFAULT,
                 HttpRequest.of(RequestHeaders.of(
                         HttpMethod.POST, "/foo",
@@ -80,6 +82,8 @@ class DefaultClientRequestContextTest {
 
         // log is different
         assertThat(derivedCtx.log()).isNotSameAs(originalCtx.log());
+        // uuid is different
+        assertThat(derivedCtx.uuid()).isNotSameAs(originalCtx.uuid());
 
         final AttributeKey<String> bar = AttributeKey.valueOf(DefaultClientRequestContextTest.class, "bar");
         originalCtx.attr(bar).set("bar");

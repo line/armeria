@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.brave;
 
 import java.util.List;
+import java.util.UUID;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
@@ -45,8 +46,8 @@ import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
-
 import brave.Tracing.Builder;
+import brave.propagation.CurrentTraceContext;
 import brave.propagation.StrictScopeDecorator;
 import brave.sampler.Sampler;
 import brave.test.http.ITHttpAsyncClient;
@@ -62,6 +63,12 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
         return ImmutableList.of(SessionProtocol.H1C, SessionProtocol.H2C);
     }
 
+    // // Hide currentTraceContext in ITHttpClient
+    private final CurrentTraceContext currentTraceContext =
+            RequestContextCurrentTraceContext.builder()
+                                             .addScopeDecorator(StrictScopeDecorator.create())
+                                             .build();
+
     private final List<Protocol> protocols;
     private final SessionProtocol sessionProtocol;
 
@@ -75,14 +82,8 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
     }
 
     @Before
-    @Override
-    public void setup() {
-        currentTraceContext =
-                RequestContextCurrentTraceContext.builder()
-                                                 .addScopeDecorator(StrictScopeDecorator.create())
-                                                 .build();
+    public void setupServer() {
         server.setProtocols(protocols);
-        super.setup();
     }
 
     @Override
@@ -160,10 +161,10 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
         client.get(pathIncludingQuery);
     }
 
-    private static class DummyRequestContext extends NonWrappingRequestContext {
+    private class DummyRequestContext extends NonWrappingRequestContext {
         DummyRequestContext() {
             super(NoopMeterRegistry.get(), SessionProtocol.HTTP,
-                  HttpMethod.GET, "/", null, HttpRequest.streaming(HttpMethod.GET, "/"), null);
+                  HttpMethod.GET, "/", UUID.randomUUID(), null, HttpRequest.streaming(HttpMethod.GET, "/"), null);
         }
 
         @Override
