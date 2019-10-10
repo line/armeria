@@ -48,7 +48,7 @@ const HomePage: React.FunctionComponent<Props> = ({ versions }) => {
   if (versions) {
     versions.getVersions().forEach((version) => {
       tableRows.push(
-        <TableRow>
+        <TableRow key={version.artifactId}>
           <TableCell>{version.artifactId}</TableCell>
           <TableCell>
             {version.artifactVersion}
