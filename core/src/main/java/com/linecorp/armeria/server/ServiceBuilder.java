@@ -57,6 +57,7 @@ interface ServiceBuilder {
      * is used.
      */
     ServiceBuilder responseContentPreviewerFactory(ContentPreviewerFactory factory);
+
     /**
      * Sets the {@link ContentPreviewerFactory} for creating a {@link ContentPreviewer} which produces the
      * preview with the maximum {@code length} limit for an HTTP request/response of the {@link Service}.
