@@ -52,6 +52,11 @@ export default class GrpcUnframedTransport extends Transport {
       method: 'POST',
       body: bodyJson,
     });
-    return jsonPrettify(await httpResponse.text());
+    const contentType = httpResponse.headers.get('content-type');
+    const text = await httpResponse.text();
+    if (contentType && contentType.startsWith('application/json')) {
+      return jsonPrettify(text);
+    }
+    return text;
   }
 }

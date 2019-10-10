@@ -389,8 +389,10 @@ const DebugPage: React.FunctionComponent<Props> = ({
           queries,
         );
       } catch (e) {
+        console.log(e);
         executedDebugResponse = e.toString();
       }
+      console.log(executedDebugResponse);
       setDebugResponse(executedDebugResponse);
     },
     [useRequestBody, isAnnotatedHttpService, exactPathMapping, method],
