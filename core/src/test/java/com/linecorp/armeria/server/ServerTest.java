@@ -436,6 +436,18 @@ public class ServerTest {
         assertThat(MoreExecutors.shutdownAndAwaitTermination(executor, 10, TimeUnit.SECONDS)).isTrue();
     }
 
+    @Test
+    public void versionMetrics() {
+        final Server server = ServerTest.server.server();
+        server.setupVersionMetrics();
+
+        final MeterRegistry meterRegistry = server.config().meterRegistry();
+        assertThat(meterRegistry.find("armeria.build.info")
+                                .gauge()
+                                .value())
+                .isOne();
+    }
+
     private static void testSimple(
             String reqLine, String expectedStatusLine, String... expectedHeaders) throws Exception {
 
