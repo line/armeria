@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import javax.annotation.Nullable;
 
@@ -40,6 +41,11 @@ class RoutingContextWrapper implements RoutingContext {
     @Override
     public String hostname() {
         return delegate.hostname();
+    }
+
+    @Override
+    public UUID uuid() {
+        return delegate.uuid();
     }
 
     @Override

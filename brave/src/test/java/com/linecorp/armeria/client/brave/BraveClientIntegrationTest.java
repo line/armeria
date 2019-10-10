@@ -164,12 +164,7 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
     private static class DummyRequestContext extends NonWrappingRequestContext {
         DummyRequestContext() {
             super(NoopMeterRegistry.get(), SessionProtocol.HTTP,
-                  HttpMethod.GET, "/", UUID.randomUUID(), null, HttpRequest.streaming(HttpMethod.GET, "/"), null);
-        }
-
-        @Override
-        public RequestContext newDerivedContext() {
-            throw new UnsupportedOperationException();
+                  UUID.randomUUID(), HttpMethod.GET, "/",  null, HttpRequest.streaming(HttpMethod.GET, "/"), null);
         }
 
         @Override

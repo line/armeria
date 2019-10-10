@@ -45,6 +45,7 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     private final MeterRegistry meterRegistry;
     private final DefaultAttributeMap attrs = new DefaultAttributeMap();
     private final SessionProtocol sessionProtocol;
+    private final UUID uuid;
     private final HttpMethod method;
     private final String path;
     @Nullable
@@ -55,7 +56,6 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     private volatile HttpRequest req;
     @Nullable
     private volatile RpcRequest rpcReq;
-    protected UUID uuid;
 
     // Callbacks
     @Nullable
@@ -75,7 +75,7 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
      */
     protected NonWrappingRequestContext(
             MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            HttpMethod method, String path, UUID uuid, @Nullable String query,
+            UUID uuid, HttpMethod method, String path, @Nullable String query,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
@@ -158,6 +158,11 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     }
 
     @Override
+    public final UUID uuid() {
+        return uuid;
+    }
+
+    @Override
     public final HttpMethod method() {
         return method;
     }
@@ -180,11 +185,6 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     @Override
     public final String query() {
         return query;
-    }
-
-    @Override
-    public final UUID uuid() {
-        return uuid;
     }
 
     @Override

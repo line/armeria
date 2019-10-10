@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import javax.annotation.Nullable;
 
@@ -50,15 +51,16 @@ final class DefaultRoutingContext implements RoutingContext {
     /**
      * Returns a new {@link RoutingContext} instance.
      */
-    static RoutingContext of(VirtualHost virtualHost, String hostname,
+    static RoutingContext of(VirtualHost virtualHost, String hostname, UUID uuid,
                              String path, @Nullable String query,
                              RequestHeaders headers, boolean isCorsPreflight) {
-        return new DefaultRoutingContext(virtualHost, hostname, headers, path, query, isCorsPreflight);
+        return new DefaultRoutingContext(virtualHost, hostname, uuid, headers, path, query, isCorsPreflight);
     }
 
     private final VirtualHost virtualHost;
     private final String hostname;
     private final RequestHeaders headers;
+    private final UUID uuid;
     private final String path;
     @Nullable
     private final String query;
@@ -69,10 +71,11 @@ final class DefaultRoutingContext implements RoutingContext {
     @Nullable
     private Throwable delayedCause;
 
-    DefaultRoutingContext(VirtualHost virtualHost, String hostname, RequestHeaders headers,
+    DefaultRoutingContext(VirtualHost virtualHost, String hostname, UUID uuid, RequestHeaders headers,
                           String path, @Nullable String query, boolean isCorsPreflight) {
         this.virtualHost = requireNonNull(virtualHost, "virtualHost");
         this.hostname = requireNonNull(hostname, "hostname");
+        this.uuid = requireNonNull(uuid, "uuid");
         this.headers = requireNonNull(headers, "headers");
         this.path = requireNonNull(path, "path");
         this.query = query;
@@ -88,6 +91,11 @@ final class DefaultRoutingContext implements RoutingContext {
     @Override
     public String hostname() {
         return hostname;
+    }
+
+    @Override
+    public UUID uuid() {
+        return uuid;
     }
 
     @Override

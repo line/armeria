@@ -23,6 +23,8 @@ import static com.linecorp.armeria.server.RoutingContextTest.virtualHost;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.UUID;
+
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -309,19 +311,21 @@ class RouteTest {
     }
 
     private static RoutingContext method(HttpMethod method) {
-        return DefaultRoutingContext.of(virtualHost(), "example.com",
+        return DefaultRoutingContext.of(virtualHost(), "example.com", UUID.randomUUID(),
                                         PATH, null, RequestHeaders.of(method, PATH), false);
     }
 
     private static RoutingContext consumeType(HttpMethod method, MediaType contentType) {
         final RequestHeaders headers = RequestHeaders.of(method, PATH,
                                                          HttpHeaderNames.CONTENT_TYPE, contentType);
-        return DefaultRoutingContext.of(virtualHost(), "example.com", PATH, null, headers, false);
+        return DefaultRoutingContext.of(virtualHost(), "example.com", UUID.randomUUID(),
+                                        PATH, null, headers, false);
     }
 
     private static RoutingContext withAcceptHeader(HttpMethod method, String acceptHeader) {
         final RequestHeaders headers = RequestHeaders.of(method, PATH,
                                                          HttpHeaderNames.ACCEPT, acceptHeader);
-        return DefaultRoutingContext.of(virtualHost(), "example.com", PATH, null, headers, false);
+        return DefaultRoutingContext.of(virtualHost(), "example.com", UUID.randomUUID(),
+                                        PATH, null, headers, false);
     }
 }

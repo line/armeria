@@ -66,10 +66,10 @@ public abstract class AbstractRequestContextBuilder {
     @Nullable
     private final RpcRequest rpcReq;
     private SessionProtocol sessionProtocol;
+    private UUID uuid;
     private HttpMethod method;
     private final String authority;
     private final String path;
-    private final UUID uuid;
     @Nullable
     private final String query;
 
@@ -100,7 +100,7 @@ public abstract class AbstractRequestContextBuilder {
         this.req = requireNonNull(req, "req");
         rpcReq = null;
         sessionProtocol = SessionProtocol.H2C;
-
+        uuid = UUID.randomUUID();
         method = req.headers().method();
         authority = firstNonNull(req.headers().authority(), FALLBACK_AUTHORITY);
 
@@ -109,7 +109,6 @@ public abstract class AbstractRequestContextBuilder {
         checkArgument(pathAndQuery != null, "request.path is not valid: %s", req);
         path = pathAndQuery.path();
         query = pathAndQuery.query();
-        uuid = UUID.randomUUID();
     }
 
     /**
@@ -123,6 +122,7 @@ public abstract class AbstractRequestContextBuilder {
         this.server = server;
         req = null;
         this.rpcReq = requireNonNull(rpcReq, "rpcReq");
+        uuid = UUID.randomUUID();
         method = HttpMethod.POST;
 
         requireNonNull(uri, "uri");
@@ -148,7 +148,6 @@ public abstract class AbstractRequestContextBuilder {
         checkArgument(pathAndQuery != null, "uri.path or uri.query is not valid: %s", uri);
         path = pathAndQuery.path();
         query = pathAndQuery.query();
-        uuid = UUID.randomUUID();
     }
 
     /**
@@ -438,9 +437,20 @@ public abstract class AbstractRequestContextBuilder {
     }
 
     /**
+     * Sets the UUID of the request. If not set, it is auto-generated with UUID
+     */
+    public AbstractRequestContextBuilder uuid(UUID uuid) {
+        this.uuid = requireNonNull(uuid, "uuid");
+        return this;
+    }
+
+    /**
      * Returns the {@link UUID} of the request.
      */
     protected final UUID uuid() {
+        if(uuid == null) {
+            uuid = UUID.randomUUID();
+        }
         return uuid;
     }
 

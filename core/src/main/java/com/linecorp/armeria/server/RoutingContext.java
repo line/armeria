@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import javax.annotation.Nullable;
 
@@ -43,6 +44,11 @@ public interface RoutingContext {
      * Returns the virtual host name of the request.
      */
     String hostname();
+
+    /**
+     * Returns the {@link UUID} of the request.
+     */
+    UUID uuid();
 
     /**
      * Returns {@link HttpMethod} of the request.

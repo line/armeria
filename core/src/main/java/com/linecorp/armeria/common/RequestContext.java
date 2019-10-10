@@ -169,6 +169,11 @@ public interface RequestContext extends AttributeMap {
     SSLSession sslSession();
 
     /**
+     * Returns the {@link UUID} that contains the information about the current {@link Request}.
+     */
+    UUID uuid();
+
+    /**
      * Returns the HTTP method of the current {@link Request}.
      */
     HttpMethod method();
@@ -191,11 +196,6 @@ public interface RequestContext extends AttributeMap {
      */
     @Nullable
     String query();
-
-    /**
-     * Returns the {@link UUID} that contains the information about the current {@link Request}.
-     */
-    UUID uuid();
 
     /**
      * Returns the {@link RequestLog} that contains the information about the current {@link Request}.

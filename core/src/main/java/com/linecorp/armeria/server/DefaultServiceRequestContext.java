@@ -160,7 +160,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
             long requestStartTimeMicros) {
 
         super(meterRegistry, sessionProtocol,
-              requireNonNull(routingContext, "routingContext").method(), routingContext.path(), UUID.randomUUID(),
+              requireNonNull(routingContext, "routingContext").uuid(),
+              requireNonNull(routingContext, "routingContext").method(), routingContext.path(),
               requireNonNull(routingResult, "routingResult").query(),
               requireNonNull(req, "req"), null);
 

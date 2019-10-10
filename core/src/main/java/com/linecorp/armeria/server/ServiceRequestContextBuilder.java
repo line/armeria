@@ -157,6 +157,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         final RoutingContext routingCtx = DefaultRoutingContext.of(
                 server.config().defaultVirtualHost(),
                 localAddress().getHostString(),
+                uuid(),
                 path(),
                 query(),
                 req.headers(),
