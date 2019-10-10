@@ -27,6 +27,10 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
+/**
+ * A builder that implements {@link ServerBuilder} by delegating all calls
+ * to {@link DefaultServiceBuilder}
+ */
 abstract class AbstractServiceBuilder implements ServiceBuilder {
 
     private final DefaultServiceBuilder defaultServiceBuilder = new DefaultServiceBuilder();
@@ -45,8 +49,8 @@ abstract class AbstractServiceBuilder implements ServiceBuilder {
 
     @Override
     public AbstractServiceBuilder maxRequestLength(long maxRequestLength) {
-         defaultServiceBuilder.maxRequestLength(maxRequestLength);
-         return this;
+        defaultServiceBuilder.maxRequestLength(maxRequestLength);
+        return this;
     }
 
     @Override
@@ -89,7 +93,7 @@ abstract class AbstractServiceBuilder implements ServiceBuilder {
     @Override
     public AbstractServiceBuilder accessLogFormat(String accessLogFormat) {
         return accessLogWriter(AccessLogWriter.custom(requireNonNull(accessLogFormat, "accessLogFormat")),
-            true);
+                               true);
     }
 
     @Override

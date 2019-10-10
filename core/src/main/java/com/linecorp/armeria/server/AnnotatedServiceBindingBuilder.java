@@ -37,6 +37,27 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
+/**
+ * A builder class for binding a {@link Service} fluently. This class can be instantiated through
+ * {@link ServerBuilder#annotatedService()}.
+ *
+ * <p>Call {@link #buildAnnotated(Object)} to build the {@link Service} and return to the {@link ServerBuilder}.
+ *
+ * <pre>{@code
+ * ServerBuilder sb = Server.builder();
+ * sb.annotatedService()                                    // Returns an instance of this class
+ *   .requestTimeout(5000)
+ *   .maxRequestLength(8192)
+ *   .exceptionHandler((ctx, request, cause) -> HttpResponse.of(400))
+ *   .pathPrefix("/foo")
+ *   .verboseResponses(true)
+ *   .contentPreview(500)
+ *   .buildAnnotated(new Service())                         // Return to the ServerBuilder.
+ *   .build();
+ * }</pre>
+ *
+ * @see ServiceBindingBuilder
+ */
 public class AnnotatedServiceBindingBuilder extends AbstractServiceBuilder {
 
     private final ServerBuilder serverBuilder;
@@ -134,7 +155,8 @@ public class AnnotatedServiceBindingBuilder extends AbstractServiceBuilder {
     }
 
     @Override
-    public AnnotatedServiceBindingBuilder accessLogWriter(AccessLogWriter accessLogWriter, boolean shutdownOnStop) {
+    public AnnotatedServiceBindingBuilder accessLogWriter(AccessLogWriter accessLogWriter,
+                                                          boolean shutdownOnStop) {
         return (AnnotatedServiceBindingBuilder) super.accessLogWriter(accessLogWriter, shutdownOnStop);
     }
 
@@ -150,12 +172,12 @@ public class AnnotatedServiceBindingBuilder extends AbstractServiceBuilder {
                                                                             requestConverterFunctions,
                                                                             responseConverterFunctions);
         final List<AnnotatedHttpServiceElement> elements =
-            AnnotatedHttpServiceFactory.find(pathPrefix, service, exceptionHandlersAndConverters);
+                AnnotatedHttpServiceFactory.find(pathPrefix, service, exceptionHandlersAndConverters);
         elements.forEach(e -> {
             Service<HttpRequest, HttpResponse> s = e.service();
             // Apply decorators which are specified in the service class.
             s = e.decorator().apply(s);
-
+            // Apply decorator passed in through this builder
             s = decorate(s);
             // If there is a decorator, we should add one more decorator which handles an exception
             // raised from decorators.
