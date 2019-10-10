@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroup.DEFAULT_HEALTH_CHECK_RETRY_BACKOFF;
+import static com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroup.DEFAULT_HEALTH_CHECK_STRATEGY;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -45,6 +46,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
     private ClientFactory clientFactory = ClientFactory.DEFAULT;
     private Function<? super ClientOptionsBuilder, ClientOptionsBuilder> configurator = Function.identity();
     private int port;
+    private HealthCheckStrategy healthCheckStrategy = DEFAULT_HEALTH_CHECK_STRATEGY;
 
     /**
      * Creates a new {@link AbstractHealthCheckedEndpointGroupBuilder}.
@@ -156,11 +158,20 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
     }
 
     /**
+     * Sets the health check strategy
+     */
+    public AbstractHealthCheckedEndpointGroupBuilder healthCheckStrategy(HealthCheckStrategy healthCheckStrategy) {
+        this.healthCheckStrategy = requireNonNull(healthCheckStrategy, "healthCheckStrategy");
+        return this;
+    }
+
+    /**
      * Returns a newly created {@link HealthCheckedEndpointGroup} based on the properties set so far.
      */
     public HealthCheckedEndpointGroup build() {
         return new HealthCheckedEndpointGroup(delegate, clientFactory, protocol, port,
-                                              retryBackoff, configurator, newCheckerFactory());
+                                              retryBackoff, configurator, newCheckerFactory(),
+                                              healthCheckStrategy);
     }
 
     /**

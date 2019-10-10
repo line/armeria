@@ -102,6 +102,12 @@ public class HealthCheckedEndpointGroupBuilder extends AbstractHealthCheckedEndp
     }
 
     @Override
+    public HealthCheckedEndpointGroupBuilder healthCheckStrategy(
+            HealthCheckStrategy healthCheckStrategy) {
+        return (HealthCheckedEndpointGroupBuilder) super.healthCheckStrategy(healthCheckStrategy);
+    }
+
+    @Override
     protected Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory() {
         return new HttpHealthCheckerFactory(path, useGet);
     }
