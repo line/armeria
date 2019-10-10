@@ -84,13 +84,17 @@ By default, :api:`HttpFileService` caches up to 1024 files whose length is less 
             HttpFileServiceBuilder.forFileSystem("/var/lib/www/images");
 
     // Cache up to 4096 files.
-    fsb.maxCacheEntries(4096);
+    fsb.entryCacheSpec("maximumSize=4096");
     // Cache files whose length is less than or equal to 1 MiB.
     fsb.maxCacheEntrySizeBytes(1048576);
 
     HttpFileService fs = fsb.build();
 
-The cache can also be disabled by specifying ``0`` for ``maxCacheEntries()``.
+The cache can be disabled by specifying ``0`` for ``maxCacheEntries()``.
+You can also specify a custom cache specification using ``entryCacheSpec()``,
+as defined in `Caffeine documentation <https://static.javadoc.io/com.github.ben-manes.caffeine/caffeine/2.8.0/com/github/benmanes/caffeine/cache/CaffeineSpec.html>`_.
+Or, you can override the default cache specification of ``maximumSize=1024`` using
+the JVM property ``-Dcom.linecorp.armeria.fileServiceCache=<spec>``.
 
 Serving pre-compressed files
 ----------------------------

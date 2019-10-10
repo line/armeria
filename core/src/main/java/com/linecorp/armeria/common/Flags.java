@@ -282,6 +282,10 @@ public final class Flags {
     private static final Optional<String> HEADER_VALUE_CACHE_SPEC =
             caffeineSpec("headerValueCache", DEFAULT_HEADER_VALUE_CACHE_SPEC);
 
+    private static final String DEFAULT_FILE_SERVICE_CACHE_SPEC = "maximumSize=1024";
+    private static final Optional<String> FILE_SERVICE_CACHE_SPEC =
+            caffeineSpec("fileServiceCache", DEFAULT_FILE_SERVICE_CACHE_SPEC);
+
     private static final String DEFAULT_CACHED_HEADERS =
             ":authority,:scheme,:method,accept-encoding,content-type";
     private static final List<String> CACHED_HEADERS =
@@ -770,6 +774,19 @@ public final class Flags {
      */
     public static Optional<String> headerValueCacheSpec() {
         return HEADER_VALUE_CACHE_SPEC;
+    }
+
+    /**
+     * Returns the value of the {@code fileServiceCache} parameter. It would be used to create a Caffeine
+     * {@link Cache} instance using {@link CaffeineSpec} for caching file entries.
+     *
+     * <p>The default value of this flag is {@value DEFAULT_FILE_SERVICE_CACHE_SPEC}. Specify the
+     * {@code -Dcom.linecorp.armeria.fileServiceCache=<spec>} JVM option to override the default value.
+     * For example, {@code -Dcom.linecorp.armeria.fileServiceCache=maximumSize=1024,expireAfterAccess=600s}.
+     * Also, specify {@code -Dcom.linecorp.armeria.fileServiceCache=off} JVM option to disable it.
+     */
+    public static Optional<String> fileServiceCacheSpec() {
+        return FILE_SERVICE_CACHE_SPEC;
     }
 
     /**
