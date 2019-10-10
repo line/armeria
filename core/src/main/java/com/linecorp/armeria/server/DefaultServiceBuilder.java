@@ -32,6 +32,11 @@ import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
+/**
+ * A default implementation of {@link ServiceBuilder} that stores service related settings
+ * and provides a method {@link DefaultServiceBuilder#serviceConfigBuilder(Route, Service)} to buid
+ * {@link ServiceConfigBuilder}
+ */
 class DefaultServiceBuilder implements ServiceBuilder {
     @Nullable
     private Long requestTimeoutMillis;
