@@ -187,9 +187,6 @@ class HttpFileServiceTest {
                 assertThat(PathAndQuery.cachedPaths()).contains(
                         "/cached/classes/java/lang/Object.class");
             }
-        }
-
-        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             // Read a class from a JDK module (java.base).
             try (CloseableHttpResponse res =
                          hc.execute(new HttpGet(baseUri + "/by-entry/classes/java/lang/Object.class"))) {
@@ -217,9 +214,6 @@ class HttpFileServiceTest {
                 assertThat(PathAndQuery.cachedPaths()).contains(
                         "/cached/classes/io/netty/util/NetUtil.class");
             }
-        }
-
-        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             // Read a class from a third-party library JAR.
             try (CloseableHttpResponse res =
                          hc.execute(new HttpGet(baseUri + "/by-entry/classes/io/netty/util/NetUtil.class"))) {
@@ -271,7 +265,7 @@ class HttpFileServiceTest {
         Files.write(grandchildFile, "grandchild_file".getBytes(StandardCharsets.UTF_8));
         Files.write(customIndexFile, "custom_index_file".getBytes(StandardCharsets.UTF_8));
 
-        String basePath = new URI(baseUri).getPath();
+        final String basePath = new URI(baseUri).getPath();
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             // Ensure auto-redirect works as expected.
