@@ -104,6 +104,11 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     }
 
     @Override
+    public UUID uuid() {
+        return delegate().uuid();
+    }
+
+    @Override
     public HttpMethod method() {
         return delegate().method();
     }
@@ -116,11 +121,6 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     @Override
     public String decodedPath() {
         return delegate().decodedPath();
-    }
-
-    @Override
-    public UUID uuid() {
-        return delegate().uuid();
     }
 
     @Override

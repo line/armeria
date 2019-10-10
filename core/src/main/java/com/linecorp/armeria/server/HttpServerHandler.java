@@ -322,9 +322,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final String hostname = hostname(headers);
         final VirtualHost host = config.findVirtualHost(hostname);
-
         final RoutingContext routingCtx =
-                DefaultRoutingContext.of(host, hostname, pathAndQuery.path(), pathAndQuery.query(),
+                DefaultRoutingContext.of(host, hostname, UUID.randomUUID(), pathAndQuery.path(), pathAndQuery.query(),
                                          headers, isCorsPreflightRequest(req));
         // Find the service that matches the path.
         final Routed<ServiceConfig> routed;
@@ -693,7 +692,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         EarlyRespondingRequestContext(Channel channel, MeterRegistry meterRegistry,
                                       SessionProtocol sessionProtocol, HttpMethod method, String path,
                                       @Nullable String query, HttpRequest request) {
-            super(meterRegistry, sessionProtocol, method, path, UUID.randomUUID(), query, request, null);
+            super(meterRegistry, sessionProtocol, UUID.randomUUID(), method, path, query, request, null);
             this.channel = requireNonNull(channel, "channel");
             requestLog = new DefaultRequestLog(this);
         }

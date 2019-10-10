@@ -443,7 +443,7 @@ public class RequestContextTest {
     private class DummyRequestContext extends NonWrappingRequestContext {
         DummyRequestContext() {
             super(NoopMeterRegistry.get(), SessionProtocol.HTTP,
-                  HttpMethod.GET, "/", UUID.randomUUID(), null, HttpRequest.streaming(HttpMethod.GET, "/"), null);
+                  UUID.randomUUID(), HttpMethod.GET, "/", null, HttpRequest.streaming(HttpMethod.GET, "/"), null);
         }
 
         @Override

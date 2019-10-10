@@ -105,10 +105,10 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      */
     public DefaultClientRequestContext(
             EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            HttpMethod method, String path, UUID uuid, @Nullable String query, @Nullable String fragment,
+            UUID uuid, HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
         this(null, requireNonNull(eventLoop, "eventLoop"), meterRegistry, sessionProtocol,
-             method, path, uuid, query, fragment, options, req, rpcReq);
+             uuid, method, path, query, fragment, options, req, rpcReq);
     }
 
     /**
@@ -123,18 +123,18 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      */
     public DefaultClientRequestContext(
             ClientFactory factory, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            HttpMethod method, String path, UUID uuid, @Nullable String query, @Nullable String fragment,
-            ClientOptions options,  @Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
+            UUID uuid, HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
+            ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
         this(requireNonNull(factory, "factory"), null, meterRegistry, sessionProtocol,
-             method, path, uuid, query, fragment, options, req, rpcReq);
+             uuid, method, path, query, fragment, options, req, rpcReq);
     }
 
     private DefaultClientRequestContext(
             @Nullable ClientFactory factory, @Nullable EventLoop eventLoop, MeterRegistry meterRegistry,
-            SessionProtocol sessionProtocol, HttpMethod method, String path, UUID uuid, @Nullable String query,
+            SessionProtocol sessionProtocol, UUID uuid, HttpMethod method, String path, @Nullable String query,
             @Nullable String fragment, ClientOptions options,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
-        super(meterRegistry, sessionProtocol, method, path, uuid, query, req, rpcReq);
+        super(meterRegistry, sessionProtocol, uuid, method, path, query, req, rpcReq);
 
         this.factory = factory;
         this.eventLoop = eventLoop;
@@ -255,10 +255,8 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
                                         @Nullable HttpRequest req,
                                         @Nullable RpcRequest rpcReq,
                                         Endpoint endpoint) {
-        super(ctx.meterRegistry(), ctx.sessionProtocol(), ctx.method(), ctx.path(), ctx.uuid(), ctx.query(), req, rpcReq);
+        super(ctx.meterRegistry(), ctx.sessionProtocol(), ctx.uuid(), ctx.method(), ctx.path(), ctx.query(), req, rpcReq);
 
-        //the new request change uuid.
-        uuid = UUID.randomUUID();
         eventLoop = ctx.eventLoop();
         options = ctx.options();
         endpointSelector = ctx.endpointSelector();
