@@ -12,7 +12,7 @@
   <suppress checks=".*" files="[\\/]gen-src[\\/]" />
   <!-- Suppress checks in large forks to make diffing against upstream easier. -->
   <suppress checks=".*" files="[\\/]common[\\/]MediaType.java$" />
-  <suppress checks=".*" files="|[\\/]internal[\\/]DefaultAttributeMap.java" />
+  <suppress checks=".*" files="[\\/]internal[\\/]DefaultAttributeMap.java" />
   <suppress checks=".*" files="[\\/]reactive[\\/]DefaultSslInfo.java" />
   <!-- Enable 'NonNullByDefaultAnnotation' for package-info.java only. -->
   <suppress id="NonNullByDefaultAnnotation" files="(?&lt;![\\/]package-info\.java)$" />

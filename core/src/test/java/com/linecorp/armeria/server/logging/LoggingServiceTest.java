@@ -88,7 +88,7 @@ public class LoggingServiceTest {
 
         when(ctx.log()).thenReturn(log);
         doAnswer(invocation -> {
-            RequestLogListener listener = invocation.getArgument(0);
+            final RequestLogListener listener = invocation.getArgument(0);
             listener.onRequestLog(log);
             return null;
         }).when(log).addListener(isA(RequestLogListener.class), isA(RequestLogAvailability.class));

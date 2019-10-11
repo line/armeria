@@ -386,7 +386,7 @@ class HttpServerTest {
 
             sb.service("/additional-trailers-no-other-trailers", (ctx, req) -> {
                 ctx.addAdditionalResponseTrailer(HttpHeaderNames.of("additional-trailer"), "value2");
-                String payload = "foobar";
+                final String payload = "foobar";
                 return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
                                        new DefaultHttpData(payload.getBytes(StandardCharsets.UTF_8),
                                                            true));
@@ -394,7 +394,7 @@ class HttpServerTest {
 
             sb.service("/additional-trailers-no-eos", (ctx, req) -> {
                 ctx.addAdditionalResponseTrailer(HttpHeaderNames.of("additional-trailer"), "value2");
-                String payload = "foobar";
+                final String payload = "foobar";
                 return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
                                        new DefaultHttpData(payload.getBytes(StandardCharsets.UTF_8),
                                                            false));

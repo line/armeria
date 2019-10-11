@@ -119,9 +119,9 @@ class ThriftDynamicTimeoutTest {
     private static final class ClientDecoratorProvider implements ArgumentsProvider {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
-            Function<Client<RpcRequest, RpcResponse>,
+            final Function<Client<RpcRequest, RpcResponse>,
                     Client<RpcRequest, RpcResponse>> newDynamicTimeoutClient = DynamicTimeoutClient::new;
-            Function<Client<RpcRequest, RpcResponse>,
+            final Function<Client<RpcRequest, RpcResponse>,
                     Client<RpcRequest, RpcResponse>> newTimeoutDisablingClient = TimeoutDisablingClient::new;
             return Stream.of(newDynamicTimeoutClient, newTimeoutDisablingClient).map(Arguments::of);
         }

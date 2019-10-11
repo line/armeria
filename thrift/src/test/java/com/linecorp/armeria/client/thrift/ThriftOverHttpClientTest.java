@@ -126,7 +126,7 @@ class ThriftOverHttpClientTest {
     };
 
     private static final BinaryService.Iface binaryHandler = data -> {
-        ByteBuffer result = ByteBuffer.allocate(data.remaining());
+        final ByteBuffer result = ByteBuffer.allocate(data.remaining());
         for (int i = data.position(), j = 0; i < data.limit(); i++, j++) {
             result.put(j, (byte) (data.get(i) + 1));
         }

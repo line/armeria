@@ -1056,7 +1056,7 @@ class GrpcServiceServerTest {
                 assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
             });
 
-            byte[] deframed = Arrays.copyOfRange(payload.get(), 5, payload.get().length);
+            final byte[] deframed = Arrays.copyOfRange(payload.get(), 5, payload.get().length);
             assertThat(new String(deframed, StandardCharsets.UTF_8)).contains("oauthScope");
         });
     }
@@ -1092,7 +1092,7 @@ class GrpcServiceServerTest {
             assertThat(requestHeaders.get().get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo(
                     "application/grpc+json");
 
-            byte[] deframed = Arrays.copyOfRange(payload.get(), 5, payload.get().length);
+            final byte[] deframed = Arrays.copyOfRange(payload.get(), 5, payload.get().length);
             assertThat(new String(deframed, StandardCharsets.UTF_8)).contains("oauth_scope");
         });
     }
