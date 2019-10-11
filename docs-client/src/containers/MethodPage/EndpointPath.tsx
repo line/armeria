@@ -24,7 +24,7 @@ const endpointPathPlaceHolder = '/foo/bar';
 interface Props {
   endpointPathOpen: boolean;
   endpointPath: string;
-  onEditEndpointPathClick: () => void;
+  onEditEndpointPathClick: React.Dispatch<unknown>;
   onEndpointPathChange: (e: ChangeEvent<HTMLInputElement>) => void;
 }
 

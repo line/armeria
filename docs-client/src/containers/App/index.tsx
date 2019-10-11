@@ -209,7 +209,7 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                         )
                       }
                     >
-                      <Grid container alignItems="center" spacing={5}>
+                      <Grid container alignItems="center">
                         <Grid item xs={4}>
                           <Typography
                             className={httpMethodClass(method.httpMethod)}

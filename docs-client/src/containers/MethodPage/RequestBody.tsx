@@ -26,7 +26,7 @@ const jsonPlaceHolder = jsonPrettify('{"foo":"bar"}');
 interface Props {
   requestBodyOpen: boolean;
   requestBody: string;
-  onEditRequestBodyClick: () => void;
+  onEditRequestBodyClick: React.Dispatch<unknown>;
   onDebugFormChange: (e: ChangeEvent<HTMLInputElement>) => void;
 }
 
