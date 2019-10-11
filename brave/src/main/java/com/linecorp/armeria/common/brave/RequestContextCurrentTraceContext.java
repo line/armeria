@@ -20,8 +20,11 @@ import static com.linecorp.armeria.internal.brave.TraceContextUtil.getTraceConte
 import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import javax.annotation.Nullable;
 
@@ -29,6 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.brave.BraveClient;
 import com.linecorp.armeria.common.RequestContext;
@@ -80,7 +84,8 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         }
     }
 
-    private static final CurrentTraceContext DEFAULT = new RequestContextCurrentTraceContext(new Builder());
+    private static final RequestContextCurrentTraceContext DEFAULT =
+            new RequestContextCurrentTraceContext(new Builder());
 
     private static final Logger logger = LoggerFactory.getLogger(RequestContextCurrentTraceContext.class);
 
@@ -101,7 +106,41 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         }
     };
 
-    static final class Builder extends CurrentTraceContext.Builder {
+    public static final class Builder extends CurrentTraceContext.Builder {
+
+        private final ImmutableList.Builder<Pattern> nonRequestThreadPatterns = ImmutableList.builder();
+
+        /**
+         * Sets a regular expression that matches names of threads that should be considered non-request
+         * threads, meaning they may have spans created for clients outside of the context of an Armeria
+         * request. For example, this can be set to {@code "^RMI TCP Connection.*"} if you use RMI to serve
+         * monitoring requests.
+         *
+         * @see #setCurrentThreadNotRequestThread(boolean)
+         */
+        public RequestContextCurrentTraceContext.Builder nonRequestThread(String pattern) {
+            requireNonNull(pattern, "pattern");
+            final Pattern compiled;
+            try {
+                compiled = Pattern.compile(pattern);
+            } catch (PatternSyntaxException e) {
+                throw new IllegalArgumentException("Invalid regex: " + pattern);
+            }
+            return nonRequestThread(compiled);
+        }
+
+        /**
+         * Sets a regular expression that matches names of threads that should be considered non-request
+         * threads, meaning they may have spans created for clients outside of the context of an Armeria
+         * request. For example, this can be set to {@code Pattern.compile("^RMI TCP Connection.*")} if you use
+         * RMI to serve monitoring requests.
+         *
+         * @see #setCurrentThreadNotRequestThread(boolean)
+         */
+        public RequestContextCurrentTraceContext.Builder nonRequestThread(Pattern pattern) {
+            nonRequestThreadPatterns.add(requireNonNull(pattern, "pattern"));
+            return this;
+        }
 
         @Override
         public CurrentTraceContext build() {
@@ -117,7 +156,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
      *
      * @see Tracing.Builder#currentTraceContext(CurrentTraceContext)
      */
-    public static CurrentTraceContext ofDefault() {
+    public static RequestContextCurrentTraceContext ofDefault() {
         return DEFAULT;
     }
 
@@ -127,7 +166,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
      *
      * @see Tracing.Builder#currentTraceContext(CurrentTraceContext)
      */
-    public static CurrentTraceContext.Builder builder() {
+    public static RequestContextCurrentTraceContext.Builder builder() {
         return new Builder();
     }
 
@@ -155,8 +194,12 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         }
     }
 
+    private final List<Pattern> nonRequestThreadPatterns;
+
     private RequestContextCurrentTraceContext(Builder builder) {
         super(builder);
+
+        nonRequestThreadPatterns = builder.nonRequestThreadPatterns.build();
     }
 
     @Override
@@ -248,7 +291,18 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
      * Armeria code should always have a request context available, and this won't work without it.
      */
     @Nullable
-    private static RequestContext getRequestContextOrWarnOnce() {
+    private RequestContext getRequestContextOrWarnOnce() {
+        if (Boolean.TRUE.equals(THREAD_NOT_REQUEST_THREAD.get())) {
+            return null;
+        }
+        if (!nonRequestThreadPatterns.isEmpty()) {
+            final String threadName = Thread.currentThread().getName();
+            for (Pattern pattern : nonRequestThreadPatterns) {
+                if (pattern.matcher(threadName).matches()) {
+                    return null;
+                }
+            }
+        }
         return RequestContext.mapCurrent(Function.identity(), LogRequestContextWarningOnce.INSTANCE);
     }
 
@@ -256,7 +310,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
      * Armeria code should always have a request context available, and this won't work without it.
      */
     @Nullable
-    private static Attribute<TraceContext> getTraceContextAttributeOrWarnOnce() {
+    private Attribute<TraceContext> getTraceContextAttributeOrWarnOnce() {
         final RequestContext ctx = getRequestContextOrWarnOnce();
         if (ctx == null) {
             return null;
@@ -271,9 +325,6 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         @Override
         @Nullable
         public RequestContext get() {
-            if (Boolean.TRUE.equals(THREAD_NOT_REQUEST_THREAD.get())) {
-                return null;
-            }
             ClassLoaderHack.loadMe();
             return null;
         }

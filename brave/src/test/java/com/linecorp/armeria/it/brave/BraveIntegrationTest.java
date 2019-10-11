@@ -47,6 +47,7 @@ import org.junit.Test;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.Uninterruptibles;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.Clients;
@@ -62,6 +63,7 @@ import com.linecorp.armeria.common.brave.HelloService;
 import com.linecorp.armeria.common.brave.HelloService.AsyncIface;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.thrift.ThriftCompletableFuture;
+import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
@@ -230,6 +232,7 @@ public class BraveIntegrationTest {
     private static Tracing newTracing(String name) {
         final CurrentTraceContext currentTraceContext =
                 RequestContextCurrentTraceContext.builder()
+                                                 .nonRequestThread("^nonrequest-.*")
                                                  .addScopeDecorator(StrictScopeDecorator.create())
                                                  .build();
         return Tracing.newBuilder()
@@ -439,6 +442,27 @@ public class BraveIntegrationTest {
         }
     }
 
+    @Test(timeout = 10000)
+    public void testNonRequestContextThreadPatternTraceable() throws Exception {
+        final CountDownLatch done = new CountDownLatch(1);
+        ThreadFactories.builder("nonrequest-").eventLoop(false)
+                       .build()
+                       .newThread(() -> {
+                           final Tracing tracing = newTracing("no-request");
+                           final ScopedSpan span1 = tracing.tracer().startScopedSpan("span1");
+                           final ScopedSpan span2 = tracing.tracer().startScopedSpan("span2");
+
+                           assertThat(span2.context().traceId()).isEqualTo(span1.context().traceId());
+
+                           span2.finish();
+                           span1.finish();
+
+                           spanReporter.take(2);
+                           done.countDown();
+                       }).start();
+        done.await();
+    }
+
     private static Span findSpan(Span[] spans, String serviceName) {
         return Arrays.stream(spans)
                      .filter(s -> serviceName.equals(s.localServiceName()))
@@ -474,10 +498,10 @@ public class BraveIntegrationTest {
             spans.add(span);
         }
 
-        Span[] take(int numSpans) throws InterruptedException {
+        Span[] take(int numSpans) {
             final List<Span> taken = new ArrayList<>();
             while (taken.size() < numSpans) {
-                taken.add(spans.take());
+                taken.add(Uninterruptibles.takeUninterruptibly(spans));
             }
 
             // Reverse the collected spans to sort the spans by request time.
