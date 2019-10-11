@@ -18,7 +18,6 @@ package com.linecorp.armeria.server;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
@@ -447,7 +446,7 @@ public class ServerTest {
         final Gauge gauge = meterRegistry.find("armeria.build.info")
                                          .tagKeys("version", "commit", "repostatus")
                                          .gauge();
-        assertNotNull(gauge);
+        assertThat(gauge).isNotNull();
         assertThat(gauge.value()).isOne();
     }
 
