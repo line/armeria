@@ -321,8 +321,10 @@ public final class Server implements AutoCloseable {
         final Version versionInfo = map.get("armeria");
         final String version = versionInfo.artifactVersion();
         final String commit = versionInfo.longCommitHash();
+        final String repositoryStatus = versionInfo.repositoryStatus();
         final List<Tag> tags = ImmutableList.of(Tag.of("version", version),
-                                                Tag.of("commit", commit));
+                                                Tag.of("commit", commit),
+                                                Tag.of("repostatus", repositoryStatus));
         Gauge.builder("armeria.build.info", () -> 1)
              .tags(tags)
              .description("A metric with a constant '1' value labeled by version and commit hash"
