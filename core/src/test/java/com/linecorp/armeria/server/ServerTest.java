@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
@@ -67,6 +68,7 @@ import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.http.HttpStatusClass;
@@ -442,10 +444,11 @@ public class ServerTest {
         server.setupVersionMetrics();
 
         final MeterRegistry meterRegistry = server.config().meterRegistry();
-        assertThat(meterRegistry.find("armeria.build.info")
-                                .gauge()
-                                .value())
-                .isOne();
+        final Gauge gauge = meterRegistry.find("armeria.build.info")
+                                         .tagKeys("version", "commit", "repostatus")
+                                         .gauge();
+        assertNotNull(gauge);
+        assertThat(gauge.value()).isOne();
     }
 
     private static void testSimple(
