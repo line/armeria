@@ -204,11 +204,11 @@ public class WeightedRoundRobinStrategyTest {
         assertThat(EndpointGroupRegistry.selectNode(ctx, groupName).authority()).isEqualTo("127.0.0.1:3456");
 
         //weight dynamic with random weight
-        Random rnd = new Random();
+        final Random rnd = new Random();
 
-        DynamicEndpointGroup dynamic = new DynamicEndpointGroup();
-        int numberOfEndpoint = 500;
-        int[] weights = new int[numberOfEndpoint];
+        final DynamicEndpointGroup dynamic = new DynamicEndpointGroup();
+        final int numberOfEndpoint = 500;
+        final int[] weights = new int[numberOfEndpoint];
 
         long totalWeight = 0;
         for (int i = 0; i < numberOfEndpoint; i++) {

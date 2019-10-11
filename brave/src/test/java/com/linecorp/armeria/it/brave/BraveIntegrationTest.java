@@ -141,7 +141,7 @@ public class BraveIntegrationTest {
                                             countDownLatch.countDown();
                                             countDownLatch.await();
                                         }
-                                        brave.Span span = Tracing.currentTracer().nextSpan().start();
+                                        final brave.Span span = Tracing.currentTracer().nextSpan().start();
                                         try (SpanInScope spanInScope =
                                                      Tracing.currentTracer().withSpanInScope(span)) {
                                             if (i == 1) {
@@ -162,8 +162,8 @@ public class BraveIntegrationTest {
                                    result -> allAsList(IntStream.range(1, 3).mapToObj(
                                            i -> executorService.submit(
                                                    RequestContext.current().makeContextAware(() -> {
-                                                       ScopedSpan span = Tracing.currentTracer()
-                                                                                .startScopedSpan("aloha");
+                                                       final ScopedSpan span = Tracing.currentTracer()
+                                                                                      .startScopedSpan("aloha");
                                                        try {
                                                            return null;
                                                        } finally {

@@ -150,7 +150,7 @@ public class GrpcClientTest {
                                         ServerCall<REQ, RESP> call,
                                         Metadata requestHeaders,
                                         ServerCallHandler<REQ, RESP> next) {
-                                    HttpHeadersBuilder fromClient = HttpHeaders.builder();
+                                    final HttpHeadersBuilder fromClient = HttpHeaders.builder();
                                     MetadataUtil.fillHeaders(requestHeaders, fromClient);
                                     CLIENT_HEADERS_CAPTURE.set(fromClient.build());
                                     return next.startCall(
@@ -235,7 +235,7 @@ public class GrpcClientTest {
 
     @Test
     public void emptyUnary_grpcWeb() throws Exception {
-        TestServiceBlockingStub stub = new ClientBuilder("gproto-web+" + server.httpUri("/"))
+        final TestServiceBlockingStub stub = new ClientBuilder("gproto-web+" + server.httpUri("/"))
                 .build(TestServiceBlockingStub.class);
         assertThat(stub.emptyCall(EMPTY)).isEqualTo(EMPTY);
     }
@@ -807,8 +807,8 @@ public class GrpcClientTest {
                         ClientOption.HTTP_HEADERS.newValue(
                                 HttpHeaders.of(TestServiceImpl.EXTRA_HEADER_NAME, "dog")));
 
-        AtomicReference<Metadata> headers = new AtomicReference<>();
-        AtomicReference<Metadata> trailers = new AtomicReference<>();
+        final AtomicReference<Metadata> headers = new AtomicReference<>();
+        final AtomicReference<Metadata> trailers = new AtomicReference<>();
         stub = MetadataUtils.captureMetadata(stub, headers, trailers);
 
         assertThat(stub.emptyCall(EMPTY)).isNotNull();
@@ -831,13 +831,13 @@ public class GrpcClientTest {
 
     @Test
     public void exchangeHeadersUnaryCall_grpcMetadata() throws Exception {
-        Metadata metadata = new Metadata();
+        final Metadata metadata = new Metadata();
         metadata.put(TestServiceImpl.EXTRA_HEADER_KEY, "dog");
 
         TestServiceBlockingStub stub = MetadataUtils.attachHeaders(blockingStub, metadata);
 
-        AtomicReference<Metadata> headers = new AtomicReference<>();
-        AtomicReference<Metadata> trailers = new AtomicReference<>();
+        final AtomicReference<Metadata> headers = new AtomicReference<>();
+        final AtomicReference<Metadata> trailers = new AtomicReference<>();
         stub = MetadataUtils.captureMetadata(stub, headers, trailers);
 
         assertThat(stub.emptyCall(EMPTY)).isNotNull();

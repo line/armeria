@@ -277,7 +277,8 @@ public class ThriftOverHttpClientTServletIntegrationTest {
             fail();
         } catch (UnprocessedRequestException e) {
             assertThat(e).hasCauseInstanceOf(SessionProtocolNegotiationException.class);
-            SessionProtocolNegotiationException cause = (SessionProtocolNegotiationException) e.getCause();
+            final SessionProtocolNegotiationException cause =
+                    (SessionProtocolNegotiationException) e.getCause();
 
             // Test if a failed upgrade attempt triggers an exception with
             // both 'expected' and 'actual' protocols.
@@ -292,7 +293,8 @@ public class ThriftOverHttpClientTServletIntegrationTest {
             fail();
         } catch (UnprocessedRequestException e) {
             assertThat(e).hasCauseInstanceOf(SessionProtocolNegotiationException.class);
-            SessionProtocolNegotiationException cause = (SessionProtocolNegotiationException) e.getCause();
+            final SessionProtocolNegotiationException cause =
+                    (SessionProtocolNegotiationException) e.getCause();
             // Test if no upgrade attempt is made thanks to the cache.
             assertThat(cause.expected()).isEqualTo(H2C);
             // It has no idea about the actual protocol, because it did not create any connection.
