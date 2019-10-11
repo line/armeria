@@ -154,7 +154,7 @@ public final class SystemInfo {
         return JavaVersionSpecific.get().currentTimeMicros();
     }
 
-    private static boolean isLinux() {
+    public static boolean isLinux() {
         return Ascii.toLowerCase(System.getProperty("os.name", "")).startsWith("linux");
     }
 
