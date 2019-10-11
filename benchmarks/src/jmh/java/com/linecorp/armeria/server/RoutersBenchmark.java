@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.openjdk.jmh.annotations.Benchmark;
 import org.slf4j.helpers.NOPLogger;
@@ -62,7 +63,7 @@ public class RoutersBenchmark {
 
     @Benchmark
     public Routed<ServiceConfig> exactMatch() {
-        final RoutingContext ctx = DefaultRoutingContext.of(HOST, "localhost", METHOD1_HEADERS.path(),
+        final RoutingContext ctx = DefaultRoutingContext.of(HOST, "localhost", UUID.randomUUID(), METHOD1_HEADERS.path(),
                                                             null, METHOD1_HEADERS, false);
         final Routed<ServiceConfig> routed = ROUTER.find(ctx);
         if (routed.value() != SERVICES.get(0)) {
