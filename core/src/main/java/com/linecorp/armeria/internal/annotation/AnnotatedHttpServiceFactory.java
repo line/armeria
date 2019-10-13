@@ -49,6 +49,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
@@ -90,6 +91,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.annotation.AdditionalHeader;
 import com.linecorp.armeria.server.annotation.AdditionalTrailer;
+import com.linecorp.armeria.server.annotation.Blocking;
 import com.linecorp.armeria.server.annotation.ConsumeType;
 import com.linecorp.armeria.server.annotation.Consumes;
 import com.linecorp.armeria.server.annotation.Decorator;
@@ -295,6 +297,9 @@ public final class AnnotatedHttpServiceFactory {
                 getAnnotatedInstances(method, clazz, ResponseConverter.class, ResponseConverterFunction.class)
                         .addAll(baseResponseConverters).build();
 
+        final boolean useBlocking = findFirst(method, Blocking.class).map(Blocking::value)
+                                                                     .orElse(defaultBlocking(method));
+
         List<AnnotatedValueResolver> resolvers;
         try {
             resolvers = AnnotatedValueResolver.ofServiceMethod(method, route.paramNames(),
@@ -381,6 +386,15 @@ public final class AnnotatedHttpServiceFactory {
                                                                                defaultHeaders.build(),
                                                                                defaultTrailers.build()),
                                                decorator(method, clazz, initialDecorator));
+    }
+
+    /**
+     * Returns the default value if you do not use {@link Blocking} in annotated methods.
+     */
+    private static boolean defaultBlocking(Method method) {
+        final Class<?> returnType = method.getReturnType();
+        return !(returnType.isAssignableFrom(HttpResponse.class) ||
+                 CompletionStage.class.isAssignableFrom(returnType));
     }
 
     /**
