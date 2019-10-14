@@ -203,6 +203,9 @@ public final class ServerBuilder {
     private Function<VirtualHost, Logger> accessLoggerMapper = host -> LoggerFactory.getLogger(
             defaultAccessLoggerName(host.hostnamePattern()));
 
+    private boolean defaultServerNameResponseHeader = true;
+    private boolean defaultServerDateResponseHeader = true;
+
     /**
      * Returns a new {@link ServerBuilder}.
      *
@@ -1503,6 +1506,28 @@ public final class ServerBuilder {
     }
 
     /**
+     * Sets whether the response header will include Server header.
+     */
+    public ServerBuilder setDefaultServerNameResponseHeader(boolean defaultServerNameResponseHeader) {
+        this.defaultServerNameResponseHeader = defaultServerNameResponseHeader;
+        return this;
+    }
+
+    boolean defaultServerNameResponseHeader() { return defaultServerNameResponseHeader; }
+
+    /**
+     * Sets whether the response header will include Date header.
+     */
+    public ServerBuilder setDefaultServerDateResponseHeader(boolean defaultServerDateResponseHeader) {
+        this.defaultServerDateResponseHeader = defaultServerDateResponseHeader;
+        return this;
+    }
+
+    boolean defaultServerDateResponseHeader() {
+        return defaultServerDateResponseHeader;
+    }
+
+    /**
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
@@ -1586,7 +1611,8 @@ public final class ServerBuilder {
                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
                 meterRegistry, serviceLoggerPrefix, accessLogWriter, shutdownAccessLogWriterOnStop,
                 proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
-                clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter), sslContexts);
+                clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter,
+                defaultServerNameResponseHeader, defaultServerDateResponseHeader), sslContexts);
 
         serverListeners.forEach(server::addListener);
         return server;

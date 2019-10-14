@@ -29,6 +29,9 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.IdentityHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -365,6 +368,16 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 serviceCfg, channel, serviceCfg.server().meterRegistry(),
                 protocol, routingCtx, routingResult, req, getSSLSession(channel),
                 proxiedAddresses, clientAddress);
+
+        if (config.defaultServerNameResponseHeader()) {
+            reqCtx.addAdditionalResponseHeader(HttpHeaderNames.SERVER, "armeria");
+        }
+
+        if (config.defaultServerDateResponseHeader()) {
+            reqCtx.addAdditionalResponseHeader(HttpHeaderNames.DATE,
+                                               DateTimeFormatter.RFC_1123_DATE_TIME.format(
+                                                       ZonedDateTime.now(ZoneOffset.UTC)));
+        }
 
         try (SafeCloseable ignored = reqCtx.push()) {
             final RequestLogBuilder logBuilder = reqCtx.logBuilder();

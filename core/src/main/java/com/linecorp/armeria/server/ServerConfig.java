@@ -109,6 +109,9 @@ public final class ServerConfig {
     @Nullable
     private String strVal;
 
+    private boolean defaultServerNameResponseHeader;
+    private boolean defaultServerDateResponseHeader;
+
     ServerConfig(
             Iterable<ServerPort> ports,
             VirtualHost defaultVirtualHost, Iterable<VirtualHost> virtualHosts,
@@ -126,7 +129,8 @@ public final class ServerConfig {
             Map<ChannelOption<?>, Object> childChannelOptions,
             List<ClientAddressSource> clientAddressSources,
             Predicate<InetAddress> clientAddressTrustedProxyFilter,
-            Predicate<InetAddress> clientAddressFilter) {
+            Predicate<InetAddress> clientAddressFilter,
+            boolean defaultServerNameResponseHeader, boolean defaultServerDateResponseHeader) {
 
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
@@ -243,6 +247,9 @@ public final class ServerConfig {
         services = virtualHostsCopy.stream()
                                    .flatMap(h -> h.serviceConfigs().stream())
                                    .collect(toImmutableList());
+
+        this.defaultServerNameResponseHeader = defaultServerNameResponseHeader;
+        this.defaultServerDateResponseHeader = defaultServerDateResponseHeader;
     }
 
     static int validateMaxNumConnections(int maxNumConnections) {
@@ -641,6 +648,16 @@ public final class ServerConfig {
     public Predicate<InetAddress> clientAddressFilter() {
         return clientAddressFilter;
     }
+
+    /**
+     * Returns whether the response header will include Server header.
+     */
+    public boolean defaultServerNameResponseHeader() { return defaultServerNameResponseHeader; }
+
+    /**
+     * Returns whether the response header will include Date header.
+     */
+    public boolean defaultServerDateResponseHeader() { return defaultServerDateResponseHeader; }
 
     @Override
     public String toString() {
