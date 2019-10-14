@@ -29,6 +29,9 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.LinkedTransferQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
@@ -47,6 +50,8 @@ import org.apache.http.util.EntityUtils;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.HttpClient;
@@ -65,6 +70,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -73,6 +79,7 @@ import com.linecorp.armeria.server.TestConverters.NaiveStringConverterFunction;
 import com.linecorp.armeria.server.TestConverters.TypedNumberConverterFunction;
 import com.linecorp.armeria.server.TestConverters.TypedStringConverterFunction;
 import com.linecorp.armeria.server.TestConverters.UnformattedStringConverterFunction;
+import com.linecorp.armeria.server.annotation.Blocking;
 import com.linecorp.armeria.server.annotation.Consumes;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Get;
@@ -89,6 +96,10 @@ import com.linecorp.armeria.testing.internal.AnticipatedException;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 public class AnnotatedHttpServiceTest {
+
+    private static final ThreadPoolExecutor executor = new ThreadPoolExecutor(
+            0, 1, 1, TimeUnit.SECONDS, new LinkedTransferQueue<>(),
+            ThreadFactories.newThreadFactory("blocking-test", true));
 
     @ClassRule
     public static final ServerRule rule = new ServerRule() {
@@ -131,6 +142,11 @@ public class AnnotatedHttpServiceTest {
 
             sb.annotatedService("/11", new MyAnnotatedService11(),
                                 LoggingService.newDecorator());
+            sb.annotatedService("/12", new MyAnnotatedService12(),
+                                LoggingService.newDecorator());
+            sb.annotatedService("/13", new MyAnnotatedService13(),
+                                LoggingService.newDecorator());
+            sb.blockingTaskExecutor(executor, false);
         }
     };
 
@@ -672,6 +688,64 @@ public class AnnotatedHttpServiceTest {
         }
     }
 
+    static class MyAnnotatedService12 {
+
+        @Get("/httpResponse")
+        public HttpResponse httpResponse(RequestContext ctx) {
+            validateContext(ctx);
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Get("/aggregatedHttpResponse")
+        public AggregatedHttpResponse aggregatedHttpResponse(RequestContext ctx) {
+            validateContext(ctx);
+            return AggregatedHttpResponse.of(HttpStatus.OK);
+        }
+
+        @Get("/jsonNode")
+        public JsonNode jsonNode(RequestContext ctx) {
+            validateContext(ctx);
+            return TextNode.valueOf("Armeria");
+        }
+
+        @Get("/completionStage")
+        public CompletionStage<String> completionStage(RequestContext ctx) {
+            validateContext(ctx);
+            return CompletableFuture.supplyAsync(() -> "Armeria");
+        }
+    }
+
+    static class MyAnnotatedService13 {
+
+        @Get("/httpResponse")
+        @Blocking
+        public HttpResponse httpResponse(RequestContext ctx) {
+            validateContext(ctx);
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Get("/aggregatedHttpResponse")
+        @Blocking(false)
+        public AggregatedHttpResponse aggregatedHttpResponse(RequestContext ctx) {
+            validateContext(ctx);
+            return AggregatedHttpResponse.of(HttpStatus.OK);
+        }
+
+        @Get("/jsonNode")
+        @Blocking(false)
+        public JsonNode jsonNode(RequestContext ctx) {
+            validateContext(ctx);
+            return TextNode.valueOf("Armeria");
+        }
+
+        @Get("/completionStage")
+        @Blocking
+        public CompletionStage<String> completionStage(RequestContext ctx) {
+            validateContext(ctx);
+            return CompletableFuture.supplyAsync(() -> "Armeria");
+        }
+    }
+
     @Test
     public void testAnnotatedHttpService() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
@@ -983,6 +1057,64 @@ public class AnnotatedHttpServiceTest {
             testStatusCode(hc, get("/1/void/204"), 204);
             testBodyAndContentType(hc, get("/1/void/200"), "200 OK", MediaType.PLAIN_TEXT_UTF_8.toString());
         }
+    }
+
+    @Test
+    public void testOriginBlockingTaskType() throws Exception {
+        final HttpClient client = HttpClient.of(rule.uri("/"));
+
+        String path = "/12/httpResponse";
+        RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, path);
+        AggregatedHttpResponse res = client.execute(headers).aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(executor.getCompletedTaskCount()).isEqualTo(0);
+
+        path = "/12/aggregatedHttpResponse";
+        headers = RequestHeaders.of(HttpMethod.GET, path);
+        res = client.execute(headers).aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(executor.getCompletedTaskCount()).isEqualTo(1);
+
+        path = "/12/jsonNode";
+        headers = RequestHeaders.of(HttpMethod.GET, path);
+        res = client.execute(headers).aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(executor.getCompletedTaskCount()).isEqualTo(2);
+
+        path = "/12/completionStage";
+        headers = RequestHeaders.of(HttpMethod.GET, path);
+        res = client.execute(headers).aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(executor.getCompletedTaskCount()).isEqualTo(2);
+    }
+
+    @Test
+    public void testReverseBlockingTaskType() throws Exception {
+        final HttpClient client = HttpClient.of(rule.uri("/"));
+
+        String path = "/13/httpResponse";
+        RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, path);
+        AggregatedHttpResponse res = client.execute(headers).aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(executor.getCompletedTaskCount()).isEqualTo(1);
+
+        path = "/13/aggregatedHttpResponse";
+        headers = RequestHeaders.of(HttpMethod.GET, path);
+        res = client.execute(headers).aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(executor.getCompletedTaskCount()).isEqualTo(1);
+
+        path = "/13/jsonNode";
+        headers = RequestHeaders.of(HttpMethod.GET, path);
+        res = client.execute(headers).aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(executor.getCompletedTaskCount()).isEqualTo(1);
+
+        path = "/13/completionStage";
+        headers = RequestHeaders.of(HttpMethod.GET, path);
+        res = client.execute(headers).aggregate().join();
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(executor.getCompletedTaskCount()).isEqualTo(2);
     }
 
     private enum UserLevel {
