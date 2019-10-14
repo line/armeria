@@ -111,6 +111,7 @@ public class AnnotatedHttpService implements HttpService {
     private final HttpHeaders defaultHttpTrailers;
 
     private final ResponseType responseType;
+    private final boolean useBlocking;
 
     AnnotatedHttpService(Object object, Method method,
                          List<AnnotatedValueResolver> resolvers,
@@ -118,7 +119,8 @@ public class AnnotatedHttpService implements HttpService {
                          List<ResponseConverterFunction> responseConverters,
                          Route route,
                          ResponseHeaders defaultHttpHeaders,
-                         HttpHeaders defaultHttpTrailers) {
+                         HttpHeaders defaultHttpTrailers,
+                         boolean useBlocking) {
         this.object = requireNonNull(object, "object");
         this.method = requireNonNull(method, "method");
         this.resolvers = requireNonNull(resolvers, "resolvers");
@@ -132,6 +134,7 @@ public class AnnotatedHttpService implements HttpService {
 
         this.defaultHttpHeaders = requireNonNull(defaultHttpHeaders, "defaultHttpHeaders");
         this.defaultHttpTrailers = requireNonNull(defaultHttpTrailers, "defaultHttpTrailers");
+        this.useBlocking = useBlocking;
         final Class<?> returnType = method.getReturnType();
         if (HttpResponse.class.isAssignableFrom(returnType)) {
             responseType = ResponseType.HTTP_RESPONSE;
@@ -232,19 +235,48 @@ public class AnnotatedHttpService implements HttpService {
 
         switch (responseType) {
             case HTTP_RESPONSE:
-                return f.thenApply(
-                        msg -> new ExceptionFilteredHttpResponse(ctx, req, (HttpResponse) invoke(ctx, req, msg),
-                                                                 exceptionHandler));
+                if (useBlocking) {
+                    return f.thenApplyAsync(
+                            msg -> new ExceptionFilteredHttpResponse(ctx, req,
+                                                                     (HttpResponse) invoke(ctx, req, msg),
+                                                                     exceptionHandler),
+                            ctx.blockingTaskExecutor());
+                } else {
+                    return f.thenApply(
+                            msg -> new ExceptionFilteredHttpResponse(ctx, req,
+                                                                     (HttpResponse) invoke(ctx, req, msg),
+                                                                     exceptionHandler));
+                }
+
             case COMPLETION_STAGE:
-                return f.thenCompose(msg -> toCompletionStage(invoke(ctx, req, msg)))
-                        .handle((result, cause) -> cause == null ? convertResponse(ctx, req, null, result,
-                                                                                   HttpHeaders.of())
-                                                                 : exceptionHandler.handleException(ctx, req,
-                                                                                                    cause));
+                if (useBlocking) {
+                    return f.thenComposeAsync(msg -> toCompletionStage(invoke(ctx, req, msg)),
+                                              ctx.blockingTaskExecutor())
+                            .handle((result, cause) ->
+                                            cause == null ? convertResponse(ctx, req, null, result,
+                                                                            HttpHeaders.of())
+                                                          : exceptionHandler.handleException(ctx, req, cause));
+                } else {
+                    return f.thenCompose(msg -> toCompletionStage(invoke(ctx, req, msg)))
+                            .handle((result, cause) ->
+                                            cause == null ? convertResponse(ctx, req, null, result,
+                                                                            HttpHeaders.of())
+                                                          : exceptionHandler.handleException(ctx, req, cause));
+                }
+
             default:
-                return f.thenApplyAsync(msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg),
-                                                               HttpHeaders.of()),
-                                        ctx.blockingTaskExecutor());
+                if (useBlocking) {
+                    logger.warn("The current thread is using blockTaskExecutor. It'll migrate to use" +
+                                " event loop thread when soon. Therefore, use @Blocking to avoid" +
+                                " unexpected problems.");
+                    return f.thenApplyAsync(
+                            msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg),
+                                                   HttpHeaders.of()),
+                            ctx.blockingTaskExecutor());
+                } else {
+                    return f.thenApply(msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg),
+                                                              HttpHeaders.of()));
+                }
         }
     }
 

@@ -384,7 +384,8 @@ public final class AnnotatedHttpServiceFactory {
         return new AnnotatedHttpServiceElement(route, new AnnotatedHttpService(object, method, resolvers,
                                                                                eh, res, route,
                                                                                defaultHeaders.build(),
-                                                                               defaultTrailers.build()),
+                                                                               defaultTrailers.build(),
+                                                                               useBlocking),
                                                decorator(method, clazz, initialDecorator));
     }
 
