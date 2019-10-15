@@ -534,7 +534,6 @@ public class AnnotatedHttpServiceFactoryTest {
             return HttpResponse.of(HttpStatus.OK);
         }
 
-        // TODO: will leave this as failing until we decide how to process this
         @Path("/path")
         public HttpResponse pathMapping() {
             return HttpResponse.of(HttpStatus.OK);

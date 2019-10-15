@@ -350,7 +350,6 @@ public class AnnotatedHttpServiceBuilderTest {
             public void root() {}
         })).isInstanceOf(IllegalArgumentException.class);
 
-        // TODO: Check if we must support this
         assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
             @Path("/")
             public void root() {}
