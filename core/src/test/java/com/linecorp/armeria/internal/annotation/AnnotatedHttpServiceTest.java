@@ -47,8 +47,8 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.util.EntityUtils;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.TextNode;
@@ -93,7 +93,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 public class AnnotatedHttpServiceTest {
 
@@ -101,8 +101,8 @@ public class AnnotatedHttpServiceTest {
             0, 1, 1, TimeUnit.SECONDS, new LinkedTransferQueue<>(),
             ThreadFactories.newThreadFactory("blocking-test", true));
 
-    @ClassRule
-    public static final ServerRule rule = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             // Case 1, 2, and 3, with a converter map
@@ -867,7 +867,7 @@ public class AnnotatedHttpServiceTest {
 
     @Test
     public void testAdvancedAnnotatedHttpService() throws Exception {
-        final HttpClient client = HttpClient.of(rule.uri("/"));
+        final HttpClient client = HttpClient.of(server.uri("/"));
         final String path = "/8/same/path";
 
         RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, path);
@@ -1062,7 +1062,7 @@ public class AnnotatedHttpServiceTest {
     @Test
     public void testOriginBlockingTaskType() throws Exception {
         final long blockingCount = executor.getCompletedTaskCount();
-        final HttpClient client = HttpClient.of(rule.uri("/"));
+        final HttpClient client = HttpClient.of(server.uri("/"));
 
         String path = "/12/httpResponse";
         RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, path);
@@ -1092,7 +1092,7 @@ public class AnnotatedHttpServiceTest {
     @Test
     public void testOnlyBlockingTaskType() throws Exception {
         final long blockingCount = executor.getCompletedTaskCount();
-        final HttpClient client = HttpClient.of(rule.uri("/"));
+        final HttpClient client = HttpClient.of(server.uri("/"));
 
         String path = "/13/httpResponse";
         RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, path);
@@ -1235,10 +1235,10 @@ public class AnnotatedHttpServiceTest {
         final HttpRequestBase req;
         switch (method) {
             case GET:
-                req = new HttpGet(rule.httpUri(uri));
+                req = new HttpGet(server.httpUri(uri));
                 break;
             case POST:
-                req = new HttpPost(rule.httpUri(uri));
+                req = new HttpPost(server.httpUri(uri));
                 break;
             default:
                 throw new Error("Unexpected method: " + method);
