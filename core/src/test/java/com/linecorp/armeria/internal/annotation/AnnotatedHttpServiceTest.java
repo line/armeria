@@ -27,11 +27,14 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.LinkedTransferQueue;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
@@ -97,9 +100,25 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 public class AnnotatedHttpServiceTest {
 
-    private static final ThreadPoolExecutor executor = new ThreadPoolExecutor(
+    private static final CountingThreadPoolExecutor executor = new CountingThreadPoolExecutor(
             0, 1, 1, TimeUnit.SECONDS, new LinkedTransferQueue<>(),
             ThreadFactories.newThreadFactory("blocking-test", true));
+
+    private static final AtomicInteger blockingCount = new AtomicInteger();
+
+    private static class CountingThreadPoolExecutor extends ThreadPoolExecutor {
+
+        CountingThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime,
+                                   TimeUnit unit, BlockingQueue<Runnable> workQueue,
+                                   ThreadFactory threadFactory) {
+            super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, threadFactory);
+        }
+
+        @Override
+        protected void beforeExecute(Thread t, Runnable r) {
+            blockingCount.incrementAndGet();
+        }
+    }
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -1061,62 +1080,62 @@ public class AnnotatedHttpServiceTest {
 
     @Test
     public void testOriginBlockingTaskType() throws Exception {
-        final long blockingCount = executor.getCompletedTaskCount();
+        blockingCount.set(0);
         final HttpClient client = HttpClient.of(server.uri("/"));
 
         String path = "/12/httpResponse";
         RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, path);
         AggregatedHttpResponse res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(executor.getCompletedTaskCount() - blockingCount).isEqualTo(0);
+        assertThat(blockingCount).hasValue(0);
 
         path = "/12/aggregatedHttpResponse";
         headers = RequestHeaders.of(HttpMethod.GET, path);
         res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(executor.getCompletedTaskCount() - blockingCount).isEqualTo(1);
+        assertThat(blockingCount).hasValue(1);
 
         path = "/12/jsonNode";
         headers = RequestHeaders.of(HttpMethod.GET, path);
         res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(executor.getCompletedTaskCount() - blockingCount).isEqualTo(2);
+        assertThat(blockingCount).hasValue(2);
 
         path = "/12/completionStage";
         headers = RequestHeaders.of(HttpMethod.GET, path);
         res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(executor.getCompletedTaskCount() - blockingCount).isEqualTo(2);
+        assertThat(blockingCount).hasValue(2);
     }
 
     @Test
     public void testOnlyBlockingTaskType() throws Exception {
-        final long blockingCount = executor.getCompletedTaskCount();
+        blockingCount.set(0);
         final HttpClient client = HttpClient.of(server.uri("/"));
 
         String path = "/13/httpResponse";
         RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, path);
         AggregatedHttpResponse res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(executor.getCompletedTaskCount() - blockingCount).isEqualTo(1);
+        assertThat(blockingCount).hasValue(1);
 
         path = "/13/aggregatedHttpResponse";
         headers = RequestHeaders.of(HttpMethod.GET, path);
         res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(executor.getCompletedTaskCount() - blockingCount).isEqualTo(2);
+        assertThat(blockingCount).hasValue(2);
 
         path = "/13/jsonNode";
         headers = RequestHeaders.of(HttpMethod.GET, path);
         res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(executor.getCompletedTaskCount() - blockingCount).isEqualTo(3);
+        assertThat(blockingCount).hasValue(3);
 
         path = "/13/completionStage";
         headers = RequestHeaders.of(HttpMethod.GET, path);
         res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(executor.getCompletedTaskCount() - blockingCount).isEqualTo(4);
+        assertThat(blockingCount).hasValue(4);
     }
 
     private enum UserLevel {
