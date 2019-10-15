@@ -1061,60 +1061,62 @@ public class AnnotatedHttpServiceTest {
 
     @Test
     public void testOriginBlockingTaskType() throws Exception {
+        final long blockingCount = executor.getCompletedTaskCount();
         final HttpClient client = HttpClient.of(rule.uri("/"));
 
         String path = "/12/httpResponse";
         RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, path);
         AggregatedHttpResponse res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(executor.getCompletedTaskCount()).isEqualTo(0);
+        assertThat(executor.getCompletedTaskCount() - blockingCount).isEqualTo(0);
 
         path = "/12/aggregatedHttpResponse";
         headers = RequestHeaders.of(HttpMethod.GET, path);
         res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(executor.getCompletedTaskCount()).isEqualTo(1);
+        assertThat(executor.getCompletedTaskCount() - blockingCount).isEqualTo(1);
 
         path = "/12/jsonNode";
         headers = RequestHeaders.of(HttpMethod.GET, path);
         res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(executor.getCompletedTaskCount()).isEqualTo(2);
+        assertThat(executor.getCompletedTaskCount() - blockingCount).isEqualTo(2);
 
         path = "/12/completionStage";
         headers = RequestHeaders.of(HttpMethod.GET, path);
         res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(executor.getCompletedTaskCount()).isEqualTo(2);
+        assertThat(executor.getCompletedTaskCount() - blockingCount).isEqualTo(2);
     }
 
     @Test
     public void testOnlyBlockingTaskType() throws Exception {
+        final long blockingCount = executor.getCompletedTaskCount();
         final HttpClient client = HttpClient.of(rule.uri("/"));
 
         String path = "/13/httpResponse";
         RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, path);
         AggregatedHttpResponse res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(executor.getCompletedTaskCount()).isEqualTo(1);
+        assertThat(executor.getCompletedTaskCount() - blockingCount).isEqualTo(1);
 
         path = "/13/aggregatedHttpResponse";
         headers = RequestHeaders.of(HttpMethod.GET, path);
         res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(executor.getCompletedTaskCount()).isEqualTo(2);
+        assertThat(executor.getCompletedTaskCount() - blockingCount).isEqualTo(2);
 
         path = "/13/jsonNode";
         headers = RequestHeaders.of(HttpMethod.GET, path);
         res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(executor.getCompletedTaskCount()).isEqualTo(3);
+        assertThat(executor.getCompletedTaskCount() - blockingCount).isEqualTo(3);
 
         path = "/13/completionStage";
         headers = RequestHeaders.of(HttpMethod.GET, path);
         res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(executor.getCompletedTaskCount()).isEqualTo(4);
+        assertThat(executor.getCompletedTaskCount() - blockingCount).isEqualTo(4);
     }
 
     private enum UserLevel {
