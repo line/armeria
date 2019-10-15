@@ -50,6 +50,7 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.util.EntityUtils;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -765,6 +766,11 @@ public class AnnotatedHttpServiceTest {
         }
     }
 
+    @BeforeEach
+    void clear() {
+        blockingCount.set(0);
+    }
+
     @Test
     public void testAnnotatedHttpService() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
@@ -1080,7 +1086,6 @@ public class AnnotatedHttpServiceTest {
 
     @Test
     public void testOriginBlockingTaskType() throws Exception {
-        blockingCount.set(0);
         final HttpClient client = HttpClient.of(server.uri("/"));
 
         String path = "/12/httpResponse";
@@ -1110,7 +1115,6 @@ public class AnnotatedHttpServiceTest {
 
     @Test
     public void testOnlyBlockingTaskType() throws Exception {
-        blockingCount.set(0);
         final HttpClient client = HttpClient.of(server.uri("/"));
 
         String path = "/13/httpResponse";
