@@ -297,8 +297,7 @@ public final class AnnotatedHttpServiceFactory {
                 getAnnotatedInstances(method, clazz, ResponseConverter.class, ResponseConverterFunction.class)
                         .addAll(baseResponseConverters).build();
 
-        final boolean useBlocking = findFirst(method, Blocking.class).map(Blocking::value)
-                                                                     .orElse(defaultBlocking(method));
+        final boolean useBlocking = findFirst(method, Blocking.class).isPresent();
 
         List<AnnotatedValueResolver> resolvers;
         try {
@@ -387,15 +386,6 @@ public final class AnnotatedHttpServiceFactory {
                                                                                defaultTrailers.build(),
                                                                                useBlocking),
                                                decorator(method, clazz, initialDecorator));
-    }
-
-    /**
-     * Returns the default value if you do not use {@link Blocking} in annotated methods.
-     */
-    private static boolean defaultBlocking(Method method) {
-        final Class<?> returnType = method.getReturnType();
-        return !(returnType.isAssignableFrom(HttpResponse.class) ||
-                 CompletionStage.class.isAssignableFrom(returnType));
     }
 
     /**
