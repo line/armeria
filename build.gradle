@@ -47,6 +47,10 @@ allprojects {
         if (project.hasFlags('coverage')) {
             systemProperty 'com.linecorp.armeria.testing.coverage', 'true'
         }
+        // Pass special environment variable to enable demo mode for `*DocServiceTest`.
+        if (rootProject.hasProperty('demo')) {
+            environment['DOC_SERVICE_DEMO'] = 'true'
+        }
         // Use a different JRE for testing if necessary.
         if (javaTestHome) {
             executable "${javaTestHome}/bin/java"
