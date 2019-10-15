@@ -725,14 +725,14 @@ public class AnnotatedHttpServiceTest {
         }
 
         @Get("/aggregatedHttpResponse")
-        @Blocking(false)
+        @Blocking
         public AggregatedHttpResponse aggregatedHttpResponse(RequestContext ctx) {
             validateContext(ctx);
             return AggregatedHttpResponse.of(HttpStatus.OK);
         }
 
         @Get("/jsonNode")
-        @Blocking(false)
+        @Blocking
         public JsonNode jsonNode(RequestContext ctx) {
             validateContext(ctx);
             return TextNode.valueOf("Armeria");
@@ -1089,7 +1089,7 @@ public class AnnotatedHttpServiceTest {
     }
 
     @Test
-    public void testReverseBlockingTaskType() throws Exception {
+    public void testOnlyBlockingTaskType() throws Exception {
         final HttpClient client = HttpClient.of(rule.uri("/"));
 
         String path = "/13/httpResponse";
@@ -1102,19 +1102,19 @@ public class AnnotatedHttpServiceTest {
         headers = RequestHeaders.of(HttpMethod.GET, path);
         res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(executor.getCompletedTaskCount()).isEqualTo(1);
+        assertThat(executor.getCompletedTaskCount()).isEqualTo(2);
 
         path = "/13/jsonNode";
         headers = RequestHeaders.of(HttpMethod.GET, path);
         res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(executor.getCompletedTaskCount()).isEqualTo(1);
+        assertThat(executor.getCompletedTaskCount()).isEqualTo(3);
 
         path = "/13/completionStage";
         headers = RequestHeaders.of(HttpMethod.GET, path);
         res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(executor.getCompletedTaskCount()).isEqualTo(2);
+        assertThat(executor.getCompletedTaskCount()).isEqualTo(4);
     }
 
     private enum UserLevel {
