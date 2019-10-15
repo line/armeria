@@ -28,8 +28,4 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 public @interface Blocking {
 
-    /**
-     * Whether blocking of thread for the annotated service method.
-     */
-    boolean value() default true;
 }
