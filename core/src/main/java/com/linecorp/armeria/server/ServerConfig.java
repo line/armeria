@@ -652,12 +652,16 @@ public final class ServerConfig {
     /**
      * Returns whether the response header will include Server header.
      */
-    public boolean defaultServerNameResponseHeader() { return defaultServerNameResponseHeader; }
+    public boolean defaultServerNameResponseHeader() {
+        return defaultServerNameResponseHeader;
+    }
 
     /**
      * Returns whether the response header will include Date header.
      */
-    public boolean defaultServerDateResponseHeader() { return defaultServerDateResponseHeader; }
+    public boolean defaultServerDateResponseHeader() {
+        return defaultServerDateResponseHeader;
+    }
 
     @Override
     public String toString() {

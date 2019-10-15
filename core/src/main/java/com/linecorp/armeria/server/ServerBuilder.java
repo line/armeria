@@ -1513,7 +1513,9 @@ public final class ServerBuilder {
         return this;
     }
 
-    boolean defaultServerNameResponseHeader() { return defaultServerNameResponseHeader; }
+    boolean defaultServerNameResponseHeader() {
+        return defaultServerNameResponseHeader;
+    }
 
     /**
      * Sets whether the response header will include Date header.
