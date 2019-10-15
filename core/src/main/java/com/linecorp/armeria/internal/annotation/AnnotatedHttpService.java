@@ -266,9 +266,9 @@ public class AnnotatedHttpService implements HttpService {
 
             default:
                 if (useBlocking) {
-                    logger.warn("The current thread is using blockTaskExecutor. It'll migrate to use" +
-                                " event loop thread when soon. Therefore, use @Blocking to avoid" +
-                                " unexpected problems.");
+                    logger.warn(method.getDeclaringClass().getName() + '#' + method.getName() + "is using" +
+                                " blockTaskExecutor. It'll migrate to use event loop thread when soon." +
+                                " Therefore, use @Blocking to avoid unexpected problems.");
                     return f.thenApplyAsync(
                             msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg),
                                                    HttpHeaders.of()),
