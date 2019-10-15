@@ -226,6 +226,42 @@ public class AnnotatedHttpServiceFactoryTest {
     }
 
     @Test
+    public void testMultiPathAnnotations() {
+        final List<AnnotatedHttpServiceElement> getServiceElements = getServiceElements(
+                new MultiPathSuccessService(), "multiPathAnnotations", HttpMethod.GET);
+        final Set<Route> getRoutes = getServiceElements.stream().map(AnnotatedHttpServiceElement::route)
+                                                       .collect(Collectors.toSet());
+        assertThat(getRoutes).containsOnly(Route.builder().path("/path1").methods(HttpMethod.GET).build(),
+                                           Route.builder().path("/path2").methods(HttpMethod.GET).build());
+
+        final List<AnnotatedHttpServiceElement> postServiceElements = getServiceElements(
+                new MultiPathSuccessService(), "multiPathAnnotations", HttpMethod.POST);
+        final Set<Route> postRoutes = postServiceElements.stream().map(AnnotatedHttpServiceElement::route)
+                                                         .collect(Collectors.toSet());
+        assertThat(postRoutes).containsOnly(Route.builder().path("/path1").methods(HttpMethod.POST).build(),
+                                            Route.builder().path("/path2").methods(HttpMethod.POST).build());
+    }
+
+    @Test
+    public void testDuplicatePathAnnotations() {
+        final List<AnnotatedHttpServiceElement> getServiceElements = getServiceElements(
+                new MultiPathSuccessService(), "duplicatePathAnnotations", HttpMethod.GET);
+        assertThat(getServiceElements).hasSize(2);
+        final Set<Route> getRoutes = getServiceElements.stream().map(AnnotatedHttpServiceElement::route)
+                                                       .collect(Collectors.toSet());
+        assertThat(getRoutes).containsOnly(Route.builder().path("/path").methods(HttpMethod.GET).build(),
+                                           Route.builder().path("/path").methods(HttpMethod.GET).build());
+
+        final List<AnnotatedHttpServiceElement> postServiceElements = getServiceElements(
+                new MultiPathSuccessService(), "duplicatePathAnnotations", HttpMethod.POST);
+        assertThat(getServiceElements).hasSize(2);
+        final Set<Route> postRoutes = postServiceElements.stream().map(AnnotatedHttpServiceElement::route)
+                                                         .collect(Collectors.toSet());
+        assertThat(postRoutes).containsOnly(Route.builder().path("/path").methods(HttpMethod.POST).build(),
+                                            Route.builder().path("/path").methods(HttpMethod.POST).build());
+    }
+
+    @Test
     public void testMultiPathFailingService() {
         final MultiPathFailingService serviceObject = new MultiPathFailingService();
         getMethods(MultiPathFailingService.class, HttpResponse.class).forEach(method -> {
@@ -446,6 +482,22 @@ public class AnnotatedHttpServiceFactoryTest {
         @Post
         @Path("/path")
         public HttpResponse getPostMappingByPath() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Get
+        @Post
+        @Path("/path1")
+        @Path("/path2")
+        public HttpResponse multiPathAnnotations() {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Get
+        @Post
+        @Path("/path")
+        @Path("/path")
+        public HttpResponse duplicatePathAnnotations() {
             return HttpResponse.of(HttpStatus.OK);
         }
     }

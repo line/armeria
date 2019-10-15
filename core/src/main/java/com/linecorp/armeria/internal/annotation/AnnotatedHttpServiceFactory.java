@@ -272,16 +272,16 @@ public final class AnnotatedHttpServiceFactory {
         }
 
         final Class<?> clazz = object.getClass();
-        final Map<HttpMethod, Set<String>> httpMethodPatternsMap = getHttpMethodPatternsMap(method,
-                                                                                            methodAnnotations);
+        final Map<HttpMethod, List<String>> httpMethodPatternsMap = getHttpMethodPatternsMap(method,
+                                                                                             methodAnnotations);
         final String computedPathPrefix = computePathPrefix(clazz, pathPrefix);
         final Set<MediaType> consumableMediaTypes = consumableMediaTypes(method, clazz);
         final Set<MediaType> producibleMediaTypes = producibleMediaTypes(method, clazz);
 
-        final Set<Route> routes = httpMethodPatternsMap.entrySet().stream().flatMap(
+        final List<Route> routes = httpMethodPatternsMap.entrySet().stream().flatMap(
                 pattern -> {
                     final HttpMethod httpMethod = pattern.getKey();
-                    final Set<String> pathMappings = pattern.getValue();
+                    final List<String> pathMappings = pattern.getValue();
                     return pathMappings.stream().map(
                             pathMapping -> Route.builder()
                                                 .path(computedPathPrefix, pathMapping)
@@ -289,7 +289,7 @@ public final class AnnotatedHttpServiceFactory {
                                                 .consumes(consumableMediaTypes)
                                                 .produces(producibleMediaTypes)
                                                 .build());
-                }).collect(toImmutableSet());
+                }).collect(toImmutableList());
 
         final List<ExceptionHandlerFunction> eh =
                 getAnnotatedInstances(method, clazz, ExceptionHandler.class, ExceptionHandlerFunction.class)
@@ -517,13 +517,13 @@ public final class AnnotatedHttpServiceFactory {
      * may be specified by either HTTP method annotations, or {@link Path} annotations but not both
      * simultaneously.
      */
-    private static Map<HttpMethod, Set<String>> getHttpMethodPatternsMap(Method method,
-                                                                         Set<Annotation> methodAnnotations) {
-        final Set<String> pathPatterns = findAll(method, Path.class).stream().map(Path::value)
-                                                                    .collect(toImmutableSet());
+    private static Map<HttpMethod, List<String>> getHttpMethodPatternsMap(Method method,
+                                                                          Set<Annotation> methodAnnotations) {
+        final List<String> pathPatterns = findAll(method, Path.class).stream().map(Path::value)
+                                                                     .collect(toImmutableList());
         final boolean usePathPatterns = !pathPatterns.isEmpty();
 
-        final Map<HttpMethod, Set<String>> httpMethodAnnotatedPatternMap =
+        final Map<HttpMethod, List<String>> httpMethodAnnotatedPatternMap =
                 getHttpMethodAnnotatedPatternMap(methodAnnotations);
         if (httpMethodAnnotatedPatternMap.keySet().isEmpty()) {
             throw new IllegalArgumentException(method.getDeclaringClass().getName() + '#' + method.getName() +
@@ -533,7 +533,7 @@ public final class AnnotatedHttpServiceFactory {
                 ImmutableMap.toImmutableMap(
                         Entry::getKey,
                         entry -> {
-                            final Set<String> httpMethodPaths = entry.getValue();
+                            final List<String> httpMethodPaths = entry.getValue();
                             if (usePathPatterns && !httpMethodPaths.isEmpty()) {
                                 throw new IllegalArgumentException(
                                         method.getDeclaringClass().getName() + '#' + method.getName() +
@@ -546,20 +546,20 @@ public final class AnnotatedHttpServiceFactory {
                                 throw new IllegalArgumentException("A path pattern should be specified by" +
                                                                    " @Path or HTTP method annotations.");
                             }
-                            return ImmutableSet.copyOf(httpMethodPaths);
+                            return ImmutableList.copyOf(httpMethodPaths);
                         }));
     }
 
-    private static Map<HttpMethod, Set<String>> getHttpMethodAnnotatedPatternMap(
+    private static Map<HttpMethod, List<String>> getHttpMethodAnnotatedPatternMap(
             Set<Annotation> methodAnnotations) {
-        final Map<HttpMethod, Set<String>> httpMethodPatternMap = new EnumMap<>(HttpMethod.class);
+        final Map<HttpMethod, List<String>> httpMethodPatternMap = new EnumMap<>(HttpMethod.class);
         methodAnnotations.stream()
                          .filter(annotation -> HTTP_METHOD_MAP.containsKey(annotation.annotationType()))
                          .forEach(annotation -> {
                              final HttpMethod httpMethod = HTTP_METHOD_MAP.get(annotation.annotationType());
                              final String value = (String) invokeValueMethod(annotation);
-                             final Set<String> patterns = httpMethodPatternMap
-                                     .computeIfAbsent(httpMethod, ignored -> new HashSet<>());
+                             final List<String> patterns = httpMethodPatternMap
+                                     .computeIfAbsent(httpMethod, ignored -> new ArrayList<>());
                              if (DefaultValues.isSpecified(value)) {
                                  patterns.add(value);
                              }
