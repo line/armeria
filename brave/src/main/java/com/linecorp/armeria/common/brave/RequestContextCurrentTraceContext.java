@@ -118,7 +118,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
          *
          * @see #setCurrentThreadNotRequestThread(boolean)
          */
-        public RequestContextCurrentTraceContext.Builder nonRequestThread(String pattern) {
+        public Builder nonRequestThread(String pattern) {
             requireNonNull(pattern, "pattern");
             final Pattern compiled;
             try {
@@ -137,7 +137,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
          *
          * @see #setCurrentThreadNotRequestThread(boolean)
          */
-        public RequestContextCurrentTraceContext.Builder nonRequestThread(Pattern pattern) {
+        public Builder nonRequestThread(Pattern pattern) {
             nonRequestThreadPatterns.add(requireNonNull(pattern, "pattern"));
             return this;
         }
