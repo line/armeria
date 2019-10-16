@@ -19,6 +19,9 @@ package com.linecorp.armeria.server;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isTrailerBlacklisted;
 
 import java.nio.channels.ClosedChannelException;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -46,6 +49,7 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
 
@@ -77,6 +81,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     private final HttpObjectEncoder responseEncoder;
     private final DecodedHttpRequest req;
     private final DefaultServiceRequestContext reqCtx;
+    private final ServerConfig config;
     private final long startTimeNanos;
 
     @Nullable
@@ -89,11 +94,13 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     private boolean loggedResponseHeadersFirstBytesTransferred;
 
     HttpResponseSubscriber(ChannelHandlerContext ctx, HttpObjectEncoder responseEncoder,
-                           DefaultServiceRequestContext reqCtx, DecodedHttpRequest req) {
+                           DefaultServiceRequestContext reqCtx, DecodedHttpRequest req,
+                           ServerConfig config) {
         this.ctx = ctx;
         this.responseEncoder = responseEncoder;
         this.req = req;
         this.reqCtx = reqCtx;
+        this.config = config;
         startTimeNanos = System.nanoTime();
     }
 
@@ -198,6 +205,21 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                     // prevent the trailers from being sent so we go ahead and remove content-length to force
                     // chunked encoding.
                     newHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
+                }
+
+                if (!newHeaders.contains(HttpHeaderNames.SERVER) &&
+                    config.defaultServerNameResponseHeader()) {
+                    final String verInfo = String.format("Armeria/%s (%s)",
+                                                         Version.identify().get("armeria").artifactVersion(),
+                                                         System.getProperty("os.name"));
+                    newHeaders.add(HttpHeaderNames.SERVER, verInfo);
+                }
+
+                if (!newHeaders.contains(HttpHeaderNames.DATE) &&
+                    config.defaultServerDateResponseHeader()) {
+                    newHeaders.add(HttpHeaderNames.DATE,
+                                   DateTimeFormatter.RFC_1123_DATE_TIME.format(
+                                           ZonedDateTime.now(ZoneOffset.UTC)));
                 }
 
                 headers = newHeaders.build();

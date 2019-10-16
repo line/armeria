@@ -42,7 +42,7 @@ class HttpServerDefaultHeadersTest {
     static final ServerExtension server2 = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.setDefaultServerNameResponseHeader(false);
+            sb.includeServerHeader(false);
             sb.service("/", (ctx, req) -> {
                 return HttpResponse.of(HttpStatus.OK);
             });
@@ -53,7 +53,7 @@ class HttpServerDefaultHeadersTest {
     static final ServerExtension server3 = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.setDefaultServerDateResponseHeader(false);
+            sb.includeDateHeader(false);
             sb.service("/", (ctx, req) -> {
                 return HttpResponse.of(HttpStatus.OK);
             });

@@ -203,8 +203,8 @@ public final class ServerBuilder {
     private Function<VirtualHost, Logger> accessLoggerMapper = host -> LoggerFactory.getLogger(
             defaultAccessLoggerName(host.hostnamePattern()));
 
-    private boolean defaultServerNameResponseHeader = true;
-    private boolean defaultServerDateResponseHeader = true;
+    private boolean includeServerHeader = true;
+    private boolean includeDateHeader = true;
 
     /**
      * Returns a new {@link ServerBuilder}.
@@ -1508,25 +1508,25 @@ public final class ServerBuilder {
     /**
      * Sets whether the response header will include Server header.
      */
-    public ServerBuilder setDefaultServerNameResponseHeader(boolean defaultServerNameResponseHeader) {
-        this.defaultServerNameResponseHeader = defaultServerNameResponseHeader;
+    public ServerBuilder includeServerHeader(boolean includeServerHeader) {
+        this.includeServerHeader = includeServerHeader;
         return this;
     }
 
-    boolean defaultServerNameResponseHeader() {
-        return defaultServerNameResponseHeader;
+    boolean includeServerHeader() {
+        return includeServerHeader;
     }
 
     /**
      * Sets whether the response header will include Date header.
      */
-    public ServerBuilder setDefaultServerDateResponseHeader(boolean defaultServerDateResponseHeader) {
-        this.defaultServerDateResponseHeader = defaultServerDateResponseHeader;
+    public ServerBuilder includeDateHeader(boolean includeDateHeader) {
+        this.includeDateHeader = includeDateHeader;
         return this;
     }
 
-    boolean defaultServerDateResponseHeader() {
-        return defaultServerDateResponseHeader;
+    boolean includeDateHeader() {
+        return includeDateHeader;
     }
 
     /**
@@ -1614,7 +1614,7 @@ public final class ServerBuilder {
                 meterRegistry, serviceLoggerPrefix, accessLogWriter, shutdownAccessLogWriterOnStop,
                 proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter,
-                defaultServerNameResponseHeader, defaultServerDateResponseHeader), sslContexts);
+                includeServerHeader, includeDateHeader), sslContexts);
 
         serverListeners.forEach(server::addListener);
         return server;
