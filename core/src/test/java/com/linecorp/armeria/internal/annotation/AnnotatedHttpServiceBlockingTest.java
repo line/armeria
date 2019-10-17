@@ -80,15 +80,15 @@ class AnnotatedHttpServiceBlockingTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.annotatedService("/12", new MyAnnotatedService12(),
+            sb.annotatedService("/myEvenLoop", new MyEventLoopAnnotatedService(),
                                 LoggingService.newDecorator());
-            sb.annotatedService("/13", new MyAnnotatedService13(),
+            sb.annotatedService("/myBlocking", new MyBlockingAnnotatedService(),
                                 LoggingService.newDecorator());
             sb.blockingTaskExecutor(executor, false);
         }
     };
 
-    static class MyAnnotatedService12 {
+    static class MyEventLoopAnnotatedService {
 
         @Get("/httpResponse")
         public HttpResponse httpResponse(RequestContext ctx) {
@@ -111,7 +111,7 @@ class AnnotatedHttpServiceBlockingTest {
         }
     }
 
-    static class MyAnnotatedService13 {
+    static class MyBlockingAnnotatedService {
 
         @Get("/httpResponse")
         @Blocking
@@ -140,12 +140,12 @@ class AnnotatedHttpServiceBlockingTest {
 
     @ParameterizedTest
     @CsvSource({
-            "/12/httpResponse, 0",
-            "/12/aggregatedHttpResponse, 0",
-            "/12/jsonNode, 0",
-            "/12/completionStage, 0"
+            "/myEvenLoop/httpResponse, 0",
+            "/myEvenLoop/aggregatedHttpResponse, 0",
+            "/myEvenLoop/jsonNode, 0",
+            "/myEvenLoop/completionStage, 0"
     })
-    public void testOriginBlockingTaskType(String path, Integer count) throws Exception {
+    public void testOnyEventLoopWithoutBlockingAnnotation(String path, Integer count) throws Exception {
         final HttpClient client = HttpClient.of(server.uri("/"));
 
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, path);
@@ -156,12 +156,12 @@ class AnnotatedHttpServiceBlockingTest {
 
     @ParameterizedTest
     @CsvSource({
-            "/13/httpResponse, 1",
-            "/13/aggregatedHttpResponse, 1",
-            "/13/jsonNode, 1",
-            "/13/completionStage, 1"
+            "/myBlocking/httpResponse, 1",
+            "/myBlocking/aggregatedHttpResponse, 1",
+            "/myBlocking/jsonNode, 1",
+            "/myBlocking/completionStage, 1"
     })
-    public void testOnlyBlockingTaskType(String path, Integer count) throws Exception {
+    public void testOnlyBlockingWithBlockingAnnotation(String path, Integer count) throws Exception {
         final HttpClient client = HttpClient.of(server.uri("/"));
 
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, path);
