@@ -98,7 +98,7 @@ public class AnnotatedHttpService implements HttpService {
                              new StringResponseConverterFunction(),
                              new ByteArrayResponseConverterFunction());
 
-    private static final boolean USE_EVENT_LOOP = Flags.defaultUseEventLoopForAnnotatedService();
+    private static final boolean USE_EVENT_LOOP = false;
 
     private final Object object;
     private final Method method;

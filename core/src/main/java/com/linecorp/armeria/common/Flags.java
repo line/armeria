@@ -297,9 +297,6 @@ public final class Flags {
             exceptionLoggingMode("annotatedServiceExceptionVerbosity",
                                  DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY);
 
-    private static final boolean DEFAULT_USE_EVENT_LOOP_FOR_ANNOTATED_SERVICE =
-            getBoolean("defaultUseEventLoopForAnnotatedService", false);
-
     static {
         if (!isEpollAvailable()) {
             final Throwable cause = Epoll.unavailabilityCause();
@@ -328,8 +325,7 @@ public final class Flags {
                 final SSLEngine engine = SslContextUtil.createSslContext(
                         SslContextBuilder::forClient,
                         false,
-                        unused -> {
-                        }).newEngine(ByteBufAllocator.DEFAULT);
+                        unused -> { }).newEngine(ByteBufAllocator.DEFAULT);
                 logger.info("All available SSL protocols: {}",
                             ImmutableList.copyOf(engine.getSupportedProtocols()));
                 logger.info("Default enabled SSL protocols: {}", SslContextUtil.DEFAULT_PROTOCOLS);
@@ -839,17 +835,6 @@ public final class Flags {
      */
     public static ExceptionVerbosity annotatedServiceExceptionVerbosity() {
         return ANNOTATED_SERVICE_EXCEPTION_VERBOSITY;
-    }
-
-    /**
-     * Returns the default value of the use event loop for annotated HTTP services option.
-     * Note that this value has effect only if a user did not specify it.
-     *
-     * <p>This flag is disabled by default. Specify the
-     * {@code -Dcom.linecorp.armeria.defaultUseEventLoopForAnnotatedService=true} JVM option to enable it.
-     */
-    public static boolean defaultUseEventLoopForAnnotatedService() {
-        return DEFAULT_USE_EVENT_LOOP_FOR_ANNOTATED_SERVICE;
     }
 
     private static Optional<String> caffeineSpec(String name, String defaultValue) {
