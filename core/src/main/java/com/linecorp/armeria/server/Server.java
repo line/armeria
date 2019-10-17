@@ -324,11 +324,11 @@ public final class Server implements AutoCloseable {
         final String repositoryStatus = versionInfo.repositoryStatus();
         final List<Tag> tags = ImmutableList.of(Tag.of("version", version),
                                                 Tag.of("commit", commit),
-                                                Tag.of("repostatus", repositoryStatus));
+                                                Tag.of("repoStatus", repositoryStatus));
         Gauge.builder("armeria.build.info", () -> 1)
              .tags(tags)
-             .description("A metric with a constant '1' value labeled by version and commit hash"
-                          + " from which Armeria was built.")
+             .description("A metric with a constant '1' value labeled by version and commit hash" +
+                          " from which Armeria was built.")
              .register(meterRegistry);
     }
 
