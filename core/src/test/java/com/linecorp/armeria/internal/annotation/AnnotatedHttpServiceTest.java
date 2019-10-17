@@ -47,8 +47,6 @@ import org.apache.http.util.EntityUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.HttpClient;
@@ -75,7 +73,6 @@ import com.linecorp.armeria.server.TestConverters.NaiveStringConverterFunction;
 import com.linecorp.armeria.server.TestConverters.TypedNumberConverterFunction;
 import com.linecorp.armeria.server.TestConverters.TypedStringConverterFunction;
 import com.linecorp.armeria.server.TestConverters.UnformattedStringConverterFunction;
-import com.linecorp.armeria.server.annotation.Blocking;
 import com.linecorp.armeria.server.annotation.Consumes;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Get;
@@ -672,64 +669,6 @@ class AnnotatedHttpServiceTest {
                                          @Header("password") String password) {
             validateContext(ctx);
             return username + '/' + password;
-        }
-    }
-
-    static class MyAnnotatedService12 {
-
-        @Get("/httpResponse")
-        public HttpResponse httpResponse(RequestContext ctx) {
-            validateContext(ctx);
-            return HttpResponse.of(HttpStatus.OK);
-        }
-
-        @Get("/aggregatedHttpResponse")
-        public AggregatedHttpResponse aggregatedHttpResponse(RequestContext ctx) {
-            validateContext(ctx);
-            return AggregatedHttpResponse.of(HttpStatus.OK);
-        }
-
-        @Get("/jsonNode")
-        public JsonNode jsonNode(RequestContext ctx) {
-            validateContext(ctx);
-            return TextNode.valueOf("Armeria");
-        }
-
-        @Get("/completionStage")
-        public CompletionStage<String> completionStage(RequestContext ctx) {
-            validateContext(ctx);
-            return CompletableFuture.supplyAsync(() -> "Armeria");
-        }
-    }
-
-    static class MyAnnotatedService13 {
-
-        @Get("/httpResponse")
-        @Blocking
-        public HttpResponse httpResponse(RequestContext ctx) {
-            validateContext(ctx);
-            return HttpResponse.of(HttpStatus.OK);
-        }
-
-        @Get("/aggregatedHttpResponse")
-        @Blocking
-        public AggregatedHttpResponse aggregatedHttpResponse(RequestContext ctx) {
-            validateContext(ctx);
-            return AggregatedHttpResponse.of(HttpStatus.OK);
-        }
-
-        @Get("/jsonNode")
-        @Blocking
-        public JsonNode jsonNode(RequestContext ctx) {
-            validateContext(ctx);
-            return TextNode.valueOf("Armeria");
-        }
-
-        @Get("/completionStage")
-        @Blocking
-        public CompletionStage<String> completionStage(RequestContext ctx) {
-            validateContext(ctx);
-            return CompletableFuture.supplyAsync(() -> "Armeria");
         }
     }
 
