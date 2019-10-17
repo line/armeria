@@ -444,7 +444,7 @@ public class ServerTest {
 
         final MeterRegistry meterRegistry = server.config().meterRegistry();
         final Gauge gauge = meterRegistry.find("armeria.build.info")
-                                         .tagKeys("version", "commit", "repostatus")
+                                         .tagKeys("version", "commit", "repoStatus")
                                          .gauge();
         assertThat(gauge).isNotNull();
         assertThat(gauge.value()).isOne();
