@@ -98,8 +98,6 @@ public class AnnotatedHttpService implements HttpService {
                              new StringResponseConverterFunction(),
                              new ByteArrayResponseConverterFunction());
 
-    private static final boolean USE_EVENT_LOOP = false;
-
     private final Object object;
     private final Method method;
     private final List<AnnotatedValueResolver> resolvers;
@@ -268,23 +266,16 @@ public class AnnotatedHttpService implements HttpService {
 
             default:
                 if (useBlocking) {
+                    logger.warn(method.getDeclaringClass().getName() + '#' + method.getName() + "is using" +
+                                " blockTaskExecutor. It'll migrate to use event loop thread when soon." +
+                                " Therefore, use @Blocking to avoid unexpected problems.");
                     return f.thenApplyAsync(
                             msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg),
                                                    HttpHeaders.of()),
                             ctx.blockingTaskExecutor());
                 } else {
-                    if (!USE_EVENT_LOOP) {
-                        logger.warn(method.getDeclaringClass().getName() + '#' + method.getName() + "is using" +
-                                    " blockTaskExecutor. It'll migrate to use event loop thread when soon." +
-                                    " Therefore, use @Blocking to avoid unexpected problems.");
-                        return f.thenApplyAsync(
-                                msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg),
-                                                       HttpHeaders.of()),
-                                ctx.blockingTaskExecutor());
-                    } else {
-                        return f.thenApply(msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg),
-                                                                  HttpHeaders.of()));
-                    }
+                    return f.thenApply(msg -> convertResponse(ctx, req, null, invoke(ctx, req, msg),
+                                                              HttpHeaders.of()));
                 }
         }
     }

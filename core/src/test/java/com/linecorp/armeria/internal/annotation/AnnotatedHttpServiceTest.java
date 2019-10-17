@@ -1098,19 +1098,19 @@ public class AnnotatedHttpServiceTest {
         headers = RequestHeaders.of(HttpMethod.GET, path);
         res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(blockingCount).hasValue(1);
+        assertThat(blockingCount).hasValue(0);
 
         path = "/12/jsonNode";
         headers = RequestHeaders.of(HttpMethod.GET, path);
         res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(blockingCount).hasValue(2);
+        assertThat(blockingCount).hasValue(0);
 
         path = "/12/completionStage";
         headers = RequestHeaders.of(HttpMethod.GET, path);
         res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(blockingCount).hasValue(2);
+        assertThat(blockingCount).hasValue(0);
     }
 
     @Test
