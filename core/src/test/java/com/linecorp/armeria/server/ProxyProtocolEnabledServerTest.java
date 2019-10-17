@@ -81,6 +81,8 @@ public class ProxyProtocolEnabledServerTest {
                                                          dst.getHostString(), dst.getPort()));
                 }
             });
+            sb.useServerHeader(false);
+            sb.useDateHeader(false);
         }
     };
 

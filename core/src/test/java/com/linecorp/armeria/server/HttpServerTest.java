@@ -434,6 +434,9 @@ class HttpServerTest {
 
             sb.maxRequestLength(MAX_CONTENT_LENGTH);
             sb.idleTimeout(Duration.ofSeconds(5));
+
+            sb.useServerHeader(false);
+            sb.useDateHeader(false);
         }
     };
 

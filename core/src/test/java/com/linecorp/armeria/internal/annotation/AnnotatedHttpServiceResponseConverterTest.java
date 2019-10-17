@@ -402,6 +402,9 @@ public class AnnotatedHttpServiceResponseConverterTest {
                                      ServerSentEvent.ofData("qux"));
                 }
             });
+
+            sb.useServerHeader(false);
+            sb.useDateHeader(false);
         }
 
         private Publisher<String> exceptionRaisingPublisher() {

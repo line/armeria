@@ -95,6 +95,8 @@ class HealthCheckServiceTest {
                                          })
                                          .build());
             sb.gracefulShutdownTimeout(Duration.ofSeconds(10), Duration.ofSeconds(10));
+            sb.useServerHeader(false);
+            sb.useDateHeader(false);
         }
     };
 

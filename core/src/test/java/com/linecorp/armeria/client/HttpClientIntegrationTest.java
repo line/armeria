@@ -340,6 +340,9 @@ class HttpClientIntegrationTest {
                     return HttpResponse.of(HttpStatus.OK);
                 }
             });
+
+            sb.useServerHeader(false);
+            sb.useDateHeader(false);
         }
     };
 
