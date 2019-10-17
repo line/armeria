@@ -109,8 +109,8 @@ public final class ServerConfig {
     @Nullable
     private String strVal;
 
-    private boolean defaultServerNameResponseHeader;
-    private boolean defaultServerDateResponseHeader;
+    private boolean includeServerHeader;
+    private boolean includeDateHeader;
 
     ServerConfig(
             Iterable<ServerPort> ports,
@@ -130,7 +130,7 @@ public final class ServerConfig {
             List<ClientAddressSource> clientAddressSources,
             Predicate<InetAddress> clientAddressTrustedProxyFilter,
             Predicate<InetAddress> clientAddressFilter,
-            boolean defaultServerNameResponseHeader, boolean defaultServerDateResponseHeader) {
+            boolean includeServerHeader, boolean includeDateHeader) {
 
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
@@ -248,8 +248,8 @@ public final class ServerConfig {
                                    .flatMap(h -> h.serviceConfigs().stream())
                                    .collect(toImmutableList());
 
-        this.defaultServerNameResponseHeader = defaultServerNameResponseHeader;
-        this.defaultServerDateResponseHeader = defaultServerDateResponseHeader;
+        this.includeServerHeader = includeServerHeader;
+        this.includeDateHeader = includeDateHeader;
     }
 
     static int validateMaxNumConnections(int maxNumConnections) {
@@ -652,15 +652,15 @@ public final class ServerConfig {
     /**
      * Returns whether the response header will include Server header.
      */
-    public boolean defaultServerNameResponseHeader() {
-        return defaultServerNameResponseHeader;
+    public boolean includeServerHeader() {
+        return includeServerHeader;
     }
 
     /**
      * Returns whether the response header will include Date header.
      */
-    public boolean defaultServerDateResponseHeader() {
-        return defaultServerDateResponseHeader;
+    public boolean includeDateHeader() {
+        return includeDateHeader;
     }
 
     @Override

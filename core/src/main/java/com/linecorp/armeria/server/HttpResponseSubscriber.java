@@ -71,6 +71,18 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     private static final Set<AsciiString> ADDITIONAL_HEADER_BLACKLIST = ImmutableSet.of(
             HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD, HttpHeaderNames.PATH);
 
+    private static final String ARTIFACT_ID = "armeria";
+    private static final String SERVER_NAME = "Armeria";
+    private static final String serverHeader;
+
+    static {
+        serverHeader = String.format("%s/%s (%s)",
+                                     SERVER_NAME,
+                                     Version.identify(HttpResponseSubscriber.class.getClassLoader())
+                                            .get(ARTIFACT_ID).artifactVersion(),
+                                     System.getProperty("os.name"));
+    }
+
     enum State {
         NEEDS_HEADERS,
         NEEDS_DATA_OR_TRAILERS,
@@ -208,15 +220,12 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                 }
 
                 if (!newHeaders.contains(HttpHeaderNames.SERVER) &&
-                    config.defaultServerNameResponseHeader()) {
-                    final String verInfo = String.format("Armeria/%s (%s)",
-                                                         Version.identify().get("armeria").artifactVersion(),
-                                                         System.getProperty("os.name"));
-                    newHeaders.add(HttpHeaderNames.SERVER, verInfo);
+                    config.includeServerHeader()) {
+                    newHeaders.add(HttpHeaderNames.SERVER, serverHeader);
                 }
 
                 if (!newHeaders.contains(HttpHeaderNames.DATE) &&
-                    config.defaultServerDateResponseHeader()) {
+                    config.includeDateHeader()) {
                     newHeaders.add(HttpHeaderNames.DATE,
                                    DateTimeFormatter.RFC_1123_DATE_TIME.format(
                                            ZonedDateTime.now(ZoneOffset.UTC)));
