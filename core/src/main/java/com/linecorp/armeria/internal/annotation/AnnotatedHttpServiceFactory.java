@@ -296,7 +296,7 @@ public final class AnnotatedHttpServiceFactory {
                 getAnnotatedInstances(method, clazz, ResponseConverter.class, ResponseConverterFunction.class)
                         .addAll(baseResponseConverters).build();
 
-        final boolean useBlocking = findFirst(method, Blocking.class).isPresent();
+        final boolean useBlockingTaskExecutor = findFirst(method, Blocking.class).isPresent();
 
         List<AnnotatedValueResolver> resolvers;
         try {
@@ -383,7 +383,7 @@ public final class AnnotatedHttpServiceFactory {
                                                                                eh, res, route,
                                                                                defaultHeaders.build(),
                                                                                defaultTrailers.build(),
-                                                                               useBlocking),
+                                                                               useBlockingTaskExecutor),
                                                decorator(method, clazz, initialDecorator));
     }
 

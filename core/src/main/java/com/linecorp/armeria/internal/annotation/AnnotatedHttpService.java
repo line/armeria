@@ -111,7 +111,7 @@ public class AnnotatedHttpService implements HttpService {
     private final HttpHeaders defaultHttpTrailers;
 
     private final ResponseType responseType;
-    private final boolean useBlocking;
+    private final boolean useBlockingTaskExecutor;
 
     AnnotatedHttpService(Object object, Method method,
                          List<AnnotatedValueResolver> resolvers,
@@ -120,7 +120,7 @@ public class AnnotatedHttpService implements HttpService {
                          Route route,
                          ResponseHeaders defaultHttpHeaders,
                          HttpHeaders defaultHttpTrailers,
-                         boolean useBlocking) {
+                         boolean useBlockingTaskExecutor) {
         this.object = requireNonNull(object, "object");
         this.method = requireNonNull(method, "method");
         this.resolvers = requireNonNull(resolvers, "resolvers");
@@ -134,7 +134,7 @@ public class AnnotatedHttpService implements HttpService {
 
         this.defaultHttpHeaders = requireNonNull(defaultHttpHeaders, "defaultHttpHeaders");
         this.defaultHttpTrailers = requireNonNull(defaultHttpTrailers, "defaultHttpTrailers");
-        this.useBlocking = useBlocking;
+        this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         final Class<?> returnType = method.getReturnType();
         if (HttpResponse.class.isAssignableFrom(returnType)) {
             responseType = ResponseType.HTTP_RESPONSE;
@@ -235,7 +235,7 @@ public class AnnotatedHttpService implements HttpService {
 
         switch (responseType) {
             case HTTP_RESPONSE:
-                if (useBlocking) {
+                if (useBlockingTaskExecutor) {
                     return f.thenApplyAsync(
                             msg -> new ExceptionFilteredHttpResponse(ctx, req,
                                                                      (HttpResponse) invoke(ctx, req, msg),
@@ -249,7 +249,7 @@ public class AnnotatedHttpService implements HttpService {
                 }
 
             case COMPLETION_STAGE:
-                if (useBlocking) {
+                if (useBlockingTaskExecutor) {
                     return f.thenComposeAsync(msg -> toCompletionStage(invoke(ctx, req, msg)),
                                               ctx.blockingTaskExecutor())
                             .handle((result, cause) ->
@@ -265,7 +265,7 @@ public class AnnotatedHttpService implements HttpService {
                 }
 
             default:
-                if (useBlocking) {
+                if (useBlockingTaskExecutor) {
                     logger.warn(method.getDeclaringClass().getName() + '#' + method.getName() + "is using" +
                                 " blockTaskExecutor. It'll migrate to use event loop thread when soon." +
                                 " Therefore, use @Blocking to avoid unexpected problems.");
