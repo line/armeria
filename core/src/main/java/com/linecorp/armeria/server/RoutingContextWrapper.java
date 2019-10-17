@@ -44,11 +44,6 @@ class RoutingContextWrapper implements RoutingContext {
     }
 
     @Override
-    public UUID uuid() {
-        return delegate.uuid();
-    }
-
-    @Override
     public HttpMethod method() {
         return delegate.method();
     }

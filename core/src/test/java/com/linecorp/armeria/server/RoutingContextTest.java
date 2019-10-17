@@ -22,7 +22,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 import java.util.List;
-import java.util.UUID;
 
 import javax.annotation.Nullable;
 
@@ -76,7 +75,6 @@ class RoutingContextTest {
         final RoutingContext ctx3;
 
         ctx1 = new DefaultRoutingContext(virtualHost, "example.com",
-                                         UUID.randomUUID(),
                                          RequestHeaders.of(HttpMethod.GET, "/hello",
                                                            HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
                                                            HttpHeaderNames.ACCEPT,
@@ -84,7 +82,6 @@ class RoutingContextTest {
                                                            MediaType.XML_UTF_8 + "; q=0.8"),
                                          "/hello", null, false);
         ctx2 = new DefaultRoutingContext(virtualHost, "example.com",
-                                         UUID.randomUUID(),
                                          RequestHeaders.of(HttpMethod.GET, "/hello",
                                                            HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
                                                            HttpHeaderNames.ACCEPT,
@@ -92,7 +89,6 @@ class RoutingContextTest {
                                                            MediaType.XML_UTF_8 + "; q=0.8"),
                                          "/hello", null, false);
         ctx3 = new DefaultRoutingContext(virtualHost, "example.com",
-                                         UUID.randomUUID(),
                                          RequestHeaders.of(HttpMethod.GET, "/hello",
                                                            HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
                                                            HttpHeaderNames.ACCEPT,
@@ -105,11 +101,9 @@ class RoutingContextTest {
         assertThat(ctx1).isNotEqualTo(ctx3);
 
         ctx1 = new DefaultRoutingContext(virtualHost, "example.com",
-                                         UUID.randomUUID(),
                                          RequestHeaders.of(HttpMethod.GET, "/hello"),
                                          "/hello", "a=1&b=1", false);
         ctx2 = new DefaultRoutingContext(virtualHost, "example.com",
-                                         UUID.randomUUID(),
                                          RequestHeaders.of(HttpMethod.GET, "/hello"), "/hello", "a=1", false);
 
         assertThat(ctx1.hashCode()).isEqualTo(ctx2.hashCode());
@@ -124,7 +118,6 @@ class RoutingContextTest {
         final String requestPath = query != null ? path + '?' + query : path;
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, requestPath);
         return DefaultRoutingContext.of(virtualHost(), "example.com",
-                                        UUID.randomUUID(),
                                         path, query, headers, false);
     }
 
