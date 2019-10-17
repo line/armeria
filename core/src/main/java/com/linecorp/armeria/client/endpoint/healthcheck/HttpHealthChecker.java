@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 
+import com.google.common.math.LongMath;
 import io.netty.util.AsciiString;
 
 final class HttpHealthChecker implements AsyncCloseable {

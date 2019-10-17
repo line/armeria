@@ -30,13 +30,12 @@ import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 
-import com.google.common.collect.ImmutableList;
-
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 
+import com.google.common.collect.ImmutableList;
 import io.netty.channel.EventLoopGroup;
 
 class HealthCheckedEndpointGroupTest {
