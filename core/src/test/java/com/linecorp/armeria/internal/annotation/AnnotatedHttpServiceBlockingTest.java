@@ -19,6 +19,8 @@ package com.linecorp.armeria.internal.annotation;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -26,18 +28,24 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.util.ThreadFactories;
-import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceTest.MyAnnotatedService12;
-import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceTest.MyAnnotatedService13;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.annotation.Blocking;
+import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
@@ -80,61 +88,85 @@ class AnnotatedHttpServiceBlockingTest {
         }
     };
 
-    @Test
-    public void testOriginBlockingTaskType() throws Exception {
-        final HttpClient client = HttpClient.of(server.uri("/"));
+    static class MyAnnotatedService12 {
 
-        String path = "/12/httpResponse";
-        RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, path);
-        AggregatedHttpResponse res = client.execute(headers).aggregate().join();
-        assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(blockingCount).hasValue(0);
+        @Get("/httpResponse")
+        public HttpResponse httpResponse(RequestContext ctx) {
+            return HttpResponse.of(HttpStatus.OK);
+        }
 
-        path = "/12/aggregatedHttpResponse";
-        headers = RequestHeaders.of(HttpMethod.GET, path);
-        res = client.execute(headers).aggregate().join();
-        assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(blockingCount).hasValue(0);
+        @Get("/aggregatedHttpResponse")
+        public AggregatedHttpResponse aggregatedHttpResponse(RequestContext ctx) {
+            return AggregatedHttpResponse.of(HttpStatus.OK);
+        }
 
-        path = "/12/jsonNode";
-        headers = RequestHeaders.of(HttpMethod.GET, path);
-        res = client.execute(headers).aggregate().join();
-        assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(blockingCount).hasValue(0);
+        @Get("/jsonNode")
+        public JsonNode jsonNode(RequestContext ctx) {
+            return TextNode.valueOf("Armeria");
+        }
 
-        path = "/12/completionStage";
-        headers = RequestHeaders.of(HttpMethod.GET, path);
-        res = client.execute(headers).aggregate().join();
-        assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(blockingCount).hasValue(0);
+        @Get("/completionStage")
+        public CompletionStage<String> completionStage(RequestContext ctx) {
+            return CompletableFuture.supplyAsync(() -> "Armeria");
+        }
     }
 
-    @Test
-    public void testOnlyBlockingTaskType() throws Exception {
+    static class MyAnnotatedService13 {
+
+        @Get("/httpResponse")
+        @Blocking
+        public HttpResponse httpResponse(RequestContext ctx) {
+            return HttpResponse.of(HttpStatus.OK);
+        }
+
+        @Get("/aggregatedHttpResponse")
+        @Blocking
+        public AggregatedHttpResponse aggregatedHttpResponse(RequestContext ctx) {
+            return AggregatedHttpResponse.of(HttpStatus.OK);
+        }
+
+        @Get("/jsonNode")
+        @Blocking
+        public JsonNode jsonNode(RequestContext ctx) {
+            return TextNode.valueOf("Armeria");
+        }
+
+        @Get("/completionStage")
+        @Blocking
+        public CompletionStage<String> completionStage(RequestContext ctx) {
+            return CompletableFuture.supplyAsync(() -> "Armeria");
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "/12/httpResponse, 0",
+            "/12/aggregatedHttpResponse, 0",
+            "/12/jsonNode, 0",
+            "/12/completionStage, 0"
+    })
+    public void testOriginBlockingTaskType(String path, Integer count) throws Exception {
         final HttpClient client = HttpClient.of(server.uri("/"));
 
-        String path = "/13/httpResponse";
-        RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, path);
-        AggregatedHttpResponse res = client.execute(headers).aggregate().join();
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, path);
+        final AggregatedHttpResponse res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(blockingCount).hasValue(1);
+        assertThat(blockingCount).hasValue(count);
+    }
 
-        path = "/13/aggregatedHttpResponse";
-        headers = RequestHeaders.of(HttpMethod.GET, path);
-        res = client.execute(headers).aggregate().join();
-        assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(blockingCount).hasValue(2);
+    @ParameterizedTest
+    @CsvSource({
+            "/13/httpResponse, 1",
+            "/13/aggregatedHttpResponse, 1",
+            "/13/jsonNode, 1",
+            "/13/completionStage, 1"
+    })
+    public void testOnlyBlockingTaskType(String path, Integer count) throws Exception {
+        final HttpClient client = HttpClient.of(server.uri("/"));
 
-        path = "/13/jsonNode";
-        headers = RequestHeaders.of(HttpMethod.GET, path);
-        res = client.execute(headers).aggregate().join();
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, path);
+        final AggregatedHttpResponse res = client.execute(headers).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(blockingCount).hasValue(3);
-
-        path = "/13/completionStage";
-        headers = RequestHeaders.of(HttpMethod.GET, path);
-        res = client.execute(headers).aggregate().join();
-        assertThat(res.status()).isSameAs(HttpStatus.OK);
-        assertThat(blockingCount).hasValue(4);
+        assertThat(blockingCount).hasValue(count);
     }
 }
