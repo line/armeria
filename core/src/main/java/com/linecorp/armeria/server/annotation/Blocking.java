@@ -21,8 +21,12 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.linecorp.armeria.server.ServerConfig;
+
 /**
- * Specifies whether blocking of thread that would be produced by the annotated service method.
+ * Specifies that the annotated service method must be invoked from the
+ * {@linkplain ServerConfig#blockingTaskExecutor() blocking task executor}
+ * instead of an event loop thread.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
