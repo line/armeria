@@ -17,6 +17,11 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.DateTimeException;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -29,7 +34,7 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 class HttpServerDefaultHeadersTest {
     @RegisterExtension
-    static final ServerExtension server1 = new ServerExtension() {
+    static final ServerExtension serverWithDefaults = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/", (ctx, req) -> {
@@ -39,10 +44,10 @@ class HttpServerDefaultHeadersTest {
     };
 
     @RegisterExtension
-    static final ServerExtension server2 = new ServerExtension() {
+    static final ServerExtension serverWithoutServerHeader = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.includeServerHeader(false);
+            sb.useServerHeader(false);
             sb.service("/", (ctx, req) -> {
                 return HttpResponse.of(HttpStatus.OK);
             });
@@ -50,10 +55,10 @@ class HttpServerDefaultHeadersTest {
     };
 
     @RegisterExtension
-    static final ServerExtension server3 = new ServerExtension() {
+    static final ServerExtension serverWithoutDateHeader = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.includeDateHeader(false);
+            sb.useDateHeader(false);
             sb.service("/", (ctx, req) -> {
                 return HttpResponse.of(HttpStatus.OK);
             });
@@ -61,14 +66,14 @@ class HttpServerDefaultHeadersTest {
     };
 
     @RegisterExtension
-    static final ServerExtension server4 = new ServerExtension() {
+    static final ServerExtension serverWithServerNameOverridden = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/", (ctx, req) -> {
                 return HttpResponse.of(HttpStatus.OK);
             });
             sb.decorator((delegate, ctx, req) -> {
-                ctx.addAdditionalResponseHeader(HttpHeaderNames.SERVER, "armeria2");
+                ctx.addAdditionalResponseHeader(HttpHeaderNames.SERVER, "name-set-by-user");
                 return delegate.serve(ctx, req);
             });
         }
@@ -76,39 +81,68 @@ class HttpServerDefaultHeadersTest {
 
     @Test
     void testServerNameAndDateHeaderIncludedByDefault() {
-        final HttpClient client = HttpClient.of(server1.httpUri("/"));
+        final HttpClient client = HttpClient.of(serverWithDefaults.httpUri("/"));
         final AggregatedHttpResponse res = client.get("/").aggregate().join();
+
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.headers().names()).contains(HttpHeaderNames.SERVER,
-                                                   HttpHeaderNames.DATE);
-        assertThat(res.headers().get(HttpHeaderNames.SERVER)).isEqualTo("armeria");
+
+        assertThat(res.headers().names()).contains(HttpHeaderNames.SERVER);
+        assertThat(res.headers().get(HttpHeaderNames.SERVER)).contains("Armeria");
+
+        assertThat(res.headers().names()).contains(HttpHeaderNames.DATE);
+        assertThat(isValidDateTimeFormat(res.headers().get(HttpHeaderNames.DATE))).isTrue();
     }
 
     @Test
     void testServerNameHeaderShouldBeExcludedByOption() {
-        final HttpClient client = HttpClient.of(server2.httpUri("/"));
+        final HttpClient client = HttpClient.of(serverWithoutServerHeader.httpUri("/"));
         final AggregatedHttpResponse res = client.get("/").aggregate().join();
+
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.headers().names()).contains(HttpHeaderNames.DATE);
+
         assertThat(res.headers().names()).doesNotContain(HttpHeaderNames.SERVER);
+
+        assertThat(res.headers().names()).contains(HttpHeaderNames.DATE);
+        assertThat(isValidDateTimeFormat(res.headers().get(HttpHeaderNames.DATE))).isTrue();
     }
 
     @Test
     void testDateHeaderShouldBeExcludedByOption() {
-        final HttpClient client = HttpClient.of(server3.httpUri("/"));
+        final HttpClient client = HttpClient.of(serverWithoutDateHeader.httpUri("/"));
         final AggregatedHttpResponse res = client.get("/").aggregate().join();
+
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
+
         assertThat(res.headers().names()).contains(HttpHeaderNames.SERVER);
-        assertThat(res.headers().get(HttpHeaderNames.SERVER)).isEqualTo("armeria");
+        assertThat(res.headers().get(HttpHeaderNames.SERVER)).contains("Armeria");
+
         assertThat(res.headers().names()).doesNotContain(HttpHeaderNames.DATE);
     }
 
     @Test
     void testServerNameHeaderOverride() {
-        final HttpClient client = HttpClient.of(server4.httpUri("/"));
+        final HttpClient client = HttpClient.of(serverWithServerNameOverridden.httpUri("/"));
         final AggregatedHttpResponse res = client.get("/").aggregate().join();
+
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
+
         assertThat(res.headers().names()).contains(HttpHeaderNames.SERVER);
-        assertThat(res.headers().get(HttpHeaderNames.SERVER)).isEqualTo("armeria2");
+        assertThat(res.headers().get(HttpHeaderNames.SERVER)).isEqualTo("name-set-by-user");
+    }
+
+    private boolean isValidDateTimeFormat(String dateTimeString) {
+        ZonedDateTime parsedDateTime = null;
+
+        try {
+            parsedDateTime = ZonedDateTime.parse(dateTimeString, DateTimeFormatter.RFC_1123_DATE_TIME);
+            final String parsedDateTimeString = parsedDateTime.format(DateTimeFormatter.RFC_1123_DATE_TIME);
+            return parsedDateTimeString.equals(dateTimeString);
+        } catch (DateTimeParseException e) {
+            return false;
+        } catch (DateTimeException e) {
+            return false;
+        } catch (Exception e) {
+            throw e;
+        }
     }
 }

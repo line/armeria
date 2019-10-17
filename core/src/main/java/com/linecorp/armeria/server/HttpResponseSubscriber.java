@@ -219,13 +219,13 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                     newHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
                 }
 
-                if (!newHeaders.contains(HttpHeaderNames.SERVER) &&
-                    config.includeServerHeader()) {
+                if (config.useServerHeader() &&
+                    !newHeaders.contains(HttpHeaderNames.SERVER)) {
                     newHeaders.add(HttpHeaderNames.SERVER, serverHeader);
                 }
 
-                if (!newHeaders.contains(HttpHeaderNames.DATE) &&
-                    config.includeDateHeader()) {
+                if (config.useDateHeader() &&
+                    !newHeaders.contains(HttpHeaderNames.DATE)) {
                     newHeaders.add(HttpHeaderNames.DATE,
                                    DateTimeFormatter.RFC_1123_DATE_TIME.format(
                                            ZonedDateTime.now(ZoneOffset.UTC)));

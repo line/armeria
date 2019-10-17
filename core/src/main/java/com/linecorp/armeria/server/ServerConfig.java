@@ -109,8 +109,8 @@ public final class ServerConfig {
     @Nullable
     private String strVal;
 
-    private boolean includeServerHeader;
-    private boolean includeDateHeader;
+    private boolean useServerHeader;
+    private boolean useDateHeader;
 
     ServerConfig(
             Iterable<ServerPort> ports,
@@ -130,7 +130,7 @@ public final class ServerConfig {
             List<ClientAddressSource> clientAddressSources,
             Predicate<InetAddress> clientAddressTrustedProxyFilter,
             Predicate<InetAddress> clientAddressFilter,
-            boolean includeServerHeader, boolean includeDateHeader) {
+            boolean useServerHeader, boolean useDateHeader) {
 
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
@@ -248,8 +248,8 @@ public final class ServerConfig {
                                    .flatMap(h -> h.serviceConfigs().stream())
                                    .collect(toImmutableList());
 
-        this.includeServerHeader = includeServerHeader;
-        this.includeDateHeader = includeDateHeader;
+        this.useServerHeader = useServerHeader;
+        this.useDateHeader = useDateHeader;
     }
 
     static int validateMaxNumConnections(int maxNumConnections) {
@@ -652,15 +652,15 @@ public final class ServerConfig {
     /**
      * Returns whether the response header will include Server header.
      */
-    public boolean includeServerHeader() {
-        return includeServerHeader;
+    public boolean useServerHeader() {
+        return useServerHeader;
     }
 
     /**
      * Returns whether the response header will include Date header.
      */
-    public boolean includeDateHeader() {
-        return includeDateHeader;
+    public boolean useDateHeader() {
+        return useDateHeader;
     }
 
     @Override

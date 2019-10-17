@@ -203,8 +203,8 @@ public final class ServerBuilder {
     private Function<VirtualHost, Logger> accessLoggerMapper = host -> LoggerFactory.getLogger(
             defaultAccessLoggerName(host.hostnamePattern()));
 
-    private boolean includeServerHeader = true;
-    private boolean includeDateHeader = true;
+    private boolean useServerHeader = true;
+    private boolean useDateHeader = true;
 
     /**
      * Returns a new {@link ServerBuilder}.
@@ -1508,25 +1508,25 @@ public final class ServerBuilder {
     /**
      * Sets whether the response header will include Server header.
      */
-    public ServerBuilder includeServerHeader(boolean includeServerHeader) {
-        this.includeServerHeader = includeServerHeader;
+    public ServerBuilder useServerHeader(boolean useServerHeader) {
+        this.useServerHeader = useServerHeader;
         return this;
     }
 
-    boolean includeServerHeader() {
-        return includeServerHeader;
+    boolean useServerHeader() {
+        return useServerHeader;
     }
 
     /**
      * Sets whether the response header will include Date header.
      */
-    public ServerBuilder includeDateHeader(boolean includeDateHeader) {
-        this.includeDateHeader = includeDateHeader;
+    public ServerBuilder useDateHeader(boolean useDateHeader) {
+        this.useDateHeader = useDateHeader;
         return this;
     }
 
-    boolean includeDateHeader() {
-        return includeDateHeader;
+    boolean useDateHeader() {
+        return useDateHeader;
     }
 
     /**
@@ -1614,7 +1614,7 @@ public final class ServerBuilder {
                 meterRegistry, serviceLoggerPrefix, accessLogWriter, shutdownAccessLogWriterOnStop,
                 proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter,
-                includeServerHeader, includeDateHeader), sslContexts);
+                useServerHeader, useDateHeader), sslContexts);
 
         serverListeners.forEach(server::addListener);
         return server;
