@@ -312,7 +312,7 @@ public final class Server implements AutoCloseable {
     }
 
     /**
-     * Setup version metrics
+     * Sets up the version metrics.
      */
     @VisibleForTesting
     void setupVersionMetrics() {
