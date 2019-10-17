@@ -69,6 +69,11 @@ abstract class AbstractHttpHeadersBuilder<T extends AbstractHttpHeadersBuilder<T
         return parent;
     }
 
+    final <V extends HttpHeadersBase> V updateParent(V parent) {
+        this.parent = requireNonNull(parent, "parent");
+        return parent;
+    }
+
     /**
      * Makes the current {@link #delegate()} a new {@link #parent()} and clears the current {@link #delegate()}.
      * Call this method when you create a new {@link HttpHeaders} derived from the {@link #delegate()},

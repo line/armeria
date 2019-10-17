@@ -22,9 +22,9 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.Maps;
 
-public class DefaultResponseHeadersBuilderTest {
+class DefaultResponseHeadersBuilderTest {
     @Test
-    public void mutationAfterBuild() {
+    void mutationAfterBuild() {
         final ResponseHeaders headers = ResponseHeaders.of(200);
         final DefaultResponseHeadersBuilder builder = (DefaultResponseHeadersBuilder) headers.toBuilder();
 
@@ -73,7 +73,7 @@ public class DefaultResponseHeadersBuilderTest {
     }
 
     @Test
-    public void noMutationNoCopy() {
+    void noMutationNoCopy() {
         final ResponseHeaders headers = ResponseHeaders.of(200);
         final DefaultResponseHeadersBuilder builder = (DefaultResponseHeadersBuilder) headers.toBuilder();
         assertThat(builder.build()).isSameAs(headers);
@@ -81,7 +81,14 @@ public class DefaultResponseHeadersBuilderTest {
     }
 
     @Test
-    public void validation() {
+    void buildTwice() {
+        final ResponseHeadersBuilder builder = ResponseHeaders.builder(200).add("foo", "bar");
+        assertThat(builder.build()).isEqualTo(ResponseHeaders.of(HttpStatus.OK, "foo", "bar"));
+        assertThat(builder.build()).isEqualTo(ResponseHeaders.of(HttpStatus.OK, "foo", "bar"));
+    }
+
+    @Test
+    void validation() {
         // When delegate is null.
         assertThatThrownBy(() -> ResponseHeaders.builder().build())
                 .isInstanceOf(IllegalStateException.class)
