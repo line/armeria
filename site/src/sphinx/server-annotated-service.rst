@@ -95,8 +95,8 @@ Please refer to :ref:`parameter-injection` for more information about :api:`@Par
     }
 
 Every service method in the examples so far had a single HTTP method annotation with it. What if you want
-to map more than one HTTP method to your service method? You can use :api:`@Path` annotation to specify
-a path and use the HTTP method annotations without a path to map multiple HTTP methods, e.g.
+to map more than one HTTP method or path to your service method? You can use :api:`@Path` annotations to
+specify multiple paths, and use the HTTP method annotations without a path to map multiple HTTP methods, e.g.
 
 .. code-block:: java
 
@@ -106,7 +106,8 @@ a path and use the HTTP method annotations without a path to map multiple HTTP m
         @Put
         @Delete
         @Path("/hello")
-        public HttpResponse hello() { ... }
+        @Path("/hi")
+        public HttpResponse greeting() { ... }
     }
 
 Every service method assumes that it returns an HTTP response with ``200 OK`` or ``204 No Content`` status
