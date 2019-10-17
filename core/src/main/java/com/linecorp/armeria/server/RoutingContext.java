@@ -46,11 +46,6 @@ public interface RoutingContext {
     String hostname();
 
     /**
-     * Returns the {@link UUID} of the request.
-     */
-    UUID uuid();
-
-    /**
      * Returns {@link HttpMethod} of the request.
      */
     HttpMethod method();

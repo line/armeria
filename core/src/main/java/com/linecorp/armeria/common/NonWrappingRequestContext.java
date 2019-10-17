@@ -80,9 +80,9 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
         this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
+        this.uuid = requireNonNull(uuid, "uuid");
         this.method = requireNonNull(method, "method");
         this.path = requireNonNull(path, "path");
-        this.uuid = requireNonNull(uuid, "uuid");
         this.query = query;
         this.req = req;
         this.rpcReq = rpcReq;

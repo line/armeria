@@ -40,7 +40,6 @@ import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
-import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -99,7 +98,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      *
      * @param eventLoop the {@link EventLoop} associated with this context
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
-     * @param uuid the {@link UUID} that contains the information about the current {@link Request}.
+     * @param uuid the {@link UUID} that contains the information about the current {@link HttpRequest}.
      * @param req the {@link HttpRequest} associated with this context
      * @param rpcReq the {@link RpcRequest} associated with this context
      */
@@ -117,7 +116,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      *
      * @param factory the {@link ClientFactory} which is used to acquire an {@link EventLoop}
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
-     * @param uuid the {@link UUID} that contains the information about the current {@link Request}.
+     * @param uuid the {@link UUID} that contains the information about the current {@link HttpRequest}.
      * @param req the {@link HttpRequest} associated with this context
      * @param rpcReq the {@link RpcRequest} associated with this context
      */

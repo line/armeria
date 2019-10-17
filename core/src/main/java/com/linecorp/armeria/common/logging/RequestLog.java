@@ -169,7 +169,7 @@ public interface RequestLog extends AttributeMap {
     RequestContext context();
 
     /**
-     * Returns the method of the {@link Request}. This method is a shortcut to {@code context().uuid()}.
+     * Returns the {@link UUID} of the {@link Request}. This method is a shortcut to {@code context().uuid()}.
      */
     default UUID uuid() {
         return context().uuid();

@@ -100,7 +100,9 @@ public abstract class AbstractRequestContextBuilder {
         this.req = requireNonNull(req, "req");
         rpcReq = null;
         sessionProtocol = SessionProtocol.H2C;
-        uuid = UUID.randomUUID();
+        if (uuid == null) {
+            uuid = UUID.randomUUID();
+        }
         method = req.headers().method();
         authority = firstNonNull(req.headers().authority(), FALLBACK_AUTHORITY);
 
@@ -448,7 +450,7 @@ public abstract class AbstractRequestContextBuilder {
      * Returns the {@link UUID} of the request.
      */
     protected final UUID uuid() {
-        if(uuid == null) {
+        if (uuid == null) {
             uuid = UUID.randomUUID();
         }
         return uuid;
