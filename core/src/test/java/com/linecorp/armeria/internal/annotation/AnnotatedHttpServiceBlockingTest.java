@@ -49,6 +49,11 @@ class AnnotatedHttpServiceBlockingTest {
 
     private static final AtomicInteger blockingCount = new AtomicInteger();
 
+    @BeforeEach
+    void clear() {
+        blockingCount.set(0);
+    }
+
     private static class CountingThreadPoolExecutor extends ThreadPoolExecutor {
 
         CountingThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime,
@@ -61,11 +66,6 @@ class AnnotatedHttpServiceBlockingTest {
         protected void beforeExecute(Thread t, Runnable r) {
             blockingCount.incrementAndGet();
         }
-    }
-
-    @BeforeEach
-    void clear() {
-        blockingCount.set(0);
     }
 
     @RegisterExtension
