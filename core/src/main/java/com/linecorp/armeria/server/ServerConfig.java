@@ -109,8 +109,8 @@ public final class ServerConfig {
     @Nullable
     private String strVal;
 
-    private boolean enableServerHeader;
-    private boolean enableDateHeader;
+    private final boolean enableServerHeader;
+    private final boolean enableDateHeader;
 
     ServerConfig(
             Iterable<ServerPort> ports,
