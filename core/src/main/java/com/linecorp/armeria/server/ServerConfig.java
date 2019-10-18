@@ -650,14 +650,14 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns whether the response header will include Server header.
+     * Returns whether the response header will include {@code "Server"} header.
      */
     public boolean useServerHeader() {
         return useServerHeader;
     }
 
     /**
-     * Returns whether the response header will include Date header.
+     * Returns whether the response header will include {@code "Date"} header.
      */
     public boolean useDateHeader() {
         return useDateHeader;
