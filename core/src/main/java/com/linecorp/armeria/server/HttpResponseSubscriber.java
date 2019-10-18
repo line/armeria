@@ -19,9 +19,6 @@ package com.linecorp.armeria.server;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isTrailerBlacklisted;
 
 import java.nio.channels.ClosedChannelException;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
