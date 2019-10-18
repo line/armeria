@@ -403,8 +403,8 @@ public class AnnotatedHttpServiceResponseConverterTest {
                 }
             });
 
-            sb.useServerHeader(false);
-            sb.useDateHeader(false);
+            sb.disableServerHeader();
+            sb.disableDateHeader();
         }
 
         private Publisher<String> exceptionRaisingPublisher() {

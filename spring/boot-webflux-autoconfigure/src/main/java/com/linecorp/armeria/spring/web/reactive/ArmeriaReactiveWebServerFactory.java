@@ -131,8 +131,8 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
     @Override
     public WebServer getWebServer(HttpHandler httpHandler) {
         final ServerBuilder sb = Server.builder();
-        sb.useServerHeader(false);
-        sb.useDateHeader(false);
+        sb.disableServerHeader();
+        sb.disableDateHeader();
 
         final SessionProtocol protocol;
         final Ssl ssl = getSsl();

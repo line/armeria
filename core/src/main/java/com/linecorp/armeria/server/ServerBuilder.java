@@ -1508,8 +1508,8 @@ public final class ServerBuilder {
     /**
      * Sets whether the response header will include Server header.
      */
-    public ServerBuilder useServerHeader(boolean useServerHeader) {
-        this.useServerHeader = useServerHeader;
+    public ServerBuilder disableServerHeader() {
+        this.useServerHeader = false;
         return this;
     }
 
@@ -1520,8 +1520,8 @@ public final class ServerBuilder {
     /**
      * Sets whether the response header will include Date header.
      */
-    public ServerBuilder useDateHeader(boolean useDateHeader) {
-        this.useDateHeader = useDateHeader;
+    public ServerBuilder disableDateHeader() {
+        this.useDateHeader = false;
         return this;
     }
 

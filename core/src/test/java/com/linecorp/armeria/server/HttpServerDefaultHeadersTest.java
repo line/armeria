@@ -47,7 +47,7 @@ class HttpServerDefaultHeadersTest {
     static final ServerExtension serverWithoutServerHeader = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.useServerHeader(false);
+            sb.disableServerHeader();
             sb.service("/", (ctx, req) -> {
                 return HttpResponse.of(HttpStatus.OK);
             });
@@ -58,7 +58,7 @@ class HttpServerDefaultHeadersTest {
     static final ServerExtension serverWithoutDateHeader = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.useDateHeader(false);
+            sb.disableDateHeader();
             sb.service("/", (ctx, req) -> {
                 return HttpResponse.of(HttpStatus.OK);
             });

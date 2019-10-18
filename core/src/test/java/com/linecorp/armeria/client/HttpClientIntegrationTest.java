@@ -341,8 +341,8 @@ class HttpClientIntegrationTest {
                 }
             });
 
-            sb.useServerHeader(false);
-            sb.useDateHeader(false);
+            sb.disableServerHeader();
+            sb.disableDateHeader();
         }
     };
 
