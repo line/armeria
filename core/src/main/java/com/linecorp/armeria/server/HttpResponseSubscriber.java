@@ -52,6 +52,7 @@ import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
+import com.linecorp.armeria.internal.HttpTimestampSupplier;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -218,9 +219,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                 }
 
                 if (enableDateHeader && !newHeaders.contains(HttpHeaderNames.DATE)) {
-                    newHeaders.add(HttpHeaderNames.DATE,
-                                   DateTimeFormatter.RFC_1123_DATE_TIME.format(
-                                           ZonedDateTime.now(ZoneOffset.UTC)));
+                    newHeaders.add(HttpHeaderNames.DATE, HttpTimestampSupplier.currentTime());
                 }
 
                 headers = newHeaders.build();
