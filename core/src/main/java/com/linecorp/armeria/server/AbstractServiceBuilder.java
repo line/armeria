@@ -110,7 +110,7 @@ abstract class AbstractServiceBuilder implements ServiceBuilder {
         return this;
     }
 
-    public Service<HttpRequest, HttpResponse> decorate(Service<HttpRequest, HttpResponse> service) {
+    Service<HttpRequest, HttpResponse> decorate(Service<HttpRequest, HttpResponse> service) {
         return defaultServiceBuilder.decorate(service);
     }
 
