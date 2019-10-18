@@ -71,12 +71,9 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     private static final Set<AsciiString> ADDITIONAL_HEADER_BLACKLIST = ImmutableSet.of(
             HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD, HttpHeaderNames.PATH);
 
-    private static final String SERVER_HEADER;
-
-    static {
-        SERVER_HEADER = "Armeria/" + Version.identify(HttpResponseSubscriber.class.getClassLoader())
-                                            .get("armeria").artifactVersion();
-    }
+    private static final String SERVER_HEADER =
+            "Armeria/" + Version.identify(HttpResponseSubscriber.class.getClassLoader()).get("armeria")
+                                .artifactVersion();
 
     enum State {
         NEEDS_HEADERS,
