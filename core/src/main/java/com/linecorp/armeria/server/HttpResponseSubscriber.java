@@ -73,14 +73,14 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
     private static final String ARTIFACT_ID = "armeria";
     private static final String SERVER_NAME = "Armeria";
-    private static final String serverHeader;
+    private static final String SERVER_HEADER;
 
     static {
-        serverHeader = String.format("%s/%s (%s)",
-                                     SERVER_NAME,
-                                     Version.identify(HttpResponseSubscriber.class.getClassLoader())
-                                            .get(ARTIFACT_ID).artifactVersion(),
-                                     System.getProperty("os.name"));
+        SERVER_HEADER = String.format("%s/%s (%s)",
+                                      SERVER_NAME,
+                                      Version.identify(HttpResponseSubscriber.class.getClassLoader())
+                                             .get(ARTIFACT_ID).artifactVersion(),
+                                      System.getProperty("os.name"));
     }
 
     enum State {
@@ -222,7 +222,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                 }
 
                 if (useServerHeader && !newHeaders.contains(HttpHeaderNames.SERVER)) {
-                    newHeaders.add(HttpHeaderNames.SERVER, serverHeader);
+                    newHeaders.add(HttpHeaderNames.SERVER, SERVER_HEADER);
                 }
 
                 if (useDateHeader && !newHeaders.contains(HttpHeaderNames.DATE)) {
