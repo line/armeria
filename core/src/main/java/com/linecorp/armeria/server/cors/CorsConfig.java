@@ -202,23 +202,4 @@ public final class CorsConfig {
             return String.valueOf(value);
         }
     }
-
-    /**
-     * This {@link Supplier} is used for the {@code "Date"} preflight HTTP response header.
-     * It's value must be generated when the response is generated, hence will be
-     * different for every call.
-     */
-    enum TimestampSupplier implements Supplier<String> {
-        INSTANCE;
-
-        @Override
-        public String get() {
-            return HttpTimestampSupplier.currentTime();
-        }
-
-        @Override
-        public String toString() {
-            return "<now>";
-        }
-    }
 }
