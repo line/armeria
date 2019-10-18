@@ -85,8 +85,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     private final HttpObjectEncoder responseEncoder;
     private final DecodedHttpRequest req;
     private final DefaultServiceRequestContext reqCtx;
-    private final boolean useServerHeader;
-    private final boolean useDateHeader;
+    private final boolean enableServerHeader;
+    private final boolean enableDateHeader;
     private final long startTimeNanos;
 
     @Nullable
@@ -100,13 +100,13 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
     HttpResponseSubscriber(ChannelHandlerContext ctx, HttpObjectEncoder responseEncoder,
                            DefaultServiceRequestContext reqCtx, DecodedHttpRequest req,
-                           boolean useServerHeader, boolean useDateHeader) {
+                           boolean enableServerHeader, boolean enableDateHeader) {
         this.ctx = ctx;
         this.responseEncoder = responseEncoder;
         this.req = req;
         this.reqCtx = reqCtx;
-        this.useServerHeader = useServerHeader;
-        this.useDateHeader = useDateHeader;
+        this.enableServerHeader = enableServerHeader;
+        this.enableDateHeader = enableDateHeader;
         startTimeNanos = System.nanoTime();
     }
 
@@ -213,11 +213,11 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                     newHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
                 }
 
-                if (useServerHeader && !newHeaders.contains(HttpHeaderNames.SERVER)) {
+                if (enableServerHeader && !newHeaders.contains(HttpHeaderNames.SERVER)) {
                     newHeaders.add(HttpHeaderNames.SERVER, SERVER_HEADER);
                 }
 
-                if (useDateHeader && !newHeaders.contains(HttpHeaderNames.DATE)) {
+                if (enableDateHeader && !newHeaders.contains(HttpHeaderNames.DATE)) {
                     newHeaders.add(HttpHeaderNames.DATE,
                                    DateTimeFormatter.RFC_1123_DATE_TIME.format(
                                            ZonedDateTime.now(ZoneOffset.UTC)));
