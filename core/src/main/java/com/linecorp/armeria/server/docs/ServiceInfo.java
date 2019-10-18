@@ -80,7 +80,7 @@ public final class ServiceInfo {
                        @Nullable String docString) {
 
         this.name = requireNonNull(name, "name");
-        this.methods = ImmutableList.copyOf(mergeEndpoints(requireNonNull(methods)));
+        this.methods = mergeEndpoints(requireNonNull(methods));
         this.exampleHttpHeaders = ImmutableList.copyOf(requireNonNull(exampleHttpHeaders,
                                                                       "exampleHttpHeaders"));
         this.docString = Strings.emptyToNull(docString);

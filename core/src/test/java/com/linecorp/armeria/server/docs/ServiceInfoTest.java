@@ -1,5 +1,5 @@
 /*
- *  Copyright 2018 LINE Corporation
+ *  Copyright 2019 LINE Corporation
  *
  *  LINE Corporation licenses this file to you under the Apache License,
  *  version 2.0 (the "License"); you may not use this file except in compliance
@@ -42,7 +42,7 @@ class ServiceInfoTest {
     }
 
     @Test
-    public void testCollectMethodsWithDifferentMethods() {
+    void testCollectMethodsWithDifferentMethods() {
         final MethodInfo barMethodInfo = createMethodInfo("bar", HttpMethod.GET, "exact:/bar");
         final MethodInfo fooMethodInfo = createMethodInfo("foo", HttpMethod.GET, "exact:/foo");
         final List<MethodInfo> inputMethodInfos = ImmutableList.of(barMethodInfo, fooMethodInfo);
@@ -50,7 +50,7 @@ class ServiceInfoTest {
     }
 
     @Test
-    public void testCollectMethodGrouping() {
+    void testCollectMethodGrouping() {
 
         final MethodInfo barGet1 = createMethodInfo("bar", HttpMethod.GET, "exact:/bar1");
         final MethodInfo barGet2 = createMethodInfo("bar", HttpMethod.GET, "exact:/bar2");

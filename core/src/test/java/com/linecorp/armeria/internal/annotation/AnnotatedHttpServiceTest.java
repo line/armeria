@@ -707,6 +707,13 @@ public class AnnotatedHttpServiceTest {
         }
 
         @Get
+        @Path("/pathDiffPattern/path")
+        @Path("/pathDiffPattern/{param}")
+        public String pathDiffPattern(@Param @Default("default") String param) {
+            return param;
+        }
+
+        @Get
         @Post
         @Path("/getPostWithPathMapping1")
         @Path("/getPostWithPathMapping2")
@@ -1049,6 +1056,9 @@ public class AnnotatedHttpServiceTest {
             testBody(hc, get("/12/pathDiffParam1/param1?param2=param2"), "param1_param2");
             testStatusCode(hc, get("/12/pathDiffParam2/param2"), 400);
             testBody(hc, get("/12/pathDiffParam2/param2?param1=param1"), "param1_param2");
+
+            testBody(hc, get("/12/pathDiffPattern/path"), "default");
+            testBody(hc, get("/12/pathDiffPattern/customArg"), "customArg");
 
             testBody(hc, get("/12/getPostWithPathMapping1"), "/12/getPostWithPathMapping1");
             testBody(hc, post("/12/getPostWithPathMapping1"), "/12/getPostWithPathMapping1");

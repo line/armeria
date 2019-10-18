@@ -525,7 +525,7 @@ public final class AnnotatedHttpServiceFactory {
 
         final Map<HttpMethod, List<String>> httpMethodAnnotatedPatternMap =
                 getHttpMethodAnnotatedPatternMap(methodAnnotations);
-        if (httpMethodAnnotatedPatternMap.keySet().isEmpty()) {
+        if (httpMethodAnnotatedPatternMap.isEmpty()) {
             throw new IllegalArgumentException(method.getDeclaringClass().getName() + '#' + method.getName() +
                                                " must have an HTTP method annotation.");
         }
