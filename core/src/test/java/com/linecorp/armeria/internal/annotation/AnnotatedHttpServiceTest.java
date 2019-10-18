@@ -348,15 +348,6 @@ class AnnotatedHttpServiceTest {
             validateContext(ctx);
             return AggregatedHttpResponse.of(ResponseHeaders.of(HttpStatus.OK), request.content());
         }
-
-        @Post
-        @Path("/a/string-aggregate-response2")
-        public AggregatedHttpResponse postStringAggregateResponse2(HttpRequest req,
-                                                                   RequestContext ctx) {
-            validateContextAndRequest(ctx, req);
-            final AggregatedHttpRequest request = req.aggregate().join();
-            return AggregatedHttpResponse.of(ResponseHeaders.of(HttpStatus.OK), request.content());
-        }
     }
 
     /**
@@ -745,7 +736,6 @@ class AnnotatedHttpServiceTest {
             testForm(hc, form("/3/a/string-async1"));
             testForm(hc, form("/3/a/string-async2"));
             testForm(hc, form("/3/a/string-aggregate-response1"));
-            testForm(hc, form("/3/a/string-aggregate-response2"));
         }
     }
 
