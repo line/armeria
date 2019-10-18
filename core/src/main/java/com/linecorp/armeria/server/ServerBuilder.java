@@ -203,8 +203,8 @@ public final class ServerBuilder {
     private Function<VirtualHost, Logger> accessLoggerMapper = host -> LoggerFactory.getLogger(
             defaultAccessLoggerName(host.hostnamePattern()));
 
-    private boolean useServerHeader = true;
-    private boolean useDateHeader = true;
+    private boolean enableServerHeader = true;
+    private boolean enableDateHeader = true;
 
     /**
      * Returns a new {@link ServerBuilder}.
@@ -1509,24 +1509,24 @@ public final class ServerBuilder {
      * Sets whether the response header will include {@code "Server"} header.
      */
     public ServerBuilder disableServerHeader() {
-        this.useServerHeader = false;
+        this.enableServerHeader = false;
         return this;
     }
 
-    boolean useServerHeader() {
-        return useServerHeader;
+    boolean isServerHeaderEnabled() {
+        return enableServerHeader;
     }
 
     /**
      * Sets whether the response header will include {@code "Date"} header.
      */
     public ServerBuilder disableDateHeader() {
-        this.useDateHeader = false;
+        this.enableDateHeader = false;
         return this;
     }
 
-    boolean useDateHeader() {
-        return useDateHeader;
+    boolean isDateHeaderEnabled() {
+        return enableDateHeader;
     }
 
     /**
@@ -1614,7 +1614,7 @@ public final class ServerBuilder {
                 meterRegistry, serviceLoggerPrefix, accessLogWriter, shutdownAccessLogWriterOnStop,
                 proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter,
-                useServerHeader, useDateHeader), sslContexts);
+                enableServerHeader, enableDateHeader), sslContexts);
 
         serverListeners.forEach(server::addListener);
         return server;
