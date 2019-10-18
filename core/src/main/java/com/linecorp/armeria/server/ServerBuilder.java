@@ -1506,7 +1506,7 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets whether the response header will include Server header.
+     * Sets whether the response header will include {@code "Server"} header.
      */
     public ServerBuilder disableServerHeader() {
         this.useServerHeader = false;
@@ -1518,7 +1518,7 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets whether the response header will include Date header.
+     * Sets whether the response header will include {@code "Date"} header.
      */
     public ServerBuilder disableDateHeader() {
         this.useDateHeader = false;
