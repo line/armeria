@@ -58,7 +58,7 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
  *
  * @see ServiceBindingBuilder
  */
-public class AnnotatedServiceBindingBuilder extends AbstractServiceBuilder {
+public final class AnnotatedServiceBindingBuilder extends AbstractServiceBuilder {
 
     private final ServerBuilder serverBuilder;
     private final Builder<ExceptionHandlerFunction> exceptionHandlerFunctionBuilder = ImmutableList.builder();
@@ -66,7 +66,7 @@ public class AnnotatedServiceBindingBuilder extends AbstractServiceBuilder {
     private final Builder<ResponseConverterFunction> responseConverterFunctionBuilder = ImmutableList.builder();
     private String pathPrefix = "/";
 
-    public AnnotatedServiceBindingBuilder(ServerBuilder serverBuilder) {
+    AnnotatedServiceBindingBuilder(ServerBuilder serverBuilder) {
         this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
     }
 
