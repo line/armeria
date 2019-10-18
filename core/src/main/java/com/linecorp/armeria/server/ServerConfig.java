@@ -650,14 +650,14 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns whether the response header will include {@code "Server"} header.
+     * Returns whether the response header will include default {@code "Server"} header.
      */
     public boolean isServerHeaderEnabled() {
         return enableServerHeader;
     }
 
     /**
-     * Returns whether the response header will include {@code "Date"} header.
+     * Returns whether the response header will include default {@code "Date"} header.
      */
     public boolean isDateHeaderEnabled() {
         return enableDateHeader;
