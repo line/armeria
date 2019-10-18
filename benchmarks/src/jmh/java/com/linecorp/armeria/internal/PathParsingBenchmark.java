@@ -24,6 +24,9 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.infra.Blackhole;
 
+/**
+ * Microbenchmarks for the {@link PathAndQuery#parse(String)} method.
+ */
 @State(Scope.Thread)
 public class PathParsingBenchmark {
 

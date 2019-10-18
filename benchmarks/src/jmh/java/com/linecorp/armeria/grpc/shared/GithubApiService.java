@@ -26,6 +26,9 @@ import com.linecorp.armeria.grpc.GithubServiceGrpc.GithubServiceImplBase;
 
 import io.grpc.stub.StreamObserver;
 
+/**
+ * The {@link GithubApiService} mocks the GitHub API by always sending the same response.
+ */
 public class GithubApiService extends GithubServiceImplBase {
 
     public static final SearchResponse SEARCH_RESPONSE;

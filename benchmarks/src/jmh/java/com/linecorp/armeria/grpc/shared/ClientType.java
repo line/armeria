@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.grpc.shared;
 
+/**
+ * Represents the different grpc client types.
+ */
 public enum ClientType {
     // The official client for the benchmark (armeria for downstream, grpc-netty for upstream).
     NORMAL,
