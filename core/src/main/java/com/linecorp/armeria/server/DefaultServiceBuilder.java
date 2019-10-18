@@ -138,14 +138,14 @@ class DefaultServiceBuilder implements ServiceBuilder {
         return this;
     }
 
-    public Service<HttpRequest, HttpResponse> decorate(Service<HttpRequest, HttpResponse> service) {
+    Service<HttpRequest, HttpResponse> decorate(Service<HttpRequest, HttpResponse> service) {
         if (decorator == null) {
             return service;
         }
         return service.decorate(decorator);
     }
 
-    public ServiceConfigBuilder serviceConfigBuilder(Route route, Service<HttpRequest, HttpResponse> service) {
+    ServiceConfigBuilder serviceConfigBuilder(Route route, Service<HttpRequest, HttpResponse> service) {
         final ServiceConfigBuilder serviceConfigBuilder = new ServiceConfigBuilder(route, service);
         if (requestTimeoutMillis != null) {
             serviceConfigBuilder.requestTimeoutMillis(requestTimeoutMillis);
