@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.cors;
 
 import static java.util.Objects.requireNonNull;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -30,6 +29,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.Iterables;
 
+import com.linecorp.armeria.internal.HttpTimestampSupplier;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutingContext;
 
@@ -208,13 +208,12 @@ public final class CorsConfig {
      * It's value must be generated when the response is generated, hence will be
      * different for every call.
      */
-    static final class InstantValueSupplier implements Supplier<Instant> {
-
-        static final InstantValueSupplier INSTANCE = new InstantValueSupplier();
+    enum TimestampSupplier implements Supplier<String> {
+        INSTANCE;
 
         @Override
-        public Instant get() {
-            return Instant.now();
+        public String get() {
+            return HttpTimestampSupplier.currentTime();
         }
 
         @Override

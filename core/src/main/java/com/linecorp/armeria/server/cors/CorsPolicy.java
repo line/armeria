@@ -42,7 +42,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.cors.CorsConfig.ConstantValueSupplier;
-import com.linecorp.armeria.server.cors.CorsConfig.InstantValueSupplier;
+import com.linecorp.armeria.server.cors.CorsConfig.TimestampSupplier;
 
 import io.netty.util.AsciiString;
 
@@ -87,7 +87,7 @@ public final class CorsPolicy {
             this.preflightResponseHeaders = Collections.emptyMap();
         } else if (preflightResponseHeaders.isEmpty()) {
             this.preflightResponseHeaders = ImmutableMap.of(
-                    HttpHeaderNames.DATE, InstantValueSupplier.INSTANCE,
+                    HttpHeaderNames.DATE, TimestampSupplier.INSTANCE,
                     HttpHeaderNames.CONTENT_LENGTH, ConstantValueSupplier.ZERO);
         } else {
             this.preflightResponseHeaders = ImmutableMap.copyOf(preflightResponseHeaders);
