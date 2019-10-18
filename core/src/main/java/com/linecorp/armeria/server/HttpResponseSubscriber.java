@@ -93,7 +93,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     private final HttpObjectEncoder responseEncoder;
     private final DecodedHttpRequest req;
     private final DefaultServiceRequestContext reqCtx;
-    private final ServerConfig config;
+    private final boolean useServerHeader;
+    private final boolean useDateHeader;
     private final long startTimeNanos;
 
     @Nullable
@@ -107,12 +108,13 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
 
     HttpResponseSubscriber(ChannelHandlerContext ctx, HttpObjectEncoder responseEncoder,
                            DefaultServiceRequestContext reqCtx, DecodedHttpRequest req,
-                           ServerConfig config) {
+                           boolean useServerHeader, boolean useDateHeader) {
         this.ctx = ctx;
         this.responseEncoder = responseEncoder;
         this.req = req;
         this.reqCtx = reqCtx;
-        this.config = config;
+        this.useServerHeader = useServerHeader;
+        this.useDateHeader = useDateHeader;
         startTimeNanos = System.nanoTime();
     }
 
@@ -219,13 +221,11 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                     newHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
                 }
 
-                if (config.useServerHeader() &&
-                    !newHeaders.contains(HttpHeaderNames.SERVER)) {
+                if (useServerHeader && !newHeaders.contains(HttpHeaderNames.SERVER)) {
                     newHeaders.add(HttpHeaderNames.SERVER, serverHeader);
                 }
 
-                if (config.useDateHeader() &&
-                    !newHeaders.contains(HttpHeaderNames.DATE)) {
+                if (useDateHeader && !newHeaders.contains(HttpHeaderNames.DATE)) {
                     newHeaders.add(HttpHeaderNames.DATE,
                                    DateTimeFormatter.RFC_1123_DATE_TIME.format(
                                            ZonedDateTime.now(ZoneOffset.UTC)));
