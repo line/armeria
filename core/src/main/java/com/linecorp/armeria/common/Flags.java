@@ -314,7 +314,7 @@ public final class Flags {
     }
 
     private static boolean isEpollAvailable() {
-        if (SystemInfo.isLinux()) {
+        if (SystemInfo.osType() == SystemInfo.OsType.LINUX) {
             // Netty epoll transport does not work with WSL (Windows Sybsystem for Linux) yet.
             // TODO(trustin): Re-enable on WSL if https://github.com/Microsoft/WSL/issues/1982 is resolved.
             return Epoll.isAvailable() && !HAS_WSLENV;

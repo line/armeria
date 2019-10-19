@@ -51,6 +51,8 @@ public final class SystemInfo {
 
     private static boolean JETTY_ALPN_OPTIONAL_OR_AVAILABLE;
 
+    private static OsType osType;
+
     static {
         int javaVersion = -1;
         try {
@@ -109,6 +111,12 @@ public final class SystemInfo {
                 JETTY_ALPN_OPTIONAL_OR_AVAILABLE = false;
             }
         }
+
+        try {
+            osType = OsType.valueOf(Ascii.toUpperCase(System.getProperty("os.name", "").split(" ")[0]));
+        } catch (Throwable t) {
+            osType = osType().OTHERS;
+        }
     }
 
     /**
@@ -155,10 +163,19 @@ public final class SystemInfo {
     }
 
     /**
-     * Return whether Linux is used.
+     * Returns the operating system type.
      */
-    public static boolean isLinux() {
-        return Ascii.toLowerCase(System.getProperty("os.name", "")).startsWith("linux");
+    public static OsType osType() {
+        return osType;
+    }
+
+    public enum OsType {
+        WINDOWS,
+        LINUX,
+        MAC,
+        FREEBSD,
+        SOLARIS,
+        OTHERS
     }
 
     private SystemInfo() {}
@@ -173,7 +190,7 @@ public final class SystemInfo {
         static {
             // Try /proc/sys/kernel/hostname on Linux.
             String hostname = null;
-            if (isLinux()) {
+            if (osType() == OsType.LINUX) {
                 try {
                     final List<String> lines = Files.readAllLines(Paths.get("/proc/sys/kernel/hostname"));
                     if (!lines.isEmpty()) {
@@ -295,7 +312,7 @@ public final class SystemInfo {
             }
 
             // Try /proc/self (Linux only)
-            if (pid <= 0 && isLinux()) {
+            if (pid <= 0 && osType() == OsType.LINUX) {
                 try {
                     final Path path = Paths.get("/proc/self");
                     if (Files.isSymbolicLink(path)) {
