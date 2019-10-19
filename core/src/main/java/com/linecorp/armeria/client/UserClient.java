@@ -152,10 +152,12 @@ public abstract class UserClient<I extends Request, O extends Response>
 
         if (eventLoop == null) {
             ctx = new DefaultClientRequestContext(factory(), meterRegistry, sessionProtocol,
-                                                  UUID.randomUUID(), method, path, query, fragment, options(), httpReq, rpcReq);
+                                                  UUID.randomUUID(), method, path, query, fragment, options(),
+                                                  httpReq, rpcReq);
         } else {
             ctx = new DefaultClientRequestContext(eventLoop, meterRegistry, sessionProtocol,
-                                                  UUID.randomUUID(), method, path, query, fragment, options(), httpReq, rpcReq);
+                                                  UUID.randomUUID(), method, path, query, fragment, options(),
+                                                  httpReq, rpcReq);
         }
 
         return initContextAndExecuteWithFallback(delegate(), ctx, endpoint, fallback);

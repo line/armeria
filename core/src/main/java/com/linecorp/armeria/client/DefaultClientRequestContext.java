@@ -99,7 +99,8 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      *
      * @param eventLoop the {@link EventLoop} associated with this context
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
-     * @param uuid the {@link UUID} that represents the unique identifier of the current {@link Request} and {@link Response} pair.
+     * @param uuid the {@link UUID} that represents the unique identifier of the current {@link Request}
+     *             and {@link Response} pair.
      * @param req the {@link HttpRequest} associated with this context
      * @param rpcReq the {@link RpcRequest} associated with this context
      */
@@ -255,7 +256,8 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
                                         @Nullable HttpRequest req,
                                         @Nullable RpcRequest rpcReq,
                                         Endpoint endpoint) {
-        super(ctx.meterRegistry(), ctx.sessionProtocol(), ctx.uuid(), ctx.method(), ctx.path(), ctx.query(), req, rpcReq);
+        super(ctx.meterRegistry(), ctx.sessionProtocol(), ctx.uuid(), ctx.method(), ctx.path(), ctx.query(),
+              req, rpcReq);
 
         // The new requests cannot be null if it was previously non-null.
         if (ctx.request() != null) {

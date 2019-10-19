@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server;
 
 import java.util.List;
-import java.util.UUID;
 
 import org.openjdk.jmh.annotations.Benchmark;
 import org.slf4j.helpers.NOPLogger;

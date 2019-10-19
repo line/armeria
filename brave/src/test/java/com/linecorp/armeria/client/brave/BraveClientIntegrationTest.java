@@ -164,7 +164,8 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
     private static class DummyRequestContext extends NonWrappingRequestContext {
         DummyRequestContext() {
             super(NoopMeterRegistry.get(), SessionProtocol.HTTP,
-                  UUID.randomUUID(), HttpMethod.GET, "/",  null, HttpRequest.streaming(HttpMethod.GET, "/"), null);
+                  UUID.randomUUID(), HttpMethod.GET, "/", null,
+                  HttpRequest.streaming(HttpMethod.GET, "/"), null);
         }
 
         @Override
