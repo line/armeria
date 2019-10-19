@@ -17,25 +17,20 @@
 package com.linecorp.armeria.common.brave;
 
 import static com.linecorp.armeria.internal.brave.TraceContextUtil.getTraceContextAttribute;
-import static java.util.Objects.requireNonNull;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
 
 import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
-
 import com.linecorp.armeria.client.brave.BraveClient;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.internal.brave.TraceContextUtil;
 import com.linecorp.armeria.server.brave.BraveService;
 
 import brave.Tracing;
@@ -52,6 +47,28 @@ import io.netty.util.Attribute;
  * which can lead to unpredictable behavior in asynchronous programming.
  */
 public final class RequestContextCurrentTraceContext extends CurrentTraceContext {
+
+    /**
+     * Returns the default {@link CurrentTraceContext}. Use this when building a {@link Tracing} instance
+     * for use with {@link BraveService} or {@link BraveClient}.
+     *
+     * <p>If you need to customize the context, use {@link #builder()} instead.
+     *
+     * @see Tracing.Builder#currentTraceContext(CurrentTraceContext)
+     */
+    public static RequestContextCurrentTraceContext ofDefault() {
+        return DEFAULT;
+    }
+
+    /**
+     * Use this when you need customizations such as log integration via
+     * {@linkplain RequestContextCurrentTraceContextBuilder#addScopeDecorator(ScopeDecorator)}.
+     *
+     * @see Tracing.Builder#currentTraceContext(CurrentTraceContext)
+     */
+    public static RequestContextCurrentTraceContextBuilder builder() {
+        return new RequestContextCurrentTraceContextBuilder();
+    }
 
     /**
      * Sets whether the current thread is not a request thread, meaning it is never executed in the scope of a
@@ -85,7 +102,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
     }
 
     private static final RequestContextCurrentTraceContext DEFAULT =
-            new RequestContextCurrentTraceContext(new Builder());
+            new RequestContextCurrentTraceContextBuilder().build();
 
     private static final Logger logger = LoggerFactory.getLogger(RequestContextCurrentTraceContext.class);
 
@@ -106,100 +123,13 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         }
     };
 
-    public static final class Builder extends CurrentTraceContext.Builder {
-
-        private final ImmutableList.Builder<Pattern> nonRequestThreadPatterns = ImmutableList.builder();
-
-        /**
-         * Sets a regular expression that matches names of threads that should be considered non-request
-         * threads, meaning they may have spans created for clients outside of the context of an Armeria
-         * request. For example, this can be set to {@code "^RMI TCP Connection.*"} if you use RMI to serve
-         * monitoring requests.
-         *
-         * @see #setCurrentThreadNotRequestThread(boolean)
-         */
-        public Builder nonRequestThread(String pattern) {
-            requireNonNull(pattern, "pattern");
-            final Pattern compiled;
-            try {
-                compiled = Pattern.compile(pattern);
-            } catch (PatternSyntaxException e) {
-                throw new IllegalArgumentException("Invalid regex: " + pattern);
-            }
-            return nonRequestThread(compiled);
-        }
-
-        /**
-         * Sets a regular expression that matches names of threads that should be considered non-request
-         * threads, meaning they may have spans created for clients outside of the context of an Armeria
-         * request. For example, this can be set to {@code Pattern.compile("^RMI TCP Connection.*")} if you use
-         * RMI to serve monitoring requests.
-         *
-         * @see #setCurrentThreadNotRequestThread(boolean)
-         */
-        public Builder nonRequestThread(Pattern pattern) {
-            nonRequestThreadPatterns.add(requireNonNull(pattern, "pattern"));
-            return this;
-        }
-
-        @Override
-        public CurrentTraceContext build() {
-            return new RequestContextCurrentTraceContext(this);
-        }
-    }
-
-    /**
-     * Returns the default {@link CurrentTraceContext}. Use this when building a {@link Tracing} instance
-     * for use with {@link BraveService} or {@link BraveClient}.
-     *
-     * <p>If you need to customize the context, use {@link #builder()} instead.
-     *
-     * @see Tracing.Builder#currentTraceContext(CurrentTraceContext)
-     */
-    public static RequestContextCurrentTraceContext ofDefault() {
-        return DEFAULT;
-    }
-
-    /**
-     * Use this when you need customizations such as log integration via
-     * {@linkplain Builder#addScopeDecorator(ScopeDecorator)}.
-     *
-     * @see Tracing.Builder#currentTraceContext(CurrentTraceContext)
-     */
-    public static RequestContextCurrentTraceContext.Builder builder() {
-        return new Builder();
-    }
-
-    /**
-     * Ensures the specified {@link Tracing} uses a {@link RequestContextCurrentTraceContext}.
-     *
-     * @throws IllegalStateException if {@code tracing} does not use {@link RequestContextCurrentTraceContext}
-     */
-    public static void ensureScopeUsesRequestContext(Tracing tracing) {
-        requireNonNull(tracing, "tracing");
-        final PingPongExtra extra = new PingPongExtra();
-        // trace contexts are not recorded until Tracer.toSpan, so this won't end up as junk data
-        final TraceContext dummyContext = TraceContext.newBuilder().traceId(1).spanId(1)
-                                                      .extra(Collections.singletonList(extra)).build();
-        final boolean scopeUsesRequestContext;
-        try (Scope scope = tracing.currentTraceContext().newScope(dummyContext)) {
-            scopeUsesRequestContext = extra.isPong();
-        }
-        if (!scopeUsesRequestContext) {
-            throw new IllegalStateException(
-                    "Tracing.currentTraceContext is not a " + RequestContextCurrentTraceContext.class
-                            .getSimpleName() + " scope. " +
-                    "Please call Tracing.Builder.currentTraceContext(" + RequestContextCurrentTraceContext.class
-                            .getSimpleName() + ".ofDefault()).");
-        }
-    }
-
     private final List<Pattern> nonRequestThreadPatterns;
 
-    private RequestContextCurrentTraceContext(Builder builder) {
+    RequestContextCurrentTraceContext(
+            CurrentTraceContext.Builder builder, List<Pattern> nonRequestThreadPatterns) {
         super(builder);
 
-        nonRequestThreadPatterns = builder.nonRequestThreadPatterns.build();
+        this.nonRequestThreadPatterns = nonRequestThreadPatterns;
     }
 
     @Override
@@ -225,7 +155,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
     @Override
     public Scope newScope(@Nullable TraceContext currentSpan) {
         // Handle inspection added to ensure we can fail-fast if this isn't installed.
-        if (currentSpan != null && PingPongExtra.maybeSetPong(currentSpan)) {
+        if (currentSpan != null && TraceContextUtil.PingPongExtra.maybeSetPong(currentSpan)) {
             return Scope.NOOP;
         }
 
@@ -298,7 +228,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         if (!nonRequestThreadPatterns.isEmpty()) {
             final String threadName = Thread.currentThread().getName();
             for (Pattern pattern : nonRequestThreadPatterns) {
-                if (pattern.matcher(threadName).matches()) {
+                if (pattern.matcher(threadName).lookingAt()) {
                     // A matched thread will match forever, so it's worth avoiding this regex match on every
                     // time the thread is used by saving into the ThreadLocal.
                     setCurrentThreadNotRequestThread(true);
@@ -348,30 +278,6 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
 
         private static final class NoRequestContextException extends RuntimeException {
             private static final long serialVersionUID = 2804189311774982052L;
-        }
-    }
-
-    /** Hack to allow us to peek inside a current trace context implementation. */
-    @VisibleForTesting
-    static final class PingPongExtra {
-        /**
-         * If the input includes only this extra, set {@link #isPong() pong = true}.
-         */
-        static boolean maybeSetPong(TraceContext context) {
-            if (context.extra().size() == 1) {
-                final Object extra = context.extra().get(0);
-                if (extra instanceof PingPongExtra) {
-                    ((PingPongExtra) extra).pong = true;
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        private boolean pong;
-
-        boolean isPong() {
-            return pong;
         }
     }
 }

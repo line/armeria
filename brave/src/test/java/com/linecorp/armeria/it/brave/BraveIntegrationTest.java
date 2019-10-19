@@ -232,7 +232,7 @@ public class BraveIntegrationTest {
     private static Tracing newTracing(String name) {
         final CurrentTraceContext currentTraceContext =
                 RequestContextCurrentTraceContext.builder()
-                                                 .nonRequestThread("^nonrequest-.*")
+                                                 .nonRequestThread("nonrequest-")
                                                  .addScopeDecorator(StrictScopeDecorator.create())
                                                  .build();
         return Tracing.newBuilder()
