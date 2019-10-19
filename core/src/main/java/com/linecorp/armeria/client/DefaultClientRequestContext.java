@@ -41,7 +41,6 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
@@ -100,16 +99,16 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      * @param eventLoop the {@link EventLoop} associated with this context
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
      * @param uuid the {@link UUID} that represents the unique identifier of the current {@link Request}
-     *              and {@link Response} pair.
+     *                  and {@link Response} pair.
      * @param req the {@link HttpRequest} associated with this context
      * @param rpcReq the {@link RpcRequest} associated with this context
      */
     public DefaultClientRequestContext(
             EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            UUID uuid, HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
+           UUID uuid, HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
         this(null, requireNonNull(eventLoop, "eventLoop"), meterRegistry, sessionProtocol,
-             uuid, method, path, query, fragment, options, req, rpcReq);
+            uuid, method, path, query, fragment, options, req, rpcReq);
     }
 
     /**
@@ -256,7 +255,16 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
                                         @Nullable HttpRequest req,
                                         @Nullable RpcRequest rpcReq,
                                         Endpoint endpoint) {
-        super(ctx.meterRegistry(), ctx.sessionProtocol(), ctx.uuid(), ctx.method(), ctx.path(), ctx.query(), req, rpcReq);
+        super(ctx.meterRegistry(), ctx.sessionProtocol(), ctx.uuid(), ctx.method(), ctx.path(), ctx.query(),
+              req, rpcReq);
+
+        // The new requests cannot be null if it was previously non-null.
+        if (ctx.request() != null) {
+            requireNonNull(req, "req");
+        }
+        if (ctx.rpcRequest() != null) {
+            requireNonNull(rpcReq, "rpcReq");
+        }
 
         eventLoop = ctx.eventLoop();
         options = ctx.options();
