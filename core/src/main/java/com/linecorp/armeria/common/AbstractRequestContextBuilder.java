@@ -100,9 +100,7 @@ public abstract class AbstractRequestContextBuilder {
         this.req = requireNonNull(req, "req");
         rpcReq = null;
         sessionProtocol = SessionProtocol.H2C;
-        if (uuid == null) {
-            uuid = UUID.randomUUID();
-        }
+        uuid = UUID.randomUUID();
         method = req.headers().method();
         authority = firstNonNull(req.headers().authority(), FALLBACK_AUTHORITY);
 

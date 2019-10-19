@@ -25,7 +25,6 @@ import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -159,7 +158,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
             InetAddress clientAddress, boolean requestStartTimeSet, long requestStartTimeNanos,
             long requestStartTimeMicros) {
 
-        super(meterRegistry, sessionProtocol, UUID.randomUUID(),
+        super(meterRegistry, sessionProtocol, null,
               requireNonNull(routingContext).method(), routingContext.path(),
               requireNonNull(routingResult, "routingResult").query(),
               requireNonNull(req, "req"), null);
@@ -185,6 +184,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         // there is some delay between the actual channel read and this logging, but it's the best we can do for
         // now.
         log.requestFirstBytesTransferred();
+
         logger = newLogger(cfg);
 
         requestTimeoutMillis = cfg.requestTimeoutMillis();

@@ -169,7 +169,8 @@ public interface RequestContext extends AttributeMap {
     SSLSession sslSession();
 
     /**
-     * Returns the {@link UUID} that represents the unique identifier of the current {@link Request} and {@link Response} pair.
+     * Returns the {@link UUID} that represents the unique identifier of the current {@link Request}
+     * and {@link Response} pair.
      */
     UUID uuid();
 

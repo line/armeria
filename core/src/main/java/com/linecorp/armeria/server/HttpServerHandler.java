@@ -322,6 +322,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final String hostname = hostname(headers);
         final VirtualHost host = config.findVirtualHost(hostname);
+
         final RoutingContext routingCtx =
                 DefaultRoutingContext.of(host, hostname, pathAndQuery.path(), pathAndQuery.query(),
                                          headers, isCorsPreflightRequest(req));
