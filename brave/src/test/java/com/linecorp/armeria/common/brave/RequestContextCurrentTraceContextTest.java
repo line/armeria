@@ -32,10 +32,10 @@ import org.mockito.junit.MockitoRule;
 import org.mockito.stubbing.Answer;
 
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.internal.brave.TraceContextUtil.PingPongExtra;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.DefaultAttributeMap;
 import com.linecorp.armeria.internal.brave.TraceContextUtil;
+import com.linecorp.armeria.internal.brave.TraceContextUtil.PingPongExtra;
 
 import brave.propagation.CurrentTraceContext;
 import brave.propagation.CurrentTraceContext.Scope;
