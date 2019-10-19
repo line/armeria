@@ -19,9 +19,6 @@ package com.linecorp.armeria.server;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.isTrailerBlacklisted;
 
 import java.nio.channels.ClosedChannelException;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -52,6 +49,7 @@ import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
+import com.linecorp.armeria.internal.HttpTimestampSupplier;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -218,9 +216,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                 }
 
                 if (enableDateHeader && !newHeaders.contains(HttpHeaderNames.DATE)) {
-                    newHeaders.add(HttpHeaderNames.DATE,
-                                   DateTimeFormatter.RFC_1123_DATE_TIME.format(
-                                           ZonedDateTime.now(ZoneOffset.UTC)));
+                    newHeaders.add(HttpHeaderNames.DATE, HttpTimestampSupplier.currentTime());
                 }
 
                 headers = newHeaders.build();
