@@ -38,7 +38,6 @@ import com.linecorp.armeria.shared.AsyncCounters;
 
 /**
  * Microbenchmarks of a {@link Server}.
- *
  */
 @State(Scope.Benchmark)
 public class HttpServerBenchmark {

@@ -33,7 +33,6 @@ import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 
 /**
  * Microbenchmarks of different {@link EndpointSelector} configurations.
- *
  */
 @State(Scope.Thread)
 public class WeightedRoundRobinStrategyBenchmark {
