@@ -228,7 +228,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         if (!nonRequestThreadPatterns.isEmpty()) {
             final String threadName = Thread.currentThread().getName();
             for (Pattern pattern : nonRequestThreadPatterns) {
-                if (pattern.matcher(threadName).lookingAt()) {
+                if (pattern.matcher(threadName).find()) {
                     // A matched thread will match forever, so it's worth avoiding this regex match on every
                     // time the thread is used by saving into the ThreadLocal.
                     setCurrentThreadNotRequestThread(true);
