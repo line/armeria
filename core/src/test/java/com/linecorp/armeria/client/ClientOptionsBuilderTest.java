@@ -99,6 +99,7 @@ public class ClientOptionsBuilderTest {
     @Test
     public void testSetHttpHeaders() {
         final ClientOptionsBuilder b = new ClientOptionsBuilder();
+        // QWxhZGRpbjpPcGVuU2VzYW1l is the base64-encoding of Aladdin:OpenSesame.
         b.setHttpHeaders(HttpHeaders.of(HttpHeaderNames.AUTHORIZATION, "Basic QWxhZGRpbjpPcGVuU2VzYW1l"));
 
         assertThat(b.build().httpHeaders().get(HttpHeaderNames.AUTHORIZATION))

@@ -50,6 +50,7 @@ import com.linecorp.armeria.testing.junit4.server.ServerRule;
  */
 public class ThriftHttpHeaderTest {
 
+    // QWxhZGRpbjpPcGVuU2VzYW1l is the base64-encoding of Aladdin:OpenSesame.
     private static final String SECRET = "QWxhZGRpbjpPcGVuU2VzYW1l";
 
     private static final HelloService.AsyncIface helloService = (name, resultHandler) -> {
