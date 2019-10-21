@@ -30,7 +30,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Collections;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntFunction;
 
@@ -350,9 +350,14 @@ class HttpClientIntegrationTest {
                 final HttpResponseWriter response = HttpResponse.streaming();
                 response.write(ResponseHeaders.of(HttpStatus.OK));
                 response.write(HttpData.ofUtf8("slow response"));
-                ctx.eventLoop().schedule((Runnable) response::close, 2, TimeUnit.SECONDS);
                 return response;
             });
+
+            sb.service("/client-aborted", (ctx, req) -> {
+                // Don't need to return a real response since the client will timeout.
+                return HttpResponse.streaming();
+            });
+
             sb.disableServerHeader();
             sb.disableDateHeader();
         }
@@ -778,6 +783,17 @@ class HttpClientIntegrationTest {
             assertThatThrownBy(() -> response.aggregate().join())
                     .hasCauseInstanceOf(ResponseTimeoutException.class);
         }
+    }
+
+    @Test
+    void abortWithException() {
+        final HttpClient client = HttpClient.of(server.httpUri("/"));
+        final HttpRequest request = HttpRequest.streaming(HttpMethod.GET, "/client-aborted");
+        final HttpResponse response = client.execute(request);
+        request.abort(new IllegalStateException("bad state"));
+        assertThatThrownBy(() -> response.aggregate().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(IllegalStateException.class);
     }
 
     @Nested

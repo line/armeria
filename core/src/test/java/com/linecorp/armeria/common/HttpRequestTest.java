@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -58,6 +59,8 @@ class HttpRequestTest {
         });
         final IllegalStateException abortCause = new IllegalStateException("abort stream");
         request.abort(abortCause);
-        assertThat(abortCauseHolder).hasValue(abortCause);
+        await().untilAsserted(() -> {
+            assertThat(abortCauseHolder).hasValue(abortCause);
+        });
     }
 }

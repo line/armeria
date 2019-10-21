@@ -396,7 +396,7 @@ public interface StreamMessage<T> extends Publisher<T> {
     void abort(Throwable cause);
 
     /**
-     * Closes this stream with a {@link Throwable} which is supplied by the specified
+     * Closes this stream with a {@link Throwable} that is supplied by the specified
      * {@code causeSupplier} and prevents further subscription.
      * A {@link Subscriber} that attempts to subscribe to an aborted stream will be notified with
      * the {@link Throwable} via {@link Subscriber#onError(Throwable)}. Calling this method
