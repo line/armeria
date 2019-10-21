@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server.docs;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Comparator.comparing;
 import static java.util.Objects.requireNonNull;
 
@@ -49,7 +48,7 @@ import com.linecorp.armeria.server.Service;
 public final class ServiceInfo {
 
     private final String name;
-    private final List<MethodInfo> methods;
+    private final Set<MethodInfo> methods;
     private final List<HttpHeaders> exampleHttpHeaders;
     @Nullable
     private final String docString;
@@ -98,7 +97,7 @@ public final class ServiceInfo {
      * Returns the metadata about the methods available in the service.
      */
     @JsonProperty
-    public List<MethodInfo> methods() {
+    public Set<MethodInfo> methods() {
         return methods;
     }
 
@@ -109,7 +108,7 @@ public final class ServiceInfo {
      * {@code exampleHttpHeaders} and {@code exampleRequests}.
      */
     @VisibleForTesting
-    static List<MethodInfo> mergeEndpoints(Iterable<MethodInfo> methodInfos) {
+    static Set<MethodInfo> mergeEndpoints(Iterable<MethodInfo> methodInfos) {
         final Map<List<Object>, MethodInfo> methodInfoMap = new HashMap<>();
         for (MethodInfo methodInfo : methodInfos) {
             final List<Object> mergeKey = ImmutableList.of(methodInfo.name(), methodInfo.httpMethod());
@@ -127,9 +126,10 @@ public final class ServiceInfo {
                 }
             });
         }
-        return methodInfoMap.values().stream()
-                            .sorted(comparing(MethodInfo::name).thenComparing(MethodInfo::httpMethod))
-                            .collect(toImmutableList());
+        return ImmutableSortedSet
+                .orderedBy(comparing(MethodInfo::name).thenComparing(MethodInfo::httpMethod))
+                .addAll(methodInfoMap.values())
+                .build();
     }
 
     /**
