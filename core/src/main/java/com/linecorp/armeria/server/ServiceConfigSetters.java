@@ -1,3 +1,19 @@
+/*
+ * Copyright 2019 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
 package com.linecorp.armeria.server;
 
 import java.nio.charset.Charset;
@@ -10,7 +26,7 @@ import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
-interface ServiceBuilder {
+interface ServiceConfigSetters {
 
     /**
      * Sets the timeout of an HTTP request. If not set, {@link VirtualHost#requestTimeoutMillis()}
@@ -18,7 +34,7 @@ interface ServiceBuilder {
      *
      * @param requestTimeout the timeout. {@code 0} disables the timeout.
      */
-    ServiceBuilder requestTimeout(Duration requestTimeout);
+    ServiceConfigSetters requestTimeout(Duration requestTimeout);
 
     /**
      * Sets the timeout of an HTTP request in milliseconds. If not set,
@@ -26,7 +42,7 @@ interface ServiceBuilder {
      *
      * @param requestTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
      */
-    ServiceBuilder requestTimeoutMillis(long requestTimeoutMillis);
+    ServiceConfigSetters requestTimeoutMillis(long requestTimeoutMillis);
 
     /**
      * Sets the maximum allowed length of an HTTP request. If not set,
@@ -34,7 +50,7 @@ interface ServiceBuilder {
      *
      * @param maxRequestLength the maximum allowed length. {@code 0} disables the length limit.
      */
-    ServiceBuilder maxRequestLength(long maxRequestLength);
+    ServiceConfigSetters maxRequestLength(long maxRequestLength);
 
     /**
      * Sets whether the verbose response mode is enabled. When enabled, the service response will contain
@@ -42,21 +58,21 @@ interface ServiceBuilder {
      * insecure. When disabled, the service response will not expose such server-side details to the client.
      * If not set, {@link VirtualHost#verboseResponses()} is used.
      */
-    ServiceBuilder verboseResponses(boolean verboseResponses);
+    ServiceConfigSetters verboseResponses(boolean verboseResponses);
 
     /**
      * Sets the {@link ContentPreviewerFactory} for an HTTP request of a {@link Service}.
      * If not set, {@link VirtualHost#requestContentPreviewerFactory()}
      * is used.
      */
-    ServiceBuilder requestContentPreviewerFactory(ContentPreviewerFactory factory);
+    ServiceConfigSetters requestContentPreviewerFactory(ContentPreviewerFactory factory);
 
     /**
      * Sets the {@link ContentPreviewerFactory} for an HTTP response of a {@link Service}.
      * If not set, {@link VirtualHost#responseContentPreviewerFactory()}
      * is used.
      */
-    ServiceBuilder responseContentPreviewerFactory(ContentPreviewerFactory factory);
+    ServiceConfigSetters responseContentPreviewerFactory(ContentPreviewerFactory factory);
 
     /**
      * Sets the {@link ContentPreviewerFactory} for creating a {@link ContentPreviewer} which produces the
@@ -71,7 +87,7 @@ interface ServiceBuilder {
      * </ul>
      * @param length the maximum length of the preview.
      */
-    ServiceBuilder contentPreview(int length);
+    ServiceConfigSetters contentPreview(int length);
 
     /**
      * Sets the {@link ContentPreviewerFactory} for creating a {@link ContentPreviewer} which produces the
@@ -88,18 +104,18 @@ interface ServiceBuilder {
      * @param defaultCharset the default charset used when a charset is not specified in the
      *                       {@code "content-type"} header
      */
-    ServiceBuilder contentPreview(int length, Charset defaultCharset);
+    ServiceConfigSetters contentPreview(int length, Charset defaultCharset);
 
     /**
      * Sets the {@link ContentPreviewerFactory} for an HTTP request/response of a {@link Service}.
      */
-    ServiceBuilder contentPreviewerFactory(ContentPreviewerFactory factory);
+    ServiceConfigSetters contentPreviewerFactory(ContentPreviewerFactory factory);
 
     /**
      * Sets the format of this {@link Service}'s access log. The specified {@code accessLogFormat} would be
      * parsed by {@link AccessLogWriter#custom(String)}.
      */
-    ServiceBuilder accessLogFormat(String accessLogFormat);
+    ServiceConfigSetters accessLogFormat(String accessLogFormat);
 
     /**
      * Sets the access log writer of this {@link Service}. If not set, {@link ServerConfig#accessLogWriter()}
@@ -107,8 +123,8 @@ interface ServiceBuilder {
      *
      * @param shutdownOnStop whether to shut down the {@link AccessLogWriter} when the {@link Server} stops
      */
-    ServiceBuilder accessLogWriter(AccessLogWriter accessLogWriter,
-                                   boolean shutdownOnStop);
+    ServiceConfigSetters accessLogWriter(AccessLogWriter accessLogWriter,
+                                         boolean shutdownOnStop);
 
     /**
      * Decorates a {@link Service} with the specified {@code decorator}.
@@ -118,6 +134,5 @@ interface ServiceBuilder {
      * @param <R> the type of the {@link Service} {@code decorator} will produce
      */
     <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
-    ServiceBuilder decorator(Function<T, R> decorator);
-
+    ServiceConfigSetters decorator(Function<T, R> decorator);
 }

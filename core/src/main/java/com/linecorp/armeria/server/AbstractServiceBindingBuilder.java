@@ -34,9 +34,10 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
  * @see ServiceBindingBuilder
  * @see VirtualHostServiceBindingBuilder
  */
-abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder implements ServiceBuilder {
+abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder implements
+                                                                                  ServiceConfigSetters {
 
-    private final DefaultServiceBuilder defaultServiceBuilder = new DefaultServiceBuilder();
+    private final DefaultServiceConfigSetters defaultServiceConfigSetters = new DefaultServiceConfigSetters();
 
     @Override
     public AbstractServiceBindingBuilder requestTimeout(Duration requestTimeout) {
@@ -45,37 +46,37 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
 
     @Override
     public AbstractServiceBindingBuilder requestTimeoutMillis(long requestTimeoutMillis) {
-        defaultServiceBuilder.requestTimeoutMillis(requestTimeoutMillis);
+        defaultServiceConfigSetters.requestTimeoutMillis(requestTimeoutMillis);
         return this;
     }
 
     @Override
     public AbstractServiceBindingBuilder maxRequestLength(long maxRequestLength) {
-        defaultServiceBuilder.maxRequestLength(maxRequestLength);
+        defaultServiceConfigSetters.maxRequestLength(maxRequestLength);
         return this;
     }
 
     @Override
     public AbstractServiceBindingBuilder verboseResponses(boolean verboseResponses) {
-        defaultServiceBuilder.verboseResponses(verboseResponses);
+        defaultServiceConfigSetters.verboseResponses(verboseResponses);
         return this;
     }
 
     @Override
     public AbstractServiceBindingBuilder requestContentPreviewerFactory(ContentPreviewerFactory factory) {
-        defaultServiceBuilder.requestContentPreviewerFactory(factory);
+        defaultServiceConfigSetters.requestContentPreviewerFactory(factory);
         return this;
     }
 
     @Override
     public AbstractServiceBindingBuilder responseContentPreviewerFactory(ContentPreviewerFactory factory) {
-        defaultServiceBuilder.responseContentPreviewerFactory(factory);
+        defaultServiceConfigSetters.responseContentPreviewerFactory(factory);
         return this;
     }
 
     @Override
     public AbstractServiceBindingBuilder contentPreview(int length) {
-        defaultServiceBuilder.contentPreview(length);
+        defaultServiceConfigSetters.contentPreview(length);
         return this;
     }
 
@@ -100,27 +101,27 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     @Override
     public AbstractServiceBindingBuilder accessLogWriter(AccessLogWriter accessLogWriter,
                                                          boolean shutdownOnStop) {
-        defaultServiceBuilder.accessLogWriter(accessLogWriter, shutdownOnStop);
+        defaultServiceConfigSetters.accessLogWriter(accessLogWriter, shutdownOnStop);
         return this;
     }
 
     @Override
     public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
     AbstractServiceBindingBuilder decorator(Function<T, R> decorator) {
-        defaultServiceBuilder.decorator(decorator);
+        defaultServiceConfigSetters.decorator(decorator);
         return this;
     }
 
-    abstract void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder);
+    abstract void toServiceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder);
 
     final void build0(Service<HttpRequest, HttpResponse> service) {
         final List<Route> routes = buildRouteList();
 
         for (Route route : routes) {
-            service = defaultServiceBuilder.decorate(service);
-            final ServiceConfigBuilder serviceConfigBuilder = defaultServiceBuilder.serviceConfigBuilder(route,
-                                                                                                         service);
-            serviceConfigBuilder(serviceConfigBuilder);
+            service = defaultServiceConfigSetters.decorate(service);
+            final ServiceConfigBuilder serviceConfigBuilder = defaultServiceConfigSetters
+                                                                    .toServiceConfigBuilder(route, service);
+            toServiceConfigBuilder(serviceConfigBuilder);
         }
     }
 }

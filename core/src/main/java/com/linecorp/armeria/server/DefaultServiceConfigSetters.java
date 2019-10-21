@@ -33,11 +33,11 @@ import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
- * A default implementation of {@link ServiceBuilder} that stores service related settings
- * and provides a method {@link DefaultServiceBuilder#serviceConfigBuilder(Route, Service)} to buid
- * {@link ServiceConfigBuilder}
+ * A default implementation of {@link ServiceConfigSetters} that stores service related settings
+ * and provides a method {@link DefaultServiceConfigSetters#toServiceConfigBuilder(Route, Service)} to build
+ * {@link ServiceConfigBuilder}.
  */
-class DefaultServiceBuilder implements ServiceBuilder {
+class DefaultServiceConfigSetters implements ServiceConfigSetters {
     @Nullable
     private Long requestTimeoutMillis;
     @Nullable
@@ -55,65 +55,65 @@ class DefaultServiceBuilder implements ServiceBuilder {
     private boolean shutdownAccessLogWriterOnStop;
 
     @Override
-    public ServiceBuilder requestTimeout(Duration requestTimeout) {
+    public ServiceConfigSetters requestTimeout(Duration requestTimeout) {
         return requestTimeoutMillis(requireNonNull(requestTimeout, "requestTimeout").toMillis());
     }
 
     @Override
-    public ServiceBuilder requestTimeoutMillis(long requestTimeoutMillis) {
+    public ServiceConfigSetters requestTimeoutMillis(long requestTimeoutMillis) {
         this.requestTimeoutMillis = validateRequestTimeoutMillis(requestTimeoutMillis);
         return this;
     }
 
     @Override
-    public ServiceBuilder maxRequestLength(long maxRequestLength) {
+    public ServiceConfigSetters maxRequestLength(long maxRequestLength) {
         this.maxRequestLength = validateMaxRequestLength(maxRequestLength);
         return this;
     }
 
     @Override
-    public ServiceBuilder verboseResponses(boolean verboseResponses) {
+    public ServiceConfigSetters verboseResponses(boolean verboseResponses) {
         this.verboseResponses = verboseResponses;
         return this;
     }
 
     @Override
-    public ServiceBuilder requestContentPreviewerFactory(ContentPreviewerFactory factory) {
+    public ServiceConfigSetters requestContentPreviewerFactory(ContentPreviewerFactory factory) {
         requestContentPreviewerFactory = requireNonNull(factory, "factory");
         return this;
     }
 
     @Override
-    public ServiceBuilder responseContentPreviewerFactory(ContentPreviewerFactory factory) {
+    public ServiceConfigSetters responseContentPreviewerFactory(ContentPreviewerFactory factory) {
         responseContentPreviewerFactory = requireNonNull(factory, "factory");
         return this;
     }
 
     @Override
-    public ServiceBuilder contentPreview(int length) {
+    public ServiceConfigSetters contentPreview(int length) {
         return contentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
     }
 
     @Override
-    public ServiceBuilder contentPreview(int length, Charset defaultCharset) {
+    public ServiceConfigSetters contentPreview(int length, Charset defaultCharset) {
         return contentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
     }
 
     @Override
-    public ServiceBuilder contentPreviewerFactory(ContentPreviewerFactory factory) {
+    public ServiceConfigSetters contentPreviewerFactory(ContentPreviewerFactory factory) {
         requestContentPreviewerFactory(factory);
         responseContentPreviewerFactory(factory);
         return this;
     }
 
     @Override
-    public ServiceBuilder accessLogFormat(String accessLogFormat) {
+    public ServiceConfigSetters accessLogFormat(String accessLogFormat) {
         return accessLogWriter(AccessLogWriter.custom(requireNonNull(accessLogFormat, "accessLogFormat")),
                                true);
     }
 
     @Override
-    public ServiceBuilder accessLogWriter(AccessLogWriter accessLogWriter,
+    public ServiceConfigSetters accessLogWriter(AccessLogWriter accessLogWriter,
                                           boolean shutdownOnStop) {
         this.accessLogWriter = requireNonNull(accessLogWriter, "accessLogWriter");
         shutdownAccessLogWriterOnStop = shutdownOnStop;
@@ -122,7 +122,7 @@ class DefaultServiceBuilder implements ServiceBuilder {
 
     @Override
     public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
-    ServiceBuilder decorator(Function<T, R> decorator) {
+    ServiceConfigSetters decorator(Function<T, R> decorator) {
         requireNonNull(decorator, "decorator");
 
         @SuppressWarnings("unchecked")
@@ -145,7 +145,13 @@ class DefaultServiceBuilder implements ServiceBuilder {
         return service.decorate(decorator);
     }
 
-    ServiceConfigBuilder serviceConfigBuilder(Route route, Service<HttpRequest, HttpResponse> service) {
+    /**
+     * Note: {@link ServiceConfigBuilder} built by this method is not decorated with the decorator function
+     * which can be configured using {@link DefaultServiceConfigSetters#decorate(Service)} because
+     * {@link AnnotatedServiceBindingBuilder} needs exception handling decorators to be the last to handle
+     * any exceptions thrown by the service and other decorators.
+     */
+    ServiceConfigBuilder toServiceConfigBuilder(Route route, Service<HttpRequest, HttpResponse> service) {
         final ServiceConfigBuilder serviceConfigBuilder = new ServiceConfigBuilder(route, service);
         if (requestTimeoutMillis != null) {
             serviceConfigBuilder.requestTimeoutMillis(requestTimeoutMillis);
