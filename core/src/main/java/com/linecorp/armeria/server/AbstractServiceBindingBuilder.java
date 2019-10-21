@@ -112,7 +112,7 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
         return this;
     }
 
-    abstract void toServiceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder);
+    abstract void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder);
 
     final void build0(Service<HttpRequest, HttpResponse> service) {
         final List<Route> routes = buildRouteList();
@@ -121,7 +121,7 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
             service = defaultServiceConfigSetters.decorate(service);
             final ServiceConfigBuilder serviceConfigBuilder = defaultServiceConfigSetters
                                                                     .toServiceConfigBuilder(route, service);
-            toServiceConfigBuilder(serviceConfigBuilder);
+            serviceConfigBuilder(serviceConfigBuilder);
         }
     }
 }
