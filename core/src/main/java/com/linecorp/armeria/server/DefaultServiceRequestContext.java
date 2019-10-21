@@ -158,8 +158,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
             InetAddress clientAddress, boolean requestStartTimeSet, long requestStartTimeNanos,
             long requestStartTimeMicros) {
 
-        super(meterRegistry, sessionProtocol,
-              requireNonNull(routingContext, "routingContext").method(), routingContext.path(),
+        super(meterRegistry, sessionProtocol, null,
+              requireNonNull(routingContext).method(), routingContext.path(),
               requireNonNull(routingResult, "routingResult").query(),
               requireNonNull(req, "req"), null);
 

@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.brave;
 
 import java.util.List;
+import java.util.UUID;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
@@ -163,7 +164,8 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
     private static class DummyRequestContext extends NonWrappingRequestContext {
         DummyRequestContext() {
             super(NoopMeterRegistry.get(), SessionProtocol.HTTP,
-                  HttpMethod.GET, "/", null, HttpRequest.streaming(HttpMethod.GET, "/"), null);
+                  UUID.randomUUID(), HttpMethod.GET, "/", null,
+                  HttpRequest.streaming(HttpMethod.GET, "/"), null);
         }
 
         @Override
