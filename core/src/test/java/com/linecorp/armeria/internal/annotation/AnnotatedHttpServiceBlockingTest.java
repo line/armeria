@@ -145,7 +145,7 @@ class AnnotatedHttpServiceBlockingTest {
             "/myEvenLoop/jsonNode, 0",
             "/myEvenLoop/completionStage, 0"
     })
-    public void testOnlyEventLoopWithoutBlockingAnnotation(String path, Integer count) throws Exception {
+    void testOnlyEventLoopWithoutBlockingAnnotation(String path, Integer count) throws Exception {
         final HttpClient client = HttpClient.of(server.uri("/"));
 
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, path);
@@ -161,7 +161,7 @@ class AnnotatedHttpServiceBlockingTest {
             "/myBlocking/jsonNode, 1",
             "/myBlocking/completionStage, 1"
     })
-    public void testOnlyBlockingWithBlockingAnnotation(String path, Integer count) throws Exception {
+    void testOnlyBlockingWithBlockingAnnotation(String path, Integer count) throws Exception {
         final HttpClient client = HttpClient.of(server.uri("/"));
 
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, path);
