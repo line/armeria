@@ -229,7 +229,7 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     }
 
     @Override
-    void toServiceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder) {
+    void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder) {
         serverBuilder.serviceConfigBuilder(serviceConfigBuilder);
     }
 }
