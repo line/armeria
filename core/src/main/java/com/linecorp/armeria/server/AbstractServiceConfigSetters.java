@@ -28,95 +28,95 @@ import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
- * A builder that implements {@link ServerBuilder} by delegating all calls
- * to {@link DefaultServiceBuilder}
+ * A builder that implements {@link ServiceConfigSetters} by delegating all calls
+ * to {@link DefaultServiceConfigSetters}.
  */
-abstract class AbstractServiceBuilder implements ServiceBuilder {
+abstract class AbstractServiceConfigSetters implements ServiceConfigSetters {
 
-    private final DefaultServiceBuilder defaultServiceBuilder = new DefaultServiceBuilder();
+    private final DefaultServiceConfigSetters defaultServiceConfigSetters = new DefaultServiceConfigSetters();
 
     @Override
-    public AbstractServiceBuilder requestTimeout(Duration requestTimeout) {
-        defaultServiceBuilder.requestTimeout(requestTimeout);
+    public AbstractServiceConfigSetters requestTimeout(Duration requestTimeout) {
+        defaultServiceConfigSetters.requestTimeout(requestTimeout);
         return this;
     }
 
     @Override
-    public AbstractServiceBuilder requestTimeoutMillis(long requestTimeoutMillis) {
-        defaultServiceBuilder.requestTimeoutMillis(requestTimeoutMillis);
+    public AbstractServiceConfigSetters requestTimeoutMillis(long requestTimeoutMillis) {
+        defaultServiceConfigSetters.requestTimeoutMillis(requestTimeoutMillis);
         return this;
     }
 
     @Override
-    public AbstractServiceBuilder maxRequestLength(long maxRequestLength) {
-        defaultServiceBuilder.maxRequestLength(maxRequestLength);
+    public AbstractServiceConfigSetters maxRequestLength(long maxRequestLength) {
+        defaultServiceConfigSetters.maxRequestLength(maxRequestLength);
         return this;
     }
 
     @Override
-    public AbstractServiceBuilder verboseResponses(boolean verboseResponses) {
-        defaultServiceBuilder.verboseResponses(verboseResponses);
+    public AbstractServiceConfigSetters verboseResponses(boolean verboseResponses) {
+        defaultServiceConfigSetters.verboseResponses(verboseResponses);
         return this;
     }
 
     @Override
-    public AbstractServiceBuilder requestContentPreviewerFactory(ContentPreviewerFactory factory) {
-        defaultServiceBuilder.requestContentPreviewerFactory(factory);
+    public AbstractServiceConfigSetters requestContentPreviewerFactory(ContentPreviewerFactory factory) {
+        defaultServiceConfigSetters.requestContentPreviewerFactory(factory);
         return this;
     }
 
     @Override
-    public AbstractServiceBuilder responseContentPreviewerFactory(ContentPreviewerFactory factory) {
-        defaultServiceBuilder.responseContentPreviewerFactory(factory);
+    public AbstractServiceConfigSetters responseContentPreviewerFactory(ContentPreviewerFactory factory) {
+        defaultServiceConfigSetters.responseContentPreviewerFactory(factory);
         return this;
     }
 
     @Override
-    public AbstractServiceBuilder contentPreview(int length) {
-        defaultServiceBuilder.contentPreview(length);
+    public AbstractServiceConfigSetters contentPreview(int length) {
+        defaultServiceConfigSetters.contentPreview(length);
         return this;
     }
 
     @Override
-    public AbstractServiceBuilder contentPreview(int length, Charset defaultCharset) {
+    public AbstractServiceConfigSetters contentPreview(int length, Charset defaultCharset) {
         contentPreviewerFactory(ContentPreviewerFactory.ofText(length, defaultCharset));
         return this;
     }
 
     @Override
-    public AbstractServiceBuilder contentPreviewerFactory(ContentPreviewerFactory factory) {
+    public AbstractServiceConfigSetters contentPreviewerFactory(ContentPreviewerFactory factory) {
         requestContentPreviewerFactory(factory);
         responseContentPreviewerFactory(factory);
         return this;
     }
 
     @Override
-    public AbstractServiceBuilder accessLogFormat(String accessLogFormat) {
+    public AbstractServiceConfigSetters accessLogFormat(String accessLogFormat) {
         return accessLogWriter(AccessLogWriter.custom(requireNonNull(accessLogFormat, "accessLogFormat")),
                                true);
     }
 
     @Override
-    public AbstractServiceBuilder accessLogWriter(AccessLogWriter accessLogWriter,
+    public AbstractServiceConfigSetters accessLogWriter(AccessLogWriter accessLogWriter,
                                                   boolean shutdownOnStop) {
-        defaultServiceBuilder.accessLogWriter(accessLogWriter, shutdownOnStop);
+        defaultServiceConfigSetters.accessLogWriter(accessLogWriter, shutdownOnStop);
         return this;
     }
 
     @Override
     public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
-    AbstractServiceBuilder decorator(Function<T, R> decorator) {
-        defaultServiceBuilder.decorator(decorator);
+    AbstractServiceConfigSetters decorator(Function<T, R> decorator) {
+        defaultServiceConfigSetters.decorator(decorator);
         return this;
     }
 
     Service<HttpRequest, HttpResponse> decorate(Service<HttpRequest, HttpResponse> service) {
-        return defaultServiceBuilder.decorate(service);
+        return defaultServiceConfigSetters.decorate(service);
     }
 
     final void build0(Route route, Service<HttpRequest, HttpResponse> service) {
-        final ServiceConfigBuilder serviceConfigBuilder = defaultServiceBuilder.serviceConfigBuilder(route,
-                                                                                                     service);
+        final ServiceConfigBuilder serviceConfigBuilder = defaultServiceConfigSetters
+                                                                .toServiceConfigBuilder(route, service);
         serviceConfigBuilder(serviceConfigBuilder);
     }
 

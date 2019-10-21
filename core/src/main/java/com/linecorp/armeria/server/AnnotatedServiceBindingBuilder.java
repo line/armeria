@@ -58,7 +58,7 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
  *
  * @see ServiceBindingBuilder
  */
-public final class AnnotatedServiceBindingBuilder extends AbstractServiceBuilder {
+public final class AnnotatedServiceBindingBuilder extends AbstractServiceConfigSetters {
 
     private final ServerBuilder serverBuilder;
     private final Builder<ExceptionHandlerFunction> exceptionHandlerFunctionBuilder = ImmutableList.builder();
@@ -75,23 +75,36 @@ public final class AnnotatedServiceBindingBuilder extends AbstractServiceBuilder
         serverBuilder.serviceConfigBuilder(serviceConfigBuilder);
     }
 
+    /**
+     * Sets the path prefix to be used for this {@link AnnotatedServiceBindingBuilder}.
+     * @param pathPrefix string representing the path prefix.
+     */
     public AnnotatedServiceBindingBuilder pathPrefix(String pathPrefix) {
         this.pathPrefix = requireNonNull(pathPrefix, "pathPrefix");
         return this;
     }
 
+    /**
+     * Adds the given {@link ExceptionHandlerFunction} to this {@link AnnotatedServiceBindingBuilder}.
+     */
     public AnnotatedServiceBindingBuilder exceptionHandler(ExceptionHandlerFunction exceptionHandlerFunction) {
         requireNonNull(exceptionHandlerFunction, "exceptionHandler");
         exceptionHandlerFunctionBuilder.add(exceptionHandlerFunction);
         return this;
     }
 
+    /**
+     * Adds the given {@link ResponseConverterFunction} to this {@link AnnotatedServiceBindingBuilder}.
+     */
     public AnnotatedServiceBindingBuilder responseHandler(ResponseConverterFunction responseConverterFunction) {
         requireNonNull(responseConverterFunction, "responseConverterFunction");
         responseConverterFunctionBuilder.add(responseConverterFunction);
         return this;
     }
 
+    /**
+     * Adds the given {@link RequestConverterFunction} to this {@link AnnotatedServiceBindingBuilder}.
+     */
     public AnnotatedServiceBindingBuilder requestHandler(RequestConverterFunction requestConverterFunction) {
         requireNonNull(requestConverterFunction, "requestConverterFunction");
         requestConverterFunctionBuilder.add(requestConverterFunction);
@@ -160,6 +173,15 @@ public final class AnnotatedServiceBindingBuilder extends AbstractServiceBuilder
         return (AnnotatedServiceBindingBuilder) super.accessLogWriter(accessLogWriter, shutdownOnStop);
     }
 
+    /**
+     * Registers the {@link ServiceConfigBuilder} that is created from this Builder and returns
+     * {@link ServerBuilder}.
+     * @param service annotated service object to handle incoming requests matching path prefix, which
+     *                  can be configured through {@link AnnotatedServiceBindingBuilder#pathPrefix(String)}.
+     *                  If path prefix is not set then this service is registered to handle requests matching
+     *                  {@code /}
+     * @return {@link ServerBuilder} to continue building {@link Server}
+     */
     public ServerBuilder buildAnnotated(Object service) {
         final ImmutableList<ExceptionHandlerFunction> exceptionHandlerFunctions =
                 exceptionHandlerFunctionBuilder.build();
