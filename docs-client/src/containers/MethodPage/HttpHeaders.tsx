@@ -58,7 +58,6 @@ const HttpHeaders: React.FunctionComponent<Props> = (props) => (
         )}
         <Typography variant="body2" paragraph />
         <KeyValueEditor />
-        zzz
         <TextField
           multiline
           fullWidth
