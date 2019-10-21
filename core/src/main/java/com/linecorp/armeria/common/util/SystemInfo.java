@@ -173,8 +173,6 @@ public final class SystemInfo {
         WINDOWS,
         LINUX,
         MAC,
-        FREEBSD,
-        SOLARIS,
         OTHERS
     }
 
