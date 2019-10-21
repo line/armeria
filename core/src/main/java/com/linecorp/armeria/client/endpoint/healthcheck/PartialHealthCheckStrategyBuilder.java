@@ -27,41 +27,44 @@ import com.linecorp.armeria.client.endpoint.healthcheck.PartialHealthCheckStrate
 public class PartialHealthCheckStrategyBuilder {
 
     @Nullable
-    private Integer maxValue;
+    private Integer maxEndpointCount;
 
     @Nullable
-    private Double maxRatio;
+    private Double maxEndpointRatio;
+
+    PartialHealthCheckStrategyBuilder() {}
 
     /**
-     * Sets the maximum value of target selected candidates.
-     * The maximum value must greater than 0.
-     * You can use only one of the maximum value or maximum ratio.
+     * Sets the maximum endpoint count of target selected candidates.
+     * The maximum endpoint count must greater than 0.
+     * You can use only one of the maximum endpoint count or maximum endpoint ratio.
      */
-    public PartialHealthCheckStrategyBuilder maxValue(int maxValue) {
-        if (maxRatio != null) {
-            throw new IllegalArgumentException("Maximum ratio is already set.");
+    public PartialHealthCheckStrategyBuilder maxEndpointCount(int maxEndpointCount) {
+        if (maxEndpointRatio != null) {
+            throw new IllegalArgumentException("Maximum endpoint ratio is already set.");
         }
 
-        checkArgument(maxValue > 0, "maxValue: %s (expected: 1 - MAX_INT)", maxValue);
+        checkArgument(maxEndpointCount > 0, "maxEndpointCount: %s (expected: 0 < maxEndpointCount <= MAX_INT)",
+                      maxEndpointCount);
 
-        this.maxValue = maxValue;
+        this.maxEndpointCount = maxEndpointCount;
         return this;
     }
 
     /**
-     * Sets the maximum ratio of target selected candidates.
-     * The maximum ratio must greater than 0 and less or equal to 1.
-     * You can use only one of the maximum value or maximum ratio.
+     * Sets the maximum endpoint ratio of target selected candidates.
+     * The maximum endpoint ratio must greater than 0 and less or equal to 1.
+     * You can use only one of the maximum endpoint count or maximum endpoint ratio.
      */
-    public PartialHealthCheckStrategyBuilder maxRatio(double maxRatio) {
-        if (maxValue != null) {
-            throw new IllegalArgumentException("Maximum value is already set.");
+    public PartialHealthCheckStrategyBuilder maxEndpointRatio(double maxEndpointRatio) {
+        if (maxEndpointCount != null) {
+            throw new IllegalArgumentException("Maximum endpoint count is already set.");
         }
 
-        checkArgument(maxRatio > 0 && maxRatio <= 1,
-                      "maxRatio: %s (expected: 0.x - 1)", maxRatio);
+        checkArgument(maxEndpointRatio > 0 && maxEndpointRatio <= 1,
+                      "maxEndpointRatio: %s (expected: 0 < maxEndpointRatio <= 1)", maxEndpointRatio);
 
-        this.maxRatio = maxRatio;
+        this.maxEndpointRatio = maxEndpointRatio;
         return this;
     }
 
@@ -70,10 +73,10 @@ public class PartialHealthCheckStrategyBuilder {
      */
     public PartialHealthCheckStrategy build() {
         final TargetCount targetCount;
-        if (maxValue != null) {
-            targetCount = TargetCount.ofValue(maxValue);
-        } else if (maxRatio != null) {
-            targetCount = TargetCount.ofRatio(maxRatio);
+        if (maxEndpointCount != null) {
+            targetCount = TargetCount.ofCount(maxEndpointCount);
+        } else if (maxEndpointRatio != null) {
+            targetCount = TargetCount.ofRatio(maxEndpointRatio);
         } else {
             targetCount = null;
         }

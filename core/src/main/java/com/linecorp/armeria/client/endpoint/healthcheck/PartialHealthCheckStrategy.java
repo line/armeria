@@ -27,14 +27,22 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import org.jctools.maps.NonBlockingHashSet;
 
-import com.linecorp.armeria.client.Endpoint;
-
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+
+import com.linecorp.armeria.client.Endpoint;
 
 /**
  * A strategy to check part of candidates by health.
  */
-public class PartialHealthCheckStrategy implements HealthCheckStrategy {
+final class PartialHealthCheckStrategy implements HealthCheckStrategy {
+
+    /**
+     * Creates a new builder.
+     */
+    public static PartialHealthCheckStrategyBuilder builder() {
+        return new PartialHealthCheckStrategyBuilder();
+    }
 
     private final Set<Endpoint> selectedCandidates;
     private final Set<Endpoint> unhealthyCandidates;
@@ -46,22 +54,9 @@ public class PartialHealthCheckStrategy implements HealthCheckStrategy {
      */
     PartialHealthCheckStrategy(TargetCount max) {
         this.max = requireNonNull(max, "max");
-        selectedCandidates = new NonBlockingHashSet<>();
+        selectedCandidates = new HashSet<>();
         unhealthyCandidates = new NonBlockingHashSet<>();
-        candidates = ImmutableSet.copyOf(new ArrayList<>());
-    }
-
-    private static Set<Endpoint> selectRandomly(Set<Endpoint> availableCandidates, int cnt) {
-        final List<Endpoint> endpoints = new ArrayList<>(availableCandidates);
-
-        final Set<Endpoint> selectedCandidates = new HashSet<>();
-        final Random random = ThreadLocalRandom.current();
-
-        for (int i = 0; i < cnt && !endpoints.isEmpty(); i++) {
-            selectedCandidates.add(endpoints.remove(random.nextInt(endpoints.size())));
-        }
-
-        return selectedCandidates;
+        candidates = ImmutableSet.of();
     }
 
     @Override
@@ -80,14 +75,14 @@ public class PartialHealthCheckStrategy implements HealthCheckStrategy {
                 removedCandidates.add(selectedCandidate);
             }
 
-            updateSelectedCandidates(removedCandidates);
+            removeAndSelectNewCandidates(removedCandidates);
         }
     }
 
     @Override
     public List<Endpoint> getCandidates() {
         synchronized (selectedCandidates) {
-            return new ArrayList<>(selectedCandidates);
+            return ImmutableList.copyOf(selectedCandidates);
         }
     }
 
@@ -109,41 +104,62 @@ public class PartialHealthCheckStrategy implements HealthCheckStrategy {
 
         unhealthyCandidates.add(endpoint);
         synchronized (selectedCandidates) {
-            updateSelectedCandidates(ImmutableSet.of(endpoint));
+            removeAndSelectNewCandidates(ImmutableSet.of(endpoint));
             return true;
         }
     }
 
-    /*
-    This method must be called with synchronized selectedCandidates
+    /**
+     This method must be called with synchronized selectedCandidates.
      */
-    private void updateSelectedCandidates(final Set<Endpoint> removedEndpoints) {
+    private void removeAndSelectNewCandidates(final Set<Endpoint> removedEndpoints) {
         final int targetSelectedCandidatesSize = max.calculate(candidates.size());
 
-        removedEndpoints.forEach(selectedCandidates::remove);
+        selectedCandidates.removeAll(removedEndpoints);
 
         int availableCandidateCount = calculateAvailableCandidateCount(targetSelectedCandidatesSize);
         if (availableCandidateCount <= 0) {
             return;
         }
 
-        final Set<Endpoint> availableCandidates = new HashSet<>(candidates);
-        availableCandidates.removeAll(selectedCandidates);
-        availableCandidates.removeAll(unhealthyCandidates);
+        final int newSelectedCandidatesCount = addRandomlySelectedCandidates(selectedCandidates, candidates,
+                                                                             availableCandidateCount,
+                                                                             selectedCandidates,
+                                                                             unhealthyCandidates);
 
-        final Set<Endpoint> newSelectedCandidates = selectRandomly(availableCandidates,
-                                                                   availableCandidateCount);
-        selectedCandidates.addAll(newSelectedCandidates);
-
-        availableCandidateCount -= newSelectedCandidates.size();
+        availableCandidateCount -= newSelectedCandidatesCount;
         if (availableCandidateCount <= 0) {
             return;
         }
 
-        final Set<Endpoint> availableUnhealthyCandidates = new HashSet<>(unhealthyCandidates);
-        availableUnhealthyCandidates.removeAll(selectedCandidates);
+        addRandomlySelectedCandidates(selectedCandidates, unhealthyCandidates, availableCandidateCount,
+                                      selectedCandidates);
+    }
 
-        selectedCandidates.addAll(selectRandomly(availableUnhealthyCandidates, availableCandidateCount));
+    @SafeVarargs
+    private static int addRandomlySelectedCandidates(Set<Endpoint> selectedCandidates,
+                                                     Set<Endpoint> candidates, int count,
+                                                     Set<Endpoint>... exclusions) {
+        final List<Endpoint> availableCandidates = new ArrayList<>(candidates.size());
+        loop:
+        for (Endpoint candidate : candidates) {
+            for (Set<Endpoint> exclusion : exclusions) {
+                if (exclusion.contains(candidate)) {
+                    continue loop;
+                }
+            }
+
+            availableCandidates.add(candidate);
+        }
+
+        int newSelectedCandidateCount = 0;
+        final Random random = ThreadLocalRandom.current();
+        for (int i = 0; i < count && !availableCandidates.isEmpty(); i++) {
+            newSelectedCandidateCount++;
+            selectedCandidates.add(availableCandidates.remove(random.nextInt(availableCandidates.size())));
+        }
+
+        return newSelectedCandidateCount;
     }
 
     private int calculateAvailableCandidateCount(int targetSelectedCandidatesSize) {
@@ -153,22 +169,23 @@ public class PartialHealthCheckStrategy implements HealthCheckStrategy {
 
     static final class TargetCount {
 
-        private final int value;
+        private final int count;
         private final double ratio;
         private final boolean ratioMode;
-        private TargetCount(int value, double ratio, boolean ratioMode) {
-            this.value = value;
+
+        private TargetCount(int count, double ratio, boolean ratioMode) {
+            this.count = count;
             this.ratio = ratio;
             this.ratioMode = ratioMode;
         }
 
-        static TargetCount ofValue(int value) {
-            checkArgument(value > 0, "value: %s (expected: 1 - MAX_INT)", value);
-            return new TargetCount(value, 0, false);
+        static TargetCount ofCount(int count) {
+            checkArgument(count > 0, "count: %s (expected: 0 < count <= MAX_INT)", count);
+            return new TargetCount(count, 0, false);
         }
 
         static TargetCount ofRatio(double ratio) {
-            checkArgument(0 < ratio && ratio <= 1, "ratio: %s (expected: 0.x - 1)",
+            checkArgument(0 < ratio && ratio <= 1, "ratio: %s (expected: 0 < ratio <= 1)",
                           ratio);
 
             return new TargetCount(0, ratio, true);
@@ -178,7 +195,7 @@ public class PartialHealthCheckStrategy implements HealthCheckStrategy {
             if (ratioMode) {
                 return Math.max(1, (int) (candidates * ratio));
             } else {
-                return value;
+                return count;
             }
         }
     }

@@ -22,18 +22,18 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.linecorp.armeria.client.Endpoint;
-
 import com.google.common.collect.ImmutableSet;
+
+import com.linecorp.armeria.client.Endpoint;
 
 /**
  * A strategy to check all of candidates.
  */
-public class AllHealthCheckStrategy implements HealthCheckStrategy {
+final class AllHealthCheckStrategy implements HealthCheckStrategy {
 
     private Set<Endpoint> candidates;
 
-    public AllHealthCheckStrategy() {
+    AllHealthCheckStrategy() {
         candidates = new HashSet<>();
     }
 
@@ -51,10 +51,6 @@ public class AllHealthCheckStrategy implements HealthCheckStrategy {
     @Override
     public boolean updateHealth(Endpoint endpoint, double health) {
         requireNonNull(endpoint, "endpoint");
-        return isDisappeared(endpoint);
-    }
-
-    private boolean isDisappeared(Endpoint endpoint) {
         return !candidates.contains(endpoint);
     }
 }

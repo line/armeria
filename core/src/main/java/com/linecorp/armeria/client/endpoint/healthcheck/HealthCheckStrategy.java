@@ -18,8 +18,30 @@ package com.linecorp.armeria.client.endpoint.healthcheck;
 import java.util.List;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.healthcheck.PartialHealthCheckStrategy.TargetCount;
 
 public interface HealthCheckStrategy {
+
+    /**
+     * Creates a new AllHealthCheckStrategy.
+     */
+    static HealthCheckStrategy all() {
+        return new AllHealthCheckStrategy();
+    }
+
+    /**
+     * Creates a new max endpoint count PartialHealthCheckStrategy.
+     */
+    static HealthCheckStrategy partialMaxEndpointCount(int maxEndpointCount) {
+        return new PartialHealthCheckStrategy(TargetCount.ofCount(maxEndpointCount));
+    }
+
+    /**
+     * Creates a new max endpoint ratio PartialHealthCheckStrategy.
+     */
+    static HealthCheckStrategy partialMaxEndpointRatio(double maxEndpointRatio) {
+        return new PartialHealthCheckStrategy(TargetCount.ofRatio(maxEndpointRatio));
+    }
 
     /**
      * Updates the candidates.
@@ -28,7 +50,7 @@ public interface HealthCheckStrategy {
     void updateCandidates(List<Endpoint> candidates);
 
     /**
-     * Gets the candidates
+     * Gets the candidates.
      * @return the selected {@link Endpoint} by based on implementation.
      */
     List<Endpoint> getCandidates();
@@ -39,7 +61,7 @@ public interface HealthCheckStrategy {
      * @param health {@code 0.0} indicates the {@link Endpoint} is not able to handle any requests.
      *               A positive value indicates the {@link Endpoint} is able to handle requests.
      *               A value greater than {@code 1.0} will be set equal to {@code 1.0}.
-     * @return the result of candidates updated by update health
+     * @return the result of candidates updated by update health.
      */
     boolean updateHealth(Endpoint endpoint, double health);
 }

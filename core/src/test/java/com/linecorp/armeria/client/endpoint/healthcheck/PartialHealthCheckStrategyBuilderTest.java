@@ -39,29 +39,29 @@ public class PartialHealthCheckStrategyBuilderTest {
 
     @BeforeEach
     void beforeEach() {
-        builder = new PartialHealthCheckStrategyBuilder();
+        builder = PartialHealthCheckStrategy.builder();
     }
 
     @Test
-    void maxValueWhenLessOrEqual0() {
-        assertThrows(IllegalArgumentException.class, () -> builder.maxValue(0));
+    void maxEndpointCountWhenLessOrEqual0() {
+        assertThrows(IllegalArgumentException.class, () -> builder.maxEndpointCount(0));
     }
 
     @Test
-    void maxValueWhenMaxRatioAlreadySet() {
-        builder.maxRatio(MAX_RATIO);
-        assertThrows(IllegalArgumentException.class, () -> builder.maxValue(10));
+    void maxEndpointCountWhenMaxEndpointRatioAlreadySet() {
+        builder.maxEndpointRatio(MAX_RATIO);
+        assertThrows(IllegalArgumentException.class, () -> builder.maxEndpointCount(10));
     }
 
     @Test
-    void maxRatioWhenLessThanEqual0() {
-        assertThrows(IllegalArgumentException.class, () -> builder.maxRatio(0));
+    void maxEndpointRatioWhenLessThanEqual0() {
+        assertThrows(IllegalArgumentException.class, () -> builder.maxEndpointRatio(0));
     }
 
     @Test
-    void maxRatioWhenMaxValueAlreadySet() {
-        builder.maxValue(10);
-        assertThrows(IllegalArgumentException.class, () -> builder.maxRatio(0));
+    void maxEndpointRatioWhenMaxEndpointCountAlreadySet() {
+        builder.maxEndpointCount(10);
+        assertThrows(IllegalArgumentException.class, () -> builder.maxEndpointRatio(0));
     }
 
     @Test
@@ -71,7 +71,7 @@ public class PartialHealthCheckStrategyBuilderTest {
 
     @Test
     void build() {
-        builder.maxRatio(MAX_RATIO);
+        builder.maxEndpointRatio(MAX_RATIO);
 
         final PartialHealthCheckStrategy actualStrategy = builder.build();
         actualStrategy.updateCandidates(createCandidates(10));

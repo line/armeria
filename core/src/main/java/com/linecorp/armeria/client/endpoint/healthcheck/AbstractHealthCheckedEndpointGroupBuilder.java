@@ -158,7 +158,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
     }
 
     /**
-     * Sets the health check strategy
+     * Sets the health check strategy.
      */
     public AbstractHealthCheckedEndpointGroupBuilder healthCheckStrategy(
             HealthCheckStrategy healthCheckStrategy) {

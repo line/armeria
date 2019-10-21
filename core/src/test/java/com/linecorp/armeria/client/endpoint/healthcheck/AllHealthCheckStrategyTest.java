@@ -98,7 +98,7 @@ public class AllHealthCheckStrategyTest {
         assertCandidates(strategy.getCandidates(), candidates);
     }
 
-    private void assertCandidates(List<Endpoint> act, List<Endpoint> exp) {
+    private static void assertCandidates(List<Endpoint> act, List<Endpoint> exp) {
         assertThat(act).hasSize(exp.size());
 
         for (Endpoint expCandidate : exp) {
