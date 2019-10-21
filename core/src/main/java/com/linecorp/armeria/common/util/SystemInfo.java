@@ -113,7 +113,16 @@ public final class SystemInfo {
         }
 
         try {
-            osType = OsType.valueOf(Ascii.toUpperCase(System.getProperty("os.name", "").split(" ")[0]));
+            String osName = Ascii.toUpperCase(System.getProperty("os.name", ""));
+            if (osName.startsWith("WINDOWS")) {
+                osType = osType().WINDOWS;
+            }
+            if (osName.startsWith("LINUX")) {
+                osType = osType().LINUX;
+            }
+            if (osName.startsWith("MAC")) {
+                osType = osType().MAC;
+            }
         } catch (Throwable t) {
             osType = osType().OTHERS;
         }
