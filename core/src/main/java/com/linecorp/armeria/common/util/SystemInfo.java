@@ -51,7 +51,7 @@ public final class SystemInfo {
 
     private static boolean JETTY_ALPN_OPTIONAL_OR_AVAILABLE;
 
-    private static OsType osType;
+    private static final OsType osType;
 
     static {
         int javaVersion = -1;
@@ -112,19 +112,15 @@ public final class SystemInfo {
             }
         }
 
-        try {
-            String osName = Ascii.toUpperCase(System.getProperty("os.name", ""));
-            if (osName.startsWith("WINDOWS")) {
-                osType = osType().WINDOWS;
-            }
-            if (osName.startsWith("LINUX")) {
-                osType = osType().LINUX;
-            }
-            if (osName.startsWith("MAC")) {
-                osType = osType().MAC;
-            }
-        } catch (Throwable t) {
-            osType = osType().OTHERS;
+        final String osName = Ascii.toUpperCase(System.getProperty("os.name", ""));
+        if (osName.startsWith("WINDOWS")) {
+            osType = OsType.WINDOWS;
+        } else if (osName.startsWith("LINUX")) {
+            osType = OsType.LINUX;
+        } else if (osName.startsWith("MAC")) {
+            osType = OsType.MAC;
+        } else {
+            osType = OsType.OTHERS;
         }
     }
 
@@ -178,6 +174,9 @@ public final class SystemInfo {
         return osType;
     }
 
+    /**
+     * Operating system type enumeration value
+     */
     public enum OsType {
         WINDOWS,
         LINUX,
