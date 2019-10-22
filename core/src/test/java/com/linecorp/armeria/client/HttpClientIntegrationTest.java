@@ -65,6 +65,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -743,13 +744,12 @@ class HttpClientIntegrationTest {
 
     @ParameterizedTest
     @CsvSource({
-//            "H1C, true", "H1C, false",
+            "H1C, true", "H1C, false",
             "H2C, true", "H2C, false"
     })
     void testResponseTimeoutHandler(SessionProtocol protocol, boolean useResponseTimeoutHandler) {
         final AtomicReference<RequestLog> logHolder = new AtomicReference<>();
         final IllegalStateException reqCause = new IllegalStateException("abort request");
-        final IllegalStateException resCause = new IllegalStateException("abort response");
         final IllegalStateException logCause = new IllegalStateException("log cause");
         final HttpClient client = new HttpClientBuilder(server.uri(protocol, "/"))
                 .responseTimeout(Duration.ofSeconds(1))
@@ -773,9 +773,8 @@ class HttpClientIntegrationTest {
         });
 
         if (useResponseTimeoutHandler) {
-//            assertThatThrownBy(() -> response.aggregate().join()).hasCause(resCause);
-            // Expect ClosedSessionException, but receive UnprocessedRequestException(GoAwayReceivedException)
-            response.aggregate().join();
+            assertThatThrownBy(() -> response.aggregate().join()).isInstanceOf(CompletionException.class)
+                    .hasCauseInstanceOf(ClosedSessionException.class);
             assertThat(logHolder.get().requestCause()).isSameAs(reqCause);
             assertThat(logHolder.get().responseCause()).isSameAs(logCause);
         } else {
