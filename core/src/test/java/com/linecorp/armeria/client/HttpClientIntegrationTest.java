@@ -31,6 +31,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntFunction;
 
@@ -751,18 +752,18 @@ class HttpClientIntegrationTest {
         final AtomicReference<RequestLog> logHolder = new AtomicReference<>();
         final IllegalStateException reqCause = new IllegalStateException("abort request");
         final IllegalStateException logCause = new IllegalStateException("log cause");
+        final AtomicBoolean invokeResponseTimeoutHandler = new AtomicBoolean(false);
         final HttpClient client = new HttpClientBuilder(server.uri(protocol, "/"))
-                .responseTimeout(Duration.ofSeconds(1))
+                .responseTimeout(Duration.ofSeconds(2))
                 .decorator((delegate, ctx, req) -> {
-                    final HttpResponse res = delegate.execute(ctx, req);
                     if (useResponseTimeoutHandler) {
                         ctx.setResponseTimeoutHandler(() -> {
-                            ctx.logBuilder().endResponse(logCause);
                             ctx.request().abort(reqCause);
+                            invokeResponseTimeoutHandler.set(true);
                         });
                     }
                     logHolder.set(ctx.log());
-                    return res;
+                    return delegate.execute(ctx, req);
                 })
                 .build();
 
@@ -773,13 +774,12 @@ class HttpClientIntegrationTest {
         });
 
         if (useResponseTimeoutHandler) {
+            assertThat(invokeResponseTimeoutHandler).isTrue();
             assertThatThrownBy(() -> response.aggregate().join()).isInstanceOf(CompletionException.class)
                     .hasCauseInstanceOf(ClosedSessionException.class);
             assertThat(logHolder.get().requestCause()).isSameAs(reqCause);
-            assertThat(logHolder.get().responseCause()).isSameAs(logCause);
         } else {
             assertThat(logHolder.get().requestCause()).isInstanceOf(ResponseTimeoutException.class);
-            assertThat(logHolder.get().responseCause()).isInstanceOf(ResponseTimeoutException.class);
             assertThatThrownBy(() -> response.aggregate().join())
                     .hasCauseInstanceOf(ResponseTimeoutException.class);
         }
