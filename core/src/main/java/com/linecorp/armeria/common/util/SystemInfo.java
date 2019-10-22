@@ -184,6 +184,13 @@ public final class SystemInfo {
         OTHERS
     }
 
+    /**
+     * Return whether Linux is used.
+     */
+    public static boolean isLinux() {
+        return osType == OsType.LINUX;
+    }
+
     private SystemInfo() {}
 
     private static final class Hostname {
@@ -196,7 +203,7 @@ public final class SystemInfo {
         static {
             // Try /proc/sys/kernel/hostname on Linux.
             String hostname = null;
-            if (osType() == OsType.LINUX) {
+            if (isLinux()) {
                 try {
                     final List<String> lines = Files.readAllLines(Paths.get("/proc/sys/kernel/hostname"));
                     if (!lines.isEmpty()) {
@@ -318,7 +325,7 @@ public final class SystemInfo {
             }
 
             // Try /proc/self (Linux only)
-            if (pid <= 0 && osType() == OsType.LINUX) {
+            if (pid <= 0 && isLinux()) {
                 try {
                     final Path path = Paths.get("/proc/self");
                     if (Files.isSymbolicLink(path)) {
