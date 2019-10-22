@@ -71,7 +71,8 @@ import io.netty.buffer.Unpooled;
 
 /**
  * A deframer of messages transported in the gRPC wire format. See
- * <a href="https://grpc.io/docs/guides/wire.html">gRPC Wire Protocol</a> for more detail on the protocol.
+ * <a href="https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md">gRPC Wire Format</a>
+ * for more detail on the protocol.
  *
  * <p>The logic has been mostly copied from {@code io.grpc.internal.MessageDeframer}, while removing the buffer
  * abstraction in favor of using {@link ByteBuf} directly, and allowing the delivery of uncompressed frames as
