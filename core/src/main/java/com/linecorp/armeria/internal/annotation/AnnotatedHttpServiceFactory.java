@@ -119,6 +119,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.StatusCode;
 import com.linecorp.armeria.server.annotation.Trace;
+import com.linecorp.armeria.server.cors.CorsService;
 
 /**
  * Builds a list of {@link AnnotatedHttpService}s from an {@link Object}.
@@ -163,6 +164,24 @@ public final class AnnotatedHttpServiceFactory {
                     .put(Delete.class, HttpMethod.DELETE)
                     .put(Trace.class, HttpMethod.TRACE)
                     .build();
+
+    /**
+     * An initial decorator for a service without an {@link Options} mapping. This decorator
+     * will receive {@link Options} requests only for CORS preflight requests not processed by a
+     * preceding {@link CorsService}. In such case, a {@code FORBIDDEN} status code is returned.
+     */
+    private static final Function<Service<HttpRequest, HttpResponse>,
+            ? extends Service<HttpRequest, HttpResponse>> noOptionMappingInitialDecorator =
+            delegate -> new SimpleDecoratingHttpService(delegate) {
+                @Override
+                public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                    if (req.method() == HttpMethod.OPTIONS) {
+                        // This must be a CORS preflight request.
+                        throw HttpStatusException.of(HttpStatus.FORBIDDEN);
+                    }
+                    return delegate().serve(ctx, req);
+                }
+            };
 
     /**
      * Returns the list of {@link AnnotatedHttpService} defined by {@link Path} and HTTP method annotations
@@ -344,24 +363,15 @@ public final class AnnotatedHttpServiceFactory {
     }
 
     /**
-     * A CORS preflight request can be received because we handle it specially. The following
-     * decorator will prevent the service from an unexpected request which has OPTIONS method.
+     * A CORS preflight request can be received although no {@link Options} mapping is defined because
+     * we handle it specially.
      */
     private static Function<Service<HttpRequest, HttpResponse>, ? extends Service<HttpRequest, HttpResponse>>
             getInitialDecorator(Set<HttpMethod> httpMethods) {
         if (httpMethods.contains(HttpMethod.OPTIONS)) {
             return Function.identity();
         }
-        return delegate -> new SimpleDecoratingHttpService(delegate) {
-            @Override
-            public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                if (req.method() == HttpMethod.OPTIONS) {
-                    // This must be a CORS preflight request.
-                    throw HttpStatusException.of(HttpStatus.FORBIDDEN);
-                }
-                return delegate().serve(ctx, req);
-            }
-        };
+        return noOptionMappingInitialDecorator;
     }
 
     private static List<AnnotatedValueResolver> getAnnotatedValueResolvers(List<RequestConverterFunction> req,
