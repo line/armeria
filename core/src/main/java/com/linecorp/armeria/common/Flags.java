@@ -118,6 +118,7 @@ public final class Flags {
     private static final boolean HAS_WSLENV = System.getenv("WSLENV") != null;
     private static final boolean USE_EPOLL = getBoolean("useEpoll", isEpollAvailable(),
                                                         value -> isEpollAvailable() || !value);
+    @Nullable
     private static Boolean useOpenSsl;
 
     private static final boolean DUMP_OPENSSL_INFO = getBoolean("dumpOpenSslInfo", false);
@@ -406,18 +407,16 @@ public final class Flags {
      * {@code -Dcom.linecorp.armeria.useOpenSsl=false} JVM option to disable it.
      */
     public static boolean useOpenSsl() {
-        if (useOpenSsl != null) {
-            return useOpenSsl;
+        final boolean useOpenSsl = getBoolean("useOpenSsl", true);
+        if (!useOpenSsl) {
+            // OpenSSL explicitly disabled
+            return Flags.useOpenSsl = false;
         }
-        useOpenSsl = getBoolean("useOpenSsl", OpenSsl.isAvailable(), value -> OpenSsl.isAvailable() || !value);
         if (!OpenSsl.isAvailable()) {
             final Throwable cause = Exceptions.peel(OpenSsl.unavailabilityCause());
             logger.info("OpenSSL not available: {}", cause.toString());
-        } else if (useOpenSsl) {
-            logger.info("Using OpenSSL: {}, 0x{}",
-                    OpenSsl.versionString(),
-                    Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
-
+        } else {
+            logger.info("Using OpenSSL: {}, 0x{}", OpenSsl.versionString(), Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
             if (dumpOpenSslInfo()) {
                 final SSLEngine engine = SslContextUtil.createSslContext(
                         SslContextBuilder::forClient,
