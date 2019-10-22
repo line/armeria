@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -28,6 +29,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
@@ -145,9 +147,73 @@ class HealthCheckedEndpointGroupTest {
         }
     }
 
+    /*
+     * This test code and comment will be removed.
+     *
+     * The key point of this test method is below.
+     * 1. The checkFactory works synchronously.
+     * 2. HealthCheckStrategy always returns true when some thread calls updateHealth() method.
+     *    (It depends on how to implement a strategy.)
+     *
+     * The scenario is below.
+     * 1. Some thread creates a new HealthCheckedEndpointGroup.
+     * 2. The thread calls HealthCheckedEndpointGroup.updateCandidates() method automatically.
+     * 3. The thread calls HealthCheckStrategy.updateCandidates() method
+     *    by delegates then get selectedCandidates.
+     * 4. After step 3, the thread initializes endpoints in selectedCandidates
+     *    by calling refreshContexts() method.
+     * 5. The thread calls checkFactory to initialize endpoints,
+     *    then checkFactory calls HealthCheckContext.updateHealth() synchronously.
+     * 6. Because HealthCheckStrategy.updateHealth() always returns true,
+     *    thread calls refreshContexts() method.
+     * 7. Step 5~6 is repeated until StackOverflow occurs.
+     */
+    @DisplayName("bug reporting test case")
+    @Test
+    void updatesSelectedCandidatesByHealthCheckStrategy() {
+        final MockEndpointGroup delegate = new MockEndpointGroup();
+        delegate.set(Endpoint.of("foo"));
+
+        try (HealthCheckedEndpointGroup group = new AbstractHealthCheckedEndpointGroupBuilder(delegate) {
+            @Override
+            protected Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory() {
+                return ctx -> {
+                    ctx.updateHealth(0);
+                    return () -> CompletableFuture.completedFuture(null);
+                };
+            }
+        }.healthCheckStrategy(new MockHealthCheckStrategy())
+         .build()) {
+            // java.lang.StackOverflowError occurs.
+        }
+    }
+
     private static final class MockEndpointGroup extends DynamicEndpointGroup {
         void set(Endpoint... endpoints) {
             setEndpoints(ImmutableList.copyOf(endpoints));
+        }
+    }
+
+    private static final class MockHealthCheckStrategy implements HealthCheckStrategy {
+        private List<Endpoint> candidates;
+
+        MockHealthCheckStrategy() {
+            candidates = new ArrayList<>();
+        }
+
+        @Override
+        public void updateCandidates(List<Endpoint> candidates) {
+            this.candidates = candidates;
+        }
+
+        @Override
+        public List<Endpoint> getCandidates() {
+            return candidates;
+        }
+
+        @Override
+        public boolean updateHealth(Endpoint endpoint, double health) {
+            return true;
         }
     }
 }
