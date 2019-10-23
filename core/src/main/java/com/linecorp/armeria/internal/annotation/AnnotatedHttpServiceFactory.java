@@ -321,8 +321,6 @@ public final class AnnotatedHttpServiceFactory {
                 getAnnotatedInstances(method, clazz, ResponseConverter.class, ResponseConverterFunction.class)
                         .addAll(baseResponseConverters).build();
 
-        final boolean useBlockingTaskExecutor = findFirst(method, Blocking.class).isPresent();
-
         final Optional<HttpStatus> defaultResponseStatus = findFirst(method, StatusCode.class)
                 .map(code -> {
                     final int statusCode = code.value();
@@ -353,6 +351,8 @@ public final class AnnotatedHttpServiceFactory {
 
         final ResponseHeaders responseHeaders = defaultHeaders.build();
         final HttpHeaders responseTrailers = defaultTrailers.build();
+
+        final boolean useBlockingTaskExecutor = findFirst(method, Blocking.class).isPresent();
 
         return routes.stream().map(route -> {
             final List<AnnotatedValueResolver> resolvers = getAnnotatedValueResolvers(req, route, method,
