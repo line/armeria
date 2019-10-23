@@ -48,7 +48,7 @@ class AnnotatedServiceBindingBuilderTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.annotatedService()
               .exceptionHandler(handlerFunction)
-              .buildAnnotated(new TestService())
+              .build(new TestService())
               .build();
         }
     };
@@ -77,7 +77,7 @@ class AnnotatedServiceBindingBuilderTest {
                                     .annotatedService()
                                     .requestTimeout(Duration.ofMillis(5000))
                                     .exceptionHandler((ctx, request, cause) -> HttpResponse.of(400))
-                                    .buildAnnotated(new TestService())
+                                    .build(new TestService())
                                     .build();
 
         assertThat(server.config().serviceConfigs()).hasSize(1);
@@ -92,7 +92,7 @@ class AnnotatedServiceBindingBuilderTest {
                                     .requestTimeout(Duration.ofMillis(5000))
                                     .exceptionHandler((ctx, request, cause) -> HttpResponse.of(400))
                                     .pathPrefix("/home")
-                                    .buildAnnotated(new TestService())
+                                    .build(new TestService())
                                     .build();
 
         assertThat(server.config().serviceConfigs()).hasSize(1);
@@ -118,7 +118,7 @@ class AnnotatedServiceBindingBuilderTest {
                                     .accessLogWriter(accessLogWriter, shutdownOnStop)
                                     .contentPreviewerFactory(factory)
                                     .verboseResponses(verboseResponse)
-                                    .buildAnnotated(new TestService())
+                                    .build(new TestService())
                                     .build();
 
         assertThat(server.config().serviceConfigs()).hasSize(1);

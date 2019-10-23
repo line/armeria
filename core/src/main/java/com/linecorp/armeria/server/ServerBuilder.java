@@ -982,28 +982,58 @@ public final class ServerBuilder {
 
         final List<AnnotatedHttpServiceElement> elements =
                 AnnotatedHttpServiceFactory.find(pathPrefix, service, exceptionHandlersAndConverters);
-        elements.forEach(e -> {
-            Service<HttpRequest, HttpResponse> s = e.service();
-            // Apply decorators which are specified in the service class.
-            s = e.decorator().apply(s);
-            // Apply decorators which are passed via annotatedService() methods.
-            s = decorator.apply(s);
-
-            // If there is a decorator, we should add one more decorator which handles an exception
-            // raised from decorators.
-            if (s != e.service()) {
-                s = e.service().exceptionHandlingDecorator().apply(s);
-            }
-            service(e.route(), s);
-        });
+        registerHttpServiceElement(elements, decorator);
         return this;
     }
 
     /**
-     * Returns a {@link AnnotatedServiceBindingBuilder} to build annotated service.
+     * Binds the specified annotated service object under the specified path prefix.
+     *
+     * @param exceptionHandlerFunctions a list of {@link ExceptionHandlerFunction}'s
+     * @param requestConverterFunctions a list of {@link RequestConverterFunction}'s
+     * @param responseConverterFunctions a list of {@link ResponseConverterFunction}'s
+     */
+    public ServerBuilder annotatedService(String pathPrefix, Object service,
+                                          Function<Service<HttpRequest, HttpResponse>,
+                                                  ? extends Service<HttpRequest, HttpResponse>> decorator,
+                                          List<ExceptionHandlerFunction> exceptionHandlerFunctions,
+                                          List<RequestConverterFunction> requestConverterFunctions,
+                                          List<ResponseConverterFunction> responseConverterFunctions) {
+        requireNonNull(pathPrefix, "pathPrefix");
+        requireNonNull(service, "service");
+        requireNonNull(decorator, "decorator");
+        requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
+        requireNonNull(requestConverterFunctions, "requestConverterFunctions");
+        requireNonNull(responseConverterFunctions, "responseConverterFunctions");
+
+        final List<AnnotatedHttpServiceElement> elements =
+                AnnotatedHttpServiceFactory.find(pathPrefix, service, exceptionHandlerFunctions,
+                                                 requestConverterFunctions, responseConverterFunctions);
+        registerHttpServiceElement(elements, decorator);
+        return this;
+    }
+
+    /**
+     * Returns an {@link AnnotatedServiceBindingBuilder} to build annotated service.
      */
     public AnnotatedServiceBindingBuilder annotatedService() {
         return new AnnotatedServiceBindingBuilder(this);
+    }
+
+    /**
+     * Converts each of the {@link AnnotatedHttpServiceElement} to {@link ServiceConfigBuilder} and
+     * registers it with {@link VirtualHostBuilder}.
+     */
+    private void registerHttpServiceElement(List<AnnotatedHttpServiceElement> elements,
+                                            Function<Service<HttpRequest, HttpResponse>,
+                                                    ? extends Service<HttpRequest, HttpResponse>> decorator) {
+        elements.forEach(element -> {
+            final Service<HttpRequest, HttpResponse> decoratedService =
+                    element.buildSafeDecoratedService(decorator);
+            final ServiceConfigBuilder serviceConfigBuilder =
+                    new ServiceConfigBuilder(element.route(), decoratedService);
+            serviceConfigBuilder(serviceConfigBuilder);
+        });
     }
 
     ServerBuilder serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder) {
