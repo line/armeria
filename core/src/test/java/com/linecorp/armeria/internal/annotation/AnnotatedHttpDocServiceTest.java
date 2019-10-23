@@ -134,6 +134,7 @@ public class AnnotatedHttpDocServiceTest {
         addPrefixMethodInfo(methodInfos);
         addConsumesMethodInfo(methodInfos);
         addBeanMethodInfo(methodInfos);
+        addMultiMethodInfo(methodInfos);
         final Map<Class<?>, String> serviceDescription = ImmutableMap.of(MyService.class, "My service class");
 
         final JsonNode expectedJson = mapper.valueToTree(AnnotatedHttpDocServicePlugin.generate(
@@ -242,6 +243,17 @@ public class AnnotatedHttpDocServiceTest {
         final MethodInfo methodInfo = new MethodInfo(
                 "bean", TypeSignature.ofBase("HttpResponse"), fieldInfos, ImmutableList.of(),
                 ImmutableList.of(endpoint), HttpMethod.GET, null);
+        methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
+    }
+
+    private static void addMultiMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
+        final EndpointInfo endpoint1 = new EndpointInfoBuilder("*", "exact:/service/multi")
+                .availableMimeTypes(MediaType.JSON_UTF_8).build();
+        final EndpointInfo endpoint2 = new EndpointInfoBuilder("*", "prefix:/service/multi2/")
+                .availableMimeTypes(MediaType.JSON_UTF_8).build();
+        final MethodInfo methodInfo = new MethodInfo(
+                "multi", TypeSignature.ofBase("HttpResponse"), ImmutableList.of(), ImmutableList.of(),
+                ImmutableList.of(endpoint1, endpoint2), HttpMethod.GET, null);
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
@@ -370,6 +382,13 @@ public class AnnotatedHttpDocServiceTest {
 
         @Get("/exclude2")
         public HttpResponse exclude2() {
+            return HttpResponse.of(200);
+        }
+
+        @Get
+        @Path("/multi")
+        @Path("prefix:/multi2")
+        public HttpResponse multi() {
             return HttpResponse.of(200);
         }
     }

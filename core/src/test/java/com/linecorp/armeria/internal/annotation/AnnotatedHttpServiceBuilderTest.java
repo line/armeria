@@ -39,7 +39,6 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.JacksonRequestConverterFunction;
-import com.linecorp.armeria.server.annotation.Options;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.Post;
@@ -65,13 +64,6 @@ public class AnnotatedHttpServiceBuilderTest {
             @Path("/")
             @Get
             @Post
-            public void root() {}
-        });
-
-        Server.builder().annotatedService(new Object() {
-            @Options
-            @Get
-            @Post("/")
             public void root() {}
         });
 
@@ -191,6 +183,52 @@ public class AnnotatedHttpServiceBuilderTest {
                              @Header("a") LinkedList<String> b) {}
         });
 
+        // Multiple paths are allowed
+        Server.builder().annotatedService(new Object() {
+            @Get
+            @Post
+            @Path("/a")
+            public void root() {}
+        });
+
+        Server.builder().annotatedService(new Object() {
+            @Post("/")
+            @Get("/")
+            public void root() {}
+        });
+
+        // Multiple paths with matching params
+        Server.builder().annotatedService(new Object() {
+            @Get
+            @Path("/a/{param}")
+            @Path("/b/{param}")
+            public void root(@Param("param") String param) {}
+        });
+
+        // Multiple paths with non matching but optional path variables
+        Server.builder().annotatedService(new Object() {
+            @Get
+            @Path("/a")
+            @Path("/b/{param}")
+            public void root(@Param("param") Optional<String> param) {}
+        });
+
+        // Multiple paths with non matching non-optional path variables
+        Server.builder().annotatedService(new Object() {
+            @Get
+            @Path("/a/{param1}")
+            @Path("/b/{param2}")
+            public void root(String param1, String param2) {}
+        });
+
+        // Multiple paths with same value
+        Server.builder().annotatedService(new Object() {
+            @Get
+            @Path("/a")
+            @Path("/a")
+            public void root(BeanB b) {}
+        });
+
         // Optional is redundant, but we just warn.
         Server.builder().annotatedService(new Object() {
             @Get("/{name}")
@@ -245,18 +283,6 @@ public class AnnotatedHttpServiceBuilderTest {
     @Test
     public void failedOf() {
         assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
-            @Path("/")
-            @Get("/")
-            public void root() {}
-        })).isInstanceOf(IllegalArgumentException.class);
-
-        assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
-            @Post("/")
-            @Get("/")
-            public void root() {}
-        })).isInstanceOf(IllegalArgumentException.class);
-
-        assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
             @Get
             public void root() {}
         })).isInstanceOf(IllegalArgumentException.class);
@@ -305,6 +331,28 @@ public class AnnotatedHttpServiceBuilderTest {
         assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
             @Get("/test")
             public void root(BeanA a) {}
+        })).isInstanceOf(IllegalArgumentException.class);
+
+        assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
+            @Get
+            @Post("/")
+            public void root() {}
+        })).isInstanceOf(IllegalArgumentException.class);
+
+        assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
+            @Get("/")
+            @Path("/")
+            public void root() {}
+        })).isInstanceOf(IllegalArgumentException.class);
+
+        assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
+            @Path("")
+            public void root() {}
+        })).isInstanceOf(IllegalArgumentException.class);
+
+        assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
+            @Path("/")
+            public void root() {}
         })).isInstanceOf(IllegalArgumentException.class);
     }
 
