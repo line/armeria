@@ -185,7 +185,7 @@ public final class SystemInfo {
     }
 
     /**
-     * Return whether Linux is used.
+     * Returns {@code true} if the operating system is Linux.
      */
     public static boolean isLinux() {
         return osType == OsType.LINUX;
