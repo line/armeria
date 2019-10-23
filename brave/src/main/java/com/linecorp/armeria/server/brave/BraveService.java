@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server.brave;
 
-import static com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext.ensureScopeUsesRequestContext;
+import static com.linecorp.armeria.internal.brave.TraceContextUtil.ensureScopeUsesRequestContext;
 
 import java.util.function.Function;
 
