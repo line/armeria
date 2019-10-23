@@ -138,6 +138,13 @@ class DefaultServiceConfigSetters implements ServiceConfigSetters {
         return this;
     }
 
+    Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> getDecorator() {
+        if (decorator == null) {
+            return Function.identity();
+        }
+        return decorator;
+    }
+
     Service<HttpRequest, HttpResponse> decorate(Service<HttpRequest, HttpResponse> service) {
         if (decorator == null) {
             return service;

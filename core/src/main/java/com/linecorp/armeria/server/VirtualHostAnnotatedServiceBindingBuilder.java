@@ -37,61 +37,68 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
- * A builder class for binding a {@link Service} fluently. This class can be instantiated through
- * {@link ServerBuilder#annotatedService()}.
+ * A builder class for binding a {@link Service} to a virtual host fluently. This class can be instantiated
+ * through {@link VirtualHostBuilder#annotatedService()}.
  *
- * <p>Call {@link #build(Object)} to build the {@link Service} and return to the {@link ServerBuilder}.
+ * <p>Call {@link #build(Object)} to build the {@link Service} and return to the {@link VirtualHostBuilder}.
  *
  * <pre>{@code
  * ServerBuilder sb = Server.builder();
- * sb.annotatedService()                                    // Returns an instance of this class
+ * sb.virtualHost("foo.com")                       // Return a new instance of {@link VirtualHostBuilder}
+ *   .annotatedService()                           // Return a new instance of this class
  *   .requestTimeoutMillis(5000)
  *   .maxRequestLength(8192)
  *   .exceptionHandler((ctx, request, cause) -> HttpResponse.of(400))
  *   .pathPrefix("/foo")
  *   .verboseResponses(true)
  *   .contentPreview(500)
- *   .build(new Service())                                   // Return to the ServerBuilder.
+ *   .build(new FooService())                      // Return to {@link VirtualHostBuilder}
+ *   .and()                                        // Return to {@link ServerBuilder}
+ *   .annotatedService(new MyDefaultHostService())
  *   .build();
  * }</pre>
  *
- * @see ServiceBindingBuilder
+ * @see VirtualHostBuilder
+ * @see AnnotatedServiceBindingBuilder
  */
-public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetters {
+public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceConfigSetters {
 
-    private final ServerBuilder serverBuilder;
     private final DefaultServiceConfigSetters defaultServiceConfigSetters = new DefaultServiceConfigSetters();
+    private final VirtualHostBuilder virtualHostBuilder;
     private final Builder<ExceptionHandlerFunction> exceptionHandlerFunctionBuilder = ImmutableList.builder();
     private final Builder<RequestConverterFunction> requestConverterFunctionBuilder = ImmutableList.builder();
     private final Builder<ResponseConverterFunction> responseConverterFunctionBuilder = ImmutableList.builder();
     private String pathPrefix = "/";
 
-    AnnotatedServiceBindingBuilder(ServerBuilder serverBuilder) {
-        this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
+    public VirtualHostAnnotatedServiceBindingBuilder(VirtualHostBuilder virtualHostBuilder) {
+        this.virtualHostBuilder = virtualHostBuilder;
     }
 
     /**
-     * Sets the path prefix to be used for this {@link AnnotatedServiceBindingBuilder}.
+     * Sets the path prefix to be used for this {@link VirtualHostAnnotatedServiceBindingBuilder}.
      * @param pathPrefix string representing the path prefix.
      */
-    public AnnotatedServiceBindingBuilder pathPrefix(String pathPrefix) {
+    public VirtualHostAnnotatedServiceBindingBuilder pathPrefix(String pathPrefix) {
         this.pathPrefix = requireNonNull(pathPrefix, "pathPrefix");
         return this;
     }
 
     /**
-     * Adds the given {@link ExceptionHandlerFunction} to this {@link AnnotatedServiceBindingBuilder}.
+     * Adds the given {@link ExceptionHandlerFunction} to this
+     * {@link VirtualHostAnnotatedServiceBindingBuilder}.
      */
-    public AnnotatedServiceBindingBuilder exceptionHandler(ExceptionHandlerFunction exceptionHandlerFunction) {
+    public VirtualHostAnnotatedServiceBindingBuilder exceptionHandler(
+            ExceptionHandlerFunction exceptionHandlerFunction) {
         requireNonNull(exceptionHandlerFunction, "exceptionHandler");
         exceptionHandlerFunctionBuilder.add(exceptionHandlerFunction);
         return this;
     }
 
     /**
-     * Adds the given {@link ResponseConverterFunction} to this {@link AnnotatedServiceBindingBuilder}.
+     * Adds the given {@link ResponseConverterFunction} to this
+     * {@link VirtualHostAnnotatedServiceBindingBuilder}.
      */
-    public AnnotatedServiceBindingBuilder responseConverter(
+    public VirtualHostAnnotatedServiceBindingBuilder responseConverter(
             ResponseConverterFunction responseConverterFunction) {
         requireNonNull(responseConverterFunction, "responseConverterFunction");
         responseConverterFunctionBuilder.add(responseConverterFunction);
@@ -99,99 +106,102 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     }
 
     /**
-     * Adds the given {@link RequestConverterFunction} to this {@link AnnotatedServiceBindingBuilder}.
+     * Adds the given {@link RequestConverterFunction} to this
+     * {@link VirtualHostAnnotatedServiceBindingBuilder}.
      */
-    public AnnotatedServiceBindingBuilder requestConverter(RequestConverterFunction requestConverterFunction) {
+    public VirtualHostAnnotatedServiceBindingBuilder requestConverter(
+            RequestConverterFunction requestConverterFunction) {
         requireNonNull(requestConverterFunction, "requestConverterFunction");
         requestConverterFunctionBuilder.add(requestConverterFunction);
         return this;
     }
 
     @Override
-    public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
-    AnnotatedServiceBindingBuilder decorator(Function<T, R> decorator) {
-        defaultServiceConfigSetters.decorator(decorator);
-        return this;
-    }
-
-    @Override
-    public AnnotatedServiceBindingBuilder requestTimeout(Duration requestTimeout) {
+    public VirtualHostAnnotatedServiceBindingBuilder requestTimeout(Duration requestTimeout) {
         defaultServiceConfigSetters.requestTimeout(requestTimeout);
         return this;
     }
 
     @Override
-    public AnnotatedServiceBindingBuilder requestTimeoutMillis(long requestTimeoutMillis) {
+    public VirtualHostAnnotatedServiceBindingBuilder requestTimeoutMillis(long requestTimeoutMillis) {
         defaultServiceConfigSetters.requestTimeoutMillis(requestTimeoutMillis);
         return this;
     }
 
     @Override
-    public AnnotatedServiceBindingBuilder maxRequestLength(long maxRequestLength) {
+    public VirtualHostAnnotatedServiceBindingBuilder maxRequestLength(long maxRequestLength) {
         defaultServiceConfigSetters.maxRequestLength(maxRequestLength);
         return this;
     }
 
     @Override
-    public AnnotatedServiceBindingBuilder verboseResponses(boolean verboseResponses) {
+    public VirtualHostAnnotatedServiceBindingBuilder verboseResponses(boolean verboseResponses) {
         defaultServiceConfigSetters.verboseResponses(verboseResponses);
         return this;
     }
 
     @Override
-    public AnnotatedServiceBindingBuilder requestContentPreviewerFactory(ContentPreviewerFactory factory) {
+    public VirtualHostAnnotatedServiceBindingBuilder requestContentPreviewerFactory(
+            ContentPreviewerFactory factory) {
         defaultServiceConfigSetters.requestContentPreviewerFactory(factory);
         return this;
     }
 
     @Override
-    public AnnotatedServiceBindingBuilder responseContentPreviewerFactory(ContentPreviewerFactory factory) {
+    public VirtualHostAnnotatedServiceBindingBuilder responseContentPreviewerFactory(
+            ContentPreviewerFactory factory) {
         defaultServiceConfigSetters.responseContentPreviewerFactory(factory);
         return this;
     }
 
     @Override
-    public AnnotatedServiceBindingBuilder contentPreview(int length) {
+    public VirtualHostAnnotatedServiceBindingBuilder contentPreview(int length) {
         defaultServiceConfigSetters.contentPreview(length);
         return this;
     }
 
     @Override
-    public AnnotatedServiceBindingBuilder contentPreview(int length, Charset defaultCharset) {
+    public VirtualHostAnnotatedServiceBindingBuilder contentPreview(int length, Charset defaultCharset) {
         defaultServiceConfigSetters.contentPreview(length, defaultCharset);
         return this;
     }
 
     @Override
-    public AnnotatedServiceBindingBuilder contentPreviewerFactory(ContentPreviewerFactory factory) {
+    public VirtualHostAnnotatedServiceBindingBuilder contentPreviewerFactory(ContentPreviewerFactory factory) {
         defaultServiceConfigSetters.contentPreviewerFactory(factory);
         return this;
     }
 
     @Override
-    public AnnotatedServiceBindingBuilder accessLogFormat(String accessLogFormat) {
+    public VirtualHostAnnotatedServiceBindingBuilder accessLogFormat(String accessLogFormat) {
         defaultServiceConfigSetters.accessLogFormat(accessLogFormat);
         return this;
     }
 
     @Override
-    public AnnotatedServiceBindingBuilder accessLogWriter(AccessLogWriter accessLogWriter,
-                                                          boolean shutdownOnStop) {
+    public VirtualHostAnnotatedServiceBindingBuilder accessLogWriter(AccessLogWriter accessLogWriter,
+                                                                     boolean shutdownOnStop) {
         defaultServiceConfigSetters.accessLogWriter(accessLogWriter, shutdownOnStop);
         return this;
     }
 
+    @Override
+    public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
+    VirtualHostAnnotatedServiceBindingBuilder decorator(Function<T, R> decorator) {
+        defaultServiceConfigSetters.decorator(decorator);
+        return this;
+    }
+
     /**
-     * Registers the given service to {@link ServerBuilder} adn return {@link ServerBuilder}
-     * to continue building {@link Server}.
+     * Registers the given service to the {@linkplain VirtualHostBuilder}.
      *
      * @param service annotated service object to handle incoming requests matching path prefix, which
      *                can be configured through {@link AnnotatedServiceBindingBuilder#pathPrefix(String)}.
      *                If path prefix is not set then this service is registered to handle requests matching
      *                {@code /}
-     * @return {@link ServerBuilder} to continue building {@link Server}
+     * @return {@link VirtualHostBuilder} to continue building {@link VirtualHost}
      */
-    public ServerBuilder build(Object service) {
+    public VirtualHostBuilder build(Object service) {
         final List<AnnotatedHttpServiceElement> elements =
                 AnnotatedHttpServiceFactory.find(pathPrefix, service, exceptionHandlerFunctionBuilder.build(),
                                                  requestConverterFunctionBuilder.build(),
@@ -201,8 +211,8 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
                     element.buildSafeDecoratedService(defaultServiceConfigSetters.getDecorator());
             final ServiceConfigBuilder serviceConfigBuilder =
                     defaultServiceConfigSetters.toServiceConfigBuilder(element.route(), decoratedService);
-            serverBuilder.serviceConfigBuilder(serviceConfigBuilder);
+            virtualHostBuilder.serviceConfigBuilder(serviceConfigBuilder);
         });
-        return serverBuilder;
+        return virtualHostBuilder;
     }
 }
