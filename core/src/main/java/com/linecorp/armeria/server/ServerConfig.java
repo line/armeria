@@ -109,6 +109,9 @@ public final class ServerConfig {
     @Nullable
     private String strVal;
 
+    private final boolean enableServerHeader;
+    private final boolean enableDateHeader;
+
     ServerConfig(
             Iterable<ServerPort> ports,
             VirtualHost defaultVirtualHost, Iterable<VirtualHost> virtualHosts,
@@ -126,7 +129,8 @@ public final class ServerConfig {
             Map<ChannelOption<?>, Object> childChannelOptions,
             List<ClientAddressSource> clientAddressSources,
             Predicate<InetAddress> clientAddressTrustedProxyFilter,
-            Predicate<InetAddress> clientAddressFilter) {
+            Predicate<InetAddress> clientAddressFilter,
+            boolean enableServerHeader, boolean enableDateHeader) {
 
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
@@ -243,6 +247,9 @@ public final class ServerConfig {
         services = virtualHostsCopy.stream()
                                    .flatMap(h -> h.serviceConfigs().stream())
                                    .collect(toImmutableList());
+
+        this.enableServerHeader = enableServerHeader;
+        this.enableDateHeader = enableDateHeader;
     }
 
     static int validateMaxNumConnections(int maxNumConnections) {
@@ -640,6 +647,20 @@ public final class ServerConfig {
      */
     public Predicate<InetAddress> clientAddressFilter() {
         return clientAddressFilter;
+    }
+
+    /**
+     * Returns whether the response header will include default {@code "Server"} header.
+     */
+    public boolean isServerHeaderEnabled() {
+        return enableServerHeader;
+    }
+
+    /**
+     * Returns whether the response header will include default {@code "Date"} header.
+     */
+    public boolean isDateHeaderEnabled() {
+        return enableDateHeader;
     }
 
     @Override

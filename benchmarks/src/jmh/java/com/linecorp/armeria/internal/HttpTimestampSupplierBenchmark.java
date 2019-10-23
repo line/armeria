@@ -14,24 +14,23 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.annotation;
+package com.linecorp.armeria.internal;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Repeatable;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.time.Clock;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 
-/**
- * Annotation for mapping dynamic web requests onto specific method.
- */
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
-@Repeatable(value = Paths.class)
-public @interface Path {
+import org.openjdk.jmh.annotations.Benchmark;
 
-    /**
-     * A path pattern for the annotated method.
-     */
-    String value();
+public class HttpTimestampSupplierBenchmark {
+
+    @Benchmark
+    public String cached() {
+        return HttpTimestampSupplier.currentTime();
+    }
+
+    @Benchmark
+    public String notCached() {
+        return DateTimeFormatter.RFC_1123_DATE_TIME.format(ZonedDateTime.now(Clock.systemUTC()));
+    }
 }

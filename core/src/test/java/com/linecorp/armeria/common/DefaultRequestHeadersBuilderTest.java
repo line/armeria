@@ -89,6 +89,13 @@ class DefaultRequestHeadersBuilderTest {
     }
 
     @Test
+    void buildTwice() {
+        final RequestHeadersBuilder builder = RequestHeaders.builder(HttpMethod.GET, "/").add("foo", "bar");
+        assertThat(builder.build()).isEqualTo(RequestHeaders.of(HttpMethod.GET, "/", "foo", "bar"));
+        assertThat(builder.build()).isEqualTo(RequestHeaders.of(HttpMethod.GET, "/", "foo", "bar"));
+    }
+
+    @Test
     void validation() {
         assertThatThrownBy(() -> RequestHeaders.builder().build())
                 .isInstanceOf(IllegalStateException.class)

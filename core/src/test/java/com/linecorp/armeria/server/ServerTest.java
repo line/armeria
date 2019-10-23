@@ -67,6 +67,7 @@ import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.codec.http.HttpStatusClass;
@@ -434,6 +435,19 @@ public class ServerTest {
         assertThat(server.config().blockingTaskExecutor().isShutdown()).isFalse();
         assertThat(server.config().blockingTaskExecutor().isTerminated()).isFalse();
         assertThat(MoreExecutors.shutdownAndAwaitTermination(executor, 10, TimeUnit.SECONDS)).isTrue();
+    }
+
+    @Test
+    public void versionMetrics() {
+        final Server server = ServerTest.server.server();
+        server.setupVersionMetrics();
+
+        final MeterRegistry meterRegistry = server.config().meterRegistry();
+        final Gauge gauge = meterRegistry.find("armeria.build.info")
+                                         .tagKeys("version", "commit", "repoStatus")
+                                         .gauge();
+        assertThat(gauge).isNotNull();
+        assertThat(gauge.value()).isOne();
     }
 
     private static void testSimple(

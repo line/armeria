@@ -131,6 +131,9 @@ class AnnotatedHttpServiceTest {
 
             sb.annotatedService("/11", new MyAnnotatedService11(),
                                 LoggingService.newDecorator());
+
+            sb.annotatedService("/12", new MyAnnotatedService12(),
+                                LoggingService.newDecorator());
         }
     };
 
@@ -663,6 +666,59 @@ class AnnotatedHttpServiceTest {
         }
     }
 
+    @ResponseConverter(UnformattedStringConverterFunction.class)
+    public static class MyAnnotatedService12 {
+
+        @Get
+        @Path("/pathMapping1")
+        @Path("/pathMapping2")
+        public String pathMapping(RequestContext ctx) {
+            return "multiGet";
+        }
+
+        @Get
+        @Path("/duplicatePath")
+        @Path("/duplicatePath")
+        public String duplicatePath(RequestContext ctx) {
+            return "duplicatePath";
+        }
+
+        @Get
+        @Path("/pathSameParam1/{param}")
+        @Path("/pathSameParam2/{param}")
+        public String pathSameParam(RequestContext ctx, @Param String param) {
+            return param;
+        }
+
+        @Get
+        @Path("/pathDiffParam1/{param1}")
+        @Path("/pathDiffParam2/{param2}")
+        public String pathDiffParam(RequestContext ctx, @Param String param1, @Param String param2) {
+            return param1 + '_' + param2;
+        }
+
+        @Get
+        @Path("/pathDiffPattern/path")
+        @Path("/pathDiffPattern/{param}")
+        public String pathDiffPattern(@Param @Default("default") String param) {
+            return param;
+        }
+
+        @Get
+        @Post
+        @Path("/getPostWithPathMapping1")
+        @Path("/getPostWithPathMapping2")
+        public String getPostWithPathMapping(RequestContext ctx) {
+            return ctx.path();
+        }
+
+        @Get("/getMapping")
+        @Post("/postMapping")
+        public String getPostMapping(RequestContext ctx) {
+            return ctx.path();
+        }
+    }
+
     @Test
     void testAnnotatedHttpService() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
@@ -972,6 +1028,37 @@ class AnnotatedHttpServiceTest {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             testStatusCode(hc, get("/1/void/204"), 204);
             testBodyAndContentType(hc, get("/1/void/200"), "200 OK", MediaType.PLAIN_TEXT_UTF_8.toString());
+        }
+    }
+
+    @Test
+    public void testMultiplePaths() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            testStatusCode(hc, get("/12/pathMapping1"), 200);
+            testStatusCode(hc, get("/12/pathMapping2"), 200);
+
+            testStatusCode(hc, get("/12/duplicatePath"), 200);
+
+            testBody(hc, get("/12/pathSameParam1/param"), "param");
+            testBody(hc, get("/12/pathSameParam2/param"), "param");
+
+            testStatusCode(hc, get("/12/pathDiffParam1/param1"), 400);
+            testBody(hc, get("/12/pathDiffParam1/param1?param2=param2"), "param1_param2");
+            testStatusCode(hc, get("/12/pathDiffParam2/param2"), 400);
+            testBody(hc, get("/12/pathDiffParam2/param2?param1=param1"), "param1_param2");
+
+            testBody(hc, get("/12/pathDiffPattern/path"), "default");
+            testBody(hc, get("/12/pathDiffPattern/customArg"), "customArg");
+
+            testBody(hc, get("/12/getPostWithPathMapping1"), "/12/getPostWithPathMapping1");
+            testBody(hc, post("/12/getPostWithPathMapping1"), "/12/getPostWithPathMapping1");
+            testBody(hc, get("/12/getPostWithPathMapping2"), "/12/getPostWithPathMapping2");
+            testBody(hc, post("/12/getPostWithPathMapping2"), "/12/getPostWithPathMapping2");
+
+            testBody(hc, get("/12/getMapping"), "/12/getMapping");
+            testStatusCode(hc, post("/12/getMapping"), 405);
+            testStatusCode(hc, get("/12/postMapping"), 405);
+            testBody(hc, post("/12/postMapping"), "/12/postMapping");
         }
     }
 

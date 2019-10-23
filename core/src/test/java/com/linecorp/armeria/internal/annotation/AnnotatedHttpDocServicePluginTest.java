@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.annotation;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.BEAN;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.INT;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.LONG;
@@ -31,6 +32,7 @@ import static com.linecorp.armeria.server.docs.FieldLocation.QUERY;
 import static com.linecorp.armeria.server.docs.FieldRequirement.REQUIRED;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -54,9 +56,11 @@ import com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePluginTes
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RouteBuilder;
 import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
+import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfo;
@@ -218,7 +222,9 @@ public class AnnotatedHttpDocServicePluginTest {
     @Test
     public void testGenerateSpecification() {
         final Map<String, ServiceInfo> services = services((plugin, service, method) -> true,
-                                                           (plugin, service, method) -> false);
+                                                           (plugin, service, method) -> false,
+                                                           new FooClass(),
+                                                           new BarClass());
 
         assertThat(services).containsOnlyKeys(FOO_NAME, BAR_NAME);
         checkFooService(services.get(FOO_NAME));
@@ -237,12 +243,12 @@ public class AnnotatedHttpDocServicePluginTest {
         // 1. Nothing specified.
         DocServiceFilter include = (plugin, service, method) -> true;
         DocServiceFilter exclude = (plugin, service, method) -> false;
-        Map<String, ServiceInfo> services = services(include, exclude);
+        Map<String, ServiceInfo> services = services(include, exclude, new FooClass(), new BarClass());
         assertThat(services).containsOnlyKeys(FOO_NAME, BAR_NAME);
 
         // 2. Exclude specified.
         exclude = DocServiceFilter.ofMethodName(FOO_NAME, "fooMethod");
-        services = services(include, exclude);
+        services = services(include, exclude, new FooClass(), new BarClass());
         assertThat(services).containsOnlyKeys(FOO_NAME, BAR_NAME);
 
         List<String> methods = methods(services);
@@ -252,7 +258,7 @@ public class AnnotatedHttpDocServicePluginTest {
         include = DocServiceFilter.ofServiceName(FOO_NAME);
         // Set the exclude to the default.
         exclude = (plugin, service, method) -> false;
-        services = services(include, exclude);
+        services = services(include, exclude, new FooClass(), new BarClass());
         assertThat(services).containsOnlyKeys(FOO_NAME);
 
         methods = methods(services);
@@ -260,7 +266,7 @@ public class AnnotatedHttpDocServicePluginTest {
 
         // 3-2. Include methodName specified.
         include = DocServiceFilter.ofMethodName(FOO_NAME, "fooMethod");
-        services = services(include, exclude);
+        services = services(include, exclude, new FooClass(), new BarClass());
         assertThat(services).containsOnlyKeys(FOO_NAME);
 
         methods = methods(services);
@@ -269,7 +275,7 @@ public class AnnotatedHttpDocServicePluginTest {
         // 4-1. Include and exclude specified.
         include = DocServiceFilter.ofServiceName(FOO_NAME);
         exclude = DocServiceFilter.ofMethodName(FOO_NAME, "fooMethod");
-        services = services(include, exclude);
+        services = services(include, exclude, new FooClass());
         assertThat(services).containsOnlyKeys(FOO_NAME);
 
         methods = methods(services);
@@ -278,8 +284,20 @@ public class AnnotatedHttpDocServicePluginTest {
         // 4-2. Include and exclude specified.
         include = DocServiceFilter.ofMethodName(FOO_NAME, "fooMethod");
         exclude = DocServiceFilter.ofServiceName(FOO_NAME);
-        services = services(include, exclude);
+        services = services(include, exclude, new FooClass(), new BarClass());
         assertThat(services.size()).isZero();
+    }
+
+    @Test
+    public void testMultiPath() {
+        final Map<String, ServiceInfo> services = services(new MultiPathClass());
+        final Map<String, MethodInfo> methods =
+                services.get(MultiPathClass.class.getName()).methods().stream()
+                        .collect(toImmutableMap(MethodInfo::name, Function.identity()));
+        final Set<String> paths = methods.get("multiGet").endpoints()
+                                         .stream().map(EndpointInfo::pathMapping)
+                                         .collect(toImmutableSet());
+        assertThat(paths).containsOnly("exact:/path1", "exact:/path2");
     }
 
     private static void checkFooService(ServiceInfo fooServiceInfo) {
@@ -330,11 +348,18 @@ public class AnnotatedHttpDocServicePluginTest {
         assertFieldInfos(fieldInfos, ImmutableList.of(bar, compositeBean()));
     }
 
-    private static Map<String, ServiceInfo> services(DocServiceFilter include, DocServiceFilter exclude) {
-        final Server server = Server.builder()
-                                    .annotatedService(new FooClass())
-                                    .annotatedService(new BarClass())
-                                    .build();
+    private static Map<String, ServiceInfo> services(Object... services) {
+        final DocServiceFilter include = (plugin, service, method) -> true;
+        final DocServiceFilter exclude = (plugin, service, method) -> false;
+        return services(include, exclude, services);
+    }
+
+    private static Map<String, ServiceInfo> services(DocServiceFilter include,
+                                                     DocServiceFilter exclude,
+                                                     Object... services) {
+        final ServerBuilder builder = Server.builder();
+        Arrays.stream(services).forEach(builder::annotatedService);
+        final Server server = builder.build();
         final ServiceSpecification specification =
                 plugin.generateSpecification(ImmutableSet.copyOf(server.serviceConfigs()),
                                              unifyFilter(include, exclude));
@@ -410,6 +435,13 @@ public class AnnotatedHttpDocServicePluginTest {
     private static class BarClass {
         @Get("/bar")
         public void barMethod(@Param String bar, CompositeBean compositeBean) {}
+    }
+
+    private static class MultiPathClass {
+        @Get
+        @Path("/path1")
+        @Path("/path2")
+        public void multiGet() {}
     }
 
     static class CompositeBean {

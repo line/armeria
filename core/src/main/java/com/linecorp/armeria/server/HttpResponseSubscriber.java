@@ -46,8 +46,10 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.HttpObjectEncoder;
+import com.linecorp.armeria.internal.HttpTimestampSupplier;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -67,6 +69,10 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     private static final Set<AsciiString> ADDITIONAL_HEADER_BLACKLIST = ImmutableSet.of(
             HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD, HttpHeaderNames.PATH);
 
+    private static final String SERVER_HEADER =
+            "Armeria/" + Version.identify(HttpResponseSubscriber.class.getClassLoader()).get("armeria")
+                                .artifactVersion();
+
     enum State {
         NEEDS_HEADERS,
         NEEDS_DATA_OR_TRAILERS,
@@ -77,6 +83,8 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     private final HttpObjectEncoder responseEncoder;
     private final DecodedHttpRequest req;
     private final DefaultServiceRequestContext reqCtx;
+    private final boolean enableServerHeader;
+    private final boolean enableDateHeader;
     private final long startTimeNanos;
 
     @Nullable
@@ -89,11 +97,14 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
     private boolean loggedResponseHeadersFirstBytesTransferred;
 
     HttpResponseSubscriber(ChannelHandlerContext ctx, HttpObjectEncoder responseEncoder,
-                           DefaultServiceRequestContext reqCtx, DecodedHttpRequest req) {
+                           DefaultServiceRequestContext reqCtx, DecodedHttpRequest req,
+                           boolean enableServerHeader, boolean enableDateHeader) {
         this.ctx = ctx;
         this.responseEncoder = responseEncoder;
         this.req = req;
         this.reqCtx = reqCtx;
+        this.enableServerHeader = enableServerHeader;
+        this.enableDateHeader = enableDateHeader;
         startTimeNanos = System.nanoTime();
     }
 
@@ -198,6 +209,14 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
                     // prevent the trailers from being sent so we go ahead and remove content-length to force
                     // chunked encoding.
                     newHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
+                }
+
+                if (enableServerHeader && !newHeaders.contains(HttpHeaderNames.SERVER)) {
+                    newHeaders.add(HttpHeaderNames.SERVER, SERVER_HEADER);
+                }
+
+                if (enableDateHeader && !newHeaders.contains(HttpHeaderNames.DATE)) {
+                    newHeaders.add(HttpHeaderNames.DATE, HttpTimestampSupplier.currentTime());
                 }
 
                 headers = newHeaders.build();
