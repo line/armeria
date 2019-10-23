@@ -34,8 +34,7 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
  * @see ServiceBindingBuilder
  * @see VirtualHostServiceBindingBuilder
  */
-abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder implements
-                                                                                  ServiceConfigSetters {
+abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder implements ServiceConfigSetters {
 
     private final DefaultServiceConfigSetters defaultServiceConfigSetters = new DefaultServiceConfigSetters();
 
@@ -118,9 +117,10 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
         final List<Route> routes = buildRouteList();
 
         for (Route route : routes) {
-            service = defaultServiceConfigSetters.decorate(service);
-            final ServiceConfigBuilder serviceConfigBuilder = defaultServiceConfigSetters
-                                                                    .toServiceConfigBuilder(route, service);
+            final Service<HttpRequest, HttpResponse> decoratedService =
+                    defaultServiceConfigSetters.decorate(service);
+            final ServiceConfigBuilder serviceConfigBuilder =
+                    defaultServiceConfigSetters.toServiceConfigBuilder(route, decoratedService);
             serviceConfigBuilder(serviceConfigBuilder);
         }
     }
