@@ -17,21 +17,18 @@
 package com.linecorp.armeria.server.annotation;
 
 import java.lang.annotation.ElementType;
-import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Annotation for mapping dynamic web requests onto specific method.
+ * The containing annotation type for {@link Path}.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
-@Repeatable(value = Paths.class)
-public @interface Path {
-
+public @interface Paths {
     /**
-     * A path pattern for the annotated method.
+     * An array of {@link Path}s.
      */
-    String value();
+    Path[] value();
 }

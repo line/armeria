@@ -79,14 +79,12 @@ function removeBrackets(headers: string): string {
   return headers.substring(1, length - 1).trim();
 }
 
-function isExactPathMapping(method: Method): boolean {
+function isSingleExactPathMapping(method: Method): boolean {
   const endpoints = method.endpoints;
-  if (endpoints.length !== 1) {
-    throw new Error(`
-    Endpoints size should be 1 to determine prefix or regex. size: ${endpoints.length}`);
-  }
-  const endpoint = endpoints[0];
-  return endpoint.pathMapping.startsWith('exact:');
+  return (
+    method.endpoints.length === 1 &&
+    endpoints[0].pathMapping.startsWith('exact:')
+  );
 }
 
 function useRequestBody(httpMethod: string) {
@@ -167,7 +165,7 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
             method,
           )}
           exactPathMapping={
-            isAnnotatedHttpService ? isExactPathMapping(method) : false
+            isAnnotatedHttpService ? isSingleExactPathMapping(method) : false
           }
           useRequestBody={useRequestBody(props.match.params.httpMethod)}
         />
