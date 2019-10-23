@@ -407,6 +407,9 @@ public final class Flags {
      * {@code -Dcom.linecorp.armeria.useOpenSsl=false} JVM option to disable it.
      */
     public static boolean useOpenSsl() {
+        if (Flags.useOpenSsl != null) {
+            return Flags.useOpenSsl;
+        }
         final boolean useOpenSsl = getBoolean("useOpenSsl", true);
         if (!useOpenSsl) {
             // OpenSSL explicitly disabled
@@ -415,22 +418,22 @@ public final class Flags {
         if (!OpenSsl.isAvailable()) {
             final Throwable cause = Exceptions.peel(OpenSsl.unavailabilityCause());
             logger.info("OpenSSL not available: {}", cause.toString());
-        } else {
-            logger.info("Using OpenSSL: {}, 0x{}", OpenSsl.versionString(), Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
-            if (dumpOpenSslInfo()) {
-                final SSLEngine engine = SslContextUtil.createSslContext(
-                        SslContextBuilder::forClient,
-                        false,
-                        unused -> {}).newEngine(ByteBufAllocator.DEFAULT);
-                logger.info("AllUSE_OPENSSL = null; available SSL protocols: {}",
-                        ImmutableList.copyOf(engine.getSupportedProtocols()));
-                logger.info("Default enabled SSL protocols: {}", SslContextUtil.DEFAULT_PROTOCOLS);
-                ReferenceCountUtil.release(engine);
-                logger.info("All available SSL ciphers: {}", OpenSsl.availableJavaCipherSuites());
-                logger.info("Default enabled SSL ciphers: {}", SslContextUtil.DEFAULT_CIPHERS);
-            }
+            return Flags.useOpenSsl = false;
         }
-        return useOpenSsl;
+        logger.info("Using OpenSSL: {}, 0x{}", OpenSsl.versionString(), Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
+        if (dumpOpenSslInfo()) {
+            final SSLEngine engine = SslContextUtil.createSslContext(
+                    SslContextBuilder::forClient,
+                    false,
+                    unused -> {}).newEngine(ByteBufAllocator.DEFAULT);
+            logger.info("AllUSE_OPENSSL = null; available SSL protocols: {}",
+                    ImmutableList.copyOf(engine.getSupportedProtocols()));
+            logger.info("Default enabled SSL protocols: {}", SslContextUtil.DEFAULT_PROTOCOLS);
+            ReferenceCountUtil.release(engine);
+            logger.info("All available SSL ciphers: {}", OpenSsl.availableJavaCipherSuites());
+            logger.info("Default enabled SSL ciphers: {}", SslContextUtil.DEFAULT_CIPHERS);
+        }
+        return Flags.useOpenSsl = true;
     }
 
     /**
