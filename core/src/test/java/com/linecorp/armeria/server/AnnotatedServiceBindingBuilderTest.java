@@ -21,14 +21,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.IOException;
 import java.time.Duration;
 
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpRequestBase;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
@@ -52,24 +49,6 @@ class AnnotatedServiceBindingBuilderTest {
               .build();
         }
     };
-
-    static void testStatusCode(CloseableHttpClient hc, HttpRequestBase req,
-                               int statusCode) throws IOException {
-        try (CloseableHttpResponse res = hc.execute(req)) {
-            checkResult(res, statusCode);
-        }
-    }
-
-    static void checkResult(org.apache.http.HttpResponse res,
-                            int statusCode) throws IOException {
-        final HttpStatus status = HttpStatus.valueOf(statusCode);
-        assertThat(res.getStatusLine().toString()).isEqualTo(
-                "HTTP/1.1 " + status);
-    }
-
-    static HttpRequestBase get(String uri) {
-        return new HttpGet(server.httpUri(uri));
-    }
 
     @Test
     void testWhenPathPrefixIsNotGivenThenUsesDefault() {
@@ -133,9 +112,14 @@ class AnnotatedServiceBindingBuilderTest {
 
     @Test
     void testServiceDecoration_shouldCatchException() throws IOException {
-        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            testStatusCode(hc, get("/foo"), 501);
-        }
+        final HttpStatus status = get("/foo").status();
+
+        assertThat(status.code()).isEqualTo(501);
+    }
+
+    private static AggregatedHttpResponse get(String path) {
+        final HttpClient httpClient = HttpClient.of(server.httpUri("/"));
+        return httpClient.get(path).aggregate().join();
     }
 
     static class TestService {
