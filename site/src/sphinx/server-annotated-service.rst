@@ -372,7 +372,7 @@ an exception handler. If your exception handler is not able to handle a given ex
 
     public class MyExceptionHandler implements ExceptionHandlerFunction {
         @Override
-        public HttpResponse handleException(RequestContext ctx, HttpRequest req, Throwable cause) {
+        public HttpResponse handleException(ServiceRequestContext ctx, HttpRequest req, Throwable cause) {
             if (cause instanceof MyServiceException) {
                 return HttpResponse.of(HttpStatus.CONFLICT);
             }
