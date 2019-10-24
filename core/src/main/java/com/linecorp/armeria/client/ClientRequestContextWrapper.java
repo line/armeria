@@ -19,13 +19,9 @@ package com.linecorp.armeria.client;
 import java.time.Duration;
 import java.util.Map.Entry;
 
-import javax.annotation.Nullable;
-
 import com.linecorp.armeria.client.endpoint.EndpointSelector;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContextWrapper;
-import com.linecorp.armeria.common.RpcRequest;
 
 /**
  * Wraps an existing {@link ClientRequestContext}.
@@ -38,12 +34,6 @@ public class ClientRequestContextWrapper
      */
     protected ClientRequestContextWrapper(ClientRequestContext delegate) {
         super(delegate);
-    }
-
-    @Override
-    public ClientRequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
-                                                  Endpoint endpoint) {
-        return delegate().newDerivedContext(req, rpcReq, endpoint);
     }
 
     @Override

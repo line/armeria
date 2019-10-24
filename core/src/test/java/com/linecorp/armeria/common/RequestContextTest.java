@@ -446,12 +446,6 @@ public class RequestContextTest {
         }
 
         @Override
-        public RequestContext newDerivedContext(@Nullable HttpRequest req,
-                                                @Nullable RpcRequest rpcReq) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
         public EventLoop eventLoop() {
             return channel.eventLoop();
         }

@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
-import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
@@ -53,7 +52,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
-import io.netty.util.Attribute;
 
 /**
  * Default {@link ClientRequestContext} implementation.
@@ -242,55 +240,6 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
                            .scheme(sessionProtocol())
                            .build()));
         }
-    }
-
-    /**
-     * Creates a derived context.
-     */
-    private DefaultClientRequestContext(DefaultClientRequestContext ctx,
-                                        @Nullable HttpRequest req,
-                                        @Nullable RpcRequest rpcReq,
-                                        Endpoint endpoint) {
-        super(ctx.meterRegistry(), ctx.sessionProtocol(), ctx.method(), ctx.path(), ctx.query(), req, rpcReq);
-
-        // The new requests cannot be null if it was previously non-null.
-        if (ctx.request() != null) {
-            requireNonNull(req, "req");
-        }
-        if (ctx.rpcRequest() != null) {
-            requireNonNull(rpcReq, "rpcReq");
-        }
-
-        eventLoop = ctx.eventLoop();
-        options = ctx.options();
-        endpointSelector = ctx.endpointSelector();
-        updateEndpoint(requireNonNull(endpoint, "endpoint"));
-        fragment = ctx.fragment();
-
-        log = new DefaultRequestLog(this, options.requestContentPreviewerFactory(),
-                                    options.responseContentPreviewerFactory());
-
-        writeTimeoutMillis = ctx.writeTimeoutMillis();
-        responseTimeoutMillis = ctx.responseTimeoutMillis();
-        maxResponseLength = ctx.maxResponseLength();
-        additionalRequestHeaders = ctx.additionalRequestHeaders();
-
-        for (final Iterator<Attribute<?>> i = ctx.attrs(); i.hasNext();) {
-            addAttr(i.next());
-        }
-        runThreadLocalContextCustomizer();
-    }
-
-    @SuppressWarnings("unchecked")
-    private <T> void addAttr(Attribute<?> attribute) {
-        final Attribute<T> a = (Attribute<T>) attribute;
-        attr(a.key()).set(a.get());
-    }
-
-    @Override
-    public ClientRequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
-                                                  Endpoint endpoint) {
-        return new DefaultClientRequestContext(this, req, rpcReq, endpoint);
     }
 
     @Override

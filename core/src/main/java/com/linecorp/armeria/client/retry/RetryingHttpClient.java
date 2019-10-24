@@ -19,6 +19,7 @@ package com.linecorp.armeria.client.retry;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.ClientUtil.executeWithFallback;
+import static com.linecorp.armeria.internal.ClientUtil.newDerivedContext;
 
 import java.time.Duration;
 import java.util.Date;
@@ -182,10 +183,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
             duplicateReq = rootReqDuplicator.duplicateStream(newHeaders.build());
         }
 
-        final ClientRequestContext derivedCtx = newDerivedContext(ctx, duplicateReq, ctx.rpcRequest(),
-                                                                  initialAttempt);
-        ctx.logBuilder().addChild(derivedCtx.log());
-
+        final ClientRequestContext derivedCtx = newDerivedContext(ctx, duplicateReq, initialAttempt);
         final HttpResponse response = executeWithFallback(delegate(), derivedCtx,
                                                           (context, cause) -> HttpResponse.ofFailure(cause));
 

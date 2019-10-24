@@ -17,6 +17,7 @@
 package com.linecorp.armeria.internal.metric;
 
 import static com.linecorp.armeria.common.metric.MoreMeters.measureAll;
+import static com.linecorp.armeria.internal.ClientUtil.newDerivedContext;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
@@ -228,8 +229,7 @@ public class RequestMetricSupportTest {
     }
 
     private static void addLogInfoInDerivedCtx(ClientRequestContext ctx) {
-        final ClientRequestContext derivedCtx = ctx.newDerivedContext();
-        ctx.logBuilder().addChild(derivedCtx.log());
+        final ClientRequestContext derivedCtx = newDerivedContext(ctx, false);
 
         setConnectionTimings(derivedCtx);
         derivedCtx.logBuilder().requestHeaders(RequestHeaders.of(HttpMethod.POST, "/foo"));

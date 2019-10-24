@@ -22,7 +22,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CancellationException;
@@ -43,7 +42,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
-import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -54,7 +52,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
-import io.netty.util.Attribute;
 
 /**
  * Default {@link ServiceRequestContext} implementation.
@@ -226,43 +223,6 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     @Override
     public InetAddress clientAddress() {
         return clientAddress;
-    }
-
-    @Override
-    public ServiceRequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
-        requireNonNull(req, "req");
-        if (rpcRequest() != null) {
-            requireNonNull(rpcReq, "rpcReq");
-        }
-
-        final DefaultServiceRequestContext ctx = new DefaultServiceRequestContext(
-                cfg, ch, meterRegistry(), sessionProtocol(), routingContext,
-                routingResult, req, sslSession(), proxiedAddresses(), clientAddress);
-
-        if (rpcReq != null) {
-            ctx.updateRpcRequest(rpcReq);
-        }
-
-        final HttpHeaders additionalHeaders = additionalResponseHeaders();
-        if (!additionalHeaders.isEmpty()) {
-            ctx.setAdditionalResponseHeaders(additionalHeaders);
-        }
-
-        final HttpHeaders additionalTrailers = additionalResponseTrailers();
-        if (!additionalTrailers.isEmpty()) {
-            ctx.setAdditionalResponseTrailers(additionalTrailers);
-        }
-
-        for (final Iterator<Attribute<?>> i = attrs(); i.hasNext();/* noop */) {
-            ctx.addAttr(i.next());
-        }
-        return ctx;
-    }
-
-    @SuppressWarnings("unchecked")
-    private <T> void addAttr(Attribute<?> attribute) {
-        final Attribute<T> a = (Attribute<T>) attribute;
-        attr(a.key()).set(a.get());
     }
 
     @Override

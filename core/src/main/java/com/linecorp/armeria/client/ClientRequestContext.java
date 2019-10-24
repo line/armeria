@@ -35,9 +35,6 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.logging.RequestLog;
-
-import io.netty.util.Attribute;
 
 /**
  * Provides information about a {@link Request}, its {@link Response} and its related utilities.
@@ -151,36 +148,6 @@ public interface ClientRequestContext extends RequestContext {
     @Nullable
     @Override
     RpcRequest rpcRequest();
-
-    /**
-     * Creates a new {@link ClientRequestContext} whose properties and {@link Attribute}s are copied from this
-     * {@link ClientRequestContext}, except having its own {@link RequestLog}.
-     */
-    @Override
-    default ClientRequestContext newDerivedContext() {
-        final Endpoint endpoint = endpoint();
-        checkState(endpoint != null, "endpoint not available");
-        return newDerivedContext(request(), rpcRequest(), endpoint);
-    }
-
-    /**
-     * Creates a new {@link ClientRequestContext} whose properties and {@link Attribute}s are copied from this
-     * {@link ClientRequestContext}, except having a different {@link Request} and its own {@link RequestLog}.
-     */
-    @Override
-    default ClientRequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
-        final Endpoint endpoint = endpoint();
-        checkState(endpoint != null, "endpoint not available");
-        return newDerivedContext(req, rpcReq, endpoint);
-    }
-
-    /**
-     * Creates a new {@link ClientRequestContext} whose properties and {@link Attribute}s are copied from this
-     * {@link ClientRequestContext}, except having different {@link Request}, {@link Endpoint} and its own
-     * {@link RequestLog}.
-     */
-    ClientRequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
-                                           Endpoint endpoint);
 
     /**
      * Returns the {@link EndpointSelector} used for the current {@link Request}.

@@ -19,12 +19,17 @@ package com.linecorp.armeria.internal;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
+import java.util.Iterator;
 import java.util.function.BiFunction;
+
+import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.EndpointSelector;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
@@ -32,6 +37,8 @@ import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.util.SafeCloseable;
+
+import io.netty.util.Attribute;
 
 public final class ClientUtil {
 
@@ -106,6 +113,54 @@ public final class ClientUtil {
         logBuilder.endResponse(cause);
 
         return fallback.apply(ctx, cause);
+    }
+
+    /**
+     * Creates a new derived {@link ClientRequestContext}.
+     * If {@link ClientRequestContext#endpointSelector()} exists, a new {@link Endpoint} will be selected.
+     */
+    public static ClientRequestContext newDerivedContext(ClientRequestContext ctx, boolean initialAttempt) {
+        return newDerivedContext(ctx, ctx.request(), initialAttempt);
+    }
+
+    /**
+     * Creates a new derived {@link ClientRequestContext}, replacing the requests.
+     * If {@link ClientRequestContext#endpointSelector()} exists, a new {@link Endpoint} will be selected.
+     */
+    public static ClientRequestContext newDerivedContext(ClientRequestContext ctx,
+                                                         @Nullable HttpRequest req, boolean initialAttempt) {
+        final EndpointSelector endpointSelector = ctx.endpointSelector();
+        final Endpoint endpoint;
+        if (endpointSelector != null && !initialAttempt) {
+            endpoint = endpointSelector.select(ctx);
+        } else {
+            endpoint = ctx.endpoint();
+        }
+        assert endpoint != null;
+
+        final DefaultClientRequestContext derivedCtx = new DefaultClientRequestContext(
+                ctx.eventLoop(), ctx.meterRegistry(), ctx.sessionProtocol(), ctx.method(), ctx.path(),
+                ctx.query(), ctx.fragment(), ctx.options(), req, ctx.rpcRequest());
+        for (final Iterator<Attribute<?>> i = ctx.attrs(); i.hasNext();) {
+            addAttr(derivedCtx, i.next());
+        }
+        derivedCtx.init(endpoint);
+        final HttpHeaders additionalRequestHeaders = ctx.additionalRequestHeaders();
+        if (!additionalRequestHeaders.isEmpty()) {
+            derivedCtx.setAdditionalRequestHeaders(additionalRequestHeaders);
+        }
+        derivedCtx.setResponseTimeoutMillis(ctx.responseTimeoutMillis());
+        derivedCtx.setWriteTimeoutMillis(ctx.writeTimeoutMillis());
+        derivedCtx.setMaxResponseLength(ctx.maxResponseLength());
+
+        ctx.logBuilder().addChild(derivedCtx.log());
+        return derivedCtx;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> void addAttr(DefaultClientRequestContext derivedCtx, Attribute<?> attribute) {
+        final Attribute<T> a = (Attribute<T>) attribute;
+        derivedCtx.attr(a.key()).set(a.get());
     }
 
     private ClientUtil() {}

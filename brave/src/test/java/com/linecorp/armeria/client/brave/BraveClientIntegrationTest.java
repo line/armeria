@@ -38,8 +38,6 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
-import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -164,12 +162,6 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
         DummyRequestContext() {
             super(NoopMeterRegistry.get(), SessionProtocol.HTTP,
                   HttpMethod.GET, "/", null, HttpRequest.streaming(HttpMethod.GET, "/"), null);
-        }
-
-        @Override
-        public RequestContext newDerivedContext(@Nullable HttpRequest req,
-                                                @Nullable RpcRequest rpcReq) {
-            throw new UnsupportedOperationException();
         }
 
         @Override

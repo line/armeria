@@ -157,14 +157,6 @@ public interface ServiceRequestContext extends RequestContext {
         return remoteAddress.getAddress();
     }
 
-    @Override
-    default ServiceRequestContext newDerivedContext() {
-        return newDerivedContext(request(), rpcRequest());
-    }
-
-    @Override
-    ServiceRequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq);
-
     /**
      * Returns the {@link Server} that is handling the current {@link Request}.
      */

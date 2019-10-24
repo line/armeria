@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client.retry;
 
 import static com.linecorp.armeria.internal.ClientUtil.executeWithFallback;
+import static com.linecorp.armeria.internal.ClientUtil.newDerivedContext;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
@@ -96,12 +97,12 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
     protected RpcResponse doExecute(ClientRequestContext ctx, RpcRequest req) throws Exception {
         final CompletableFuture<RpcResponse> future = new CompletableFuture<>();
         final RpcResponse res = RpcResponse.from(future);
-        doExecute0(ctx, req, res, future);
+        doExecute0(ctx, res, future);
         return res;
     }
 
-    private void doExecute0(ClientRequestContext ctx, RpcRequest req,
-                            RpcResponse returnedRes, CompletableFuture<RpcResponse> future) {
+    private void doExecute0(ClientRequestContext ctx, RpcResponse returnedRes,
+                            CompletableFuture<RpcResponse> future) {
         final int totalAttempts = getTotalAttempts(ctx);
         final boolean initialAttempt = totalAttempts <= 1;
         if (returnedRes.isDone()) {
@@ -115,9 +116,7 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
             return;
         }
 
-        final ClientRequestContext derivedCtx = newDerivedContext(ctx, null, req, initialAttempt);
-        ctx.logBuilder().addChild(derivedCtx.log());
-
+        final ClientRequestContext derivedCtx = newDerivedContext(ctx, initialAttempt);
         if (!initialAttempt) {
             derivedCtx.setAdditionalRequestHeader(ARMERIA_RETRY_COUNT, Integer.toString(totalAttempts - 1));
         }
@@ -135,7 +134,7 @@ public final class RetryingRpcClient extends RetryingClient<RpcRequest, RpcRespo
                     }
 
                     scheduleNextRetry(ctx, cause -> handleException(ctx, future, cause, false),
-                                      () -> doExecute0(ctx, req, returnedRes, future), nextDelay);
+                                      () -> doExecute0(ctx, returnedRes, future), nextDelay);
                 } else {
                     onRetryComplete(ctx, derivedCtx, res, future);
                 }
