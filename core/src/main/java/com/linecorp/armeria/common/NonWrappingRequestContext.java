@@ -45,7 +45,8 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     private final MeterRegistry meterRegistry;
     private final DefaultAttributeMap attrs = new DefaultAttributeMap();
     private final SessionProtocol sessionProtocol;
-    private final UUID uuid;
+    @Nullable
+    private UUID uuid;
     private final HttpMethod method;
     private final String path;
     @Nullable
@@ -81,6 +82,20 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
         this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
         this.uuid = uuid;
+        this.method = requireNonNull(method, "method");
+        this.path = requireNonNull(path, "path");
+        this.query = query;
+        this.req = req;
+        this.rpcReq = rpcReq;
+    }
+
+    protected NonWrappingRequestContext(
+            MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
+            HttpMethod method, String path, @Nullable String query,
+            @Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
+
+        this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
+        this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
         this.method = requireNonNull(method, "method");
         this.path = requireNonNull(path, "path");
         this.query = query;
