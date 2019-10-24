@@ -95,14 +95,16 @@ class ReactiveWebServerAutoConfigurationTest {
 
         @Component
         static class TestHandler {
-            public Mono<ServerResponse> route(ServerRequest request) {
+            Mono<ServerResponse> route(ServerRequest request) {
                 assertThat(ServiceRequestContext.current()).isNotNull();
+                assertThat(request.remoteAddress()).isNotEmpty();
                 return ServerResponse.ok().contentType(MediaType.TEXT_PLAIN)
                                      .body(BodyInserters.fromObject("route"));
             }
 
-            public Mono<ServerResponse> route2(ServerRequest request) {
+            Mono<ServerResponse> route2(ServerRequest request) {
                 assertThat(ServiceRequestContext.current()).isNotNull();
+                assertThat(request.remoteAddress()).isNotEmpty();
                 return Mono.from(request.bodyToMono(Map.class))
                            .map(map -> assertThat(map.get("a")).isEqualTo(1))
                            .then(ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
