@@ -71,7 +71,7 @@ import io.netty.util.ReferenceCountUtil;
 public class Http1ClientCodec extends CombinedChannelDuplexHandler<HttpResponseDecoder, HttpRequestEncoder>
         implements HttpClientUpgradeHandler.SourceCodec {
 
-    // Forked from Netty 4.1.42 at 39cc7a673939dec96258ff27f5b1874671838af0
+    // Forked from Netty 4.1.41 at 9ec3411c91bdc50e78f3d50b393ab815d2be0f92
     // - Made the class non-final so that we can intercept the close() request.
     // - Handle 1xx responses correctly, not just 100 and 101.
 
@@ -190,7 +190,7 @@ public class Http1ClientCodec extends CombinedChannelDuplexHandler<HttpResponseD
                 return;
             }
 
-            if (msg instanceof HttpRequest && !done) {
+            if (msg instanceof HttpRequest) {
                 queue.offer(((HttpRequest) msg).method());
             }
 
