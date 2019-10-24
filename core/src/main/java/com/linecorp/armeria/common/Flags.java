@@ -407,8 +407,8 @@ public final class Flags {
      * {@code -Dcom.linecorp.armeria.useOpenSsl=false} JVM option to disable it.
      */
     public static boolean useOpenSsl() {
-        if (Flags.useOpenSsl != null) {
-            return Flags.useOpenSsl;
+        if (useOpenSsl != null) {
+            return useOpenSsl;
         }
         final boolean useOpenSsl = getBoolean("useOpenSsl", true);
         if (!useOpenSsl) {
@@ -420,14 +420,15 @@ public final class Flags {
             logger.info("OpenSSL not available: {}", cause.toString());
             return Flags.useOpenSsl = false;
         }
-        logger.info("Using OpenSSL: {}, 0x{}", OpenSsl.versionString(), Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
+        logger.info("Using OpenSSL: {}, 0x{}", OpenSsl.versionString(),
+                    Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
         if (dumpOpenSslInfo()) {
             final SSLEngine engine = SslContextUtil.createSslContext(
                     SslContextBuilder::forClient,
                     false,
                     unused -> {}).newEngine(ByteBufAllocator.DEFAULT);
             logger.info("AllUSE_OPENSSL = null; available SSL protocols: {}",
-                    ImmutableList.copyOf(engine.getSupportedProtocols()));
+                        ImmutableList.copyOf(engine.getSupportedProtocols()));
             logger.info("Default enabled SSL protocols: {}", SslContextUtil.DEFAULT_PROTOCOLS);
             ReferenceCountUtil.release(engine);
             logger.info("All available SSL ciphers: {}", OpenSsl.availableJavaCipherSuites());
