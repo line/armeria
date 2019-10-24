@@ -84,8 +84,8 @@ You may want to consider the following options before putting your Armeria appli
       ServerBuilder sb = Server.builder();
       sb.channelOption(ChannelOption.SO_BACKLOG, ...);
       sb.channelOption(ChannelOption.SO_REUSEADDR, ...);
-      sb.channelOption(ChannelOption.SO_RCVBUF, ...);
       sb.childChannelOption(ChannelOption.SO_SNDBUF, ...);
+      sb.childChannelOption(ChannelOption.SO_RCVBUF, ...);
 
       // Client-side
       ClientFactoryBuilder cfb = new ClientFactoryBuilder();
