@@ -44,8 +44,8 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.protocol.HTTP;
 import org.apache.http.util.EntityUtils;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableList;
 
@@ -86,12 +86,12 @@ import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-public class AnnotatedHttpServiceTest {
+class AnnotatedHttpServiceTest {
 
-    @ClassRule
-    public static final ServerRule rule = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             // Case 1, 2, and 3, with a converter map
@@ -349,15 +349,6 @@ public class AnnotatedHttpServiceTest {
         public AggregatedHttpResponse postStringAggregateResponse1(AggregatedHttpRequest request,
                                                                    RequestContext ctx) {
             validateContext(ctx);
-            return AggregatedHttpResponse.of(ResponseHeaders.of(HttpStatus.OK), request.content());
-        }
-
-        @Post
-        @Path("/a/string-aggregate-response2")
-        public AggregatedHttpResponse postStringAggregateResponse2(HttpRequest req,
-                                                                   RequestContext ctx) {
-            validateContextAndRequest(ctx, req);
-            final AggregatedHttpRequest request = req.aggregate().join();
             return AggregatedHttpResponse.of(ResponseHeaders.of(HttpStatus.OK), request.content());
         }
     }
@@ -729,7 +720,7 @@ public class AnnotatedHttpServiceTest {
     }
 
     @Test
-    public void testAnnotatedHttpService() throws Exception {
+    void testAnnotatedHttpService() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             testBody(hc, get("/1/int/42"), "Integer: 42");
             testBody(hc, get("/1/int-async/42"), "Integer: 43");
@@ -780,7 +771,7 @@ public class AnnotatedHttpServiceTest {
     }
 
     @Test
-    public void testNonDefaultRoute() throws Exception {
+    void testNonDefaultRoute() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             // Exact pattern
             testBody(hc, get("/6/exact"), "String[exact:/6/exact]");
@@ -795,18 +786,17 @@ public class AnnotatedHttpServiceTest {
     }
 
     @Test
-    public void testAggregation() throws Exception {
+    void testAggregation() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             testForm(hc, form("/3/a/string"));
             testForm(hc, form("/3/a/string-async1"));
             testForm(hc, form("/3/a/string-async2"));
             testForm(hc, form("/3/a/string-aggregate-response1"));
-            testForm(hc, form("/3/a/string-aggregate-response2"));
         }
     }
 
     @Test
-    public void testParam() throws Exception {
+    void testParam() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             testBody(hc, get("/7/param/get?username=line1&password=armeria1"), "line1/armeria1");
             testBody(hc, form("/7/param/post", StandardCharsets.UTF_8,
@@ -848,8 +838,8 @@ public class AnnotatedHttpServiceTest {
     }
 
     @Test
-    public void testAdvancedAnnotatedHttpService() throws Exception {
-        final HttpClient client = HttpClient.of(rule.uri("/"));
+    void testAdvancedAnnotatedHttpService() throws Exception {
+        final HttpClient client = HttpClient.of(server.uri("/"));
         final String path = "/8/same/path";
 
         RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, path);
@@ -944,7 +934,7 @@ public class AnnotatedHttpServiceTest {
     }
 
     @Test
-    public void testServiceThrowIllegalArgumentException() throws Exception {
+    void testServiceThrowIllegalArgumentException() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             testStatusCode(hc, get("/10/syncThrow"), 400);
             testStatusCode(hc, get("/10/asyncThrow"), 400);
@@ -953,7 +943,7 @@ public class AnnotatedHttpServiceTest {
     }
 
     @Test
-    public void testServiceThrowHttpResponseException() throws Exception {
+    void testServiceThrowHttpResponseException() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             testStatusCode(hc, get("/10/syncThrow401"), 401);
             testStatusCode(hc, get("/10/asyncThrow401"), 401);
@@ -962,7 +952,7 @@ public class AnnotatedHttpServiceTest {
     }
 
     @Test
-    public void testClassScopeMediaTypeAnnotations() throws Exception {
+    void testClassScopeMediaTypeAnnotations() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             final String uri = "/9/same/path";
 
@@ -985,7 +975,7 @@ public class AnnotatedHttpServiceTest {
     }
 
     @Test
-    public void testRequestHeaderInjection() throws Exception {
+    void testRequestHeaderInjection() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             HttpRequestBase request = get("/11/aHeader");
             request.setHeader(org.apache.http.HttpHeaders.IF_MATCH, "737060cd8c284d8af7ad3082f209582d");
@@ -1034,7 +1024,7 @@ public class AnnotatedHttpServiceTest {
     }
 
     @Test
-    public void testReturnVoid() throws Exception {
+    void testReturnVoid() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             testStatusCode(hc, get("/1/void/204"), 204);
             testBodyAndContentType(hc, get("/1/void/200"), "200 OK", MediaType.PLAIN_TEXT_UTF_8.toString());
@@ -1188,10 +1178,10 @@ public class AnnotatedHttpServiceTest {
         final HttpRequestBase req;
         switch (method) {
             case GET:
-                req = new HttpGet(rule.httpUri(uri));
+                req = new HttpGet(server.httpUri(uri));
                 break;
             case POST:
-                req = new HttpPost(rule.httpUri(uri));
+                req = new HttpPost(server.httpUri(uri));
                 break;
             default:
                 throw new Error("Unexpected method: " + method);
