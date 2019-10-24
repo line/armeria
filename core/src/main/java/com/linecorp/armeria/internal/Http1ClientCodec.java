@@ -71,7 +71,7 @@ import io.netty.util.ReferenceCountUtil;
 public class Http1ClientCodec extends CombinedChannelDuplexHandler<HttpResponseDecoder, HttpRequestEncoder>
         implements HttpClientUpgradeHandler.SourceCodec {
 
-    // Forked from Netty 4.1.34 at e0bbff74f7097f000472785982ad86c0ce891567
+    // Forked from Netty 4.1.41 at 9ec3411c91bdc50e78f3d50b393ab815d2be0f92
     // - Made the class non-final so that we can intercept the close() request.
     // - Handle 1xx responses correctly, not just 100 and 101.
 
@@ -190,7 +190,7 @@ public class Http1ClientCodec extends CombinedChannelDuplexHandler<HttpResponseD
                 return;
             }
 
-            if (msg instanceof HttpRequest && !done) {
+            if (msg instanceof HttpRequest) {
                 queue.offer(((HttpRequest) msg).method());
             }
 
@@ -263,46 +263,49 @@ public class Http1ClientCodec extends CombinedChannelDuplexHandler<HttpResponseD
             // current response.
             final HttpMethod method = queue.poll();
 
-            final char firstChar = method.name().charAt(0);
-            switch (firstChar) {
-                case 'H':
-                    // According to 4.3, RFC2616:
-                    // All responses to the HEAD request method MUST NOT include a
-                    // message-body, even though the presence of entity-header fields
-                    // might lead one to believe they do.
-                    if (HttpMethod.HEAD.equals(method)) {
-                        return true;
-
-                        // The following code was inserted to work around the servers
-                        // that behave incorrectly.  It has been commented out
-                        // because it does not work with well behaving servers.
-                        // Please note, even if the 'Transfer-Encoding: chunked'
-                        // header exists in the HEAD response, the response should
-                        // have absolutely no content.
-                        //
-                        //// Interesting edge case:
-                        //// Some poorly implemented servers will send a zero-byte
-                        //// chunk if Transfer-Encoding of the response is 'chunked'.
-                        ////
-                        //// return !msg.isChunked();
-                    }
-                    break;
-                case 'C':
-                    // Successful CONNECT request results in a response with empty body.
-                    if (statusCode == 200) {
-                        if (HttpMethod.CONNECT.equals(method)) {
-                            // Proxy connection established - Parse HTTP only if configured by
-                            // parseHttpAfterConnectRequest, else pass through.
-                            if (!parseHttpAfterConnectRequest) {
-                                done = true;
-                                queue.clear();
-                            }
+            // If the remote peer did for example send multiple responses for one request
+            // (which is not allowed per spec but may still be possible) method will be null so guard against it
+            if (method != null) {
+                final char firstChar = method.name().charAt(0);
+                switch (firstChar) {
+                    case 'H':
+                        // According to 4.3, RFC2616:
+                        // All responses to the HEAD request method MUST NOT include a
+                        // message-body, even though the presence of entity-header fields
+                        // might lead one to believe they do.
+                        if (HttpMethod.HEAD.equals(method)) {
                             return true;
-                        }
-                    }
-                    break;
-            }
 
+                            // The following code was inserted to work around the servers
+                            // that behave incorrectly.  It has been commented out
+                            // because it does not work with well behaving servers.
+                            // Please note, even if the 'Transfer-Encoding: chunked'
+                            // header exists in the HEAD response, the response should
+                            // have absolutely no content.
+                            //
+                            //// Interesting edge case:
+                            //// Some poorly implemented servers will send a zero-byte
+                            //// chunk if Transfer-Encoding of the response is 'chunked'.
+                            ////
+                            //// return !msg.isChunked();
+                        }
+                        break;
+                    case 'C':
+                        // Successful CONNECT request results in a response with empty body.
+                        if (statusCode == 200) {
+                            if (HttpMethod.CONNECT.equals(method)) {
+                                // Proxy connection established - Parse HTTP only if configured by
+                                // parseHttpAfterConnectRequest, else pass through.
+                                if (!parseHttpAfterConnectRequest) {
+                                    done = true;
+                                    queue.clear();
+                                }
+                                return true;
+                            }
+                        }
+                        break;
+                }
+            }
             return super.isContentAlwaysEmpty(msg);
         }
 
