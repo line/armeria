@@ -91,6 +91,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.annotation.AdditionalHeader;
 import com.linecorp.armeria.server.annotation.AdditionalTrailer;
+import com.linecorp.armeria.server.annotation.Blocking;
 import com.linecorp.armeria.server.annotation.ConsumeType;
 import com.linecorp.armeria.server.annotation.Consumes;
 import com.linecorp.armeria.server.annotation.Decorator;
@@ -351,13 +352,15 @@ public final class AnnotatedHttpServiceFactory {
         final ResponseHeaders responseHeaders = defaultHeaders.build();
         final HttpHeaders responseTrailers = defaultTrailers.build();
 
+        final boolean useBlockingTaskExecutor = findFirst(method, Blocking.class).isPresent();
+
         return routes.stream().map(route -> {
             final List<AnnotatedValueResolver> resolvers = getAnnotatedValueResolvers(req, route, method,
                                                                                       clazz);
             return new AnnotatedHttpServiceElement(
                     route,
                     new AnnotatedHttpService(object, method, resolvers, eh, res, route, responseHeaders,
-                                             responseTrailers),
+                                             responseTrailers, useBlockingTaskExecutor),
                     decorator(method, clazz, getInitialDecorator(route.methods())));
         }).collect(toImmutableList());
     }
