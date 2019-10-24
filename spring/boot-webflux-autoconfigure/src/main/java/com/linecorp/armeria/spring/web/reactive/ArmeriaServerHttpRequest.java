@@ -17,6 +17,7 @@ package com.linecorp.armeria.spring.web.reactive;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Collection;
 import java.util.List;
@@ -114,6 +115,11 @@ final class ArmeriaServerHttpRequest extends AbstractServerHttpRequest {
     @Override
     public Flux<DataBuffer> getBody() {
         return body;
+    }
+
+    @Override
+    public InetSocketAddress getRemoteAddress() {
+        return ctx.remoteAddress();
     }
 
     @Override
