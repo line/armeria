@@ -1,8 +1,3 @@
-import java.nio.file.FileVisitOption
-import java.nio.file.FileVisitResult
-import java.nio.file.Files
-import java.nio.file.SimpleFileVisitor
-
 buildscript {
     repositories {
         gradlePluginPortal()
@@ -19,6 +14,12 @@ if (rootProject.hasProperty('noWeb')) {
 
 apply plugin: 'base'
 apply plugin: 'com.moowork.node'
+
+tasks.yarn.args += ['--frozen-lockfile']
+
+task yarnUpdate(type: YarnTask) {
+    args = ['install']
+}
 
 task buildWeb(type: YarnTask) {
     dependsOn 'yarn'
