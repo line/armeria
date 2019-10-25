@@ -66,7 +66,7 @@ public class ArmeriaServerHttpResponseTest {
 
         response.setStatusCode(HttpStatus.NOT_FOUND);
         response.addCookie(ResponseCookie.from("a", "1")
-                                         .domain("http://localhost")
+                                         .domain("localhost")
                                          .path("/")
                                          // A negative value means no "Max-Age" attribute in which case
                                          // the cookie is removed when the browser is closed.
@@ -97,7 +97,7 @@ public class ArmeriaServerHttpResponseTest {
                                 ClientCookieDecoder.LAX.decode(headers.get(HttpHeaderNames.SET_COOKIE));
                         assertThat(setCookie.name()).isEqualTo("a");
                         assertThat(setCookie.value()).isEqualTo("1");
-                        assertThat(setCookie.domain()).isEqualTo("http://localhost");
+                        assertThat(setCookie.domain()).isEqualTo("localhost");
                         assertThat(setCookie.path()).isEqualTo("/");
                         assertThat(setCookie.maxAge()).isEqualTo(Cookie.UNDEFINED_MAX_AGE);
                         assertThat(setCookie.isSecure()).isTrue();
@@ -117,7 +117,7 @@ public class ArmeriaServerHttpResponseTest {
         response.setStatusCode(HttpStatus.OK);
         response.getHeaders().add("Armeria", "awesome");
         response.addCookie(ResponseCookie.from("a", "1")
-                                         .domain("http://localhost")
+                                         .domain("localhost")
                                          .path("/")
                                          .maxAge(Duration.ofSeconds(60))
                                          .secure(true)
@@ -151,7 +151,7 @@ public class ArmeriaServerHttpResponseTest {
                                 ClientCookieDecoder.LAX.decode(headers.get(HttpHeaderNames.SET_COOKIE));
                         assertThat(setCookie.name()).isEqualTo("a");
                         assertThat(setCookie.value()).isEqualTo("1");
-                        assertThat(setCookie.domain()).isEqualTo("http://localhost");
+                        assertThat(setCookie.domain()).isEqualTo("localhost");
                         assertThat(setCookie.path()).isEqualTo("/");
                         assertThat(setCookie.maxAge()).isEqualTo(Duration.ofSeconds(60).getSeconds());
                         assertThat(setCookie.isSecure()).isTrue();

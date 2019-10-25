@@ -184,7 +184,7 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
         assertThat(res.contentAscii()).startsWith("# HELP ");
     }
 
-    @Test
+    @Test(timeout = 20000)
     public void testHeapdump() throws Exception {
         final HttpClient client = Clients.newDerivedClient(this.client, options -> {
             return new ClientOptionsBuilder(options).maxResponseLength(0).build();
