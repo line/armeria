@@ -168,20 +168,10 @@ public final class SystemInfo {
     }
 
     /**
-     * Returns the operating system type.
+     * Returns the operating system for the currently running process.
      */
     public static OsType osType() {
         return osType;
-    }
-
-    /**
-     * Operating system type enumeration value
-     */
-    public enum OsType {
-        WINDOWS,
-        LINUX,
-        MAC,
-        OTHERS
     }
 
     /**
