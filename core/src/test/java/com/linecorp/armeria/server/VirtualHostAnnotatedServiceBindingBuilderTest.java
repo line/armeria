@@ -99,9 +99,13 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
     @Test
     @Ignore
     void testServiceDecoration_shouldCatchException() throws Exception {
-        final CloseableHttpResponse closeableHttpResponse = get("/foo/bar");
-
-        assertThat(closeableHttpResponse.getStatusLine().getStatusCode()).isEqualTo(501);
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            final HttpGet httpGet = new HttpGet(server.httpUri("/foo/bar"));
+            httpGet.setHeader(HttpHeaderNames.HOST.toString(), TEST_HOST);
+            try (CloseableHttpResponse response = hc.execute(httpGet)) {
+                assertThat(response.getStatusLine().getStatusCode()).isEqualTo(501);
+            }
+        }
     }
 
     private static class TestService {
