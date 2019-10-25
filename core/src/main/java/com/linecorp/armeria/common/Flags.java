@@ -45,6 +45,7 @@ import com.linecorp.armeria.client.retry.RetryingHttpClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Sampler;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.SslContextUtil;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -117,9 +118,8 @@ public final class Flags {
     private static final boolean HAS_WSLENV = System.getenv("WSLENV") != null;
     private static final boolean USE_EPOLL = getBoolean("useEpoll", isEpollAvailable(),
                                                         value -> isEpollAvailable() || !value);
-
-    private static final boolean USE_OPENSSL = getBoolean("useOpenSsl", OpenSsl.isAvailable(),
-                                                          value -> OpenSsl.isAvailable() || !value);
+    @Nullable
+    private static Boolean useOpenSsl;
 
     private static final boolean DUMP_OPENSSL_INFO = getBoolean("dumpOpenSslInfo", false);
 
@@ -312,34 +312,15 @@ public final class Flags {
         } else if (USE_EPOLL) {
             logger.info("Using /dev/epoll");
         }
-
-        if (!OpenSsl.isAvailable()) {
-            final Throwable cause = Exceptions.peel(OpenSsl.unavailabilityCause());
-            logger.info("OpenSSL not available: {}", cause.toString());
-        } else if (USE_OPENSSL) {
-            logger.info("Using OpenSSL: {}, 0x{}",
-                        OpenSsl.versionString(),
-                        Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
-
-            if (dumpOpenSslInfo()) {
-                final SSLEngine engine = SslContextUtil.createSslContext(
-                        SslContextBuilder::forClient,
-                        false,
-                        unused -> {}).newEngine(ByteBufAllocator.DEFAULT);
-                logger.info("All available SSL protocols: {}",
-                            ImmutableList.copyOf(engine.getSupportedProtocols()));
-                logger.info("Default enabled SSL protocols: {}", SslContextUtil.DEFAULT_PROTOCOLS);
-                ReferenceCountUtil.release(engine);
-                logger.info("All available SSL ciphers: {}", OpenSsl.availableJavaCipherSuites());
-                logger.info("Default enabled SSL ciphers: {}", SslContextUtil.DEFAULT_CIPHERS);
-            }
-        }
     }
 
     private static boolean isEpollAvailable() {
-        // Netty epoll transport does not work with WSL (Windows Sybsystem for Linux) yet.
-        // TODO(trustin): Re-enable on WSL if https://github.com/Microsoft/WSL/issues/1982 is resolved.
-        return Epoll.isAvailable() && !HAS_WSLENV;
+        if (SystemInfo.isLinux()) {
+            // Netty epoll transport does not work with WSL (Windows Sybsystem for Linux) yet.
+            // TODO(trustin): Re-enable on WSL if https://github.com/Microsoft/WSL/issues/1982 is resolved.
+            return Epoll.isAvailable() && !HAS_WSLENV;
+        }
+        return false;
     }
 
     /**
@@ -426,7 +407,34 @@ public final class Flags {
      * {@code -Dcom.linecorp.armeria.useOpenSsl=false} JVM option to disable it.
      */
     public static boolean useOpenSsl() {
-        return USE_OPENSSL;
+        if (useOpenSsl != null) {
+            return useOpenSsl;
+        }
+        final boolean useOpenSsl = getBoolean("useOpenSsl", true);
+        if (!useOpenSsl) {
+            // OpenSSL explicitly disabled
+            return Flags.useOpenSsl = false;
+        }
+        if (!OpenSsl.isAvailable()) {
+            final Throwable cause = Exceptions.peel(OpenSsl.unavailabilityCause());
+            logger.info("OpenSSL not available: {}", cause.toString());
+            return Flags.useOpenSsl = false;
+        }
+        logger.info("Using OpenSSL: {}, 0x{}", OpenSsl.versionString(),
+                    Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
+        if (dumpOpenSslInfo()) {
+            final SSLEngine engine = SslContextUtil.createSslContext(
+                    SslContextBuilder::forClient,
+                    false,
+                    unused -> {}).newEngine(ByteBufAllocator.DEFAULT);
+            logger.info("All available SSL protocols: {}",
+                        ImmutableList.copyOf(engine.getSupportedProtocols()));
+            logger.info("Default enabled SSL protocols: {}", SslContextUtil.DEFAULT_PROTOCOLS);
+            ReferenceCountUtil.release(engine);
+            logger.info("All available SSL ciphers: {}", OpenSsl.availableJavaCipherSuites());
+            logger.info("Default enabled SSL ciphers: {}", SslContextUtil.DEFAULT_CIPHERS);
+        }
+        return Flags.useOpenSsl = true;
     }
 
     /**

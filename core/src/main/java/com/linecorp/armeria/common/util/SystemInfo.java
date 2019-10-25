@@ -51,6 +51,8 @@ public final class SystemInfo {
 
     private static boolean JETTY_ALPN_OPTIONAL_OR_AVAILABLE;
 
+    private static final OsType osType;
+
     static {
         int javaVersion = -1;
         try {
@@ -109,6 +111,17 @@ public final class SystemInfo {
                 JETTY_ALPN_OPTIONAL_OR_AVAILABLE = false;
             }
         }
+
+        final String osName = Ascii.toUpperCase(System.getProperty("os.name", ""));
+        if (osName.startsWith("WINDOWS")) {
+            osType = OsType.WINDOWS;
+        } else if (osName.startsWith("LINUX")) {
+            osType = OsType.LINUX;
+        } else if (osName.startsWith("MAC")) {
+            osType = OsType.MAC;
+        } else {
+            osType = OsType.OTHERS;
+        }
     }
 
     /**
@@ -154,8 +167,18 @@ public final class SystemInfo {
         return JavaVersionSpecific.get().currentTimeMicros();
     }
 
-    private static boolean isLinux() {
-        return Ascii.toLowerCase(System.getProperty("os.name", "")).startsWith("linux");
+    /**
+     * Returns the operating system for the currently running process.
+     */
+    public static OsType osType() {
+        return osType;
+    }
+
+    /**
+     * Returns {@code true} if the operating system is Linux.
+     */
+    public static boolean isLinux() {
+        return osType == OsType.LINUX;
     }
 
     private SystemInfo() {}

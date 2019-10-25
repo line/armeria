@@ -81,7 +81,6 @@ import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.EpollChannelOption;
-import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.DomainNameMapping;
@@ -1613,7 +1612,7 @@ public final class ServerBuilder {
                 ports = ImmutableList.of(new ServerPort(0, HTTP));
             }
         } else {
-            if ((!OpenSsl.isAvailable() || !Flags.useOpenSsl()) && !SystemInfo.jettyAlpnOptionalOrAvailable()) {
+            if (!Flags.useOpenSsl() && !SystemInfo.jettyAlpnOptionalOrAvailable()) {
                 throw new IllegalStateException(
                         "TLS configured but this is Java 8 and neither OpenSSL nor Jetty ALPN could be " +
                         "detected. To use TLS with Armeria, you must either use Java 9+, enable OpenSSL, " +
