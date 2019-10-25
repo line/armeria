@@ -45,7 +45,6 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     private final MeterRegistry meterRegistry;
     private final DefaultAttributeMap attrs = new DefaultAttributeMap();
     private final SessionProtocol sessionProtocol;
-    @Nullable
     private UUID uuid;
     private final HttpMethod method;
     private final String path;
