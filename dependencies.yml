@@ -246,7 +246,7 @@ me.champeau.gradle:
   jmh-gradle-plugin: { version: '0.5.0-rc-2' }
 
 net.javacrumbs.json-unit:
-  json-unit: { version: &JSON_UNIT_VERSION '2.8.1' }
+  json-unit: { version: &JSON_UNIT_VERSION '2.10.0' }
   json-unit-fluent: { version: *JSON_UNIT_VERSION }
 
 net.sf.proguard:
@@ -348,6 +348,9 @@ org.eclipse.jetty:
 org.eclipse.jetty.alpn:
   alpn-api: { version: '1.1.3.v20160715' }
 
+org.hamcrest:
+  hamcrest: { version: &HAMCREST_VERSION '2.2' }
+  hamcrest-library: { version: *HAMCREST_VERSION }
 
 org.hibernate.validator:
   hibernate-validator: { version: '6.0.17.Final' }
