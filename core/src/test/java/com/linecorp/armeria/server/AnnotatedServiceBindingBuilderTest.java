@@ -45,8 +45,7 @@ class AnnotatedServiceBindingBuilderTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.annotatedService()
               .exceptionHandler(handlerFunction)
-              .build(new TestService())
-              .build();
+              .build(new TestService());
         }
     };
 
@@ -91,7 +90,7 @@ class AnnotatedServiceBindingBuilderTest {
         final Server server = Server.builder()
                                     .annotatedService()
                                     .requestTimeout(requestTimeoutDuration)
-                                    .maxRequestLength(2 * 1024)
+                                    .maxRequestLength(maxRequestLength)
                                     .exceptionHandler((ctx, request, cause) -> HttpResponse.of(400))
                                     .pathPrefix("/home")
                                     .accessLogWriter(accessLogWriter, shutdownOnStop)
@@ -122,7 +121,7 @@ class AnnotatedServiceBindingBuilderTest {
         return httpClient.get(path).aggregate().join();
     }
 
-    static class TestService {
+    private static class TestService {
         @Get("/foo")
         public HttpResponse foo() {
             throw new RuntimeException();
