@@ -79,6 +79,7 @@ public class ArmeriaAutoConfiguration {
             throws InterruptedException {
 
         if (!armeriaServerConfigurators.isPresent() &&
+            !armeriaServerBuilderConsumers.isPresent() &&
             !thriftServiceRegistrationBeans.isPresent() &&
             !httpServiceRegistrationBeans.isPresent() &&
             !annotatedServiceRegistrationBeans.isPresent()) {
