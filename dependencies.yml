@@ -198,6 +198,7 @@ io.zipkin.brave:
     # ':site:javadoc' fails when we use a newer version of Javadoc.
     javadocs:
     - https://static.javadoc.io/io.zipkin.brave/brave/5.6.3/
+    - https://static.javadoc.io/io.zipkin.brave/brave-instrumentation-http/5.6.3/
 
 it.unimi.dsi:
   fastutil:
