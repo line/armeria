@@ -201,7 +201,7 @@ class HttpHealthCheckedEndpointGroupLongPollingTest {
             final Stopwatch stopwatch = Stopwatch.createStarted();
             healthCheckRequestLogs.take();
             assertThat(stopwatch.elapsed(TimeUnit.MILLISECONDS))
-                    .isLessThanOrEqualTo(LONG_POLLING_TIMEOUT.toMillis());
+                    .isLessThanOrEqualTo((long) (LONG_POLLING_TIMEOUT.toMillis() * 1.1)); // buffer 10 percent.
         }
     }
 
