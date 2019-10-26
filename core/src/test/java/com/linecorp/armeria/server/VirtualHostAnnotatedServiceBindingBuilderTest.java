@@ -20,16 +20,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.junit.Ignore;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
@@ -53,16 +52,6 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
               .build(new TestService());
         }
     };
-
-    private static CloseableHttpResponse get(String path) throws Exception {
-        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpGet httpGet = new HttpGet(server.httpUri(path));
-            httpGet.setHeader(HttpHeaderNames.HOST.toString(), TEST_HOST);
-            try (CloseableHttpResponse response = hc.execute(httpGet)) {
-                return response;
-            }
-        }
-    }
 
     @Test
     void testAllConfigsAreSet() {
@@ -97,15 +86,12 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
     }
 
     @Test
-    @Ignore
     void testServiceDecoration_shouldCatchException() throws Exception {
-        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpGet httpGet = new HttpGet(server.httpUri("/foo/bar"));
-            httpGet.setHeader(HttpHeaderNames.HOST.toString(), TEST_HOST);
-            try (CloseableHttpResponse response = hc.execute(httpGet)) {
-                assertThat(response.getStatusLine().getStatusCode()).isEqualTo(501);
-            }
-        }
+        final Endpoint endpoint = Endpoint.of(TEST_HOST, server.httpPort()).withIpAddr("127.0.0.1");
+        final HttpClient httpClientTest = HttpClient.of(SessionProtocol.HTTP, endpoint);
+        final AggregatedHttpResponse join = httpClientTest.get("/foo/bar").aggregate().join();
+
+        assertThat(join.status()).isEqualTo(HttpStatus.NOT_IMPLEMENTED);
     }
 
     private static class TestService {
