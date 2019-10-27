@@ -364,7 +364,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
                 serviceCfg, channel, serviceCfg.server().meterRegistry(),
-                protocol, routingCtx, routingResult, req, getSSLSession(channel),
+                protocol, UUID.randomUUID(), routingCtx, routingResult, req, getSSLSession(channel),
                 proxiedAddresses, clientAddress);
 
         try (SafeCloseable ignored = reqCtx.push()) {

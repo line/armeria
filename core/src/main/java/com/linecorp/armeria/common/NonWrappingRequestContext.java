@@ -88,20 +88,6 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
         this.rpcReq = rpcReq;
     }
 
-    protected NonWrappingRequestContext(
-            MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            HttpMethod method, String path, @Nullable String query,
-            @Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
-
-        this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
-        this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
-        this.method = requireNonNull(method, "method");
-        this.path = requireNonNull(path, "path");
-        this.query = query;
-        this.req = req;
-        this.rpcReq = rpcReq;
-    }
-
     @Override
     public HttpRequest request() {
         return req;

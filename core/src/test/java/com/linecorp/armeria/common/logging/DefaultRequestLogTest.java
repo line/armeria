@@ -49,6 +49,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
 
 import io.netty.channel.Channel;
@@ -273,5 +274,19 @@ public class DefaultRequestLogTest {
                 VERY_LONG_STRING.length() +
                 responseTrailers.toString().length() +
                 cause.toString().length());
+    }
+
+    @Test
+    public void testUUID_Assign() {
+        final RequestHeaders reqHeaders =
+                RequestHeaders.of(HttpMethod.POST, "/armeria/uuid",
+                                  HttpHeaderNames.CONTENT_LENGTH, VERY_LONG_STRING.length());
+        final HttpRequest req = HttpRequest.of(
+                AggregatedHttpRequest.of(reqHeaders, HttpData.ofUtf8(VERY_LONG_STRING)));
+        final ClientRequestContext cctx = ClientRequestContextBuilder.of(req).build();
+        assertThat(cctx.log().uuid()).isNotNull();
+
+        final ServiceRequestContext sctx = ServiceRequestContext.of(req);
+        assertThat(sctx.log().uuid()).isNotNull();
     }
 }

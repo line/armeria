@@ -92,6 +92,11 @@ final class ArmeriaServerHttpRequest extends AbstractServerHttpRequest {
         return cookies;
     }
 
+    @Override
+    protected String initId() {
+        return ctx.uuid().toString();
+    }
+
     @Nullable
     @Override
     protected SslInfo initSslInfo() {
