@@ -58,12 +58,12 @@ public class DefaultDnsNameResolver {
         if (numQuestions == 1) {
             // Simple case of single query
             final DnsQuestion question = questions.get(0);
-            logger.debug("[{}] Sending a DNS query", logPrefix);
+            logger.debug("[{}] Sending a DNS query: {}", logPrefix, question);
             return delegate.resolveAll(question);
         }
 
         // Multiple queries
-        logger.debug("{} Sending DNS queries", logPrefix);
+        logger.debug("[{}] Sending DNS queries: {}", logPrefix, questions);
         final Promise<List<DnsRecord>> aggregatedPromise = eventLoop.newPromise();
         final FutureListener<List<DnsRecord>> listener = new FutureListener<List<DnsRecord>>() {
             private final List<DnsRecord> records = new ArrayList<>();

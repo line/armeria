@@ -60,7 +60,14 @@ class AutoUpdatingAddressResolver extends AbstractAddressResolver<InetSocketAddr
     private static final AtomicReferenceFieldUpdater<CacheEntry, ScheduledFuture> futureUpdater =
             AtomicReferenceFieldUpdater.newUpdater(CacheEntry.class, ScheduledFuture.class,
                                                    "cacheUpdatingScheduledFuture");
+
+    /**
+     * A {@link ScheduledFuture} which is set in {@link CacheEntry} when the
+     * {@link AutoUpdatingAddressResolver} is closed by replacing and cancelling previously scheduled automatic
+     * DNS cache updating.
+     */
     @VisibleForTesting
+    @SuppressWarnings("ComparableImplementedButEqualsNotOverridden")
     static final ScheduledFuture<?> closed = new ScheduledFuture<Object>() {
 
         @Override
@@ -109,11 +116,11 @@ class AutoUpdatingAddressResolver extends AbstractAddressResolver<InetSocketAddr
 
     private volatile boolean resolverClosed;
 
-    protected AutoUpdatingAddressResolver(EventLoop eventLoop,
-                                          ConcurrentMap<String, CompletableFuture<CacheEntry>> cache,
-                                          DefaultDnsNameResolver resolver, List<DnsRecordType> dnsRecordTypes,
-                                          int minTtl, int maxTtl, Backoff autoUpdateBackoff,
-                                          long autoUpdateTimeoutMillis) {
+    AutoUpdatingAddressResolver(EventLoop eventLoop,
+                                ConcurrentMap<String, CompletableFuture<CacheEntry>> cache,
+                                DefaultDnsNameResolver resolver, List<DnsRecordType> dnsRecordTypes,
+                                int minTtl, int maxTtl, Backoff autoUpdateBackoff,
+                                long autoUpdateTimeoutMillis) {
         super(eventLoop);
         this.cache = cache;
         this.resolver = resolver;

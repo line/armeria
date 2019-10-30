@@ -47,7 +47,7 @@ import io.netty.resolver.dns.NoopDnsCache;
 
 /**
  * Builds an {@link AddressResolverGroup} which builds {@link AddressResolver}s that update DNS caches
- * automatically. An usual DNS resolver such as {@link DnsNameResolver}, a cache is expired after TTL.
+ * automatically. A usual DNS resolver such as {@link DnsNameResolver}, a cache is expired after TTL.
  * On the other hand, the automatic updating {@link AddressResolver} updates the DNS cache spontaneously
  * even after TTL has elapsed. If automatic updating fails, the {@link AddressResolver} will retry with
  * {@link #autoUpdateBackoff(Backoff)} until {@link #autoUpdateTimeoutMillis(long)} has elapsed.
