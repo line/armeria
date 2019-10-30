@@ -142,6 +142,7 @@ public abstract class UserClient<I extends Request, O extends Response>
         final DefaultClientRequestContext ctx;
         final HttpRequest httpReq;
         final RpcRequest rpcReq;
+        final UUID uuid = UUID.randomUUID();
         if (req instanceof HttpRequest) {
             httpReq = (HttpRequest) req;
             rpcReq = null;
@@ -152,11 +153,11 @@ public abstract class UserClient<I extends Request, O extends Response>
 
         if (eventLoop == null) {
             ctx = new DefaultClientRequestContext(factory(), meterRegistry, sessionProtocol,
-                                                  UUID.randomUUID(), method, path, query, fragment, options(),
+                                                  uuid, method, path, query, fragment, options(),
                                                   httpReq, rpcReq);
         } else {
             ctx = new DefaultClientRequestContext(eventLoop, meterRegistry, sessionProtocol,
-                                                  UUID.randomUUID(), method, path, query, fragment, options(),
+                                                  uuid, method, path, query, fragment, options(),
                                                   httpReq, rpcReq);
         }
 

@@ -66,7 +66,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
 
     private static final AtomicReferenceFieldUpdater<DefaultClientRequestContext, HttpHeaders>
             additionalRequestHeadersUpdater = AtomicReferenceFieldUpdater.newUpdater(
-            DefaultClientRequestContext.class, HttpHeaders.class, "additionalRequestHeaders");
+                    DefaultClientRequestContext.class, HttpHeaders.class, "additionalRequestHeaders");
 
     private boolean initialized;
     @Nullable

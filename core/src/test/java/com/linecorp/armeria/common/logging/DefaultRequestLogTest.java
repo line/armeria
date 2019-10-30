@@ -285,8 +285,10 @@ public class DefaultRequestLogTest {
                 AggregatedHttpRequest.of(reqHeaders, HttpData.ofUtf8(VERY_LONG_STRING)));
         final ClientRequestContext cctx = ClientRequestContextBuilder.of(req).build();
         assertThat(cctx.log().uuid()).isNotNull();
+        assertThat(cctx.log().uuid()).isEqualTo(cctx.uuid());
 
         final ServiceRequestContext sctx = ServiceRequestContext.of(req);
         assertThat(sctx.log().uuid()).isNotNull();
+        assertThat(sctx.log().uuid()).isEqualTo(sctx.uuid());
     }
 }
