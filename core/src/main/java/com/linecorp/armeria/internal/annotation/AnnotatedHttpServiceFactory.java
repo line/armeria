@@ -243,13 +243,11 @@ public final class AnnotatedHttpServiceFactory {
      * from the specified {@code object}, {@link ExceptionHandlerFunction}'s,
      * {@link RequestConverterFunction}'s and {@link ResponseConverterFunction}'s.
      */
-    public static List<AnnotatedHttpServiceElement> find(String pathPrefix, Object object,
-                                                         List<ExceptionHandlerFunction>
-                                                                 exceptionHandlerFunctions,
-                                                         List<RequestConverterFunction>
-                                                                 requestConverterFunctions,
-                                                         List<ResponseConverterFunction>
-                                                                 responseConverterFunctions) {
+    public static List<AnnotatedHttpServiceElement> find(
+            String pathPrefix, Object object,
+            List<ExceptionHandlerFunction> exceptionHandlerFunctions,
+            List<RequestConverterFunction> requestConverterFunctions,
+            List<ResponseConverterFunction> responseConverterFunctions) {
         final List<Method> methods = requestMappingMethods(object);
         return methods.stream()
                       .flatMap((Method method) ->

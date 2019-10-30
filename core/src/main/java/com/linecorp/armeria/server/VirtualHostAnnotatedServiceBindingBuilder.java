@@ -70,7 +70,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     private final Builder<ResponseConverterFunction> responseConverterFunctionBuilder = ImmutableList.builder();
     private String pathPrefix = "/";
 
-    public VirtualHostAnnotatedServiceBindingBuilder(VirtualHostBuilder virtualHostBuilder) {
+    VirtualHostAnnotatedServiceBindingBuilder(VirtualHostBuilder virtualHostBuilder) {
         this.virtualHostBuilder = virtualHostBuilder;
     }
 

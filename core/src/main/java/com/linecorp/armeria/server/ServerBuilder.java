@@ -989,9 +989,9 @@ public final class ServerBuilder {
     /**
      * Binds the specified annotated service object under the specified path prefix.
      *
-     * @param exceptionHandlerFunctions a list of {@link ExceptionHandlerFunction}'s
-     * @param requestConverterFunctions a list of {@link RequestConverterFunction}'s
-     * @param responseConverterFunctions a list of {@link ResponseConverterFunction}'s
+     * @param exceptionHandlerFunctions a list of {@link ExceptionHandlerFunction}
+     * @param requestConverterFunctions a list of {@link RequestConverterFunction}
+     * @param responseConverterFunctions a list of {@link ResponseConverterFunction}
      */
     public ServerBuilder annotatedService(String pathPrefix, Object service,
                                           Function<Service<HttpRequest, HttpResponse>,
