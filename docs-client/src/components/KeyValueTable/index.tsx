@@ -11,6 +11,7 @@ import { Row, ValueListContext } from '../KeyValueEditor/valueListContext';
 
 interface RowProps {
   row: Row;
+  index : number;
   onRowChange: (index: number, key: string, value: string) => void;
   onRowRemove: (index: number) => void;
 }
@@ -24,30 +25,31 @@ const useStyles = makeStyles((theme) => ({
 
 const KeyValueTableRow: React.FunctionComponent<RowProps> = ({
   row,
+  index,
   onRowChange,
   onRowRemove,
 }) => {
   const classes = useStyles();
-  const onChange = (rkey: string, rvalue: string) => {
-    onRowChange(row.index, rkey, rvalue);
+  const onChange = (index : number, key: string, value: string) => {
+    onRowChange(index, key, value);
   };
 
   const onRemove = () => {
-    onRowRemove(row.index);
+    onRowRemove(index);
   };
 
   return (
-    <TableRow key={row.index}>
+    <TableRow key={index}>
       <TableCell>
         <Input
           value={row.key}
-          onChange={(e) => onChange('key', e.target.value)}
+          onChange={(e) => onChange(index,'key', e.target.value)}
         />
       </TableCell>
       <TableCell>
         <Input
           defaultValue={row.value}
-          onChange={(e) => onChange('value', e.target.value)}
+          onChange={(e) => onChange(index,'value', e.target.value)}
         />
         <IconButton
           onClick={() => onRemove()}
@@ -81,7 +83,7 @@ const KeyValueTable: React.FunctionComponent<KeyValueTableProps> = ({
     if (rowList.length === 1) return;
     setRowList(
       rowList
-        .filter((v) => v.index !== index)
+        .filter((_, i) => i !== index)
         .map((v, i) => ({ ...v, index: i })),
     );
   };
@@ -92,7 +94,7 @@ const KeyValueTable: React.FunctionComponent<KeyValueTableProps> = ({
         i === index ? { ...row, [name]: value } : row,
       );
       if (index === rowList.length - 1) {
-        newRowList.push({ index: rowList.length, key: '', value: '' });
+        newRowList.push({ key: '', value: '' });
       }
 
       setRowList(newRowList);
@@ -114,8 +116,8 @@ const KeyValueTable: React.FunctionComponent<KeyValueTableProps> = ({
           rowList.map((v, i) => (
             <KeyValueTableRow
               key={i}
+              index={i}
               row={{
-                index: i,
                 key: v.key,
                 value: v.value,
               }}
