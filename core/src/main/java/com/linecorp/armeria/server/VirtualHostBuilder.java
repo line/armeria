@@ -586,7 +586,7 @@ public final class VirtualHostBuilder {
 
     /**
      * Returns a new instance of {@link VirtualHostAnnotatedServiceBindingBuilder} to build
-     * {@link AnnotatedHttpService} fluently
+     * {@link AnnotatedHttpService} fluently.
      */
     public VirtualHostAnnotatedServiceBindingBuilder annotatedService() {
         return new VirtualHostAnnotatedServiceBindingBuilder(this);
