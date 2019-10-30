@@ -120,18 +120,10 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
             if (needsImmediateDisconnection()) {
                 connection().forEachActiveStream(closeAllStreams);
             }
-
-            onCloseRequest(ctx);
         }
 
         super.close(ctx, promise);
     }
-
-    /**
-     * Invoked when a close request has been issued by {@link ChannelHandlerContext#close()} and all active
-     * streams have been closed.
-     */
-    protected abstract void onCloseRequest(ChannelHandlerContext ctx) throws Exception;
 
     /**
      * Returns {@code true} if the connection has to be closed immediately rather than sending a GOAWAY

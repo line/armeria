@@ -59,6 +59,7 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -149,6 +150,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         final ChannelPipeline p = ch.pipeline();
         p.addLast(new FlushConsolidationHandler());
         p.addLast(ReadSuppressingHandler.INSTANCE);
+        p.addLast(ChannelDeactivationHandler.INSTANCE);
 
         try {
             if (sslCtx != null) {
@@ -628,13 +630,26 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
     private static Http1ClientCodec newHttp1Codec(
             int defaultMaxInitialLineLength, int defaultMaxHeaderSize, int defaultMaxChunkSize) {
-        return new Http1ClientCodec(defaultMaxInitialLineLength, defaultMaxHeaderSize, defaultMaxChunkSize) {
-            @Override
-            public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-                HttpSession.get(ctx.channel()).deactivate();
-                super.close(ctx, promise);
-            }
-        };
+        return new Http1ClientCodec(defaultMaxInitialLineLength, defaultMaxHeaderSize, defaultMaxChunkSize);
+    }
+
+    /**
+     * Deactivates the {@link HttpSession} associated with a channel when it is closed to ensure it isn't used
+     * anymore.
+     */
+    private static final class ChannelDeactivationHandler extends ChannelOutboundHandlerAdapter {
+        private static final ChannelDeactivationHandler INSTANCE = new ChannelDeactivationHandler();
+
+        @Override
+        public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            HttpSession.get(ctx.channel()).deactivate();
+            super.close(ctx, promise);
+        }
+
+        @Override
+        public boolean isSharable() {
+            return true;
+        }
     }
 
     /**
