@@ -55,6 +55,7 @@ import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.SslContextUtil;
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpService;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceElement;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory;
 import com.linecorp.armeria.internal.crypto.BouncyCastleKeyFactoryProvider;
@@ -557,9 +558,9 @@ public final class VirtualHostBuilder {
     /**
      * Binds the specified annotated service object under the specified path prefix.
      *
-     * @param exceptionHandlerFunctions a list of {@link ExceptionHandlerFunction}'s
-     * @param requestConverterFunctions a list of {@link RequestConverterFunction}'s
-     * @param responseConverterFunctions a list of {@link ResponseConverterFunction}'s
+     * @param exceptionHandlerFunctions a list of {@link ExceptionHandlerFunction}
+     * @param requestConverterFunctions a list of {@link RequestConverterFunction}
+     * @param responseConverterFunctions a list of {@link ResponseConverterFunction}
      */
     public VirtualHostBuilder annotatedService(
             String pathPrefix, Object service,
@@ -583,6 +584,10 @@ public final class VirtualHostBuilder {
         return this;
     }
 
+    /**
+     * Returns a {@link VirtualHostAnnotatedServiceBindingBuilder} to build an {@link AnnotatedHttpService}
+     * fluently.
+     */
     public VirtualHostAnnotatedServiceBindingBuilder annotatedService() {
         return new VirtualHostAnnotatedServiceBindingBuilder(this);
     }

@@ -37,7 +37,7 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
  * and provides a method {@link DefaultServiceConfigSetters#toServiceConfigBuilder(Route, Service)} to build
  * {@link ServiceConfigBuilder}.
  */
-class DefaultServiceConfigSetters implements ServiceConfigSetters {
+final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     @Nullable
     private Long requestTimeoutMillis;
     @Nullable
