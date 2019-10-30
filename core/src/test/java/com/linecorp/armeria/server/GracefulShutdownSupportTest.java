@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -29,6 +30,7 @@ import java.time.Duration;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.After;
 import org.junit.Before;
@@ -224,12 +226,15 @@ public class GracefulShutdownSupportTest {
     }
 
     private void submitLongTask() {
+        final AtomicBoolean running = new AtomicBoolean();
         executor.execute(() -> {
+            running.set(true);
             try {
-                Thread.sleep(10000);
+                Thread.sleep(100000);
             } catch (InterruptedException ignored) {
                 // Ignored
             }
         });
+        await().untilTrue(running);
     }
 }

@@ -22,7 +22,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.server.logging.LoggingServiceBuilder;
 
 /**
  * A factory which creates a {@link LoggingService} decorator.
@@ -35,11 +34,11 @@ public final class LoggingDecoratorFactoryFunction implements DecoratorFactoryFu
     @Override
     public Function<Service<HttpRequest, HttpResponse>,
             ? extends Service<HttpRequest, HttpResponse>> newDecorator(LoggingDecorator parameter) {
-        return new LoggingServiceBuilder()
-                .requestLogLevel(parameter.requestLogLevel())
-                .successfulResponseLogLevel(parameter.successfulResponseLogLevel())
-                .failureResponseLogLevel(parameter.failureResponseLogLevel())
-                .samplingRate(parameter.samplingRate())
-                .newDecorator();
+        return LoggingService.builder()
+                             .requestLogLevel(parameter.requestLogLevel())
+                             .successfulResponseLogLevel(parameter.successfulResponseLogLevel())
+                             .failureResponseLogLevel(parameter.failureResponseLogLevel())
+                             .samplingRate(parameter.samplingRate())
+                             .newDecorator();
     }
 }

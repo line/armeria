@@ -50,7 +50,7 @@ public final class Clients {
      *                                  the specified {@code clientType} is unsupported for the scheme
      */
     public static <T> T newClient(String uri, Class<T> clientType, ClientOptionValue<?>... options) {
-        return newClient(ClientFactory.DEFAULT, uri, clientType, options);
+        return newClient(ClientFactory.ofDefault(), uri, clientType, options);
     }
 
     /**
@@ -65,7 +65,7 @@ public final class Clients {
      *                                  the specified {@code clientType} is unsupported for the scheme
      */
     public static <T> T newClient(String uri, Class<T> clientType, ClientOptions options) {
-        return newClient(ClientFactory.DEFAULT, uri, clientType, options);
+        return newClient(ClientFactory.ofDefault(), uri, clientType, options);
     }
 
     /**
@@ -115,7 +115,7 @@ public final class Clients {
      *                                  the specified {@code clientType} is unsupported for the scheme
      */
     public static <T> T newClient(URI uri, Class<T> clientType, ClientOptionValue<?>... options) {
-        return newClient(ClientFactory.DEFAULT, uri, clientType, options);
+        return newClient(ClientFactory.ofDefault(), uri, clientType, options);
     }
 
     /**
@@ -130,7 +130,7 @@ public final class Clients {
      *                                  the specified {@code clientType} is unsupported for the scheme
      */
     public static <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
-        return newClient(ClientFactory.DEFAULT, uri, clientType, options);
+        return newClient(ClientFactory.ofDefault(), uri, clientType, options);
     }
 
     /**
@@ -182,7 +182,7 @@ public final class Clients {
      */
     public static <T> T newClient(SessionProtocol protocol, SerializationFormat format, Endpoint endpoint,
                                   Class<T> clientType, ClientOptionValue<?>... options) {
-        return newClient(ClientFactory.DEFAULT, protocol, format, endpoint, clientType, options);
+        return newClient(ClientFactory.ofDefault(), protocol, format, endpoint, clientType, options);
     }
 
     /**
@@ -201,7 +201,7 @@ public final class Clients {
      */
     public static <T> T newClient(SessionProtocol protocol, SerializationFormat format, Endpoint endpoint,
                                   Class<T> clientType, ClientOptions options) {
-        return newClient(ClientFactory.DEFAULT, protocol, format, endpoint, clientType, options);
+        return newClient(ClientFactory.ofDefault(), protocol, format, endpoint, clientType, options);
     }
 
     /**
@@ -258,7 +258,7 @@ public final class Clients {
      */
     public static <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType,
                                   ClientOptionValue<?>... options) {
-        return newClient(ClientFactory.DEFAULT, scheme, endpoint, clientType, options);
+        return newClient(ClientFactory.ofDefault(), scheme, endpoint, clientType, options);
     }
 
     /**
@@ -275,7 +275,7 @@ public final class Clients {
      */
     public static <T> T newClient(Scheme scheme, Endpoint endpoint, Class<T> clientType,
                                   ClientOptions options) {
-        return newClient(ClientFactory.DEFAULT, scheme, endpoint, clientType, options);
+        return newClient(ClientFactory.ofDefault(), scheme, endpoint, clientType, options);
     }
 
     /**
@@ -389,7 +389,7 @@ public final class Clients {
 
     private static ClientBuilderParams builderParams(Object client) {
         requireNonNull(client, "client");
-        final Optional<ClientBuilderParams> params = ClientFactory.DEFAULT.clientBuilderParams(client);
+        final Optional<ClientBuilderParams> params = ClientFactory.ofDefault().clientBuilderParams(client);
         if (params.isPresent()) {
             return params.get();
         }
@@ -419,7 +419,7 @@ public final class Clients {
      * @see Unwrappable
      */
     public static <T> Optional<T> unwrap(Object client, Class<T> type) {
-        final Optional<ClientBuilderParams> params = ClientFactory.DEFAULT.clientBuilderParams(client);
+        final Optional<ClientBuilderParams> params = ClientFactory.ofDefault().clientBuilderParams(client);
         if (!params.isPresent()) {
             return Optional.empty();
         }

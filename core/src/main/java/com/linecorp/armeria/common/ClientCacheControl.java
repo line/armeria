@@ -39,21 +39,19 @@ public final class ClientCacheControl extends CacheControl {
     /**
      * An empty instance with all directives disabled.
      */
-    public static final ClientCacheControl EMPTY = new ClientCacheControlBuilder().build();
+    public static final ClientCacheControl EMPTY = builder().build();
 
     /**
      * {@code "no-cache"}.
      */
-    public static final ClientCacheControl FORCE_NETWORK = new ClientCacheControlBuilder()
-            .noCache().build();
+    public static final ClientCacheControl FORCE_NETWORK = builder().noCache().build();
 
     /**
      * {@code "only-if-cached, max-stale=2147483647"}.
      */
-    public static final ClientCacheControl FORCE_CACHE = new ClientCacheControlBuilder()
-            .onlyIfCached()
-            .maxStaleSeconds(Integer.MAX_VALUE)
-            .build();
+    public static final ClientCacheControl FORCE_CACHE = builder().onlyIfCached()
+                                                                  .maxStaleSeconds(Integer.MAX_VALUE)
+                                                                  .build();
 
     private static final Map<String, BiConsumer<ClientCacheControlBuilder, String>> DIRECTIVES =
             ImmutableMap.<String, BiConsumer<ClientCacheControlBuilder, String>>builder()
@@ -115,7 +113,7 @@ public final class ClientCacheControl extends CacheControl {
      */
     public static ClientCacheControl parse(Iterable<String> directives) {
         requireNonNull(directives, "directives");
-        final ClientCacheControlBuilder builder = new ClientCacheControlBuilder();
+        final ClientCacheControlBuilder builder = builder();
         for (String d : directives) {
             parseDirectives(d, (name, value) -> {
                 final BiConsumer<ClientCacheControlBuilder, String> action = DIRECTIVES.get(name);
@@ -126,6 +124,13 @@ public final class ClientCacheControl extends CacheControl {
         }
 
         return builder.build();
+    }
+
+    /**
+     * Returns a newly created {@link ClientCacheControlBuilder} with all directived disabled initially.
+     */
+    public static ClientCacheControlBuilder builder() {
+        return new ClientCacheControlBuilder();
     }
 
     static final long UNSPECIFIED_MAX_STALE = -2;

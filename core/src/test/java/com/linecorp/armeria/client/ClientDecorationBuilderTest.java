@@ -19,7 +19,7 @@ package com.linecorp.armeria.client;
 import static java.util.function.Function.identity;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.DefaultRpcRequest;
 import com.linecorp.armeria.common.DefaultRpcResponse;
@@ -32,15 +32,15 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 
-public class ClientDecorationBuilderTest {
+class ClientDecorationBuilderTest {
 
     /**
      * Make sure only {@link HttpRequest} and {@link HttpResponse} or {@link RpcRequest} and {@link RpcRequest}
      * are allowed.
      */
     @Test
-    public void typeConstraints() {
-        final ClientDecorationBuilder cdb = new ClientDecorationBuilder();
+    void typeConstraints() {
+        final ClientDecorationBuilder cdb = ClientDecoration.builder();
         assertThatThrownBy(() -> cdb.add(Request.class, Response.class, identity()))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> cdb.add(HttpRequest.class, RpcResponse.class, identity()))

@@ -48,7 +48,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.client.ClientOptionsBuilder;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -111,7 +110,7 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
     }
 
     @Rule
-    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
+    public TestRule globalTimeout = new DisableOnDebug(new Timeout(30, TimeUnit.SECONDS));
 
     @Inject
     private Server server;
@@ -184,12 +183,12 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
         assertThat(res.contentAscii()).startsWith("# HELP ");
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void testHeapdump() throws Exception {
-        final HttpClient client = Clients.newDerivedClient(this.client, options -> {
-            return new ClientOptionsBuilder(options).maxResponseLength(0).build();
-        });
-
+        final HttpClient client = Clients.newDerivedClient(this.client,
+                                                           options -> options.toBuilder()
+                                                                             .maxResponseLength(0)
+                                                                             .build());
         final HttpResponse res = client.get("/internal/actuator/heapdump");
         final AtomicLong remainingBytes = new AtomicLong();
         StepVerifier.create(res)

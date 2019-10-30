@@ -31,11 +31,9 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
-import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
@@ -92,10 +90,9 @@ class RetryingClientLoadBalancingTest {
                                                   .map(InetSocketAddress::getPort)
                                                   .collect(toImmutableList());
 
-        final EndpointGroup group =
-                new StaticEndpointGroup(expectedPorts.stream()
-                                                     .map(port -> Endpoint.of("127.0.0.1", port))
-                                                     .collect(toImmutableList()));
+        final EndpointGroup group = EndpointGroup.of(expectedPorts.stream()
+                                                                  .map(port -> Endpoint.of("127.0.0.1", port))
+                                                                  .collect(toImmutableList()));
 
         final String groupName = "loadBalancedRetry";
         EndpointGroupRegistry.register(groupName, group, EndpointSelectionStrategy.ROUND_ROBIN);
@@ -116,10 +113,10 @@ class RetryingClientLoadBalancingTest {
                     return CompletableFuture.completedFuture(null);
                 }
             };
-            final HttpClient c = new HttpClientBuilder("h2c://group:" + groupName)
-                    .decorator(RetryingHttpClient.builder(retryStrategy)
-                                                 .newDecorator())
-                    .build();
+            final HttpClient c = HttpClient.builder("h2c://group:" + groupName)
+                                           .decorator(RetryingHttpClient.builder(retryStrategy)
+                                                                        .newDecorator())
+                                           .build();
 
             for (int i = 0; i < NUM_PORTS; i++) {
                 c.get(mode.path).aggregate().join();

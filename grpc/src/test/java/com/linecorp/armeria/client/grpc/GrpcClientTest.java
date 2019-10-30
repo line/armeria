@@ -62,7 +62,7 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.DecoratingClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.ResponseTimeoutException;
-import com.linecorp.armeria.client.logging.LoggingClientBuilder;
+import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -209,11 +209,11 @@ public class GrpcClientTest {
         final URI uri = URI.create(server.httpUri("/"));
         blockingStub = new ClientBuilder("gproto+" + uri)
                 .maxResponseLength(MAX_MESSAGE_SIZE)
-                .decorator(new LoggingClientBuilder().newDecorator())
+                .decorator(LoggingClient.builder().newDecorator())
                 .decorator(requestLogRecorder)
                 .build(TestServiceBlockingStub.class);
         asyncStub = new ClientBuilder("gproto+" + uri.getScheme(), Endpoint.of(uri.getHost(), uri.getPort()))
-                .decorator(new LoggingClientBuilder().newDecorator())
+                .decorator(LoggingClient.builder().newDecorator())
                 .decorator(requestLogRecorder)
                 .build(TestServiceStub.class);
     }
@@ -281,7 +281,7 @@ public class GrpcClientTest {
 
         final TestServiceStub stub = new ClientBuilder("gproto+" + server.httpUri("/"))
                 .option(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS.newValue(true))
-                .decorator(new LoggingClientBuilder().newDecorator())
+                .decorator(LoggingClient.builder().newDecorator())
                 .build(TestServiceStub.class);
 
         final BlockingQueue<Object> resultQueue = new LinkedTransferQueue<>();

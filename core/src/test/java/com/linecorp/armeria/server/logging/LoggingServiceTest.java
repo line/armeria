@@ -22,7 +22,7 @@ import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.function.Function;
@@ -117,16 +117,16 @@ public class LoggingServiceTest {
 
     @Test
     public void defaults_success() throws Exception {
-        final LoggingService<HttpRequest, HttpResponse> service = new LoggingServiceBuilder()
-                .<HttpRequest, HttpResponse>newDecorator().apply(delegate);
+        final LoggingService<HttpRequest, HttpResponse> service =
+                LoggingService.builder().<HttpRequest, HttpResponse>newDecorator().apply(delegate);
         service.serve(ctx, REQUEST);
         verify(logger, never()).info(isA(String.class), isA(Object.class));
     }
 
     @Test
     public void defaults_error() throws Exception {
-        final LoggingService<HttpRequest, HttpResponse> service = new LoggingServiceBuilder()
-                .<HttpRequest, HttpResponse>newDecorator().apply(delegate);
+        final LoggingService<HttpRequest, HttpResponse> service =
+                LoggingService.builder().<HttpRequest, HttpResponse>newDecorator().apply(delegate);
         final IllegalStateException cause = new IllegalStateException("Failed");
         when(log.responseCause()).thenReturn(cause);
         service.serve(ctx, REQUEST);
@@ -141,10 +141,11 @@ public class LoggingServiceTest {
 
     @Test
     public void infoLevel() throws Exception {
-        final LoggingService<HttpRequest, HttpResponse> service = new LoggingServiceBuilder()
-                .requestLogLevel(LogLevel.INFO)
-                .successfulResponseLogLevel(LogLevel.INFO)
-                .<HttpRequest, HttpResponse>newDecorator().apply(delegate);
+        final LoggingService<HttpRequest, HttpResponse> service =
+                LoggingService.builder()
+                              .requestLogLevel(LogLevel.INFO)
+                              .successfulResponseLogLevel(LogLevel.INFO)
+                              .<HttpRequest, HttpResponse>newDecorator().apply(delegate);
         service.serve(ctx, REQUEST);
         verify(logger).info(REQUEST_FORMAT,
                             "headers: " + REQUEST_HEADERS + ", content: " + REQUEST_CONTENT +
@@ -190,17 +191,18 @@ public class LoggingServiceTest {
             return sanitizedResponseTrailers;
         };
 
-        final LoggingService<HttpRequest, HttpResponse> service = new LoggingServiceBuilder()
-                .requestLogLevel(LogLevel.INFO)
-                .successfulResponseLogLevel(LogLevel.INFO)
-                .requestHeadersSanitizer(requestHeadersSanitizer)
-                .requestContentSanitizer(requestContentSanitizer)
-                .requestTrailersSanitizer(requestTrailersSanitizer)
-                .requestTrailersSanitizer(requestTrailersSanitizer)
-                .responseHeadersSanitizer(responseHeadersSanitizer)
-                .responseContentSanitizer(responseContentSanitizer)
-                .responseTrailersSanitizer(responseTrailersSanitizer)
-                .<HttpRequest, HttpResponse>newDecorator().apply(delegate);
+        final LoggingService<HttpRequest, HttpResponse> service =
+                LoggingService.builder()
+                              .requestLogLevel(LogLevel.INFO)
+                              .successfulResponseLogLevel(LogLevel.INFO)
+                              .requestHeadersSanitizer(requestHeadersSanitizer)
+                              .requestContentSanitizer(requestContentSanitizer)
+                              .requestTrailersSanitizer(requestTrailersSanitizer)
+                              .requestTrailersSanitizer(requestTrailersSanitizer)
+                              .responseHeadersSanitizer(responseHeadersSanitizer)
+                              .responseContentSanitizer(responseContentSanitizer)
+                              .responseTrailersSanitizer(responseTrailersSanitizer)
+                              .<HttpRequest, HttpResponse>newDecorator().apply(delegate);
         service.serve(ctx, REQUEST);
         verify(logger).info(REQUEST_FORMAT,
                             "headers: " + sanitizedRequestHeaders + ", content: clean request" +
@@ -218,11 +220,12 @@ public class LoggingServiceTest {
             assertThat(cause).isSameAs(dirtyCause);
             return cleanCause;
         };
-        final LoggingService<HttpRequest, HttpResponse> service = new LoggingServiceBuilder()
-                .requestLogLevel(LogLevel.INFO)
-                .successfulResponseLogLevel(LogLevel.INFO)
-                .responseCauseSanitizer(responseCauseSanitizer)
-                .<HttpRequest, HttpResponse>newDecorator().apply(delegate);
+        final LoggingService<HttpRequest, HttpResponse> service =
+                LoggingService.builder()
+                              .requestLogLevel(LogLevel.INFO)
+                              .successfulResponseLogLevel(LogLevel.INFO)
+                              .responseCauseSanitizer(responseCauseSanitizer)
+                              .<HttpRequest, HttpResponse>newDecorator().apply(delegate);
         when(log.responseCause()).thenReturn(dirtyCause);
         service.serve(ctx, REQUEST);
         verify(logger).info(REQUEST_FORMAT, "headers: " + REQUEST_HEADERS +
@@ -241,11 +244,12 @@ public class LoggingServiceTest {
             assertThat(cause).isSameAs(dirtyCause);
             return null;
         };
-        final LoggingService<HttpRequest, HttpResponse> service = new LoggingServiceBuilder()
-                .requestLogLevel(LogLevel.INFO)
-                .successfulResponseLogLevel(LogLevel.INFO)
-                .responseCauseSanitizer(responseCauseSanitizer)
-                .<HttpRequest, HttpResponse>newDecorator().apply(delegate);
+        final LoggingService<HttpRequest, HttpResponse> service =
+                LoggingService.builder()
+                              .requestLogLevel(LogLevel.INFO)
+                              .successfulResponseLogLevel(LogLevel.INFO)
+                              .responseCauseSanitizer(responseCauseSanitizer)
+                              .<HttpRequest, HttpResponse>newDecorator().apply(delegate);
         when(log.responseCause()).thenReturn(dirtyCause);
         service.serve(ctx, REQUEST);
         verify(logger).info(REQUEST_FORMAT, "headers: " + REQUEST_HEADERS + ", content: " + REQUEST_CONTENT +
@@ -256,12 +260,13 @@ public class LoggingServiceTest {
 
     @Test
     public void sample() throws Exception {
-        final LoggingService<HttpRequest, HttpResponse> service = new LoggingServiceBuilder()
-                .requestLogLevel(LogLevel.INFO)
-                .successfulResponseLogLevel(LogLevel.INFO)
-                .samplingRate(0.0f)
-                .<HttpRequest, HttpResponse>newDecorator().apply(delegate);
+        final LoggingService<HttpRequest, HttpResponse> service =
+                LoggingService.builder()
+                              .requestLogLevel(LogLevel.INFO)
+                              .successfulResponseLogLevel(LogLevel.INFO)
+                              .samplingRate(0.0f)
+                              .<HttpRequest, HttpResponse>newDecorator().apply(delegate);
         service.serve(ctx, REQUEST);
-        verifyZeroInteractions(logger);
+        verifyNoInteractions(logger);
     }
 }

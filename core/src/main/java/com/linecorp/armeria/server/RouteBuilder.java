@@ -44,7 +44,7 @@ import com.linecorp.armeria.common.MediaType;
 /**
  * Builds a new {@link Route}.
  */
-public class RouteBuilder {
+public final class RouteBuilder {
 
     @Nullable
     private PathMapping pathMapping;
@@ -54,6 +54,8 @@ public class RouteBuilder {
     private Set<MediaType> consumes = ImmutableSet.of();
 
     private Set<MediaType> produces = ImmutableSet.of();
+
+    RouteBuilder() {}
 
     /**
      * Sets the {@link Route} to match the specified {@code pathPattern}. e.g.

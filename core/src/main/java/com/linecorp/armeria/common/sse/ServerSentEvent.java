@@ -46,35 +46,42 @@ public interface ServerSentEvent {
      * Creates a new {@link ServerSentEvent} with the specified {@code id}.
      */
     static ServerSentEvent ofId(String id) {
-        return new ServerSentEventBuilder().id(id).build();
+        return builder().id(id).build();
     }
 
     /**
      * Creates a new {@link ServerSentEvent} with the specified {@code event}.
      */
     static ServerSentEvent ofEvent(String event) {
-        return new ServerSentEventBuilder().event(event).build();
+        return builder().event(event).build();
     }
 
     /**
      * Creates a new {@link ServerSentEvent} with the specified {@code retry}.
      */
     static ServerSentEvent ofRetry(Duration retry) {
-        return new ServerSentEventBuilder().retry(retry).build();
+        return builder().retry(retry).build();
     }
 
     /**
      * Creates a new {@link ServerSentEvent} with the specified {@code comment}.
      */
     static ServerSentEvent ofComment(String comment) {
-        return new ServerSentEventBuilder().comment(comment).build();
+        return builder().comment(comment).build();
     }
 
     /**
      * Creates a new {@link ServerSentEvent} with the specified {@code data}.
      */
     static ServerSentEvent ofData(String data) {
-        return new ServerSentEventBuilder().data(data).build();
+        return builder().data(data).build();
+    }
+
+    /**
+     * Returns a newly created {@link ServerSentEventBuilder}.
+     */
+    static ServerSentEventBuilder builder() {
+        return new ServerSentEventBuilder();
     }
 
     /**

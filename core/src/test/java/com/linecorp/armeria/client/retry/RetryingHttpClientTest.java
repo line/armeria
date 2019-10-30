@@ -32,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -46,11 +47,10 @@ import org.reactivestreams.Subscription;
 
 import com.google.common.base.Stopwatch;
 
+import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.logging.LoggingClient;
@@ -80,8 +80,8 @@ import io.netty.channel.EventLoop;
 public class RetryingHttpClientTest {
 
     // use different eventLoop from server's so that clients don't hang when the eventLoop in server hangs
-    private static final ClientFactory clientFactory = new ClientFactoryBuilder()
-            .workerGroup(EventLoopGroups.newEventLoopGroup(2), true).build();
+    private static final ClientFactory clientFactory =
+            ClientFactory.builder().workerGroup(EventLoopGroups.newEventLoopGroup(2), true).build();
 
     private static final RetryStrategy retryAlways =
             (ctx, cause) -> CompletableFuture.completedFuture(Backoff.fixed(500));
@@ -278,12 +278,14 @@ public class RetryingHttpClientTest {
 
     @Test
     public void retryWhenContentMatched() {
-        final HttpClient client = new HttpClientBuilder(server.uri("/"))
-                .factory(clientFactory)
-                .decorator(RetryingHttpClient.builder(new RetryIfContentMatch("Need to retry"))
-                                             .contentPreviewLength(1024)
-                                             .newDecorator())
-                .build();
+        final Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient> retryingDecorator =
+                RetryingHttpClient.builder(new RetryIfContentMatch("Need to retry"))
+                                  .contentPreviewLength(1024)
+                                  .newDecorator();
+        final HttpClient client = HttpClient.builder(server.uri("/"))
+                                            .factory(clientFactory)
+                                            .decorator(retryingDecorator)
+                                            .build();
 
         final AggregatedHttpResponse res = client.get("/retry-content").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
@@ -412,17 +414,20 @@ public class RetryingHttpClientTest {
 
     @Test
     public void shouldGetExceptionWhenFactoryIsClosed() {
-        final ClientFactory factory = new ClientFactoryBuilder()
-                .workerGroup(EventLoopGroups.newEventLoopGroup(2), true).build();
+        final ClientFactory factory =
+                ClientFactory.builder().workerGroup(EventLoopGroups.newEventLoopGroup(2), true).build();
 
-        final HttpClient client = new HttpClientBuilder(server.uri("/"))
-                .factory(factory)
-                .responseTimeoutMillis(10000)
-                .decorator(RetryingHttpClient.builder(
-                        // Retry after 8000 which is slightly less than responseTimeoutMillis(10000).
-                        RetryStrategy.onServerErrorStatus(Backoff.fixed(8000))).newDecorator())
-                .decorator(LoggingClient.newDecorator())
-                .build();
+        // Retry after 8000 which is slightly less than responseTimeoutMillis(10000).
+        final Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient> retryingDecorator =
+                RetryingHttpClient.builder(RetryStrategy.onServerErrorStatus(Backoff.fixed(8000)))
+                                  .newDecorator();
+
+        final HttpClient client = HttpClient.builder(server.uri("/"))
+                                            .factory(factory)
+                                            .responseTimeoutMillis(10000)
+                                            .decorator(retryingDecorator)
+                                            .decorator(LoggingClient.newDecorator())
+                                            .build();
 
         // There's no way to notice that the RetryingClient has scheduled the next retry.
         // The next retry will be after 8 seconds so closing the factory after 3 seconds should work.
@@ -453,13 +458,13 @@ public class RetryingHttpClientTest {
     @Test
     public void doNotRetryWhenResponseIsAborted() throws Exception {
         final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
-        final HttpClient client = new HttpClientBuilder(server.uri("/"))
-                .decorator(RetryingHttpClient.newDecorator(retryAlways))
-                .decorator((delegate, ctx, req) -> {
-                    context.set(ctx);
-                    return delegate.execute(ctx, req);
-                })
-                .build();
+        final HttpClient client = HttpClient.builder(server.uri("/"))
+                                            .decorator(RetryingHttpClient.newDecorator(retryAlways))
+                                            .decorator((delegate, ctx, req) -> {
+                                                context.set(ctx);
+                                                return delegate.execute(ctx, req);
+                                            })
+                                            .build();
         final HttpResponse httpResponse = client.get("/response-abort");
         httpResponse.abort();
 
@@ -500,13 +505,13 @@ public class RetryingHttpClientTest {
     @Test
     public void doNotRetryWhenRequestIsAborted() throws Exception {
         final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
-        final HttpClient client = new HttpClientBuilder(server.uri("/"))
-                .decorator(RetryingHttpClient.newDecorator(retryAlways))
-                .decorator((delegate, ctx, req) -> {
-                    context.set(ctx);
-                    return delegate.execute(ctx, req);
-                })
-                .build();
+        final HttpClient client = HttpClient.builder(server.uri("/"))
+                                            .decorator(RetryingHttpClient.newDecorator(retryAlways))
+                                            .decorator((delegate, ctx, req) -> {
+                                                context.set(ctx);
+                                                return delegate.execute(ctx, req);
+                                            })
+                                            .build();
 
         final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.GET, "/request-abort");
         req.write(HttpData.ofUtf8("I'm going to abort this request"));
@@ -528,11 +533,12 @@ public class RetryingHttpClientTest {
             retryCounter.incrementAndGet();
             return CompletableFuture.completedFuture(Backoff.withoutDelay());
         };
-        final HttpClient client = new HttpClientBuilder(server.uri("/"))
-                .decorator((delegate, ctx, req) -> {
-                    throw new AnticipatedException();
-                })
-                .decorator(RetryingHttpClient.newDecorator(strategy, 5)).build();
+        final HttpClient client = HttpClient.builder(server.uri("/"))
+                                            .decorator((delegate, ctx, req) -> {
+                                                throw new AnticipatedException();
+                                            })
+                                            .decorator(RetryingHttpClient.newDecorator(strategy, 5))
+                                            .build();
 
         assertThatThrownBy(() -> client.get("/").aggregate().join())
                 .hasCauseExactlyInstanceOf(AnticipatedException.class);
@@ -543,12 +549,14 @@ public class RetryingHttpClientTest {
     public void useSameEventLoopWhenAggregate() throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<EventLoop> eventLoop = new AtomicReference<>();
-        final HttpClient client = new HttpClientBuilder(server.uri("/"))
-                .decorator((delegate, ctx, req) -> {
-                    eventLoop.set(ctx.eventLoop());
-                    return delegate.execute(ctx, req);
-                })
-                .decorator(RetryingHttpClient.newDecorator(RetryStrategy.onServerErrorStatus(), 2)).build();
+        final HttpClient client = HttpClient.builder(server.uri("/"))
+                                            .decorator((delegate, ctx, req) -> {
+                                                eventLoop.set(ctx.eventLoop());
+                                                return delegate.execute(ctx, req);
+                                            })
+                                            .decorator(RetryingHttpClient.newDecorator(
+                                                    RetryStrategy.onServerErrorStatus(), 2))
+                                            .build();
         client.get("/503-then-success").aggregate().whenComplete((unused, cause) -> {
             assertThat(eventLoop.get().inEventLoop()).isTrue();
             latch.countDown();
@@ -562,14 +570,18 @@ public class RetryingHttpClientTest {
 
     private HttpClient client(RetryStrategy strategy, long responseTimeoutMillis,
                               long responseTimeoutForEach, int maxTotalAttempts) {
-        return new HttpClientBuilder(server.uri("/"))
-                .factory(clientFactory).responseTimeoutMillis(responseTimeoutMillis)
-                .decorator(RetryingHttpClient.builder(strategy)
-                                             .responseTimeoutMillisForEachAttempt(responseTimeoutForEach)
-                                             .useRetryAfter(true)
-                                             .maxTotalAttempts(maxTotalAttempts)
-                                             .newDecorator())
-                .build();
+        final Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient> retryingDecorator =
+                RetryingHttpClient.builder(strategy)
+                                  .responseTimeoutMillisForEachAttempt(responseTimeoutForEach)
+                                  .useRetryAfter(true)
+                                  .maxTotalAttempts(maxTotalAttempts)
+                                  .newDecorator();
+
+        return HttpClient.builder(server.uri("/"))
+                         .factory(clientFactory)
+                         .responseTimeoutMillis(responseTimeoutMillis)
+                         .decorator(retryingDecorator)
+                         .build();
     }
 
     private static class RetryIfContentMatch implements RetryStrategyWithContent<HttpResponse> {

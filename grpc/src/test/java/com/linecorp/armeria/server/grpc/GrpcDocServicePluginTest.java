@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -53,10 +53,10 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceWithRoutes;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
-import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
+import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.EnumValueInfo;
-import com.linecorp.armeria.server.docs.FieldInfoBuilder;
+import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.ServiceInfo;
@@ -65,7 +65,7 @@ import com.linecorp.armeria.server.docs.StructInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.server.grpc.GrpcDocServicePlugin.ServiceEntry;
 
-public class GrpcDocServicePluginTest {
+class GrpcDocServicePluginTest {
 
     private static final ServiceDescriptor TEST_SERVICE_DESCRIPTOR =
             com.linecorp.armeria.grpc.testing.Test.getDescriptor()
@@ -74,7 +74,7 @@ public class GrpcDocServicePluginTest {
     private static final GrpcDocServicePlugin generator = new GrpcDocServicePlugin();
 
     @Test
-    public void servicesTest() throws Exception {
+    void servicesTest() throws Exception {
         final Map<String, ServiceInfo> services = services((plugin, service, method) -> true,
                                                            (plugin, service, method) -> false);
 
@@ -95,7 +95,7 @@ public class GrpcDocServicePluginTest {
     }
 
     @Test
-    public void include() {
+    void include() {
 
         // 1. Nothing specified: include all.
         // 2. Exclude specified: include all except the methods which the exclude filter returns true.
@@ -210,7 +210,7 @@ public class GrpcDocServicePluginTest {
     }
 
     @Test
-    public void newEnumInfo() throws Exception {
+    void newEnumInfo() throws Exception {
         final EnumInfo enumInfo = generator.newEnumInfo(CompressionType.getDescriptor());
         assertThat(enumInfo).isEqualTo(new EnumInfo(
                 "armeria.grpc.testing.CompressionType",
@@ -220,14 +220,14 @@ public class GrpcDocServicePluginTest {
     }
 
     @Test
-    public void newListInfo() throws Exception {
+    void newListInfo() throws Exception {
         final TypeSignature list = GrpcDocServicePlugin.newFieldTypeInfo(
                 ReconnectInfo.getDescriptor().findFieldByNumber(ReconnectInfo.BACKOFF_MS_FIELD_NUMBER));
         assertThat(list).isEqualTo(TypeSignature.ofContainer("repeated", GrpcDocServicePlugin.INT32));
     }
 
     @Test
-    public void newMapInfo() throws Exception {
+    void newMapInfo() throws Exception {
         final TypeSignature map = GrpcDocServicePlugin.newFieldTypeInfo(
                 StreamingOutputCallRequest.getDescriptor().findFieldByNumber(
                         StreamingOutputCallRequest.OPTIONS_FIELD_NUMBER));
@@ -235,18 +235,18 @@ public class GrpcDocServicePluginTest {
     }
 
     @Test
-    public void newMethodInfo() throws Exception {
+    void newMethodInfo() throws Exception {
         final MethodInfo methodInfo = GrpcDocServicePlugin.newMethodInfo(
                 TEST_SERVICE_DESCRIPTOR.findMethodByName("UnaryCall"),
                 new ServiceEntry(
                         TEST_SERVICE_DESCRIPTOR,
                         ImmutableList.of(
-                                new EndpointInfoBuilder("*", "/foo/")
-                                        .availableFormats(GrpcSerializationFormats.PROTO)
-                                        .build(),
-                                new EndpointInfoBuilder("*", "/debug/foo/")
-                                        .availableFormats(GrpcSerializationFormats.JSON)
-                                        .build())));
+                                EndpointInfo.builder("*", "/foo/")
+                                            .availableFormats(GrpcSerializationFormats.PROTO)
+                                            .build(),
+                                EndpointInfo.builder("*", "/debug/foo/")
+                                            .availableFormats(GrpcSerializationFormats.JSON)
+                                            .build())));
         assertThat(methodInfo.name()).isEqualTo("UnaryCall");
         assertThat(methodInfo.returnTypeSignature().name()).isEqualTo("armeria.grpc.testing.SimpleResponse");
         assertThat(methodInfo.returnTypeSignature().namedTypeDescriptor())
@@ -260,41 +260,41 @@ public class GrpcDocServicePluginTest {
         assertThat(methodInfo.exceptionTypeSignatures()).isEmpty();
         assertThat(methodInfo.docString()).isNull();
         assertThat(methodInfo.endpoints()).containsExactlyInAnyOrder(
-                new EndpointInfoBuilder("*", "/foo/UnaryCall")
-                        .availableFormats(GrpcSerializationFormats.PROTO)
-                        .build(),
-                new EndpointInfoBuilder("*", "/debug/foo/UnaryCall")
-                        .availableFormats(GrpcSerializationFormats.JSON)
-                        .build());
+                EndpointInfo.builder("*", "/foo/UnaryCall")
+                            .availableFormats(GrpcSerializationFormats.PROTO)
+                            .build(),
+                EndpointInfo.builder("*", "/debug/foo/UnaryCall")
+                            .availableFormats(GrpcSerializationFormats.JSON)
+                            .build());
     }
 
     @Test
-    public void newServiceInfo() throws Exception {
+    void newServiceInfo() throws Exception {
         final ServiceInfo service = generator.newServiceInfo(
                 new ServiceEntry(
                         TEST_SERVICE_DESCRIPTOR,
                         ImmutableList.of(
-                                new EndpointInfoBuilder("*", "/foo")
-                                        .fragment("a").availableFormats(GrpcSerializationFormats.PROTO)
-                                        .build(),
-                                new EndpointInfoBuilder("*", "/debug/foo")
-                                        .fragment("b").availableFormats(GrpcSerializationFormats.JSON)
-                                        .build())),
+                                EndpointInfo.builder("*", "/foo")
+                                            .fragment("a").availableFormats(GrpcSerializationFormats.PROTO)
+                                            .build(),
+                                EndpointInfo.builder("*", "/debug/foo")
+                                            .fragment("b").availableFormats(GrpcSerializationFormats.JSON)
+                                            .build())),
                 (pluginName, serviceName, methodName) -> true);
 
-        final Map<String, MethodInfo> functions = service
-                .methods()
-                .stream()
-                .collect(toImmutableMap(MethodInfo::name, Function.identity()));
+        final Map<String, MethodInfo> functions = service.methods()
+                                                         .stream()
+                                                         .collect(toImmutableMap(MethodInfo::name,
+                                                                                 Function.identity()));
         assertThat(functions).hasSize(8);
         final MethodInfo emptyCall = functions.get("EmptyCall");
         assertThat(emptyCall.name()).isEqualTo("EmptyCall");
         assertThat(emptyCall.parameters())
-                .containsExactly(new FieldInfoBuilder("request",
-                                                      TypeSignature.ofNamed("armeria.grpc.testing.Empty",
-                                                                            Empty.getDescriptor()))
-                                         .requirement(FieldRequirement.REQUIRED)
-                                         .build());
+                .containsExactly(FieldInfo.builder("request",
+                                                   TypeSignature.ofNamed("armeria.grpc.testing.Empty",
+                                                                         Empty.getDescriptor()))
+                                          .requirement(FieldRequirement.REQUIRED)
+                                          .build());
         assertThat(emptyCall.returnTypeSignature())
                 .isEqualTo(TypeSignature.ofNamed("armeria.grpc.testing.Empty", Empty.getDescriptor()));
 
@@ -310,7 +310,7 @@ public class GrpcDocServicePluginTest {
     }
 
     @Test
-    public void newStructInfo() throws Exception {
+    void newStructInfo() throws Exception {
         final StructInfo structInfo = generator.newStructInfo(TestMessage.getDescriptor());
         assertThat(structInfo.name()).isEqualTo("armeria.grpc.testing.TestMessage");
         assertThat(structInfo.fields()).hasSize(18);

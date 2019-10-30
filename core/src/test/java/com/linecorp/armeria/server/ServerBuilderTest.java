@@ -29,7 +29,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
@@ -64,9 +63,9 @@ class ServerBuilderTest {
 
     @BeforeAll
     static void init() {
-        clientFactory = new ClientFactoryBuilder()
-                .addressResolverGroupFactory(eventLoopGroup -> MockAddressResolverGroup.localhost())
-                .build();
+        clientFactory = ClientFactory.builder()
+                                     .addressResolverGroupFactory(group -> MockAddressResolverGroup.localhost())
+                                     .build();
     }
 
     @AfterAll

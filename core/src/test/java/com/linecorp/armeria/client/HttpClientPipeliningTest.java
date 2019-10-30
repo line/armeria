@@ -98,15 +98,15 @@ public class HttpClientPipeliningTest {
     public static void initClientFactory() {
         // Ensure only a single event loop is used so that there's only one connection pool.
         // Note: Each event loop has its own connection pool.
-        factoryWithPipelining = new ClientFactoryBuilder()
-                .workerGroup(eventLoopGroup.get(), false)
-                .useHttp1Pipelining(true)
-                .build();
+        factoryWithPipelining = ClientFactory.builder()
+                                             .workerGroup(eventLoopGroup.get(), false)
+                                             .useHttp1Pipelining(true)
+                                             .build();
 
-        factoryWithoutPipelining = new ClientFactoryBuilder()
-                .workerGroup(eventLoopGroup.get(), false)
-                .useHttp1Pipelining(false)
-                .build();
+        factoryWithoutPipelining = ClientFactory.builder()
+                                                .workerGroup(eventLoopGroup.get(), false)
+                                                .useHttp1Pipelining(false)
+                                                .build();
     }
 
     @AfterClass

@@ -53,7 +53,6 @@ import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.internal.grpc.GrpcTestUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
@@ -101,9 +100,9 @@ public class ArmeriaServerCallTest {
         completionFuture = new CompletableFuture<>();
         when(res.completionFuture()).thenReturn(completionFuture);
 
-        ctx = ServiceRequestContextBuilder.of(HttpRequest.of(HttpMethod.POST, "/"))
-                                          .eventLoop(eventLoop.get())
-                                          .build();
+        ctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/"))
+                                   .eventLoop(eventLoop.get())
+                                   .build();
 
         call = new ArmeriaServerCall<>(
                 HttpHeaders.of(),

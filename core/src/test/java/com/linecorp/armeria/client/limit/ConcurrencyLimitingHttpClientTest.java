@@ -32,7 +32,6 @@ import org.mockito.Mock;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.ClientRequestContextBuilder;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -218,9 +217,9 @@ class ConcurrencyLimitingHttpClientTest {
     }
 
     private static ClientRequestContext newContext() {
-        return ClientRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/"))
-                                          .eventLoop(eventLoop.get())
-                                          .build();
+        return ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                   .eventLoop(eventLoop.get())
+                                   .build();
     }
 
     /**

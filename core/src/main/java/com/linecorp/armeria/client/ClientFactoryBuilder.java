@@ -118,7 +118,10 @@ public final class ClientFactoryBuilder {
 
     /**
      * Creates a new instance.
+     *
+     * @deprecated Use {@link ClientFactory#builder()}.
      */
+    @Deprecated
     public ClientFactoryBuilder() {
         connectTimeoutMillis(Flags.defaultConnectTimeoutMillis());
     }

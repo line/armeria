@@ -44,9 +44,9 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
+import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.ClientDecorationBuilder;
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptionValue;
 import com.linecorp.armeria.client.ClientOptions;
@@ -216,19 +216,19 @@ class ThriftOverHttpClientTest {
                 ENABLE_CONNECTION_POOL_LOGGING ? new ConnectionPoolLoggingListener()
                                                : ConnectionPoolListener.noop();
 
-        clientFactoryWithUseHttp2Preface = new ClientFactoryBuilder()
-                .sslContextCustomizer(sslContextCustomizer)
-                .connectionPoolListener(connectionPoolListener)
-                .useHttp2Preface(true)
-                .build();
+        clientFactoryWithUseHttp2Preface = ClientFactory.builder()
+                                                        .sslContextCustomizer(sslContextCustomizer)
+                                                        .connectionPoolListener(connectionPoolListener)
+                                                        .useHttp2Preface(true)
+                                                        .build();
 
-        clientFactoryWithoutUseHttp2Preface = new ClientFactoryBuilder()
-                .sslContextCustomizer(sslContextCustomizer)
-                .connectionPoolListener(connectionPoolListener)
-                .useHttp2Preface(false)
-                .build();
+        clientFactoryWithoutUseHttp2Preface = ClientFactory.builder()
+                                                           .sslContextCustomizer(sslContextCustomizer)
+                                                           .connectionPoolListener(connectionPoolListener)
+                                                           .useHttp2Preface(false)
+                                                           .build();
 
-        final ClientDecorationBuilder decoBuilder = new ClientDecorationBuilder();
+        final ClientDecorationBuilder decoBuilder = ClientDecoration.builder();
         decoBuilder.addRpc((delegate, ctx, req) -> {
             if (recordMessageLogs) {
                 ctx.log().addListener(requestLogs::add, RequestLogAvailability.COMPLETE);

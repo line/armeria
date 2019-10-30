@@ -47,7 +47,6 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 
 import brave.Tracing;
 import brave.http.HttpTracing;
@@ -169,8 +168,7 @@ class BraveServiceTest {
         final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/trustin",
                                                                  HttpHeaderNames.SCHEME, "http",
                                                                  HttpHeaderNames.AUTHORITY, "foo.com"));
-        final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(req)
-                                                                      .build();
+        final ServiceRequestContext ctx = ServiceRequestContext.builder(req).build();
         final RpcRequest rpcReq = RpcRequest.of(HelloService.Iface.class, "hello", "trustin");
         final HttpResponse res = HttpResponse.of(HttpStatus.OK);
         final RpcResponse rpcRes = RpcResponse.of("Hello, trustin!");

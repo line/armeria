@@ -43,7 +43,6 @@ import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.ClientRequestContextBuilder;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.DefaultRpcRequest;
 import com.linecorp.armeria.common.DefaultRpcResponse;
@@ -63,7 +62,6 @@ import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -403,12 +401,12 @@ public class RequestContextExportingAppenderTest {
                                                                  HttpHeaderNames.USER_AGENT, "some-client"));
 
         final ServiceRequestContext ctx =
-                ServiceRequestContextBuilder.of(req)
-                                            .sslSession(newSslSession())
-                                            .remoteAddress(remoteAddress)
-                                            .localAddress(localAddress)
-                                            .clientAddress(InetAddress.getByName("9.10.11.12"))
-                                            .build();
+                ServiceRequestContext.builder(req)
+                                     .sslSession(newSslSession())
+                                     .remoteAddress(remoteAddress)
+                                     .localAddress(localAddress)
+                                     .clientAddress(InetAddress.getByName("9.10.11.12"))
+                                     .build();
 
         ctx.attr(MY_ATTR).set(new CustomValue("some-attr"));
         return ctx;
@@ -520,12 +518,12 @@ public class RequestContextExportingAppenderTest {
                                                                  HttpHeaderNames.USER_AGENT, "some-client"));
 
         final ClientRequestContext ctx =
-                ClientRequestContextBuilder.of(req)
-                                           .remoteAddress(remoteAddress)
-                                           .localAddress(localAddress)
-                                           .endpoint(Endpoint.of("server.com", 8080))
-                                           .sslSession(newSslSession())
-                                           .build();
+                ClientRequestContext.builder(req)
+                                    .remoteAddress(remoteAddress)
+                                    .localAddress(localAddress)
+                                    .endpoint(Endpoint.of("server.com", 8080))
+                                    .sslSession(newSslSession())
+                                    .build();
 
         ctx.attr(MY_ATTR).set(new CustomValue("some-attr"));
         return ctx;

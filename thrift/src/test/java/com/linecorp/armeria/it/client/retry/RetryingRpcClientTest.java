@@ -44,7 +44,6 @@ import org.junit.Test;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.retry.Backoff;
@@ -185,8 +184,8 @@ public class RetryingRpcClientTest {
 
     @Test
     public void shouldGetExceptionWhenFactoryIsClosed() throws Exception {
-        final ClientFactory factory = new ClientFactoryBuilder()
-                .workerGroup(EventLoopGroups.newEventLoopGroup(2), true).build();
+        final ClientFactory factory =
+                ClientFactory.builder().workerGroup(EventLoopGroups.newEventLoopGroup(2), true).build();
 
         final RetryStrategyWithContent<RpcResponse> strategy =
                 (ctx, response) -> {

@@ -25,11 +25,10 @@ import javax.annotation.Nullable;
 import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.client.ClientOptionsBuilder;
+import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -61,11 +60,11 @@ final class HttpHealthChecker implements AsyncCloseable {
     HttpHealthChecker(HealthCheckerContext ctx, String path, boolean useGet) {
         final Endpoint endpoint = ctx.endpoint();
         this.ctx = ctx;
-        httpClient = new HttpClientBuilder(ctx.protocol(), endpoint)
-                .factory(ctx.clientFactory())
-                .options(ctx.clientConfigurator().apply(new ClientOptionsBuilder()).build())
-                .decorator(ResponseTimeoutUpdater::new)
-                .build();
+        httpClient = HttpClient.builder(ctx.protocol(), endpoint)
+                               .factory(ctx.clientFactory())
+                               .options(ctx.clientConfigurator().apply(ClientOptions.builder()).build())
+                               .decorator(ResponseTimeoutUpdater::new)
+                               .build();
         authority = endpoint.authority();
         this.path = path;
         this.useGet = useGet;

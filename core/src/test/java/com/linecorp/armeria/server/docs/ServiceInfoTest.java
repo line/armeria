@@ -35,7 +35,7 @@ class ServiceInfoTest {
 
     private static MethodInfo createMethodInfo(String methodName, HttpMethod method,
                                                String endpointPathMapping) {
-        final EndpointInfo endpoint = new EndpointInfoBuilder("*", endpointPathMapping)
+        final EndpointInfo endpoint = EndpointInfo.builder("*", endpointPathMapping)
                 .availableMimeTypes(MediaType.JSON_UTF_8).build();
         return new MethodInfo(methodName, TypeSignature.ofBase("T"), ImmutableList.of(), ImmutableList.of(),
                               ImmutableList.of(endpoint), method, null);

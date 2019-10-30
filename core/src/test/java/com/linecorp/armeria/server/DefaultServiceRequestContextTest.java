@@ -33,7 +33,7 @@ class DefaultServiceRequestContextTest {
     @Test
     void requestTimedOut() {
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/hello");
-        final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(request).build();
+        final ServiceRequestContext ctx = ServiceRequestContext.builder(request).build();
         assertThat(ctx.isTimedOut()).isFalse();
 
         assert ctx instanceof DefaultServiceRequestContext;
@@ -46,7 +46,7 @@ class DefaultServiceRequestContextTest {
     @Test
     void deriveContext() {
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/hello");
-        final ServiceRequestContext originalCtx = ServiceRequestContextBuilder.of(request).build();
+        final ServiceRequestContext originalCtx = ServiceRequestContext.builder(request).build();
 
         setAdditionalHeaders(originalCtx);
         setAdditionalTrailers(originalCtx);

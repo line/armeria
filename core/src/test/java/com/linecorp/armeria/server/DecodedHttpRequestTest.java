@@ -108,9 +108,9 @@ public class DecodedHttpRequestTest {
                                                          HttpHeaderNames.CONTENT_TYPE,
                                                          MediaType.PLAIN_TEXT_UTF_8);
         final ServiceRequestContext sctx =
-                ServiceRequestContextBuilder.of(HttpRequest.of(headers))
-                                            .serverConfigurator(sb -> sb.contentPreview(100))
-                                            .build();
+                ServiceRequestContext.builder(HttpRequest.of(headers))
+                                     .serverConfigurator(sb -> sb.contentPreview(100))
+                                     .build();
         final DecodedHttpRequest req = decodedHttpRequest(headers, sctx);
         req.completionFuture().handle((ret, cause) -> {
             sctx.logBuilder().endRequest();

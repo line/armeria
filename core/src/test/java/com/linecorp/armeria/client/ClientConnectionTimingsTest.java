@@ -19,19 +19,19 @@ package com.linecorp.armeria.client;
 import static com.linecorp.armeria.client.ClientConnectionTimings.TO_STRING_BUILDER_CAPACITY;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class ClientConnectionTimingsTest {
+class ClientConnectionTimingsTest {
 
     @Test
-    public void toStringBuilderCapacity() {
-        final ClientConnectionTimings timings = new ClientConnectionTimingsBuilder()
-                .dnsResolutionEnd()
-                .pendingAcquisitionStart()
-                .pendingAcquisitionEnd()
-                .socketConnectStart()
-                .socketConnectEnd()
-                .build();
+    void toStringBuilderCapacity() {
+        final ClientConnectionTimings timings = ClientConnectionTimings.builder()
+                                                                       .dnsResolutionEnd()
+                                                                       .pendingAcquisitionStart()
+                                                                       .pendingAcquisitionEnd()
+                                                                       .socketConnectStart()
+                                                                       .socketConnectEnd()
+                                                                       .build();
 
         assertThat(timings.toString().length()).isLessThanOrEqualTo(TO_STRING_BUILDER_CAPACITY);
     }

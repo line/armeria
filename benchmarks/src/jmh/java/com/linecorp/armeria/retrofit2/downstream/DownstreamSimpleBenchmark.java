@@ -20,7 +20,6 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.retrofit2.ArmeriaRetrofitBuilder;
 import com.linecorp.armeria.retrofit2.shared.SimpleBenchmarkBase;
 import com.linecorp.armeria.retrofit2.shared.SimpleBenchmarkClient;
@@ -34,9 +33,10 @@ public class DownstreamSimpleBenchmark extends SimpleBenchmarkBase {
     @Override
     protected SimpleBenchmarkClient newClient() {
         final ClientFactory factory =
-                new ClientFactoryBuilder()
-                        .sslContextCustomizer(ssl -> ssl.trustManager(InsecureTrustManagerFactory.INSTANCE))
-                        .build();
+                ClientFactory.builder()
+                             .sslContextCustomizer(
+                                     ssl -> ssl.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                             .build();
         return new ArmeriaRetrofitBuilder(factory)
                 .baseUrl(baseUrl())
                 .addConverterFactory(JacksonConverterFactory.create())

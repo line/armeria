@@ -61,7 +61,10 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
 
     /**
      * Returns a new {@link ServiceRequestContextBuilder} created from the specified {@link HttpRequest}.
+     *
+     * @deprecated Use {@link ServiceRequestContext#builder(HttpRequest)}.
      */
+    @Deprecated
     public static ServiceRequestContextBuilder of(HttpRequest request) {
         return new ServiceRequestContextBuilder(request);
     }
@@ -76,7 +79,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
     @Nullable
     private InetAddress clientAddress;
 
-    private ServiceRequestContextBuilder(HttpRequest request) {
+    ServiceRequestContextBuilder(HttpRequest request) {
         super(true, request);
     }
 

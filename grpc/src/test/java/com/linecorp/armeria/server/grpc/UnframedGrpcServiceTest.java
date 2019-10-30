@@ -35,7 +35,6 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 
 import io.grpc.BindableService;
@@ -67,7 +66,7 @@ public class UnframedGrpcServiceTest {
         request = HttpRequest.of(HttpMethod.POST,
                                  "/armeria.grpc.testing.TestService/EmptyCall",
                                  MediaType.JSON_UTF_8, "{}");
-        ctx = ServiceRequestContextBuilder.of(request).eventLoop(eventLoop.get()).build();
+        ctx = ServiceRequestContext.builder(request).eventLoop(eventLoop.get()).build();
     }
 
     @Test

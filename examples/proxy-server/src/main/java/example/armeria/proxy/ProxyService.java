@@ -5,11 +5,9 @@ import java.time.Duration;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
-import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.client.endpoint.dns.DnsServiceEndpointGroup;
 import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroup;
 import com.linecorp.armeria.client.logging.LoggingClient;
@@ -37,7 +35,7 @@ public final class ProxyService extends AbstractHttpService {
      * <a href="https://line.github.io/armeria/advanced-zookeeper.html#advanced-zookeeper">Service discovery
      * with ZooKeeper</a> and <a href="https://line.github.io/centraldogma/">centraldogma</a>.
      */
-    private static final EndpointGroup animationGroup = new StaticEndpointGroup(
+    private static final EndpointGroup animationGroup = EndpointGroup.of(
             Endpoint.of("127.0.0.1", 8081),
             Endpoint.of("127.0.0.1", 8082),
             Endpoint.of("127.0.0.1", 8083));
@@ -69,11 +67,11 @@ public final class ProxyService extends AbstractHttpService {
                                        // implement your own strategy to balance requests.
                                        EndpointSelectionStrategy.ROUND_ROBIN);
 
-        return new HttpClientBuilder("http://group:animation_apis")
-                // Disable timeout to serve infinite streaming response.
-                .responseTimeoutMillis(0)
-                .decorator(LoggingClient.newDecorator())
-                .build();
+        return HttpClient.builder("http://group:animation_apis")
+                         // Disable timeout to serve infinite streaming response.
+                         .responseTimeoutMillis(0)
+                         .decorator(LoggingClient.newDecorator())
+                         .build();
     }
 
     @Override

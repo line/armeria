@@ -41,7 +41,7 @@ class DefaultClientRequestContextTest {
         final DefaultClientRequestContext originalCtx = new DefaultClientRequestContext(
                 mock(EventLoop.class), NoopMeterRegistry.get(), SessionProtocol.H2C,
                 UUID.randomUUID(), HttpMethod.POST, "/foo", null, null,
-                ClientOptions.DEFAULT,
+                ClientOptions.of(),
                 HttpRequest.of(RequestHeaders.of(
                         HttpMethod.POST, "/foo",
                         HttpHeaderNames.SCHEME, "http",

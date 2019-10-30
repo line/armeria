@@ -34,7 +34,6 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.ClientRequestContextBuilder;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -225,7 +224,7 @@ public class DefaultRequestLogTest {
                                   HttpHeaderNames.CONTENT_LENGTH, VERY_LONG_STRING.length());
         final HttpRequest req = HttpRequest.of(
                 AggregatedHttpRequest.of(reqHeaders, HttpData.ofUtf8(VERY_LONG_STRING)));
-        final ClientRequestContext ctx = ClientRequestContextBuilder.of(req).build();
+        final ClientRequestContext ctx = ClientRequestContext.builder(req).build();
 
         final RequestLogBuilder logBuilder = ctx.logBuilder();
         logBuilder.requestLength(1000000000);
@@ -252,7 +251,7 @@ public class DefaultRequestLogTest {
                                   HttpHeaderNames.CONTENT_LENGTH, VERY_LONG_STRING.length());
         final HttpRequest req = HttpRequest.of(
                 AggregatedHttpRequest.of(reqHeaders, HttpData.ofUtf8(VERY_LONG_STRING)));
-        final ClientRequestContext ctx = ClientRequestContextBuilder.of(req).build();
+        final ClientRequestContext ctx = ClientRequestContext.builder(req).build();
         final RequestLogBuilder logBuilder = ctx.logBuilder();
         logBuilder.endRequest();
 
@@ -283,7 +282,7 @@ public class DefaultRequestLogTest {
                                   HttpHeaderNames.CONTENT_LENGTH, VERY_LONG_STRING.length());
         final HttpRequest req = HttpRequest.of(
                 AggregatedHttpRequest.of(reqHeaders, HttpData.ofUtf8(VERY_LONG_STRING)));
-        final ClientRequestContext cctx = ClientRequestContextBuilder.of(req).build();
+        final ClientRequestContext cctx = ClientRequestContext.builder(req).build();
         assertThat(cctx.log().uuid()).isNotNull();
         assertThat(cctx.log().uuid()).isEqualTo(cctx.uuid());
 

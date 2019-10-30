@@ -32,8 +32,18 @@ public final class ClientDecoration {
 
     /**
      * A {@link ClientDecoration} that decorates no {@link Client}.
+     *
+     * @deprecated Use {@link #of()}.
      */
+    @Deprecated
     public static final ClientDecoration NONE = new ClientDecoration(Collections.emptyList());
+
+    /**
+     * Returns an empty {@link ClientDecoration} which does not decorate a {@link Client}.
+     */
+    public static ClientDecoration of() {
+        return NONE;
+    }
 
     /**
      * Creates a new instance from a single decorator {@link Function}.
@@ -46,7 +56,14 @@ public final class ClientDecoration {
      */
     public static <T extends Client<I, O>, R extends Client<I, O>, I extends Request, O extends Response>
     ClientDecoration of(Class<I> requestType, Class<O> responseType, Function<T, R> decorator) {
-        return new ClientDecorationBuilder().add(requestType, responseType, decorator).build();
+        return builder().add(requestType, responseType, decorator).build();
+    }
+
+    /**
+     * Returns a newly created {@link ClientDecorationBuilder}.
+     */
+    public static ClientDecorationBuilder builder() {
+        return new ClientDecorationBuilder();
     }
 
     private final List<Entry<?, ?>> entries;

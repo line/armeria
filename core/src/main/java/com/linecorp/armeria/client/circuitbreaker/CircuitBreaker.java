@@ -44,14 +44,14 @@ public interface CircuitBreaker {
      * @param name the name of the circuit breaker
      */
     static CircuitBreaker of(String name) {
-        return new CircuitBreakerBuilder(name).build();
+        return builder(name).build();
     }
 
     /**
      * Creates a new {@link CircuitBreaker} that has a default name and the default configurations.
      */
     static CircuitBreaker ofDefaultName() {
-        return new CircuitBreakerBuilder().build();
+        return builder().build();
     }
 
     /**

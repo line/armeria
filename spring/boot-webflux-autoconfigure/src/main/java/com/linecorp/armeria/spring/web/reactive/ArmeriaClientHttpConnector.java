@@ -105,7 +105,7 @@ public final class ArmeriaClientHttpConnector implements ClientHttpConnector {
         checkArgument(!Strings.isNullOrEmpty(path), "path is undefined: " + uri);
 
         final URI baseUri = URI.create(Strings.isNullOrEmpty(scheme) ? authority : scheme + "://" + authority);
-        final HttpClientBuilder builder = new HttpClientBuilder(baseUri);
+        final HttpClientBuilder builder = HttpClient.builder(baseUri);
         configurators.forEach(c -> c.configure(builder));
 
         final String pathAndQuery = Strings.isNullOrEmpty(query) ? path : path + '?' + query;

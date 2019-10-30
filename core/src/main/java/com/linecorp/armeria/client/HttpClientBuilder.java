@@ -55,11 +55,14 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
     private final Scheme scheme;
     @Nullable
     private String path;
-    private ClientFactory factory = ClientFactory.DEFAULT;
+    private ClientFactory factory = ClientFactory.ofDefault();
 
     /**
      * Creates a new instance.
+     *
+     * @deprecated Use {@link HttpClient#builder()}.
      */
+    @Deprecated
     public HttpClientBuilder() {
         uri = UNDEFINED_URI;
         scheme = null;
@@ -71,7 +74,10 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
      *
      * @throws IllegalArgumentException if the scheme of the uri is not one of the fields
      *                                  in {@link SessionProtocol} or the uri violates RFC 2396
+     *
+     * @deprecated Use {@link HttpClient#builder(String)}.
      */
+    @Deprecated
     public HttpClientBuilder(String uri) {
         this(URI.create(requireNonNull(uri, "uri")));
     }
@@ -81,7 +87,10 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
      *
      * @throws IllegalArgumentException if the scheme of the uri is not one of the fields
      *                                  in {@link SessionProtocol}
+     *
+     * @deprecated Use {@link HttpClient#builder(URI)}.
      */
+    @Deprecated
     public HttpClientBuilder(URI uri) {
         if (isUndefinedUri(uri)) {
             this.uri = uri;
@@ -98,7 +107,10 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
      *
      * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields
      *                                  in {@link SessionProtocol}
+     *
+     * @deprecated Use {@link HttpClient#builder(SessionProtocol, Endpoint)}.
      */
+    @Deprecated
     public HttpClientBuilder(SessionProtocol sessionProtocol, Endpoint endpoint) {
         validateScheme(requireNonNull(sessionProtocol, "sessionProtocol").uriText());
 
@@ -118,7 +130,7 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
     }
 
     /**
-     * Sets the {@link ClientFactory} of the client. The default is {@link ClientFactory#DEFAULT}.
+     * Sets the {@link ClientFactory} of the client. The default is {@link ClientFactory#ofDefault()}.
      */
     public HttpClientBuilder factory(ClientFactory factory) {
         this.factory = requireNonNull(factory, "factory");
@@ -137,7 +149,7 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
      * Returns a newly-created HTTP client based on the properties of this builder.
      *
      * @throws IllegalArgumentException if the scheme of the {@code uri} specified in
-     *                                  {@link #HttpClientBuilder(String)} or {@link #HttpClientBuilder(URI)}
+     *                                  {@link HttpClient#builder(String)} or {@link HttpClient#builder(URI)}
      *                                  is not an HTTP scheme
      */
     public HttpClient build() {

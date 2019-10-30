@@ -20,7 +20,6 @@ import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
 
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.client.retry.RetryStrategy;
 import com.linecorp.armeria.client.retry.RetryingHttpClient;
 
@@ -29,8 +28,8 @@ public class WithoutDuplicator extends RetryingHttpClientBase {
 
     @Override
     protected HttpClient newClient() {
-        return new HttpClientBuilder(baseUrl())
-                .decorator(RetryingHttpClient.newDecorator(RetryStrategy.never()))
-                .build();
+        return HttpClient.builder(baseUrl())
+                         .decorator(RetryingHttpClient.newDecorator(RetryStrategy.never()))
+                         .build();
     }
 }

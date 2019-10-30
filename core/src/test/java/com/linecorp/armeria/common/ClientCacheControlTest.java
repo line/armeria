@@ -34,7 +34,7 @@ public class ClientCacheControlTest {
 
     @Test
     public void testIsEmpty() {
-        final ClientCacheControl cc = new ClientCacheControlBuilder().build();
+        final ClientCacheControl cc = ClientCacheControl.builder().build();
         assertThat(cc.isEmpty()).isTrue();
         assertThat(cc.noCache()).isFalse();
         assertThat(cc.noStore()).isFalse();
@@ -52,7 +52,7 @@ public class ClientCacheControlTest {
 
     @Test
     public void testOnlyIfCached() {
-        final ClientCacheControl cc = new ClientCacheControlBuilder().onlyIfCached().build();
+        final ClientCacheControl cc = ClientCacheControl.builder().onlyIfCached().build();
         assertThat(cc.onlyIfCached()).isTrue();
         assertThat(cc.hasMaxStale()).isFalse();
         assertThat(cc.maxStaleSeconds()).isEqualTo(-1);
@@ -65,7 +65,7 @@ public class ClientCacheControlTest {
 
     @Test
     public void testMaxStale() {
-        final ClientCacheControl cc = new ClientCacheControlBuilder().maxStale().build();
+        final ClientCacheControl cc = ClientCacheControl.builder().maxStale().build();
         assertThat(cc.onlyIfCached()).isFalse();
         assertThat(cc.hasMaxStale()).isTrue();
         assertThat(cc.maxStaleSeconds()).isEqualTo(-1);
@@ -78,7 +78,7 @@ public class ClientCacheControlTest {
 
     @Test
     public void testMaxStaleWithValue() {
-        final ClientCacheControl cc = new ClientCacheControlBuilder().maxStale(Duration.ofHours(1)).build();
+        final ClientCacheControl cc = ClientCacheControl.builder().maxStale(Duration.ofHours(1)).build();
         assertThat(cc.onlyIfCached()).isFalse();
         assertThat(cc.hasMaxStale()).isTrue();
         assertThat(cc.maxStaleSeconds()).isEqualTo(3600);
@@ -88,12 +88,12 @@ public class ClientCacheControlTest {
         assertThat(cc.asHeaderValue()).isEqualTo("max-stale=3600");
         assertThat(cc.toString()).isEqualTo("ClientCacheControl(max-stale=3600)");
 
-        assertThat(new ClientCacheControlBuilder().maxStaleSeconds(3600).build()).isEqualTo(cc);
+        assertThat(ClientCacheControl.builder().maxStaleSeconds(3600).build()).isEqualTo(cc);
     }
 
     @Test
     public void testMinFresh() {
-        final ClientCacheControl cc = new ClientCacheControlBuilder().minFresh(Duration.ofHours(1)).build();
+        final ClientCacheControl cc = ClientCacheControl.builder().minFresh(Duration.ofHours(1)).build();
         assertThat(cc.onlyIfCached()).isFalse();
         assertThat(cc.hasMaxStale()).isFalse();
         assertThat(cc.maxStaleSeconds()).isEqualTo(-1);
@@ -103,13 +103,14 @@ public class ClientCacheControlTest {
         assertThat(cc.asHeaderValue()).isEqualTo("min-fresh=3600");
         assertThat(cc.toString()).isEqualTo("ClientCacheControl(min-fresh=3600)");
 
-        assertThat(new ClientCacheControlBuilder().minFreshSeconds(3600).build()).isEqualTo(cc);
+        assertThat(ClientCacheControl.builder().minFreshSeconds(3600).build()).isEqualTo(cc);
     }
 
     @Test
     public void testStaleWhileRevalidate() {
-        final ClientCacheControl cc = new ClientCacheControlBuilder().staleWhileRevalidate(Duration.ofHours(1))
-                                                                     .build();
+        final ClientCacheControl cc = ClientCacheControl.builder()
+                                                        .staleWhileRevalidate(Duration.ofHours(1))
+                                                        .build();
         assertThat(cc.onlyIfCached()).isFalse();
         assertThat(cc.hasMaxStale()).isFalse();
         assertThat(cc.maxStaleSeconds()).isEqualTo(-1);
@@ -119,12 +120,14 @@ public class ClientCacheControlTest {
         assertThat(cc.asHeaderValue()).isEqualTo("stale-while-revalidate=3600");
         assertThat(cc.toString()).isEqualTo("ClientCacheControl(stale-while-revalidate=3600)");
 
-        assertThat(new ClientCacheControlBuilder().staleWhileRevalidateSeconds(3600).build()).isEqualTo(cc);
+        assertThat(ClientCacheControl.builder().staleWhileRevalidateSeconds(3600).build()).isEqualTo(cc);
     }
 
     @Test
     public void testStaleIfError() {
-        final ClientCacheControl cc = new ClientCacheControlBuilder().staleIfError(Duration.ofHours(1)).build();
+        final ClientCacheControl cc = ClientCacheControl.builder()
+                                                        .staleIfError(Duration.ofHours(1))
+                                                        .build();
         assertThat(cc.onlyIfCached()).isFalse();
         assertThat(cc.hasMaxStale()).isFalse();
         assertThat(cc.maxStaleSeconds()).isEqualTo(-1);
@@ -134,17 +137,18 @@ public class ClientCacheControlTest {
         assertThat(cc.asHeaderValue()).isEqualTo("stale-if-error=3600");
         assertThat(cc.toString()).isEqualTo("ClientCacheControl(stale-if-error=3600)");
 
-        assertThat(new ClientCacheControlBuilder().staleIfErrorSeconds(3600).build()).isEqualTo(cc);
+        assertThat(ClientCacheControl.builder().staleIfErrorSeconds(3600).build()).isEqualTo(cc);
     }
 
     @Test
     public void testToBuilder() {
-        final ClientCacheControl cc = new ClientCacheControlBuilder().onlyIfCached()
-                                                                     .maxStaleSeconds(60)
-                                                                     .minFreshSeconds(60)
-                                                                     .staleWhileRevalidateSeconds(60)
-                                                                     .staleIfErrorSeconds(60)
-                                                                     .build();
+        final ClientCacheControl cc = ClientCacheControl.builder()
+                                                        .onlyIfCached()
+                                                        .maxStaleSeconds(60)
+                                                        .minFreshSeconds(60)
+                                                        .staleWhileRevalidateSeconds(60)
+                                                        .staleIfErrorSeconds(60)
+                                                        .build();
         assertThat(cc.asHeaderValue()).isEqualTo(
                 "only-if-cached, max-stale=60, min-fresh=60, stale-while-revalidate=60, stale-if-error=60");
         assertThat(cc.toBuilder().build()).isEqualTo(cc);
@@ -170,20 +174,20 @@ public class ClientCacheControlTest {
         assertThat(ClientCacheControl.parse("no-cache, no-store, no-transform, only-if-cached, " +
                                             "max-age=1, max-stale=2, min-fresh=3, " +
                                             "stale-while-revalidate=4, stale-if-error=5"))
-                .isEqualTo(new ClientCacheControlBuilder()
-                                   .noCache()
-                                   .noStore()
-                                   .noTransform()
-                                   .maxAgeSeconds(1)
-                                   .onlyIfCached()
-                                   .maxStaleSeconds(2)
-                                   .minFreshSeconds(3)
-                                   .staleWhileRevalidateSeconds(4)
-                                   .staleIfErrorSeconds(5)
-                                   .build());
+                .isEqualTo(ClientCacheControl.builder()
+                                             .noCache()
+                                             .noStore()
+                                             .noTransform()
+                                             .maxAgeSeconds(1)
+                                             .onlyIfCached()
+                                             .maxStaleSeconds(2)
+                                             .minFreshSeconds(3)
+                                             .staleWhileRevalidateSeconds(4)
+                                             .staleIfErrorSeconds(5)
+                                             .build());
 
         // Make sure 'max-stale' without a value is parsed.
         assertThat(ClientCacheControl.parse("max-stale"))
-                .isEqualTo(new ClientCacheControlBuilder().maxStale().build());
+                .isEqualTo(ClientCacheControl.builder().maxStale().build());
     }
 }

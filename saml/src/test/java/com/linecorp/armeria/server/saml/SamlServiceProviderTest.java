@@ -298,7 +298,7 @@ public class SamlServiceProviderTest {
         }
     }
 
-    final HttpClient client = HttpClient.of(rule.uri("/"), ClientOptions.DEFAULT);
+    final HttpClient client = HttpClient.of(rule.uri("/"), ClientOptions.of());
 
     @Test
     public void shouldRespondAuthnRequest_HttpRedirect() throws Exception {

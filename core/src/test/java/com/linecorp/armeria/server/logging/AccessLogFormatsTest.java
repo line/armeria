@@ -45,7 +45,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.function.Function;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.DefaultRpcRequest;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -59,7 +59,6 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 import com.linecorp.armeria.server.logging.AccessLogComponent.AttributeComponent;
 import com.linecorp.armeria.server.logging.AccessLogComponent.CommonComponent;
 import com.linecorp.armeria.server.logging.AccessLogComponent.HttpHeaderComponent;
@@ -67,7 +66,7 @@ import com.linecorp.armeria.server.logging.AccessLogComponent.HttpHeaderComponen
 import io.netty.util.AttributeKey;
 import io.netty.util.NetUtil;
 
-public class AccessLogFormatsTest {
+class AccessLogFormatsTest {
 
     private static final Duration duration = Duration.ofMillis(1000000000L);
 
@@ -78,7 +77,7 @@ public class AccessLogFormatsTest {
     private static final long requestEndTimeNanos = requestStartTimeNanos + duration.toNanos();
 
     @Test
-    public void parseSuccess() {
+    void parseSuccess() {
         List<AccessLogComponent> format;
         AccessLogComponent entry;
         HttpHeaderComponent headerEntry;
@@ -159,7 +158,7 @@ public class AccessLogFormatsTest {
     }
 
     @Test
-    public void parseFailure() {
+    void parseFailure() {
         assertThatThrownBy(() -> AccessLogFormats.parseCustom("%x"))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> AccessLogFormats.parseCustom("%!{abc}i"))
@@ -179,16 +178,16 @@ public class AccessLogFormatsTest {
     }
 
     @Test
-    public void formatMessage() {
+    void formatMessage() {
         final HttpRequest req = HttpRequest.of(
                 RequestHeaders.of(HttpMethod.GET, "/armeria/log",
                                   HttpHeaderNames.USER_AGENT, "armeria/x.y.z",
                                   HttpHeaderNames.REFERER, "http://log.example.com",
                                   HttpHeaderNames.COOKIE, "a=1;b=2"));
         final ServiceRequestContext ctx =
-                ServiceRequestContextBuilder.of(req)
-                                            .requestStartTime(requestStartTimeNanos, requestStartTimeMicros)
-                                            .build();
+                ServiceRequestContext.builder(req)
+                                     .requestStartTime(requestStartTimeNanos, requestStartTimeMicros)
+                                     .build();
         ctx.attr(Attr.ATTR_KEY).set(new Attr("line"));
 
         final RequestLog log = ctx.log();
@@ -254,13 +253,13 @@ public class AccessLogFormatsTest {
     }
 
     @Test
-    public void logClientAddress() throws Exception {
+    void logClientAddress() throws Exception {
         final InetSocketAddress remote = new InetSocketAddress(InetAddress.getByName("10.1.0.1"), 5000);
         final ServiceRequestContext ctx =
-                ServiceRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/"))
-                                            .remoteAddress(remote)
-                                            .clientAddress(InetAddress.getByName("10.0.0.1"))
-                                            .build();
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .remoteAddress(remote)
+                                     .clientAddress(InetAddress.getByName("10.0.0.1"))
+                                     .build();
 
         List<AccessLogComponent> format;
 
@@ -274,10 +273,10 @@ public class AccessLogFormatsTest {
     }
 
     @Test
-    public void requestLogAvailabilityException() {
+    void requestLogAvailabilityException() {
         final String expectedLogMessage = "\"GET /armeria/log#rpcMethod h2\" 200 1024";
 
-        final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(
+        final ServiceRequestContext ctx = ServiceRequestContext.builder(
                 HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/armeria/log",
                                                  HttpHeaderNames.USER_AGENT, "armeria/x.y.z",
                                                  HttpHeaderNames.REFERER, "http://log.example.com",
@@ -304,11 +303,11 @@ public class AccessLogFormatsTest {
     }
 
     @Test
-    public void requestLogComponent() {
+    void requestLogComponent() {
         final ServiceRequestContext ctx =
-                ServiceRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/armeria/log"))
-                                            .requestStartTime(requestStartTimeNanos, requestStartTimeMicros)
-                                            .build();
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/armeria/log"))
+                                     .requestStartTime(requestStartTimeNanos, requestStartTimeMicros)
+                                     .build();
 
         final RequestLog log = ctx.log();
         final RequestLogBuilder logBuilder = ctx.logBuilder();
@@ -360,7 +359,7 @@ public class AccessLogFormatsTest {
     }
 
     @Test
-    public void requestLogWithEmptyCause() {
+    void requestLogWithEmptyCause() {
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
 
         final RequestLog log = ctx.log();
@@ -376,11 +375,11 @@ public class AccessLogFormatsTest {
     }
 
     @Test
-    public void timestamp() {
+    void timestamp() {
         final ServiceRequestContext ctx =
-                ServiceRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/"))
-                                            .requestStartTime(requestStartTimeNanos, requestStartTimeMicros)
-                                            .build();
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                     .requestStartTime(requestStartTimeNanos, requestStartTimeMicros)
+                                     .build();
         final RequestLog log = ctx.log();
 
         assertThat(AccessLogger.format(AccessLogFormats.parseCustom("%t"), log))
@@ -423,7 +422,7 @@ public class AccessLogFormatsTest {
         return formatter.format(ZonedDateTime.ofInstant(Instant.ofEpochMilli(millis), defaultZoneId));
     }
 
-    public static class Attr {
+    static class Attr {
         static final AttributeKey<Attr> ATTR_KEY = AttributeKey.valueOf(Attr.class, "KEY");
 
         private final String member;
@@ -432,7 +431,7 @@ public class AccessLogFormatsTest {
             this.member = member;
         }
 
-        public String member() {
+        String member() {
             return member;
         }
 
@@ -442,7 +441,7 @@ public class AccessLogFormatsTest {
         }
     }
 
-    public static class AttributeStringfier implements Function<Attr, String> {
+    static class AttributeStringfier implements Function<Attr, String> {
         @Override
         public String apply(Attr attr) {
             return '(' + attr.member() + ')';

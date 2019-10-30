@@ -32,6 +32,14 @@ public final class RequestContextCurrentTraceContextBuilder extends CurrentTrace
     private final ImmutableList.Builder<Pattern> nonRequestThreadPatterns = ImmutableList.builder();
 
     /**
+     * Creates a new instance.
+     *
+     * @deprecated Use {@link RequestContextCurrentTraceContext#builder()}.
+     */
+    @Deprecated
+    public RequestContextCurrentTraceContextBuilder() {}
+
+    /**
      * Sets a regular expression that matches names of threads that should be considered non-request
      * threads, meaning they may have spans created for clients outside of the context of an Armeria
      * request. For example, this can be set to {@code "RMI TCP Connection"} if you use RMI to serve
