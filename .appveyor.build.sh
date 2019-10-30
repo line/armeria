@@ -135,7 +135,7 @@ if [[ "$COVERAGE" -eq 1 ]]; then
 fi
 
 msg "Building .."
-echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 checkstyle build
+echo_and_run ./gradlew $GRADLE_CLI_OPTS --parallel --max-workers=4 clean checkstyle build
 
 if [[ "$COVERAGE" -eq 1 ]]; then
   # Send coverage reports to CodeCov.io.
