@@ -46,27 +46,27 @@ import io.netty.resolver.dns.NoopAuthoritativeDnsServerCache;
 import io.netty.resolver.dns.NoopDnsCache;
 
 /**
- * Builds an {@link AddressResolverGroup} which builds {@link AddressResolver}s that update DNS cache
- * automatically. An usual DNS resolver such as {@link DnsNameResolver}, cache is expired after TTL.
+ * Builds an {@link AddressResolverGroup} which builds {@link AddressResolver}s that update DNS caches
+ * automatically. An usual DNS resolver such as {@link DnsNameResolver}, a cache is expired after TTL.
  * On the other hand, the automatic updating {@link AddressResolver} updates the DNS cache spontaneously
  * even after TTL has elapsed. If automatic updating fails, the {@link AddressResolver} will retry with
  * {@link #autoUpdateBackoff(Backoff)} until {@link #autoUpdateTimeoutMillis(long)} has elapsed.
  *
- * <p>{@link AddressResolver} keeps cache hits so that it does not automatically update the cache for
+ * <p>{@link AddressResolver} keeps cache hits so that it does not automatically update the caches for
  * the DNS addresses used only once.
  */
-public final class AutoUpdatingAddressResolverGroupBuilder {
+public final class DnsResolverGroupBuilder {
 
     private Backoff autoUpdateBackoff = Backoff.ofDefault();
 
     private long autoUpdateTimeoutMillis = TimeUnit.MINUTES.toMillis(10);
 
-    private int minTtl;
+    private int minTtl = 1;
     private int maxTtl = Integer.MAX_VALUE;
-    private boolean traceEnabled = true;
 
     // DnsNameResolverBuilder properties:
 
+    private boolean traceEnabled = true;
     @Nullable
     private DnsCnameCache cnameCache;
     @Nullable
@@ -94,12 +94,12 @@ public final class AutoUpdatingAddressResolverGroupBuilder {
     @Nullable
     private Boolean decodeIdn;
 
-    AutoUpdatingAddressResolverGroupBuilder() {}
+    DnsResolverGroupBuilder() {}
 
     /**
      * Sets {@link Backoff} which is used when the {@link DnsNameResolver} fails to update the cache.
      */
-    public AutoUpdatingAddressResolverGroupBuilder autoUpdateBackoff(Backoff autoUpdateBackoff) {
+    public DnsResolverGroupBuilder autoUpdateBackoff(Backoff autoUpdateBackoff) {
         this.autoUpdateBackoff = requireNonNull(autoUpdateBackoff, "autoUpdateBackoff");
         return this;
     }
@@ -108,7 +108,7 @@ public final class AutoUpdatingAddressResolverGroupBuilder {
      * Sets the timeout of automatic updating DNS cache. After this timeout, the previously resolved
      * DNS cache is invalidated.
      */
-    public AutoUpdatingAddressResolverGroupBuilder autoUpdateTimeout(Duration autoUpdateTimeout) {
+    public DnsResolverGroupBuilder autoUpdateTimeout(Duration autoUpdateTimeout) {
         requireNonNull(autoUpdateTimeout, "autoUpdateTimeout");
         checkArgument(!autoUpdateTimeout.isNegative(),
                       "autoUpdateTimeout: %s (expected: >= 0)", autoUpdateTimeout);
@@ -119,7 +119,7 @@ public final class AutoUpdatingAddressResolverGroupBuilder {
      * Sets the timeout of automatic updating DNS cache in milliseconds. After this timeout,
      * the previously resolved DNS cache is invalidated.
      */
-    public AutoUpdatingAddressResolverGroupBuilder autoUpdateTimeoutMillis(
+    public DnsResolverGroupBuilder autoUpdateTimeoutMillis(
             long autoUpdateTimeoutMillis) {
         checkArgument(autoUpdateTimeoutMillis >= 0, "autoUpdateTimeoutMillis: %s (expected: >= 0)",
                       autoUpdateTimeoutMillis);
@@ -135,7 +135,7 @@ public final class AutoUpdatingAddressResolverGroupBuilder {
      * The default value is {@code 1} and {@link Integer#MAX_VALUE}, which practically tells this resolver to
      * respect the TTL from the DNS server.
      */
-    public AutoUpdatingAddressResolverGroupBuilder ttl(int minTtl, int maxTtl) {
+    public DnsResolverGroupBuilder ttl(int minTtl, int maxTtl) {
         checkArgument(minTtl > 0 && minTtl <= maxTtl,
                       "minTtl: %s, maxTtl: %s (expected: 1 <= minTtl <= maxTtl)", minTtl, maxTtl);
         this.minTtl = minTtl;
@@ -147,7 +147,7 @@ public final class AutoUpdatingAddressResolverGroupBuilder {
      * Sets if this resolver should generate the detailed trace information in an exception message so that
      * it is easier to understand the cause of resolution failure. This flag is enabled by default.
      */
-    public AutoUpdatingAddressResolverGroupBuilder traceEnabled(boolean traceEnabled) {
+    public DnsResolverGroupBuilder traceEnabled(boolean traceEnabled) {
         this.traceEnabled = traceEnabled;
         return this;
     }
@@ -155,7 +155,7 @@ public final class AutoUpdatingAddressResolverGroupBuilder {
     /**
      * Sets the cache for {@code CNAME} mappings.
      */
-    public AutoUpdatingAddressResolverGroupBuilder cnameCache(DnsCnameCache cnameCache) {
+    public DnsResolverGroupBuilder cnameCache(DnsCnameCache cnameCache) {
         this.cnameCache = requireNonNull(cnameCache, "cnameCache");
         return this;
     }
@@ -163,7 +163,7 @@ public final class AutoUpdatingAddressResolverGroupBuilder {
     /**
      * Sets the timeout of each DNS query performed by this resolver.
      */
-    public AutoUpdatingAddressResolverGroupBuilder queryTimeout(Duration queryTimeout) {
+    public DnsResolverGroupBuilder queryTimeout(Duration queryTimeout) {
         requireNonNull(queryTimeout, "queryTimeout");
         checkArgument(!queryTimeout.isNegative(), "queryTimeout: %s (expected: >= 0)",
                       queryTimeout);
@@ -173,7 +173,7 @@ public final class AutoUpdatingAddressResolverGroupBuilder {
     /**
      * Sets the timeout of each DNS query performed by this resolver in milliseconds.
      */
-    public AutoUpdatingAddressResolverGroupBuilder queryTimeoutMillis(long queryTimeoutMillis) {
+    public DnsResolverGroupBuilder queryTimeoutMillis(long queryTimeoutMillis) {
         checkArgument(queryTimeoutMillis >= 0, "queryTimeoutMillis: %s (expected: >= 0)", queryTimeoutMillis);
         this.queryTimeoutMillis = queryTimeoutMillis;
         return this;
@@ -182,7 +182,7 @@ public final class AutoUpdatingAddressResolverGroupBuilder {
     /**
      * Sets {@link ResolvedAddressTypes} which is the list of the protocol families of the address resolved.
      */
-    public AutoUpdatingAddressResolverGroupBuilder resolvedAddressTypes(
+    public DnsResolverGroupBuilder resolvedAddressTypes(
             ResolvedAddressTypes resolvedAddressTypes) {
         this.resolvedAddressTypes = requireNonNull(resolvedAddressTypes, "resolvedAddressTypes");
         return this;
@@ -192,7 +192,7 @@ public final class AutoUpdatingAddressResolverGroupBuilder {
      * Sets if this resolver has to send a DNS query with the RD (recursion desired) flag set.
      * This flag is enabled by default.
      */
-    public AutoUpdatingAddressResolverGroupBuilder recursionDesired(boolean recursionDesired) {
+    public DnsResolverGroupBuilder recursionDesired(boolean recursionDesired) {
         this.recursionDesired = recursionDesired;
         return this;
     }
@@ -201,7 +201,7 @@ public final class AutoUpdatingAddressResolverGroupBuilder {
      * Returns the maximum allowed number of DNS queries to send when resolving a host name.
      * The default value is {@code 16}.
      */
-    public AutoUpdatingAddressResolverGroupBuilder maxQueriesPerResolve(int maxQueriesPerResolve) {
+    public DnsResolverGroupBuilder maxQueriesPerResolve(int maxQueriesPerResolve) {
         checkArgument(maxQueriesPerResolve > 0,
                       "maxQueriesPerResolve: %s (expected: > 0)", maxQueriesPerResolve);
         this.maxQueriesPerResolve = maxQueriesPerResolve;
@@ -211,7 +211,7 @@ public final class AutoUpdatingAddressResolverGroupBuilder {
     /**
      * Sets the capacity of the datagram packet buffer in bytes. The default value is {@code 4096} bytes.
      */
-    public AutoUpdatingAddressResolverGroupBuilder maxPayloadSize(int maxPayloadSize) {
+    public DnsResolverGroupBuilder maxPayloadSize(int maxPayloadSize) {
         this.maxPayloadSize = maxPayloadSize;
         return this;
     }
@@ -221,7 +221,7 @@ public final class AutoUpdatingAddressResolverGroupBuilder {
      * about how much data the resolver can read per response. Some DNSServer may not support this and so
      * fail to answer queries. This flag is enabled by default.
      */
-    public AutoUpdatingAddressResolverGroupBuilder optResourceEnabled(boolean optResourceEnabled) {
+    public DnsResolverGroupBuilder optResourceEnabled(boolean optResourceEnabled) {
         this.optResourceEnabled = optResourceEnabled;
         return this;
     }
@@ -229,7 +229,7 @@ public final class AutoUpdatingAddressResolverGroupBuilder {
     /**
      * Sets {@link HostsFileEntriesResolver} which is used to first check if the hostname is locally aliased.
      */
-    public AutoUpdatingAddressResolverGroupBuilder hostsFileEntriesResolver(
+    public DnsResolverGroupBuilder hostsFileEntriesResolver(
             HostsFileEntriesResolver hostsFileEntriesResolver) {
         this.hostsFileEntriesResolver = requireNonNull(hostsFileEntriesResolver, "hostsFileEntriesResolver");
         return this;
@@ -239,7 +239,7 @@ public final class AutoUpdatingAddressResolverGroupBuilder {
      * Sets {@link DnsServerAddressStreamProvider} which is used to determine which DNS server is used to
      * resolve each hostname.
      */
-    public AutoUpdatingAddressResolverGroupBuilder dnsServerAddressStreamProvider(
+    public DnsResolverGroupBuilder dnsServerAddressStreamProvider(
             DnsServerAddressStreamProvider dnsServerAddressStreamProvider) {
         this.dnsServerAddressStreamProvider =
                 requireNonNull(dnsServerAddressStreamProvider, "dnsServerAddressStreamProvider");
@@ -250,7 +250,7 @@ public final class AutoUpdatingAddressResolverGroupBuilder {
      * Sets {@link DnsQueryLifecycleObserverFactory} that is used to generate objects which can observe
      * individual DNS queries.
      */
-    public AutoUpdatingAddressResolverGroupBuilder dnsQueryLifecycleObserverFactory(
+    public DnsResolverGroupBuilder dnsQueryLifecycleObserverFactory(
             DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory) {
         this.dnsQueryLifecycleObserverFactory =
                 requireNonNull(dnsQueryLifecycleObserverFactory, "dnsQueryLifecycleObserverFactory");
@@ -260,7 +260,7 @@ public final class AutoUpdatingAddressResolverGroupBuilder {
     /**
      * Sets the list of search domains of the resolver.
      */
-    public AutoUpdatingAddressResolverGroupBuilder searchDomains(Iterable<String> searchDomains) {
+    public DnsResolverGroupBuilder searchDomains(Iterable<String> searchDomains) {
         this.searchDomains = ImmutableList.copyOf(requireNonNull(searchDomains, "searchDomains"));
         return this;
     }
@@ -268,14 +268,14 @@ public final class AutoUpdatingAddressResolverGroupBuilder {
     /**
      * Sets the search domains of the resolver.
      */
-    public AutoUpdatingAddressResolverGroupBuilder searchDomains(String... searchDomains) {
+    public DnsResolverGroupBuilder searchDomains(String... searchDomains) {
         return searchDomains(ImmutableList.copyOf(requireNonNull(searchDomains, "searchDomains")));
     }
 
     /**
      * Sets the number of dots which must appear in a name before an initial absolute query is made.
      */
-    public AutoUpdatingAddressResolverGroupBuilder ndots(int ndots) {
+    public DnsResolverGroupBuilder ndots(int ndots) {
         checkArgument(ndots >= 0, "ndots: %s (expected: >= 0)", ndots);
         this.ndots = ndots;
         return this;
@@ -285,7 +285,7 @@ public final class AutoUpdatingAddressResolverGroupBuilder {
      * Sets if the domain and host names should be decoded to unicode when received.
      * See <a href="https://tools.ietf.org/html/rfc3492">rfc3492</a>. This flag is enabled by default.
      */
-    public AutoUpdatingAddressResolverGroupBuilder decodeIdn(boolean decodeIdn) {
+    public DnsResolverGroupBuilder decodeIdn(boolean decodeIdn) {
         this.decodeIdn = decodeIdn;
         return this;
     }

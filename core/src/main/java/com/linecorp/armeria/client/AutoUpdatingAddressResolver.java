@@ -135,10 +135,10 @@ class AutoUpdatingAddressResolver extends AbstractAddressResolver<InetSocketAddr
         requireNonNull(unresolvedAddress, "unresolvedAddress");
         requireNonNull(promise, "promise");
         if (resolverClosed) {
-            promise.tryFailure(new IllegalStateException("resolver is already closed."));
+            promise.tryFailure(new IllegalStateException("resolver is closed already."));
             return;
         }
-        final String hostname = unresolvedAddress.getHostName();
+        final String hostname = unresolvedAddress.getHostString();
         final int port = unresolvedAddress.getPort();
         final CompletableFuture<CacheEntry> entryFuture = cache.get(hostname);
         if (entryFuture != null) {
@@ -247,7 +247,10 @@ class AutoUpdatingAddressResolver extends AbstractAddressResolver<InetSocketAddr
         private final List<DnsQuestion> questions;
         private final long deadlineNanos;
 
-        private int numAttemptsSoFar = 1; // Updated only by the executor().
+        /**
+         * No need to be volatile because updated only by the {@link #executor()}.
+         */
+        private int numAttemptsSoFar = 1;
 
         private volatile int cacheHits;
 

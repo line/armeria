@@ -108,7 +108,7 @@ class AutoUpdatingAddressResolverTest {
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1", 1))))
         ) {
             final EventLoop eventLoop = eventLoopExtension.get();
-            final AutoUpdatingAddressResolverGroupBuilder builder = builder(server);
+            final DnsResolverGroupBuilder builder = builder(server);
             builder.autoUpdateTimeoutMillis(TimeUnit.SECONDS.toMillis(1));
             try (AutoUpdatingAddressResolverGroup group = builder.build(eventLoop)) {
                 final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
@@ -177,7 +177,7 @@ class AutoUpdatingAddressResolverTest {
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1", 1))))
         ) {
             final EventLoop eventLoop = eventLoopExtension.get();
-            final AutoUpdatingAddressResolverGroupBuilder builder = builder(server);
+            final DnsResolverGroupBuilder builder = builder(server);
             builder.autoUpdateTimeoutMillis(TimeUnit.SECONDS.toMillis(1));
             try (AutoUpdatingAddressResolverGroup group = builder.build(eventLoop)) {
                 final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
@@ -235,9 +235,9 @@ class AutoUpdatingAddressResolverTest {
         }
     }
 
-    private static AutoUpdatingAddressResolverGroupBuilder builder(TestDnsServer server) {
+    private static DnsResolverGroupBuilder builder(TestDnsServer server) {
         final DnsServerAddresses addrs = DnsServerAddresses.sequential(server.addr());
-        return new AutoUpdatingAddressResolverGroupBuilder()
+        return new DnsResolverGroupBuilder()
                 .dnsServerAddressStreamProvider(hostname -> addrs.stream())
                 .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
                 .traceEnabled(false);

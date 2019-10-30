@@ -34,13 +34,7 @@ class ClientFactoryBuilderTest {
 
         final ClientFactoryBuilder builder2 = new ClientFactoryBuilder();
         builder2.domainNameResolverCustomizer(b -> {});
-        assertThatThrownBy(() -> builder2.autoUpdatingAddressResolverCustomizer(b -> {}))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("mutually exclusive");
-
-        final ClientFactoryBuilder builder3 = new ClientFactoryBuilder();
-        builder3.autoUpdatingAddressResolverCustomizer(b -> {});
-        assertThatThrownBy(() -> builder3.addressResolverGroupFactory(eventLoopGroup -> null))
+        assertThatThrownBy(() -> builder2.addressResolverGroupFactory(eventLoopGroup -> null))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("mutually exclusive");
     }
