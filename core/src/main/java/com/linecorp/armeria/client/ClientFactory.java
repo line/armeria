@@ -56,7 +56,7 @@ import io.netty.channel.EventLoopGroup;
  * {@link ClientFactory}, use {@link #closeDefault()}.
  * </p>
  */
-public interface ClientFactory extends AutoCloseable {
+public interface ClientFactory extends ClientFactoryBuilderParams, AutoCloseable {
 
     /**
      * The default {@link ClientFactory} implementation.

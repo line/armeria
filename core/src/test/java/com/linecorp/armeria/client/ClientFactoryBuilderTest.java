@@ -55,4 +55,23 @@ class ClientFactoryBuilderTest {
                                                          () -> builder2.maxNumEventLoopsPerEndpoint(2));
         assertThat(cause).hasMessageContaining("mutually exclusive");
     }
+
+    // TBW
+    @Test
+    void testFrom() {
+        final ClientFactory factory1 = ClientFactory.builder()
+                                                    .maxNumEventLoopsPerEndpoint(2)
+                                                    .connectTimeoutMillis(5000)
+                                                    .build();
+        final ClientFactory factory2 = ClientFactoryBuilder.from(factory1).build();
+
+        System.out.println(factory1.eventLoopSchedulerFactory());
+        System.out.println(factory2.eventLoopSchedulerFactory());
+
+        System.out.println(factory1.addressResolverGroupFactory());
+        System.out.println(factory2.addressResolverGroupFactory());
+
+        System.out.println(factory1.options());
+        System.out.println(factory2.options());
+    }
 }

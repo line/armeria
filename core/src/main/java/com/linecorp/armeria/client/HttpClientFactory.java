@@ -23,10 +23,10 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
@@ -88,43 +88,42 @@ final class HttpClientFactory extends AbstractClientFactory {
 
     private volatile boolean closed;
 
-    HttpClientFactory(
-            EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnClose,
-            EventLoopScheduler eventLoopScheduler, Map<ChannelOption<?>, Object> channelOptions,
-            Consumer<? super SslContextBuilder> sslContextCustomizer,
-            AddressResolverGroup<InetSocketAddress> addressResolverGroup,
-            int http2InitialConnectionWindowSize, int http2InitialStreamWindowSize, int http2MaxFrameSize,
-            long http2MaxHeaderListSize, int http1MaxInitialLineLength, int http1MaxHeaderSize,
-            int http1MaxChunkSize, long idleTimeoutMillis, boolean useHttp2Preface, boolean useHttp1Pipelining,
-            ConnectionPoolListener connectionPoolListener, MeterRegistry meterRegistry) {
+    private final ClientFactoryOptions options;
+
+    HttpClientFactory(ClientFactoryOptions options,
+                      EventLoopScheduler eventLoopScheduler,
+                      AddressResolverGroup<InetSocketAddress> addressResolverGroup) {
+
         final Bootstrap baseBootstrap = new Bootstrap();
-        baseBootstrap.channel(TransportType.socketChannelType(workerGroup));
+        baseBootstrap.channel(TransportType.socketChannelType(options.workerGroup()));
         baseBootstrap.resolver(addressResolverGroup);
 
-        channelOptions.forEach((option, value) -> {
+        options.channelOptions().forEach((option, value) -> {
             @SuppressWarnings("unchecked")
             final ChannelOption<Object> castOption = (ChannelOption<Object>) option;
             baseBootstrap.option(castOption, value);
         });
 
-        this.workerGroup = workerGroup;
-        this.shutdownWorkerGroupOnClose = shutdownWorkerGroupOnClose;
+        workerGroup = options.workerGroup();
+        shutdownWorkerGroupOnClose = options.shutdownWorkerGroupOnClose();
         this.eventLoopScheduler = eventLoopScheduler;
         this.baseBootstrap = baseBootstrap;
-        this.sslContextCustomizer = sslContextCustomizer;
+        sslContextCustomizer = options.sslContextCustomizer();
+        http2InitialConnectionWindowSize = options.http2InitialConnectionWindowSize();
+        http2InitialStreamWindowSize = options.http2InitialStreamWindowSize();
+        http2MaxFrameSize = options.http2MaxFrameSize();
+        http2MaxHeaderListSize = options.http2MaxHeaderListSize();
+        http1MaxInitialLineLength = options.http1MaxInitialLineLength();
+        http1MaxHeaderSize = options.http1MaxHeaderSize();
+        http1MaxChunkSize = options.http1MaxChunkSize();
+        idleTimeoutMillis = options.idleTimeoutMillis();
+        useHttp2Preface = options.useHttp2Preface();
+        useHttp1Pipelining = options.useHttp1Pipelining();
+        connectionPoolListener = options.connectionPoolListener();
+        meterRegistry = options.meterRegistry();
+
         this.addressResolverGroup = addressResolverGroup;
-        this.http2InitialConnectionWindowSize = http2InitialConnectionWindowSize;
-        this.http2InitialStreamWindowSize = http2InitialStreamWindowSize;
-        this.http2MaxFrameSize = http2MaxFrameSize;
-        this.http2MaxHeaderListSize = http2MaxHeaderListSize;
-        this.http1MaxInitialLineLength = http1MaxInitialLineLength;
-        this.http1MaxHeaderSize = http1MaxHeaderSize;
-        this.http1MaxChunkSize = http1MaxChunkSize;
-        this.idleTimeoutMillis = idleTimeoutMillis;
-        this.useHttp2Preface = useHttp2Preface;
-        this.useHttp1Pipelining = useHttp1Pipelining;
-        this.connectionPoolListener = connectionPoolListener;
-        this.meterRegistry = meterRegistry;
+        this.options = options;
 
         clientDelegate = new HttpClientDelegate(this, addressResolverGroup);
     }
@@ -297,5 +296,22 @@ final class HttpClientFactory extends AbstractClientFactory {
 
         return pools.computeIfAbsent(eventLoop,
                                      e -> new HttpChannelPool(this, eventLoop, connectionPoolListener()));
+    }
+
+    @Override
+    public Function<? super EventLoopGroup,
+            ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory() {
+
+        return eventLoopGroup -> addressResolverGroup;
+    }
+
+    @Override
+    public Function<? super EventLoopGroup, ? extends EventLoopScheduler> eventLoopSchedulerFactory() {
+        return eventLoopGroup -> eventLoopScheduler;
+    }
+
+    @Override
+    public ClientFactoryOptions options() {
+        return options;
     }
 }

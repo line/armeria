@@ -18,9 +18,11 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
@@ -32,6 +34,7 @@ import com.linecorp.armeria.common.util.ReleasableHolder;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.resolver.AddressResolverGroup;
 
 /**
  * A {@link ClientFactory} that delegates the creation of {@link Client}s to another {@link ClientFactory}.
@@ -108,5 +111,22 @@ public class DecoratingClientFactory extends AbstractClientFactory {
     @Override
     public void close() {
         delegate().close();
+    }
+
+    @Override
+    public Function<? super EventLoopGroup,
+            ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory() {
+
+        return delegate().addressResolverGroupFactory();
+    }
+
+    @Override
+    public Function<? super EventLoopGroup, ? extends EventLoopScheduler> eventLoopSchedulerFactory() {
+        return delegate().eventLoopSchedulerFactory();
+    }
+
+    @Override
+    public ClientFactoryOptions options() {
+        return delegate().options();
     }
 }
