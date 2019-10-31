@@ -59,7 +59,6 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -149,8 +148,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         final ChannelPipeline p = ch.pipeline();
         p.addLast(new FlushConsolidationHandler());
-        p.addLast(ReadSuppressingHandler.INSTANCE);
-        p.addLast(ChannelDeactivationHandler.INSTANCE);
+        p.addLast(ReadSuppressingAndChannelDeactivatingHandler.INSTANCE);
 
         try {
             if (sslCtx != null) {
@@ -634,21 +632,18 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     }
 
     /**
-     * Deactivates the {@link HttpSession} associated with a channel when it is closed to ensure it isn't used
-     * anymore.
+     * Suppresses unnecessary read calls and deactivates the {@link HttpSession} associated with a channel when
+     * it is closed to ensure it isn't used anymore.
      */
-    private static final class ChannelDeactivationHandler extends ChannelOutboundHandlerAdapter {
-        private static final ChannelDeactivationHandler INSTANCE = new ChannelDeactivationHandler();
+    private static final class ReadSuppressingAndChannelDeactivatingHandler extends ReadSuppressingHandler {
+
+        private static final ReadSuppressingAndChannelDeactivatingHandler
+                INSTANCE = new ReadSuppressingAndChannelDeactivatingHandler();
 
         @Override
         public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
             HttpSession.get(ctx.channel()).deactivate();
             super.close(ctx, promise);
-        }
-
-        @Override
-        public boolean isSharable() {
-            return true;
         }
     }
 
