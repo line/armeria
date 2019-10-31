@@ -48,18 +48,18 @@ import io.netty.resolver.dns.NoopDnsCache;
 /**
  * Builds an {@link AddressResolverGroup} which builds {@link AddressResolver}s that update DNS caches
  * automatically. A usual DNS resolver such as {@link DnsNameResolver}, a cache is expired after TTL.
- * On the other hand, the automatic updating {@link AddressResolver} updates the DNS cache spontaneously
- * even after TTL has elapsed. If automatic updating fails, the {@link AddressResolver} will retry with
- * {@link #autoUpdateBackoff(Backoff)} until {@link #autoUpdateTimeoutMillis(long)} has elapsed.
+ * On the other hand, the refreshing {@link AddressResolver} updates the DNS cache spontaneously
+ * even after TTL has elapsed. If refreshing fails, the {@link AddressResolver} will retry with
+ * {@link #refreshBackoff(Backoff)} until {@link #refreshTimeoutMillis(long)} has elapsed.
  *
- * <p>{@link AddressResolver} keeps cache hits so that it does not automatically update the caches for
+ * <p>{@link AddressResolver} keeps cache hits so that it does not refresh the caches for
  * the DNS addresses used only once.
  */
 public final class DnsResolverGroupBuilder {
 
-    private Backoff autoUpdateBackoff = Backoff.ofDefault();
+    private Backoff refreshBackoff = Backoff.ofDefault();
 
-    private long autoUpdateTimeoutMillis = TimeUnit.MINUTES.toMillis(10);
+    private long refreshTimeoutMillis = TimeUnit.MINUTES.toMillis(10);
 
     private int minTtl = 1;
     private int maxTtl = Integer.MAX_VALUE;
@@ -99,31 +99,29 @@ public final class DnsResolverGroupBuilder {
     /**
      * Sets {@link Backoff} which is used when the {@link DnsNameResolver} fails to update the cache.
      */
-    public DnsResolverGroupBuilder autoUpdateBackoff(Backoff autoUpdateBackoff) {
-        this.autoUpdateBackoff = requireNonNull(autoUpdateBackoff, "autoUpdateBackoff");
+    public DnsResolverGroupBuilder refreshBackoff(Backoff refreshBackoff) {
+        this.refreshBackoff = requireNonNull(refreshBackoff, "refreshBackoff");
         return this;
     }
 
     /**
-     * Sets the timeout of automatic updating DNS cache. After this timeout, the previously resolved
+     * Sets the timeout of refreshing DNS caches. After this timeout, the previously resolved
      * DNS cache is invalidated.
      */
-    public DnsResolverGroupBuilder autoUpdateTimeout(Duration autoUpdateTimeout) {
-        requireNonNull(autoUpdateTimeout, "autoUpdateTimeout");
-        checkArgument(!autoUpdateTimeout.isNegative(),
-                      "autoUpdateTimeout: %s (expected: >= 0)", autoUpdateTimeout);
-        return autoUpdateTimeoutMillis(autoUpdateTimeout.toMillis());
+    public DnsResolverGroupBuilder refreshTimeout(Duration refreshTimeout) {
+        requireNonNull(refreshTimeout, "refreshTimeout");
+        checkArgument(!refreshTimeout.isNegative(), "refreshTimeout: %s (expected: >= 0)", refreshTimeout);
+        return refreshTimeoutMillis(refreshTimeout.toMillis());
     }
 
     /**
-     * Sets the timeout of automatic updating DNS cache in milliseconds. After this timeout,
+     * Sets the timeout of refreshing DNS caches in milliseconds. After this timeout,
      * the previously resolved DNS cache is invalidated.
      */
-    public DnsResolverGroupBuilder autoUpdateTimeoutMillis(
-            long autoUpdateTimeoutMillis) {
-        checkArgument(autoUpdateTimeoutMillis >= 0, "autoUpdateTimeoutMillis: %s (expected: >= 0)",
-                      autoUpdateTimeoutMillis);
-        this.autoUpdateTimeoutMillis = autoUpdateTimeoutMillis;
+    public DnsResolverGroupBuilder refreshTimeoutMillis(long refreshTimeoutMillis) {
+        checkArgument(refreshTimeoutMillis >= 0, "refreshTimeoutMillis: %s (expected: >= 0)",
+                      refreshTimeoutMillis);
+        this.refreshTimeoutMillis = refreshTimeoutMillis;
         return this;
     }
 
@@ -290,7 +288,7 @@ public final class DnsResolverGroupBuilder {
         return this;
     }
 
-    AutoUpdatingAddressResolverGroup build(EventLoopGroup eventLoopGroup) {
+    RefreshingAddressResolverGroup build(EventLoopGroup eventLoopGroup) {
         final Consumer<DnsNameResolverBuilder> resolverConfigurator = builder -> {
             builder.channelType(TransportType.datagramChannelType(eventLoopGroup))
                    .socketChannelType(TransportType.socketChannelType(eventLoopGroup))
@@ -340,9 +338,7 @@ public final class DnsResolverGroupBuilder {
                 builder.decodeIdn(decodeIdn);
             }
         };
-        return new AutoUpdatingAddressResolverGroup(resolverConfigurator, minTtl, maxTtl,
-                                                    autoUpdateBackoff, autoUpdateTimeoutMillis,
-                                                    resolvedAddressTypes
-        );
+        return new RefreshingAddressResolverGroup(resolverConfigurator, minTtl, maxTtl, refreshBackoff,
+                                                  refreshTimeoutMillis, resolvedAddressTypes);
     }
 }

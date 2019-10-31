@@ -52,9 +52,9 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 
-class AutoUpdatingAddressResolver extends AbstractAddressResolver<InetSocketAddress> {
+class RefreshingAddressResolver extends AbstractAddressResolver<InetSocketAddress> {
 
-    private static final Logger logger = LoggerFactory.getLogger(AutoUpdatingAddressResolver.class);
+    private static final Logger logger = LoggerFactory.getLogger(RefreshingAddressResolver.class);
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<CacheEntry, ScheduledFuture> futureUpdater =
@@ -63,7 +63,7 @@ class AutoUpdatingAddressResolver extends AbstractAddressResolver<InetSocketAddr
 
     /**
      * A {@link ScheduledFuture} which is set in {@link CacheEntry} when the
-     * {@link AutoUpdatingAddressResolver} is closed by replacing and cancelling previously scheduled automatic
+     * {@link RefreshingAddressResolver} is closed by replacing and cancelling previously scheduled automatic
      * DNS cache updating.
      */
     @VisibleForTesting
@@ -111,24 +111,24 @@ class AutoUpdatingAddressResolver extends AbstractAddressResolver<InetSocketAddr
     private final List<DnsRecordType> dnsRecordTypes;
     private final int minTtl;
     private final int maxTtl;
-    private final Backoff autoUpdateBackoff;
-    private final long autoUpdateTimeoutMillis;
+    private final Backoff refreshBackoff;
+    private final long refreshTimeoutMillis;
 
     private volatile boolean resolverClosed;
 
-    AutoUpdatingAddressResolver(EventLoop eventLoop,
-                                ConcurrentMap<String, CompletableFuture<CacheEntry>> cache,
-                                DefaultDnsNameResolver resolver, List<DnsRecordType> dnsRecordTypes,
-                                int minTtl, int maxTtl, Backoff autoUpdateBackoff,
-                                long autoUpdateTimeoutMillis) {
+    RefreshingAddressResolver(EventLoop eventLoop,
+                              ConcurrentMap<String, CompletableFuture<CacheEntry>> cache,
+                              DefaultDnsNameResolver resolver, List<DnsRecordType> dnsRecordTypes,
+                              int minTtl, int maxTtl, Backoff refreshBackoff,
+                              long refreshTimeoutMillis) {
         super(eventLoop);
         this.cache = cache;
         this.resolver = resolver;
         this.dnsRecordTypes = dnsRecordTypes;
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
-        this.autoUpdateBackoff = autoUpdateBackoff;
-        this.autoUpdateTimeoutMillis = autoUpdateTimeoutMillis;
+        this.refreshBackoff = refreshBackoff;
+        this.refreshTimeoutMillis = refreshTimeoutMillis;
     }
 
     @Override
@@ -269,11 +269,11 @@ class AutoUpdatingAddressResolver extends AbstractAddressResolver<InetSocketAddr
             this.ttlMillis = ttlMillis;
             this.questions = questions;
 
-            if (autoUpdateTimeoutMillis <= 0 || autoUpdateTimeoutMillis == Long.MAX_VALUE) {
+            if (refreshTimeoutMillis <= 0 || refreshTimeoutMillis == Long.MAX_VALUE) {
                 deadlineNanos = 0;
             } else {
                 deadlineNanos = System.nanoTime() +
-                                TimeUnit.MILLISECONDS.toNanos(ttlMillis + autoUpdateTimeoutMillis);
+                                TimeUnit.MILLISECONDS.toNanos(ttlMillis + refreshTimeoutMillis);
             }
         }
 
@@ -338,7 +338,7 @@ class AutoUpdatingAddressResolver extends AbstractAddressResolver<InetSocketAddr
 
                 if (cause != null) {
                     if (deadlineNanos == 0) {
-                        final long nextDelayMillis = autoUpdateBackoff.nextDelayMillis(numAttemptsSoFar++);
+                        final long nextDelayMillis = refreshBackoff.nextDelayMillis(numAttemptsSoFar++);
                         scheduleCacheUpdate(nextDelayMillis);
                         return null;
                     }
@@ -347,7 +347,7 @@ class AutoUpdatingAddressResolver extends AbstractAddressResolver<InetSocketAddr
                         cache.remove(hostName);
                         return null;
                     }
-                    final long nextDelayMillis = autoUpdateBackoff.nextDelayMillis(numAttemptsSoFar++);
+                    final long nextDelayMillis = refreshBackoff.nextDelayMillis(numAttemptsSoFar++);
                     scheduleCacheUpdate(Math.min(timeoutMillis, nextDelayMillis));
                     return null;
                 }

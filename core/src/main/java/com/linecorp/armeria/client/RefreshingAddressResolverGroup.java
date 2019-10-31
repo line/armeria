@@ -39,7 +39,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
-import com.linecorp.armeria.client.AutoUpdatingAddressResolver.CacheEntry;
+import com.linecorp.armeria.client.RefreshingAddressResolver.CacheEntry;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.internal.dns.DefaultDnsNameResolver;
 
@@ -53,11 +53,11 @@ import io.netty.util.NetUtil;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
- * Creates and manages automatic updating {@link AddressResolver}s and the DNS cache.
+ * Creates and manages refreshing {@link AddressResolver}s and the DNS cache.
  */
-final class AutoUpdatingAddressResolverGroup extends AddressResolverGroup<InetSocketAddress> {
+final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSocketAddress> {
 
-    private static final Logger logger = LoggerFactory.getLogger(AutoUpdatingAddressResolverGroup.class);
+    private static final Logger logger = LoggerFactory.getLogger(RefreshingAddressResolverGroup.class);
 
     private static final List<DnsRecordType> defaultDnsRecordTypes;
 
@@ -119,20 +119,19 @@ final class AutoUpdatingAddressResolverGroup extends AddressResolverGroup<InetSo
 
     private final int minTtl;
     private final int maxTtl;
-    private final Backoff autoUpdateBackoff;
-    private final long autoUpdateTimeoutMillis;
+    private final Backoff refreshBackoff;
+    private final long refreshTimeoutMillis;
     private final List<DnsRecordType> dnsRecordTypes;
     private final Consumer<DnsNameResolverBuilder> resolverConfigurator;
 
-    AutoUpdatingAddressResolverGroup(Consumer<DnsNameResolverBuilder> resolverConfigurator,
-                                     int minTtl, int maxTtl, Backoff autoUpdateBackoff,
-                                     long autoUpdateTimeoutMillis,
-                                     @Nullable ResolvedAddressTypes resolvedAddressTypes) {
+    RefreshingAddressResolverGroup(Consumer<DnsNameResolverBuilder> resolverConfigurator,
+                                   int minTtl, int maxTtl, Backoff refreshBackoff, long refreshTimeoutMillis,
+                                   @Nullable ResolvedAddressTypes resolvedAddressTypes) {
         this.resolverConfigurator = resolverConfigurator;
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
-        this.autoUpdateBackoff = autoUpdateBackoff;
-        this.autoUpdateTimeoutMillis = autoUpdateTimeoutMillis;
+        this.refreshBackoff = refreshBackoff;
+        this.refreshTimeoutMillis = refreshTimeoutMillis;
         if (resolvedAddressTypes == null) {
             dnsRecordTypes = defaultDnsRecordTypes;
         } else {
@@ -152,8 +151,8 @@ final class AutoUpdatingAddressResolverGroup extends AddressResolverGroup<InetSo
         final DnsNameResolverBuilder builder = new DnsNameResolverBuilder(eventLoop);
         resolverConfigurator.accept(builder);
         final DefaultDnsNameResolver resolver = new DefaultDnsNameResolver(builder.build(), eventLoop);
-        return new AutoUpdatingAddressResolver(eventLoop, cache, resolver, dnsRecordTypes, minTtl, maxTtl,
-                                               autoUpdateBackoff, autoUpdateTimeoutMillis);
+        return new RefreshingAddressResolver(eventLoop, cache, resolver, dnsRecordTypes, minTtl, maxTtl,
+                                             refreshBackoff, refreshTimeoutMillis);
     }
 
     @Override

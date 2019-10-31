@@ -36,7 +36,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.client.AutoUpdatingAddressResolver.CacheEntry;
+import com.linecorp.armeria.client.RefreshingAddressResolver.CacheEntry;
 import com.linecorp.armeria.client.endpoint.dns.TestDnsServer;
 import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
 
@@ -48,7 +48,7 @@ import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.resolver.dns.DnsServerAddresses;
 import io.netty.util.concurrent.Future;
 
-class AutoUpdatingAddressResolverTest {
+class RefreshingAddressResolverTest {
 
     @RegisterExtension
     static final EventLoopExtension eventLoopExtension = new EventLoopExtension();
@@ -62,7 +62,7 @@ class AutoUpdatingAddressResolverTest {
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("bar.com.", "1.2.3.4"))))
         ) {
             final EventLoop eventLoop = eventLoopExtension.get();
-            try (AutoUpdatingAddressResolverGroup group = builder(server).build(eventLoop)) {
+            try (RefreshingAddressResolverGroup group = builder(server).build(eventLoop)) {
                 final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
                 final Future<InetSocketAddress> foo = resolver.resolve(
                         InetSocketAddress.createUnresolved("foo.com", 36462));
@@ -109,8 +109,8 @@ class AutoUpdatingAddressResolverTest {
         ) {
             final EventLoop eventLoop = eventLoopExtension.get();
             final DnsResolverGroupBuilder builder = builder(server);
-            builder.autoUpdateTimeoutMillis(TimeUnit.SECONDS.toMillis(1));
-            try (AutoUpdatingAddressResolverGroup group = builder.build(eventLoop)) {
+            builder.refreshTimeoutMillis(TimeUnit.SECONDS.toMillis(1));
+            try (RefreshingAddressResolverGroup group = builder.build(eventLoop)) {
                 final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
 
                 final long start = System.nanoTime();
@@ -130,13 +130,13 @@ class AutoUpdatingAddressResolverTest {
     }
 
     @Test
-    void autoUpdate() throws Exception {
+    void refreshing() throws Exception {
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
                 new DefaultDnsQuestion("baz.com.", A),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("baz.com.", "1.1.1.1", 1))))
         ) {
             final EventLoop eventLoop = eventLoopExtension.get();
-            try (AutoUpdatingAddressResolverGroup group = builder(server).build(eventLoop)) {
+            try (RefreshingAddressResolverGroup group = builder(server).build(eventLoop)) {
                 final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
 
                 final long start = System.nanoTime();
@@ -171,15 +171,15 @@ class AutoUpdatingAddressResolverTest {
     }
 
     @Test
-    void autoUpdateTimeout() throws Exception {
+    void refreshingTimeout() throws Exception {
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
                 new DefaultDnsQuestion("foo.com.", A),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1", 1))))
         ) {
             final EventLoop eventLoop = eventLoopExtension.get();
             final DnsResolverGroupBuilder builder = builder(server);
-            builder.autoUpdateTimeoutMillis(TimeUnit.SECONDS.toMillis(1));
-            try (AutoUpdatingAddressResolverGroup group = builder.build(eventLoop)) {
+            builder.refreshTimeoutMillis(TimeUnit.SECONDS.toMillis(1));
+            try (RefreshingAddressResolverGroup group = builder.build(eventLoop)) {
                 final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
 
                 final long start = System.nanoTime();
@@ -220,7 +220,7 @@ class AutoUpdatingAddressResolverTest {
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1"))))
         ) {
             final EventLoop eventLoop = eventLoopExtension.get();
-            final AutoUpdatingAddressResolverGroup group = builder(server).build(eventLoop);
+            final RefreshingAddressResolverGroup group = builder(server).build(eventLoop);
             final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
             final Future<InetSocketAddress> foo = resolver.resolve(
                     InetSocketAddress.createUnresolved("foo.com", 36462));
@@ -230,7 +230,7 @@ class AutoUpdatingAddressResolverTest {
             assertThat(cache.size()).isEqualTo(1);
             final CacheEntry cacheEntry = cache.get("foo.com").join();
             group.close();
-            await().until(() -> cacheEntry.cacheUpdatingScheduledFuture == AutoUpdatingAddressResolver.closed);
+            await().until(() -> cacheEntry.cacheUpdatingScheduledFuture == RefreshingAddressResolver.closed);
             assertThat(cache).isEmpty();
         }
     }
