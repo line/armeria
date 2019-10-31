@@ -168,6 +168,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
      * This will also clean up the data published from the upstream {@link StreamMessage}.
      */
     public void abort(Throwable cause) {
+        requireNonNull(cause, "cause");
         processor.abort(() -> cause);
     }
 
@@ -177,7 +178,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
      * This will also clean up the data published from the upstream {@link StreamMessage}.
      */
     public void abort(Supplier<? extends Throwable> causeSupplier) {
-        processor.abort(causeSupplier);
+        processor.abort(requireNonNull(causeSupplier, "causeSupplier"));
     }
 
     @VisibleForTesting
@@ -503,6 +504,12 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                 subscriptionUpdater = AtomicReferenceFieldUpdater.newUpdater(
                 ChildStreamMessage.class, DownstreamSubscription.class, "subscription");
 
+        @SuppressWarnings("rawtypes")
+        private static final AtomicReferenceFieldUpdater<ChildStreamMessage, Supplier>
+                completionCauseSupplierUpdater =
+                AtomicReferenceFieldUpdater.newUpdater(
+                        ChildStreamMessage.class, Supplier.class, "completionCauseSupplier");
+
         private final AbstractStreamMessageDuplicator<T, ?> parent;
         private final StreamMessageProcessor<T> processor;
         private final boolean lastStream;
@@ -510,6 +517,8 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         @Nullable
         @SuppressWarnings("unused")
         private volatile DownstreamSubscription<T> subscription;
+        @Nullable
+        private volatile Supplier<? extends Throwable> completionCauseSupplier;
 
         private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
 
@@ -537,6 +546,12 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         @Override
         public CompletableFuture<Void> completionFuture() {
             return completionFuture;
+        }
+
+        @Nullable
+        @Override
+        public Throwable completionCause() {
+            return completionCauseSupplier != null ? completionCauseSupplier.get() : null;
         }
 
         @Override
@@ -665,7 +680,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
 
         @Override
         public void abort() {
-            abort(AbortedStreamException::get);
+            abort0(null);
         }
 
         @Override
@@ -677,20 +692,28 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         @Override
         public void abort(Supplier<? extends Throwable> causeSupplier) {
             requireNonNull(causeSupplier, "causeSupplier");
-            final Throwable cause = requireNonNull(causeSupplier.get(), "cause");
+            abort0(causeSupplier);
+        }
+
+        private void abort0(@Nullable Supplier<? extends Throwable> causeSupplier) {
+            final Supplier<? extends Throwable> causeOrAbortStreamExceptionSupplier =
+                    causeSupplier != null ? causeSupplier : AbortedStreamException::get;
+            completionCauseSupplierUpdater.compareAndSet(this, null, causeOrAbortStreamExceptionSupplier);
             final DownstreamSubscription<T> currentSubscription = subscription;
             if (currentSubscription != null) {
-                currentSubscription.abort(causeSupplier);
+                currentSubscription.abort(causeOrAbortStreamExceptionSupplier);
                 return;
             }
 
             final DownstreamSubscription<T> newSubscription = new DownstreamSubscription<>(
-                    this, new AbortingSubscriber<>(causeSupplier), processor, ImmediateEventExecutor.INSTANCE,
+                    this, AbortingSubscriber.get(causeSupplier), processor, ImmediateEventExecutor.INSTANCE,
                     false, false, false);
             if (subscriptionUpdater.compareAndSet(this, null, newSubscription)) {
+                final Throwable cause = requireNonNull(causeOrAbortStreamExceptionSupplier.get(),
+                                                       "cause returned by causeSupplier is null");
                 newSubscription.completionFuture().completeExceptionally(cause);
             } else {
-                subscription.abort(causeSupplier);
+                subscription.abort(causeOrAbortStreamExceptionSupplier);
             }
         }
     }

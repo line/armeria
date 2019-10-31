@@ -58,12 +58,6 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             AtomicIntegerFieldUpdater.newUpdater(
                     DeferredStreamMessage.class, "subscribedToDelegate");
 
-    @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<DeferredStreamMessage, Supplier>
-            abortCauseSupplierUpdater =
-            AtomicReferenceFieldUpdater.newUpdater(
-                    DeferredStreamMessage.class, Supplier.class, "abortCauseSupplier");
-
     @Nullable
     @SuppressWarnings("unused") // Updated only via delegateUpdater
     private volatile StreamMessage<T> delegate;
@@ -82,8 +76,6 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     // Only accessed from subscription's executor.
     private long pendingDemand;
 
-    private volatile Supplier<? extends Throwable> abortCauseSupplier;
-
     // Only accessed from subscription's executor.
     private boolean cancelPending;
 
@@ -100,8 +92,8 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             throw new IllegalStateException("delegate set already");
         }
 
-        if (abortCauseSupplier != null) {
-            delegate.abort(abortCauseSupplier);
+        if (completionCause() != null) {
+            delegate.abort(completionCause());
         }
 
         if (!completionFuture().isDone()) {
@@ -276,7 +268,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
 
     @Override
     public void abort() {
-        abort0(AbortedStreamException::get, ABORTED_CLOSE);
+        abort0(null, ABORTED_CLOSE);
     }
 
     @Override
@@ -287,30 +279,33 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
 
     @Override
     public void abort(Supplier<? extends Throwable> causeSupplier) {
-        abort0(causeSupplier, null);
+        abort0(requireNonNull(causeSupplier, "causeSupplier"), null);
     }
 
-    private void abort0(Supplier<? extends Throwable> causeSupplier, @Nullable CloseEvent closeEvent) {
-        requireNonNull(causeSupplier, "causeSupplier");
-        if (!abortCauseSupplierUpdater.compareAndSet(this, null, causeSupplier)) {
+    private void abort0(@Nullable Supplier<? extends Throwable> causeSupplier,
+                        @Nullable CloseEvent closeEvent) {
+        final Supplier<? extends Throwable> causeOrAbortStreamExceptionSupplier =
+                causeSupplier != null ? causeSupplier : AbortedStreamException::get;
+        if (!completionCause(causeOrAbortStreamExceptionSupplier)) {
             return;
         }
 
         final SubscriptionImpl newSubscription = new SubscriptionImpl(
-                this, new AbortingSubscriber<>(causeSupplier), ImmediateEventExecutor.INSTANCE, false, false);
+                this, AbortingSubscriber.get(causeSupplier), ImmediateEventExecutor.INSTANCE, false, false);
         subscriptionUpdater.compareAndSet(this, null, newSubscription);
 
         final StreamMessage<T> delegate = this.delegate;
         if (delegate != null) {
-            delegate.abort(causeSupplier);
+            delegate.abort(causeOrAbortStreamExceptionSupplier);
         } else {
-            final Throwable cause = requireNonNull(causeSupplier.get(), "cause");
+            final Throwable cause = requireNonNull(causeOrAbortStreamExceptionSupplier.get(),
+                                                   "cause returned by causeSupplier is null");
             final CloseEvent closeEvent0 = (closeEvent == null) ? new CloseEvent(cause) : closeEvent;
             if (subscription.needsDirectInvocation()) {
-                closeEvent0.notifySubscriber(subscription, completionFuture());
+                closeEvent0.notifySubscriber(subscription, completionFuture(), null);
             } else {
                 subscription.executor().execute(
-                        () -> closeEvent0.notifySubscriber(subscription, completionFuture()));
+                        () -> closeEvent0.notifySubscriber(subscription, completionFuture(), null));
             }
         }
     }

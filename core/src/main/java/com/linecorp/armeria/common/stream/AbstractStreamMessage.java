@@ -24,6 +24,9 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -46,7 +49,15 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
     static final CloseEvent CANCELLED_CLOSE = new CloseEvent(CancelledSubscriptionException.INSTANCE);
     static final CloseEvent ABORTED_CLOSE = new CloseEvent(AbortedStreamException.INSTANCE);
 
+    @SuppressWarnings("rawtypes")
+    private static final AtomicReferenceFieldUpdater<AbstractStreamMessage, Supplier>
+            completionCauseSupplierUpdater = AtomicReferenceFieldUpdater.newUpdater(
+            AbstractStreamMessage.class, Supplier.class, "completionCauseSupplier");
+
     private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
+
+    @Nullable
+    private volatile Supplier<? extends Throwable> completionCauseSupplier;
 
     @Override
     public final void subscribe(Subscriber<? super T> subscriber) {
@@ -163,6 +174,20 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
     @Override
     public final CompletableFuture<Void> completionFuture() {
         return completionFuture;
+    }
+
+    @Nullable
+    @Override
+    public Throwable completionCause() {
+        return completionCauseSupplier != null ? completionCauseSupplier.get() : null;
+    }
+
+    final boolean completionCause(Supplier<? extends Throwable> causeSupplier) {
+        return completionCauseSupplierUpdater.compareAndSet(this, null, causeSupplier);
+    }
+
+    final boolean completionCause(Throwable cause) {
+        return completionCause(() -> cause);
     }
 
     /**
@@ -346,7 +371,8 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
             this.cause = cause;
         }
 
-        void notifySubscriber(SubscriptionImpl subscription, CompletableFuture<?> completionFuture) {
+        void notifySubscriber(SubscriptionImpl subscription, CompletableFuture<?> completionFuture,
+                              @Nullable Consumer<Throwable> onError) {
             if (completionFuture.isDone()) {
                 // Notified already
                 return;
@@ -370,6 +396,9 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
                         subscriber.onError(cause);
                     }
                 } finally {
+                    if (onError != null) {
+                        onError.accept(cause);
+                    }
                     completionFuture.completeExceptionally(cause);
                 }
             }

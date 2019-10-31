@@ -71,6 +71,12 @@ final class HeaderOverridingHttpRequest implements HttpRequest {
         return delegate.completionFuture();
     }
 
+    @Nullable
+    @Override
+    public Throwable completionCause() {
+        return delegate.completionCause();
+    }
+
     @Override
     public CompletableFuture<Void> closeFuture() {
         return delegate.closeFuture();

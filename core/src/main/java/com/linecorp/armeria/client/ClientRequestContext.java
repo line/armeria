@@ -36,7 +36,6 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.logging.RequestLog;
 
 import io.netty.util.Attribute;
@@ -289,7 +288,7 @@ public interface ClientRequestContext extends RequestContext {
     /**
      * Sets a handler to run when the response times out. {@code responseTimeoutHandler} must close the request,
      * e.g., by calling {@link HttpRequestWriter#close(Throwable)}. If not set, the response will be closed with
-     * {@link TimeoutException}.
+     * {@link ResponseTimeoutException}.
      *
      * <p>For example,
      * <pre>{@code

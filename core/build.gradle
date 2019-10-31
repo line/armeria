@@ -166,7 +166,6 @@ task testNg(type: Test,
             group: 'Verification',
             description: 'Runs the TestNG unit tests.',
             dependsOn: tasks.shadedTestClasses) {
-
     useTestNG()
     include '/com/linecorp/armeria/common/**'
 

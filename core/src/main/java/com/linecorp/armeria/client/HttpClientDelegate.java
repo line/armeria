@@ -63,6 +63,7 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
             // - `ClientRequestContext.endpoint()` returns `null` only when the context initialization failed.
             // - `ClientUtil.initContextAndExecuteWithFallback()` will use the fallback response rather than
             //   what we return here.
+            req.abort(CONTEXT_INITIALIZATION_FAILED);
             return HttpResponse.ofFailure(CONTEXT_INITIALIZATION_FAILED);
         }
 

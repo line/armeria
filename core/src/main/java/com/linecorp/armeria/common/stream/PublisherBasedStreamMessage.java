@@ -52,12 +52,19 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
             subscriberUpdater = AtomicReferenceFieldUpdater.newUpdater(
             PublisherBasedStreamMessage.class, AbortableSubscriber.class, "subscriber");
 
+    @SuppressWarnings("rawtypes")
+    private static final AtomicReferenceFieldUpdater<PublisherBasedStreamMessage, Supplier>
+            completionCauseSupplierUpdater = AtomicReferenceFieldUpdater.newUpdater(
+            PublisherBasedStreamMessage.class, Supplier.class, "completionCauseSupplier");
+
     private final Publisher<? extends T> publisher;
     private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
     @Nullable
     @SuppressWarnings("unused") // Updated only via subscriberUpdater.
     private volatile AbortableSubscriber subscriber;
     private volatile boolean publishedAny;
+    @Nullable
+    private volatile Supplier<? extends Throwable> completionCauseSupplier;
 
     /**
      * Creates a new instance with the specified delegate {@link Publisher}.
@@ -217,28 +224,41 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     @Override
     public void abort(Supplier<? extends Throwable> causeSupplier) {
         requireNonNull(causeSupplier, "causeSupplier");
+        abort0(causeSupplier);
+    }
+
+    private void abort0(@Nullable Supplier<? extends Throwable> causeSupplier) {
         final AbortableSubscriber subscriber = this.subscriber;
+        final Supplier<? extends Throwable> causeOrAbortStreamExceptionSupplier =
+                causeSupplier != null ? causeSupplier : AbortedStreamException::get;
+        completionCauseSupplierUpdater.compareAndSet(this, null, causeOrAbortStreamExceptionSupplier);
         if (subscriber != null) {
-            subscriber.abort(causeSupplier);
+            subscriber.abort(causeOrAbortStreamExceptionSupplier);
             return;
         }
 
         final AbortableSubscriber abortable = new AbortableSubscriber(this,
-                                                                      new AbortingSubscriber<>(causeSupplier),
+                                                                      AbortingSubscriber.get(causeSupplier),
                                                                       ImmediateEventExecutor.INSTANCE,
                                                                       false);
         if (!subscriberUpdater.compareAndSet(this, null, abortable)) {
-            this.subscriber.abort(causeSupplier);
+            this.subscriber.abort(causeOrAbortStreamExceptionSupplier);
             return;
         }
 
-        abortable.abort(causeSupplier);
+        abortable.abort(causeOrAbortStreamExceptionSupplier);
         abortable.onSubscribe(NoopSubscription.INSTANCE);
     }
 
     @Override
     public CompletableFuture<Void> completionFuture() {
         return completionFuture;
+    }
+
+    @Nullable
+    @Override
+    public Throwable completionCause() {
+        return completionCauseSupplier != null ? completionCauseSupplier.get() : null;
     }
 
     @VisibleForTesting
@@ -310,7 +330,8 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
                 this.subscriber = NoopSubscriber.get();
             }
 
-            final Throwable cause = requireNonNull(causeSupplier.get(), "cause");
+            final Throwable cause = requireNonNull(causeSupplier.get(),
+                                                   "cause returned by causeSupplier is null");
             try {
                 if (!cancel || notifyCancellation) {
                     subscriber.onError(cause);

@@ -127,7 +127,7 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
     @Override
     final void notifySubscriberOfCloseEvent(SubscriptionImpl subscription, CloseEvent event) {
         try {
-            event.notifySubscriber(subscription, completionFuture());
+            event.notifySubscriber(subscription, completionFuture(), this::completionCause);
         } finally {
             subscription.clearSubscriber();
             cleanup(subscription);
@@ -141,28 +141,35 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
 
     @Override
     public final void abort() {
-        abort(AbortedStreamException::get);
+        abort0(null);
     }
 
     @Override
     public final void abort(Throwable cause) {
         requireNonNull(cause, "cause");
-        abort(() -> cause);
+        abort0(() -> cause);
     }
 
     @Override
     public final void abort(Supplier<? extends Throwable> causeSupplier) {
         requireNonNull(causeSupplier, "causeSupplier");
+        abort0(causeSupplier);
+    }
+
+    private void abort0(@Nullable Supplier<? extends Throwable> causeSupplier) {
+        final Supplier<? extends Throwable> causeOrAbortStreamExceptionSupplier =
+                causeSupplier != null ? causeSupplier : AbortedStreamException::get;
+        completionCause(causeOrAbortStreamExceptionSupplier);
         final SubscriptionImpl currentSubscription = subscription;
         if (currentSubscription != null) {
-            cancelOrAbort(false, causeSupplier);
+            cancelOrAbort(false, causeOrAbortStreamExceptionSupplier);
             return;
         }
 
         final SubscriptionImpl newSubscription = new SubscriptionImpl(
-                this, new AbortingSubscriber<>(causeSupplier), ImmediateEventExecutor.INSTANCE, false, false);
+                this, AbortingSubscriber.get(causeSupplier), ImmediateEventExecutor.INSTANCE, false, false);
         subscriptionUpdater.compareAndSet(this, null, newSubscription);
-        cancelOrAbort(false, causeSupplier);
+        cancelOrAbort(false, causeOrAbortStreamExceptionSupplier);
     }
 
     private void cancelOrAbort(boolean cancel, @Nullable Supplier<? extends Throwable> causeSupplier) {
@@ -173,7 +180,8 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
                          new CloseEvent(new CancelledSubscriptionException()) : CANCELLED_CLOSE;
         } else {
             // causeSupplier is always not-null if cancel == false
-            final Throwable cause = requireNonNull(causeSupplier.get(), "cause");
+            final Throwable cause = requireNonNull(causeSupplier.get(),
+                                                   "cause returned by causeSupplier is null");
             if (cause instanceof AbortedStreamException) {
                 closeEvent = sampler.isSampled(AbortedStreamException.class) ?
                              new CloseEvent(cause) : ABORTED_CLOSE;

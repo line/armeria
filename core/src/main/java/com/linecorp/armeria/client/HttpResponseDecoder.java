@@ -275,7 +275,15 @@ abstract class HttpResponseDecoder {
 
         @Override
         public void close(Throwable cause) {
-            close(cause, this::closeAction);
+            final Throwable closeCause;
+            if (delegate.completionCause() != null) {
+                closeCause = delegate.completionCause();
+            } else if (request.completionCause() != null) {
+                closeCause = request.completionCause();
+            } else {
+               closeCause = cause;
+            }
+            close(closeCause, this::closeAction);
         }
 
         private void close(@Nullable Throwable cause,

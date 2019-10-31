@@ -18,14 +18,25 @@ package com.linecorp.armeria.common.stream;
 
 import java.util.function.Supplier;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 final class AbortingSubscriber<T> implements Subscriber<T> {
 
+    private static final AbortingSubscriber<Object> INSTANCE =
+            new AbortingSubscriber<>(AbortedStreamException::get);
+
+    @SuppressWarnings("unchecked")
+    static <T> AbortingSubscriber<T> get(@Nullable Supplier<? extends Throwable> causeSupplier) {
+        return causeSupplier == null ? (AbortingSubscriber<T>) INSTANCE
+                                     : new AbortingSubscriber<>(causeSupplier);
+    }
+
     private final Supplier<? extends Throwable> causeSupplier;
 
-    AbortingSubscriber(Supplier<? extends Throwable> causeSupplier) {
+    private AbortingSubscriber(Supplier<? extends Throwable> causeSupplier) {
         this.causeSupplier = causeSupplier;
     }
 

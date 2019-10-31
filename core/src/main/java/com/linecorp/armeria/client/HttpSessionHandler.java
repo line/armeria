@@ -186,22 +186,19 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         req.abort(CancelledSubscriptionException::get);
         ctx.logBuilder().startRequest(channel, protocol);
         ctx.logBuilder().requestHeaders(req.headers());
-        req.completionFuture().handle((unused, cause) -> {
-            if (cause == null) {
-                ctx.logBuilder().endRequest();
-            } else {
-                ctx.logBuilder().endRequest(cause);
-            }
-            return null;
-        });
-        res.completionFuture().handle((unused, cause) -> {
-            if (cause == null) {
-                ctx.logBuilder().endResponse();
-            } else {
-                ctx.logBuilder().endResponse(cause);
-            }
-            return null;
-        });
+
+        final Throwable requestCause = req.completionCause();
+        if (requestCause == null) {
+            ctx.logBuilder().endRequest();
+        } else {
+            ctx.logBuilder().endRequest(requestCause);
+        }
+        final Throwable responseCause = res.completionCause();
+        if (responseCause != null) {
+            ctx.logBuilder().endResponse();
+        } else {
+            ctx.logBuilder().endResponse(responseCause);
+        }
 
         return true;
     }

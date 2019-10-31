@@ -132,7 +132,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
     @Override
     public void abort() {
-        abort(AbortedStreamException::get);
+        abort0(null);
     }
 
     @Override
@@ -147,20 +147,22 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
         abort0(causeSupplier);
     }
 
-    private void abort0(Supplier<? extends Throwable> causeSupplier) {
+    private void abort0(@Nullable Supplier<? extends Throwable> causeSupplier) {
+        final Supplier<? extends Throwable> causeOrAbortStreamExceptionSupplier =
+                causeSupplier != null ? causeSupplier : AbortedStreamException::get;
         final SubscriptionImpl currentSubscription = subscription;
         if (currentSubscription != null) {
-            cancelOrAbort(false, causeSupplier);
+            cancelOrAbort(false, causeOrAbortStreamExceptionSupplier);
             return;
         }
 
         final SubscriptionImpl newSubscription = new SubscriptionImpl(
-                this, new AbortingSubscriber<>(causeSupplier), ImmediateEventExecutor.INSTANCE, false, false);
+                this, AbortingSubscriber.get(causeSupplier), ImmediateEventExecutor.INSTANCE, false, false);
         if (subscriptionUpdater.compareAndSet(this, null, newSubscription)) {
             // We don't need to invoke onSubscribe() for AbortingSubscriber because it's just a placeholder.
             invokedOnSubscribe = true;
         }
-        cancelOrAbort(false, causeSupplier);
+        cancelOrAbort(false, causeOrAbortStreamExceptionSupplier);
     }
 
     @Override
@@ -209,7 +211,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     void notifySubscriberOfCloseEvent(SubscriptionImpl subscription, CloseEvent event) {
         // Always called from the subscriber thread.
         try {
-            event.notifySubscriber(subscription, completionFuture());
+            event.notifySubscriber(subscription, completionFuture(), this::completionCause);
         } finally {
             subscription.clearSubscriber();
             cleanup();
@@ -224,8 +226,10 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
                 closeEvent = sampler.isSampled(CancelledSubscriptionException.class) ?
                              new CloseEvent(new CancelledSubscriptionException()) : CANCELLED_CLOSE;
             } else {
+                completionCause(causeSupplier);
                 // causeSupplier is always not-null if cancel == false
-                final Throwable cause = requireNonNull(causeSupplier.get(), "cause");
+                final Throwable cause = requireNonNull(causeSupplier.get(),
+                                                       "cause returned by causeSupplier is null");
                 if (cause instanceof AbortedStreamException) {
                     closeEvent = sampler.isSampled(AbortedStreamException.class) ?
                                  new CloseEvent(cause) : ABORTED_CLOSE;
@@ -398,6 +402,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     @Override
     public void close(Throwable cause) {
         requireNonNull(cause, "cause");
+        completionCause(cause);
         if (cause instanceof CancelledSubscriptionException) {
             throw new IllegalArgumentException("cause: " + cause + " (must use Subscription.cancel())");
         }

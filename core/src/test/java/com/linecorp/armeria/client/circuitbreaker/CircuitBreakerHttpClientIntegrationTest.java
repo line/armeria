@@ -70,6 +70,7 @@ class CircuitBreakerHttpClientIntegrationTest {
                     await().untilAsserted(() -> {
                         assertThat(req.completionFuture()).hasFailedWithThrowableThat()
                                                           .isInstanceOf(UnprocessedRequestException.class);
+                        assertThat(req.completionCause()).isInstanceOf(UnprocessedRequestException.class);
                     });
                     break;
                 default:

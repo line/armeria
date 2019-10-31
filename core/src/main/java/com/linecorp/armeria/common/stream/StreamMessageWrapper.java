@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Subscriber;
 
 import com.google.common.base.MoreObjects;
@@ -65,6 +67,12 @@ public class StreamMessageWrapper<T> implements StreamMessage<T> {
     @Override
     public CompletableFuture<Void> completionFuture() {
         return delegate().completionFuture();
+    }
+
+    @Nullable
+    @Override
+    public Throwable completionCause() {
+        return delegate().completionCause();
     }
 
     @Override

@@ -52,7 +52,7 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -66,7 +66,6 @@ import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -83,8 +82,6 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.AbstractHttpService;
@@ -107,7 +104,7 @@ class HttpClientIntegrationTest {
     private static final AtomicReference<ByteBuf> releasedByteBuf = new AtomicReference<>();
 
     // Used to communicate with test when the response can't be used.
-    private static final AtomicReference<Boolean> completed = new AtomicReference<>();
+    private static final AtomicBoolean completed = new AtomicBoolean();
 
     private static final class PoolUnawareDecorator extends SimpleDecoratingService<HttpRequest, HttpResponse> {
 
@@ -348,15 +345,9 @@ class HttpClientIntegrationTest {
                 }
             });
 
-            sb.service("/slow", (ctx, req) -> {
-                final HttpResponseWriter response = HttpResponse.streaming();
-                response.write(ResponseHeaders.of(HttpStatus.OK));
-                response.write(HttpData.ofUtf8("slow response"));
-                return response;
-            });
-
             sb.service("/client-aborted", (ctx, req) -> {
                 // Don't need to return a real response since the client will timeout.
+                completed.compareAndSet(false, true);
                 return HttpResponse.streaming();
             });
 
@@ -638,7 +629,7 @@ class HttpClientIntegrationTest {
         req.write(HttpData.ofUtf8("not finishing this stream, sorry."));
         await().untilAsserted(() -> assertThat(obj).hasValue(ResponseHeaders.of(HttpStatus.OK)));
         factory.close();
-        await().untilAsserted(() -> assertThat(completed).hasValue(true));
+        await().untilAsserted(() -> assertThat(completed));
     }
 
     @Test
@@ -744,56 +735,40 @@ class HttpClientIntegrationTest {
     }
 
     @ParameterizedTest
-    @CsvSource({
-            "H1C, true", "H1C, false",
-            "H2C, true", "H2C, false"
-    })
-    void testResponseTimeoutHandler(SessionProtocol protocol, boolean useResponseTimeoutHandler) {
-        final AtomicReference<RequestLog> logHolder = new AtomicReference<>();
-        final IllegalStateException reqCause = new IllegalStateException("abort request");
-        final IllegalStateException logCause = new IllegalStateException("log cause");
-        final AtomicBoolean invokeResponseTimeoutHandler = new AtomicBoolean(false);
-        final HttpClient client = new HttpClientBuilder(server.uri(protocol, "/"))
-                .responseTimeout(Duration.ofSeconds(2))
-                .decorator((delegate, ctx, req) -> {
-                    if (useResponseTimeoutHandler) {
-                        ctx.setResponseTimeoutHandler(() -> {
-                            ctx.request().abort(reqCause);
-                            invokeResponseTimeoutHandler.set(true);
-                        });
-                    }
-                    logHolder.set(ctx.log());
-                    return delegate.execute(ctx, req);
-                })
-                .build();
+    @ValueSource(booleans = { true, false })
+    void requestAbortWithException(boolean isAbort) {
+        final HttpClient client = HttpClient.of(server.httpUri("/"));
+        final HttpRequestWriter request = HttpRequest.streaming(HttpMethod.GET, "/client-aborted");
 
-        final HttpRequestWriter writer = HttpRequest.streaming(HttpMethod.POST, "/slow");
-        final HttpResponse response = client.execute(writer);
-        await().untilAsserted(() -> {
-            assertThat(logHolder.get().isAvailable(RequestLogAvailability.COMPLETE)).isTrue();
-        });
-
-        if (useResponseTimeoutHandler) {
-            assertThat(invokeResponseTimeoutHandler).isTrue();
-            assertThatThrownBy(() -> response.aggregate().join()).isInstanceOf(CompletionException.class)
-                    .hasCauseInstanceOf(ClosedSessionException.class);
-            assertThat(logHolder.get().requestCause()).isSameAs(reqCause);
+        final HttpResponse response = client.execute(request);
+        final IllegalStateException badState = new IllegalStateException("bad state");
+        if (isAbort) {
+            request.abort(badState);
         } else {
-            assertThat(logHolder.get().requestCause()).isInstanceOf(ResponseTimeoutException.class);
-            assertThatThrownBy(() -> response.aggregate().join())
-                    .hasCauseInstanceOf(ResponseTimeoutException.class);
+            request.close(badState);
         }
+        // request cause is obtained immediately
+        assertThat(request.completionCause()).isEqualTo(badState);
+        assertThatThrownBy(() -> response.aggregate().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCause(badState);
+        assertThat(response.completionCause()).isEqualTo(badState);
     }
 
     @Test
-    void abortWithException() {
+    void responseAbortWithException() throws InterruptedException {
         final HttpClient client = HttpClient.of(server.httpUri("/"));
         final HttpRequest request = HttpRequest.streaming(HttpMethod.GET, "/client-aborted");
         final HttpResponse response = client.execute(request);
-        request.abort(new IllegalStateException("bad state"));
+        await().untilTrue(completed);
+        final IllegalStateException badState = new IllegalStateException("bad state");
+        response.abort(badState);
+        // response cause is obtained immediately
+        assertThat(response.completionCause()).isEqualTo(badState);
         assertThatThrownBy(() -> response.aggregate().join())
                 .isInstanceOf(CompletionException.class)
-                .hasCauseInstanceOf(IllegalStateException.class);
+                .hasCause(badState);
+        await().untilAsserted(() -> assertThat(request.completionCause()).isEqualTo(badState));
     }
 
     @Nested

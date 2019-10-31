@@ -255,6 +255,12 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
         delegate.abort(requireNonNull(causeSupplier, "causeSupplier"));
     }
 
+    @Nullable
+    @Override
+    public Throwable completionCause() {
+        return delegate.completionCause();
+    }
+
     private final class FilteringSubscriber implements Subscriber<T> {
 
         private final Subscriber<? super U> delegate;

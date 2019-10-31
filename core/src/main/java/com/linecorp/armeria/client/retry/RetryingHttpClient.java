@@ -47,7 +47,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
-import com.linecorp.armeria.common.stream.AbortedStreamException;
 
 import io.netty.handler.codec.DateFormatter;
 
@@ -160,19 +159,14 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
         final boolean initialAttempt = totalAttempts <= 1;
         // The request or response has been aborted by the client before it receives a response,
         // so stop retrying.
-        if (originalReq.completionFuture().isCompletedExceptionally()) {
-            originalReq.completionFuture().handle((result, cause) -> {
-                handleException(ctx, rootReqDuplicator, future, cause, initialAttempt);
-                return null;
-            });
+        final Throwable originalCause = originalReq.completionCause();
+        if (originalCause != null) {
+            handleException(ctx, rootReqDuplicator, future, originalCause, initialAttempt);
             return;
         }
-        if (returnedRes.isComplete()) {
-            returnedRes.completionFuture().handle((result, cause) -> {
-                final Throwable abortCause = firstNonNull(cause, AbortedStreamException.get());
-                handleException(ctx, rootReqDuplicator, future, abortCause, initialAttempt);
-                return null;
-            });
+        final Throwable returnedCause = returnedRes.completionCause();
+        if (returnedCause != null) {
+            handleException(ctx, rootReqDuplicator, future, returnedCause, initialAttempt);
             return;
         }
 

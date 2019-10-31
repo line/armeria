@@ -23,6 +23,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Supplier;
 
+import javax.annotation.Nullable;
+
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -172,6 +174,15 @@ public interface StreamMessage<T> extends Publisher<T> {
      * </ul>
      */
     CompletableFuture<Void> completionFuture();
+
+    /**
+     * Returns a {@link Throwable} that was captured immediately when abortion or cancellation occurred.
+     * Note that this method will return {@code null} when this streams is not complete yet
+     * or complete successfully. An error cause in {@link #completionFuture()} could be obtained only
+     * when this stream is exceptionally complete.
+     */
+    @Nullable
+    Throwable completionCause();
 
     /**
      * Returns a {@link CompletableFuture} that completes when this stream is complete,
