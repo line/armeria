@@ -46,13 +46,15 @@ import io.netty.resolver.dns.NoopDnsCnameCache;
 
 /**
  * Builds an {@link AddressResolverGroup} which builds {@link AddressResolver}s that update DNS caches
- * automatically. A usual DNS resolver such as {@link DnsNameResolver}, a cache is expired after TTL.
- * On the other hand, the refreshing {@link AddressResolver} updates the DNS cache spontaneously
- * even after TTL has elapsed. If refreshing fails, the {@link AddressResolver} will retry with
- * {@link #refreshBackoff(Backoff)}.
+ * automatically. Standard {@link DnsNameResolver} will only expire a cache entry after TTL,
+ * meaning DNS queries after TTL will always take time to resolve. A refreshing {@link AddressResolver}
+ * on the other hand updates the DNS cache automatically when TTL elapses,
+ * meaning DNS queries after TTL will retrieve a refreshed result right away. If refreshing fails,
+ * the {@link AddressResolver} will retry with {@link #refreshBackoff(Backoff)}.
  *
- * <p>{@link AddressResolver} keeps cache hits so that it does not refresh the caches for
- * the DNS addresses used only once.
+ * <p>The refreshing {@link AddressResolver} will only start auto refresh for a given hostname
+ * on the second access before TTL to avoid auto-refreshing for queries that only happen once
+ * (e.g., requests during server startup).
  */
 public final class DnsResolverGroupBuilder {
 
@@ -118,7 +120,7 @@ public final class DnsResolverGroupBuilder {
     }
 
     /**
-     * Sets if this resolver should generate the detailed trace information in an exception message so that
+     * Sets if this resolver should generate detailed trace information in exception messages so that
      * it is easier to understand the cause of resolution failure. This flag is enabled by default.
      */
     public DnsResolverGroupBuilder traceEnabled(boolean traceEnabled) {

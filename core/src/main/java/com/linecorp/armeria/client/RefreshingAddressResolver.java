@@ -146,14 +146,14 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
         final int port = unresolvedAddress.getPort();
         final CompletableFuture<CacheEntry> entryFuture = cache.get(hostname);
         if (entryFuture != null) {
-            handle(entryFuture, promise, port);
+            handleServedFromCache(entryFuture, promise, port);
             return;
         }
 
         final CompletableFuture<CacheEntry> result = new CompletableFuture<>();
         final CompletableFuture<CacheEntry> previous = cache.putIfAbsent(hostname, result);
         if (previous != null) {
-            handle(previous, promise, port);
+            handleServedFromCache(previous, promise, port);
             return;
         }
 
@@ -173,14 +173,14 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
         });
     }
 
-    private static void handle(CompletableFuture<CacheEntry> future, Promise<InetSocketAddress> promise,
-                               int port) {
+    private static void handleServedFromCache(CompletableFuture<CacheEntry> future,
+                                              Promise<InetSocketAddress> promise, int port) {
         future.handle((entry, cause) -> {
             if (cause != null) {
                 promise.tryFailure(cause);
                 return null;
             }
-            entry.incrementCacheHit();
+            entry.servedFromCache();
             promise.trySuccess(new InetSocketAddress(entry.address(), port));
             return null;
         });
@@ -263,7 +263,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
          */
         private int numAttemptsSoFar = 1;
 
-        private volatile int cacheHits;
+        private volatile boolean servedFromCache;
 
         @Nullable
         volatile ScheduledFuture<?> cacheUpdatingScheduledFuture;
@@ -274,8 +274,8 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
             this.questions = questions;
         }
 
-        void incrementCacheHit() {
-            cacheHits++;
+        void servedFromCache() {
+            servedFromCache = true;
         }
 
         InetAddress address() {
@@ -287,22 +287,20 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
         }
 
         void scheduleCacheUpdate(long nextDelayMillis) {
-            for (;;) {
-                if (resolverClosed) {
-                    return;
-                }
-                final ScheduledFuture<?> oldFuture = futureUpdater.get(this);
-                if (oldFuture == closed) {
-                    return;
-                }
+            if (resolverClosed) {
+                return;
+            }
+            final ScheduledFuture<?> oldFuture = futureUpdater.get(this);
+            if (oldFuture == closed) {
+                return;
+            }
 
-                final ScheduledFuture<?> newFuture =
-                        executor().schedule(this, nextDelayMillis, TimeUnit.MILLISECONDS);
-                if (futureUpdater.compareAndSet(this, oldFuture, newFuture)) {
-                    return;
-                } else {
-                    newFuture.cancel(true);
-                }
+            final ScheduledFuture<?> newFuture =
+                    executor().schedule(this, nextDelayMillis, TimeUnit.MILLISECONDS);
+            if (!futureUpdater.compareAndSet(this, oldFuture, newFuture)) {
+                // clear() is called and the future is set to closed future. So we just cancel the newFuture
+                // we just made.
+                newFuture.cancel(true);
             }
         }
 
@@ -321,7 +319,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
             }
 
             final String hostName = address.getHostName();
-            if (cacheHits <= 0) { // Should we increase 0 to N?
+            if (!servedFromCache) {
                 cache.remove(hostName);
                 return;
             }
@@ -344,7 +342,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
                 }
 
                 // Got the response successfully so reset the state.
-                cacheHits = 0;
+                servedFromCache = true;
                 numAttemptsSoFar = 1;
 
                 if (entry.address().equals(address) && entry.ttlMillis() == ttlMillis) {
@@ -364,7 +362,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
                               .add("address", address)
                               .add("ttlMillis", ttlMillis)
                               .add("questions", questions)
-                              .add("cacheHits", cacheHits)
+                              .add("servedFromCache", servedFromCache)
                               .toString();
         }
     }
