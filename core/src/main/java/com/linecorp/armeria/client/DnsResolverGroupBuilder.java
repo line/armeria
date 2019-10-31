@@ -35,7 +35,6 @@ import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;
-import io.netty.resolver.dns.DefaultDnsCnameCache;
 import io.netty.resolver.dns.DnsCnameCache;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
@@ -43,6 +42,7 @@ import io.netty.resolver.dns.DnsQueryLifecycleObserverFactory;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 import io.netty.resolver.dns.NoopAuthoritativeDnsServerCache;
 import io.netty.resolver.dns.NoopDnsCache;
+import io.netty.resolver.dns.NoopDnsCnameCache;
 
 /**
  * Builds an {@link AddressResolverGroup} which builds {@link AddressResolver}s that update DNS caches
@@ -270,12 +270,9 @@ public final class DnsResolverGroupBuilder {
                    .socketChannelType(TransportType.socketChannelType(eventLoopGroup))
                    .resolveCache(NoopDnsCache.INSTANCE)
                    .authoritativeDnsServerCache(NoopAuthoritativeDnsServerCache.INSTANCE)
-                   .traceEnabled(traceEnabled);
-
-            final DnsCnameCache cnameCache =
-                    this.cnameCache != null ? this.cnameCache : new DefaultDnsCnameCache(minTtl, maxTtl);
-            builder.cnameCache(cnameCache);
-            builder.completeOncePreferredResolved(true);
+                   .cnameCache(NoopDnsCnameCache.INSTANCE)
+                   .traceEnabled(traceEnabled)
+                   .completeOncePreferredResolved(true);
 
             if (queryTimeoutMillis != null) {
                 builder.queryTimeoutMillis(queryTimeoutMillis);

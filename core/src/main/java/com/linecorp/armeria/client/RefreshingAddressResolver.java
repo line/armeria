@@ -52,7 +52,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 
-class RefreshingAddressResolver extends AbstractAddressResolver<InetSocketAddress> {
+final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocketAddress> {
 
     private static final Logger logger = LoggerFactory.getLogger(RefreshingAddressResolver.class);
 
@@ -238,6 +238,14 @@ class RefreshingAddressResolver extends AbstractAddressResolver<InetSocketAddres
         throw new UnsupportedOperationException();
     }
 
+    /**
+     * Closes all the resources allocated and used by this resolver.
+     *
+     * <p>Please note that this method does not clear the {@link CacheEntry} because the {@link #cache} is
+     * created by {@link RefreshingAddressResolverGroup} and shared across from all
+     * {@link RefreshingAddressResolver}s. {@link CacheEntry} is cleared when
+     * {@link RefreshingAddressResolverGroup#close()} is called.
+     */
     @Override
     public void close() {
         resolverClosed = true;
