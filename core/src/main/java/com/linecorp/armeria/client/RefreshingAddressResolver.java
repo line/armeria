@@ -112,15 +112,13 @@ class RefreshingAddressResolver extends AbstractAddressResolver<InetSocketAddres
     private final int minTtl;
     private final int maxTtl;
     private final Backoff refreshBackoff;
-    private final long refreshTimeoutMillis;
 
     private volatile boolean resolverClosed;
 
     RefreshingAddressResolver(EventLoop eventLoop,
                               ConcurrentMap<String, CompletableFuture<CacheEntry>> cache,
                               DefaultDnsNameResolver resolver, List<DnsRecordType> dnsRecordTypes,
-                              int minTtl, int maxTtl, Backoff refreshBackoff,
-                              long refreshTimeoutMillis) {
+                              int minTtl, int maxTtl, Backoff refreshBackoff) {
         super(eventLoop);
         this.cache = cache;
         this.resolver = resolver;
@@ -128,7 +126,6 @@ class RefreshingAddressResolver extends AbstractAddressResolver<InetSocketAddres
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
         this.refreshBackoff = refreshBackoff;
-        this.refreshTimeoutMillis = refreshTimeoutMillis;
     }
 
     @Override
@@ -252,7 +249,6 @@ class RefreshingAddressResolver extends AbstractAddressResolver<InetSocketAddres
         private final InetAddress address;
         private final long ttlMillis;
         private final List<DnsQuestion> questions;
-        private final long deadlineNanos;
 
         /**
          * No need to be volatile because updated only by the {@link #executor()}.
@@ -268,13 +264,6 @@ class RefreshingAddressResolver extends AbstractAddressResolver<InetSocketAddres
             this.address = address;
             this.ttlMillis = ttlMillis;
             this.questions = questions;
-
-            if (refreshTimeoutMillis <= 0 || refreshTimeoutMillis == Long.MAX_VALUE) {
-                deadlineNanos = 0;
-            } else {
-                deadlineNanos = System.nanoTime() +
-                                TimeUnit.MILLISECONDS.toNanos(ttlMillis + refreshTimeoutMillis);
-            }
         }
 
         void incrementCacheHit() {
@@ -337,18 +326,12 @@ class RefreshingAddressResolver extends AbstractAddressResolver<InetSocketAddres
                 }
 
                 if (cause != null) {
-                    if (deadlineNanos == 0) {
-                        final long nextDelayMillis = refreshBackoff.nextDelayMillis(numAttemptsSoFar++);
-                        scheduleCacheUpdate(nextDelayMillis);
-                        return null;
-                    }
-                    final long timeoutMillis = TimeUnit.NANOSECONDS.toMillis(deadlineNanos - System.nanoTime());
-                    if (timeoutMillis <= 0) {
+                    final long nextDelayMillis = refreshBackoff.nextDelayMillis(numAttemptsSoFar++);
+                    if (nextDelayMillis < 0) {
                         cache.remove(hostName);
                         return null;
                     }
-                    final long nextDelayMillis = refreshBackoff.nextDelayMillis(numAttemptsSoFar++);
-                    scheduleCacheUpdate(Math.min(timeoutMillis, nextDelayMillis));
+                    scheduleCacheUpdate(nextDelayMillis);
                     return null;
                 }
 

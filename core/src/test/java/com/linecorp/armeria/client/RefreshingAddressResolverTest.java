@@ -38,6 +38,7 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.RefreshingAddressResolver.CacheEntry;
 import com.linecorp.armeria.client.endpoint.dns.TestDnsServer;
+import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
 
 import io.netty.channel.EventLoop;
@@ -109,7 +110,6 @@ class RefreshingAddressResolverTest {
         ) {
             final EventLoop eventLoop = eventLoopExtension.get();
             final DnsResolverGroupBuilder builder = builder(server);
-            builder.refreshTimeoutMillis(TimeUnit.SECONDS.toMillis(1));
             try (RefreshingAddressResolverGroup group = builder.build(eventLoop)) {
                 final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
 
@@ -171,14 +171,14 @@ class RefreshingAddressResolverTest {
     }
 
     @Test
-    void refreshingTimeout() throws Exception {
+    void removedWhenExceedingBackoffMaxAttempts() throws Exception {
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
                 new DefaultDnsQuestion("foo.com.", A),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1", 1))))
         ) {
             final EventLoop eventLoop = eventLoopExtension.get();
             final DnsResolverGroupBuilder builder = builder(server);
-            builder.refreshTimeoutMillis(TimeUnit.SECONDS.toMillis(1));
+            builder.refreshBackoff(Backoff.ofDefault().withMaxAttempts(1));
             try (RefreshingAddressResolverGroup group = builder.build(eventLoop)) {
                 final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
 
@@ -202,8 +202,7 @@ class RefreshingAddressResolverTest {
                 await().until(cache::isEmpty);
 
                 assertThat(System.nanoTime() - start).isGreaterThanOrEqualTo(
-                        // (ttl 1 seconds + cache expiration 1 second) * buffer (90%)
-                        (long) (TimeUnit.SECONDS.toNanos(2) * 0.9));
+                        (long) (TimeUnit.SECONDS.toNanos(1) * 0.9)); // buffer (90%)
 
                 final Future<InetSocketAddress> future = resolver.resolve(
                         InetSocketAddress.createUnresolved("foo.com", 36462));

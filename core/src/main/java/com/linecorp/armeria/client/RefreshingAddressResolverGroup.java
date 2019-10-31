@@ -57,6 +57,10 @@ import io.netty.util.concurrent.EventExecutor;
  */
 final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSocketAddress> {
 
+    // Forked from Netty 4.1.43 at 2e5dd288008d4e674f53beaf8d323595813062fb
+    // - if else logic in static initialization block
+    // - anyInterfaceSupportsIpV6()
+
     private static final Logger logger = LoggerFactory.getLogger(RefreshingAddressResolverGroup.class);
 
     private static final List<DnsRecordType> defaultDnsRecordTypes;
@@ -120,18 +124,16 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
     private final int minTtl;
     private final int maxTtl;
     private final Backoff refreshBackoff;
-    private final long refreshTimeoutMillis;
     private final List<DnsRecordType> dnsRecordTypes;
     private final Consumer<DnsNameResolverBuilder> resolverConfigurator;
 
     RefreshingAddressResolverGroup(Consumer<DnsNameResolverBuilder> resolverConfigurator,
-                                   int minTtl, int maxTtl, Backoff refreshBackoff, long refreshTimeoutMillis,
+                                   int minTtl, int maxTtl, Backoff refreshBackoff,
                                    @Nullable ResolvedAddressTypes resolvedAddressTypes) {
         this.resolverConfigurator = resolverConfigurator;
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
         this.refreshBackoff = refreshBackoff;
-        this.refreshTimeoutMillis = refreshTimeoutMillis;
         if (resolvedAddressTypes == null) {
             dnsRecordTypes = defaultDnsRecordTypes;
         } else {
@@ -152,7 +154,7 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
         resolverConfigurator.accept(builder);
         final DefaultDnsNameResolver resolver = new DefaultDnsNameResolver(builder.build(), eventLoop);
         return new RefreshingAddressResolver(eventLoop, cache, resolver, dnsRecordTypes, minTtl, maxTtl,
-                                             refreshBackoff, refreshTimeoutMillis);
+                                             refreshBackoff);
     }
 
     @Override

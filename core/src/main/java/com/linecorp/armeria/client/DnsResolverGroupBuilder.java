@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
@@ -50,7 +49,7 @@ import io.netty.resolver.dns.NoopDnsCache;
  * automatically. A usual DNS resolver such as {@link DnsNameResolver}, a cache is expired after TTL.
  * On the other hand, the refreshing {@link AddressResolver} updates the DNS cache spontaneously
  * even after TTL has elapsed. If refreshing fails, the {@link AddressResolver} will retry with
- * {@link #refreshBackoff(Backoff)} until {@link #refreshTimeoutMillis(long)} has elapsed.
+ * {@link #refreshBackoff(Backoff)}.
  *
  * <p>{@link AddressResolver} keeps cache hits so that it does not refresh the caches for
  * the DNS addresses used only once.
@@ -58,8 +57,6 @@ import io.netty.resolver.dns.NoopDnsCache;
 public final class DnsResolverGroupBuilder {
 
     private Backoff refreshBackoff = Backoff.ofDefault();
-
-    private long refreshTimeoutMillis = TimeUnit.MINUTES.toMillis(10);
 
     private int minTtl = 1;
     private int maxTtl = Integer.MAX_VALUE;
@@ -101,27 +98,6 @@ public final class DnsResolverGroupBuilder {
      */
     public DnsResolverGroupBuilder refreshBackoff(Backoff refreshBackoff) {
         this.refreshBackoff = requireNonNull(refreshBackoff, "refreshBackoff");
-        return this;
-    }
-
-    /**
-     * Sets the timeout of refreshing DNS caches. After this timeout, the previously resolved
-     * DNS cache is invalidated.
-     */
-    public DnsResolverGroupBuilder refreshTimeout(Duration refreshTimeout) {
-        requireNonNull(refreshTimeout, "refreshTimeout");
-        checkArgument(!refreshTimeout.isNegative(), "refreshTimeout: %s (expected: >= 0)", refreshTimeout);
-        return refreshTimeoutMillis(refreshTimeout.toMillis());
-    }
-
-    /**
-     * Sets the timeout of refreshing DNS caches in milliseconds. After this timeout,
-     * the previously resolved DNS cache is invalidated.
-     */
-    public DnsResolverGroupBuilder refreshTimeoutMillis(long refreshTimeoutMillis) {
-        checkArgument(refreshTimeoutMillis >= 0, "refreshTimeoutMillis: %s (expected: >= 0)",
-                      refreshTimeoutMillis);
-        this.refreshTimeoutMillis = refreshTimeoutMillis;
         return this;
     }
 
@@ -339,6 +315,6 @@ public final class DnsResolverGroupBuilder {
             }
         };
         return new RefreshingAddressResolverGroup(resolverConfigurator, minTtl, maxTtl, refreshBackoff,
-                                                  refreshTimeoutMillis, resolvedAddressTypes);
+                                                  resolvedAddressTypes);
     }
 }
