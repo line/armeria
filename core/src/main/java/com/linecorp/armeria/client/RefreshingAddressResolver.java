@@ -96,14 +96,14 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
         final int port = unresolvedAddress.getPort();
         final CompletableFuture<CacheEntry> entryFuture = cache.get(hostname);
         if (entryFuture != null) {
-            handleFuture(entryFuture, promise, port, true);
+            handleFromCache(entryFuture, promise, port);
             return;
         }
 
         final CompletableFuture<CacheEntry> result = new CompletableFuture<>();
         final CompletableFuture<CacheEntry> previous = cache.putIfAbsent(hostname, result);
         if (previous != null) {
-            handleFuture(previous, promise, port, true);
+            handleFromCache(previous, promise, port);
             return;
         }
 
@@ -112,20 +112,33 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
                               .map(type -> DnsQuestionWithoutTrailingDot.of(hostname, type))
                               .collect(toImmutableList());
         sendQueries(questions, hostname, result);
-        handleFuture(result, promise, port, false);
+        result.handle((entry, unused) -> {
+            final Throwable cause = entry.cause();
+            if (cause != null) {
+                if (negativeTtl > 0) {
+                    executor().schedule(() -> cache.remove(hostname), negativeTtl, TimeUnit.SECONDS);
+                } else {
+                    cache.remove(hostname);
+                }
+                promise.tryFailure(cause);
+                return null;
+            }
+
+            entry.scheduleRefresh(entry.ttlMillis());
+            promise.trySuccess(new InetSocketAddress(entry.address(), port));
+            return null;
+        });
     }
 
-    private static void handleFuture(CompletableFuture<CacheEntry> future, Promise<InetSocketAddress> promise,
-                                     int port, boolean fromCache) {
+    private void handleFromCache(CompletableFuture<CacheEntry> future, Promise<InetSocketAddress> promise,
+                                 int port) {
         future.handle((entry, unused) -> {
             final Throwable cause = entry.cause();
             if (cause != null) {
                 promise.tryFailure(cause);
                 return null;
             }
-            if (fromCache) {
-                entry.servedFromCache();
-            }
+            entry.servedFromCache();
             promise.trySuccess(new InetSocketAddress(entry.address(), port));
             return null;
         });
@@ -136,7 +149,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
         final Future<List<DnsRecord>> recordsFuture = resolver.sendQueries(questions, hostname);
         recordsFuture.addListener(f -> {
             if (!f.isSuccess()) {
-                handleFailure(questions, hostname, result, f.cause());
+                result.complete(new CacheEntry(null, -1, questions, f.cause()));
                 return;
             }
 
@@ -157,8 +170,8 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
                         break;
                     } catch (UnknownHostException e) {
                         // Should never reach here because we already validated it in extractAddressBytes.
-                        handleFailure(questions, hostname, result, new IllegalArgumentException(
-                                "Invalid address: " + hostname, e));
+                        result.complete(new CacheEntry(null, -1, questions, new IllegalArgumentException(
+                                "Invalid address: " + hostname, e)));
                         return;
                     }
                 }
@@ -166,25 +179,15 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
                 records.forEach(ReferenceCountUtil::safeRelease);
             }
 
+            final CacheEntry cacheEntry;
             if (inetAddress == null) {
-                handleFailure(questions, hostname, result, new UnknownHostException(
+                cacheEntry = new CacheEntry(null, -1, questions, new UnknownHostException(
                         "failed to receive DNS records for " + hostname));
-                return;
+            } else {
+                cacheEntry = new CacheEntry(inetAddress, ttlMillis, questions, null);
             }
-            final CacheEntry entry = new CacheEntry(inetAddress, ttlMillis, questions, null);
-            result.complete(entry);
-            entry.scheduleRefresh(ttlMillis);
+            result.complete(cacheEntry);
         });
-    }
-
-    private void handleFailure(List<DnsQuestion> questions, String hostname,
-                               CompletableFuture<CacheEntry> result, Throwable cause) {
-        if (negativeTtl > 0) {
-            executor().schedule(() -> cache.remove(hostname), negativeTtl, TimeUnit.SECONDS);
-        } else {
-            cache.remove(hostname);
-        }
-        result.complete(new CacheEntry(null, -1, questions, cause));
     }
 
     @Override
@@ -283,11 +286,12 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
 
             final CompletableFuture<CacheEntry> result = new CompletableFuture<>();
             sendQueries(questions, hostName, result);
-            result.handle((entry, cause) -> {
+            result.handle((entry, unused) -> {
                 if (resolverClosed) {
                     return null;
                 }
 
+                final Throwable cause = entry.cause();
                 if (cause != null) {
                     final long nextDelayMillis = refreshBackoff.nextDelayMillis(numAttemptsSoFar++);
                     if (nextDelayMillis < 0) {
