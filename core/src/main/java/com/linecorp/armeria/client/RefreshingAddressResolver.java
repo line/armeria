@@ -303,7 +303,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
                 }
 
                 // Got the response successfully so reset the state.
-                servedFromCache = true;
+                servedFromCache = false;
                 numAttemptsSoFar = 1;
 
                 if (entry.address().equals(address) && entry.ttlMillis() == ttlMillis) {
