@@ -123,16 +123,18 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
 
     private final int minTtl;
     private final int maxTtl;
+    private int negativeTtl;
     private final Backoff refreshBackoff;
     private final List<DnsRecordType> dnsRecordTypes;
     private final Consumer<DnsNameResolverBuilder> resolverConfigurator;
 
     RefreshingAddressResolverGroup(Consumer<DnsNameResolverBuilder> resolverConfigurator,
-                                   int minTtl, int maxTtl, Backoff refreshBackoff,
+                                   int minTtl, int maxTtl, int negativeTtl, Backoff refreshBackoff,
                                    @Nullable ResolvedAddressTypes resolvedAddressTypes) {
         this.resolverConfigurator = resolverConfigurator;
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
+        this.negativeTtl = negativeTtl;
         this.refreshBackoff = refreshBackoff;
         if (resolvedAddressTypes == null) {
             dnsRecordTypes = defaultDnsRecordTypes;
@@ -154,7 +156,7 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
         resolverConfigurator.accept(builder);
         final DefaultDnsNameResolver resolver = new DefaultDnsNameResolver(builder.build(), eventLoop);
         return new RefreshingAddressResolver(eventLoop, cache, resolver, dnsRecordTypes, minTtl, maxTtl,
-                                             refreshBackoff);
+                                             negativeTtl, refreshBackoff);
     }
 
     @Override

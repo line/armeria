@@ -238,6 +238,32 @@ class RefreshingAddressResolverTest {
         }
     }
 
+    @Test
+    void negativeTtl() {
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of())
+        ) {
+            final EventLoop eventLoop = eventLoopExtension.get();
+            final DnsResolverGroupBuilder builder = builder(server).negativeTtl(2);
+            try (RefreshingAddressResolverGroup group = builder.build(eventLoop)) {
+                final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
+
+                final long start = System.nanoTime();
+
+                final Future<InetSocketAddress> future = resolver.resolve(
+                        InetSocketAddress.createUnresolved("foo.com", 36462));
+                await().until(future::isDone);
+                assertThat(future.cause()).isExactlyInstanceOf(UnknownHostException.class);
+
+                final ConcurrentMap<String, CompletableFuture<CacheEntry>> cache = group.cache();
+                assertThat(cache.size()).isOne();
+
+                await().until(cache::isEmpty);
+                assertThat(System.nanoTime() - start).isGreaterThanOrEqualTo(
+                        (long) (TimeUnit.SECONDS.toNanos(2) * 0.9));
+            }
+        }
+    }
+
     private static DnsResolverGroupBuilder builder(TestDnsServer server) {
         final DnsServerAddresses addrs = DnsServerAddresses.sequential(server.addr());
         return new DnsResolverGroupBuilder()

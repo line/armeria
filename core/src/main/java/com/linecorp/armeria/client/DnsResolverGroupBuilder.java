@@ -61,6 +61,7 @@ public final class DnsResolverGroupBuilder {
 
     private int minTtl = 1;
     private int maxTtl = Integer.MAX_VALUE;
+    private int negativeTtl;
 
     // DnsNameResolverBuilder properties:
 
@@ -113,6 +114,16 @@ public final class DnsResolverGroupBuilder {
                       "minTtl: %s, maxTtl: %s (expected: 1 <= minTtl <= maxTtl)", minTtl, maxTtl);
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
+        return this;
+    }
+
+    /**
+     * Sets the TTL of the cache for the failed DNS queries in seconds. The default value is {@code 0} which
+     * means that the {@link AddressResolver} does not cache when DNS queries are failed.
+     */
+    public DnsResolverGroupBuilder negativeTtl(int negativeTtl) {
+        checkArgument(negativeTtl >= 0, "negativeTtl: %s, (expected: >= 0)", negativeTtl);
+        this.negativeTtl = negativeTtl;
         return this;
     }
 
@@ -328,7 +339,7 @@ public final class DnsResolverGroupBuilder {
                 builder.decodeIdn(decodeIdn);
             }
         };
-        return new RefreshingAddressResolverGroup(resolverConfigurator, minTtl, maxTtl, refreshBackoff,
-                                                  resolvedAddressTypes);
+        return new RefreshingAddressResolverGroup(resolverConfigurator, minTtl, maxTtl, negativeTtl,
+                                                  refreshBackoff, resolvedAddressTypes);
     }
 }
