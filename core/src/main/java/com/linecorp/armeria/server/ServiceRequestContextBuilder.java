@@ -21,6 +21,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
@@ -169,12 +170,12 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         // Build the context with the properties set by a user and the fake objects.
         if (isRequestStartTimeSet()) {
             return new DefaultServiceRequestContext(
-                    serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), routingCtx,
+                    serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), uuid(), routingCtx,
                     routingResult, req, sslSession(), proxiedAddresses, clientAddress,
                     requestStartTimeNanos(), requestStartTimeMicros());
         } else {
             return new DefaultServiceRequestContext(
-                    serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), routingCtx,
+                    serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), uuid(), routingCtx,
                     routingResult, req, sslSession(), proxiedAddresses, clientAddress);
         }
     }
@@ -218,6 +219,11 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
     @Override
     public ServiceRequestContextBuilder sessionProtocol(SessionProtocol sessionProtocol) {
         return (ServiceRequestContextBuilder) super.sessionProtocol(sessionProtocol);
+    }
+
+    @Override
+    public ServiceRequestContextBuilder uuid(UUID uuid) {
+        return (ServiceRequestContextBuilder) super.uuid(uuid);
     }
 
     @Override

@@ -23,6 +23,7 @@ import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -44,6 +45,7 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     private final MeterRegistry meterRegistry;
     private final DefaultAttributeMap attrs = new DefaultAttributeMap();
     private final SessionProtocol sessionProtocol;
+    private UUID uuid;
     private final HttpMethod method;
     private final String path;
     @Nullable
@@ -67,16 +69,18 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
      * Creates a new instance.
      *
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
+     * @param uuid the {@link UUID} associated with this context
      * @param req the {@link HttpRequest} associated with this context
      * @param rpcReq the {@link RpcRequest} associated with this context
      */
     protected NonWrappingRequestContext(
             MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            HttpMethod method, String path, @Nullable String query,
+            UUID uuid, HttpMethod method, String path, @Nullable String query,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
         this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
+        this.uuid = requireNonNull(uuid, "uuid");
         this.method = requireNonNull(method, "method");
         this.path = requireNonNull(path, "path");
         this.query = query;
@@ -151,6 +155,11 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     public <A extends SocketAddress> A localAddress() {
         final Channel ch = channel();
         return ch != null ? (A) ch.localAddress() : null;
+    }
+
+    @Override
+    public final UUID uuid() {
+        return uuid;
     }
 
     @Override

@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.util.UUID;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
@@ -113,7 +114,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
 
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
                 eventLoop(), meterRegistry(), sessionProtocol(),
-                method(), path(), query(), fragment, options, request(), rpcRequest());
+                uuid(), method(), path(), query(), fragment, options, request(), rpcRequest());
         ctx.init(endpoint);
 
         if (isRequestStartTimeSet()) {
@@ -154,6 +155,11 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     @Override
     public ClientRequestContextBuilder sessionProtocol(SessionProtocol sessionProtocol) {
         return (ClientRequestContextBuilder) super.sessionProtocol(sessionProtocol);
+    }
+
+    @Override
+    public ClientRequestContextBuilder uuid(UUID uuid) {
+        return (ClientRequestContextBuilder) super.uuid(uuid);
     }
 
     @Override

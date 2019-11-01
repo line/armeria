@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.grpc;
 
 import java.net.URI;
 import java.util.Optional;
+import java.util.UUID;
 
 import javax.annotation.Nullable;
 
@@ -165,6 +166,7 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwrappable
                 factory(),
                 meterRegistry,
                 sessionProtocol,
+                UUID.randomUUID(),
                 method,
                 uri().getRawPath(),
                 uri().getRawQuery(),

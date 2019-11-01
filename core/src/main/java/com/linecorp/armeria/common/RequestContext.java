@@ -19,6 +19,7 @@ package com.linecorp.armeria.common;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -166,6 +167,12 @@ public interface RequestContext extends AttributeMap {
      */
     @Nullable
     SSLSession sslSession();
+
+    /**
+     * Returns the {@link UUID} that represents the unique identifier of the current {@link Request}
+     * and {@link Response} pair.
+     */
+    UUID uuid();
 
     /**
      * Returns the HTTP method of the current {@link Request}.
