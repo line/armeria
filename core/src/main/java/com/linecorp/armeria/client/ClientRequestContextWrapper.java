@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 
 import java.time.Duration;
 import java.util.Map.Entry;
+import java.util.UUID;
 
 import javax.annotation.Nullable;
 
@@ -41,9 +42,9 @@ public class ClientRequestContextWrapper
     }
 
     @Override
-    public ClientRequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
-                                                  Endpoint endpoint) {
-        return delegate().newDerivedContext(req, rpcReq, endpoint);
+    public ClientRequestContext newDerivedContext(UUID uuid, @Nullable HttpRequest req,
+                                                  @Nullable RpcRequest rpcReq, Endpoint endpoint) {
+        return delegate().newDerivedContext(uuid, req, rpcReq, endpoint);
     }
 
     @Override

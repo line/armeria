@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
@@ -253,10 +254,11 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
      * Creates a derived context.
      */
     private DefaultClientRequestContext(DefaultClientRequestContext ctx,
+                                        UUID uuid,
                                         @Nullable HttpRequest req,
                                         @Nullable RpcRequest rpcReq,
                                         Endpoint endpoint) {
-        super(ctx.meterRegistry(), ctx.sessionProtocol(), ctx.uuid(), ctx.method(), ctx.path(), ctx.query(),
+        super(ctx.meterRegistry(), ctx.sessionProtocol(), uuid, ctx.method(), ctx.path(), ctx.query(),
               req, rpcReq);
 
         // The new requests cannot be null if it was previously non-null.
@@ -294,9 +296,11 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     }
 
     @Override
-    public ClientRequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
+    public ClientRequestContext newDerivedContext(UUID uuid,
+                                                  @Nullable HttpRequest req,
+                                                  @Nullable RpcRequest rpcReq,
                                                   Endpoint endpoint) {
-        return new DefaultClientRequestContext(this, req, rpcReq, endpoint);
+        return new DefaultClientRequestContext(this, uuid, req, rpcReq, endpoint);
     }
 
     @Override

@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
+import java.util.UUID;
 
 import javax.annotation.Nullable;
 
@@ -185,8 +186,11 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
         }
 
         @Override
-        public ServiceRequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
-            return new CompositeServiceRequestContext(super.newDerivedContext(req, rpcReq), route, mappedPath);
+        public ServiceRequestContext newDerivedContext(UUID uuid,
+                                                       @Nullable HttpRequest req,
+                                                       @Nullable RpcRequest rpcReq) {
+            return new CompositeServiceRequestContext(super.newDerivedContext(uuid, req, rpcReq),
+                                                      route, mappedPath);
         }
 
         @Override

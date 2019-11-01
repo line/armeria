@@ -19,7 +19,9 @@ package com.linecorp.armeria.client;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
+import java.util.UUID;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
 
@@ -56,6 +58,15 @@ class ClientOptionsBuilderTest {
         final ClientOptionsBuilder b = ClientOptions.builder();
         b.option(ClientOption.MAX_RESPONSE_LENGTH, 123L);
         assertThat(b.build().maxResponseLength()).isEqualTo(123);
+    }
+
+    @Test
+    void testUuidGenerator() {
+        final Supplier<UUID> expected = () -> new UUID(0, 0);
+        final ClientOptionsBuilder b = ClientOptions.builder();
+        b.uuidGenerator(expected);
+        final ClientOptions options = b.build();
+        assertThat(options.uuidGenerator()).isSameAs(expected);
     }
 
     @Test

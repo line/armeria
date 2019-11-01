@@ -46,6 +46,7 @@ import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
+import com.linecorp.armeria.internal.UuidUtil;
 
 import brave.Tracing.Builder;
 import brave.propagation.StrictScopeDecorator;
@@ -164,12 +165,13 @@ public class BraveClientIntegrationTest extends ITHttpAsyncClient<HttpClient> {
     private static class DummyRequestContext extends NonWrappingRequestContext {
         DummyRequestContext() {
             super(NoopMeterRegistry.get(), SessionProtocol.HTTP,
-                  UUID.randomUUID(), HttpMethod.GET, "/", null,
+                  UuidUtil.random(), HttpMethod.GET, "/", null,
                   HttpRequest.streaming(HttpMethod.GET, "/"), null);
         }
 
         @Override
-        public RequestContext newDerivedContext(@Nullable HttpRequest req,
+        public RequestContext newDerivedContext(UUID uuid,
+                                                @Nullable HttpRequest req,
                                                 @Nullable RpcRequest rpcReq) {
             throw new UnsupportedOperationException();
         }

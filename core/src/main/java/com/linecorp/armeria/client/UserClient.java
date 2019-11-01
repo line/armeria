@@ -142,7 +142,7 @@ public abstract class UserClient<I extends Request, O extends Response>
         final DefaultClientRequestContext ctx;
         final HttpRequest httpReq;
         final RpcRequest rpcReq;
-        final UUID uuid = UUID.randomUUID();
+        final UUID uuid = options().uuidGenerator().get();
         if (req instanceof HttpRequest) {
             httpReq = (HttpRequest) req;
             rpcReq = null;

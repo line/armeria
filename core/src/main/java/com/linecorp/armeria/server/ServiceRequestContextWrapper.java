@@ -21,6 +21,7 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 
 import javax.annotation.Nonnull;
@@ -75,8 +76,10 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public ServiceRequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
-        return delegate().newDerivedContext(req, rpcReq);
+    public ServiceRequestContext newDerivedContext(UUID uuid,
+                                                   @Nullable HttpRequest req,
+                                                   @Nullable RpcRequest rpcReq) {
+        return delegate().newDerivedContext(uuid, req, rpcReq);
     }
 
     @Override

@@ -363,9 +363,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
-                serviceCfg, channel, serviceCfg.server().meterRegistry(),
-                protocol, UUID.randomUUID(), routingCtx, routingResult, req, getSSLSession(channel),
-                proxiedAddresses, clientAddress);
+                serviceCfg, channel, config.meterRegistry(), protocol,
+                config.uuidGenerator().get(), routingCtx, routingResult,
+                req, getSSLSession(channel), proxiedAddresses, clientAddress);
 
         try (SafeCloseable ignored = reqCtx.push()) {
             final RequestLogBuilder logBuilder = reqCtx.logBuilder();
@@ -676,7 +676,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final Channel channel = ctx.channel();
         final EarlyRespondingRequestContext reqCtx =
                 new EarlyRespondingRequestContext(channel, NoopMeterRegistry.get(), protocol(),
-                                                  req.method(), path, query, req);
+                                                  config.uuidGenerator().get(), req.method(), path, query, req);
 
         final RequestLogBuilder logBuilder = reqCtx.logBuilder();
         logBuilder.startRequest(channel, protocol());
@@ -691,19 +691,21 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         private final DefaultRequestLog requestLog;
 
         EarlyRespondingRequestContext(Channel channel, MeterRegistry meterRegistry,
-                                      SessionProtocol sessionProtocol, HttpMethod method, String path,
-                                      @Nullable String query, HttpRequest request) {
-            super(meterRegistry, sessionProtocol, UUID.randomUUID(), method, path, query, request, null);
+                                      SessionProtocol sessionProtocol, UUID uuid, HttpMethod method,
+                                      String path, @Nullable String query, HttpRequest request) {
+            super(meterRegistry, sessionProtocol, uuid, method, path, query, request, null);
             this.channel = requireNonNull(channel, "channel");
             requestLog = new DefaultRequestLog(this);
         }
 
         @Override
-        public RequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
+        public RequestContext newDerivedContext(UUID uuid,
+                                                @Nullable HttpRequest req,
+                                                @Nullable RpcRequest rpcReq) {
             // There are no attributes which should be copied to a new instance.
             requireNonNull(req, "req");
             return new EarlyRespondingRequestContext(channel, meterRegistry(), sessionProtocol(),
-                                                     method(), path(), query(), req);
+                                                     uuid, method(), path(), query(), req);
         }
 
         @Override

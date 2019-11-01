@@ -24,6 +24,7 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -165,12 +166,7 @@ public interface ServiceRequestContext extends RequestContext {
     }
 
     @Override
-    default ServiceRequestContext newDerivedContext() {
-        return newDerivedContext(request(), rpcRequest());
-    }
-
-    @Override
-    ServiceRequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq);
+    ServiceRequestContext newDerivedContext(UUID uuid, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq);
 
     /**
      * Returns the {@link Server} that is handling the current {@link Request}.

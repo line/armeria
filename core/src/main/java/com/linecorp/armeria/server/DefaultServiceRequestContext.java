@@ -44,6 +44,8 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
@@ -233,14 +235,16 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     }
 
     @Override
-    public ServiceRequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
+    public ServiceRequestContext newDerivedContext(UUID uuid,
+                                                   @Nullable HttpRequest req,
+                                                   @Nullable RpcRequest rpcReq) {
         requireNonNull(req, "req");
         if (rpcRequest() != null) {
             requireNonNull(rpcReq, "rpcReq");
         }
 
         final DefaultServiceRequestContext ctx = new DefaultServiceRequestContext(
-                cfg, ch, meterRegistry(), sessionProtocol(), uuid(), routingContext,
+                cfg, ch, meterRegistry(), sessionProtocol(), uuid, routingContext,
                 routingResult, req, sslSession(), proxiedAddresses(), clientAddress);
 
         if (rpcReq != null) {

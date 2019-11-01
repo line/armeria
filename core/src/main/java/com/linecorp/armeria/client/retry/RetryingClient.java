@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -262,11 +263,12 @@ public abstract class RetryingClient<I extends Request, O extends Response>
                                                             @Nullable HttpRequest req,
                                                             @Nullable RpcRequest rpcReq,
                                                             boolean initialAttempt) {
+        final UUID uuid = ctx.options().uuidGenerator().get();
         final EndpointSelector endpointSelector = ctx.endpointSelector();
         if (endpointSelector != null && !initialAttempt) {
-            return ctx.newDerivedContext(req, rpcReq, endpointSelector.select(ctx));
+            return ctx.newDerivedContext(uuid, req, rpcReq, endpointSelector.select(ctx));
         } else {
-            return ctx.newDerivedContext(req, rpcReq);
+            return ctx.newDerivedContext(uuid, req, rpcReq);
         }
     }
 

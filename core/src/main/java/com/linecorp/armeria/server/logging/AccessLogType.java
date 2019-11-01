@@ -22,6 +22,7 @@ import static com.linecorp.armeria.server.logging.AccessLogType.VariableRequirem
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -105,7 +106,12 @@ enum AccessLogType {
     /**
      * A plain text which would be written to access log message.
      */
-    TEXT('%', false, NO);
+    TEXT('%', false, NO),
+    /**
+     * {@code "%I"} - the {@link UUID} of the request. Use {@code "%{abbrev}I"} to get only the first
+     * 8 hexadigits, e.g. {@code "8b608a23"}.
+     */
+    UUID('I', false, OPTIONAL);
 
     private static final Map<Character, AccessLogType> tokenToEnum;
 

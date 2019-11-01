@@ -160,6 +160,9 @@ Tokens for the log format are listed in the following table.
 | ``%h``                    | No                | the remote hostname or IP address if DNS           |
 |                           |                   | hostname lookup is not available                   |
 +---------------------------+-------------------+----------------------------------------------------+
+| ``%I``                    | No                | the UUID of the request. Use ``%{abbrev}I`` format |
+|                           |                   | string to get the abbreviated form.                |
++---------------------------+-------------------+----------------------------------------------------+
 | ``%l``                    | No                | the remote logname of the user                     |
 |                           |                   | (not supported yet, always write ``-``)            |
 +---------------------------+-------------------+----------------------------------------------------+

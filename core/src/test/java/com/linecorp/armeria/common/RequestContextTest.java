@@ -64,6 +64,7 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.ChannelUtil;
+import com.linecorp.armeria.internal.UuidUtil;
 import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 
 import io.netty.channel.Channel;
@@ -443,12 +444,13 @@ public class RequestContextTest {
     private class DummyRequestContext extends NonWrappingRequestContext {
         DummyRequestContext() {
             super(NoopMeterRegistry.get(), SessionProtocol.HTTP,
-                  UUID.randomUUID(), HttpMethod.GET, "/", null,
+                  UuidUtil.random(), HttpMethod.GET, "/", null,
                   HttpRequest.streaming(HttpMethod.GET, "/"), null);
         }
 
         @Override
-        public RequestContext newDerivedContext(@Nullable HttpRequest req,
+        public RequestContext newDerivedContext(UUID uuid,
+                                                @Nullable HttpRequest req,
                                                 @Nullable RpcRequest rpcReq) {
             throw new UnsupportedOperationException();
         }

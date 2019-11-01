@@ -42,10 +42,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.KeyManagerFactory;
@@ -64,11 +66,13 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.UuidUtil;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceElement;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
@@ -187,6 +191,9 @@ public final class ServerBuilder {
     private Predicate<InetAddress> clientAddressTrustedProxyFilter = address -> false;
     private Predicate<InetAddress> clientAddressFilter = address -> true;
     private RejectedRouteHandler rejectedRouteHandler = RejectedRouteHandler.WARN;
+    private boolean enableServerHeader = true;
+    private boolean enableDateHeader = true;
+    private Supplier<UUID> uuidGenerator = UuidUtil.randomGenerator();
 
     // These properties can also be set in the service level.
 
@@ -201,9 +208,6 @@ public final class ServerBuilder {
 
     private Function<VirtualHost, Logger> accessLoggerMapper = host -> LoggerFactory.getLogger(
             defaultAccessLoggerName(host.hostnamePattern()));
-
-    private boolean enableServerHeader = true;
-    private boolean enableDateHeader = true;
 
     /**
      * Returns a new {@link ServerBuilder}.
@@ -1352,6 +1356,33 @@ public final class ServerBuilder {
     }
 
     /**
+     * Sets the response header not to include default {@code "Server"} header.
+     */
+    public ServerBuilder disableServerHeader() {
+        enableServerHeader = false;
+        return this;
+    }
+
+    /**
+     * Sets the response header not to include default {@code "Date"} header.
+     */
+    public ServerBuilder disableDateHeader() {
+        enableDateHeader = false;
+        return this;
+    }
+
+    /**
+     * Sets the {@link Supplier} which generates a {@link UUID} for each {@link ServiceRequestContext}.
+     * By default, a random {@link UUID} is generated.
+     *
+     * @see RequestContext#uuid()
+     */
+    public ServerBuilder uuidGenerator(Supplier<UUID> uuidGenerator) {
+        this.uuidGenerator = requireNonNull(uuidGenerator, "uuidGenerator");
+        return this;
+    }
+
+    /**
      * Sets the timeout of a request.
      *
      * @deprecated Use {@link #requestTimeout(Duration)}.
@@ -1542,30 +1573,6 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the response header not to include default {@code "Server"} header.
-     */
-    public ServerBuilder disableServerHeader() {
-        this.enableServerHeader = false;
-        return this;
-    }
-
-    boolean isServerHeaderEnabled() {
-        return enableServerHeader;
-    }
-
-    /**
-     * Sets the response header not to include default {@code "Date"} header.
-     */
-    public ServerBuilder disableDateHeader() {
-        this.enableDateHeader = false;
-        return this;
-    }
-
-    boolean isDateHeaderEnabled() {
-        return enableDateHeader;
-    }
-
-    /**
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
@@ -1650,7 +1657,7 @@ public final class ServerBuilder {
                 meterRegistry, serviceLoggerPrefix, accessLogWriter, shutdownAccessLogWriterOnStop,
                 proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter,
-                enableServerHeader, enableDateHeader), sslContexts);
+                enableServerHeader, enableDateHeader, uuidGenerator), sslContexts);
 
         serverListeners.forEach(server::addListener);
         return server;
@@ -1743,7 +1750,7 @@ public final class ServerBuilder {
                 meterRegistry, serviceLoggerPrefix,
                 accessLogWriter, shutdownAccessLogWriterOnStop,
                 channelOptions, childChannelOptions,
-                clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter
-        );
+                clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter,
+                enableServerHeader, enableDateHeader, uuidGenerator);
     }
 }

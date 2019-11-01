@@ -32,6 +32,7 @@ import javax.net.ssl.SSLSession;
 import com.linecorp.armeria.client.ClientRequestContextBuilder;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.internal.PathAndQuery;
+import com.linecorp.armeria.internal.UuidUtil;
 import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -450,7 +451,7 @@ public abstract class AbstractRequestContextBuilder {
      */
     protected final UUID uuid() {
         if (uuid == null) {
-            uuid = UUID.randomUUID();
+            uuid = UuidUtil.random();
         }
         return uuid;
     }

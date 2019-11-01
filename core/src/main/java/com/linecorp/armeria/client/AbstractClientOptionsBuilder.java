@@ -23,7 +23,9 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.UUID;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -287,6 +289,13 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
      */
     public B contentPreview(int length) {
         return contentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
+    }
+
+    /**
+     * Sets the {@link Supplier} that generates a {@link UUID} for each {@link Request}.
+     */
+    public B uuidGenerator(Supplier<UUID> uuidGenerator) {
+       return option(ClientOption.UUID_GENERATOR, uuidGenerator);
     }
 
     /**

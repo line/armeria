@@ -647,16 +647,8 @@ public interface RequestContext extends AttributeMap {
 
     /**
      * Creates a new {@link RequestContext} whose properties and {@link Attribute}s are copied from this
-     * {@link RequestContext}, except having its own {@link RequestLog}.
-     */
-    default RequestContext newDerivedContext() {
-        return newDerivedContext(request(), rpcRequest());
-    }
-
-    /**
-     * Creates a new {@link RequestContext} whose properties and {@link Attribute}s are copied from this
      * {@link RequestContext}, except having a different pair of {@link HttpRequest} and {@link RpcRequest}
      * and its own {@link RequestLog}.
      */
-    RequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq);
+    RequestContext newDerivedContext(UUID uuid, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq);
 }

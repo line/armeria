@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Map.Entry;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -177,24 +178,15 @@ public interface ClientRequestContext extends RequestContext {
 
     /**
      * Creates a new {@link ClientRequestContext} whose properties and {@link Attribute}s are copied from this
-     * {@link ClientRequestContext}, except having its own {@link RequestLog}.
-     */
-    @Override
-    default ClientRequestContext newDerivedContext() {
-        final Endpoint endpoint = endpoint();
-        checkState(endpoint != null, "endpoint not available");
-        return newDerivedContext(request(), rpcRequest(), endpoint);
-    }
-
-    /**
-     * Creates a new {@link ClientRequestContext} whose properties and {@link Attribute}s are copied from this
      * {@link ClientRequestContext}, except having a different {@link Request} and its own {@link RequestLog}.
      */
     @Override
-    default ClientRequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
+    default ClientRequestContext newDerivedContext(UUID uuid,
+                                                   @Nullable HttpRequest req,
+                                                   @Nullable RpcRequest rpcReq) {
         final Endpoint endpoint = endpoint();
         checkState(endpoint != null, "endpoint not available");
-        return newDerivedContext(req, rpcReq, endpoint);
+        return newDerivedContext(uuid, req, rpcReq, endpoint);
     }
 
     /**
@@ -202,7 +194,7 @@ public interface ClientRequestContext extends RequestContext {
      * {@link ClientRequestContext}, except having different {@link Request}, {@link Endpoint} and its own
      * {@link RequestLog}.
      */
-    ClientRequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
+    ClientRequestContext newDerivedContext(UUID uuid, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
                                            Endpoint endpoint);
 
     /**

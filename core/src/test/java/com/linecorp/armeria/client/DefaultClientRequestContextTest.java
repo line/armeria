@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
+import com.linecorp.armeria.internal.UuidUtil;
 
 import io.netty.channel.EventLoop;
 import io.netty.util.AttributeKey;
@@ -40,7 +41,7 @@ class DefaultClientRequestContextTest {
     void deriveContext() {
         final DefaultClientRequestContext originalCtx = new DefaultClientRequestContext(
                 mock(EventLoop.class), NoopMeterRegistry.get(), SessionProtocol.H2C,
-                UUID.randomUUID(), HttpMethod.POST, "/foo", null, null,
+                UuidUtil.random(), HttpMethod.POST, "/foo", null, null,
                 ClientOptions.of(),
                 HttpRequest.of(RequestHeaders.of(
                         HttpMethod.POST, "/foo",
@@ -54,16 +55,18 @@ class DefaultClientRequestContextTest {
         final AttributeKey<String> foo = AttributeKey.valueOf(DefaultClientRequestContextTest.class, "foo");
         originalCtx.attr(foo).set("foo");
 
+        final UUID newUuid = UuidUtil.random();
         final HttpRequest newRequest = HttpRequest.of(RequestHeaders.of(
                 HttpMethod.POST, "/foo",
                 HttpHeaderNames.SCHEME, "http",
                 HttpHeaderNames.AUTHORITY, "example.com:8080",
                 "foo", "bar"));
-        final ClientRequestContext derivedCtx = originalCtx.newDerivedContext(newRequest, null);
+        final ClientRequestContext derivedCtx = originalCtx.newDerivedContext(newUuid, newRequest, null);
         assertThat(derivedCtx.endpoint()).isSameAs(originalCtx.endpoint());
         assertThat(derivedCtx.sessionProtocol()).isSameAs(originalCtx.sessionProtocol());
         assertThat(derivedCtx.method()).isSameAs(originalCtx.method());
         assertThat(derivedCtx.options()).isSameAs(originalCtx.options());
+        assertThat(derivedCtx.uuid()).isSameAs(newUuid);
         assertThat(derivedCtx.request()).isSameAs(newRequest);
 
         assertThat(derivedCtx.path()).isEqualTo(originalCtx.path());
