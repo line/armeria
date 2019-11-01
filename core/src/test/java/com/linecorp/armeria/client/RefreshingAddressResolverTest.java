@@ -231,7 +231,7 @@ class RefreshingAddressResolverTest {
             final CacheEntry cacheEntry = cache.get("foo.com").join();
             group.close();
             await().until(() -> {
-                final ScheduledFuture<?> future = cacheEntry.refreshingScheduledFuture;
+                final ScheduledFuture<?> future = cacheEntry.refreshFuture;
                 return future != null && future.isCancelled();
             });
             assertThat(cache).isEmpty();

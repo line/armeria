@@ -215,7 +215,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
 
         @VisibleForTesting
         @Nullable
-        ScheduledFuture<?> refreshingScheduledFuture;
+        ScheduledFuture<?> refreshFuture;
 
         CacheEntry(InetAddress address, long ttlMillis, List<DnsQuestion> questions) {
             this.address = address;
@@ -239,13 +239,13 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
             if (resolverClosed) {
                 return;
             }
-            refreshingScheduledFuture = executor().schedule(this, nextDelayMillis, TimeUnit.MILLISECONDS);
+            refreshFuture = executor().schedule(this, nextDelayMillis, TimeUnit.MILLISECONDS);
         }
 
         void clear() {
             assert resolverClosed;
-            if (refreshingScheduledFuture != null) {
-                refreshingScheduledFuture.cancel(false);
+            if (refreshFuture != null) {
+                refreshFuture.cancel(false);
             }
         }
 
