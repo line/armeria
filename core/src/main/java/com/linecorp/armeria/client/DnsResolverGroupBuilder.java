@@ -35,7 +35,6 @@ import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;
-import io.netty.resolver.dns.DnsCnameCache;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
 import io.netty.resolver.dns.DnsQueryLifecycleObserverFactory;
@@ -66,8 +65,6 @@ public final class DnsResolverGroupBuilder {
     // DnsNameResolverBuilder properties:
 
     private boolean traceEnabled = true;
-    @Nullable
-    private DnsCnameCache cnameCache;
     @Nullable
     private Long queryTimeoutMillis;
     @Nullable
@@ -129,15 +126,9 @@ public final class DnsResolverGroupBuilder {
     }
 
     /**
-     * Sets the cache for {@code CNAME} mappings.
-     */
-    public DnsResolverGroupBuilder cnameCache(DnsCnameCache cnameCache) {
-        this.cnameCache = requireNonNull(cnameCache, "cnameCache");
-        return this;
-    }
-
-    /**
      * Sets the timeout of each DNS query performed by this resolver.
+     *
+     * @see DnsNameResolverBuilder#queryTimeoutMillis(long)
      */
     public DnsResolverGroupBuilder queryTimeout(Duration queryTimeout) {
         requireNonNull(queryTimeout, "queryTimeout");
@@ -148,6 +139,8 @@ public final class DnsResolverGroupBuilder {
 
     /**
      * Sets the timeout of each DNS query performed by this resolver in milliseconds.
+     *
+     * @see DnsNameResolverBuilder#queryTimeoutMillis(long)
      */
     public DnsResolverGroupBuilder queryTimeoutMillis(long queryTimeoutMillis) {
         checkArgument(queryTimeoutMillis >= 0, "queryTimeoutMillis: %s (expected: >= 0)", queryTimeoutMillis);
@@ -157,6 +150,8 @@ public final class DnsResolverGroupBuilder {
 
     /**
      * Sets {@link ResolvedAddressTypes} which is the list of the protocol families of the address resolved.
+     *
+     * @see DnsNameResolverBuilder#resolvedAddressTypes(ResolvedAddressTypes)
      */
     public DnsResolverGroupBuilder resolvedAddressTypes(
             ResolvedAddressTypes resolvedAddressTypes) {
@@ -166,7 +161,8 @@ public final class DnsResolverGroupBuilder {
 
     /**
      * Sets if this resolver has to send a DNS query with the RD (recursion desired) flag set.
-     * This flag is enabled by default.
+     *
+     * @see DnsNameResolverBuilder#recursionDesired(boolean)
      */
     public DnsResolverGroupBuilder recursionDesired(boolean recursionDesired) {
         this.recursionDesired = recursionDesired;
@@ -175,7 +171,8 @@ public final class DnsResolverGroupBuilder {
 
     /**
      * Returns the maximum allowed number of DNS queries to send when resolving a host name.
-     * The default value is {@code 16}.
+     *
+     * @see DnsNameResolverBuilder#maxQueriesPerResolve(int)
      */
     public DnsResolverGroupBuilder maxQueriesPerResolve(int maxQueriesPerResolve) {
         checkArgument(maxQueriesPerResolve > 0,
@@ -185,7 +182,9 @@ public final class DnsResolverGroupBuilder {
     }
 
     /**
-     * Sets the capacity of the datagram packet buffer in bytes. The default value is {@code 4096} bytes.
+     * Sets the capacity of the datagram packet buffer in bytes.
+     *
+     * @see DnsNameResolverBuilder#maxPayloadSize(int)
      */
     public DnsResolverGroupBuilder maxPayloadSize(int maxPayloadSize) {
         this.maxPayloadSize = maxPayloadSize;
@@ -195,7 +194,9 @@ public final class DnsResolverGroupBuilder {
     /**
      * Enables the automatic inclusion of a optional records that tries to give the remote DNS server a hint
      * about how much data the resolver can read per response. Some DNSServer may not support this and so
-     * fail to answer queries. This flag is enabled by default.
+     * fail to answer queries.
+     *
+     * @see DnsNameResolverBuilder#optResourceEnabled(boolean)
      */
     public DnsResolverGroupBuilder optResourceEnabled(boolean optResourceEnabled) {
         this.optResourceEnabled = optResourceEnabled;
@@ -204,6 +205,8 @@ public final class DnsResolverGroupBuilder {
 
     /**
      * Sets {@link HostsFileEntriesResolver} which is used to first check if the hostname is locally aliased.
+     *
+     * @see DnsNameResolverBuilder#hostsFileEntriesResolver(HostsFileEntriesResolver)
      */
     public DnsResolverGroupBuilder hostsFileEntriesResolver(
             HostsFileEntriesResolver hostsFileEntriesResolver) {
@@ -214,6 +217,8 @@ public final class DnsResolverGroupBuilder {
     /**
      * Sets {@link DnsServerAddressStreamProvider} which is used to determine which DNS server is used to
      * resolve each hostname.
+     *
+     * @see DnsNameResolverBuilder#nameServerProvider(DnsServerAddressStreamProvider)
      */
     public DnsResolverGroupBuilder dnsServerAddressStreamProvider(
             DnsServerAddressStreamProvider dnsServerAddressStreamProvider) {
@@ -225,6 +230,8 @@ public final class DnsResolverGroupBuilder {
     /**
      * Sets {@link DnsQueryLifecycleObserverFactory} that is used to generate objects which can observe
      * individual DNS queries.
+     *
+     * @see DnsNameResolverBuilder#dnsQueryLifecycleObserverFactory(DnsQueryLifecycleObserverFactory)
      */
     public DnsResolverGroupBuilder dnsQueryLifecycleObserverFactory(
             DnsQueryLifecycleObserverFactory dnsQueryLifecycleObserverFactory) {
@@ -235,6 +242,8 @@ public final class DnsResolverGroupBuilder {
 
     /**
      * Sets the list of search domains of the resolver.
+     *
+     * @see DnsNameResolverBuilder#searchDomains(Iterable)
      */
     public DnsResolverGroupBuilder searchDomains(Iterable<String> searchDomains) {
         this.searchDomains = ImmutableList.copyOf(requireNonNull(searchDomains, "searchDomains"));
@@ -243,6 +252,8 @@ public final class DnsResolverGroupBuilder {
 
     /**
      * Sets the search domains of the resolver.
+     *
+     * @see DnsNameResolverBuilder#searchDomains(Iterable)
      */
     public DnsResolverGroupBuilder searchDomains(String... searchDomains) {
         return searchDomains(ImmutableList.copyOf(requireNonNull(searchDomains, "searchDomains")));
@@ -250,6 +261,8 @@ public final class DnsResolverGroupBuilder {
 
     /**
      * Sets the number of dots which must appear in a name before an initial absolute query is made.
+     *
+     * @see DnsNameResolverBuilder#ndots(int)
      */
     public DnsResolverGroupBuilder ndots(int ndots) {
         checkArgument(ndots >= 0, "ndots: %s (expected: >= 0)", ndots);
@@ -260,6 +273,8 @@ public final class DnsResolverGroupBuilder {
     /**
      * Sets if the domain and host names should be decoded to unicode when received.
      * See <a href="https://tools.ietf.org/html/rfc3492">rfc3492</a>. This flag is enabled by default.
+     *
+     * @see DnsNameResolverBuilder#decodeIdn(boolean)
      */
     public DnsResolverGroupBuilder decodeIdn(boolean decodeIdn) {
         this.decodeIdn = decodeIdn;

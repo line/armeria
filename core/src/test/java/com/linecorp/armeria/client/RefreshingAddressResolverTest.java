@@ -29,6 +29,7 @@ import java.net.UnknownHostException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
@@ -229,7 +230,10 @@ class RefreshingAddressResolverTest {
             assertThat(cache.size()).isEqualTo(1);
             final CacheEntry cacheEntry = cache.get("foo.com").join();
             group.close();
-            await().until(() -> cacheEntry.cacheUpdatingScheduledFuture == RefreshingAddressResolver.closed);
+            await().until(() -> {
+                final ScheduledFuture<?> future = cacheEntry.refreshingScheduledFuture;
+                return future != null && future.isCancelled();
+            });
             assertThat(cache).isEmpty();
         }
     }

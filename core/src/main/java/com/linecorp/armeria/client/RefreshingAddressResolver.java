@@ -26,10 +26,8 @@ import java.net.UnknownHostException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Delayed;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import javax.annotation.Nullable;
 
@@ -55,56 +53,6 @@ import io.netty.util.concurrent.Promise;
 final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocketAddress> {
 
     private static final Logger logger = LoggerFactory.getLogger(RefreshingAddressResolver.class);
-
-    @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<CacheEntry, ScheduledFuture> futureUpdater =
-            AtomicReferenceFieldUpdater.newUpdater(CacheEntry.class, ScheduledFuture.class,
-                                                   "cacheUpdatingScheduledFuture");
-
-    /**
-     * A {@link ScheduledFuture} which is set in {@link CacheEntry} when the
-     * {@link RefreshingAddressResolver} is closed by replacing and cancelling previously scheduled automatic
-     * DNS cache updating.
-     */
-    @VisibleForTesting
-    @SuppressWarnings("ComparableImplementedButEqualsNotOverridden")
-    static final ScheduledFuture<?> closed = new ScheduledFuture<Object>() {
-
-        @Override
-        public boolean cancel(boolean mayInterruptIfRunning) {
-            return false;
-        }
-
-        @Override
-        public long getDelay(TimeUnit unit) {
-            return Long.MIN_VALUE;
-        }
-
-        @Override
-        public int compareTo(Delayed o) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public boolean isCancelled() {
-            return true;
-        }
-
-        @Override
-        public boolean isDone() {
-            return true;
-        }
-
-        @Override
-        public Object get() {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public Object get(long timeout, TimeUnit unit) {
-            throw new UnsupportedOperationException();
-        }
-    };
 
     private final ConcurrentMap<String, CompletableFuture<CacheEntry>> cache;
     private final DefaultDnsNameResolver resolver;
@@ -146,14 +94,14 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
         final int port = unresolvedAddress.getPort();
         final CompletableFuture<CacheEntry> entryFuture = cache.get(hostname);
         if (entryFuture != null) {
-            handleServedFromCache(entryFuture, promise, port);
+            handleFromCache(entryFuture, promise, port);
             return;
         }
 
         final CompletableFuture<CacheEntry> result = new CompletableFuture<>();
         final CompletableFuture<CacheEntry> previous = cache.putIfAbsent(hostname, result);
         if (previous != null) {
-            handleServedFromCache(previous, promise, port);
+            handleFromCache(previous, promise, port);
             return;
         }
 
@@ -173,8 +121,8 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
         });
     }
 
-    private static void handleServedFromCache(CompletableFuture<CacheEntry> future,
-                                              Promise<InetSocketAddress> promise, int port) {
+    private static void handleFromCache(CompletableFuture<CacheEntry> future,
+                                        Promise<InetSocketAddress> promise, int port) {
         future.handle((entry, cause) -> {
             if (cause != null) {
                 promise.tryFailure(cause);
@@ -228,7 +176,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
             }
             final CacheEntry entry = new CacheEntry(inetAddress, ttlMillis, questions);
             result.complete(entry);
-            entry.scheduleCacheUpdate(ttlMillis);
+            entry.scheduleRefresh(ttlMillis);
         });
     }
 
@@ -265,8 +213,9 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
 
         private volatile boolean servedFromCache;
 
+        @VisibleForTesting
         @Nullable
-        volatile ScheduledFuture<?> cacheUpdatingScheduledFuture;
+        ScheduledFuture<?> refreshingScheduledFuture;
 
         CacheEntry(InetAddress address, long ttlMillis, List<DnsQuestion> questions) {
             this.address = address;
@@ -286,29 +235,17 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
             return ttlMillis;
         }
 
-        void scheduleCacheUpdate(long nextDelayMillis) {
+        void scheduleRefresh(long nextDelayMillis) {
             if (resolverClosed) {
                 return;
             }
-            final ScheduledFuture<?> oldFuture = futureUpdater.get(this);
-            if (oldFuture == closed) {
-                return;
-            }
-
-            final ScheduledFuture<?> newFuture =
-                    executor().schedule(this, nextDelayMillis, TimeUnit.MILLISECONDS);
-            if (!futureUpdater.compareAndSet(this, oldFuture, newFuture)) {
-                // clear() is called and the future is set to closed future. So we just cancel the newFuture
-                // we just made.
-                newFuture.cancel(true);
-            }
+            refreshingScheduledFuture = executor().schedule(this, nextDelayMillis, TimeUnit.MILLISECONDS);
         }
 
         void clear() {
             assert resolverClosed;
-            final ScheduledFuture<?> future = futureUpdater.getAndSet(this, closed);
-            if (future != null) {
-                future.cancel(false);
+            if (refreshingScheduledFuture != null) {
+                refreshingScheduledFuture.cancel(false);
             }
         }
 
@@ -337,7 +274,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
                         cache.remove(hostName);
                         return null;
                     }
-                    scheduleCacheUpdate(nextDelayMillis);
+                    scheduleRefresh(nextDelayMillis);
                     return null;
                 }
 
@@ -346,11 +283,11 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
                 numAttemptsSoFar = 1;
 
                 if (entry.address().equals(address) && entry.ttlMillis() == ttlMillis) {
-                    scheduleCacheUpdate(ttlMillis);
+                    scheduleRefresh(ttlMillis);
                 } else {
                     // Replace the old entry with the new one.
                     cache.put(hostName, result);
-                    entry.scheduleCacheUpdate(entry.ttlMillis());
+                    entry.scheduleRefresh(entry.ttlMillis());
                 }
                 return null;
             });
