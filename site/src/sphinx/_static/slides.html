@@ -92,15 +92,17 @@ html:fullscreen #fullscreen {
 
 /* Nudge arrow */
 
-#arrow {
+#arrow-wrapper {
   display: none;
+}
+
+.arrow {
   position: absolute;
   top: 50%;
   right: 5vh;
   width: 5vh;
   height: 5vh;
-  margin: -20px 0 0 -20px;
-  overflow: visible;
+  margin: -2.5vh 0 0 -2.5vh;
   transform: rotate(-45deg);
   border-left: none;
   border-top: none;
@@ -108,25 +110,19 @@ html:fullscreen #fullscreen {
   border-bottom: solid 0.2em darkgray;
   animation-duration: 2.5s;
   animation-iteration-count: infinite;
-  animation-name: arrow;
 }
 
-#arrow:before {
-  position: absolute;
-  top: 0;
-  content: '';
-  width: 5vh;
-  height: 5vh;
-  border-left: none;
-  border-top: none;
-  border-right: solid 0.2em darkgray;
-  border-bottom: solid 0.2em darkgray;
-  animation-duration: 2.5s;
-  animation-iteration-count: infinite;
+#arrow-main {
+  z-index: 1000;
+  animation-name: arrow-main;
+}
+
+#arrow-thrust {
+  z-index: 999;
   animation-name: arrow-thrust;
 }
 
-@keyframes arrow {
+@keyframes arrow-main {
   0%, 100% {
     border-color: #ff0089;
   }
@@ -142,7 +138,7 @@ html:fullscreen #fullscreen {
   }
   100% {
     opacity: 0;
-    transform: translate(-2vh, -2vh);
+    right: 8.5vh;
   }
 }
 </style>
@@ -159,7 +155,10 @@ html:fullscreen #fullscreen {
   </div>
   <div id="bottom"></div>
 </div>
-<div id="arrow"></div>
+<div id="arrow-wrapper">
+  <div id="arrow-thrust" class="arrow"></div>
+  <div id="arrow-main" class="arrow"></div>
+</div>
 <script>
 'use strict';
 
@@ -312,7 +311,7 @@ function showPage(pageNum) {
   if (spinner) {
     spinner.remove();
     // Show the nudge arrow.
-    document.getElementById('arrow').style.display = 'block';
+    document.getElementById('arrow-wrapper').style.display = 'block';
   }
 
   // Show the page first.
@@ -384,7 +383,7 @@ function navigate(command) {
 
   if (curPageNum !== oldPageNum) {
     // Remove the initial nudge arrow.
-    var arrow = document.getElementById('arrow');
+    var arrow = document.getElementById('arrow-wrapper');
     if (arrow) {
       arrow.remove();
     }
