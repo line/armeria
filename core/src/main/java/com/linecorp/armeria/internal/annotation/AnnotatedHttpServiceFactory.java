@@ -238,6 +238,24 @@ public final class AnnotatedHttpServiceFactory {
                       .collect(toImmutableList());
     }
 
+    /**
+     * Returns the list of {@link AnnotatedHttpService} defined by {@link Path} and HTTP method annotations
+     * from the specified {@code object}, {@link ExceptionHandlerFunction}'s,
+     * {@link RequestConverterFunction}'s and {@link ResponseConverterFunction}'s.
+     */
+    public static List<AnnotatedHttpServiceElement> find(
+            String pathPrefix, Object object,
+            List<ExceptionHandlerFunction> exceptionHandlerFunctions,
+            List<RequestConverterFunction> requestConverterFunctions,
+            List<ResponseConverterFunction> responseConverterFunctions) {
+        final List<Method> methods = requestMappingMethods(object);
+        return methods.stream()
+                      .flatMap((Method method) ->
+                                       create(pathPrefix, object, method, exceptionHandlerFunctions,
+                                              requestConverterFunctions, responseConverterFunctions).stream())
+                      .collect(toImmutableList());
+    }
+
     private static HttpStatus defaultResponseStatus(Optional<HttpStatus> defaultResponseStatus,
                                                     Method method) {
         return defaultResponseStatus.orElseGet(() -> {

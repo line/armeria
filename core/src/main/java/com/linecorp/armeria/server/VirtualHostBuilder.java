@@ -55,6 +55,7 @@ import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.SslContextUtil;
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpService;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceElement;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory;
 import com.linecorp.armeria.internal.crypto.BouncyCastleKeyFactoryProvider;
@@ -550,21 +551,61 @@ public final class VirtualHostBuilder {
 
         final List<AnnotatedHttpServiceElement> elements =
                 AnnotatedHttpServiceFactory.find(pathPrefix, service, exceptionHandlersAndConverters);
-        elements.forEach(e -> {
-            Service<HttpRequest, HttpResponse> s = e.service();
-            // Apply decorators which are specified in the service class.
-            s = e.decorator().apply(s);
-            // Apply decorators which are passed via annotatedService() methods.
-            s = decorator.apply(s);
-
-            // If there is a decorator, we should add one more decorator which handles an exception
-            // raised from decorators.
-            if (s != e.service()) {
-                s = e.service().exceptionHandlingDecorator().apply(s);
-            }
-            service(e.route(), s);
-        });
+        registerHttpServiceElement(elements, decorator);
         return this;
+    }
+
+    /**
+     * Binds the specified annotated service object under the specified path prefix.
+     *
+     * @param exceptionHandlerFunctions a list of {@link ExceptionHandlerFunction}
+     * @param requestConverterFunctions a list of {@link RequestConverterFunction}
+     * @param responseConverterFunctions a list of {@link ResponseConverterFunction}
+     */
+    public VirtualHostBuilder annotatedService(
+            String pathPrefix, Object service,
+            Function<Service<HttpRequest, HttpResponse>,
+                    ? extends Service<HttpRequest, HttpResponse>> decorator,
+            List<ExceptionHandlerFunction> exceptionHandlerFunctions,
+            List<RequestConverterFunction> requestConverterFunctions,
+            List<ResponseConverterFunction> responseConverterFunctions) {
+        requireNonNull(pathPrefix, "pathPrefix");
+        requireNonNull(service, "service");
+        requireNonNull(decorator, "decorator");
+        requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
+        requireNonNull(requestConverterFunctions, "requestConverterFunctions");
+        requireNonNull(responseConverterFunctions, "responseConverterFunctions");
+
+        final List<AnnotatedHttpServiceElement> elements =
+                AnnotatedHttpServiceFactory.find(pathPrefix, service, exceptionHandlerFunctions,
+                                                 requestConverterFunctions,
+                                                 responseConverterFunctions);
+        registerHttpServiceElement(elements, decorator);
+        return this;
+    }
+
+    /**
+     * Returns a new instance of {@link VirtualHostAnnotatedServiceBindingBuilder} to build
+     * {@link AnnotatedHttpService} fluently.
+     */
+    public VirtualHostAnnotatedServiceBindingBuilder annotatedService() {
+        return new VirtualHostAnnotatedServiceBindingBuilder(this);
+    }
+
+    /**
+     * Converts each of the {@link AnnotatedHttpServiceElement} to {@link ServiceConfigBuilder} and
+     * registers it with {@link VirtualHostBuilder}.
+     */
+    private void registerHttpServiceElement(List<AnnotatedHttpServiceElement> elements,
+                                            Function<Service<HttpRequest, HttpResponse>,
+                                                    ? extends Service<HttpRequest, HttpResponse>> decorator) {
+        elements.forEach(element -> {
+            final Service<HttpRequest, HttpResponse> decoratedService =
+                    element.buildSafeDecoratedService(decorator);
+            final ServiceConfigBuilder serviceConfigBuilder =
+                    new ServiceConfigBuilder(element.route(), decoratedService);
+            serverBuilder.serviceConfigBuilder(serviceConfigBuilder);
+        });
     }
 
     VirtualHostBuilder serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder) {
