@@ -44,14 +44,14 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
  *
  * <pre>{@code
  * ServerBuilder sb = Server.builder();
- * sb.annotatedService()                                    // Returns an instance of this class
+ * sb.annotatedService()                       // Returns an instance of this class
  *   .requestTimeoutMillis(5000)
  *   .maxRequestLength(8192)
  *   .exceptionHandler((ctx, request, cause) -> HttpResponse.of(400))
  *   .pathPrefix("/foo")
  *   .verboseResponses(true)
  *   .contentPreview(500)
- *   .build(new Service())                                   // Return to the ServerBuilder.
+ *   .build(new Service())                     // Return to the ServerBuilder.
  *   .build();
  * }</pre>
  *

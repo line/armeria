@@ -113,8 +113,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     }
 
     @Override
-    public ServiceConfigSetters accessLogWriter(AccessLogWriter accessLogWriter,
-                                          boolean shutdownOnStop) {
+    public ServiceConfigSetters accessLogWriter(AccessLogWriter accessLogWriter, boolean shutdownOnStop) {
         this.accessLogWriter = requireNonNull(accessLogWriter, "accessLogWriter");
         shutdownAccessLogWriterOnStop = shutdownOnStop;
         return this;
