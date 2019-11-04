@@ -215,10 +215,10 @@ var loadingTask = pdfjsLib.getDocument({
   cMapPacked: true
 });
 loadingTask.onProgress = function(progress) {
-  if (pdfDoc) {
-    return;
+  // Set progress only while the spinner is active.
+  if (document.getElementById('spinner')) {
+    setProgress(progress.loaded, progress.total);
   }
-  setProgress(progress.loaded, progress.total);
 };
 var drawing = false;
 
