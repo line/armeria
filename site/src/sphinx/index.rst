@@ -31,7 +31,7 @@ Check out `the introductory slides <_static/slides.html>`_:
 
     <div style="width: 100%; max-width: 640px; margin-bottom: 1em;">
       <div style="position: relative; width: 100%; height: 0; padding-bottom: 56.25%; border: solid 1px darkgray;">
-        <iframe src="_static/slides.html" allowfullscreen="true" style="position: absolute; width:100%; height: 100%; left: 0; top:0; border-width: 0;"></iframe>
+        <iframe src="_static/slides.html" allowfullscreen="true" style="position: absolute; width:100%; height: 100%; left: 0; top: 0; border-width: 0;"></iframe>
       </div>
     </div>
 
