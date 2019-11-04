@@ -68,12 +68,13 @@ import io.netty.util.ReferenceCountUtil;
  *
  * @see HttpServerCodec
  */
-public class Http1ClientCodec extends CombinedChannelDuplexHandler<HttpResponseDecoder, HttpRequestEncoder>
+public final class Http1ClientCodec
+        extends CombinedChannelDuplexHandler<HttpResponseDecoder, HttpRequestEncoder>
         implements HttpClientUpgradeHandler.SourceCodec {
 
     // Forked from Netty 4.1.41 at 9ec3411c91bdc50e78f3d50b393ab815d2be0f92
-    // - Made the class non-final so that we can intercept the close() request.
     // - Handle 1xx responses correctly, not just 100 and 101.
+    // TODO(anuraaga): Remove fork after https://github.com/netty/netty/pull/9712
 
     /** A queue that is used for correlating a request and a response. */
     private final Queue<HttpMethod> queue = new ArrayDeque<>();

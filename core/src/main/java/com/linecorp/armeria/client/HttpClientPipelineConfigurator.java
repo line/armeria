@@ -148,7 +148,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         final ChannelPipeline p = ch.pipeline();
         p.addLast(new FlushConsolidationHandler());
-        p.addLast(ReadSuppressingHandler.INSTANCE);
+        p.addLast(ReadSuppressingAndChannelDeactivatingHandler.INSTANCE);
 
         try {
             if (sslCtx != null) {
@@ -628,13 +628,23 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
     private static Http1ClientCodec newHttp1Codec(
             int defaultMaxInitialLineLength, int defaultMaxHeaderSize, int defaultMaxChunkSize) {
-        return new Http1ClientCodec(defaultMaxInitialLineLength, defaultMaxHeaderSize, defaultMaxChunkSize) {
-            @Override
-            public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-                HttpSession.get(ctx.channel()).deactivate();
-                super.close(ctx, promise);
-            }
-        };
+        return new Http1ClientCodec(defaultMaxInitialLineLength, defaultMaxHeaderSize, defaultMaxChunkSize);
+    }
+
+    /**
+     * Suppresses unnecessary read calls and deactivates the {@link HttpSession} associated with a channel when
+     * it is closed to ensure it isn't used anymore.
+     */
+    private static final class ReadSuppressingAndChannelDeactivatingHandler extends ReadSuppressingHandler {
+
+        private static final ReadSuppressingAndChannelDeactivatingHandler
+                INSTANCE = new ReadSuppressingAndChannelDeactivatingHandler();
+
+        @Override
+        public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            HttpSession.get(ctx.channel()).deactivate();
+            super.close(ctx, promise);
+        }
     }
 
     /**
