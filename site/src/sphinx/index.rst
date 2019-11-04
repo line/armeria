@@ -25,11 +25,15 @@ It is open-sourced and licensed under `Apache License 2.0`_ by `LINE Corporation
 
 Want a quick tour?
 ------------------
-Check out `the introductory slides <https://speakerdeck.com/trustin/armeria-the-only-thrift-grpc-rest-microservice-framework-youll-need>`_:
+Check out `the introductory slides <_static/slides.html>`_:
 
 .. raw:: html
 
-    <div style="max-width: 640px; margin-bottom: 1em"><script async class="speakerdeck-embed" data-id="c160591ad87c4edaa8ca62afb26b1904" data-ratio="1.77777777777778" src="//speakerdeck.com/assets/embed.js"></script></div>
+    <div style="width: 100%; max-width: 640px; margin-bottom: 1em;">
+      <div style="position: relative; width: 100%; height: 0; padding-bottom: 56.25%; border: solid 1px darkgray;">
+        <iframe src="_static/slides.html" allowfullscreen="true" style="position: absolute; width:100%; height: 100%; left: 0; top: 0; border-width: 0;"></iframe>
+      </div>
+    </div>
 
 Features
 --------
