@@ -182,7 +182,7 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     }
 
     /**
-     * Registers the given service to {@link ServerBuilder} adn return {@link ServerBuilder}
+     * Registers the given service to {@link ServerBuilder} and return {@link ServerBuilder}
      * to continue building {@link Server}.
      *
      * @param service annotated service object to handle incoming requests matching path prefix, which
