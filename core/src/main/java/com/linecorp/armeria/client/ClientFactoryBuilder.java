@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
@@ -39,7 +38,6 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.CommonPools;
@@ -97,7 +95,7 @@ public final class ClientFactoryBuilder {
     private Function<? super EventLoopGroup,
             ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory;
     @Nullable
-    private List<Consumer<? super DnsNameResolverBuilder>> domainNameResolverCustomizers;
+    private List<Consumer<? super DnsResolverGroupBuilder>> dnsResolverGroupCustomizers;
     private int http2InitialConnectionWindowSize = Flags.defaultHttp2InitialConnectionWindowSize();
     private int http2InitialStreamWindowSize = Flags.defaultHttp2InitialStreamWindowSize();
     private int http2MaxFrameSize = Flags.defaultHttp2MaxFrameSize();
@@ -267,7 +265,7 @@ public final class ClientFactoryBuilder {
             Function<? super EventLoopGroup,
                      ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory) {
         requireNonNull(addressResolverGroupFactory, "addressResolverGroupFactory");
-        checkState(domainNameResolverCustomizers == null,
+        checkState(dnsResolverGroupCustomizers == null,
                    "addressResolverGroupFactory() and domainNameResolverCustomizer() are mutually exclusive.");
         this.addressResolverGroupFactory = addressResolverGroupFactory;
         return this;
@@ -281,14 +279,14 @@ public final class ClientFactoryBuilder {
      * @throws IllegalStateException if {@link #addressResolverGroupFactory(Function)} was called already.
      */
     public ClientFactoryBuilder domainNameResolverCustomizer(
-            Consumer<? super DnsNameResolverBuilder> domainNameResolverCustomizer) {
-        requireNonNull(domainNameResolverCustomizer, "domainNameResolverCustomizer");
+            Consumer<? super DnsResolverGroupBuilder> dnsResolverGroupCustomizer) {
+        requireNonNull(dnsResolverGroupCustomizer, "dnsResolverGroupCustomizer");
         checkState(addressResolverGroupFactory == null,
                    "addressResolverGroupFactory() and domainNameResolverCustomizer() are mutually exclusive.");
-        if (domainNameResolverCustomizers == null) {
-            domainNameResolverCustomizers = new ArrayList<>();
+        if (dnsResolverGroupCustomizers == null) {
+            dnsResolverGroupCustomizers = new ArrayList<>();
         }
-        domainNameResolverCustomizers.add(domainNameResolverCustomizer);
+        dnsResolverGroupCustomizers.add(dnsResolverGroupCustomizer);
         return this;
     }
 
@@ -453,18 +451,19 @@ public final class ClientFactoryBuilder {
                                                                maxNumEventLoopsFunctions);
         }
 
-        final Function<? super EventLoopGroup,
-                       ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory;
-        if (this.addressResolverGroupFactory != null) {
-            addressResolverGroupFactory = this.addressResolverGroupFactory;
+        final AddressResolverGroup<InetSocketAddress> addressResolverGroup;
+        if (addressResolverGroupFactory != null) {
+            @SuppressWarnings("unchecked")
+            final AddressResolverGroup<InetSocketAddress> group =
+                    (AddressResolverGroup<InetSocketAddress>) addressResolverGroupFactory.apply(workerGroup);
+            addressResolverGroup = group;
         } else {
-            addressResolverGroupFactory = new DefaultAddressResolverGroupFactory(
-                    firstNonNull(domainNameResolverCustomizers, ImmutableList.of()));
+            final DnsResolverGroupBuilder builder = new DnsResolverGroupBuilder();
+            if (dnsResolverGroupCustomizers != null) {
+                dnsResolverGroupCustomizers.forEach(consumer -> consumer.accept(builder));
+            }
+            addressResolverGroup = builder.build(workerGroup);
         }
-
-        @SuppressWarnings("unchecked")
-        final AddressResolverGroup<InetSocketAddress> addressResolverGroup =
-                (AddressResolverGroup<InetSocketAddress>) addressResolverGroupFactory.apply(workerGroup);
 
         return new DefaultClientFactory(new HttpClientFactory(
                 workerGroup, shutdownWorkerGroupOnClose, eventLoopScheduler, channelOptions,

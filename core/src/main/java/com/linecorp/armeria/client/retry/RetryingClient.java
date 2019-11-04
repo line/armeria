@@ -274,7 +274,6 @@ public abstract class RetryingClient<I extends Request, O extends Response>
 
         private final int maxTotalAttempts;
         private final long responseTimeoutMillisForEachAttempt;
-        private final long responseTimeoutMillis;
         private final long deadlineNanos;
 
         @Nullable
@@ -285,12 +284,11 @@ public abstract class RetryingClient<I extends Request, O extends Response>
         State(int maxTotalAttempts, long responseTimeoutMillisForEachAttempt, long responseTimeoutMillis) {
             this.maxTotalAttempts = maxTotalAttempts;
             this.responseTimeoutMillisForEachAttempt = responseTimeoutMillisForEachAttempt;
-            this.responseTimeoutMillis = responseTimeoutMillis;
-            if (responseTimeoutMillis > 0) {
-                deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis);
-            } else {
-                // Response timeout is disabled.
+
+            if (responseTimeoutMillis <= 0 || responseTimeoutMillis == Long.MAX_VALUE) {
                 deadlineNanos = 0;
+            } else {
+                deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis);
             }
             totalAttemptNo = 1;
         }
@@ -322,7 +320,7 @@ public abstract class RetryingClient<I extends Request, O extends Response>
         }
 
         boolean timeoutForWholeRetryEnabled() {
-            return responseTimeoutMillis != 0;
+            return deadlineNanos != 0;
         }
 
         long actualResponseTimeoutMillis() {
