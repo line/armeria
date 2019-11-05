@@ -60,7 +60,6 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.spring.ArmeriaAutoConfiguration;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfigurationTest.TestConfiguration;
 
@@ -68,7 +67,7 @@ import io.prometheus.client.exporter.common.TextFormat;
 import reactor.test.StepVerifier;
 
 /**
- * This uses {@link ArmeriaAutoConfiguration} for integration tests.
+ * This uses {@link com.linecorp.armeria.spring.ArmeriaAutoConfiguration} for integration tests.
  * {@code application-autoConfTest.yml} will be loaded with minimal settings to make it work.
  */
 @RunWith(SpringRunner.class)
