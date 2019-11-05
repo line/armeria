@@ -151,19 +151,16 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
             if (!f.isSuccess()) {
                 final Throwable cause = f.cause();
 
-                // In Netty, only cache if the failure was not because of an IO error / timeout that was
-                // caused by the query itself. To figure out that, we need to check the cause of the
-                // UnknownHostException. If it's null, then we can cache the cause.
-                // However, this is very vulnerable because Netty can change the behavior while we are not
-                // noticing that. So sending a PR to upstream would be the best solution.
+                // TODO(minwoox): In Netty, DnsNameResolver only cache if the failure was not because of an
+                //                IO error / timeout that was caused by the query itself.
+                //                To figure out that, we need to check the cause of the UnknownHostException.
+                //                If it's null, then we can cache the cause. However, this is very fragile
+                //                because Netty can change the behavior while we are not noticing that.
+                //                So sending a PR to upstream would be the best solution.
                 final boolean isCacheableCause;
                 if (cause instanceof UnknownHostException) {
                     final UnknownHostException unknownHostException = (UnknownHostException) cause;
-                    if (unknownHostException.getCause() == null) {
-                        isCacheableCause = true;
-                    } else {
-                        isCacheableCause = false;
-                    }
+                    isCacheableCause = unknownHostException.getCause() == null;
                 } else {
                     isCacheableCause = false;
                 }
