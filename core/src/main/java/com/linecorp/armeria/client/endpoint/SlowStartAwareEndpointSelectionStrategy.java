@@ -72,7 +72,7 @@ public final class SlowStartAwareEndpointSelectionStrategy implements EndpointSe
         private volatile EndpointsAndWeights endpointsAndWeights;
         private final EndpointWeighter endpointWeighter;
 
-        private volatile ScheduledFuture<?> updateEndpointWeightFuture = null;
+        private volatile ScheduledFuture<?> updateEndpointWeightFuture;
         private final Map<Endpoint, EndpointAndStep> currentWeights = new ConcurrentHashMap<>();
 
         SlowStartAwareWeightedRoundRobinSelector(EndpointGroup endpointGroup,
@@ -126,7 +126,7 @@ public final class SlowStartAwareEndpointSelectionStrategy implements EndpointSe
                 return e;
             }
             final int originalWeight = e.weight();
-            int newWeight = endpointWeighter.compute(e, endpointAndStep.stepUp(), numberOfSteps);
+            final int newWeight = endpointWeighter.compute(e, endpointAndStep.stepUp(), numberOfSteps);
             if (originalWeight <= newWeight) {
                 currentWeights.remove(e);
                 return e;
@@ -135,7 +135,7 @@ public final class SlowStartAwareEndpointSelectionStrategy implements EndpointSe
         }
     }
 
-    private static class EndpointAndStep {
+    private static final class EndpointAndStep {
         private final Endpoint endpoint;
         private int step;
 
