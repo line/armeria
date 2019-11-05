@@ -17,7 +17,6 @@
 package com.linecorp.armeria.common.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -42,10 +41,6 @@ class RequestLogListenerInvokerTest {
         log.addListener(l -> { /* no-op */ }, RequestLogAvailability.REQUEST_END);
         ctx.logBuilder().endRequest();
 
-        await().until(() -> counter.get() == 1);
-
-        // Sleep one second more to check if pushing context happens again.
-        Thread.sleep(1000);
         assertThat(counter.get()).isOne();
     }
 }
