@@ -43,6 +43,7 @@ import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
@@ -274,7 +275,7 @@ class AccessLogFormatsTest {
 
     @Test
     void requestLogAvailabilityException() {
-        final String expectedLogMessage = "\"GET /armeria/log#rpcMethod h2\" 200 1024";
+        final String expectedLogMessage = "\"GET /armeria/log#rpcMethod h2c\" 200 1024";
 
         final ServiceRequestContext ctx = ServiceRequestContext.builder(
                 HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/armeria/log",
@@ -285,8 +286,8 @@ class AccessLogFormatsTest {
         final RequestLogBuilder logBuilder = ctx.logBuilder();
 
         // AccessLogger#format will be called after response is finished.
-        log.addListener(l -> assertThat(AccessLogger.format(AccessLogFormats.COMMON, l))
-                .endsWith(expectedLogMessage), RequestLogAvailability.COMPLETE);
+        final AtomicReference<RequestLog> logHolder = new AtomicReference<>();
+        log.addListener(logHolder::set, RequestLogAvailability.COMPLETE);
 
         // RequestLogAvailabilityException will be raised inside AccessLogger#format before injecting each
         // component to RequestLog. So we cannot get the expected log message here.
@@ -300,6 +301,8 @@ class AccessLogFormatsTest {
         logBuilder.responseLength(1024);
         assertThat(AccessLogger.format(AccessLogFormats.COMMON, log)).doesNotEndWith(expectedLogMessage);
         logBuilder.endResponse();
+
+        assertThat(AccessLogger.format(AccessLogFormats.COMMON, logHolder.get())).endsWith(expectedLogMessage);
     }
 
     @Test

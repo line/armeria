@@ -62,7 +62,7 @@ public final class RequestLogListenerInvoker {
                 }
                 try {
                     listener.onRequestLog(log);
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     logger.warn("onRequestLog() failed with an exception:", e);
                 }
             }
