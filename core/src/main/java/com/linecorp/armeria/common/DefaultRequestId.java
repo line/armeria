@@ -43,7 +43,7 @@ final class DefaultRequestId implements RequestId {
     }
 
     @Override
-    public String longText() {
+    public String text() {
         if (longText != null) {
             return longText;
         }
@@ -109,6 +109,6 @@ final class DefaultRequestId implements RequestId {
 
     @Override
     public String toString() {
-        return longText();
+        return text();
     }
 }

@@ -315,7 +315,7 @@ interface AccessLogComponent {
                     if ("short".equals(variable)) {
                         return id.shortText();
                     } else {
-                        return id.longText();
+                        return id.text();
                     }
             }
             return null;

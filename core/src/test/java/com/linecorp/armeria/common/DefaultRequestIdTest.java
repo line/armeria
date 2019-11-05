@@ -25,30 +25,30 @@ class DefaultRequestIdTest {
     void basic() {
         final RequestId id = RequestId.random();
         assertThat(id).isInstanceOf(DefaultRequestId.class);
-        assertThat(id.longText()).hasSize(16);
+        assertThat(id.text()).hasSize(16);
         assertThat(id.shortText()).hasSize(8);
-        assertThat(id.toString()).isEqualTo(id.longText());
+        assertThat(id.toString()).isEqualTo(id.text());
     }
 
     @Test
     void textWithoutLeadingZero() {
         final RequestId id = RequestId.of(0x123456789ABCDEF0L);
-        assertThat(id.longText()).isEqualTo("123456789abcdef0");
+        assertThat(id.text()).isEqualTo("123456789abcdef0");
         assertThat(id.shortText()).isEqualTo("12345678");
     }
 
     @Test
     void textWithLeadingZero() {
         final RequestId id = RequestId.of(0x0FEDCBA987654321L);
-        assertThat(id.longText()).isEqualTo("0fedcba987654321");
+        assertThat(id.text()).isEqualTo("0fedcba987654321");
         assertThat(id.shortText()).isEqualTo("0fedcba9");
     }
 
     @Test
     void cache() {
         final RequestId id = RequestId.random();
-        final String longText = id.longText();
-        assertThat(id.longText()).isSameAs(longText);
+        final String longText = id.text();
+        assertThat(id.text()).isSameAs(longText);
         final String shortText = id.shortText();
         assertThat(id.shortText()).isSameAs(shortText);
     }

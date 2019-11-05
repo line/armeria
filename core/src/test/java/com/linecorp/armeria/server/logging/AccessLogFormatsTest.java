@@ -254,7 +254,7 @@ class AccessLogFormatsTest {
         assertThat(AccessLogger.format(format, log)).isEqualTo(MediaType.PLAIN_TEXT_UTF_8.toString());
 
         format = AccessLogFormats.parseCustom("%I");
-        assertThat(AccessLogger.format(format, log)).isEqualTo(id.longText());
+        assertThat(AccessLogger.format(format, log)).isEqualTo(id.text());
 
         format = AccessLogFormats.parseCustom("%{abbrev}I");
         assertThat(AccessLogger.format(format, log)).isEqualTo(id.shortText());

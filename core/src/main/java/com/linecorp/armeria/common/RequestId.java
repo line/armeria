@@ -37,15 +37,15 @@ public interface RequestId {
     }
 
     /**
-     * Returns the long textual representation of this ID.
+     * Returns the full textual representation of this ID.
      */
-    String longText();
+    String text();
 
     /**
      * Returns the human-friendly short textual representation of this ID.
      */
     default String shortText() {
-        final String longText = longText();
+        final String longText = text();
         return longText.length() < 8 ? longText : longText.substring(0, 8);
     }
 }
