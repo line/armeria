@@ -5,7 +5,6 @@ import org.springframework.context.annotation.Configuration;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerHttpClient;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerStrategy;
 import com.linecorp.armeria.server.Server;
@@ -55,7 +54,7 @@ public class HelloConfiguration {
      */
     @Bean
     public ClientFactory clientFactory() {
-        return new ClientFactoryBuilder().sslContextCustomizer(
+        return ClientFactory.builder().sslContextCustomizer(
                 b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE)).build();
     }
 

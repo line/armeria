@@ -80,8 +80,7 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
      */
     public static Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient>
     newDecorator(RetryStrategy retryStrategy) {
-        return RetryingHttpClient.builder(retryStrategy)
-                                 .newDecorator();
+        return builder(retryStrategy).newDecorator();
     }
 
     /**
@@ -92,9 +91,8 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
      */
     public static Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient>
     newDecorator(RetryStrategy retryStrategy, int maxTotalAttempts) {
-        return RetryingHttpClient.builder(retryStrategy)
-                                 .maxTotalAttempts(maxTotalAttempts)
-                                 .newDecorator();
+        return builder(retryStrategy).maxTotalAttempts(maxTotalAttempts)
+                                     .newDecorator();
     }
 
     /**
@@ -108,10 +106,9 @@ public final class RetryingHttpClient extends RetryingClient<HttpRequest, HttpRe
     public static Function<Client<HttpRequest, HttpResponse>, RetryingHttpClient>
     newDecorator(RetryStrategy retryStrategy,
                  int maxTotalAttempts, long responseTimeoutMillisForEachAttempt) {
-        return RetryingHttpClient.builder(retryStrategy)
-                                 .maxTotalAttempts(maxTotalAttempts)
-                                 .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt)
-                                 .newDecorator();
+        return builder(retryStrategy).maxTotalAttempts(maxTotalAttempts)
+                                     .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt)
+                                     .newDecorator();
     }
 
     private final boolean useRetryAfter;

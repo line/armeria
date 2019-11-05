@@ -36,7 +36,6 @@ import org.springframework.util.SocketUtils;
 import org.springframework.util.unit.DataSize;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -59,10 +58,10 @@ class ArmeriaReactiveWebServerFactoryTest {
 
     private final DefaultListableBeanFactory beanFactory = new DefaultListableBeanFactory();
     private final ClientFactory clientFactory =
-            new ClientFactoryBuilder()
-                    .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
-                    .addressResolverGroupFactory(eventLoopGroup -> MockAddressResolverGroup.localhost())
-                    .build();
+            ClientFactory.builder()
+                         .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                         .addressResolverGroupFactory(eventLoopGroup -> MockAddressResolverGroup.localhost())
+                         .build();
 
     private ArmeriaReactiveWebServerFactory factory() {
         return new ArmeriaReactiveWebServerFactory(beanFactory);

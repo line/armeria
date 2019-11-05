@@ -43,14 +43,20 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
 
     /**
      * Returns a new {@link ClientRequestContextBuilder} created from the specified {@link HttpRequest}.
+     *
+     * @deprecated Use {@link ClientRequestContext#builder(HttpRequest)}.
      */
+    @Deprecated
     public static ClientRequestContextBuilder of(HttpRequest request) {
         return new ClientRequestContextBuilder(request);
     }
 
     /**
      * Returns a new {@link ClientRequestContextBuilder} created from the specified {@link RpcRequest} and URI.
+     *
+     * @deprecated Use {@link ClientRequestContext#builder(RpcRequest, String)}.
      */
+    @Deprecated
     public static ClientRequestContextBuilder of(RpcRequest request, String uri) {
         return of(request, URI.create(requireNonNull(uri, "uri")));
     }
@@ -58,7 +64,10 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     /**
      * Returns a new {@link ClientRequestContextBuilder} created from the specified {@link RpcRequest} and
      * {@link URI}.
+     *
+     * @deprecated Use {@link ClientRequestContext#builder(RpcRequest, URI)}.
      */
+    @Deprecated
     public static ClientRequestContextBuilder of(RpcRequest request, URI uri) {
         return new ClientRequestContextBuilder(request, uri);
     }
@@ -67,14 +76,14 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     private final String fragment;
     @Nullable
     private Endpoint endpoint;
-    private ClientOptions options = ClientOptions.DEFAULT;
+    private ClientOptions options = ClientOptions.of();
 
-    private ClientRequestContextBuilder(HttpRequest request) {
+    ClientRequestContextBuilder(HttpRequest request) {
         super(false, request);
         fragment = null;
     }
 
-    private ClientRequestContextBuilder(RpcRequest request, URI uri) {
+    ClientRequestContextBuilder(RpcRequest request, URI uri) {
         super(false, request, uri);
         fragment = uri.getRawFragment();
     }
@@ -94,7 +103,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     }
 
     /**
-     * Sets the {@link ClientOptions} of the client. If not set, {@link ClientOptions#DEFAULT} is used.
+     * Sets the {@link ClientOptions} of the client. If not set, {@link ClientOptions#of()} is used.
      */
     public ClientRequestContextBuilder options(ClientOptions options) {
         this.options = requireNonNull(options, "options");

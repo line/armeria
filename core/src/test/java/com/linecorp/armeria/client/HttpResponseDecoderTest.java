@@ -64,33 +64,34 @@ class HttpResponseDecoderTest {
         final AtomicBoolean failed = new AtomicBoolean();
         final RetryStrategy strategy =
                 (ctx, cause) -> CompletableFuture.completedFuture(Backoff.withoutDelay());
-        final HttpClient client = new HttpClientBuilder(server.uri(protocol, "/"))
-                // This increases the execution duration of 'endResponse0' of the DefaultRequestLog,
-                // which means that we have more chance to reproduce the bug if two threads are racing
-                // for notifying RESPONSE_END to listeners.
-                .contentPreview(100)
-                // In order to use a different thread to to subscribe to the response.
-                .decorator(RetryingHttpClient.builder(strategy)
-                                             .maxTotalAttempts(2)
-                                             .newDecorator())
-                .decorator((delegate, ctx, req) -> {
-                    final AtomicReference<Thread> responseStartedThread = new AtomicReference<>();
-                    ctx.log().addListener(log -> {
-                        responseStartedThread.set(Thread.currentThread());
-                    }, RequestLogAvailability.RESPONSE_START);
-                    ctx.log().addListener(log -> {
-                        final Thread thread = responseStartedThread.get();
-                        if (thread != null && thread != Thread.currentThread()) {
-                            logger.error("{} Response ended in another thread: {} != {}",
-                                         ctx, thread, Thread.currentThread());
-                            failed.set(true);
-                        }
-                    }, RequestLogAvailability.RESPONSE_END);
-                    return delegate.execute(ctx, req);
-                })
-                .build();
+
+        final HttpClientBuilder builder = HttpClient.builder(server.uri(protocol, "/"));
+        // This increases the execution duration of 'endResponse0' of the DefaultRequestLog,
+        // which means that we have more chance to reproduce the bug if two threads are racing
+        // for notifying RESPONSE_END to listeners.
+        builder.contentPreview(100);
+        // In order to use a different thread to to subscribe to the response.
+        builder.decorator(RetryingHttpClient.builder(strategy)
+                                            .maxTotalAttempts(2)
+                                            .newDecorator());
+        builder.decorator((delegate, ctx, req) -> {
+            final AtomicReference<Thread> responseStartedThread = new AtomicReference<>();
+            ctx.log().addListener(log -> {
+                responseStartedThread.set(Thread.currentThread());
+            }, RequestLogAvailability.RESPONSE_START);
+            ctx.log().addListener(log -> {
+                final Thread thread = responseStartedThread.get();
+                if (thread != null && thread != Thread.currentThread()) {
+                    logger.error("{} Response ended in another thread: {} != {}",
+                                 ctx, thread, Thread.currentThread());
+                    failed.set(true);
+                }
+            }, RequestLogAvailability.RESPONSE_END);
+            return delegate.execute(ctx, req);
+        });
 
         // Execute it as much as we can in order to confirm that there's no problem.
+        final HttpClient client = builder.build();
         final int n = 1000;
         final CountDownLatch latch = new CountDownLatch(n);
         for (int i = 0; i < n; i++) {

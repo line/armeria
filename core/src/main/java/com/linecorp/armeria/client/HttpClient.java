@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client;
 
+import static java.util.Objects.requireNonNull;
+
 import java.net.URI;
 import java.nio.charset.Charset;
 
@@ -34,10 +36,11 @@ import com.linecorp.armeria.common.util.Unwrappable;
 public interface HttpClient extends ClientBuilderParams, Unwrappable {
 
     /**
-     * Creates a new HTTP client using the {@link ClientFactory#DEFAULT} and the {@link ClientOptions#DEFAULT}.
+     * Creates a new HTTP client without a base URI using the default {@link ClientFactory} and
+     * the default {@link ClientOptions}.
      */
     static HttpClient of() {
-        return new HttpClientBuilder().options(ClientOptions.DEFAULT).build();
+        return builder().options(ClientOptions.of()).build();
     }
 
     /**
@@ -50,7 +53,7 @@ public interface HttpClient extends ClientBuilderParams, Unwrappable {
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
      */
     static HttpClient of(String uri, ClientOptionValue<?>... options) {
-        return of(ClientFactory.DEFAULT, uri, options);
+        return of(ClientFactory.ofDefault(), uri, options);
     }
 
     /**
@@ -63,7 +66,7 @@ public interface HttpClient extends ClientBuilderParams, Unwrappable {
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
      */
     static HttpClient of(String uri, ClientOptions options) {
-        return of(ClientFactory.DEFAULT, uri, options);
+        return of(ClientFactory.ofDefault(), uri, options);
     }
 
     /**
@@ -77,7 +80,7 @@ public interface HttpClient extends ClientBuilderParams, Unwrappable {
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
      */
     static HttpClient of(ClientFactory factory, String uri, ClientOptionValue<?>... options) {
-        return new HttpClientBuilder(uri).factory(factory).options(options).build();
+        return builder(uri).factory(factory).options(options).build();
     }
 
     /**
@@ -91,7 +94,7 @@ public interface HttpClient extends ClientBuilderParams, Unwrappable {
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
      */
     static HttpClient of(ClientFactory factory, String uri, ClientOptions options) {
-        return new HttpClientBuilder(uri).factory(factory).options(options).build();
+        return builder(uri).factory(factory).options(options).build();
     }
 
     /**
@@ -104,7 +107,7 @@ public interface HttpClient extends ClientBuilderParams, Unwrappable {
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
      */
     static HttpClient of(URI uri, ClientOptionValue<?>... options) {
-        return of(ClientFactory.DEFAULT, uri, options);
+        return of(ClientFactory.ofDefault(), uri, options);
     }
 
     /**
@@ -117,7 +120,7 @@ public interface HttpClient extends ClientBuilderParams, Unwrappable {
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
      */
     static HttpClient of(URI uri, ClientOptions options) {
-        return of(ClientFactory.DEFAULT, uri, options);
+        return of(ClientFactory.ofDefault(), uri, options);
     }
 
     /**
@@ -131,7 +134,7 @@ public interface HttpClient extends ClientBuilderParams, Unwrappable {
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
      */
     static HttpClient of(ClientFactory factory, URI uri, ClientOptionValue<?>... options) {
-        return new HttpClientBuilder(uri).factory(factory).options(options).build();
+        return builder(uri).factory(factory).options(options).build();
     }
 
     /**
@@ -145,7 +148,7 @@ public interface HttpClient extends ClientBuilderParams, Unwrappable {
      * @throws IllegalArgumentException if the scheme of the specified {@code uri} is not an HTTP scheme
      */
     static HttpClient of(ClientFactory factory, URI uri, ClientOptions options) {
-        return new HttpClientBuilder(uri).factory(factory).options(options).build();
+        return builder(uri).factory(factory).options(options).build();
     }
 
     /**
@@ -157,7 +160,7 @@ public interface HttpClient extends ClientBuilderParams, Unwrappable {
      * @param options the {@link ClientOptionValue}s
      */
     static HttpClient of(SessionProtocol protocol, Endpoint endpoint, ClientOptionValue<?>... options) {
-        return of(ClientFactory.DEFAULT, protocol, endpoint, options);
+        return of(ClientFactory.ofDefault(), protocol, endpoint, options);
     }
 
     /**
@@ -169,7 +172,7 @@ public interface HttpClient extends ClientBuilderParams, Unwrappable {
      * @param options the {@link ClientOptions}
      */
     static HttpClient of(SessionProtocol protocol, Endpoint endpoint, ClientOptions options) {
-        return of(ClientFactory.DEFAULT, protocol, endpoint, options);
+        return of(ClientFactory.ofDefault(), protocol, endpoint, options);
     }
 
     /**
@@ -183,7 +186,7 @@ public interface HttpClient extends ClientBuilderParams, Unwrappable {
      */
     static HttpClient of(ClientFactory factory, SessionProtocol protocol, Endpoint endpoint,
                          ClientOptionValue<?>... options) {
-        return new HttpClientBuilder(protocol, endpoint).factory(factory).options(options).build();
+        return builder(protocol, endpoint).factory(factory).options(options).build();
     }
 
     /**
@@ -197,7 +200,45 @@ public interface HttpClient extends ClientBuilderParams, Unwrappable {
      */
     static HttpClient of(ClientFactory factory, SessionProtocol protocol, Endpoint endpoint,
                          ClientOptions options) {
-        return new HttpClientBuilder(protocol, endpoint).factory(factory).options(options).build();
+        return builder(protocol, endpoint).factory(factory).options(options).build();
+    }
+
+    /**
+     * Returns a new {@link HttpClientBuilder} created without a base {@link URI}.
+     */
+    static HttpClientBuilder builder() {
+        return new HttpClientBuilder();
+    }
+
+    /**
+     * Returns a new {@link HttpClientBuilder} created with the specified base {@code uri}.
+     *
+     * @throws IllegalArgumentException if the scheme of the uri is not one of the fields
+     *                                  in {@link SessionProtocol} or the uri violates RFC 2396
+     */
+    static HttpClientBuilder builder(String uri) {
+        return builder(URI.create(requireNonNull(uri, "uri")));
+    }
+
+    /**
+     * Returns a new {@link HttpClientBuilder} created with the specified base {@link URI}.
+     *
+     * @throws IllegalArgumentException if the scheme of the uri is not one of the fields
+     *                                  in {@link SessionProtocol}
+     */
+    static HttpClientBuilder builder(URI uri) {
+        return new HttpClientBuilder(uri);
+    }
+
+    /**
+     * Returns a new {@link HttpClientBuilder} created with the specified {@link SessionProtocol}
+     * and base {@link Endpoint}.
+     *
+     * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields
+     *                                  in {@link SessionProtocol}
+     */
+    static HttpClientBuilder builder(SessionProtocol sessionProtocol, Endpoint endpoint) {
+        return new HttpClientBuilder(sessionProtocol, endpoint);
     }
 
     /**

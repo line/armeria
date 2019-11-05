@@ -39,7 +39,6 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -93,7 +92,7 @@ public class PrometheusMetricsIntegrationTest {
     };
 
     private static final ClientFactory clientFactory =
-            new ClientFactoryBuilder().meterRegistry(registry).build();
+            ClientFactory.builder().meterRegistry(registry).build();
 
     @AfterClass
     public static void closeClientFactory() {

@@ -210,13 +210,13 @@ public class Http2GoAwayTest {
     }
 
     private static ClientFactory newClientFactory() {
-        return new ClientFactoryBuilder()
-                .useHttp2Preface(true)
-                // Set the window size to the HTTP/2 default values to simplify the traffic.
-                .http2InitialConnectionWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
-                .http2InitialStreamWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
-                .workerGroup(eventLoop.get(), false)
-                .build();
+        return ClientFactory.builder()
+                            .useHttp2Preface(true)
+                            // Set the window size to the HTTP/2 default values to simplify the traffic.
+                            .http2InitialConnectionWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
+                            .http2InitialStreamWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
+                            .workerGroup(eventLoop.get(), false)
+                            .build();
     }
 
     private static void handleInitialExchange(InputStream in, BufferedOutputStream out) throws IOException {

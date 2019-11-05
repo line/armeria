@@ -49,7 +49,6 @@ import java.util.zip.InflaterInputStream;
 
 import javax.annotation.Nullable;
 
-import org.junit.Test;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -66,7 +65,6 @@ import com.google.common.base.Strings;
 import com.google.common.io.ByteStreams;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -106,11 +104,12 @@ class HttpServerTest {
 
     private static final EventLoopGroup workerGroup = EventLoopGroups.newEventLoopGroup(1);
 
-    private static final ClientFactory clientFactory = new ClientFactoryBuilder()
-            .workerGroup(workerGroup, false) // Will be shut down by the Server.
-            .idleTimeout(Duration.ofSeconds(3))
-            .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
-            .build();
+    private static final ClientFactory clientFactory =
+            ClientFactory.builder()
+                         .workerGroup(workerGroup, false) // Will be shut down by the Server.
+                         .idleTimeout(Duration.ofSeconds(3))
+                         .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                         .build();
 
     private static final long MAX_CONTENT_LENGTH = 65536;
 
@@ -588,8 +587,8 @@ class HttpServerTest {
     }
 
     /**
-     * Similar to {@link #testTimeoutAfterPartialContent()}, but tests the case where the service produces
-     * a pooled buffers.
+     * Similar to {@link #testTimeoutAfterPartialContent(HttpClient)}, but tests the case where the service
+     * produces a pooled buffers.
      */
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
@@ -771,7 +770,8 @@ class HttpServerTest {
         });
     }
 
-    @Test
+    @ParameterizedTest
+    @ArgumentsSource(ClientAndProtocolProvider.class)
     void testHeadHeadersOnly(HttpClient client, SessionProtocol protocol) throws Exception {
         assumeThat(protocol).isSameAs(H1C);
 
@@ -850,7 +850,8 @@ class HttpServerTest {
         });
     }
 
-    @Test(timeout = 30000)
+    @ParameterizedTest
+    @ArgumentsSource(ClientAndProtocolProvider.class)
     void testStreamRequestLongerThanTimeout(HttpClient client) throws Exception {
         withTimeout(() -> {
             // Disable timeouts and length limits so that test does not fail due to slow transfer.
@@ -980,7 +981,7 @@ class HttpServerTest {
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
             return Stream.of(H1C, H1, H2C, H2)
                          .map(protocol -> {
-                             final HttpClientBuilder builder = new HttpClientBuilder(
+                             final HttpClientBuilder builder = HttpClient.builder(
                                      protocol.uriText() + "://127.0.0.1:" +
                                      (protocol.isTls() ? server.httpsPort() : server.httpPort()));
 

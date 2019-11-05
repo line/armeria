@@ -24,12 +24,18 @@ public final class ClientOptionsBuilder extends AbstractClientOptionsBuilder<Cli
 
     /**
      * Creates a new instance with the default options.
+     *
+     * @deprecated Use {@link ClientOptions#builder()}.
      */
+    @Deprecated
     public ClientOptionsBuilder() {}
 
     /**
      * Creates a new instance with the specified base options.
+     *
+     * @deprecated Use {@link ClientOptions#toBuilder()}.
      */
+    @Deprecated
     public ClientOptionsBuilder(ClientOptions options) {
         super(options);
     }

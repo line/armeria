@@ -56,7 +56,6 @@ import com.google.protobuf.StringValue;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
@@ -778,7 +777,7 @@ class GrpcServiceServerTest {
     }
 
     private static void clientSocketClosedBeforeHalfClose(String protocol) throws Exception {
-        final ClientFactory factory = new ClientFactoryBuilder().build();
+        final ClientFactory factory = ClientFactory.builder().build();
         final UnitTestServiceStub stub =
                 new ClientBuilder("gproto+" + protocol + "://127.0.0.1:" + server.httpPort() + '/')
                         .factory(factory)
@@ -826,7 +825,7 @@ class GrpcServiceServerTest {
     private static void clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol protocol)
             throws Exception {
 
-        final ClientFactory factory = new ClientFactoryBuilder().build();
+        final ClientFactory factory = ClientFactory.builder().build();
         final UnitTestServiceStub stub =
                 new ClientBuilder(server.uri(protocol, GrpcSerializationFormats.PROTO, "/"))
                         .factory(factory)

@@ -39,7 +39,6 @@ import org.springframework.test.context.junit4.SpringRunner;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
@@ -88,10 +87,10 @@ public class ArmeriaSslConfigurationTest {
     }
 
     private static final ClientFactory clientFactory =
-            new ClientFactoryBuilder()
-                    .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
-                    .addressResolverGroupFactory(eventLoopGroup -> MockAddressResolverGroup.localhost())
-                    .build();
+            ClientFactory.builder()
+                         .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                         .addressResolverGroupFactory(eventLoopGroup -> MockAddressResolverGroup.localhost())
+                         .build();
 
     @Rule
     public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));

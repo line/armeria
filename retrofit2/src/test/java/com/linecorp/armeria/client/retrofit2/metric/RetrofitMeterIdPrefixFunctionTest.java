@@ -24,8 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientFactoryBuilder;
-import com.linecorp.armeria.client.ClientOptionsBuilder;
+import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.client.retrofit2.ArmeriaRetrofitBuilder;
@@ -47,11 +46,12 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import retrofit2.http.GET;
 import retrofit2.http.POST;
 
-public class RetrofitMeterIdPrefixFunctionTest {
+class RetrofitMeterIdPrefixFunctionTest {
 
     private static final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
-    private static final ClientFactory clientFactory = new ClientFactoryBuilder().meterRegistry(meterRegistry)
-                                                                                 .build();
+    private static final ClientFactory clientFactory = ClientFactory.builder()
+                                                                    .meterRegistry(meterRegistry)
+                                                                    .build();
 
     interface Example {
         @GET("/foo")
@@ -80,13 +80,13 @@ public class RetrofitMeterIdPrefixFunctionTest {
     };
 
     @Test
-    public void metrics() {
+    void metrics() {
         final Example example = new ArmeriaRetrofitBuilder(clientFactory)
                 .baseUrl("h1c://127.0.0.1:" + server.httpPort())
-                .clientOptions(new ClientOptionsBuilder()
-                                       .decorator(MetricCollectingClient.newDecorator(
-                                               RetrofitMeterIdPrefixFunction.builder("foo").build()))
-                                       .build())
+                .clientOptions(ClientOptions.builder()
+                                            .decorator(MetricCollectingClient.newDecorator(
+                                                    RetrofitMeterIdPrefixFunction.of("foo")))
+                                            .build())
                 .build()
                 .create(Example.class);
 
@@ -102,16 +102,15 @@ public class RetrofitMeterIdPrefixFunctionTest {
     }
 
     @Test
-    public void metrics_withServiceTag() {
+    void metrics_withServiceTag() {
         final Example example = new ArmeriaRetrofitBuilder(clientFactory)
                 .baseUrl("h1c://127.0.0.1:" + server.httpPort())
                 .withClientOptions((s, clientOptionsBuilder) -> {
                     return clientOptionsBuilder.decorator(
                             MetricCollectingClient.newDecorator(
-                                    RetrofitMeterIdPrefixFunction
-                                            .builder("foo")
-                                            .withServiceTag("service", "fallbackService")
-                                            .build()));
+                                    RetrofitMeterIdPrefixFunction.builder("foo")
+                                                                 .withServiceTag("service", "fallbackService")
+                                                                 .build()));
                 })
                 .build()
                 .create(Example.class);
@@ -128,9 +127,9 @@ public class RetrofitMeterIdPrefixFunctionTest {
     }
 
     @Test
-    public void hasSameNameAndTagAsDefaultMeterIdPrefixFunction() {
+    void hasSameNameAndTagAsDefaultMeterIdPrefixFunction() {
         final MeterRegistry registry = NoopMeterRegistry.get();
-        final MeterIdPrefixFunction f1 = RetrofitMeterIdPrefixFunction.builder("foo").build();
+        final MeterIdPrefixFunction f1 = RetrofitMeterIdPrefixFunction.of("foo");
         final MeterIdPrefixFunction f2 = MeterIdPrefixFunction.ofDefault("foo");
 
         final ClientRequestContext ctx = newContext();

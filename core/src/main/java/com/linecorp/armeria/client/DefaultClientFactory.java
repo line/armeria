@@ -159,7 +159,7 @@ final class DefaultClientFactory extends AbstractClientFactory {
     @Override
     public void close() {
         // The global default should never be closed.
-        if (this == ClientFactory.DEFAULT) {
+        if (this == ClientFactory.ofDefault()) {
             logger.debug("Refusing to close the default {}; must be closed via closeDefault()",
                          ClientFactory.class.getSimpleName());
             return;

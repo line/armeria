@@ -37,15 +37,16 @@ class HttpClientAdditionalHeadersTest {
 
     @Test
     void blacklistedHeadersMustBeFiltered() {
-        final HttpClient client = new HttpClientBuilder(server.httpUri("/"))
-                .decorator((delegate, ctx, req) -> {
-                    ctx.addAdditionalRequestHeader(HttpHeaderNames.SCHEME, "https");
-                    ctx.addAdditionalRequestHeader(HttpHeaderNames.STATUS, "503");
-                    ctx.addAdditionalRequestHeader(HttpHeaderNames.METHOD, "CONNECT");
-                    ctx.addAdditionalRequestHeader("foo", "bar");
-                    return delegate.execute(ctx, req);
-                })
-                .build();
+        final HttpClient client =
+                HttpClient.builder(server.httpUri("/"))
+                          .decorator((delegate, ctx, req) -> {
+                              ctx.addAdditionalRequestHeader(HttpHeaderNames.SCHEME, "https");
+                              ctx.addAdditionalRequestHeader(HttpHeaderNames.STATUS, "503");
+                              ctx.addAdditionalRequestHeader(HttpHeaderNames.METHOD, "CONNECT");
+                              ctx.addAdditionalRequestHeader("foo", "bar");
+                              return delegate.execute(ctx, req);
+                          })
+                          .build();
 
         assertThat(client.get("/").aggregate().join().contentUtf8())
                 .doesNotContain("=https")

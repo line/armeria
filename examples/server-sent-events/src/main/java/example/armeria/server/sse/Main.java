@@ -9,7 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.sse.ServerSentEvent;
-import com.linecorp.armeria.common.sse.ServerSentEventBuilder;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.ProducesEventStream;
@@ -66,13 +65,14 @@ public final class Main {
                              return Flux.interval(sendingInterval)
                                         .take(eventCount)
                                         // A user can use a builder to build a Server-Sent Event.
-                                        .map(id -> new ServerSentEventBuilder()
-                                                .id(Long.toString(id))
-                                                .data(randomStringSupplier.get())
-                                                // The client will reconnect to this server after 5 seconds
-                                                // when the on-going stream is closed.
-                                                .retry(Duration.ofSeconds(5))
-                                                .build());
+                                        .map(id -> ServerSentEvent.builder()
+                                                                  .id(Long.toString(id))
+                                                                  .data(randomStringSupplier.get())
+                                                                  // The client will reconnect to this server
+                                                                  // after 5 seconds when the on-going stream
+                                                                  // is closed.
+                                                                  .retry(Duration.ofSeconds(5))
+                                                                  .build());
                          }
                      })
                      .service("/", HttpFile.ofResource(Main.class.getClassLoader(), "index.html").asService())

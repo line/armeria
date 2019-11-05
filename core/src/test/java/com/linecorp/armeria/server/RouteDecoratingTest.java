@@ -38,7 +38,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -187,9 +186,10 @@ class RouteDecoratingTest {
             "bar.com, /bar/1, , 200"
     })
     void virtualHost(String host, String path, @Nullable String authorization, int status) {
-        final ClientFactory factory = new ClientFactoryBuilder()
-                .addressResolverGroupFactory(eventLoop -> MockAddressResolverGroup.localhost())
-                .build();
+        final ClientFactory factory =
+                ClientFactory.builder()
+                             .addressResolverGroupFactory(eventLoop -> MockAddressResolverGroup.localhost())
+                             .build();
         final HttpClient client = HttpClient.of(factory, "http://" + host + ':' + virtualHostServer.httpPort());
         final RequestHeaders headers;
         if (authorization != null) {
@@ -203,9 +203,8 @@ class RouteDecoratingTest {
 
     @Test
     void shouldSetPath() {
-        assertThatThrownBy(() -> new ServerBuilder()
-                .routeDecorator().build(Function.identity())
-        ).isInstanceOf(IllegalStateException.class)
-         .hasMessageContaining("Should set at least one");
+        assertThatThrownBy(() -> Server.builder().routeDecorator().build(Function.identity()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Should set at least one");
     }
 }

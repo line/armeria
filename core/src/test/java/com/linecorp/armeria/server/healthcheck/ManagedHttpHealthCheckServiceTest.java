@@ -29,7 +29,6 @@ import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 
 class ManagedHttpHealthCheckServiceTest {
 
@@ -54,7 +53,7 @@ class ManagedHttpHealthCheckServiceTest {
                 .isEqualTo(MediaType.PLAIN_TEXT_UTF_8.toString());
         assertThat(res.contentUtf8()).isEqualTo("Set unhealthy.");
 
-        ctx = ServiceRequestContextBuilder.of(hcReq).service(service).build();
+        ctx = ServiceRequestContext.builder(hcReq).service(service).build();
         res = service.serve(ctx, hcReq).aggregate().get();
 
         assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
@@ -72,7 +71,7 @@ class ManagedHttpHealthCheckServiceTest {
                 MediaType.PLAIN_TEXT_UTF_8.toString());
         assertThat(res.contentUtf8()).isEqualTo("Set healthy.");
 
-        ctx = ServiceRequestContextBuilder.of(hcReq).service(service).build();
+        ctx = ServiceRequestContext.builder(hcReq).service(service).build();
         res = service.serve(ctx, hcReq).aggregate().get();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
@@ -100,7 +99,7 @@ class ManagedHttpHealthCheckServiceTest {
         noopRequest.write(() -> HttpData.ofAscii("noop"));
         noopRequest.close();
 
-        ctx = ServiceRequestContextBuilder.of(noopRequest).service(service).build();
+        ctx = ServiceRequestContext.builder(noopRequest).service(service).build();
         res = service.serve(ctx, noopRequest).aggregate().get();
 
         assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);

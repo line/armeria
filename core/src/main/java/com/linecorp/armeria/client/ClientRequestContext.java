@@ -109,7 +109,7 @@ public interface ClientRequestContext extends RequestContext {
      * @see ClientRequestContextBuilder
      */
     static ClientRequestContext of(HttpRequest request) {
-        return ClientRequestContextBuilder.of(request).build();
+        return builder(request).build();
     }
 
     /**
@@ -121,7 +121,7 @@ public interface ClientRequestContext extends RequestContext {
      * @see ClientRequestContextBuilder
      */
     static ClientRequestContext of(RpcRequest request, String uri) {
-        return ClientRequestContextBuilder.of(request, URI.create(requireNonNull(uri, "uri"))).build();
+        return builder(request, URI.create(requireNonNull(uri, "uri"))).build();
     }
 
     /**
@@ -133,7 +133,30 @@ public interface ClientRequestContext extends RequestContext {
      * @see ClientRequestContextBuilder
      */
     static ClientRequestContext of(RpcRequest request, URI uri) {
-        return ClientRequestContextBuilder.of(request, uri).build();
+        return builder(request, uri).build();
+    }
+
+    /**
+     * Returns a new {@link ClientRequestContextBuilder} created from the specified {@link HttpRequest}.
+     */
+    static ClientRequestContextBuilder builder(HttpRequest request) {
+        return new ClientRequestContextBuilder(request);
+    }
+
+    /**
+     * Returns a new {@link ClientRequestContextBuilder} created from the specified {@link RpcRequest} and
+     * {@code uri}.
+     */
+    static ClientRequestContextBuilder builder(RpcRequest request, String uri) {
+        return builder(request, URI.create(requireNonNull(uri, "uri")));
+    }
+
+    /**
+     * Returns a new {@link ClientRequestContextBuilder} created from the specified {@link RpcRequest} and
+     * {@link URI}.
+     */
+    static ClientRequestContextBuilder builder(RpcRequest request, URI uri) {
+        return new ClientRequestContextBuilder(request, uri);
     }
 
     /**

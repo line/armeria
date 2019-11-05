@@ -26,19 +26,19 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.server.ServiceRequestContextBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 class RequestContextAwareCompletableFutureTest {
 
     @Test
     void makeContextAwareCompletableFutureWithDifferentContext() {
         final RequestContext context1 =
-                ServiceRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/")).build();
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/")).build();
         final CompletableFuture<Void> originalFuture = CompletableFuture.completedFuture(null);
         final CompletableFuture<Void> future1 = context1.makeContextAware(originalFuture);
 
         final RequestContext context2 =
-                ServiceRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/")).build();
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/")).build();
         final CompletableFuture<Void> future2 = context2.makeContextAware(future1);
 
         assertThat(future2).isCompletedExceptionally();

@@ -29,10 +29,10 @@ class HttpClientUnwrapTest {
 
     @Test
     void test() {
-        final HttpClient client = new HttpClientBuilder()
-                .decorator(LoggingClient.newDecorator())
-                .decorator(RetryingHttpClient.newDecorator(RetryStrategy.never()))
-                .build();
+        final HttpClient client = HttpClient.builder()
+                                            .decorator(LoggingClient.newDecorator())
+                                            .decorator(RetryingHttpClient.newDecorator(RetryStrategy.never()))
+                                            .build();
 
         assertThat(client.as(HttpClient.class)).containsSame(client);
 

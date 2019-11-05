@@ -53,7 +53,10 @@ public final class EndpointInfoBuilder {
     /**
      * Creates a new {@link EndpointInfoBuilder} that builds the {@link EndpointInfo} with the specified
      * {@code hostnamePattern} and {@code pathMapping}.
+     *
+     * @deprecated Use {@link EndpointInfo#builder(String, String)}.
      */
+    @Deprecated
     public EndpointInfoBuilder(String hostnamePattern, String pathMapping) {
         this.hostnamePattern = requireNonNull(hostnamePattern, "hostnamePattern");
         this.pathMapping = requireNonNull(pathMapping, "pathMapping");

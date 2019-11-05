@@ -101,8 +101,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
         }
     }
 
-    private static final RequestContextCurrentTraceContext DEFAULT =
-            new RequestContextCurrentTraceContextBuilder().build();
+    private static final RequestContextCurrentTraceContext DEFAULT = builder().build();
 
     private static final Logger logger = LoggerFactory.getLogger(RequestContextCurrentTraceContext.class);
 

@@ -117,7 +117,14 @@ public interface ServiceRequestContext extends RequestContext {
      * @see ServiceRequestContextBuilder
      */
     static ServiceRequestContext of(HttpRequest request) {
-        return ServiceRequestContextBuilder.of(request).build();
+        return builder(request).build();
+    }
+
+    /**
+     * Returns a new {@link ServiceRequestContextBuilder} created from the specified {@link HttpRequest}.
+     */
+    static ServiceRequestContextBuilder builder(HttpRequest request) {
+        return new ServiceRequestContextBuilder(request);
     }
 
     /**

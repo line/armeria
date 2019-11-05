@@ -48,7 +48,6 @@ import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -114,10 +113,10 @@ class ReactiveWebServerAutoConfigurationTest {
     }
 
     private static final ClientFactory clientFactory =
-            new ClientFactoryBuilder()
-                    .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
-                    .addressResolverGroupFactory(eventLoopGroup -> MockAddressResolverGroup.localhost())
-                    .build();
+            ClientFactory.builder()
+                         .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                         .addressResolverGroupFactory(eventLoopGroup -> MockAddressResolverGroup.localhost())
+                         .build();
 
     @LocalServerPort
     int port;

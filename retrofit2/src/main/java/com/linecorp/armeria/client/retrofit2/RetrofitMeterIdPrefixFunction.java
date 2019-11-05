@@ -45,35 +45,15 @@ import retrofit2.Invocation;
  */
 public final class RetrofitMeterIdPrefixFunction implements MeterIdPrefixFunction {
 
-    public static final class RetrofitMeterIdPrefixFunctionBuilder {
-
-        private final String name;
-        @Nullable
-        private String serviceTagName;
-        @Nullable
-        private String defaultServiceName;
-
-        private RetrofitMeterIdPrefixFunctionBuilder(String name) {
-            this.name = name;
-        }
-
-        /**
-         * Make tag of {@link RetrofitMeterIdPrefixFunction} contains Retrofit service interface name.
-         */
-        public RetrofitMeterIdPrefixFunctionBuilder withServiceTag(String serviceTagName,
-                                                                   String defaultServiceName) {
-            this.serviceTagName = requireNonNull(serviceTagName, "serviceTagName");
-            this.defaultServiceName = requireNonNull(defaultServiceName, "defaultServiceName");
-            return this;
-        }
-
-        public RetrofitMeterIdPrefixFunction build() {
-            return new RetrofitMeterIdPrefixFunction(name, serviceTagName, defaultServiceName);
-        }
+    /**
+     * Returns a newly created {@link RetrofitMeterIdPrefixFunction} with the specified {@code name}.
+     */
+    public static RetrofitMeterIdPrefixFunction of(String name) {
+        return builder(name).build();
     }
 
     /**
-     * Creates a {@link RetrofitMeterIdPrefixFunctionBuilder} with {@code name}.
+     * Returns a newly created {@link RetrofitMeterIdPrefixFunctionBuilder} with the specified {@code name}.
      */
     public static RetrofitMeterIdPrefixFunctionBuilder builder(String name) {
         return new RetrofitMeterIdPrefixFunctionBuilder(requireNonNull(name, "name"));

@@ -41,18 +41,18 @@ import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
 
     private final Map<ClientOption<?>, ClientOptionValue<?>> options = new LinkedHashMap<>();
-    private final ClientDecorationBuilder decoration = new ClientDecorationBuilder();
+    private final ClientDecorationBuilder decoration = ClientDecoration.builder();
     private final HttpHeadersBuilder httpHeaders = HttpHeaders.builder();
 
     /**
      * Creates a new instance with the default options.
      */
-    protected AbstractClientOptionsBuilder() {}
+    AbstractClientOptionsBuilder() {}
 
     /**
      * Creates a new instance with the specified base options.
      */
-    protected AbstractClientOptionsBuilder(ClientOptions options) {
+    AbstractClientOptionsBuilder(ClientOptions options) {
         requireNonNull(options, "options");
         options(options);
     }

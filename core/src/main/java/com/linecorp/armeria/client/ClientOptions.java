@@ -32,6 +32,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 
+import com.google.common.collect.Iterables;
+
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -71,31 +73,37 @@ public final class ClientOptions extends AbstractOptions {
             WRITE_TIMEOUT_MILLIS.newValue(Flags.defaultWriteTimeoutMillis()),
             RESPONSE_TIMEOUT_MILLIS.newValue(Flags.defaultResponseTimeoutMillis()),
             MAX_RESPONSE_LENGTH.newValue(Flags.defaultMaxResponseLength()),
-            DECORATION.newValue(ClientDecoration.NONE),
+            DECORATION.newValue(ClientDecoration.of()),
             HTTP_HEADERS.newValue(HttpHeaders.of())
     };
 
     /**
      * The default {@link ClientOptions}.
+     *
+     * @deprecated Use {@link #of()}.
      */
+    @Deprecated
     public static final ClientOptions DEFAULT = new ClientOptions(DEFAULT_OPTIONS);
+
+    /**
+     * Returns the {@link ClientOptions} with the default options only.
+     */
+    public static ClientOptions of() {
+        return DEFAULT;
+    }
 
     /**
      * Returns the {@link ClientOptions} with the specified {@link ClientOptionValue}s.
      */
     public static ClientOptions of(ClientOptionValue<?>... options) {
-        requireNonNull(options, "options");
-        if (options.length == 0) {
-            return DEFAULT;
-        }
-        return new ClientOptions(DEFAULT, options);
+        return of(of(), requireNonNull(options, "options"));
     }
 
     /**
      * Returns the {@link ClientOptions} with the specified {@link ClientOptionValue}s.
      */
     public static ClientOptions of(Iterable<ClientOptionValue<?>> options) {
-        return new ClientOptions(DEFAULT, options);
+        return of(of(), requireNonNull(options, "options"));
     }
 
     /**
@@ -122,6 +130,9 @@ public final class ClientOptions extends AbstractOptions {
         // TODO(trustin): Reduce the cost of creating a derived ClientOptions.
         requireNonNull(baseOptions, "baseOptions");
         requireNonNull(options, "options");
+        if (Iterables.isEmpty(options)) {
+            return baseOptions;
+        }
         return new ClientOptions(baseOptions, options);
     }
 
@@ -135,6 +146,13 @@ public final class ClientOptions extends AbstractOptions {
         requireNonNull(baseOptions, "baseOptions");
         requireNonNull(options, "options");
         return new ClientOptions(baseOptions, options);
+    }
+
+    /**
+     * Returns a newly created {@link ClientOptionsBuilder}.
+     */
+    public static ClientOptionsBuilder builder() {
+        return new ClientOptionsBuilder();
     }
 
     private static <T> ClientOptionValue<T> filterValue(ClientOptionValue<T> optionValue) {
@@ -264,7 +282,7 @@ public final class ClientOptions extends AbstractOptions {
      * Returns the {@link Function}s that decorate the components of a client.
      */
     public ClientDecoration decoration() {
-        return getOrElse(DECORATION, ClientDecoration.NONE);
+        return getOrElse(DECORATION, ClientDecoration.of());
     }
 
     /**
@@ -275,11 +293,24 @@ public final class ClientOptions extends AbstractOptions {
         return getOrElse(HTTP_HEADERS, HttpHeaders.of());
     }
 
+    /**
+     * Returns the request {@link ContentPreviewerFactory}.
+     */
     public ContentPreviewerFactory requestContentPreviewerFactory() {
         return getOrElse(REQ_CONTENT_PREVIEWER_FACTORY, ContentPreviewerFactory.disabled());
     }
 
+    /**
+     * Returns the response {@link ContentPreviewerFactory}.
+     */
     public ContentPreviewerFactory responseContentPreviewerFactory() {
         return getOrElse(RES_CONTENT_PREVIEWER_FACTORY, ContentPreviewerFactory.disabled());
+    }
+
+    /**
+     * Returns a new {@link ClientOptionsBuilder} created from this {@link ClientOptions}.
+     */
+    public ClientOptionsBuilder toBuilder() {
+        return new ClientOptionsBuilder(this);
     }
 }
