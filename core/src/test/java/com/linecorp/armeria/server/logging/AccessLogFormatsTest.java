@@ -256,7 +256,7 @@ class AccessLogFormatsTest {
         format = AccessLogFormats.parseCustom("%I");
         assertThat(AccessLogger.format(format, log)).isEqualTo(id.text());
 
-        format = AccessLogFormats.parseCustom("%{abbrev}I");
+        format = AccessLogFormats.parseCustom("%{short}I");
         assertThat(AccessLogger.format(format, log)).isEqualTo(id.shortText());
     }
 
