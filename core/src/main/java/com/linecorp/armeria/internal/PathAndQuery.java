@@ -36,6 +36,7 @@ import com.linecorp.armeria.internal.metric.CaffeineMetricSupport;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import it.unimi.dsi.fastutil.Arrays;
+import it.unimi.dsi.fastutil.bytes.ByteArrays;
 
 /**
  * A parser of the raw path and query components of an HTTP path. Performs validation and allows caching of
@@ -470,7 +471,7 @@ public final class PathAndQuery {
         int length;
 
         Bytes(int initialCapacity) {
-            data = ThreadLocalByteArray.get(initialCapacity);
+            data = new byte[initialCapacity];
         }
 
         Bytes(byte[] data) {
@@ -492,9 +493,7 @@ public final class PathAndQuery {
                     (int) Math.max(Math.min((long) data.length + (data.length >> 1), Arrays.MAX_ARRAY_SIZE),
                                    newCapacity);
 
-            final byte[] newData = ThreadLocalByteArray.get(newCapacity);
-            System.arraycopy(data, 0, newData, 0, length);
-            data = newData;
+            data = ByteArrays.forceCapacity(data, newCapacity, length);
         }
     }
 
