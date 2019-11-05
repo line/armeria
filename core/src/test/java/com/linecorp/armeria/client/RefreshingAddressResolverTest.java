@@ -42,12 +42,18 @@ import com.linecorp.armeria.client.endpoint.dns.TestDnsServer;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
 
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoop;
+import io.netty.handler.codec.dns.DatagramDnsQuery;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
 import io.netty.handler.codec.dns.DefaultDnsResponse;
+import io.netty.handler.codec.dns.DnsRecord;
+import io.netty.handler.codec.dns.DnsSection;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.resolver.dns.DnsServerAddresses;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 
 class RefreshingAddressResolverTest {
@@ -240,14 +246,12 @@ class RefreshingAddressResolverTest {
 
     @Test
     void negativeTtl() {
-        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of())
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(), new TimeoutHandler())
         ) {
             final EventLoop eventLoop = eventLoopExtension.get();
-            final DnsResolverGroupBuilder builder = builder(server).negativeTtl(2);
+            final DnsResolverGroupBuilder builder = builder(server).negativeTtl(60).queryTimeoutMillis(1000);
             try (RefreshingAddressResolverGroup group = builder.build(eventLoop)) {
                 final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
-
-                final long start = System.nanoTime();
 
                 final Future<InetSocketAddress> future = resolver.resolve(
                         InetSocketAddress.createUnresolved("foo.com", 36462));
@@ -255,11 +259,13 @@ class RefreshingAddressResolverTest {
                 assertThat(future.cause()).isExactlyInstanceOf(UnknownHostException.class);
 
                 final ConcurrentMap<String, CompletableFuture<CacheEntry>> cache = group.cache();
-                assertThat(cache.size()).isOne();
+                assertThat(cache.size()).isZero();
 
-                await().until(cache::isEmpty);
-                assertThat(System.nanoTime() - start).isGreaterThanOrEqualTo(
-                        (long) (TimeUnit.SECONDS.toNanos(2) * 0.9));
+                final Future<InetSocketAddress> future2 = resolver.resolve(
+                        InetSocketAddress.createUnresolved("foo.com", 36462));
+                await().until(future2::isDone);
+                assertThat(future.cause()).isExactlyInstanceOf(UnknownHostException.class);
+                assertThat(cache.size()).isOne();
             }
         }
     }
@@ -270,5 +276,23 @@ class RefreshingAddressResolverTest {
                 .dnsServerAddressStreamProvider(hostname -> addrs.stream())
                 .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
                 .traceEnabled(false);
+    }
+
+    private static class TimeoutHandler extends ChannelInboundHandlerAdapter {
+        private int recordACount;
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            if (msg instanceof DatagramDnsQuery) {
+                final DatagramDnsQuery dnsQuery = (DatagramDnsQuery) msg;
+                final DnsRecord dnsRecord = dnsQuery.recordAt(DnsSection.QUESTION, 0);
+                if (dnsRecord.type() == A && recordACount++ == 0) {
+                    // Just release the msg and return so that the client request is timed out.
+                    ReferenceCountUtil.safeRelease(msg);
+                    return;
+                }
+            }
+            super.channelRead(ctx, msg);
+        }
     }
 }

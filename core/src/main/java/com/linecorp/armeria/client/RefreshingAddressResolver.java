@@ -115,7 +115,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
         result.handle((entry, unused) -> {
             final Throwable cause = entry.cause();
             if (cause != null) {
-                if (negativeTtl > 0) {
+                if (entry.isCacheableCause() && negativeTtl > 0) {
                     executor().schedule(() -> cache.remove(hostname), negativeTtl, TimeUnit.SECONDS);
                 } else {
                     cache.remove(hostname);
@@ -149,7 +149,25 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
         final Future<List<DnsRecord>> recordsFuture = resolver.sendQueries(questions, hostname);
         recordsFuture.addListener(f -> {
             if (!f.isSuccess()) {
-                result.complete(new CacheEntry(null, -1, questions, f.cause()));
+                final Throwable cause = f.cause();
+
+                // In Netty, only cache if the failure was not because of an IO error / timeout that was
+                // caused by the query itself. To figure out that, we need to check the cause of the
+                // UnknownHostException. If it's null, then we can cache the cause.
+                // However, this is very vulnerable because Netty can change the behavior while we are not
+                // noticing that. So sending a PR to upstream would be the best solution.
+                final boolean isCacheableCause;
+                if (cause instanceof UnknownHostException) {
+                    final UnknownHostException unknownHostException = (UnknownHostException) cause;
+                    if (unknownHostException.getCause() == null) {
+                        isCacheableCause = true;
+                    } else {
+                        isCacheableCause = false;
+                    }
+                } else {
+                    isCacheableCause = false;
+                }
+                result.complete(new CacheEntry(null, -1, questions, cause, isCacheableCause));
                 return;
             }
 
@@ -171,7 +189,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
                     } catch (UnknownHostException e) {
                         // Should never reach here because we already validated it in extractAddressBytes.
                         result.complete(new CacheEntry(null, -1, questions, new IllegalArgumentException(
-                                "Invalid address: " + hostname, e)));
+                                "Invalid address: " + hostname, e), false));
                         return;
                     }
                 }
@@ -182,9 +200,9 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
             final CacheEntry cacheEntry;
             if (inetAddress == null) {
                 cacheEntry = new CacheEntry(null, -1, questions, new UnknownHostException(
-                        "failed to receive DNS records for " + hostname));
+                        "failed to receive DNS records for " + hostname), true);
             } else {
-                cacheEntry = new CacheEntry(inetAddress, ttlMillis, questions, null);
+                cacheEntry = new CacheEntry(inetAddress, ttlMillis, questions, null, false);
             }
             result.complete(cacheEntry);
         });
@@ -219,6 +237,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
 
         @Nullable
         private final Throwable cause;
+        private final boolean isCacheableCause;
 
         /**
          * No need to be volatile because updated only by the {@link #executor()}.
@@ -232,11 +251,12 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
         ScheduledFuture<?> refreshFuture;
 
         CacheEntry(@Nullable InetAddress address, long ttlMillis, List<DnsQuestion> questions,
-                   @Nullable Throwable cause) {
+                   @Nullable Throwable cause, boolean isCacheableCause) {
             this.address = address;
             this.ttlMillis = ttlMillis;
             this.questions = questions;
             this.cause = cause;
+            this.isCacheableCause = isCacheableCause;
         }
 
         void servedFromCache() {
@@ -255,6 +275,10 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
         @Nullable
         Throwable cause() {
             return cause;
+        }
+
+        boolean isCacheableCause() {
+            return isCacheableCause;
         }
 
         void scheduleRefresh(long nextDelayMillis) {
@@ -324,6 +348,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
                               .add("ttlMillis", ttlMillis)
                               .add("questions", questions)
                               .add("cause", cause)
+                              .add("isCacheableCause", isCacheableCause)
                               .add("servedFromCache", servedFromCache)
                               .toString();
         }
