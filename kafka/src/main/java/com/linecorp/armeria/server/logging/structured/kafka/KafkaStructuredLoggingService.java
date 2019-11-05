@@ -32,11 +32,8 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.server.logging.kafka.KafkaAccessLogWriter;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.logging.structured.StructuredLogBuilder;
 import com.linecorp.armeria.server.logging.structured.StructuredLoggingService;
 
@@ -50,11 +47,9 @@ import com.linecorp.armeria.server.logging.structured.StructuredLoggingService;
  *
  * <p>Refer variety of {@link #newDecorator} methods to see how to enable Kafka based structured logging.
  *
- * @deprecated Use {@link KafkaAccessLogWriter}.
+ * @param <L> the type of the structured log representation
  */
-@Deprecated
-public class KafkaStructuredLoggingService<I extends Request, O extends Response, L>
-        extends StructuredLoggingService<I, O, L> {
+public class KafkaStructuredLoggingService<L> extends StructuredLoggingService<L> {
     private static final Logger logger = LoggerFactory.getLogger(KafkaStructuredLoggingService.class);
 
     /**
@@ -82,14 +77,11 @@ public class KafkaStructuredLoggingService<I extends Request, O extends Response
      * @param topic a name of topic which is used to send logs
      * @param logBuilder an instance of {@link StructuredLogBuilder} which is used to construct a log entry
      * @param keySelector a {@link KeySelector} which is used to decide what key to use for the log
-     * @param <I> the {@link Request} type
-     * @param <O> the {@link Response} type
      * @param <L> the type of the structured log representation
      *
      * @return a service decorator which adds structured logging support integrated to Kafka
      */
-    public static <I extends Request, O extends Response, L>
-    Function<Service<I, O>, StructuredLoggingService<I, O, L>> newDecorator(
+    public static <L> Function<? super HttpService, StructuredLoggingService<L>> newDecorator(
             Producer<byte[], L> producer, String topic,
             StructuredLogBuilder<L> logBuilder, @Nullable KeySelector<L> keySelector) {
         return service -> new KafkaStructuredLoggingService<>(
@@ -102,16 +94,12 @@ public class KafkaStructuredLoggingService<I extends Request, O extends Response
      * @param producer a kafka {@link Producer} producer which is used to send logs to Kafka
      * @param topic a name of topic which is used to send logs
      * @param logBuilder an instance of {@link StructuredLogBuilder} which is used to construct a log entry
-     * @param <I> the {@link Request} type
-     * @param <O> the {@link Response} type
      * @param <L> the type of the structured log representation
      *
      * @return a service decorator which adds structured logging support integrated to Kafka
      */
-    public static <I extends Request, O extends Response, L>
-    Function<Service<I, O>, StructuredLoggingService<I, O, L>> newDecorator(
-            Producer<byte[], L> producer, String topic,
-            StructuredLogBuilder<L> logBuilder) {
+    public static <L> Function<? super HttpService, StructuredLoggingService<L>> newDecorator(
+            Producer<byte[], L> producer, String topic, StructuredLogBuilder<L> logBuilder) {
         return newDecorator(producer, topic, logBuilder, null);
     }
 
@@ -122,14 +110,11 @@ public class KafkaStructuredLoggingService<I extends Request, O extends Response
      * @param topic a name of topic which is used to send logs
      * @param logBuilder an instance of {@link StructuredLogBuilder} which is used to construct a log entry
      * @param keySelector a {@link KeySelector} which is used to decide what key to use for the log
-     * @param <I> the {@link Request} type
-     * @param <O> the {@link Response} type
      * @param <L> the type of the structured log representation
      *
      * @return a service decorator which adds structured logging support integrated to Kafka
      */
-    public static <I extends Request, O extends Response, L>
-    Function<Service<I, O>, StructuredLoggingService<I, O, L>> newDecorator(
+    public static <L> Function<? super HttpService, StructuredLoggingService<L>> newDecorator(
             String bootstrapServers, String topic,
             StructuredLogBuilder<L> logBuilder, @Nullable KeySelector<L> keySelector) {
         final Producer<byte[], L> producer = new KafkaProducer<>(newDefaultConfig(bootstrapServers));
@@ -144,15 +129,12 @@ public class KafkaStructuredLoggingService<I extends Request, O extends Response
      * @param bootstrapServers a {@code bootstrap.servers} config to specify destination Kafka cluster
      * @param topic a name of topic which is used to send logs
      * @param logBuilder an instance of {@link StructuredLogBuilder} which is used to construct a log entry
-     * @param <I> the {@link Request} type
-     * @param <O> the {@link Response} type
      * @param <L> the type of the structured log representation
      *
      * @return a service decorator which adds structured logging support integrated to Kafka
      */
-    public static <I extends Request, O extends Response, L>
-    Function<Service<I, O>, StructuredLoggingService<I, O, L>>
-    newDecorator(String bootstrapServers, String topic, StructuredLogBuilder<L> logBuilder) {
+    public static <L> Function<? super HttpService, StructuredLoggingService<L>> newDecorator(
+            String bootstrapServers, String topic, StructuredLogBuilder<L> logBuilder) {
         return newDecorator(bootstrapServers, topic, logBuilder, null);
     }
 
@@ -175,7 +157,7 @@ public class KafkaStructuredLoggingService<I extends Request, O extends Response
     private final KeySelector<L> keySelector;
     private final boolean needToCloseProducer;
 
-    KafkaStructuredLoggingService(Service<I, O> delegate,
+    KafkaStructuredLoggingService(HttpService delegate,
                                   StructuredLogBuilder<L> logBuilder,
                                   Producer<byte[], L> producer,
                                   String topic,

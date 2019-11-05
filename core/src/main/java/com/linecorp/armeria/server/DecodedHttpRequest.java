@@ -130,7 +130,8 @@ final class DecodedHttpRequest extends DefaultHttpRequest {
 
     /**
      * Sets the specified {@link HttpResponse} which responds to this request. This is always called
-     * by the {@link HttpServerHandler} after the handler gets the {@link HttpResponse} from a {@link Service}.
+     * by the {@link HttpServerHandler} after the handler gets the {@link HttpResponse} from an
+     * {@link HttpService}.
      */
     void setResponse(HttpResponse response) {
         if (isResponseAborted) {

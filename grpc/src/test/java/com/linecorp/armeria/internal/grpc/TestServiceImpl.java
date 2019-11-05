@@ -50,6 +50,7 @@ import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.protobuf.EmptyProtos;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
@@ -526,7 +527,7 @@ public class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
         /**
          * Creates a new instance that decorates the specified {@link Service}.
          */
-        public EchoRequestHeadersInTrailers(Service<HttpRequest, HttpResponse> delegate) {
+        public EchoRequestHeadersInTrailers(HttpService delegate) {
             super(delegate);
         }
 

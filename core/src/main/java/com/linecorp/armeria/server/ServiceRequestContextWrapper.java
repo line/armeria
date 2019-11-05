@@ -30,7 +30,6 @@ import org.slf4j.Logger;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContextWrapper;
 import com.linecorp.armeria.common.RequestId;
@@ -108,7 +107,7 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public <T extends Service<HttpRequest, HttpResponse>> T service() {
+    public <T extends HttpService> T service() {
         return delegate().service();
     }
 

@@ -14,15 +14,16 @@ useful when `separating concerns`_.
 
 There are basically three ways to write a decorating service:
 
-- Implementing :api:`DecoratingServiceFunction`
-- Extending :api:`SimpleDecoratingService`
+- Implementing :api:`DecoratingHttpServiceFunction` and :api:`DecoratingRpcServiceFunction`
+- Extending :api:`SimpleDecoratingHttpService` and :api:`SimpleDecoratingRpcService`
 - Extending :api:`DecoratingService`
 
-Implementing ``DecoratingServiceFunction``
-------------------------------------------
+Implementing ``DecoratingHttpServiceFunction`` and ``DecoratingRpcServiceFunction``
+-----------------------------------------------------------------------------------
 
-:api:`DecoratingServiceFunction` is a functional interface that greatly simplifies the implementation of
-a decorating service. It enables you to write a decorating service with a single lambda expression:
+:api:`DecoratingHttpServiceFunction` and :api:`DecoratingRpcServiceFunction` is a functional interface that
+greatly simplifies the implementation of a decorating service. It enables you to write a decorating service
+with a single lambda expression:
 
 .. code-block:: java
 
@@ -42,11 +43,11 @@ a decorating service. It enables you to write a decorating service with a single
         return delegate.serve(ctx, req);
     });
 
-Extending ``SimpleDecoratingService``
--------------------------------------
+Extending ``SimpleDecoratingHttpService`` and ``SimpleDecoratingRpcService``
+----------------------------------------------------------------------------
 
 If your decorator is expected to be reusable, it is recommended to define a new top-level class that extends
-:api:`SimpleDecoratingService` :
+:api:`SimpleDecoratingHttpService` or :api:`SimpleDecoratingRpcService` depends on the service type:
 
 .. code-block:: java
 
@@ -54,10 +55,10 @@ If your decorator is expected to be reusable, it is recommended to define a new 
     import com.linecorp.armeria.common.HttpResponse;
     import com.linecorp.armeria.server.Service;
     import com.linecorp.armeria.server.ServiceRequestContext;
-    import com.linecorp.armeria.server.SimpleDecoratingService;
+    import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 
-    public class AuthService extends SimpleDecoratingService<HttpRequest, HttpResponse> {
-        public AuthService(Service<HttpRequest, HttpResponse> delegate) {
+    public class AuthService extends SimpleDecoratingHttpService {
+        public AuthService(HttpService delegate) {
             super(delegate);
         }
 
@@ -88,10 +89,9 @@ response. You can do that as well, of course, using :api:`DecoratingService`:
 
 .. code-block:: java
 
-    import com.linecorp.armeria.common.RpcRequest;
-    import com.linecorp.armeria.common.RpcResponse;
+    import com.linecorp.armeria.server.RpcService;
 
-    // Transforms a Service<RpcRequest, RpcResponse> into Service<HttpRequest, HttpResponse>.
+    // Transforms a RpcService into HttpService.
     public class MyRpcService extends DecoratingService<RpcRequest, RpcResponse,
                                                         HttpRequest, HttpResponse> {
 
@@ -158,11 +158,11 @@ routes for a single service. It has a method called ``routes()`` which returns a
 .. code-block:: java
 
     import com.linecorp.armeria.server.Route;
-    import com.linecorp.armeria.server.ServiceWithRoutes;
+    import com.linecorp.armeria.server.HttpServiceWithRoutes;
     import java.util.HashSet;
     import java.util.Set;
 
-    public class MyServiceWithRoutes implements ServiceWithRoutes<HttpRequest, HttpResponse> {
+    public class MyServiceWithRoutes implements ServiceWithRoutes {
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) { ... }
 
@@ -192,8 +192,7 @@ register it without specifying a path explicitly, because a decorated service is
     ServerBuilder sb = Server.builder();
 
     // Works.
-    ServiceWithRoutes<HttpRequest, HttpResponse> service =
-            new MyServiceWithRoutes();
+    ServiceWithRoutes service = new MyServiceWithRoutes();
     sb.service(service);
 
     // Does not work - not a ServiceWithRoutes anymore due to decoration.

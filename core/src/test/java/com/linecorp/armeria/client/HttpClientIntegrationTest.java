@@ -81,11 +81,10 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.AbstractHttpService;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
-import com.linecorp.armeria.server.SimpleDecoratingService;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
@@ -102,9 +101,9 @@ class HttpClientIntegrationTest {
     // Used to communicate with test when the response can't be used.
     private static final AtomicReference<Boolean> completed = new AtomicReference<>();
 
-    private static final class PoolUnawareDecorator extends SimpleDecoratingService<HttpRequest, HttpResponse> {
+    private static final class PoolUnawareDecorator extends SimpleDecoratingHttpService {
 
-        private PoolUnawareDecorator(Service<HttpRequest, HttpResponse> delegate) {
+        private PoolUnawareDecorator(HttpService delegate) {
             super(delegate);
         }
 
@@ -139,7 +138,7 @@ class HttpClientIntegrationTest {
 
     private static final class PoolAwareDecorator extends SimpleDecoratingHttpService {
 
-        private PoolAwareDecorator(Service<HttpRequest, HttpResponse> delegate) {
+        private PoolAwareDecorator(HttpService delegate) {
             super(delegate);
         }
 

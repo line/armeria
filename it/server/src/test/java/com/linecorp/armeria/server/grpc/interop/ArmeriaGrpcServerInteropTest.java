@@ -32,12 +32,10 @@ import org.slf4j.bridge.SLF4JBridgeHandler;
 
 import com.squareup.okhttp.ConnectionSpec;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.ServiceWithRoutes;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit4.server.SelfSignedCertificateRule;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
@@ -71,7 +69,7 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
     public static final ServerRule server = new ServerRule() {
 
         private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(2);
-        private final ServiceWithRoutes<HttpRequest, HttpResponse> grpcService =
+        private final HttpServiceWithRoutes grpcService =
                 GrpcService.builder()
                            .addService(ServerInterceptors.intercept(new TestServiceImpl(executor),
                                                                     TestServiceImpl.interceptors()))

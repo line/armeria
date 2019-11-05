@@ -333,9 +333,9 @@ public final class ServerConfig {
     }
 
     /**
-     * Finds the {@link List} of {@link VirtualHost}s that contains the specified {@link Service}. If there's
-     * no match, an empty {@link List} is returned. Note that this is potentially an expensive operation and
-     * thus should not be used in a performance-sensitive path.
+     * Finds the {@link List} of {@link VirtualHost}s that contains the specified {@link HttpService}.
+     * If there's no match, an empty {@link List} is returned. Note that this is potentially an expensive
+     * operation and thus should not be used in a performance-sensitive path.
      */
     public List<VirtualHost> findVirtualHosts(Service<?, ?> service) {
         requireNonNull(service, "service");
@@ -364,7 +364,7 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns the information of all available {@link Service}s in the {@link Server}.
+     * Returns the information of all available {@link HttpService}s in the {@link Server}.
      */
     public List<ServiceConfig> serviceConfigs() {
         return services;

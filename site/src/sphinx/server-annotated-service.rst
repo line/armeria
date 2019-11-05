@@ -813,12 +813,12 @@ Decorating an annotated service
 -------------------------------
 
 Every :api:`Service` can be wrapped by another :api:`Service` in Armeria (Refer to :ref:`server-decorator`
-for more information). Simply, you can write your own decorator by implementing :api:`DecoratingServiceFunction`
-interface as follows.
+for more information). Simply, you can write your own decorator by implementing
+:api:`DecoratingHttpServiceFunction` interface as follows.
 
 .. code-block:: java
 
-    public class MyDecorator implements DecoratingServiceFunction<HttpRequest, HttpResponse> {
+    public class MyDecorator implements DecoratingHttpServiceFunction {
         @Override
         public HttpResponse serve(Service<HttpRequest, HttpResponse> delegate,
                                   ServiceRequestContext ctx, HttpRequest req) {
@@ -843,7 +843,7 @@ and finally ``hello()`` method will handle the request.
 Decorating an annotated service with a custom decorator annotation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-As you read earlier, you can write your own decorator with :api:`DecoratingServiceFunction` interface.
+As you read earlier, you can write your own decorator with :api:`DecoratingHttpServiceFunction` interface.
 If your decorator does not require any parameter, that is fine. However, what if your decorator requires
 a parameter? In this case, you can create your own decorator annotation. Let's see the following custom
 decorator annotation which applies :api:`LoggingService` to an annotated service.
@@ -875,8 +875,7 @@ decorator annotation which applies :api:`LoggingService` to an annotated service
 
     public final class LoggingDecoratorFactoryFunction implements DecoratorFactoryFunction<LoggingDecorator> {
         @Override
-        public Function<Service<HttpRequest, HttpResponse>,
-                ? extends Service<HttpRequest, HttpResponse>> newDecorator(LoggingDecorator parameter) {
+        public Function<? super HttpService, ? extends HttpService> newDecorator(LoggingDecorator parameter) {
             return new LoggingServiceBuilder()
                     .requestLogLevel(parameter.requestLogLevel())
                     .successfulResponseLogLevel(parameter.successfulResponseLogLevel())

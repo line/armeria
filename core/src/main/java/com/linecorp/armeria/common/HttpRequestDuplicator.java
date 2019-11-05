@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.stream.StreamMessageWrapper;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
- * Allows subscribing to a {@link HttpRequest} multiple times by duplicating the stream.
+ * Allows subscribing to an {@link HttpRequest} multiple times by duplicating the stream.
  *
  * <pre>{@code
  * final HttpRequest originalReq = ...
@@ -54,7 +54,7 @@ public class HttpRequestDuplicator extends AbstractStreamMessageDuplicator<HttpO
     private final RequestHeaders headers;
 
     /**
-     * Creates a new instance wrapping a {@link HttpRequest} and publishing to multiple subscribers.
+     * Creates a new instance wrapping an {@link HttpRequest} and publishing to multiple subscribers.
      * The length of request is limited by default with the server-side parameter which is
      * {@link Flags#defaultMaxResponseLength()}. If you are at client-side, you need to use
      * {@link #HttpRequestDuplicator(HttpRequest, long)} and the {@code long} value should be greater than
@@ -66,7 +66,7 @@ public class HttpRequestDuplicator extends AbstractStreamMessageDuplicator<HttpO
     }
 
     /**
-     * Creates a new instance wrapping a {@link HttpRequest} and publishing to multiple subscribers.
+     * Creates a new instance wrapping an {@link HttpRequest} and publishing to multiple subscribers.
      * @param req the request that will publish data to subscribers
      * @param maxSignalLength the maximum length of signals. {@code 0} disables the length limit
      */
@@ -75,7 +75,7 @@ public class HttpRequestDuplicator extends AbstractStreamMessageDuplicator<HttpO
     }
 
     /**
-     * Creates a new instance wrapping a {@link HttpRequest} and publishing to multiple subscribers.
+     * Creates a new instance wrapping an {@link HttpRequest} and publishing to multiple subscribers.
      * @param req the request that will publish data to subscribers
      * @param maxSignalLength the maximum length of signals. {@code 0} disables the length limit
      * @param executor the executor to use for upstream signals.

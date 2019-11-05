@@ -55,11 +55,11 @@ You may want to consider the following options before putting your Armeria appli
   .. code-block:: java
 
       import com.linecorp.armeria.server.throttling.RateLimitingThrottlingStrategy;
-      import com.linecorp.armeria.server.throttling.ThrottlingHttpService;
+      import com.linecorp.armeria.server.throttling.ThrottlingService;
 
       ServerBuilder sb = Server.builder();
       sb.service("/my_service", // Allow up to 1000 requests/sec.
-                 myService.decorate(ThrottlingHttpService.newDecorator(
+                 myService.decorate(ThrottlingService.newDecorator(
                          new RateLimitingThrottlingStrategy(1000.0))));
 
 - Decorate your clients with :api:`RetryingClient`. See :ref:`client-retry`.

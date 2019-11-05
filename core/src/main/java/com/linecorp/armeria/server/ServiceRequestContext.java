@@ -208,7 +208,7 @@ public interface ServiceRequestContext extends RequestContext {
     /**
      * Returns the {@link Service} that is handling the current {@link Request}.
      */
-    <T extends Service<HttpRequest, HttpResponse>> T service();
+    <T extends HttpService> T service();
 
     /**
      * Returns the {@link ExecutorService} that could be used for executing a potentially long-running task.

@@ -212,8 +212,8 @@ class ServerBuilderTest {
     }
 
     /**
-     * Makes sure that {@link ServerBuilder#decorator(DecoratingServiceFunction)} works at every service and
-     * virtual hosts and {@link VirtualHostBuilder#decorator(DecoratingServiceFunction)} works only at
+     * Makes sure that {@link ServerBuilder#decorator(DecoratingHttpServiceFunction)} works at every service and
+     * virtual hosts and {@link VirtualHostBuilder#decorator(DecoratingHttpServiceFunction)} works only at
      * its own services.
      */
     @Test

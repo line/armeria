@@ -44,6 +44,7 @@ import io.micrometer.core.instrument.Tags;
  *
  * @see MetricCollectingClient
  * @see MetricCollectingService
+ * @see MetricCollectingRpcService
  */
 @FunctionalInterface
 public interface MeterIdPrefixFunction {

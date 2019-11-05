@@ -57,10 +57,10 @@ import com.linecorp.armeria.internal.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.server.AbstractHttpService;
+import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.ServiceWithRoutes;
 
 import io.grpc.Codec.Identity;
 import io.grpc.CompressorRegistry;
@@ -87,8 +87,7 @@ import io.grpc.protobuf.services.ProtoReflectionService;
  *     </li>
  * </ul>
  */
-public final class GrpcService extends AbstractHttpService
-        implements ServiceWithRoutes<HttpRequest, HttpResponse> {
+public final class GrpcService extends AbstractHttpService implements HttpServiceWithRoutes {
 
     private static final Logger logger = LoggerFactory.getLogger(GrpcService.class);
 

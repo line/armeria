@@ -17,6 +17,6 @@
 package com.linecorp.armeria.common;
 
 /**
- * A request. It has to be a {@link HttpRequest} or a {@link RpcRequest}.
+ * A request. It has to be an {@link HttpRequest} or an {@link RpcRequest}.
  */
 public interface Request {}

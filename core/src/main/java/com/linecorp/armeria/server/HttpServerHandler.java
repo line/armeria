@@ -352,7 +352,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         // Decode the request and create a new invocation context from it to perform an invocation.
         final RoutingResult routingResult = routed.routingResult();
         final ServiceConfig serviceCfg = routed.value();
-        final Service<HttpRequest, HttpResponse> service = serviceCfg.service();
+        final HttpService service = serviceCfg.service();
         final Channel channel = ctx.channel();
         final InetAddress remoteAddress = ((InetSocketAddress) channel.remoteAddress()).getAddress();
 

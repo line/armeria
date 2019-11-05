@@ -54,7 +54,7 @@ import io.micrometer.core.instrument.MeterRegistry;
  * A skeletal {@link Service} implementation that enables composing multiple {@link Service}s into one.
  * Extend this class to build your own composite {@link Service}. e.g.
  * <pre>{@code
- * public class MyService extends AbstractCompositeService<HttpRequest, HttpResponse> {
+ * public class MyService extends AbstractCompositeService<HttpService, HttpRequest, HttpResponse> {
  *     public MyService() {
  *         super(CompositeServiceEntry.ofPrefix("/foo/", new FooService()),
  *               CompositeServiceEntry.ofPrefix("/bar/", new BarService()),
@@ -63,32 +63,34 @@ import io.micrometer.core.instrument.MeterRegistry;
  * }
  * }</pre>
  *
+ * @param <T> the {@link Service} type
  * @param <I> the {@link Request} type
  * @param <O> the {@link Response} type
  *
  * @see AbstractCompositeServiceBuilder
  * @see CompositeServiceEntry
  */
-public abstract class AbstractCompositeService<I extends Request, O extends Response> implements Service<I, O> {
+public abstract class AbstractCompositeService<T extends Service<I, O>, I extends Request, O extends Response>
+        implements Service<I, O> {
 
-    private final List<CompositeServiceEntry<I, O>> services;
+    private final List<CompositeServiceEntry<T>> services;
     @Nullable
     private Server server;
     @Nullable
-    private Router<Service<I, O>> router;
+    private Router<T> router;
 
     /**
      * Creates a new instance with the specified {@link CompositeServiceEntry}s.
      */
     @SafeVarargs
-    protected AbstractCompositeService(CompositeServiceEntry<I, O>... services) {
+    protected AbstractCompositeService(CompositeServiceEntry<T>... services) {
         this(ImmutableList.copyOf(requireNonNull(services, "services")));
     }
 
     /**
      * Creates a new instance with the specified {@link CompositeServiceEntry}s.
      */
-    protected AbstractCompositeService(Iterable<CompositeServiceEntry<I, O>> services) {
+    protected AbstractCompositeService(Iterable<CompositeServiceEntry<T>> services) {
         requireNonNull(services, "services");
 
         this.services = ImmutableList.copyOf(services);
@@ -114,7 +116,7 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
                                   "route", route.meterTag());
 
         router.registerMetrics(registry, meterIdPrefix);
-        for (CompositeServiceEntry<I, O> e : services()) {
+        for (CompositeServiceEntry<T> e : services()) {
             ServiceCallbackInvoker.invokeServiceAdded(cfg, e.service());
         }
     }
@@ -122,7 +124,7 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
     /**
      * Returns the list of {@link CompositeServiceEntry}s added to this composite {@link Service}.
      */
-    protected List<CompositeServiceEntry<I, O>> services() {
+    protected List<CompositeServiceEntry<T>> services() {
         return services;
     }
 
@@ -130,9 +132,8 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
      * Returns the {@code index}-th {@link Service} in this composite {@link Service}. The index of the
      * {@link Service} added first is {@code 0}, and so on.
      */
-    @SuppressWarnings("unchecked")
-    protected <T extends Service<I, O>> T serviceAt(int index) {
-        return (T) services().get(index).service();
+    protected T serviceAt(int index) {
+        return services().get(index).service();
     }
 
     /**
@@ -143,7 +144,7 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
      * @return the {@link Service} wrapped by {@link Routed} if there's a match.
      *         {@link Routed#empty()} if there's no match.
      */
-    protected Routed<Service<I, O>> findService(RoutingContext routingCtx) {
+    protected Routed<T> findService(RoutingContext routingCtx) {
         assert router != null;
         return router.find(routingCtx);
     }
@@ -151,7 +152,7 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
     @Override
     public O serve(ServiceRequestContext ctx, I req) throws Exception {
         final RoutingContext routingCtx = ctx.routingContext();
-        final Routed<Service<I, O>> result = findService(routingCtx.overridePath(ctx.mappedPath()));
+        final Routed<T> result = findService(routingCtx.overridePath(ctx.mappedPath()));
         if (!result.isPresent()) {
             throw HttpStatusException.of(HttpStatus.NOT_FOUND);
         }

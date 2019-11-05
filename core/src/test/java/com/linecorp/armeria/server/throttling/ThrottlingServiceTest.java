@@ -46,8 +46,8 @@ public class ThrottlingServiceTest {
     public ServerRule serverRule = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.service("/http-never", SERVICE.decorate(ThrottlingHttpService.newDecorator(never())));
-            sb.service("/http-always", SERVICE.decorate(ThrottlingHttpService.newDecorator(always())));
+            sb.service("/http-never", SERVICE.decorate(ThrottlingService.newDecorator(never())));
+            sb.service("/http-always", SERVICE.decorate(ThrottlingService.newDecorator(always())));
         }
     };
 

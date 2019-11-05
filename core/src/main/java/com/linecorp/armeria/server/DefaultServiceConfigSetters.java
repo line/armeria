@@ -26,15 +26,13 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
  * A default implementation of {@link ServiceConfigSetters} that stores service related settings
- * and provides a method {@link DefaultServiceConfigSetters#toServiceConfigBuilder(Route, Service)} to build
+ * and provides a method {@link DefaultServiceConfigSetters#toServiceConfigBuilder(Route, HttpService)} to build
  * {@link ServiceConfigBuilder}.
  */
 final class DefaultServiceConfigSetters implements ServiceConfigSetters {
@@ -49,7 +47,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     @Nullable
     private ContentPreviewerFactory responseContentPreviewerFactory;
     @Nullable
-    private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
+    private Function<? super HttpService, ? extends HttpService> decorator;
     @Nullable
     private AccessLogWriter accessLogWriter;
     private boolean shutdownAccessLogWriterOnStop;
@@ -120,44 +118,32 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     }
 
     @Override
-    public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
-    ServiceConfigSetters decorator(Function<T, R> decorator) {
+    public ServiceConfigSetters decorator(Function<? super HttpService, ? extends HttpService> decorator) {
         requireNonNull(decorator, "decorator");
 
-        @SuppressWarnings("unchecked")
-        final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> castDecorator =
-                (Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>>) decorator;
-
         if (this.decorator != null) {
-            this.decorator = this.decorator.andThen(castDecorator);
+            this.decorator = this.decorator.andThen(decorator);
         } else {
-            this.decorator = castDecorator;
+            this.decorator = decorator;
         }
 
         return this;
     }
 
-    Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> getDecorator() {
+    Function<? super HttpService, ? extends HttpService> decorator() {
         if (decorator == null) {
             return Function.identity();
         }
         return decorator;
     }
 
-    Service<HttpRequest, HttpResponse> decorate(Service<HttpRequest, HttpResponse> service) {
-        if (decorator == null) {
-            return service;
-        }
-        return service.decorate(decorator);
-    }
-
     /**
      * Note: {@link ServiceConfigBuilder} built by this method is not decorated with the decorator function
-     * which can be configured using {@link DefaultServiceConfigSetters#decorate(Service)} because
+     * which can be configured using {@link DefaultServiceConfigSetters#decorator()} because
      * {@link AnnotatedServiceBindingBuilder} needs exception handling decorators to be the last to handle
      * any exceptions thrown by the service and other decorators.
      */
-    ServiceConfigBuilder toServiceConfigBuilder(Route route, Service<HttpRequest, HttpResponse> service) {
+    ServiceConfigBuilder toServiceConfigBuilder(Route route, HttpService service) {
         final ServiceConfigBuilder serviceConfigBuilder = new ServiceConfigBuilder(route, service);
         if (requestTimeoutMillis != null) {
             serviceConfigBuilder.requestTimeoutMillis(requestTimeoutMillis);
