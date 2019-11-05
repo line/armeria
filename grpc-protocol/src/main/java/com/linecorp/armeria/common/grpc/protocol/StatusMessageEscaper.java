@@ -106,7 +106,8 @@ public final class StatusMessageEscaper {
             escapedBytes[wi++] = b;
         }
 
-        return new String(escapedBytes, 0, wi, StandardCharsets.US_ASCII);
+        //noinspection deprecation
+        return new String(escapedBytes, 0,  0, wi);
     }
 
     /**
