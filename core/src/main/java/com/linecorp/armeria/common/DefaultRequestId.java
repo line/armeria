@@ -19,6 +19,8 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import javax.annotation.Nullable;
 
+import com.linecorp.armeria.internal.ThreadLocalByteArray;
+
 /**
  * The default {@link RequestId} implementation.
  */
@@ -53,8 +55,19 @@ final class DefaultRequestId implements RequestId {
 
     private String newLongText() {
         final String newLongText;
-        if (Integer.numberOfLeadingZeros((int) (value >>> 32)) < 4) {
-            // Will hit this branch at the chance of 15/16 (93.75%).
+        // Long.toHexString() produces the least amount of garbage
+        // because it uses an internal String API which does not make a copy.
+        // However, it produces a variable-length string because it does not
+        // preserve the leading zeros.
+        //
+        // We want to make sure the resulting string to have fixed length, so
+        // we use Long.toHexString() only when there will be no leading zero,
+        // i.e. the most significant byte of the value is equal to or greater
+        // than 16.
+        //
+        // The chance of using Long.toHexString() is (256 - 16) / 256 = 93.75%,
+        // which is fairly high, assuming random distribution.
+        if ((value & 0xF000000000000000L) != 0) {
             newLongText = Long.toHexString(value);
         } else {
             newLongText = newTextSlow(value, 16);
@@ -72,9 +85,10 @@ final class DefaultRequestId implements RequestId {
     }
 
     private String newShortText() {
-        final int value = (int) (this.value >>> 32);
+        final int value = (int) (this.value >>> 32); // First 8 bytes only
         final String newShortText;
-        if (Integer.numberOfLeadingZeros(value) < 4) {
+        // See newLongText() for more information about this optimization.
+        if ((value & 0xF0000000) != 0) {
             newShortText = Integer.toHexString(value);
         } else {
             newShortText = newTextSlow(value, 8);
@@ -84,12 +98,12 @@ final class DefaultRequestId implements RequestId {
 
     @SuppressWarnings("deprecation")
     private static String newTextSlow(long value, int digits) {
-        final byte[] bytes = new byte[digits];
+        final byte[] bytes = ThreadLocalByteArray.get(digits);
         for (int i = digits - 1; i >= 0; i--) {
             bytes[i] = HEXDIGITS[(int) value & 0x0F];
             value >>>= 4;
         }
-        return new String(bytes, 0);
+        return new String(bytes, 0, 0, digits);
     }
 
     @Override
