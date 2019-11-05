@@ -165,7 +165,7 @@ class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwrappable
                 factory(),
                 meterRegistry,
                 sessionProtocol,
-                options().uuidGenerator().get(),
+                options().requestIdGenerator().get(),
                 method,
                 uri().getRawPath(),
                 uri().getRawQuery(),

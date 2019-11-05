@@ -42,7 +42,6 @@ import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.UUID;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
@@ -54,6 +53,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
@@ -184,11 +184,11 @@ class AccessLogFormatsTest {
                                   HttpHeaderNames.USER_AGENT, "armeria/x.y.z",
                                   HttpHeaderNames.REFERER, "http://log.example.com",
                                   HttpHeaderNames.COOKIE, "a=1;b=2"));
-        final UUID uuid = new UUID(0x0123456789ABCDEFL, 0xFEDCBA9876543210L);
+        final RequestId id = RequestId.random();
         final ServiceRequestContext ctx =
                 ServiceRequestContext.builder(req)
                                      .requestStartTime(requestStartTimeNanos, requestStartTimeMicros)
-                                     .uuid(uuid)
+                                     .id(id)
                                      .build();
         ctx.attr(Attr.ATTR_KEY).set(new Attr("line"));
 
@@ -254,10 +254,10 @@ class AccessLogFormatsTest {
         assertThat(AccessLogger.format(format, log)).isEqualTo(MediaType.PLAIN_TEXT_UTF_8.toString());
 
         format = AccessLogFormats.parseCustom("%I");
-        assertThat(AccessLogger.format(format, log)).isEqualTo("01234567-89ab-cdef-fedc-ba9876543210");
+        assertThat(AccessLogger.format(format, log)).isEqualTo(id.longText());
 
         format = AccessLogFormats.parseCustom("%{abbrev}I");
-        assertThat(AccessLogger.format(format, log)).isEqualTo("01234567");
+        assertThat(AccessLogger.format(format, log)).isEqualTo(id.shortText());
     }
 
     @Test

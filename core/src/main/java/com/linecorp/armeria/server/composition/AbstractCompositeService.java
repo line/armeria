@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
-import java.util.UUID;
 
 import javax.annotation.Nullable;
 
@@ -29,6 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
@@ -186,10 +186,10 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
         }
 
         @Override
-        public ServiceRequestContext newDerivedContext(UUID uuid,
+        public ServiceRequestContext newDerivedContext(RequestId id,
                                                        @Nullable HttpRequest req,
                                                        @Nullable RpcRequest rpcReq) {
-            return new CompositeServiceRequestContext(super.newDerivedContext(uuid, req, rpcReq),
+            return new CompositeServiceRequestContext(super.newDerivedContext(id, req, rpcReq),
                                                       route, mappedPath);
         }
 

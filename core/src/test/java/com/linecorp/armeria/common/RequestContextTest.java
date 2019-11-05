@@ -25,7 +25,6 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -64,7 +63,6 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.ChannelUtil;
-import com.linecorp.armeria.internal.UuidUtil;
 import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 
 import io.netty.channel.Channel;
@@ -444,12 +442,12 @@ public class RequestContextTest {
     private class DummyRequestContext extends NonWrappingRequestContext {
         DummyRequestContext() {
             super(NoopMeterRegistry.get(), SessionProtocol.HTTP,
-                  UuidUtil.random(), HttpMethod.GET, "/", null,
+                  RequestId.random(), HttpMethod.GET, "/", null,
                   HttpRequest.streaming(HttpMethod.GET, "/"), null);
         }
 
         @Override
-        public RequestContext newDerivedContext(UUID uuid,
+        public RequestContext newDerivedContext(RequestId id,
                                                 @Nullable HttpRequest req,
                                                 @Nullable RpcRequest rpcReq) {
             throw new UnsupportedOperationException();

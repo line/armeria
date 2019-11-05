@@ -19,7 +19,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.util.UUID;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLSession;
@@ -27,6 +26,7 @@ import javax.net.ssl.SSLSession;
 import com.linecorp.armeria.common.AbstractRequestContextBuilder;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 
@@ -123,7 +123,7 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
 
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
                 eventLoop(), meterRegistry(), sessionProtocol(),
-                uuid(), method(), path(), query(), fragment, options, request(), rpcRequest());
+                id(), method(), path(), query(), fragment, options, request(), rpcRequest());
         ctx.init(endpoint);
 
         if (isRequestStartTimeSet()) {
@@ -167,8 +167,8 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     }
 
     @Override
-    public ClientRequestContextBuilder uuid(UUID uuid) {
-        return (ClientRequestContextBuilder) super.uuid(uuid);
+    public ClientRequestContextBuilder id(RequestId id) {
+        return (ClientRequestContextBuilder) super.id(id);
     }
 
     @Override

@@ -26,7 +26,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Predicate;
@@ -37,6 +36,7 @@ import javax.annotation.Nullable;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.internal.ConnectionLimitingHandler;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
@@ -109,7 +109,7 @@ public final class ServerConfig {
     private final Predicate<InetAddress> clientAddressFilter;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
-    private final Supplier<UUID> uuidGenerator;
+    private final Supplier<? extends RequestId> requestIdGenerator;
 
     @Nullable
     private String strVal;
@@ -133,7 +133,7 @@ public final class ServerConfig {
             Predicate<InetAddress> clientAddressTrustedProxyFilter,
             Predicate<InetAddress> clientAddressFilter,
             boolean enableServerHeader, boolean enableDateHeader,
-            Supplier<UUID> uuidGenerator) {
+            Supplier<? extends RequestId> requestIdGenerator) {
 
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
@@ -253,7 +253,7 @@ public final class ServerConfig {
 
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
-        this.uuidGenerator = requireNonNull(uuidGenerator, "uuidGenerator");
+        this.requestIdGenerator = requireNonNull(requestIdGenerator, "requestIdGenerator");
     }
 
     static int validateMaxNumConnections(int maxNumConnections) {
@@ -668,10 +668,10 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns the {@link Supplier} that generates a {@link UUID} for each {@link Request}.
+     * Returns the {@link Supplier} that generates a {@link RequestId} for each {@link Request}.
      */
-    public Supplier<UUID> uuidGenerator() {
-        return uuidGenerator;
+    public Supplier<? extends RequestId> requestIdGenerator() {
+        return requestIdGenerator;
     }
 
     @Override
@@ -692,7 +692,7 @@ public final class ServerConfig {
                     accessLogWriter(), shutdownAccessLogWriterOnStop(),
                     channelOptions(), childChannelOptions(),
                     clientAddressSources(), clientAddressTrustedProxyFilter(), clientAddressFilter(),
-                    isServerHeaderEnabled(), isDateHeaderEnabled(), uuidGenerator());
+                    isServerHeaderEnabled(), isDateHeaderEnabled());
         }
 
         return strVal;
@@ -715,8 +715,7 @@ public final class ServerConfig {
             List<ClientAddressSource> clientAddressSources,
             Predicate<InetAddress> clientAddressTrustedProxyFilter,
             Predicate<InetAddress> clientAddressFilter,
-            boolean serverHeaderEnabled, boolean dateHeaderEnabled,
-            Supplier<UUID> uuidGenerator) {
+            boolean serverHeaderEnabled, boolean dateHeaderEnabled) {
 
         final StringBuilder buf = new StringBuilder();
         if (type != null) {
@@ -819,8 +818,6 @@ public final class ServerConfig {
         buf.append(serverHeaderEnabled ? "enabled" : "disabled");
         buf.append(", dateHeader: ");
         buf.append(dateHeaderEnabled ? "enabled" : "disabled");
-        buf.append(", uuidGenerator: ");
-        buf.append(uuidGenerator);
         buf.append(')');
 
         return buf.toString();

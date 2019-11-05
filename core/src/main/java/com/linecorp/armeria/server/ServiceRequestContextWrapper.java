@@ -21,7 +21,6 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 
 import javax.annotation.Nonnull;
@@ -34,6 +33,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContextWrapper;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
@@ -76,10 +76,10 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public ServiceRequestContext newDerivedContext(UUID uuid,
+    public ServiceRequestContext newDerivedContext(RequestId id,
                                                    @Nullable HttpRequest req,
                                                    @Nullable RpcRequest rpcReq) {
-        return delegate().newDerivedContext(uuid, req, rpcReq);
+        return delegate().newDerivedContext(id, req, rpcReq);
     }
 
     @Override

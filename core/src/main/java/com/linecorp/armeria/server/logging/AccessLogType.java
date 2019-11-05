@@ -22,11 +22,11 @@ import static com.linecorp.armeria.server.logging.AccessLogType.VariableRequirem
 
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.logging.RequestLog;
 
 import io.netty.util.AttributeMap;
@@ -108,10 +108,9 @@ enum AccessLogType {
      */
     TEXT('%', false, NO),
     /**
-     * {@code "%I"} - the {@link UUID} of the request. Use {@code "%{abbrev}I"} to get only the first
-     * 8 hexadigits, e.g. {@code "8b608a23"}.
+     * {@code "%I"} - the {@link RequestId}. Use {@code "%{short}I"} to get the short form.
      */
-    UUID('I', false, OPTIONAL);
+    REQUEST_ID('I', false, OPTIONAL);
 
     private static final Map<Character, AccessLogType> tokenToEnum;
 

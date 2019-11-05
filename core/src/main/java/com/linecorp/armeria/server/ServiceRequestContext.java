@@ -24,7 +24,6 @@ import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -43,6 +42,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
@@ -166,7 +166,9 @@ public interface ServiceRequestContext extends RequestContext {
     }
 
     @Override
-    ServiceRequestContext newDerivedContext(UUID uuid, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq);
+    ServiceRequestContext newDerivedContext(RequestId id,
+                                            @Nullable HttpRequest req,
+                                            @Nullable RpcRequest rpcReq);
 
     /**
      * Returns the {@link Server} that is handling the current {@link Request}.

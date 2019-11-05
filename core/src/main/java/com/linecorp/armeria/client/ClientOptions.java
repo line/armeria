@@ -19,10 +19,10 @@ package com.linecorp.armeria.client;
 import static com.linecorp.armeria.client.ClientOption.DECORATION;
 import static com.linecorp.armeria.client.ClientOption.HTTP_HEADERS;
 import static com.linecorp.armeria.client.ClientOption.MAX_RESPONSE_LENGTH;
+import static com.linecorp.armeria.client.ClientOption.REQUEST_ID_GENERATOR;
 import static com.linecorp.armeria.client.ClientOption.REQ_CONTENT_PREVIEWER_FACTORY;
 import static com.linecorp.armeria.client.ClientOption.RESPONSE_TIMEOUT_MILLIS;
 import static com.linecorp.armeria.client.ClientOption.RES_CONTENT_PREVIEWER_FACTORY;
-import static com.linecorp.armeria.client.ClientOption.UUID_GENERATOR;
 import static com.linecorp.armeria.client.ClientOption.WRITE_TIMEOUT_MILLIS;
 import static java.util.Objects.requireNonNull;
 
@@ -31,7 +31,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -40,12 +39,11 @@ import com.google.common.collect.Iterables;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.util.AbstractOptions;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
-import com.linecorp.armeria.internal.UuidUtil;
 
 import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
 import io.netty.util.AsciiString;
@@ -313,10 +311,10 @@ public final class ClientOptions extends AbstractOptions {
     }
 
     /**
-     * Returns the {@link Supplier} that generates a {@link UUID} for each {@link Request}.
+     * Returns the {@link Supplier} that generates a {@link RequestId}.
      */
-    public Supplier<UUID> uuidGenerator() {
-        return getOrElse(UUID_GENERATOR, UuidUtil.randomGenerator());
+    public Supplier<RequestId> requestIdGenerator() {
+        return getOrElse(REQUEST_ID_GENERATOR, RequestId::random);
     }
 
     /**

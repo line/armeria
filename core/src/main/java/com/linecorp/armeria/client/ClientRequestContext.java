@@ -22,7 +22,6 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Map.Entry;
-import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -34,6 +33,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -181,12 +181,12 @@ public interface ClientRequestContext extends RequestContext {
      * {@link ClientRequestContext}, except having a different {@link Request} and its own {@link RequestLog}.
      */
     @Override
-    default ClientRequestContext newDerivedContext(UUID uuid,
+    default ClientRequestContext newDerivedContext(RequestId id,
                                                    @Nullable HttpRequest req,
                                                    @Nullable RpcRequest rpcReq) {
         final Endpoint endpoint = endpoint();
         checkState(endpoint != null, "endpoint not available");
-        return newDerivedContext(uuid, req, rpcReq, endpoint);
+        return newDerivedContext(id, req, rpcReq, endpoint);
     }
 
     /**
@@ -194,7 +194,7 @@ public interface ClientRequestContext extends RequestContext {
      * {@link ClientRequestContext}, except having different {@link Request}, {@link Endpoint} and its own
      * {@link RequestLog}.
      */
-    ClientRequestContext newDerivedContext(UUID uuid, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
+    ClientRequestContext newDerivedContext(RequestId id, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
                                            Endpoint endpoint);
 
     /**

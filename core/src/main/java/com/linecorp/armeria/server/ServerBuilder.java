@@ -42,7 +42,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -67,12 +66,12 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
-import com.linecorp.armeria.internal.UuidUtil;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceElement;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
@@ -193,7 +192,7 @@ public final class ServerBuilder {
     private RejectedRouteHandler rejectedRouteHandler = RejectedRouteHandler.WARN;
     private boolean enableServerHeader = true;
     private boolean enableDateHeader = true;
-    private Supplier<UUID> uuidGenerator = UuidUtil.randomGenerator();
+    private Supplier<? extends RequestId> requestIdGenerator = RequestId::random;
 
     // These properties can also be set in the service level.
 
@@ -1372,13 +1371,13 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the {@link Supplier} which generates a {@link UUID} for each {@link ServiceRequestContext}.
-     * By default, a random {@link UUID} is generated.
+     * Sets the {@link Supplier} which generates a {@link RequestId}.
+     * By default, a {@link RequestId} is generated from a random 64-bit integer.
      *
-     * @see RequestContext#uuid()
+     * @see RequestContext#id()
      */
-    public ServerBuilder uuidGenerator(Supplier<UUID> uuidGenerator) {
-        this.uuidGenerator = requireNonNull(uuidGenerator, "uuidGenerator");
+    public ServerBuilder requestIdGenerator(Supplier<? extends RequestId> requestIdGenerator) {
+        this.requestIdGenerator = requireNonNull(requestIdGenerator, "requestIdGenerator");
         return this;
     }
 
@@ -1657,7 +1656,7 @@ public final class ServerBuilder {
                 meterRegistry, serviceLoggerPrefix, accessLogWriter, shutdownAccessLogWriterOnStop,
                 proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter,
-                enableServerHeader, enableDateHeader, uuidGenerator), sslContexts);
+                enableServerHeader, enableDateHeader, requestIdGenerator), sslContexts);
 
         serverListeners.forEach(server::addListener);
         return server;
@@ -1751,6 +1750,6 @@ public final class ServerBuilder {
                 accessLogWriter, shutdownAccessLogWriterOnStop,
                 channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter,
-                enableServerHeader, enableDateHeader, uuidGenerator);
+                enableServerHeader, enableDateHeader);
     }
 }

@@ -19,7 +19,6 @@ package com.linecorp.armeria.client;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
-import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -31,6 +30,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 
@@ -61,12 +61,12 @@ class ClientOptionsBuilderTest {
     }
 
     @Test
-    void testUuidGenerator() {
-        final Supplier<UUID> expected = () -> new UUID(0, 0);
+    void testIdGenerator() {
+        final Supplier<RequestId> expected = () -> null;
         final ClientOptionsBuilder b = ClientOptions.builder();
-        b.uuidGenerator(expected);
+        b.requestIdGenerator(expected);
         final ClientOptions options = b.build();
-        assertThat(options.uuidGenerator()).isSameAs(expected);
+        assertThat(options.requestIdGenerator()).isSameAs(expected);
     }
 
     @Test

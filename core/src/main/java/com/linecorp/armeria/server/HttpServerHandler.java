@@ -30,7 +30,6 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.IdentityHashMap;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -52,6 +51,7 @@ import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.RpcRequest;
@@ -364,7 +364,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
                 serviceCfg, channel, config.meterRegistry(), protocol,
-                config.uuidGenerator().get(), routingCtx, routingResult,
+                config.requestIdGenerator().get(), routingCtx, routingResult,
                 req, getSSLSession(channel), proxiedAddresses, clientAddress);
 
         try (SafeCloseable ignored = reqCtx.push()) {
@@ -676,7 +676,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final Channel channel = ctx.channel();
         final EarlyRespondingRequestContext reqCtx =
                 new EarlyRespondingRequestContext(channel, NoopMeterRegistry.get(), protocol(),
-                                                  config.uuidGenerator().get(), req.method(), path, query, req);
+                                                  config.requestIdGenerator().get(), req.method(),
+                                                  path, query, req);
 
         final RequestLogBuilder logBuilder = reqCtx.logBuilder();
         logBuilder.startRequest(channel, protocol());
@@ -691,21 +692,21 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         private final DefaultRequestLog requestLog;
 
         EarlyRespondingRequestContext(Channel channel, MeterRegistry meterRegistry,
-                                      SessionProtocol sessionProtocol, UUID uuid, HttpMethod method,
+                                      SessionProtocol sessionProtocol, RequestId id, HttpMethod method,
                                       String path, @Nullable String query, HttpRequest request) {
-            super(meterRegistry, sessionProtocol, uuid, method, path, query, request, null);
+            super(meterRegistry, sessionProtocol, id, method, path, query, request, null);
             this.channel = requireNonNull(channel, "channel");
             requestLog = new DefaultRequestLog(this);
         }
 
         @Override
-        public RequestContext newDerivedContext(UUID uuid,
+        public RequestContext newDerivedContext(RequestId id,
                                                 @Nullable HttpRequest req,
                                                 @Nullable RpcRequest rpcReq) {
             // There are no attributes which should be copied to a new instance.
             requireNonNull(req, "req");
             return new EarlyRespondingRequestContext(channel, meterRegistry(), sessionProtocol(),
-                                                     uuid, method(), path(), query(), req);
+                                                     id, method(), path(), query(), req);
         }
 
         @Override
