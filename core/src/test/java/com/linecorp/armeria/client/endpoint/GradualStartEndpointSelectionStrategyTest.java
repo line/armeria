@@ -36,18 +36,13 @@ import com.linecorp.armeria.client.endpoint.WeightedRoundRobinStrategyTest.TestD
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 
-class SlowStartAwareEndpointSelectionStrategyTest {
+class GradualStartEndpointSelectionStrategyTest {
     private static final EndpointGroup ENDPOINT_GROUP =
             EndpointGroup.of(Endpoint.parse("localhost:1234").withWeight(1000),
                              Endpoint.parse("localhost:2345").withWeight(1000));
 
-    private static final EndpointWeightTransition weighter = EndpointWeightTransition.linear();
-    private static final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private static final EndpointSelectionStrategy strategy =
-            SlowStartAwareEndpointSelectionStrategy.of(weighter,
-                                                       scheduler,
-                                                       Duration.ofSeconds(1),
-                                                       10);
+            GradualStartEndpointSelectionStrategy.of(Duration.ofSeconds(1));
 
     private final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
 
@@ -95,15 +90,16 @@ class SlowStartAwareEndpointSelectionStrategyTest {
     @Test
     void selectFromDynamicEndpointGroup() throws Exception {
         final AtomicInteger counter = new AtomicInteger();
-        final EndpointWeightTransition weighter = (e, step, maxStep) -> {
+        final EndpointWeightTransition transition = (e, step, maxStep) -> {
             counter.incrementAndGet();
             return EndpointWeightTransition.linear().compute(e, step, maxStep);
         };
-        final EndpointSelectionStrategy strategy =
-                SlowStartAwareEndpointSelectionStrategy.of(weighter,
-                                                           scheduler,
-                                                           Duration.ofSeconds(1),
-                                                           10);
+        final EndpointSelectionStrategy strategy = GradualStartEndpointSelectionStrategy
+                .builder()
+                .weightTransition(transition)
+                .slowStartInterval(Duration.ofSeconds(1))
+                .numberOfSteps(10)
+                .build();
 
         final TestDynamicEndpointGroup endpointGroup = new TestDynamicEndpointGroup();
         EndpointGroupRegistry.register("dynamic", endpointGroup, strategy);

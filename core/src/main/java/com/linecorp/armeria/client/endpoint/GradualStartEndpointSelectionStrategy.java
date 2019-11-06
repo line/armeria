@@ -27,32 +27,33 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.WeightedRoundRobinStrategy.EndpointsAndWeights;
+import com.linecorp.armeria.common.CommonPools;
 
 /**
  * A weighted round-robin strategy that ramps up the weight gradually from zero to its normal weight value.
  */
-public final class SlowStartAwareEndpointSelectionStrategy implements EndpointSelectionStrategy {
+public final class GradualStartEndpointSelectionStrategy implements EndpointSelectionStrategy {
     private static final int DEFAULT_NUMBER_OF_STEPS = 20;
 
     /**
-     * Creates a {@link SlowStartAwareEndpointSelectionStrategyBuilder}.
+     * Creates a {@link GradualStartEndpointSelectionStrategyBuilder}.
      */
-    public static SlowStartAwareEndpointSelectionStrategyBuilder builder() {
-        return new SlowStartAwareEndpointSelectionStrategyBuilder();
+    public static GradualStartEndpointSelectionStrategyBuilder builder() {
+        return new GradualStartEndpointSelectionStrategyBuilder();
     }
 
     /**
-     * Creates a {@link SlowStartAwareEndpointSelectionStrategy}.
+     * Creates a {@link GradualStartEndpointSelectionStrategy}.
      */
-    public static EndpointSelectionStrategy of(ScheduledExecutorService executorService,
-                                               Duration slowStartInterval) {
+    public static EndpointSelectionStrategy of(Duration slowStartInterval) {
         return builder().weightTransition(EndpointWeightTransition.linear())
-                        .executorService(executorService)
+                        .executorService(CommonPools.workerGroup())
                         .slowStartInterval(slowStartInterval)
                         .numberOfSteps(DEFAULT_NUMBER_OF_STEPS)
                         .build();
@@ -64,14 +65,14 @@ public final class SlowStartAwareEndpointSelectionStrategy implements EndpointSe
     private final int numberOfSteps;
 
     /**
-     * Creates a {@link SlowStartAwareEndpointSelectionStrategy}.
+     * Creates a {@link GradualStartEndpointSelectionStrategy}.
      */
-    SlowStartAwareEndpointSelectionStrategy(EndpointWeightTransition endpointWeightTransition,
-                                            ScheduledExecutorService executorService,
-                                            Duration slowStartInterval,
-                                            int numberOfSteps) {
-        this.endpointWeightTransition = endpointWeightTransition;
-        this.executorService = executorService;
+    GradualStartEndpointSelectionStrategy(EndpointWeightTransition endpointWeightTransition,
+                                          ScheduledExecutorService executorService,
+                                          Duration slowStartInterval,
+                                          int numberOfSteps) {
+        this.endpointWeightTransition = requireNonNull(endpointWeightTransition, "endpointWeightTransition");
+        this.executorService = requireNonNull(executorService, "executorService");
         this.slowStartInterval = requireNonNull(slowStartInterval, "slowStartInterval");
         checkArgument(numberOfSteps > 0, "numberOfSteps(%s) > 0");
         this.numberOfSteps = numberOfSteps;
@@ -89,11 +90,11 @@ public final class SlowStartAwareEndpointSelectionStrategy implements EndpointSe
     private final class SlowStartAwareWeightedRoundRobinSelector implements EndpointSelector {
         private final EndpointGroup endpointGroup;
         private final AtomicInteger sequence = new AtomicInteger();
-        private volatile EndpointsAndWeights endpointsAndWeights;
         private final EndpointWeightTransition endpointWeightTransition;
-
-        private volatile ScheduledFuture<?> updateEndpointWeightFuture;
         private final Map<Endpoint, EndpointAndStep> currentWeights = new ConcurrentHashMap<>();
+
+        private volatile EndpointsAndWeights endpointsAndWeights;
+        private volatile ScheduledFuture<?> updateEndpointWeightFuture;
 
         SlowStartAwareWeightedRoundRobinSelector(EndpointGroup endpointGroup,
                                                  EndpointWeightTransition endpointWeightTransition) {
@@ -111,7 +112,7 @@ public final class SlowStartAwareEndpointSelectionStrategy implements EndpointSe
 
         @Override
         public EndpointSelectionStrategy strategy() {
-            return SlowStartAwareEndpointSelectionStrategy.this;
+            return GradualStartEndpointSelectionStrategy.this;
         }
 
         @Override
@@ -133,23 +134,29 @@ public final class SlowStartAwareEndpointSelectionStrategy implements EndpointSe
         }
 
         private void updateEndpointWeight(List<Endpoint> endpoints) {
-            endpointsAndWeights = new EndpointsAndWeights(
-                    endpoints.stream()
-                             .map(this::updateWeight)
-                             .collect(toImmutableList()));
+            final AtomicBoolean updated = new AtomicBoolean();
+            final List<Endpoint> weightUpdated = endpoints.stream()
+                                                          .map(e -> updateWeight(e, updated))
+                                                          .collect(toImmutableList());
+            if (updated.get()) {
+                endpointsAndWeights = new EndpointsAndWeights(weightUpdated);
+            } else {
+                updateEndpointWeightFuture.cancel(true);
+            }
         }
 
-        private Endpoint updateWeight(Endpoint e) {
+        private Endpoint updateWeight(Endpoint e, AtomicBoolean updated) {
             final EndpointAndStep endpointAndStep = currentWeights.get(e);
             if (endpointAndStep == null) {
                 return e;
             }
-            final int originalWeight = e.weight();
+            final int definedWeight = e.weight();
             final int newWeight = endpointWeightTransition.compute(e, endpointAndStep.stepUp(), numberOfSteps);
-            if (newWeight >= originalWeight) {
+            if (newWeight >= definedWeight) {
                 currentWeights.remove(e);
                 return e;
             }
+            updated.set(true);
             return e.withWeight(Math.max(newWeight, 0));
         }
     }

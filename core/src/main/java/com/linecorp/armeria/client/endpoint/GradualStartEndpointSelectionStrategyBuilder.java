@@ -24,23 +24,23 @@ import java.time.Duration;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
- * A builder for creating a new {@link SlowStartAwareEndpointSelectionStrategy} that ramps up the weight
+ * A builder for creating a new {@link GradualStartEndpointSelectionStrategy} that ramps up the weight
  * gradually.
  */
-public final class SlowStartAwareEndpointSelectionStrategyBuilder {
+public final class GradualStartEndpointSelectionStrategyBuilder {
     private EndpointWeightTransition endpointWeightTransition;
     private ScheduledExecutorService executorService;
     private Duration totalSlowStartDuration;
     private Duration slowStartInterval;
     private int numberOfSteps;
 
-    SlowStartAwareEndpointSelectionStrategyBuilder() {
+    GradualStartEndpointSelectionStrategyBuilder() {
     }
 
     /**
      * Sets an {@link EndpointWeightTransition}.
      */
-    public SlowStartAwareEndpointSelectionStrategyBuilder weightTransition(
+    public GradualStartEndpointSelectionStrategyBuilder weightTransition(
             EndpointWeightTransition endpointWeightTransition) {
         this.endpointWeightTransition = requireNonNull(endpointWeightTransition, "endpointWeightTransition");
         return this;
@@ -49,7 +49,7 @@ public final class SlowStartAwareEndpointSelectionStrategyBuilder {
     /**
      * Sets a {@link ScheduledExecutorService} that runs a future that ramps up each endpoint weights.
      */
-    public SlowStartAwareEndpointSelectionStrategyBuilder executorService(
+    public GradualStartEndpointSelectionStrategyBuilder executorService(
             ScheduledExecutorService executorService) {
         this.executorService = requireNonNull(executorService, "executorService");
         return this;
@@ -58,7 +58,7 @@ public final class SlowStartAwareEndpointSelectionStrategyBuilder {
     /**
      * Sets a total duration of slow start.
      */
-    public SlowStartAwareEndpointSelectionStrategyBuilder totalSlowStartDuration(
+    public GradualStartEndpointSelectionStrategyBuilder totalSlowStartDuration(
             Duration totalSlowStartDuration) {
         checkState(slowStartInterval == null, "slowStartInterval is already given");
         this.totalSlowStartDuration = requireNonNull(totalSlowStartDuration,
@@ -69,7 +69,7 @@ public final class SlowStartAwareEndpointSelectionStrategyBuilder {
     /**
      * Sets an intervals during slow start.
      */
-    public SlowStartAwareEndpointSelectionStrategyBuilder slowStartInterval(Duration slowStartInterval) {
+    public GradualStartEndpointSelectionStrategyBuilder slowStartInterval(Duration slowStartInterval) {
         checkState(totalSlowStartDuration == null, "totalSlowStartDuration is already given");
         this.slowStartInterval = requireNonNull(slowStartInterval, "slowStartInterval");
         return this;
@@ -78,23 +78,23 @@ public final class SlowStartAwareEndpointSelectionStrategyBuilder {
     /**
      * Sets a number of steps to complete slow start.
      */
-    public SlowStartAwareEndpointSelectionStrategyBuilder numberOfSteps(int numberOfSteps) {
+    public GradualStartEndpointSelectionStrategyBuilder numberOfSteps(int numberOfSteps) {
         checkArgument(numberOfSteps > 0, "numberOfSteps: %s (expected: > 0)", numberOfSteps);
         this.numberOfSteps = numberOfSteps;
         return this;
     }
 
     /**
-     * Creates a {@link SlowStartAwareEndpointSelectionStrategy}.
+     * Creates a {@link GradualStartEndpointSelectionStrategy}.
      */
-    public SlowStartAwareEndpointSelectionStrategy build() {
+    public GradualStartEndpointSelectionStrategy build() {
         final Duration duration;
         if (totalSlowStartDuration != null) {
             duration = Duration.ofMillis(totalSlowStartDuration.toMillis() / numberOfSteps);
         } else {
             duration = slowStartInterval;
         }
-        return new SlowStartAwareEndpointSelectionStrategy(
+        return new GradualStartEndpointSelectionStrategy(
                 endpointWeightTransition,
                 executorService,
                 duration,
