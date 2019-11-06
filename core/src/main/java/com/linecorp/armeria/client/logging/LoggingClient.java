@@ -22,6 +22,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,6 +81,7 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
         return new LoggingClientBuilder();
     }
 
+    private final Logger activeLogger;
     private final LogLevel requestLogLevel;
     private final LogLevel successfulResponseLogLevel;
     private final LogLevel failedResponseLogLevel;
@@ -111,6 +114,7 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
     @Deprecated
     public LoggingClient(Client<I, O> delegate, LogLevel level) {
         this(delegate,
+             null,
              level,
              level,
              level,
@@ -129,6 +133,7 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
      * {@link LogLevel}s with the specified sanitizers.
      */
     LoggingClient(Client<I, O> delegate,
+                  @Nullable Logger logger,
                   LogLevel requestLogLevel,
                   LogLevel successfulResponseLogLevel,
                   LogLevel failedResponseLogLevel,
@@ -141,6 +146,7 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
                   Function<? super Throwable, ?> responseCauseSanitizer,
                   Sampler<? super ClientRequestContext> sampler) {
         super(requireNonNull(delegate, "delegate"));
+        activeLogger = logger != null ? logger : LoggingClient.logger;
         this.requestLogLevel = requireNonNull(requestLogLevel, "requestLogLevel");
         this.successfulResponseLogLevel = requireNonNull(successfulResponseLogLevel,
                                                          "successfulResponseLogLevel");
@@ -159,11 +165,11 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
     @Override
     public O execute(ClientRequestContext ctx, I req) throws Exception {
         if (sampler.isSampled(ctx)) {
-            ctx.log().addListener(log -> logRequest(logger, log, requestLogLevel,
+            ctx.log().addListener(log -> logRequest(activeLogger, log, requestLogLevel,
                                                     requestHeadersSanitizer,
                                                     requestContentSanitizer, requestTrailersSanitizer),
                                   RequestLogAvailability.REQUEST_END);
-            ctx.log().addListener(log -> logResponse(logger, log, requestLogLevel,
+            ctx.log().addListener(log -> logResponse(activeLogger, log, requestLogLevel,
                                                      requestHeadersSanitizer,
                                                      requestContentSanitizer,
                                                      requestHeadersSanitizer,

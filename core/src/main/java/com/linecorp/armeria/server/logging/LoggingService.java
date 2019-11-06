@@ -22,6 +22,10 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
+import org.slf4j.Logger;
+
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -74,6 +78,8 @@ public final class LoggingService<I extends Request, O extends Response> extends
         return new LoggingServiceBuilder();
     }
 
+    @Nullable
+    private final Logger logger;
     private final LogLevel requestLogLevel;
     private final LogLevel successfulResponseLogLevel;
     private final LogLevel failedResponseLogLevel;
@@ -105,6 +111,7 @@ public final class LoggingService<I extends Request, O extends Response> extends
     @Deprecated
     public LoggingService(Service<I, O> delegate, LogLevel level) {
         this(delegate,
+             null,
              level,
              level,
              level,
@@ -124,6 +131,7 @@ public final class LoggingService<I extends Request, O extends Response> extends
      */
     LoggingService(
             Service<I, O> delegate,
+            @Nullable Logger logger,
             LogLevel requestLogLevel,
             LogLevel successfulResponseLogLevel,
             LogLevel failedResponseLogLevel,
@@ -136,6 +144,7 @@ public final class LoggingService<I extends Request, O extends Response> extends
             Function<? super Throwable, ?> responseCauseSanitizer,
             Sampler<? super ServiceRequestContext> sampler) {
         super(requireNonNull(delegate, "delegate"));
+        this.logger = logger;
         this.requestLogLevel = requireNonNull(requestLogLevel, "requestLogLevel");
         this.successfulResponseLogLevel =
                 requireNonNull(successfulResponseLogLevel, "successfulResponseLogLevel");
@@ -154,23 +163,28 @@ public final class LoggingService<I extends Request, O extends Response> extends
     @Override
     public O serve(ServiceRequestContext ctx, I req) throws Exception {
         if (sampler.isSampled(ctx)) {
-            ctx.log().addListener(log -> logRequest(((ServiceRequestContext) log.context()).logger(),
+            ctx.log().addListener(log -> logRequest(getActiveLogger((ServiceRequestContext) log.context()),
                                                     log, requestLogLevel, requestHeadersSanitizer,
                                                     requestContentSanitizer, requestTrailersSanitizer),
                                   RequestLogAvailability.REQUEST_END);
-            ctx.log().addListener(log -> logResponse(((ServiceRequestContext) log.context()).logger(), log,
-                                                     requestLogLevel,
-                                                     requestHeadersSanitizer,
-                                                     requestContentSanitizer,
-                                                     requestTrailersSanitizer,
-                                                     successfulResponseLogLevel,
-                                                     failedResponseLogLevel,
-                                                     responseHeadersSanitizer,
-                                                     responseContentSanitizer,
-                                                     responseTrailersSanitizer,
-                                                     responseCauseSanitizer),
-                                  RequestLogAvailability.COMPLETE);
+            ctx.log().addListener(
+                    log -> logResponse(getActiveLogger((ServiceRequestContext) log.context()), log,
+                                       requestLogLevel,
+                                       requestHeadersSanitizer,
+                                       requestContentSanitizer,
+                                       requestTrailersSanitizer,
+                                       successfulResponseLogLevel,
+                                       failedResponseLogLevel,
+                                       responseHeadersSanitizer,
+                                       responseContentSanitizer,
+                                       responseTrailersSanitizer,
+                                       responseCauseSanitizer),
+                    RequestLogAvailability.COMPLETE);
         }
         return delegate().serve(ctx, req);
+    }
+
+    private Logger getActiveLogger(ServiceRequestContext context) {
+        return logger != null ? logger : context.logger();
     }
 }

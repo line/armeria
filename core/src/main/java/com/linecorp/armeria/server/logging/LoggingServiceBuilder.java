@@ -67,6 +67,7 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder<Logging
      */
     public <I extends Request, O extends Response> LoggingService<I, O> build(Service<I, O> delegate) {
         return new LoggingService<>(delegate,
+                                    logger(),
                                     requestLogLevel(),
                                     successfulResponseLogLevel(),
                                     failedResponseLogLevel(),

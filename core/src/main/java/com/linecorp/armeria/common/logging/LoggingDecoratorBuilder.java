@@ -20,6 +20,10 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
+import javax.annotation.Nullable;
+
+import org.slf4j.Logger;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
@@ -33,6 +37,8 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     private static final Function<Object, Object> DEFAULT_CONTENT_SANITIZER = Function.identity();
     private static final Function<Throwable, Throwable> DEFAULT_CAUSE_SANITIZER = Function.identity();
 
+    @Nullable
+    private Logger logger;
     private LogLevel requestLogLevel = LogLevel.TRACE;
     private LogLevel successfulResponseLogLevel = LogLevel.TRACE;
     private LogLevel failedResponseLogLevel = LogLevel.WARN;
@@ -44,6 +50,23 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     private Function<Object, ?> responseContentSanitizer = DEFAULT_CONTENT_SANITIZER;
     private Function<? super Throwable, ?> responseCauseSanitizer = DEFAULT_CAUSE_SANITIZER;
     private Function<? super HttpHeaders, ?> responseTrailersSanitizer = DEFAULT_HEADERS_SANITIZER;
+
+    /**
+     * Sets the {@link Logger} to use when logging.
+     * If unset, will use default logger that each logging implementation has.
+     */
+    public T logger(Logger logger) {
+        this.logger = requireNonNull(logger, "logger");
+        return self();
+    }
+
+    /**
+     * Returns the nullable {@link Logger} to use when logging.
+     */
+    @Nullable
+    public Logger logger() {
+        return logger;
+    }
 
     /**
      * Sets the {@link LogLevel} to use when logging requests. If unset, will use {@link LogLevel#TRACE}.
@@ -262,13 +285,14 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
 
     @Override
     public String toString() {
-        return toString(this, requestLogLevel, successfulResponseLogLevel, failedResponseLogLevel,
+        return toString(this, logger, requestLogLevel, successfulResponseLogLevel, failedResponseLogLevel,
                         requestHeadersSanitizer, requestContentSanitizer, requestTrailersSanitizer,
                         responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer);
     }
 
     private static <T extends LoggingDecoratorBuilder<T>> String toString(
             LoggingDecoratorBuilder<T> self,
+            @Nullable Logger logger,
             LogLevel requestLogLevel,
             LogLevel successfulResponseLogLevel,
             LogLevel failureResponseLogLevel,
@@ -279,6 +303,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
             Function<Object, ?> responseContentSanitizer,
             Function<? super HttpHeaders, ?> responseTrailersSanitizer) {
         final ToStringHelper helper = MoreObjects.toStringHelper(self)
+                                                 .add("logger", logger)
                                                  .add("requestLogLevel", requestLogLevel)
                                                  .add("successfulResponseLogLevel", successfulResponseLogLevel)
                                                  .add("failedResponseLogLevel", failureResponseLogLevel);
