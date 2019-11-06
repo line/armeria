@@ -15,22 +15,21 @@
  */
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.binder.MeterBinder;
+import it.unimi.dsi.fastutil.Hash;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
 
 /**
  * {@link MeterBinder} for a {@link HealthCheckedEndpointGroup}.
@@ -62,7 +61,8 @@ final class HealthCheckedEndpointGroupMetrics implements MeterBinder {
 
         private final MeterRegistry registry;
         private final MeterIdPrefix idPrefix;
-        private final ConcurrentMap<Endpoint, Boolean> healthMap = new ConcurrentHashMap<>();
+        private final Map<Endpoint, Boolean> healthMap =
+                new Object2ObjectOpenCustomHashMap<>(EndpointHashStrategy.INSTANCE);
 
         ListenerImpl(MeterRegistry registry, MeterIdPrefix idPrefix) {
             this.registry = registry;
@@ -71,29 +71,50 @@ final class HealthCheckedEndpointGroupMetrics implements MeterBinder {
 
         @Override
         public void accept(List<Endpoint> endpoints) {
-            final Map<Endpoint, Boolean> endpointsToUpdate = new HashMap<>();
+            final Map<Endpoint, Boolean> endpointsToUpdate =
+                    new Object2ObjectOpenCustomHashMap<>(EndpointHashStrategy.INSTANCE);
+
             endpoints.forEach(e -> endpointsToUpdate.put(e, true));
             endpointGroup.delegate.endpoints().forEach(
                     e -> endpointsToUpdate.putIfAbsent(e, false));
 
-            // Update the previously appeared endpoints.
-            healthMap.entrySet().forEach(e -> {
-                final Endpoint authority = e.getKey();
-                final Boolean healthy = endpointsToUpdate.remove(authority);
-                e.setValue(Boolean.TRUE.equals(healthy));
-            });
+            synchronized (healthMap) {
+                // Update the previously appeared endpoints.
+                healthMap.entrySet().forEach(e -> {
+                    final Endpoint endpoint = e.getKey();
+                    final Boolean healthy = endpointsToUpdate.remove(endpoint);
+                    e.setValue(Boolean.TRUE.equals(healthy));
+                });
 
-            // Process the newly appeared endpoints.
-            endpointsToUpdate.forEach((endpoint, healthy) -> {
-                healthMap.put(endpoint, healthy);
-                final List<Tag> tags = new ArrayList<>(2);
-                tags.add(Tag.of("authority", endpoint.authority()));
-                final String ipAddr = endpoint.hasIpAddr() ? endpoint.ipAddr() : "";
-                assert ipAddr != null;
-                tags.add(Tag.of("ip", ipAddr));
-                registry.gauge(idPrefix.name(), idPrefix.tags(tags),
-                               this, unused -> healthMap.get(endpoint) ? 1 : 0);
-            });
+                // Process the newly appeared endpoints.
+                endpointsToUpdate.forEach((endpoint, healthy) -> {
+                    healthMap.put(endpoint, healthy);
+                    registry.gauge(idPrefix.name(),
+                                   idPrefix.tags("authority", endpoint.authority(),
+                                                 "ip", firstNonNull(endpoint.ipAddr(), "")),
+                                   this, unused -> healthMap.get(endpoint) ? 1 : 0);
+                });
+            }
+        }
+    }
+
+    /**
+     * A special {@link Hash.Strategy} which takes only {@link Endpoint#authority()} and
+     * {@link Endpoint#ipAddr()} into account.
+     */
+    private static final class EndpointHashStrategy implements Hash.Strategy<Endpoint> {
+
+        static final EndpointHashStrategy INSTANCE = new EndpointHashStrategy();
+
+        @Override
+        public int hashCode(Endpoint e) {
+            return e.authority().hashCode() * 31 + Objects.hashCode(e.ipAddr());
+        }
+
+        @Override
+        public boolean equals(Endpoint a, Endpoint b) {
+            return a.authority().equals(b.authority()) &&
+                   Objects.equals(a.ipAddr(), b.ipAddr());
         }
     }
 }

@@ -61,7 +61,8 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     private static final Comparator<Endpoint> NON_GROUP_COMPARATOR =
             Comparator.comparing(Endpoint::host)
                       .thenComparing(e -> e.ipAddr, Comparator.nullsFirst(Comparator.naturalOrder()))
-                      .thenComparing(e -> e.port);
+                      .thenComparing(e -> e.port)
+                      .thenComparing(e -> e.weight);
 
     private static final int DEFAULT_WEIGHT = 1000;
 
@@ -665,14 +666,19 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             } else {
                 return host().equals(that.host()) &&
                        Objects.equals(ipAddr, that.ipAddr) &&
-                       port == that.port;
+                       port == that.port &&
+                       weight == that.weight;
             }
         }
     }
 
     @Override
     public int hashCode() {
-        return (authority().hashCode() * 31 + Objects.hashCode(ipAddr)) * 31 + port;
+        if (isGroup()) {
+            return groupName.hashCode();
+        } else {
+            return ((host.hashCode() * 31 + Objects.hashCode(ipAddr)) * 31 + port) * 31 + weight;
+        }
     }
 
     @Override

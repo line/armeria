@@ -94,7 +94,7 @@ public class DnsServiceEndpointGroupTest {
                          DnsServiceEndpointGroup.builder("no-port.com")
                                                 .serverAddresses(server.addr()).build()) {
                 assertThat(group.awaitInitialEndpoints()).containsExactly(
-                        Endpoint.of("d.no-port.com"));
+                        Endpoint.of("d.no-port.com").withWeight(7));
             }
         }
     }

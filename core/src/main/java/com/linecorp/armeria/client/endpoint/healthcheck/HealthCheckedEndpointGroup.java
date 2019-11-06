@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
 import java.util.HashMap;
@@ -98,7 +99,11 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     private final Function<? super ClientOptionsBuilder, ClientOptionsBuilder> clientConfigurator;
     private final Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkerFactory;
 
-    private final Map<Endpoint, DefaultHealthCheckerContext> contexts = new HashMap<>();
+    /**
+     * Key is {@link Endpoint#authority()}.
+     */
+    private final Map<String, DefaultHealthCheckerContext> contexts = new HashMap<>();
+
     @VisibleForTesting
     final Set<Endpoint> healthyEndpoints = new NonBlockingHashSet<>();
     private volatile boolean closed;
@@ -136,17 +141,22 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     }
 
     private void updateCandidates(List<Endpoint> candidates) {
+        final Set<String> candidateAuthorities = candidates.stream()
+                                                           .map(Endpoint::authority)
+                                                           .collect(toImmutableSet());
+
         synchronized (contexts) {
             if (closed) {
                 return;
             }
 
             // Stop the health checkers whose endpoints disappeared and destroy their contexts.
-            for (final Iterator<Map.Entry<Endpoint, DefaultHealthCheckerContext>> i = contexts.entrySet()
-                                                                                              .iterator();
+            for (final Iterator<Map.Entry<String, DefaultHealthCheckerContext>> i = contexts.entrySet()
+                                                                                            .iterator();
                  i.hasNext();) {
-                final Map.Entry<Endpoint, DefaultHealthCheckerContext> e = i.next();
-                if (candidates.contains(e.getKey())) {
+
+                final Map.Entry<String, DefaultHealthCheckerContext> e = i.next();
+                if (candidateAuthorities.contains(e.getKey())) {
                     // Not a removed endpoint.
                     continue;
                 }
@@ -157,13 +167,13 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
             // Start the health checkers with new contexts for newly appeared endpoints.
             for (Endpoint e : candidates) {
-                if (contexts.containsKey(e)) {
+                if (contexts.containsKey(e.authority())) {
                     // Not a new endpoint.
                     continue;
                 }
                 final DefaultHealthCheckerContext ctx = new DefaultHealthCheckerContext(e);
                 ctx.init(checkerFactory.apply(ctx));
-                contexts.put(e, ctx);
+                contexts.put(e.authority(), ctx);
             }
         }
     }

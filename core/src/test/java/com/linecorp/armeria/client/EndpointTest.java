@@ -118,6 +118,11 @@ class EndpointTest {
 
         foo.withWeight(0);
         assertThatThrownBy(() -> foo.withWeight(-1)).isInstanceOf(IllegalArgumentException.class);
+
+        // Default weight is 1000.
+        final Endpoint fooWithDefaultWeight = Endpoint.of("foo");
+        assertThat(fooWithDefaultWeight.weight()).isEqualTo(1000);
+        assertThat(fooWithDefaultWeight.withWeight(1000)).isSameAs(fooWithDefaultWeight);
     }
 
     @Test
@@ -359,14 +364,27 @@ class EndpointTest {
         final Endpoint c = Endpoint.of("a", 80);
         final Endpoint d = Endpoint.of("a", 81);
         final Endpoint e = Endpoint.of("a", 80).withIpAddr("::1");
-        final Endpoint f = Endpoint.of("a", 80).withWeight(500); // Weight not part of comparison
+        final Endpoint f = Endpoint.of("a", 80).withWeight(500);
         final Endpoint g = Endpoint.of("g", 80);
         assertThat(a).isNotEqualTo(b);
         assertThat(b).isEqualTo(c);
         assertThat(b).isNotEqualTo(d);
         assertThat(b).isNotEqualTo(e);
-        assertThat(b).isEqualTo(f);
+        assertThat(b).isNotEqualTo(f);
         assertThat(b).isNotEqualTo(g);
+    }
+
+    @Test
+    void weightEquals() {
+        final Endpoint a = Endpoint.of("a");
+        final Endpoint b = Endpoint.of("a").withWeight(500);
+        final Endpoint c = Endpoint.of("a").withWeight(500);
+        final Endpoint d = Endpoint.of("a").withWeight(10000);
+        final Endpoint e = Endpoint.of("a").withWeight(500).withIpAddr("::1");
+        assertThat(a).isNotEqualTo(b);
+        assertThat(b).isEqualTo(c);
+        assertThat(b).isNotEqualTo(d);
+        assertThat(b).isNotEqualTo(e);
     }
 
     @Test
@@ -376,13 +394,13 @@ class EndpointTest {
         final Endpoint c = Endpoint.of("a").withIpAddr("::1");
         final Endpoint d = Endpoint.of("a").withIpAddr("::2");
         final Endpoint e = Endpoint.of("a", 80).withIpAddr("::1");
-        final Endpoint f = Endpoint.of("a").withIpAddr("::1").withWeight(500); // Weight not part of comparison
+        final Endpoint f = Endpoint.of("a").withIpAddr("::1").withWeight(500);
         final Endpoint g = Endpoint.of("g").withIpAddr("::1");
         assertThat(a).isNotEqualTo(b);
         assertThat(b).isEqualTo(c);
         assertThat(b).isNotEqualTo(d);
         assertThat(b).isNotEqualTo(e);
-        assertThat(b).isEqualTo(f);
+        assertThat(b).isNotEqualTo(f);
         assertThat(b).isNotEqualTo(g);
     }
 
@@ -394,9 +412,9 @@ class EndpointTest {
         assertThat(Endpoint.of("a", 80).withIpAddr("::1").hashCode()).isNotZero();
         assertThat(Endpoint.ofGroup("a").hashCode()).isNotZero();
 
-        // Weight is not part of comparison.
+        // Weight is part of comparison.
         final int hash = Endpoint.of("a", 80).withWeight(500).hashCode();
-        assertThat(Endpoint.of("a", 80).withWeight(750).hashCode()).isEqualTo(hash);
+        assertThat(Endpoint.of("a", 80).withWeight(750).hashCode()).isNotEqualTo(hash);
     }
 
     @Test
@@ -434,7 +452,7 @@ class EndpointTest {
         assertThat(Endpoint.of("a").withIpAddr("1.1.1.1"))
                 .isLessThan(Endpoint.of("a").withIpAddr("1.1.1.2"));
 
-        // Weight is not part of comparison.
-        assertThat(Endpoint.of("a").withWeight(1)).isEqualByComparingTo(Endpoint.of("a").withWeight(2));
+        // Weight is part of comparison.
+        assertThat(Endpoint.of("a").withWeight(1)).isLessThan(Endpoint.of("a").withWeight(2));
     }
 }

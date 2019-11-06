@@ -26,10 +26,10 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.endpoint.EndpointSelector;
-import com.linecorp.armeria.client.endpoint.StaticEndpointGroup;
 
 @State(Scope.Thread)
 public class WeightedRoundRobinStrategyBenchmark {
@@ -63,10 +63,10 @@ public class WeightedRoundRobinStrategyBenchmark {
         return result;
     }
 
-    private EndpointSelector getEndpointSelector(List<Endpoint> endpoints, String groupName) {
+    private static EndpointSelector getEndpointSelector(List<Endpoint> endpoints, String groupName) {
         EndpointGroupRegistry.register(groupName,
-                new StaticEndpointGroup(endpoints),
-                EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN);
+                                       EndpointGroup.of(endpoints),
+                                       EndpointSelectionStrategy.WEIGHTED_ROUND_ROBIN);
         return EndpointGroupRegistry.getNodeSelector(groupName);
     }
 
