@@ -22,6 +22,8 @@ import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import javax.annotation.Nullable;
+
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.CommonPools;
@@ -64,11 +66,11 @@ public final class TestDnsServer implements AutoCloseable {
     private volatile Map<DnsQuestion, DnsResponse> responses;
 
     public TestDnsServer(Map<DnsQuestion, DnsResponse> responses) {
-        this(responses, new ChannelInboundHandlerAdapter());
+        this(responses, null);
     }
 
     public TestDnsServer(Map<DnsQuestion, DnsResponse> responses,
-                         ChannelInboundHandlerAdapter beforeDnsServerHandler) {
+                         @Nullable ChannelInboundHandlerAdapter beforeDnsServerHandler) {
         this.responses = ImmutableMap.copyOf(responses);
 
         final Bootstrap b = new Bootstrap();
@@ -80,7 +82,9 @@ public final class TestDnsServer implements AutoCloseable {
                 final ChannelPipeline p = ch.pipeline();
                 p.addLast(new DatagramDnsQueryDecoder());
                 p.addLast(new DatagramDnsResponseEncoder());
-                p.addLast(beforeDnsServerHandler);
+                if (beforeDnsServerHandler != null) {
+                    p.addLast(beforeDnsServerHandler);
+                }
                 p.addLast(new DnsServerHandler());
             }
         });

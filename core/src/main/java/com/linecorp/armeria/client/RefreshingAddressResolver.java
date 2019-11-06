@@ -115,7 +115,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
         result.handle((entry, unused) -> {
             final Throwable cause = entry.cause();
             if (cause != null) {
-                if (entry.isCacheableCause() && negativeTtl > 0) {
+                if (entry.hasCacheableCause() && negativeTtl > 0) {
                     executor().schedule(() -> cache.remove(hostname), negativeTtl, TimeUnit.SECONDS);
                 } else {
                     cache.remove(hostname);
@@ -151,20 +151,20 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
             if (!f.isSuccess()) {
                 final Throwable cause = f.cause();
 
-                // TODO(minwoox): In Netty, DnsNameResolver only cache if the failure was not because of an
+                // TODO(minwoox): In Netty, DnsNameResolver only caches if the failure was not because of an
                 //                IO error / timeout that was caused by the query itself.
-                //                To figure out that, we need to check the cause of the UnknownHostException.
+                //                To figure that out, we need to check the cause of the UnknownHostException.
                 //                If it's null, then we can cache the cause. However, this is very fragile
                 //                because Netty can change the behavior while we are not noticing that.
                 //                So sending a PR to upstream would be the best solution.
-                final boolean isCacheableCause;
+                final boolean hasCacheableCause;
                 if (cause instanceof UnknownHostException) {
                     final UnknownHostException unknownHostException = (UnknownHostException) cause;
-                    isCacheableCause = unknownHostException.getCause() == null;
+                    hasCacheableCause = unknownHostException.getCause() == null;
                 } else {
-                    isCacheableCause = false;
+                    hasCacheableCause = false;
                 }
-                result.complete(new CacheEntry(null, -1, questions, cause, isCacheableCause));
+                result.complete(new CacheEntry(null, -1, questions, cause, hasCacheableCause));
                 return;
             }
 
@@ -234,7 +234,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
 
         @Nullable
         private final Throwable cause;
-        private final boolean isCacheableCause;
+        private final boolean hasCacheableCause;
 
         /**
          * No need to be volatile because updated only by the {@link #executor()}.
@@ -248,12 +248,12 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
         ScheduledFuture<?> refreshFuture;
 
         CacheEntry(@Nullable InetAddress address, long ttlMillis, List<DnsQuestion> questions,
-                   @Nullable Throwable cause, boolean isCacheableCause) {
+                   @Nullable Throwable cause, boolean hasCacheableCause) {
             this.address = address;
             this.ttlMillis = ttlMillis;
             this.questions = questions;
             this.cause = cause;
-            this.isCacheableCause = isCacheableCause;
+            this.hasCacheableCause = hasCacheableCause;
         }
 
         void servedFromCache() {
@@ -274,8 +274,8 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
             return cause;
         }
 
-        boolean isCacheableCause() {
-            return isCacheableCause;
+        boolean hasCacheableCause() {
+            return hasCacheableCause;
         }
 
         void scheduleRefresh(long nextDelayMillis) {
@@ -345,7 +345,7 @@ final class RefreshingAddressResolver extends AbstractAddressResolver<InetSocket
                               .add("ttlMillis", ttlMillis)
                               .add("questions", questions)
                               .add("cause", cause)
-                              .add("isCacheableCause", isCacheableCause)
+                              .add("hasCacheableCause", hasCacheableCause)
                               .add("servedFromCache", servedFromCache)
                               .toString();
         }
