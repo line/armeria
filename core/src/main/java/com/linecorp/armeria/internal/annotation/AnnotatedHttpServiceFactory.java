@@ -230,12 +230,8 @@ public final class AnnotatedHttpServiceFactory {
         final List<ResponseConverterFunction> responseConverterFunctions =
                 responseConverters != null ? responseConverters.build() : ImmutableList.of();
 
-        final List<Method> methods = requestMappingMethods(object);
-        return methods.stream()
-                      .flatMap((Method method) ->
-                                       create(pathPrefix, object, method, exceptionHandlerFunctions,
-                                              requestConverterFunctions, responseConverterFunctions).stream())
-                      .collect(toImmutableList());
+        return find(pathPrefix, object, exceptionHandlerFunctions, requestConverterFunctions,
+                    responseConverterFunctions);
     }
 
     /**
