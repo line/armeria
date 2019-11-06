@@ -8,7 +8,7 @@ Dependency Info
 ```xml
 <dependency>
     <groupId>com.linecorp.armeria</groupId>
-    <artifactId>dropwizard-armeria</artifactId>
+    <artifactId>armeria-dropwizard</artifactId>
     <version>0.95.0</version>
 </dependency>
 ```
