@@ -58,7 +58,7 @@ public final class RequestLogListenerInvoker {
         try (SafeCloseable ignored = log.context().push()) {
             for (RequestLogListener listener : listeners) {
                 if (listener == null) {
-                    continue;
+                    break;
                 }
                 try {
                     listener.onRequestLog(log);
