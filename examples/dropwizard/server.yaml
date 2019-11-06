@@ -1,0 +1,6 @@
+server:
+  type: armeria
+  applicationContextPath: /
+  connector:
+    type: armeria-http
+    port: 8080
