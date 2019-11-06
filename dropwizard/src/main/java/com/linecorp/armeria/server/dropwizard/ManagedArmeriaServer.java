@@ -1,3 +1,18 @@
+/*
+ * Copyright 2019 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package com.linecorp.armeria.server.dropwizard;
 
 import java.util.Objects;
@@ -21,8 +36,16 @@ public class ManagedArmeriaServer<T extends Configuration> implements Managed {
     @Valid
     private final T configuration;
     private final BuilderCallback builderCallback;
-    private Server s;
+    private Server server;
 
+    /**
+    * An Armeria {@link Server} wrapper class that accepts a Dropwizard Configuration
+    * and initalizes the Armeria {@link ServerBuilder} to be passed back to the
+    * user via a {@link BuilderCallback}.
+    *
+    * @param configuration - The Dropwizard configuration
+    * @param builderCallback - A non-null implementation of {@link BuilderCallback}
+    */
     public ManagedArmeriaServer(final T configuration,
                                 final BuilderCallback builderCallback) {
         this.configuration = configuration;
@@ -34,25 +57,25 @@ public class ManagedArmeriaServer<T extends Configuration> implements Managed {
         LOGGER.trace("Getting Armeria Server Builder");
         final ServerFactory serverFactory = configuration.getServerFactory();
         if (!(serverFactory instanceof ArmeriaServerFactory)) {
-            throw new RuntimeException("Cannot manage Ameria Server "
-                    + "unless Configuration server.type=" + ArmeriaServerFactory.TYPE);
+            throw new RuntimeException("Cannot manage Ameria Server " +
+                    "unless Configuration server.type=" + ArmeriaServerFactory.TYPE);
         }
-        ServerBuilder sb = ((ArmeriaServerFactory) serverFactory).getServerBuilder();
+        final ServerBuilder sb = ((ArmeriaServerFactory) serverFactory).getServerBuilder();
         LOGGER.trace("Calling Builder Callback");
         builderCallback.onServerBuilderReady(sb);
-        s = sb.build();
+        server = sb.build();
         if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("Built server {}", s);
+            LOGGER.debug("Built server {}", server);
         }
         LOGGER.info("Starting Ameria Server");
-        s.start().thenRunAsync(() -> LOGGER.info("Started Ameria Server"));
+        server.start().thenRunAsync(() -> LOGGER.info("Started Ameria Server"));
     }
 
     @Override
     public void stop() throws Exception {
-        if (s != null) {
+        if (server != null) {
             LOGGER.info("Stopping Ameria Server");
-            s.stop().thenRunAsync(() -> LOGGER.info("Stopped Ameria Server"));
+            server.stop().thenRunAsync(() -> LOGGER.info("Stopped Ameria Server"));
         }
     }
 

@@ -1,4 +1,16 @@
+plugins {
+    id "com.github.hierynomus.license" version "0.15.0"
+}
+
+//license {
+//  header project.file('../CODE-LICENSE.txt')
+//  strictCheck true
+//   exclude "**/*.properties"
+//}
+
+
 dependencies {
+    compile project(':jetty')
     // Dropwizard
     ['core','util','lifecycle','jackson','validation','jetty','jersey'].each {
         compile "io.dropwizard:dropwizard-$it"

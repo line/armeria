@@ -1,0 +1,11 @@
+plugins {
+    id 'application'
+}
+
+application {
+    mainClassName = 'example.dropwizard.DropwizardArmeriaApplication'
+}
+
+dependencies {
+    compile project(':dropwizard')
+}
