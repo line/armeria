@@ -20,6 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -28,10 +30,8 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.endpoint.SlowStartAwareEndpointSelectionStrategy.EndpointWeighter;
 import com.linecorp.armeria.client.endpoint.WeightedRoundRobinStrategyTest.TestDynamicEndpointGroup;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -41,13 +41,13 @@ class SlowStartAwareEndpointSelectionStrategyTest {
             EndpointGroup.of(Endpoint.parse("localhost:1234").withWeight(1000),
                              Endpoint.parse("localhost:2345").withWeight(1000));
 
-    private static final EndpointWeighter weighter = EndpointWeighter.DEFAULT;
-
-    private static final SlowStartAwareEndpointSelectionStrategy strategy =
-            new SlowStartAwareEndpointSelectionStrategy(weighter,
-                                                        ClientFactory.DEFAULT,
-                                                        Duration.ofSeconds(1),
-                                                        10);
+    private static final EndpointWeightTransition weighter = EndpointWeightTransition.linear();
+    private static final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private static final EndpointSelectionStrategy strategy =
+            SlowStartAwareEndpointSelectionStrategy.of(weighter,
+                                                       scheduler,
+                                                       Duration.ofSeconds(1),
+                                                       10);
 
     private final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
 
@@ -95,15 +95,15 @@ class SlowStartAwareEndpointSelectionStrategyTest {
     @Test
     void selectFromDynamicEndpointGroup() throws Exception {
         final AtomicInteger counter = new AtomicInteger();
-        final EndpointWeighter weighter = (e, step, maxStep) -> {
+        final EndpointWeightTransition weighter = (e, step, maxStep) -> {
             counter.incrementAndGet();
-            return EndpointWeighter.DEFAULT.compute(e, step, maxStep);
+            return EndpointWeightTransition.linear().compute(e, step, maxStep);
         };
-        final SlowStartAwareEndpointSelectionStrategy strategy =
-                new SlowStartAwareEndpointSelectionStrategy(weighter,
-                                                            ClientFactory.DEFAULT,
-                                                            Duration.ofSeconds(1),
-                                                            10);
+        final EndpointSelectionStrategy strategy =
+                SlowStartAwareEndpointSelectionStrategy.of(weighter,
+                                                           scheduler,
+                                                           Duration.ofSeconds(1),
+                                                           10);
 
         final TestDynamicEndpointGroup endpointGroup = new TestDynamicEndpointGroup();
         EndpointGroupRegistry.register("dynamic", endpointGroup, strategy);

@@ -24,42 +24,63 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.WeightedRoundRobinStrategy.EndpointsAndWeights;
 
-import io.netty.util.concurrent.ScheduledFuture;
-
 /**
- * A weighted round-robin strategy that lamp up the weight gradually from zero to its normal weight value.
+ * A weighted round-robin strategy that ramps up the weight gradually from zero to its normal weight value.
  */
 public final class SlowStartAwareEndpointSelectionStrategy implements EndpointSelectionStrategy {
-    private final EndpointWeighter endpointWeighter;
-    private final ClientFactory clientFactory;
+
+    /**
+     * Creates a {@link SlowStartAwareEndpointSelectionStrategyBuilder}.
+     */
+    public static SlowStartAwareEndpointSelectionStrategyBuilder builder() {
+        return new SlowStartAwareEndpointSelectionStrategyBuilder();
+    }
+
+    /**
+     * Creates a {@link SlowStartAwareEndpointSelectionStrategy}.
+     */
+    public static EndpointSelectionStrategy of(EndpointWeightTransition endpointWeightTransition,
+                                               ScheduledExecutorService executorService,
+                                               Duration slowStartInterval,
+                                               int numberOfSteps) {
+        return builder().endpointWeighter(endpointWeightTransition)
+                        .executorService(executorService)
+                        .slowStartInterval(slowStartInterval)
+                        .numberOfSteps(numberOfSteps)
+                        .build();
+    }
+
+    private final EndpointWeightTransition endpointWeightTransition;
+    private final ScheduledExecutorService executorService;
     private final Duration slowStartInterval;
     private final int numberOfSteps;
 
     /**
      * Creates a {@link SlowStartAwareEndpointSelectionStrategy}.
      */
-    public SlowStartAwareEndpointSelectionStrategy(EndpointWeighter endpointWeighter,
-                                                   ClientFactory clientFactory,
-                                                   Duration slowStartInterval,
-                                                   int numberOfSteps) {
-        this.endpointWeighter = endpointWeighter;
-        this.clientFactory = clientFactory;
+    SlowStartAwareEndpointSelectionStrategy(EndpointWeightTransition endpointWeightTransition,
+                                            ScheduledExecutorService executorService,
+                                            Duration slowStartInterval,
+                                            int numberOfSteps) {
+        this.endpointWeightTransition = endpointWeightTransition;
+        this.executorService = executorService;
         this.slowStartInterval = requireNonNull(slowStartInterval, "slowStartInterval");
         checkArgument(numberOfSteps > 0, "numberOfSteps(%s) > 0");
         this.numberOfSteps = numberOfSteps;
     }
 
     @Override
-    public SlowStartAwareWeightedRoundRobinSelector newSelector(EndpointGroup endpointGroup) {
-        return new SlowStartAwareWeightedRoundRobinSelector(endpointGroup, endpointWeighter);
+    public EndpointSelector newSelector(EndpointGroup endpointGroup) {
+        return new SlowStartAwareWeightedRoundRobinSelector(endpointGroup, endpointWeightTransition);
     }
 
     /**
@@ -70,15 +91,15 @@ public final class SlowStartAwareEndpointSelectionStrategy implements EndpointSe
         private final EndpointGroup endpointGroup;
         private final AtomicInteger sequence = new AtomicInteger();
         private volatile EndpointsAndWeights endpointsAndWeights;
-        private final EndpointWeighter endpointWeighter;
+        private final EndpointWeightTransition endpointWeightTransition;
 
         private volatile ScheduledFuture<?> updateEndpointWeightFuture;
         private final Map<Endpoint, EndpointAndStep> currentWeights = new ConcurrentHashMap<>();
 
         SlowStartAwareWeightedRoundRobinSelector(EndpointGroup endpointGroup,
-                                                 EndpointWeighter endpointWeighter) {
+                                                 EndpointWeightTransition endpointWeightTransition) {
             this.endpointGroup = endpointGroup;
-            this.endpointWeighter = endpointWeighter;
+            this.endpointWeightTransition = endpointWeightTransition;
             final List<Endpoint> endpoints = endpointGroup.endpoints();
             endpointsAndWeights = new EndpointsAndWeights(endpoints);
             endpointGroup.addListener(this::scheduleUpdateRequestWeight);
@@ -106,11 +127,10 @@ public final class SlowStartAwareEndpointSelectionStrategy implements EndpointSe
             }
             newEndpoints.forEach(e -> currentWeights.put(e, new EndpointAndStep(e)));
             updateEndpointWeightFuture =
-                    clientFactory.eventLoopGroup()
-                                 .scheduleAtFixedRate(() -> updateEndpointWeight(newEndpoints),
-                                                      0,
-                                                      slowStartInterval.toMillis(),
-                                                      TimeUnit.MILLISECONDS);
+                    executorService.scheduleAtFixedRate(() -> updateEndpointWeight(newEndpoints),
+                                                        0,
+                                                        slowStartInterval.toMillis(),
+                                                        TimeUnit.MILLISECONDS);
         }
 
         private void updateEndpointWeight(List<Endpoint> endpoints) {
@@ -126,12 +146,12 @@ public final class SlowStartAwareEndpointSelectionStrategy implements EndpointSe
                 return e;
             }
             final int originalWeight = e.weight();
-            final int newWeight = endpointWeighter.compute(e, endpointAndStep.stepUp(), numberOfSteps);
-            if (originalWeight <= newWeight) {
+            final int newWeight = endpointWeightTransition.compute(e, endpointAndStep.stepUp(), numberOfSteps);
+            if (newWeight >= originalWeight) {
                 currentWeights.remove(e);
                 return e;
             }
-            return e.withWeight(newWeight);
+            return e.withWeight(newWeight >= 0 ? newWeight : 0);
         }
     }
 
@@ -152,16 +172,4 @@ public final class SlowStartAwareEndpointSelectionStrategy implements EndpointSe
         }
     }
 
-    /**
-     * Controls an {@link Endpoint} weight to ramp up a request load to the {@link Endpoint}.
-     */
-    @FunctionalInterface
-    public interface EndpointWeighter {
-        EndpointWeighter DEFAULT = (e, step, maxStep) -> (int) (e.weight() * (1.0 * step / maxStep * 100));
-
-        /**
-         * Computes an {@link Endpoint} weight based on original {@link Endpoint} weight, current/max steps.
-         */
-        int compute(Endpoint e, int step, int maxStep);
-    }
 }
