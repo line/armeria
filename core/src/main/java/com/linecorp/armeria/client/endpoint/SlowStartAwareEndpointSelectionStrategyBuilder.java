@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.endpoint;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -33,10 +34,13 @@ public final class SlowStartAwareEndpointSelectionStrategyBuilder {
     private Duration slowStartInterval;
     private int numberOfSteps;
 
+    SlowStartAwareEndpointSelectionStrategyBuilder() {
+    }
+
     /**
      * Sets an {@link EndpointWeightTransition}.
      */
-    public SlowStartAwareEndpointSelectionStrategyBuilder endpointWeighter(
+    public SlowStartAwareEndpointSelectionStrategyBuilder weightTransition(
             EndpointWeightTransition endpointWeightTransition) {
         this.endpointWeightTransition = requireNonNull(endpointWeightTransition, "endpointWeightTransition");
         return this;
@@ -56,6 +60,7 @@ public final class SlowStartAwareEndpointSelectionStrategyBuilder {
      */
     public SlowStartAwareEndpointSelectionStrategyBuilder totalSlowStartDuration(
             Duration totalSlowStartDuration) {
+        checkState(slowStartInterval == null, "slowStartInterval is already given");
         this.totalSlowStartDuration = requireNonNull(totalSlowStartDuration,
                                                      "totalSlowStartDuration");
         return this;
@@ -65,9 +70,7 @@ public final class SlowStartAwareEndpointSelectionStrategyBuilder {
      * Sets an intervals during slow start.
      */
     public SlowStartAwareEndpointSelectionStrategyBuilder slowStartInterval(Duration slowStartInterval) {
-        if (totalSlowStartDuration != null) {
-            throw new IllegalArgumentException("totalSlowStartDuration is already given");
-        }
+        checkState(totalSlowStartDuration == null, "totalSlowStartDuration is already given");
         this.slowStartInterval = requireNonNull(slowStartInterval, "slowStartInterval");
         return this;
     }
@@ -85,16 +88,16 @@ public final class SlowStartAwareEndpointSelectionStrategyBuilder {
      * Creates a {@link SlowStartAwareEndpointSelectionStrategy}.
      */
     public SlowStartAwareEndpointSelectionStrategy build() {
-        final Duration interval;
+        final Duration duration;
         if (totalSlowStartDuration != null) {
-            interval = Duration.ofMillis(totalSlowStartDuration.toMillis() / numberOfSteps);
+            duration = Duration.ofMillis(totalSlowStartDuration.toMillis() / numberOfSteps);
         } else {
-            interval = slowStartInterval;
+            duration = slowStartInterval;
         }
         return new SlowStartAwareEndpointSelectionStrategy(
                 endpointWeightTransition,
                 executorService,
-                interval,
+                duration,
                 numberOfSteps);
     }
 }

@@ -37,6 +37,7 @@ import com.linecorp.armeria.client.endpoint.WeightedRoundRobinStrategy.Endpoints
  * A weighted round-robin strategy that ramps up the weight gradually from zero to its normal weight value.
  */
 public final class SlowStartAwareEndpointSelectionStrategy implements EndpointSelectionStrategy {
+    private static final int DEFAULT_NUMBER_OF_STEPS = 20;
 
     /**
      * Creates a {@link SlowStartAwareEndpointSelectionStrategyBuilder}.
@@ -48,14 +49,12 @@ public final class SlowStartAwareEndpointSelectionStrategy implements EndpointSe
     /**
      * Creates a {@link SlowStartAwareEndpointSelectionStrategy}.
      */
-    public static EndpointSelectionStrategy of(EndpointWeightTransition endpointWeightTransition,
-                                               ScheduledExecutorService executorService,
-                                               Duration slowStartInterval,
-                                               int numberOfSteps) {
-        return builder().endpointWeighter(endpointWeightTransition)
+    public static EndpointSelectionStrategy of(ScheduledExecutorService executorService,
+                                               Duration slowStartInterval) {
+        return builder().weightTransition(EndpointWeightTransition.linear())
                         .executorService(executorService)
                         .slowStartInterval(slowStartInterval)
-                        .numberOfSteps(numberOfSteps)
+                        .numberOfSteps(DEFAULT_NUMBER_OF_STEPS)
                         .build();
     }
 
@@ -151,7 +150,7 @@ public final class SlowStartAwareEndpointSelectionStrategy implements EndpointSe
                 currentWeights.remove(e);
                 return e;
             }
-            return e.withWeight(newWeight >= 0 ? newWeight : 0);
+            return e.withWeight(Math.max(newWeight, 0));
         }
     }
 
