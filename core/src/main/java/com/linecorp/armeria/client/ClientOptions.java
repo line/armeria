@@ -77,7 +77,10 @@ public final class ClientOptions extends AbstractOptions {
             RESPONSE_TIMEOUT_MILLIS.newValue(Flags.defaultResponseTimeoutMillis()),
             MAX_RESPONSE_LENGTH.newValue(Flags.defaultMaxResponseLength()),
             DECORATION.newValue(ClientDecoration.of()),
-            HTTP_HEADERS.newValue(HttpHeaders.of())
+            HTTP_HEADERS.newValue(HttpHeaders.of()),
+            REQ_CONTENT_PREVIEWER_FACTORY.newValue(ContentPreviewerFactory.disabled()),
+            RES_CONTENT_PREVIEWER_FACTORY.newValue(ContentPreviewerFactory.disabled()),
+            REQUEST_ID_GENERATOR.newValue(RequestId::random)
     };
 
     /**
@@ -244,7 +247,7 @@ public final class ClientOptions extends AbstractOptions {
      * Returns the timeout of a socket write.
      */
     public long writeTimeoutMillis() {
-        return getOrElse(WRITE_TIMEOUT_MILLIS, Flags.defaultWriteTimeoutMillis());
+        return get(WRITE_TIMEOUT_MILLIS).get();
     }
 
     /**
@@ -261,7 +264,7 @@ public final class ClientOptions extends AbstractOptions {
      * Returns the timeout of a server reply to a client call.
      */
     public long responseTimeoutMillis() {
-        return getOrElse(RESPONSE_TIMEOUT_MILLIS, Flags.defaultResponseTimeoutMillis());
+        return get(RESPONSE_TIMEOUT_MILLIS).get();
     }
 
     /**
@@ -278,14 +281,14 @@ public final class ClientOptions extends AbstractOptions {
      * Returns the maximum allowed length of a server response.
      */
     public long maxResponseLength() {
-        return getOrElse(MAX_RESPONSE_LENGTH, Flags.defaultMaxResponseLength());
+        return get(MAX_RESPONSE_LENGTH).get();
     }
 
     /**
      * Returns the {@link Function}s that decorate the components of a client.
      */
     public ClientDecoration decoration() {
-        return getOrElse(DECORATION, ClientDecoration.of());
+        return get(DECORATION).get();
     }
 
     /**
@@ -293,28 +296,28 @@ public final class ClientOptions extends AbstractOptions {
      * {@link SessionProtocol} is HTTP.
      */
     public HttpHeaders httpHeaders() {
-        return getOrElse(HTTP_HEADERS, HttpHeaders.of());
+        return get(HTTP_HEADERS).get();
     }
 
     /**
      * Returns the request {@link ContentPreviewerFactory}.
      */
     public ContentPreviewerFactory requestContentPreviewerFactory() {
-        return getOrElse(REQ_CONTENT_PREVIEWER_FACTORY, ContentPreviewerFactory.disabled());
+        return get(REQ_CONTENT_PREVIEWER_FACTORY).get();
     }
 
     /**
      * Returns the response {@link ContentPreviewerFactory}.
      */
     public ContentPreviewerFactory responseContentPreviewerFactory() {
-        return getOrElse(RES_CONTENT_PREVIEWER_FACTORY, ContentPreviewerFactory.disabled());
+        return get(RES_CONTENT_PREVIEWER_FACTORY).get();
     }
 
     /**
      * Returns the {@link Supplier} that generates a {@link RequestId}.
      */
     public Supplier<RequestId> requestIdGenerator() {
-        return getOrElse(REQUEST_ID_GENERATOR, RequestId::random);
+        return get(REQUEST_ID_GENERATOR).get();
     }
 
     /**
