@@ -53,9 +53,9 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
             PublisherBasedStreamMessage.class, AbortableSubscriber.class, "subscriber");
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<PublisherBasedStreamMessage, Supplier>
-            completionCauseSupplierUpdater = AtomicReferenceFieldUpdater.newUpdater(
-            PublisherBasedStreamMessage.class, Supplier.class, "completionCauseSupplier");
+    private static final AtomicReferenceFieldUpdater<PublisherBasedStreamMessage, Throwable>
+            completionCauseUpdater = AtomicReferenceFieldUpdater.newUpdater(
+            PublisherBasedStreamMessage.class, Throwable.class, "completionCause");
 
     private final Publisher<? extends T> publisher;
     private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
@@ -64,7 +64,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     private volatile AbortableSubscriber subscriber;
     private volatile boolean publishedAny;
     @Nullable
-    private volatile Supplier<? extends Throwable> completionCauseSupplier;
+    private volatile Throwable completionCause;
 
     /**
      * Creates a new instance with the specified delegate {@link Publisher}.
@@ -227,26 +227,26 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         abort0(causeSupplier);
     }
 
-    private void abort0(@Nullable Supplier<? extends Throwable> causeSupplier) {
+    private void abort0(Supplier<? extends Throwable> causeSupplier) {
         final AbortableSubscriber subscriber = this.subscriber;
-        final Supplier<? extends Throwable> causeOrAbortStreamExceptionSupplier =
-                causeSupplier != null ? causeSupplier : AbortedStreamException::get;
-        completionCauseSupplierUpdater.compareAndSet(this, null, causeOrAbortStreamExceptionSupplier);
+        final Throwable cause = requireNonNull(causeSupplier.get(),
+                                               "cause returned by causeSupplier is null");
+        completionCauseUpdater.compareAndSet(this, null, cause);
         if (subscriber != null) {
-            subscriber.abort(causeOrAbortStreamExceptionSupplier);
+            subscriber.abort(cause);
             return;
         }
 
         final AbortableSubscriber abortable = new AbortableSubscriber(this,
-                                                                      AbortingSubscriber.get(causeSupplier),
+                                                                      AbortingSubscriber.get(cause),
                                                                       ImmediateEventExecutor.INSTANCE,
                                                                       false);
         if (!subscriberUpdater.compareAndSet(this, null, abortable)) {
-            this.subscriber.abort(causeOrAbortStreamExceptionSupplier);
+            this.subscriber.abort(cause);
             return;
         }
 
-        abortable.abort(causeOrAbortStreamExceptionSupplier);
+        abortable.abort(cause);
         abortable.onSubscribe(NoopSubscription.INSTANCE);
     }
 
@@ -258,7 +258,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     @Nullable
     @Override
     public Throwable completionCause() {
-        return completionCauseSupplier != null ? completionCauseSupplier.get() : null;
+        return completionCause;
     }
 
     @VisibleForTesting
@@ -268,7 +268,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         private boolean notifyCancellation;
         private Subscriber<Object> subscriber;
         @Nullable
-        private volatile Supplier<? extends Throwable> abortCauseSupplier;
+        private volatile Throwable abortCause;
         @Nullable
         private volatile Subscription subscription;
 
@@ -295,29 +295,29 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
             assert subscription != null;
 
             // Don't cancel but just abort if abort is pending.
-            if (abortCauseSupplier == null) {
-                cancelOrAbort(true, CancelledSubscriptionException::get);
+            if (abortCause == null) {
+                cancelOrAbort(true, CancelledSubscriptionException.get());
             } else {
-                cancelOrAbort(false, abortCauseSupplier);
+                cancelOrAbort(false, abortCause);
             }
         }
 
-        void abort(Supplier<? extends Throwable> causeSupplier) {
-            abortCauseSupplier = causeSupplier;
+        void abort(Throwable cause) {
+            abortCause = cause;
             if (subscription != null) {
-                cancelOrAbort(false, causeSupplier);
+                cancelOrAbort(false, cause);
             }
         }
 
-        private void cancelOrAbort(boolean cancel, Supplier<? extends Throwable> causeSupplier) {
+        private void cancelOrAbort(boolean cancel, Throwable cause) {
             if (executor.inEventLoop()) {
-                cancelOrAbort0(cancel, causeSupplier);
+                cancelOrAbort0(cancel, cause);
             } else {
-                executor.execute(() -> cancelOrAbort0(cancel, causeSupplier));
+                executor.execute(() -> cancelOrAbort0(cancel, cause));
             }
         }
 
-        private void cancelOrAbort0(boolean cancel, Supplier<? extends Throwable> causeSupplier) {
+        private void cancelOrAbort0(boolean cancel, Throwable cause) {
             final CompletableFuture<Void> completionFuture = parent.completionFuture();
             if (completionFuture.isDone()) {
                 return;
@@ -330,8 +330,6 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
                 this.subscriber = NoopSubscriber.get();
             }
 
-            final Throwable cause = requireNonNull(causeSupplier.get(),
-                                                   "cause returned by causeSupplier is null");
             try {
                 if (!cancel || notifyCancellation) {
                     subscriber.onError(cause);
@@ -359,8 +357,8 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
                 this.subscription = subscription;
                 subscriber.onSubscribe(this);
             } finally {
-                if (abortCauseSupplier != null) {
-                    cancelOrAbort0(false, abortCauseSupplier);
+                if (abortCause != null) {
+                    cancelOrAbort0(false, abortCause);
                 }
             }
         }

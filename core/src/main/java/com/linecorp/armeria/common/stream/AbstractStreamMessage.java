@@ -26,7 +26,6 @@ import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -50,14 +49,14 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
     static final CloseEvent ABORTED_CLOSE = new CloseEvent(AbortedStreamException.INSTANCE);
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<AbstractStreamMessage, Supplier>
-            completionCauseSupplierUpdater = AtomicReferenceFieldUpdater.newUpdater(
-            AbstractStreamMessage.class, Supplier.class, "completionCauseSupplier");
+    private static final AtomicReferenceFieldUpdater<AbstractStreamMessage, Throwable>
+            completionCauseUpdater = AtomicReferenceFieldUpdater.newUpdater(
+            AbstractStreamMessage.class, Throwable.class, "completionCause");
 
     private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
 
     @Nullable
-    private volatile Supplier<? extends Throwable> completionCauseSupplier;
+    private volatile Throwable completionCause;
 
     @Override
     public final void subscribe(Subscriber<? super T> subscriber) {
@@ -179,15 +178,11 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
     @Nullable
     @Override
     public Throwable completionCause() {
-        return completionCauseSupplier != null ? completionCauseSupplier.get() : null;
+        return completionCause;
     }
 
-    final boolean completionCause(Supplier<? extends Throwable> causeSupplier) {
-        return completionCauseSupplierUpdater.compareAndSet(this, null, causeSupplier);
-    }
-
-    final boolean completionCause(Throwable cause) {
-        return completionCause(() -> cause);
+    final boolean setCompletionCause(Throwable cause) {
+        return completionCauseUpdater.compareAndSet(this, null, cause);
     }
 
     /**

@@ -127,7 +127,7 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
     @Override
     final void notifySubscriberOfCloseEvent(SubscriptionImpl subscription, CloseEvent event) {
         try {
-            event.notifySubscriber(subscription, completionFuture(), this::completionCause);
+            event.notifySubscriber(subscription, completionFuture(), this::setCompletionCause);
         } finally {
             subscription.clearSubscriber();
             cleanup(subscription);
@@ -159,32 +159,43 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
     private void abort0(@Nullable Supplier<? extends Throwable> causeSupplier) {
         final Supplier<? extends Throwable> causeOrAbortStreamExceptionSupplier =
                 causeSupplier != null ? causeSupplier : AbortedStreamException::get;
-        completionCause(causeOrAbortStreamExceptionSupplier);
+        final Throwable cause = requireNonNull(causeOrAbortStreamExceptionSupplier.get(),
+                                               "cause returned by causeSupplier is null");
         final SubscriptionImpl currentSubscription = subscription;
         if (currentSubscription != null) {
-            cancelOrAbort(false, causeOrAbortStreamExceptionSupplier);
+            cancelOrAbort(false, cause);
             return;
         }
 
         final SubscriptionImpl newSubscription = new SubscriptionImpl(
-                this, AbortingSubscriber.get(causeSupplier), ImmediateEventExecutor.INSTANCE, false, false);
+                this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, false, false);
         subscriptionUpdater.compareAndSet(this, null, newSubscription);
-        cancelOrAbort(false, causeOrAbortStreamExceptionSupplier);
+        cancelOrAbort(false, cause);
     }
 
-    private void cancelOrAbort(boolean cancel, @Nullable Supplier<? extends Throwable> causeSupplier) {
+    private void cancelOrAbort(boolean cancel, @Nullable Throwable cause) {
         final CloseEvent closeEvent;
         final Sampler<Class<? extends Throwable>> sampler = Flags.verboseExceptionSampler();
         if (cancel) {
-            closeEvent = sampler.isSampled(CancelledSubscriptionException.class) ?
-                         new CloseEvent(new CancelledSubscriptionException()) : CANCELLED_CLOSE;
+            final boolean sampled = sampler.isSampled(CancelledSubscriptionException.class);
+            if (sampled) {
+                final Throwable cancelCause = new CancelledSubscriptionException();
+                setCompletionCause(cancelCause);
+                closeEvent = new CloseEvent(cancelCause);
+            } else {
+                setCompletionCause(CancelledSubscriptionException.INSTANCE);
+                closeEvent = CANCELLED_CLOSE;
+            }
         } else {
-            // causeSupplier is always not-null if cancel == false
-            final Throwable cause = requireNonNull(causeSupplier.get(),
-                                                   "cause returned by causeSupplier is null");
+            // cause is always not-null if cancel == false
             if (cause instanceof AbortedStreamException) {
-                closeEvent = sampler.isSampled(AbortedStreamException.class) ?
-                             new CloseEvent(cause) : ABORTED_CLOSE;
+                if (cause == AbortedStreamException.INSTANCE) {
+                    setCompletionCause(AbortedStreamException.INSTANCE);
+                    closeEvent = ABORTED_CLOSE;
+                } else {
+                    setCompletionCause(cause);
+                    closeEvent = new CloseEvent(cause);
+                }
             } else {
                 closeEvent = new CloseEvent(cause);
             }

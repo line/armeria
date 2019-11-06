@@ -474,8 +474,9 @@ class BraveIntegrationTest {
         }
     }
 
-    @Test(timeout = 10000)
-    public void testNonRequestContextThreadPatternTraceable() throws Exception {
+    @Test
+    @Timeout(10000)
+    void testNonRequestContextThreadPatternTraceable() throws Exception {
         final CountDownLatch done = new CountDownLatch(1);
         ThreadFactories.builder("nonrequest-").eventLoop(false)
                        .build()

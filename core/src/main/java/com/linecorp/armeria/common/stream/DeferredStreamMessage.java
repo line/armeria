@@ -286,20 +286,20 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
                         @Nullable CloseEvent closeEvent) {
         final Supplier<? extends Throwable> causeOrAbortStreamExceptionSupplier =
                 causeSupplier != null ? causeSupplier : AbortedStreamException::get;
-        if (!completionCause(causeOrAbortStreamExceptionSupplier)) {
+        final Throwable cause = requireNonNull(causeOrAbortStreamExceptionSupplier.get(),
+                                               "cause returned by causeSupplier is null");
+        if (!setCompletionCause(cause)) {
             return;
         }
 
         final SubscriptionImpl newSubscription = new SubscriptionImpl(
-                this, AbortingSubscriber.get(causeSupplier), ImmediateEventExecutor.INSTANCE, false, false);
+                this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, false, false);
         subscriptionUpdater.compareAndSet(this, null, newSubscription);
 
         final StreamMessage<T> delegate = this.delegate;
         if (delegate != null) {
             delegate.abort(causeOrAbortStreamExceptionSupplier);
         } else {
-            final Throwable cause = requireNonNull(causeOrAbortStreamExceptionSupplier.get(),
-                                                   "cause returned by causeSupplier is null");
             final CloseEvent closeEvent0 = (closeEvent == null) ? new CloseEvent(cause) : closeEvent;
             if (subscription.needsDirectInvocation()) {
                 closeEvent0.notifySubscriber(subscription, completionFuture(), null);

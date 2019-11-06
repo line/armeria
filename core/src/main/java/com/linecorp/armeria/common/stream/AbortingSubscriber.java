@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.common.stream;
 
-import java.util.function.Supplier;
-
 import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
@@ -26,18 +24,18 @@ import org.reactivestreams.Subscription;
 final class AbortingSubscriber<T> implements Subscriber<T> {
 
     private static final AbortingSubscriber<Object> INSTANCE =
-            new AbortingSubscriber<>(AbortedStreamException::get);
+            new AbortingSubscriber<>(AbortedStreamException.INSTANCE);
 
     @SuppressWarnings("unchecked")
-    static <T> AbortingSubscriber<T> get(@Nullable Supplier<? extends Throwable> causeSupplier) {
-        return causeSupplier == null ? (AbortingSubscriber<T>) INSTANCE
-                                     : new AbortingSubscriber<>(causeSupplier);
+    static <T> AbortingSubscriber<T> get(@Nullable Throwable cause) {
+        return cause == null || cause == AbortedStreamException.INSTANCE ? (AbortingSubscriber<T>) INSTANCE
+                                                                         : new AbortingSubscriber<>(cause);
     }
 
-    private final Supplier<? extends Throwable> causeSupplier;
+    private final Throwable cause;
 
-    private AbortingSubscriber(Supplier<? extends Throwable> causeSupplier) {
-        this.causeSupplier = causeSupplier;
+    private AbortingSubscriber(Throwable cause) {
+        this.cause = cause;
     }
 
     @Override
@@ -55,9 +53,9 @@ final class AbortingSubscriber<T> implements Subscriber<T> {
     public void onComplete() {}
 
     /**
-     * Returns the {@link Supplier} that supplies the cause of {@link AbortingSubscriber}.
+     * Returns the cause of this abortion.
      */
-    Supplier<? extends Throwable> causeSupplier() {
-        return causeSupplier;
+    Throwable cause() {
+        return cause;
     }
 }
