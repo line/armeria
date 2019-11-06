@@ -93,19 +93,6 @@ The default `port` is 8082, to not interfere with Dropwizard's default applicati
   - `keyCertChainFile` - The path to the key cert chain file
   - `selfSigned` - True if a certificate is self-signed. Default=false. 
 
-Example Application
--------------------
-This bundle includes an example usage of a `DropwizardArmeriaApplication`. Refer to [Getting started - Dropwizard](https://www.dropwizard.io/1.3.16/docs/getting-started.html) for its structure. 
-
-You can execute this application on your local machine then running:
-
-```
-./mvnw clean install -DskipTests
-./mvnw exec:java
-```
-
-This will start the application on port `8080` with an Ameria Server handling the Jetty web traffic.  
-
 Support
 -------
 Please file bug reports and feature requests in [GitHub issues](https://github.com/line/armeria/issues).
