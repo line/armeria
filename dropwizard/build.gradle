@@ -1,14 +1,3 @@
-plugins {
-    id "com.github.hierynomus.license" version "0.15.0"
-}
-
-//license {
-//  header project.file('../CODE-LICENSE.txt')
-//  strictCheck true
-//   exclude "**/*.properties"
-//}
-
-
 dependencies {
     compile project(':jetty')
     // Dropwizard
