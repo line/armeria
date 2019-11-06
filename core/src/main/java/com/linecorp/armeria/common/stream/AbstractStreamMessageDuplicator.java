@@ -490,11 +490,11 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
                 completionFutures.add(future);
             });
             downstreamSubscriptions.clear();
-            CompletableFutures.successfulAsList(completionFutures, unused -> null).handle(
-                    (unused1, unused2) -> {
-                        signals.clear();
-                        return null;
-                    });
+            CompletableFutures.successfulAsList(completionFutures, unused -> null)
+                              .handle((unused1, unused2) -> {
+                                  signals.clear();
+                                  return null;
+                              });
         }
     }
 
