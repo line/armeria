@@ -51,6 +51,7 @@ includeWithFlags ':site'
 
 // Examples
 includeWithFlags ':examples:annotated-http-service', 'java'
+includeWithFlags ':examples:dropwizard',             'java'
 includeWithFlags ':examples:grpc-example',           'java'
 project(':examples:grpc-example').projectDir = file('examples/grpc')
 includeWithFlags ':examples:grpc-reactor',           'java', 'reactor-grpc'
