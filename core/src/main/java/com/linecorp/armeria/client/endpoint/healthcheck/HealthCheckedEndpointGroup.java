@@ -140,7 +140,8 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
     private void updateCandidates(List<Endpoint> candidates) {
         final Set<Endpoint> candidateSet = Collections.newSetFromMap(
-                new Object2ObjectOpenCustomHashMap<>(EndpointHashStrategy.INSTANCE));
+                new Object2ObjectOpenCustomHashMap<>(candidates.size(), EndpointHashStrategy.INSTANCE));
+        candidateSet.addAll(candidates);
 
         synchronized (contexts) {
             if (closed) {
