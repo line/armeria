@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.Consumer;
 
 import com.linecorp.armeria.client.Endpoint;
@@ -28,7 +27,6 @@ import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.MeterBinder;
-import it.unimi.dsi.fastutil.Hash;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
 
 /**
@@ -98,23 +96,4 @@ final class HealthCheckedEndpointGroupMetrics implements MeterBinder {
         }
     }
 
-    /**
-     * A special {@link Hash.Strategy} which takes only {@link Endpoint#authority()} and
-     * {@link Endpoint#ipAddr()} into account.
-     */
-    private static final class EndpointHashStrategy implements Hash.Strategy<Endpoint> {
-
-        static final EndpointHashStrategy INSTANCE = new EndpointHashStrategy();
-
-        @Override
-        public int hashCode(Endpoint e) {
-            return e.authority().hashCode() * 31 + Objects.hashCode(e.ipAddr());
-        }
-
-        @Override
-        public boolean equals(Endpoint a, Endpoint b) {
-            return a.authority().equals(b.authority()) &&
-                   Objects.equals(a.ipAddr(), b.ipAddr());
-        }
-    }
 }

@@ -16,10 +16,9 @@
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -58,6 +57,7 @@ import com.linecorp.armeria.common.util.AsyncCloseable;
 import io.micrometer.core.instrument.binder.MeterBinder;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.Future;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
 
 /**
  * An {@link EndpointGroup} that filters out unhealthy {@link Endpoint}s from an existing {@link EndpointGroup},
@@ -99,10 +99,8 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     private final Function<? super ClientOptionsBuilder, ClientOptionsBuilder> clientConfigurator;
     private final Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkerFactory;
 
-    /**
-     * Key is {@link Endpoint#authority()}.
-     */
-    private final Map<String, DefaultHealthCheckerContext> contexts = new HashMap<>();
+    private final Map<Endpoint, DefaultHealthCheckerContext> contexts =
+            new Object2ObjectOpenCustomHashMap<>(EndpointHashStrategy.INSTANCE);
 
     @VisibleForTesting
     final Set<Endpoint> healthyEndpoints = new NonBlockingHashSet<>();
@@ -141,9 +139,8 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     }
 
     private void updateCandidates(List<Endpoint> candidates) {
-        final Set<String> candidateAuthorities = candidates.stream()
-                                                           .map(Endpoint::authority)
-                                                           .collect(toImmutableSet());
+        final Set<Endpoint> candidateSet = Collections.newSetFromMap(
+                new Object2ObjectOpenCustomHashMap<>(EndpointHashStrategy.INSTANCE));
 
         synchronized (contexts) {
             if (closed) {
@@ -151,12 +148,12 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
             }
 
             // Stop the health checkers whose endpoints disappeared and destroy their contexts.
-            for (final Iterator<Map.Entry<String, DefaultHealthCheckerContext>> i = contexts.entrySet()
-                                                                                            .iterator();
-                 i.hasNext();) {
+            for (final Iterator<Map.Entry<Endpoint, DefaultHealthCheckerContext>> i = contexts.entrySet()
+                                                                                              .iterator();
+                 i.hasNext(); ) {
 
-                final Map.Entry<String, DefaultHealthCheckerContext> e = i.next();
-                if (candidateAuthorities.contains(e.getKey())) {
+                final Map.Entry<Endpoint, DefaultHealthCheckerContext> e = i.next();
+                if (candidateSet.contains(e.getKey())) {
                     // Not a removed endpoint.
                     continue;
                 }
@@ -167,13 +164,13 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
             // Start the health checkers with new contexts for newly appeared endpoints.
             for (Endpoint e : candidates) {
-                if (contexts.containsKey(e.authority())) {
+                if (contexts.containsKey(e)) {
                     // Not a new endpoint.
                     continue;
                 }
                 final DefaultHealthCheckerContext ctx = new DefaultHealthCheckerContext(e);
                 ctx.init(checkerFactory.apply(ctx));
-                contexts.put(e.authority(), ctx);
+                contexts.put(e, ctx);
             }
         }
     }
