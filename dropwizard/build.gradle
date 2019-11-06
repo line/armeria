@@ -1,0 +1,8 @@
+dependencies {
+    // Dropwizard
+    ['core','util','lifecycle','jackson','validation','jetty','jersey'].each {
+        compile "io.dropwizard:dropwizard-$it"
+    }
+    // Dropwizard Metrics
+    compile 'io.dropwizard.metrics:metrics-core'
+}
