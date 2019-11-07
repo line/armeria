@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.logging;
 
+import static java.util.Objects.requireNonNull;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,10 +36,36 @@ public final class RequestLogListenerInvoker {
      * Invokes {@link RequestLogListener#onRequestLog(RequestLog)}.
      */
     public static void invokeOnRequestLog(RequestLogListener listener, RequestLog log) {
+        requireNonNull(listener, "listener");
+        requireNonNull(log, "log");
         try (SafeCloseable ignored = log.context().push()) {
             listener.onRequestLog(log);
         } catch (Throwable e) {
             logger.warn("onRequestLog() failed with an exception:", e);
+        }
+    }
+
+    /**
+     * Invokes {@link RequestLogListener#onRequestLog(RequestLog)}.
+     */
+    static void invokeOnRequestLog(RequestLogListener[] listeners, RequestLog log) {
+        requireNonNull(listeners, "listeners");
+        requireNonNull(log, "log");
+        if (listeners.length == 0) {
+            return;
+        }
+
+        try (SafeCloseable ignored = log.context().push()) {
+            for (RequestLogListener listener : listeners) {
+                if (listener == null) {
+                    break;
+                }
+                try {
+                    listener.onRequestLog(log);
+                } catch (Throwable e) {
+                    logger.warn("onRequestLog() failed with an exception:", e);
+                }
+            }
         }
     }
 
