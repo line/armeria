@@ -122,6 +122,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     };
 
+    private static boolean warnedNullRequestId;
+
     private static void logException(Channel ch, Throwable cause) {
         final HttpServer server = HttpServer.get(ch);
         if (server != null) {
@@ -364,7 +366,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
                 serviceCfg, channel, config.meterRegistry(), protocol,
-                config.requestIdGenerator().get(), routingCtx, routingResult,
+                nextRequestId(), routingCtx, routingResult,
                 req, getSSLSession(channel), proxiedAddresses, clientAddress);
 
         try (SafeCloseable ignored = reqCtx.push()) {
@@ -676,7 +678,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final Channel channel = ctx.channel();
         final EarlyRespondingRequestContext reqCtx =
                 new EarlyRespondingRequestContext(channel, NoopMeterRegistry.get(), protocol(),
-                                                  config.requestIdGenerator().get(), req.method(),
+                                                  nextRequestId(), req.method(),
                                                   path, query, req);
 
         final RequestLogBuilder logBuilder = reqCtx.logBuilder();
@@ -684,6 +686,19 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         logBuilder.requestHeaders(req.headers());
 
         return reqCtx;
+    }
+
+    private RequestId nextRequestId() {
+        final RequestId id = config.requestIdGenerator().get();
+        if (id == null) {
+            if (!warnedNullRequestId) {
+                warnedNullRequestId = true;
+                logger.warn("requestIdGenerator.get() returned null; using RequestId.random()");
+            }
+            return RequestId.random();
+        } else {
+            return id;
+        }
     }
 
     private static final class EarlyRespondingRequestContext extends NonWrappingRequestContext {

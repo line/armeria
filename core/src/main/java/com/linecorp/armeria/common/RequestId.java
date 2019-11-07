@@ -46,6 +46,6 @@ public interface RequestId {
      */
     default String shortText() {
         final String longText = text();
-        return longText.length() < 8 ? longText : longText.substring(0, 8);
+        return longText.length() <= 8 ? longText : longText.substring(0, 8);
     }
 }

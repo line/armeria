@@ -23,6 +23,9 @@ import java.util.function.BiFunction;
 
 import javax.annotation.Nullable;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
@@ -48,6 +51,9 @@ import io.netty.channel.EventLoop;
 public abstract class UserClient<I extends Request, O extends Response>
         extends AbstractUnwrappable<Client<I, O>>
         implements ClientBuilderParams {
+
+    private static final Logger logger = LoggerFactory.getLogger(UserClient.class);
+    private static boolean warnedNullRequestId;
 
     private final ClientBuilderParams params;
     private final MeterRegistry meterRegistry;
@@ -142,7 +148,8 @@ public abstract class UserClient<I extends Request, O extends Response>
         final DefaultClientRequestContext ctx;
         final HttpRequest httpReq;
         final RpcRequest rpcReq;
-        final RequestId id = options().requestIdGenerator().get();
+        final RequestId id = nextRequestId();
+
         if (req instanceof HttpRequest) {
             httpReq = (HttpRequest) req;
             rpcReq = null;
@@ -162,5 +169,18 @@ public abstract class UserClient<I extends Request, O extends Response>
         }
 
         return initContextAndExecuteWithFallback(delegate(), ctx, endpoint, fallback);
+    }
+
+    private RequestId nextRequestId() {
+        final RequestId id = options().requestIdGenerator().get();
+        if (id == null) {
+            if (!warnedNullRequestId) {
+                warnedNullRequestId = true;
+                logger.warn("requestIdGenerator.get() returned null; using RequestId.random()");
+            }
+            return RequestId.random();
+        } else {
+            return id;
+        }
     }
 }
