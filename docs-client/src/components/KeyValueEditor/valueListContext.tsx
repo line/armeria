@@ -4,6 +4,13 @@ export interface Row {
   key: string;
   value: string;
 }
+export const CreateDefaultRow = (): Row => {
+  return {
+    key: '',
+    value: '',
+  };
+};
+
 const ValueListContext = React.createContext<
   ([Row[], Dispatch<SetStateAction<Row[]>>]) | undefined
 >(undefined);

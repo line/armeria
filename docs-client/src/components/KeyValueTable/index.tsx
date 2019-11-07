@@ -6,14 +6,19 @@ import TableBody from '@material-ui/core/TableBody';
 import TableCell from '@material-ui/core/TableCell';
 import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
-import DeleteIcon from '@material-ui/icons/Delete';
-import { Row, ValueListContext } from '../KeyValueEditor/valueListContext';
+import DeleteIcon from '@material-ui/icons/Clear';
+import {
+  CreateDefaultRow,
+  Row,
+  ValueListContext,
+} from '../KeyValueEditor/valueListContext';
 
 interface RowProps {
   row: Row;
-  index : number;
+  index: number;
   onRowChange: (index: number, key: string, value: string) => void;
   onRowRemove: (index: number) => void;
+  isRemovable: boolean;
 }
 
 const useStyles = makeStyles((theme) => ({
@@ -28,9 +33,10 @@ const KeyValueTableRow: React.FunctionComponent<RowProps> = ({
   index,
   onRowChange,
   onRowRemove,
+  isRemovable,
 }) => {
   const classes = useStyles();
-  const onChange = (index : number, key: string, value: string) => {
+  const onChange = (key: string, value: string) => {
     onRowChange(index, key, value);
   };
 
@@ -43,21 +49,25 @@ const KeyValueTableRow: React.FunctionComponent<RowProps> = ({
       <TableCell>
         <Input
           value={row.key}
-          onChange={(e) => onChange(index,'key', e.target.value)}
+          onChange={(e) => onChange('key', e.target.value)}
         />
       </TableCell>
       <TableCell>
         <Input
           defaultValue={row.value}
-          onChange={(e) => onChange(index,'value', e.target.value)}
+          onChange={(e) => onChange('value', e.target.value)}
         />
-        <IconButton
-          onClick={() => onRemove()}
-          className={classes.floatButton}
-          aria-label="delete"
-        >
-          <DeleteIcon />
-        </IconButton>
+        {isRemovable ? (
+          <IconButton
+            onClick={() => onRemove()}
+            className={classes.floatButton}
+            aria-label="delete"
+          >
+            <DeleteIcon />
+          </IconButton>
+        ) : (
+          ''
+        )}
       </TableCell>
     </TableRow>
   );
@@ -65,10 +75,14 @@ const KeyValueTableRow: React.FunctionComponent<RowProps> = ({
 
 interface KeyValueTableProps {
   defaultKeyValueList?: Row[];
+  keyName?: string;
+  valueName?: string;
 }
 
 const KeyValueTable: React.FunctionComponent<KeyValueTableProps> = ({
   defaultKeyValueList,
+  keyName,
+  valueName,
 }) => {
   const resultArr:
     | [Row[], Dispatch<SetStateAction<Row[]>>]
@@ -82,33 +96,29 @@ const KeyValueTable: React.FunctionComponent<KeyValueTableProps> = ({
   const onRowRemove = (index: number) => {
     if (rowList.length === 1) return;
     setRowList(
-      rowList
-        .filter((_, i) => i !== index)
-        .map((v, i) => ({ ...v, index: i })),
+      rowList.filter((_, i) => i !== index).map((v, i) => ({ ...v, index: i })),
     );
   };
 
   const onRowChange = (index: number, name: string, value: string) => {
-    if (rowList) {
-      const newRowList = rowList.map((row, i) =>
-        i === index ? { ...row, [name]: value } : row,
-      );
-      if (index === rowList.length - 1) {
-        newRowList.push({ key: '', value: '' });
-      }
+    if (!rowList) return;
 
-      setRowList(newRowList);
+    const newRowList = rowList.map((row, i) =>
+      i === index ? { ...row, [name]: value } : row,
+    );
+    if (index === rowList.length - 1) {
+      newRowList.push(CreateDefaultRow());
     }
+
+    setRowList(newRowList);
   };
 
-  // tslint:disable-next-line
-  console.log(rowList);
   return (
     <Table>
       <TableHead>
         <TableRow>
-          <TableCell>KEY</TableCell>
-          <TableCell>VALUE</TableCell>
+          <TableCell>{keyName}</TableCell>
+          <TableCell>{valueName}</TableCell>
         </TableRow>
       </TableHead>
       <TableBody>
@@ -123,6 +133,7 @@ const KeyValueTable: React.FunctionComponent<KeyValueTableProps> = ({
               }}
               onRowChange={onRowChange}
               onRowRemove={onRowRemove}
+              isRemovable={Boolean(rowList.length - 1 !== i)}
             />
           ))}
       </TableBody>
