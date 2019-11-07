@@ -187,9 +187,9 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
                 closeEvent = CANCELLED_CLOSE;
             }
         } else {
+            setCompletionCause(cause);
             // cause is always not-null if cancel == false
             if (cause instanceof AbortedStreamException) {
-                setCompletionCause(cause);
                 if (cause == AbortedStreamException.INSTANCE) {
                     closeEvent = ABORTED_CLOSE;
                 } else {
