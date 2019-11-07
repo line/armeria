@@ -13,6 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
+/**
+ * Defines Armeria {@link com.linecorp.armeria.server.logging.AccessLogWriter} interfaces for
+ * integration into Dropwizard.
+ */
 @NonNullByDefault
 package com.linecorp.armeria.server.dropwizard.logging;
 

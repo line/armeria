@@ -13,6 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
+/**
+ * Provides a <a href="https://dropwizard.io/">Dropwizard</a> Bundle for Armeria.
+ */
 @NonNullByDefault
 package com.linecorp.armeria.server.dropwizard;
 
