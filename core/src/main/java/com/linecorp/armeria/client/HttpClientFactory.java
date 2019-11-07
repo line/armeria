@@ -26,7 +26,6 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
@@ -90,13 +89,11 @@ final class HttpClientFactory extends AbstractClientFactory {
 
     private final ClientFactoryOptions options;
 
-    HttpClientFactory(ClientFactoryOptions options,
-                      EventLoopScheduler eventLoopScheduler,
-                      AddressResolverGroup<InetSocketAddress> addressResolverGroup) {
+    HttpClientFactory(ClientFactoryOptions options) {
 
         final Bootstrap baseBootstrap = new Bootstrap();
         baseBootstrap.channel(TransportType.socketChannelType(options.workerGroup()));
-        baseBootstrap.resolver(addressResolverGroup);
+        baseBootstrap.resolver(options.addressResolverGroup());
 
         options.channelOptions().forEach((option, value) -> {
             @SuppressWarnings("unchecked")
@@ -106,9 +103,10 @@ final class HttpClientFactory extends AbstractClientFactory {
 
         workerGroup = options.workerGroup();
         shutdownWorkerGroupOnClose = options.shutdownWorkerGroupOnClose();
-        this.eventLoopScheduler = eventLoopScheduler;
+        eventLoopScheduler = options.eventLoopScheduler();
         this.baseBootstrap = baseBootstrap;
         sslContextCustomizer = options.sslContextCustomizer();
+        addressResolverGroup = options.addressResolverGroup();
         http2InitialConnectionWindowSize = options.http2InitialConnectionWindowSize();
         http2InitialStreamWindowSize = options.http2InitialStreamWindowSize();
         http2MaxFrameSize = options.http2MaxFrameSize();
@@ -122,7 +120,6 @@ final class HttpClientFactory extends AbstractClientFactory {
         connectionPoolListener = options.connectionPoolListener();
         meterRegistry = options.meterRegistry();
 
-        this.addressResolverGroup = addressResolverGroup;
         this.options = options;
 
         clientDelegate = new HttpClientDelegate(this, addressResolverGroup);
@@ -296,18 +293,6 @@ final class HttpClientFactory extends AbstractClientFactory {
 
         return pools.computeIfAbsent(eventLoop,
                                      e -> new HttpChannelPool(this, eventLoop, connectionPoolListener()));
-    }
-
-    @Override
-    public Function<? super EventLoopGroup,
-            ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory() {
-
-        return eventLoopGroup -> addressResolverGroup;
-    }
-
-    @Override
-    public Function<? super EventLoopGroup, ? extends EventLoopScheduler> eventLoopSchedulerFactory() {
-        return eventLoopGroup -> eventLoopScheduler;
     }
 
     @Override

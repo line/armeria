@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,7 +23,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
@@ -43,7 +41,6 @@ import com.linecorp.armeria.common.util.ReleasableHolder;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.resolver.AddressResolverGroup;
 
 /**
  * A {@link ClientFactory} which combines all discovered {@link ClientFactory} implementations.
@@ -173,18 +170,6 @@ final class DefaultClientFactory extends AbstractClientFactory {
 
     void doClose() {
         clientFactoriesToClose.forEach(ClientFactory::close);
-    }
-
-    @Override
-    public Function<? super EventLoopGroup,
-            ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory() {
-
-        return httpClientFactory.addressResolverGroupFactory();
-    }
-
-    @Override
-    public Function<? super EventLoopGroup, ? extends EventLoopScheduler> eventLoopSchedulerFactory() {
-        return httpClientFactory.eventLoopSchedulerFactory();
     }
 
     @Override

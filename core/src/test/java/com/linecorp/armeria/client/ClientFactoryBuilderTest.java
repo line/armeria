@@ -22,6 +22,8 @@ import static org.mockito.Mockito.mock;
 
 import org.junit.jupiter.api.Test;
 
+import io.netty.channel.ChannelOption;
+
 class ClientFactoryBuilderTest {
 
     @Test
@@ -56,22 +58,25 @@ class ClientFactoryBuilderTest {
         assertThat(cause).hasMessageContaining("mutually exclusive");
     }
 
-    // TBW
     @Test
-    void testFrom() {
+    void shouldInheritClientFactoryOptions() {
         final ClientFactory factory1 = ClientFactory.builder()
                                                     .maxNumEventLoopsPerEndpoint(2)
                                                     .connectTimeoutMillis(5000)
                                                     .build();
-        final ClientFactory factory2 = ClientFactoryBuilder.from(factory1).build();
 
-        System.out.println(factory1.eventLoopSchedulerFactory());
-        System.out.println(factory2.eventLoopSchedulerFactory());
+        final ClientFactory factory2 = ClientFactory.builder()
+                                                    .options(factory1.options())
+                                                    .idleTimeoutMillis(30000)
+                                                    .build();
 
-        System.out.println(factory1.addressResolverGroupFactory());
-        System.out.println(factory2.addressResolverGroupFactory());
-
-        System.out.println(factory1.options());
-        System.out.println(factory2.options());
+        assertThat(factory2.options().eventLoopScheduler())
+                .isEqualTo(factory1.options().eventLoopScheduler());
+        assertThat(factory2.options().addressResolverGroup())
+                .isEqualTo(factory1.options().addressResolverGroup());
+        assertThat(factory2.options().channelOptions().get(ChannelOption.CONNECT_TIMEOUT_MILLIS))
+                .isEqualTo(factory1.options().channelOptions().get(ChannelOption.CONNECT_TIMEOUT_MILLIS));
+        assertThat(factory2.options().idleTimeoutMillis())
+                .isNotEqualTo(factory1.options().idleTimeoutMillis());
     }
 }

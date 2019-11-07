@@ -56,7 +56,7 @@ import io.netty.channel.EventLoopGroup;
  * {@link ClientFactory}, use {@link #closeDefault()}.
  * </p>
  */
-public interface ClientFactory extends ClientFactoryBuilderParams, AutoCloseable {
+public interface ClientFactory extends AutoCloseable {
 
     /**
      * The default {@link ClientFactory} implementation.
@@ -127,6 +127,11 @@ public interface ClientFactory extends ClientFactoryBuilderParams, AutoCloseable
      * Returns the {@link MeterRegistry} that collects various stats.
      */
     MeterRegistry meterRegistry();
+
+    /**
+     * TBW.
+     */
+    ClientFactoryOptions options();
 
     /**
      * Sets the {@link MeterRegistry} that collects various stats. Note that this method is intended to be

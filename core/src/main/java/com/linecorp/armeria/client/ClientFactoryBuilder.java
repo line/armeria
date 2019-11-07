@@ -31,7 +31,6 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.ToIntFunction;
@@ -40,7 +39,6 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
-import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
@@ -50,7 +48,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
@@ -74,14 +71,6 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
  */
 public final class ClientFactoryBuilder {
 
-    // Do not accept 1) the options that may break Armeria and 2) the deprecated options.
-    @SuppressWarnings("deprecation")
-    private static final Set<ChannelOption<?>> PROHIBITED_SOCKET_OPTIONS = ImmutableSet.of(
-            ChannelOption.ALLOW_HALF_CLOSURE, ChannelOption.AUTO_READ,
-            ChannelOption.AUTO_CLOSE, ChannelOption.MAX_MESSAGES_PER_READ,
-            ChannelOption.WRITE_BUFFER_HIGH_WATER_MARK, ChannelOption.WRITE_BUFFER_LOW_WATER_MARK,
-            EpollChannelOption.EPOLL_MODE);
-
     // Netty-related properties:
     private EventLoopGroup workerGroup = CommonPools.workerGroup();
     private final Map<ChannelOption<?>, Object> channelOptions = new Object2ObjectArrayMap<>();
@@ -99,16 +88,6 @@ public final class ClientFactoryBuilder {
     private final List<ToIntFunction<Endpoint>> maxNumEventLoopsFunctions = new ArrayList<>();
 
     private final Map<ClientFactoryOption<?>, ClientFactoryOptionValue<?>> options = new LinkedHashMap<>();
-
-    /**
-     * TBW.
-     */
-    public static ClientFactoryBuilder from(ClientFactoryBuilderParams params) {
-        return ClientFactory.builder()
-                            .eventLoopSchedulerFactory(params.eventLoopSchedulerFactory())
-                            .addressResolverGroupFactory(params.addressResolverGroupFactory())
-                            .options(params.options());
-    }
 
     /**
      * Creates a new instance.
@@ -238,8 +217,6 @@ public final class ClientFactoryBuilder {
      */
     public <T> ClientFactoryBuilder channelOption(ChannelOption<T> option, T value) {
         requireNonNull(option, "option");
-        checkArgument(!PROHIBITED_SOCKET_OPTIONS.contains(option),
-                      "prohibited socket option: %s", option);
 
         channelOptions.put(option, requireNonNull(value, "value"));
         return this;
@@ -453,10 +430,18 @@ public final class ClientFactoryBuilder {
     /**
      * TBW.
      */
+    @SuppressWarnings("unchecked")
     public <T> ClientFactoryBuilder option(ClientFactoryOptionValue<T> optionValue) {
         requireNonNull(optionValue, "optionValue");
         final ClientFactoryOption<?> opt = optionValue.option();
-        options.put(opt, optionValue);
+        if (opt == ClientFactoryOption.EVENT_LOOP_SCHEDULER) {
+            eventLoopSchedulerFactory(eventLoopGroup -> (EventLoopScheduler) optionValue.value());
+        } else if (opt == ClientFactoryOption.ADDRESS_RESOLVER_GROUP) {
+            addressResolverGroupFactory(
+                    eventLoopGroup -> (AddressResolverGroup<InetSocketAddress>) optionValue.value());
+        } else {
+            options.put(opt, optionValue);
+        }
         return this;
     }
 
@@ -473,14 +458,8 @@ public final class ClientFactoryBuilder {
         final Collection<ClientFactoryOptionValue<?>> optVals = options.values();
         final int numOpts = optVals.size();
         final ClientFactoryOptionValue<?>[] optValArray =
-                optVals.toArray(new ClientFactoryOptionValue[numOpts]);
-        return ClientFactoryOptions.of(optValArray);
-    }
+                optVals.toArray(new ClientFactoryOptionValue[numOpts + 2]);
 
-    /**
-     * Returns a newly-created {@link ClientFactory} based on the properties of this builder.
-     */
-    public ClientFactory build() {
         final EventLoopScheduler eventLoopScheduler;
         if (eventLoopSchedulerFactory != null) {
             eventLoopScheduler = eventLoopSchedulerFactory.apply(workerGroup);
@@ -489,6 +468,7 @@ public final class ClientFactoryBuilder {
                                                                maxNumEventLoopsPerHttp1Endpoint,
                                                                maxNumEventLoopsFunctions);
         }
+        optValArray[numOpts] = ClientFactoryOption.EVENT_LOOP_SCHEDULER.newValue(eventLoopScheduler);
 
         final AddressResolverGroup<InetSocketAddress> addressResolverGroup;
         if (addressResolverGroupFactory != null) {
@@ -503,9 +483,15 @@ public final class ClientFactoryBuilder {
             }
             addressResolverGroup = builder.build(workerGroup);
         }
+        optValArray[numOpts + 1] = ClientFactoryOption.ADDRESS_RESOLVER_GROUP.newValue(addressResolverGroup);
+        return ClientFactoryOptions.of(optValArray);
+    }
 
-        return new DefaultClientFactory(
-                new HttpClientFactory(buildOptions(), eventLoopScheduler, addressResolverGroup));
+    /**
+     * Returns a newly-created {@link ClientFactory} based on the properties of this builder.
+     */
+    public ClientFactory build() {
+        return new DefaultClientFactory(new HttpClientFactory(buildOptions()));
     }
 
     @Override

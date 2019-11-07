@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -27,6 +28,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.resolver.AddressResolverGroup;
 import io.netty.util.ConstantPool;
 
 public final class ClientFactoryOption<T> extends AbstractOption<T> {
@@ -43,11 +45,17 @@ public final class ClientFactoryOption<T> extends AbstractOption<T> {
     public static final ClientFactoryOption<Boolean> SHUTDOWN_WORKER_GROUP_ON_CLOSE =
             valueOf("SHUTDOWN_WORKER_GROUP_ON_CLOSE");
 
+    public static final ClientFactoryOption<EventLoopScheduler> EVENT_LOOP_SCHEDULER =
+            valueOf("EVENT_LOOP_SCHEDULER");
+
     public static final ClientFactoryOption<Map<ChannelOption<?>, Object>> CHANNEL_OPTIONS =
             valueOf("CHANNEL_OPTIONS");
 
     public static final ClientFactoryOption<Consumer<? super SslContextBuilder>> SSL_CONTEXT_CUSTOMIZER =
             valueOf("SSL_CONTEXT_CUSTOMIZER");
+
+    public static final ClientFactoryOption<AddressResolverGroup<InetSocketAddress>> ADDRESS_RESOLVER_GROUP =
+            valueOf("ADDRESS_RESOLVER_GROUP");
 
     public static final ClientFactoryOption<Integer> HTTP2_INITIAL_CONNECTION_WINDOW_SIZE =
             valueOf("HTTP2_INITIAL_CONNECTION_WINDOW_SIZE");
