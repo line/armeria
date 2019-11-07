@@ -12,7 +12,7 @@ export const CreateDefaultRow = (): Row => {
 };
 
 const ValueListContext = React.createContext<
-  ([Row[], Dispatch<SetStateAction<Row[]>>]) | undefined
+  ([string, Dispatch<SetStateAction<string>>]) | undefined
 >(undefined);
 
 export { ValueListContext };

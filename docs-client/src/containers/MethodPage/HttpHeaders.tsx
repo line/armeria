@@ -57,18 +57,21 @@ const HttpHeaders: React.FunctionComponent<Props> = (props) => (
           </>
         )}
         <Typography variant="body2" paragraph />
-        <KeyValueEditor />
-        <TextField
-          multiline
-          fullWidth
-          rows={8}
-          value={props.additionalHeaders}
-          placeholder={jsonPlaceHolder}
-          onChange={props.onHeadersFormChange}
-          inputProps={{
-            className: 'code',
-          }}
+        <KeyValueEditor
+          rowListString={props.additionalHeaders}
+          setRowListString={props.onHeadersFormChange}
         />
+        {/*<TextField*/}
+        {/*  multiline*/}
+        {/*  fullWidth*/}
+        {/*  rows={8}*/}
+        {/*  value={props.additionalHeaders}*/}
+        {/*  placeholder={jsonPlaceHolder}*/}
+        {/*  onChange={props.onHeadersFormChange}*/}
+        {/*  inputProps={{*/}
+        {/*    className: 'code',*/}
+        {/*  }}*/}
+        {/*/>*/}
         <Typography variant="body2" paragraph />
         <FormControlLabel
           control={

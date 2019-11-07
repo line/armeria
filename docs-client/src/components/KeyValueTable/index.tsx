@@ -7,6 +7,7 @@ import TableCell from '@material-ui/core/TableCell';
 import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import DeleteIcon from '@material-ui/icons/Clear';
+import { RowListToStr, StrToRowList } from '../KeyValueEditor';
 import {
   CreateDefaultRow,
   Row,
@@ -74,43 +75,48 @@ const KeyValueTableRow: React.FunctionComponent<RowProps> = ({
 };
 
 interface KeyValueTableProps {
-  defaultKeyValueList?: Row[];
+  defaultKeyValueListString?: string;
   keyName?: string;
   valueName?: string;
 }
 
 const KeyValueTable: React.FunctionComponent<KeyValueTableProps> = ({
-  defaultKeyValueList,
+  defaultKeyValueListString,
   keyName,
   valueName,
 }) => {
   const resultArr:
-    | [Row[], Dispatch<SetStateAction<Row[]>>]
+    | [string, Dispatch<SetStateAction<string>>]
     | undefined = useContext(ValueListContext);
 
   if (!resultArr) throw new Error("KeyValueTable : There's no RowList");
 
-  const [rowList, setRowList] = resultArr;
-  if (defaultKeyValueList) setRowList(defaultKeyValueList);
+  const [rowListString, setRowListString] = resultArr;
+  const rowList = StrToRowList(rowListString);
+  if (defaultKeyValueListString) setRowListString(defaultKeyValueListString);
 
   const onRowRemove = (index: number) => {
     if (rowList.length === 1) return;
-    setRowList(
-      rowList.filter((_, i) => i !== index).map((v, i) => ({ ...v, index: i })),
+    setRowListString(
+      RowListToStr(
+        rowList
+          .filter((_, i) => i !== index)
+          .map((v, i) => ({ ...v, index: i })),
+      ),
     );
   };
 
   const onRowChange = (index: number, name: string, value: string) => {
-    if (!rowList) return;
-
+    if (!rowListString) return;
     const newRowList = rowList.map((row, i) =>
       i === index ? { ...row, [name]: value } : row,
     );
+
     if (index === rowList.length - 1) {
       newRowList.push(CreateDefaultRow());
     }
 
-    setRowList(newRowList);
+    setRowListString(RowListToStr(newRowList));
   };
 
   return (
