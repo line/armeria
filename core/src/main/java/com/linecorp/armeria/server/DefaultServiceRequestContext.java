@@ -25,6 +25,7 @@ import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -43,7 +44,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
-import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.DefaultRequestLog;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -109,6 +110,8 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      * @param ch the {@link Channel} that handles the invocation
      * @param meterRegistry the {@link MeterRegistry} that collects various stats
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
+     * @param uuid the {@link UUID} that represents the unique identifier of the current {@link Request}
+     *             and {@link Response} pair.
      * @param routingContext the parameters which are used when finding a matched {@link Route}
      * @param routingResult the result of finding a matched {@link Route}
      * @param request the request associated with this context
@@ -118,10 +121,10 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      */
     public DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            RoutingContext routingContext, RoutingResult routingResult, HttpRequest request,
+            UUID uuid, RoutingContext routingContext, RoutingResult routingResult, HttpRequest request,
             @Nullable SSLSession sslSession, @Nullable ProxiedAddresses proxiedAddresses,
             InetAddress clientAddress) {
-        this(cfg, ch, meterRegistry, sessionProtocol, routingContext, routingResult, request,
+        this(cfg, ch, meterRegistry, sessionProtocol, uuid, routingContext, routingResult, request,
              sslSession, proxiedAddresses, clientAddress, false, 0, 0);
     }
 
@@ -132,6 +135,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      * @param ch the {@link Channel} that handles the invocation
      * @param meterRegistry the {@link MeterRegistry} that collects various stats
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
+     * @param uuid the {@link UUID} that contains the information about current {@link HttpRequest}
      * @param routingContext the parameters which are used when finding a matched {@link Route}
      * @param routingResult the result of finding a matched {@link Route}
      * @param request the request associated with this context
@@ -144,24 +148,24 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
      */
     public DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            RoutingContext routingContext, RoutingResult routingResult, HttpRequest request,
+            UUID uuid, RoutingContext routingContext, RoutingResult routingResult, HttpRequest request,
             @Nullable SSLSession sslSession, @Nullable ProxiedAddresses proxiedAddresses,
             InetAddress clientAddress, long requestStartTimeNanos, long requestStartTimeMicros) {
-        this(cfg, ch, meterRegistry, sessionProtocol, routingContext, routingResult, request,
+        this(cfg, ch, meterRegistry, sessionProtocol, uuid, routingContext, routingResult, request,
              sslSession, proxiedAddresses, clientAddress, true, requestStartTimeNanos, requestStartTimeMicros);
     }
 
     private DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            RoutingContext routingContext, RoutingResult routingResult, HttpRequest request,
+            UUID uuid, RoutingContext routingContext, RoutingResult routingResult, HttpRequest req,
             @Nullable SSLSession sslSession, @Nullable ProxiedAddresses proxiedAddresses,
             InetAddress clientAddress, boolean requestStartTimeSet, long requestStartTimeNanos,
             long requestStartTimeMicros) {
 
-        super(meterRegistry, sessionProtocol,
+        super(meterRegistry, sessionProtocol, uuid,
               requireNonNull(routingContext, "routingContext").method(), routingContext.path(),
               requireNonNull(routingResult, "routingResult").query(),
-              request);
+              requireNonNull(req, "req"), null);
 
         this.ch = requireNonNull(ch, "ch");
         this.cfg = requireNonNull(cfg, "cfg");
@@ -178,7 +182,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
         } else {
             log.startRequest(ch, sessionProtocol, sslSession);
         }
-        log.requestHeaders(request.headers());
+        log.requestHeaders(req.headers());
 
         // For the server, request headers are processed well before ServiceRequestContext is created. It means
         // there is some delay between the actual channel read and this logging, but it's the best we can do for
@@ -201,12 +205,6 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
 
         return new RequestContextAwareLogger(this, LoggerFactory.getLogger(
                 cfg.server().config().serviceLoggerPrefix() + '.' + loggerName));
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public HttpRequest request() {
-        return super.request();
     }
 
     @Nonnull
@@ -235,15 +233,19 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     }
 
     @Override
-    public ServiceRequestContext newDerivedContext() {
-        return newDerivedContext(request());
-    }
+    public ServiceRequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
+        requireNonNull(req, "req");
+        if (rpcRequest() != null) {
+            requireNonNull(rpcReq, "rpcReq");
+        }
 
-    @Override
-    public ServiceRequestContext newDerivedContext(Request request) {
         final DefaultServiceRequestContext ctx = new DefaultServiceRequestContext(
-                cfg, ch, meterRegistry(), sessionProtocol(), routingContext,
-                routingResult, (HttpRequest) request, sslSession(), proxiedAddresses(), clientAddress);
+                cfg, ch, meterRegistry(), sessionProtocol(), uuid(), routingContext,
+                routingResult, req, sslSession(), proxiedAddresses(), clientAddress);
+
+        if (rpcReq != null) {
+            ctx.updateRpcRequest(rpcReq);
+        }
 
         final HttpHeaders additionalHeaders = additionalResponseHeaders();
         if (!additionalHeaders.isEmpty()) {

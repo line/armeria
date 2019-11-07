@@ -38,6 +38,14 @@ public final class ClientDecorationBuilder {
     private final List<Entry<?, ?>> entries = new ArrayList<>();
 
     /**
+     * Creates a new instance.
+     *
+     * @deprecated Use {@link ClientDecoration#builder()}.
+     */
+    @Deprecated
+    public ClientDecorationBuilder() {}
+
+    /**
      * Adds a new decorator {@link Function}.
      *
      * @param requestType the type of the {@link Request} that the {@code decorator} is interested in

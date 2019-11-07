@@ -68,7 +68,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
 
     private SerializationFormat format = SerializationFormat.NONE;
 
-    private ClientFactory factory = ClientFactory.DEFAULT;
+    private ClientFactory factory = ClientFactory.ofDefault();
 
     /**
      * Creates a new {@link ClientBuilder} that builds the client that connects to the specified {@code uri}.
@@ -117,7 +117,7 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder<ClientBuil
     }
 
     /**
-     * Sets the {@link ClientFactory} of the client. The default is {@link ClientFactory#DEFAULT}.
+     * Sets the {@link ClientFactory} of the client. The default is {@link ClientFactory#ofDefault()}.
      */
     public ClientBuilder factory(ClientFactory factory) {
         this.factory = requireNonNull(factory, "factory");

@@ -54,7 +54,7 @@ class HttpClientSniTest {
 
     static {
         try {
-            final ServerBuilder sb = new ServerBuilder();
+            final ServerBuilder sb = Server.builder();
             sscA = new SelfSignedCertificate("a.com");
             sscB = new SelfSignedCertificate("b.com");
 
@@ -79,10 +79,11 @@ class HttpClientSniTest {
         httpsPort = server.activePorts().values().stream()
                           .filter(ServerPort::hasHttps).findAny().get().localAddress()
                           .getPort();
-        clientFactory = new ClientFactoryBuilder()
-                .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
-                .addressResolverGroupFactory(eventLoopGroup -> MockAddressResolverGroup.localhost())
-                .build();
+        clientFactory =
+                ClientFactory.builder()
+                             .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                             .addressResolverGroupFactory(group -> MockAddressResolverGroup.localhost())
+                             .build();
     }
 
     @AfterAll
@@ -126,11 +127,10 @@ class HttpClientSniTest {
 
     @Test
     void testCustomAuthority() throws Exception {
-        final HttpClient client =
-                new HttpClientBuilder(SessionProtocol.HTTPS,
-                                      Endpoint.of("a.com", httpsPort).withIpAddr("127.0.0.1"))
-                        .factory(clientFactory)
-                        .build();
+        final HttpClient client = HttpClient.builder(SessionProtocol.HTTPS,
+                                                     Endpoint.of("a.com", httpsPort).withIpAddr("127.0.0.1"))
+                                            .factory(clientFactory)
+                                            .build();
 
         final AggregatedHttpResponse response = client.get("/").aggregate().get();
 

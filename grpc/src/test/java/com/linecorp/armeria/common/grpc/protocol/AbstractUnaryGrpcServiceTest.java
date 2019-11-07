@@ -57,9 +57,9 @@ public class AbstractUnaryGrpcServiceTest {
             } catch (InvalidProtocolBufferException e) {
                 throw new UncheckedIOException(e);
             }
-            SimpleResponse response = SimpleResponse.newBuilder()
-                                                    .setPayload(request.getPayload())
-                                                    .build();
+            final SimpleResponse response = SimpleResponse.newBuilder()
+                                                          .setPayload(request.getPayload())
+                                                          .build();
             return CompletableFuture.completedFuture(response.toByteArray());
         }
     }
@@ -74,7 +74,7 @@ public class AbstractUnaryGrpcServiceTest {
 
     @Test
     public void normal_downstream() {
-        TestServiceBlockingStub stub =
+        final TestServiceBlockingStub stub =
                 Clients.newClient(server.httpUri(GrpcSerializationFormats.PROTO, "/"),
                                   TestServiceBlockingStub.class);
         assertThat(stub.unaryCall(SimpleRequest.newBuilder()
@@ -88,12 +88,12 @@ public class AbstractUnaryGrpcServiceTest {
 
     @Test
     public void normal_upstream() {
-        ManagedChannel channel = ManagedChannelBuilder.forAddress("127.0.0.1", server.httpPort())
-                             .usePlaintext()
-                             .build();
+        final ManagedChannel channel = ManagedChannelBuilder.forAddress("127.0.0.1", server.httpPort())
+                                                            .usePlaintext()
+                                                            .build();
 
         try {
-            TestServiceBlockingStub stub = TestServiceGrpc.newBlockingStub(channel);
+            final TestServiceBlockingStub stub = TestServiceGrpc.newBlockingStub(channel);
 
             assertThat(stub.unaryCall(SimpleRequest.newBuilder()
                                                    .setPayload(Payload.newBuilder()

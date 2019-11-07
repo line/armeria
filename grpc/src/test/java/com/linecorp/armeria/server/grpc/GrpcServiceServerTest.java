@@ -56,7 +56,6 @@ import com.google.protobuf.StringValue;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
@@ -386,14 +385,14 @@ class GrpcServiceServerTest {
             sb.maxRequestLength(0);
 
             sb.service(
-                    new GrpcServiceBuilder()
-                            .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
-                            .addService(ServerInterceptors.intercept(
-                                    new UnitTestServiceImpl(),
-                                    REPLACE_EXCEPTION, ADD_TO_CONTEXT))
-                            .enableUnframedRequests(true)
-                            .supportedSerializationFormats(GrpcSerializationFormats.values())
-                            .build(),
+                    GrpcService.builder()
+                               .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
+                               .addService(ServerInterceptors.intercept(
+                                       new UnitTestServiceImpl(),
+                                       REPLACE_EXCEPTION, ADD_TO_CONTEXT))
+                               .enableUnframedRequests(true)
+                               .supportedSerializationFormats(GrpcSerializationFormats.values())
+                               .build(),
                     service -> service
                             .decorate(LoggingService.newDecorator())
                             .decorate((delegate, ctx, req) -> {
@@ -404,16 +403,17 @@ class GrpcServiceServerTest {
             // For simplicity, mount onto a subpath with custom options
             sb.serviceUnder(
                     "/json-preserving/",
-                    new GrpcServiceBuilder()
-                            .addService(new UnitTestServiceImpl())
-                            .supportedSerializationFormats(GrpcSerializationFormats.values())
-                            .jsonMarshallerCustomizer(marshaller -> marshaller.preservingProtoFieldNames(true))
-                            .build());
+                    GrpcService.builder()
+                               .addService(new UnitTestServiceImpl())
+                               .supportedSerializationFormats(GrpcSerializationFormats.values())
+                               .jsonMarshallerCustomizer(
+                                       marshaller -> marshaller.preservingProtoFieldNames(true))
+                               .build());
 
             sb.service(
-                    new GrpcServiceBuilder()
-                            .addService(ProtoReflectionService.newInstance())
-                            .build(),
+                    GrpcService.builder()
+                               .addService(ProtoReflectionService.newInstance())
+                               .build(),
                     service -> service.decorate(LoggingService.newDecorator()));
         }
     };
@@ -425,20 +425,23 @@ class GrpcServiceServerTest {
             sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
             sb.maxRequestLength(0);
 
-            sb.serviceUnder("/", new GrpcServiceBuilder()
-                    .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
-                    .addService(ServerInterceptors.intercept(
-                            new UnitTestServiceImpl(),
-                            REPLACE_EXCEPTION, ADD_TO_CONTEXT))
-                    .enableUnframedRequests(true)
-                    .supportedSerializationFormats(GrpcSerializationFormats.values())
-                    .useBlockingTaskExecutor(true)
-                    .build()
-                    .decorate(LoggingService.newDecorator())
-                    .decorate((delegate, ctx, req) -> {
-                        ctx.log().addListener(requestLogQueue::add, RequestLogAvailability.COMPLETE);
-                        return delegate.serve(ctx, req);
-                    }));
+            sb.serviceUnder("/",
+                            GrpcService.builder()
+                                       .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
+                                       .addService(ServerInterceptors.intercept(
+                                               new UnitTestServiceImpl(),
+                                               REPLACE_EXCEPTION, ADD_TO_CONTEXT))
+                                       .enableUnframedRequests(true)
+                                       .supportedSerializationFormats(
+                                               GrpcSerializationFormats.values())
+                                       .useBlockingTaskExecutor(true)
+                                       .build()
+                                       .decorate(LoggingService.newDecorator())
+                                       .decorate((delegate, ctx, req) -> {
+                                           ctx.log().addListener(requestLogQueue::add,
+                                                                 RequestLogAvailability.COMPLETE);
+                                           return delegate.serve(ctx, req);
+                                       }));
         }
     };
 
@@ -449,14 +452,16 @@ class GrpcServiceServerTest {
             sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
             sb.maxRequestLength(0);
 
-            sb.serviceUnder("/", new GrpcServiceBuilder()
-                    .addService(new UnitTestServiceImpl())
-                    .build()
-                    .decorate(LoggingService.newDecorator())
-                    .decorate((delegate, ctx, req) -> {
-                        ctx.log().addListener(requestLogQueue::add, RequestLogAvailability.COMPLETE);
-                        return delegate.serve(ctx, req);
-                    }));
+            sb.serviceUnder("/",
+                            GrpcService.builder()
+                                       .addService(new UnitTestServiceImpl())
+                                       .build()
+                                       .decorate(LoggingService.newDecorator())
+                                       .decorate((delegate, ctx, req) -> {
+                                           ctx.log().addListener(requestLogQueue::add,
+                                                                 RequestLogAvailability.COMPLETE);
+                                           return delegate.serve(ctx, req);
+                                       }));
         }
     };
 
@@ -467,14 +472,16 @@ class GrpcServiceServerTest {
             sb.workerGroup(EventLoopGroups.newEventLoopGroup(1), true);
             sb.maxRequestLength(Long.MAX_VALUE);
 
-            sb.serviceUnder("/", new GrpcServiceBuilder()
-                    .addService(new UnitTestServiceImpl())
-                    .build()
-                    .decorate(LoggingService.newDecorator())
-                    .decorate((delegate, ctx, req) -> {
-                        ctx.log().addListener(requestLogQueue::add, RequestLogAvailability.COMPLETE);
-                        return delegate.serve(ctx, req);
-                    }));
+            sb.serviceUnder("/",
+                            GrpcService.builder()
+                                       .addService(new UnitTestServiceImpl())
+                                       .build()
+                                       .decorate(LoggingService.newDecorator())
+                                       .decorate((delegate, ctx, req) -> {
+                                           ctx.log().addListener(requestLogQueue::add,
+                                                                 RequestLogAvailability.COMPLETE);
+                                           return delegate.serve(ctx, req);
+                                       }));
         }
     };
 
@@ -770,7 +777,7 @@ class GrpcServiceServerTest {
     }
 
     private static void clientSocketClosedBeforeHalfClose(String protocol) throws Exception {
-        final ClientFactory factory = new ClientFactoryBuilder().build();
+        final ClientFactory factory = ClientFactory.builder().build();
         final UnitTestServiceStub stub =
                 new ClientBuilder("gproto+" + protocol + "://127.0.0.1:" + server.httpPort() + '/')
                         .factory(factory)
@@ -818,7 +825,7 @@ class GrpcServiceServerTest {
     private static void clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol protocol)
             throws Exception {
 
-        final ClientFactory factory = new ClientFactoryBuilder().build();
+        final ClientFactory factory = ClientFactory.builder().build();
         final UnitTestServiceStub stub =
                 new ClientBuilder(server.uri(protocol, GrpcSerializationFormats.PROTO, "/"))
                         .factory(factory)
@@ -1048,7 +1055,7 @@ class GrpcServiceServerTest {
                 assertThat(rpcRes.get()).isEqualTo(RESPONSE_MESSAGE);
             });
 
-            byte[] deframed = Arrays.copyOfRange(payload.get(), 5, payload.get().length);
+            final byte[] deframed = Arrays.copyOfRange(payload.get(), 5, payload.get().length);
             assertThat(new String(deframed, StandardCharsets.UTF_8)).contains("oauthScope");
         });
     }
@@ -1084,7 +1091,7 @@ class GrpcServiceServerTest {
             assertThat(requestHeaders.get().get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo(
                     "application/grpc+json");
 
-            byte[] deframed = Arrays.copyOfRange(payload.get(), 5, payload.get().length);
+            final byte[] deframed = Arrays.copyOfRange(payload.get(), 5, payload.get().length);
             assertThat(new String(deframed, StandardCharsets.UTF_8)).contains("oauth_scope");
         });
     }

@@ -35,6 +35,13 @@ class DefaultHttpHeadersBuilder extends AbstractHttpHeadersBuilder<DefaultHttpHe
         }
 
         final HttpHeadersBase parent = parent();
-        return parent != null ? (HttpHeaders) parent : DefaultHttpHeaders.EMPTY;
+        if (parent != null) {
+            if (parent instanceof HttpHeaders) {
+                return (HttpHeaders) parent;
+            }
+            return updateParent(new DefaultHttpHeaders(parent));
+        }
+
+        return DefaultHttpHeaders.EMPTY;
     }
 }

@@ -30,6 +30,7 @@ import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientOptionsBuilder;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -97,7 +98,7 @@ final class ArmeriaCallFactory implements Factory {
                                           GROUP_PREFIX_MATCHER.matcher(key).replaceFirst("group:") : key;
             final String uriText = sessionProtocol + "://" + finalAuthority;
             return HttpClient.of(
-                    clientFactory, uriText, configurator.apply(uriText, new ClientOptionsBuilder()).build());
+                    clientFactory, uriText, configurator.apply(uriText, ClientOptions.builder()).build());
         });
     }
 

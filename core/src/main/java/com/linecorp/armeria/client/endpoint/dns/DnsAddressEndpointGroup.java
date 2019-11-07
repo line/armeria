@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.endpoint.dns;
 
+import static com.linecorp.armeria.internal.dns.DnsUtil.extractAddressBytes;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,9 +30,8 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.internal.dns.DnsQuestionWithoutTrailingDot;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRawRecord;
@@ -55,7 +56,7 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
      * @param hostname the hostname to query DNS queries for
      */
     public static DnsAddressEndpointGroup of(String hostname) {
-        return new DnsAddressEndpointGroupBuilder(hostname).build();
+        return builder(hostname).build();
     }
 
     /**
@@ -66,7 +67,16 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
      * @param port     the port of the {@link Endpoint}s
      */
     public static DnsAddressEndpointGroup of(String hostname, int port) {
-        return new DnsAddressEndpointGroupBuilder(hostname).port(port).build();
+        return builder(hostname).port(port).build();
+    }
+
+    /**
+     * Returns a new {@link DnsAddressEndpointGroupBuilder} with the specified hostname.
+     *
+     * @param hostname the hostname to query DNS queries for
+     */
+    public static DnsAddressEndpointGroupBuilder builder(String hostname) {
+        return new DnsAddressEndpointGroupBuilder(hostname);
     }
 
     private final String hostname;
@@ -106,14 +116,14 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
             case IPV4_ONLY:
             case IPV4_PREFERRED:
             case IPV6_PREFERRED:
-                builder.add(new DnsQuestionWithoutTrailingDot(hostname, DnsRecordType.A));
+                builder.add(DnsQuestionWithoutTrailingDot.of(hostname, DnsRecordType.A));
                 break;
         }
         switch (resolvedAddressTypes) {
             case IPV6_ONLY:
             case IPV4_PREFERRED:
             case IPV6_PREFERRED:
-                builder.add(new DnsQuestionWithoutTrailingDot(hostname, DnsRecordType.AAAA));
+                builder.add(DnsQuestionWithoutTrailingDot.of(hostname, DnsRecordType.AAAA));
                 break;
         }
         return builder.build();
@@ -134,29 +144,13 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
                 continue;
             }
 
-            final DnsRecordType type = r.type();
-            final ByteBuf content = ((ByteBufHolder) r).content();
-            final int contentLen = content.readableBytes();
-
-            // Skip invalid records.
-            if (type == DnsRecordType.A) {
-                if (contentLen != 4) {
-                    warnInvalidRecord(DnsRecordType.A, content);
-                    continue;
-                }
-            } else if (type == DnsRecordType.AAAA) {
-                if (contentLen != 16) {
-                    warnInvalidRecord(DnsRecordType.AAAA, content);
-                    continue;
-                }
-            } else {
+            final byte[] addrBytes = extractAddressBytes(r, logger(), logPrefix());
+            if (addrBytes == null) {
                 continue;
             }
 
-            // Convert the content into an IP address and then into an endpoint.
             final String ipAddr;
-            final byte[] addrBytes = new byte[contentLen];
-            content.getBytes(content.readerIndex(), addrBytes);
+            final int contentLen = addrBytes.length;
 
             if (contentLen == 16) {
                 // Convert some IPv6 addresses into IPv4 addresses to remove duplicate endpoints.

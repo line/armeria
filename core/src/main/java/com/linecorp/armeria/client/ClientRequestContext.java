@@ -109,7 +109,7 @@ public interface ClientRequestContext extends RequestContext {
      * @see ClientRequestContextBuilder
      */
     static ClientRequestContext of(HttpRequest request) {
-        return ClientRequestContextBuilder.of(request).build();
+        return builder(request).build();
     }
 
     /**
@@ -121,7 +121,7 @@ public interface ClientRequestContext extends RequestContext {
      * @see ClientRequestContextBuilder
      */
     static ClientRequestContext of(RpcRequest request, String uri) {
-        return ClientRequestContextBuilder.of(request, URI.create(requireNonNull(uri, "uri"))).build();
+        return builder(request, URI.create(requireNonNull(uri, "uri"))).build();
     }
 
     /**
@@ -133,29 +133,77 @@ public interface ClientRequestContext extends RequestContext {
      * @see ClientRequestContextBuilder
      */
     static ClientRequestContext of(RpcRequest request, URI uri) {
-        return ClientRequestContextBuilder.of(request, uri).build();
+        return builder(request, uri).build();
     }
+
+    /**
+     * Returns a new {@link ClientRequestContextBuilder} created from the specified {@link HttpRequest}.
+     */
+    static ClientRequestContextBuilder builder(HttpRequest request) {
+        return new ClientRequestContextBuilder(request);
+    }
+
+    /**
+     * Returns a new {@link ClientRequestContextBuilder} created from the specified {@link RpcRequest} and
+     * {@code uri}.
+     */
+    static ClientRequestContextBuilder builder(RpcRequest request, String uri) {
+        return builder(request, URI.create(requireNonNull(uri, "uri")));
+    }
+
+    /**
+     * Returns a new {@link ClientRequestContextBuilder} created from the specified {@link RpcRequest} and
+     * {@link URI}.
+     */
+    static ClientRequestContextBuilder builder(RpcRequest request, URI uri) {
+        return new ClientRequestContextBuilder(request, uri);
+    }
+
+    /**
+     * {@inheritDoc} For example, when you send an RPC request, this method will return {@code null} until
+     * the RPC request is translated into an HTTP request.
+     */
+    @Nullable
+    @Override
+    HttpRequest request();
+
+    /**
+     * {@inheritDoc} For example, this method will return {@code null} when you are not sending an RPC request
+     * but just a plain HTTP request.
+     */
+    @Nullable
+    @Override
+    RpcRequest rpcRequest();
 
     /**
      * Creates a new {@link ClientRequestContext} whose properties and {@link Attribute}s are copied from this
      * {@link ClientRequestContext}, except having its own {@link RequestLog}.
      */
     @Override
-    ClientRequestContext newDerivedContext();
+    default ClientRequestContext newDerivedContext() {
+        final Endpoint endpoint = endpoint();
+        checkState(endpoint != null, "endpoint not available");
+        return newDerivedContext(request(), rpcRequest(), endpoint);
+    }
 
     /**
      * Creates a new {@link ClientRequestContext} whose properties and {@link Attribute}s are copied from this
      * {@link ClientRequestContext}, except having a different {@link Request} and its own {@link RequestLog}.
      */
     @Override
-    ClientRequestContext newDerivedContext(Request request);
+    default ClientRequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
+        final Endpoint endpoint = endpoint();
+        checkState(endpoint != null, "endpoint not available");
+        return newDerivedContext(req, rpcReq, endpoint);
+    }
 
     /**
      * Creates a new {@link ClientRequestContext} whose properties and {@link Attribute}s are copied from this
      * {@link ClientRequestContext}, except having different {@link Request}, {@link Endpoint} and its own
      * {@link RequestLog}.
      */
-    ClientRequestContext newDerivedContext(Request request, Endpoint endpoint);
+    ClientRequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
+                                           Endpoint endpoint);
 
     /**
      * Returns the {@link EndpointSelector} used for the current {@link Request}.

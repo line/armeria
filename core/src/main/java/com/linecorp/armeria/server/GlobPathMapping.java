@@ -89,7 +89,7 @@ final class GlobPathMapping extends AbstractPathMapping {
             return null;
         }
 
-        final RoutingResultBuilder builder = RoutingResult.builder()
+        final RoutingResultBuilder builder = RoutingResult.builderWithExpectedNumParams(numParams)
                                                           .path(routingCtx.path())
                                                           .query(routingCtx.query());
         for (int i = 1; i <= numParams; i++) {

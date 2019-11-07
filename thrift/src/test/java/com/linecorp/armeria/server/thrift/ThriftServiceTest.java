@@ -57,7 +57,6 @@ import com.linecorp.armeria.common.thrift.text.Response;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 import com.linecorp.armeria.service.test.thrift.main.BinaryService;
 import com.linecorp.armeria.service.test.thrift.main.DevNullService;
 import com.linecorp.armeria.service.test.thrift.main.FileService;
@@ -697,14 +696,13 @@ class ThriftServiceTest {
         req.close();
 
         final ServiceRequestContext ctx =
-                ServiceRequestContextBuilder.of(req)
-                                            .eventLoop(eventLoop.get())
-                                            .serverConfigurator(builder -> {
-                                                builder.blockingTaskExecutor(ImmediateEventExecutor.INSTANCE,
-                                                                             false);
-                                                builder.verboseResponses(true);
-                                            })
-                                            .build();
+                ServiceRequestContext.builder(req)
+                                     .eventLoop(eventLoop.get())
+                                     .serverConfigurator(builder -> {
+                                         builder.blockingTaskExecutor(ImmediateEventExecutor.INSTANCE, false);
+                                         builder.verboseResponses(true);
+                                     })
+                                     .build();
 
         final HttpResponse res = service.serve(ctx, req);
         res.aggregate().handle(voidFunction((aReq, cause) -> {

@@ -19,7 +19,6 @@ import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
@@ -65,7 +64,7 @@ import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.StringRequestConverterFunction;
-import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
+import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.spring.ArmeriaAutoConfigurationTest.TestConfiguration;
@@ -102,7 +101,9 @@ public class ArmeriaAutoConfigurationTest {
                     .setExceptionHandlers(ImmutableList.of(new IllegalArgumentExceptionHandler()))
                     .setRequestConverters(ImmutableList.of(new StringRequestConverterFunction()))
                     .setResponseConverters(ImmutableList.of(new StringResponseConverter()))
-                    .addExampleRequest("post", "{\"foo\":\"bar\"}");
+                    .addExampleRequests("post", "{\"foo\":\"bar\"}")
+                    .addExampleHeaders("x-additional-header", "headerVal")
+                    .addExampleHeaders("get", "x-additional-header", "headerVal");
         }
 
         @Bean
@@ -112,26 +113,27 @@ public class ArmeriaAutoConfigurationTest {
                     .setService(THttpService.of((HelloService.Iface) name -> "hello " + name))
                     .setPath("/thrift")
                     .setDecorators(ImmutableList.of(LoggingService.newDecorator()))
-                    .setExampleRequests(Collections.singleton(new hello_args("nameVal")))
-                    .setExampleHeaders(Collections.singleton(HttpHeaders.of(
-                            HttpHeaderNames.of("x-additional-header"), "headerVal")));
+                    .addExampleRequests(new hello_args("nameVal"))
+                    .addExampleHeaders("x-additional-header", "headerVal")
+                    .addExampleHeaders("hello", "x-additional-header", "headerVal");
         }
 
         @Bean
         public GrpcServiceRegistrationBean helloGrpcService() {
             return new GrpcServiceRegistrationBean()
                     .setServiceName("helloGrpcService")
-                    .setService(new GrpcServiceBuilder()
-                                        .addService(new HelloGrpcService())
-                                        .supportedSerializationFormats(GrpcSerializationFormats.values())
-                                        .enableUnframedRequests(true)
-                                        .build())
+                    .setService(GrpcService.builder()
+                                           .addService(new HelloGrpcService())
+                                           .supportedSerializationFormats(GrpcSerializationFormats.values())
+                                           .enableUnframedRequests(true)
+                                           .build())
                     .setDecorators(LoggingService.newDecorator())
-                    .setExampleRequests(ImmutableList.of(GrpcExampleRequest.of(HelloServiceGrpc.SERVICE_NAME,
-                                                                               "Hello",
-                                                                               HelloRequest.newBuilder()
-                                                                                           .setName("Armeria")
-                                                                                           .build())));
+                    .addExampleRequests(HelloServiceGrpc.SERVICE_NAME,
+                                        "Hello",
+                                        HelloRequest.newBuilder().setName("Armeria").build())
+                    .addExampleHeaders(HelloServiceGrpc.SERVICE_NAME, "x-additional-header", "headerVal")
+                    .addExampleHeaders(HelloServiceGrpc.SERVICE_NAME, "Hello", "x-additional-header",
+                                       "headerVal");
         }
     }
 
@@ -245,6 +247,11 @@ public class ArmeriaAutoConfigurationTest {
                 "com.linecorp.armeria.spring.ArmeriaAutoConfigurationTest$AnnotatedService");
         assertThatJson(res.contentUtf8())
                 .node("services[0].methods[2].exampleRequests[0]").isStringEqualTo("{\"foo\":\"bar\"}");
+        assertThatJson(res.contentUtf8())
+                .node("services[0].exampleHttpHeaders[0].x-additional-header").isStringEqualTo("headerVal");
+        assertThatJson(res.contentUtf8())
+                .node("services[0].methods[0].exampleHttpHeaders[0].x-additional-header")
+                .isStringEqualTo("headerVal");
     }
 
     @Test
@@ -263,6 +270,9 @@ public class ArmeriaAutoConfigurationTest {
                 "com.linecorp.armeria.spring.test.thrift.main.HelloService");
         assertThatJson(res.contentUtf8())
                 .node("services[2].exampleHttpHeaders[0].x-additional-header").isStringEqualTo("headerVal");
+        assertThatJson(res.contentUtf8())
+                .node("services[0].methods[0].exampleHttpHeaders[0].x-additional-header")
+                .isStringEqualTo("headerVal");
     }
 
     @Test
@@ -282,7 +292,10 @@ public class ArmeriaAutoConfigurationTest {
         assertThatJson(res.contentUtf8()).node("services[1].name").isStringEqualTo(
                 "com.linecorp.armeria.spring.test.grpc.main.HelloService");
         assertThatJson(res.contentUtf8())
-                .node("services[1].exampleHttpHeaders").isEqualTo(Collections.emptyList());
+                .node("services[1].exampleHttpHeaders[0].x-additional-header").isStringEqualTo("headerVal");
+        assertThatJson(res.contentUtf8())
+                .node("services[1].methods[0].exampleHttpHeaders[0].x-additional-header")
+                .isStringEqualTo("headerVal");
     }
 
     @Test

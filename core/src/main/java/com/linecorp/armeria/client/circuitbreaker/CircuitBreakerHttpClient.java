@@ -100,6 +100,23 @@ public final class CircuitBreakerHttpClient extends CircuitBreakerClient<HttpReq
         return newDecorator(CircuitBreakerMapping.perHostAndMethod(factory), strategy);
     }
 
+    /**
+     * Returns a new {@link CircuitBreakerHttpClientBuilder} with
+     * the specified {@link CircuitBreakerStrategy}.
+     */
+    public static CircuitBreakerHttpClientBuilder builder(CircuitBreakerStrategy strategy) {
+        return new CircuitBreakerHttpClientBuilder(strategy);
+    }
+
+    /**
+     * Returns a new {@link CircuitBreakerHttpClientBuilder} with
+     * the specified {@link CircuitBreakerStrategyWithContent}.
+     */
+    public static CircuitBreakerHttpClientBuilder builder(
+            CircuitBreakerStrategyWithContent<HttpResponse> strategyWithContent) {
+        return new CircuitBreakerHttpClientBuilder(strategyWithContent);
+    }
+
     private final boolean needsContentInStrategy;
 
     /**

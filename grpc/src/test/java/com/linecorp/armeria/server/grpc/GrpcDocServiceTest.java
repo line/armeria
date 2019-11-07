@@ -53,7 +53,7 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
-import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
+import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.grpc.GrpcDocServicePlugin.ServiceEntry;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -104,11 +104,12 @@ public class GrpcDocServiceTest {
             if (TestUtil.isDocServiceDemoMode()) {
                 sb.http(8080);
             }
-            sb.serviceUnder("/test", new GrpcServiceBuilder()
-                    .addService(new TestService())
-                    .supportedSerializationFormats(GrpcSerializationFormats.values())
-                    .enableUnframedRequests(true)
-                    .build());
+            sb.serviceUnder("/test",
+                            GrpcService.builder()
+                                       .addService(new TestService())
+                                       .supportedSerializationFormats(GrpcSerializationFormats.values())
+                                       .enableUnframedRequests(true)
+                                       .build());
             sb.serviceUnder(
                     "/docs/",
                     new DocServiceBuilder()
@@ -128,9 +129,10 @@ public class GrpcDocServiceTest {
             sb.serviceUnder("/excludeAll/", new DocServiceBuilder()
                     .exclude(DocServiceFilter.ofGrpc())
                     .build());
-            sb.serviceUnder("/", new GrpcServiceBuilder()
-                    .addService(mock(ReconnectServiceImplBase.class))
-                    .build());
+            sb.serviceUnder("/",
+                            GrpcService.builder()
+                                       .addService(mock(ReconnectServiceImplBase.class))
+                                       .build());
         }
     };
 
@@ -141,19 +143,19 @@ public class GrpcDocServiceTest {
         }
         final List<ServiceEntry> entries = ImmutableList.of(
                 new ServiceEntry(TEST_SERVICE_DESCRIPTOR, ImmutableList.of(
-                        new EndpointInfoBuilder("*", "/test/armeria.grpc.testing.TestService/")
-                                .availableMimeTypes(GrpcSerializationFormats.PROTO.mediaType(),
-                                                    GrpcSerializationFormats.JSON.mediaType(),
-                                                    GrpcSerializationFormats.PROTO_WEB.mediaType(),
-                                                    GrpcSerializationFormats.JSON_WEB.mediaType(),
-                                                    MediaType.PROTOBUF.withParameter("protocol", "gRPC"),
-                                                    MediaType.JSON_UTF_8.withParameter("protocol", "gRPC"))
-                                .build())),
+                        EndpointInfo.builder("*", "/test/armeria.grpc.testing.TestService/")
+                                    .availableMimeTypes(GrpcSerializationFormats.PROTO.mediaType(),
+                                                        GrpcSerializationFormats.JSON.mediaType(),
+                                                        GrpcSerializationFormats.PROTO_WEB.mediaType(),
+                                                        GrpcSerializationFormats.JSON_WEB.mediaType(),
+                                                        MediaType.PROTOBUF.withParameter("protocol", "gRPC"),
+                                                        MediaType.JSON_UTF_8.withParameter("protocol", "gRPC"))
+                                    .build())),
                 new ServiceEntry(RECONNECT_SERVICE_DESCRIPTOR, ImmutableList.of(
-                        new EndpointInfoBuilder("*", "/armeria.grpc.testing.ReconnectService/")
-                                .availableFormats(GrpcSerializationFormats.PROTO,
-                                                  GrpcSerializationFormats.PROTO_WEB)
-                                .build())));
+                        EndpointInfo.builder("*", "/armeria.grpc.testing.ReconnectService/")
+                                    .availableFormats(GrpcSerializationFormats.PROTO,
+                                                      GrpcSerializationFormats.PROTO_WEB)
+                                    .build())));
         final JsonNode expectedJson = mapper.valueToTree(new GrpcDocServicePlugin().generate(
                 entries, unifyFilter((plugin, service, method) -> true,
                                      DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME,

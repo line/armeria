@@ -19,17 +19,17 @@ package com.linecorp.armeria.server.docs;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.MediaType;
 
-public class EndpointInfoBuilderTest {
+class EndpointInfoBuilderTest {
 
     @Test
-    public void testBuild() {
-        final EndpointInfoBuilder endpointInfoBuilder = new EndpointInfoBuilder("*", "/foo");
+    void testBuild() {
+        final EndpointInfoBuilder endpointInfoBuilder = EndpointInfo.builder("*", "/foo");
         final EndpointInfo endpointInfo = endpointInfoBuilder.availableMimeTypes(MediaType.JSON_UTF_8)
                                                              .build();
         assertThat(endpointInfo).isEqualTo(new EndpointInfo("*", "/foo", "", "", null,
@@ -37,22 +37,22 @@ public class EndpointInfoBuilderTest {
     }
 
     @Test
-    public void shouldHaveAtLeastOneMimeType() {
-        final EndpointInfoBuilder endpointInfoBuilder = new EndpointInfoBuilder("*", "/foo");
+    void shouldHaveAtLeastOneMimeType() {
+        final EndpointInfoBuilder endpointInfoBuilder = EndpointInfo.builder("*", "/foo");
         assertThatThrownBy(endpointInfoBuilder::build).isExactlyInstanceOf(IllegalStateException.class);
     }
 
     @Test
-    public void cannotSetBothPrefixAndFragment() {
-        final EndpointInfoBuilder endpointInfoBuilder = new EndpointInfoBuilder("*", "/foo");
+    void cannotSetBothPrefixAndFragment() {
+        final EndpointInfoBuilder endpointInfoBuilder = EndpointInfo.builder("*", "/foo");
         endpointInfoBuilder.regexPathPrefix("/prefix/");
         assertThatThrownBy(() -> endpointInfoBuilder.fragment("/fragment"))
                 .isExactlyInstanceOf(IllegalStateException.class);
     }
 
     @Test
-    public void defaultTypeIsAddedToAvailableTypes() {
-        EndpointInfoBuilder endpointInfoBuilder = new EndpointInfoBuilder("*", "/foo");
+    void defaultTypeIsAddedToAvailableTypes() {
+        EndpointInfoBuilder endpointInfoBuilder = EndpointInfo.builder("*", "/foo");
         // Add the defaultMiMeType first.
         endpointInfoBuilder.defaultMimeType(MediaType.JSON_UTF_8);
         endpointInfoBuilder.availableMimeTypes(MediaType.JSON_PATCH);
@@ -60,7 +60,7 @@ public class EndpointInfoBuilderTest {
         assertThat(endpointInfo.availableMimeTypes()).containsExactlyInAnyOrder(MediaType.JSON_UTF_8,
                                                                                 MediaType.JSON_PATCH);
 
-        endpointInfoBuilder = new EndpointInfoBuilder("*", "/foo");
+        endpointInfoBuilder = EndpointInfo.builder("*", "/foo");
         // Add the availableMimeTypes first.
         endpointInfoBuilder.availableMimeTypes(MediaType.JSON_PATCH);
         endpointInfoBuilder.defaultMimeType(MediaType.JSON_UTF_8);

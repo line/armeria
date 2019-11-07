@@ -40,7 +40,10 @@ public final class DnsAddressEndpointGroupBuilder
      * Creates a new instance that builds a {@link DnsAddressEndpointGroup} for the specified {@code hostname}.
      *
      * @param hostname the hostname to query DNS queries for
+     *
+     * @deprecated Use {@link DnsAddressEndpointGroup#builder(String)}.
      */
+    @Deprecated
     public DnsAddressEndpointGroupBuilder(String hostname) {
         super(hostname);
     }

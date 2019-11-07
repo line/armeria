@@ -62,6 +62,8 @@ public class JsonTextSequencesTest {
                                new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT)))
               .service("/seq/single",
                        (ctx, req) -> JsonTextSequences.fromObject("foo"));
+            sb.disableServerHeader();
+            sb.disableDateHeader();
         }
     };
 

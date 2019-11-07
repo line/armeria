@@ -37,7 +37,6 @@ import com.codahale.metrics.Sampling;
 
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
 import com.linecorp.armeria.common.metric.DropwizardMeterRegistries;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
@@ -70,7 +69,7 @@ public class DropwizardMetricsIntegrationTest {
     };
 
     private static final ClientFactory clientFactory =
-            new ClientFactoryBuilder().meterRegistry(registry).build();
+            ClientFactory.builder().meterRegistry(registry).build();
 
     @AfterClass
     public static void closeClientFactory() {
@@ -94,8 +93,6 @@ public class DropwizardMetricsIntegrationTest {
             assertThat(dropwizardRegistry.getMeters()
                                          .get(clientMetricNameWithStatusAndResult("requests", 200, "failure"))
                                          .getCount()).isEqualTo(3L);
-            System.err.println(dropwizardRegistry.getMeters());
-            System.err.println(serverMetricNameWithStatusAndResult("requests", 200, "failure"));
             assertThat(dropwizardRegistry.getMeters()
                                          .get(serverMetricNameWithStatusAndResult("requests", 200, "failure"))
                                          .getCount()).isEqualTo(3L);

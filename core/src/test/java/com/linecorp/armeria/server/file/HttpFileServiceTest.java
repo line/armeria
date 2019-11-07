@@ -110,6 +110,17 @@ class HttpFileServiceTest {
                                           .build());
 
             sb.serviceUnder(
+                    "/cached/by-entry/classes/",
+                    HttpFileServiceBuilder.forClassPath("/")
+                                          .entryCacheSpec("maximumSize=512")
+                                          .build());
+            sb.serviceUnder(
+                    "/uncached/by-entry/classes/",
+                    HttpFileServiceBuilder.forClassPath("/")
+                                          .entryCacheSpec("off")
+                                          .build());
+
+            sb.serviceUnder(
                     "/cached/",
                     HttpFileService.forClassPath(baseResourceDir + "foo")
                                    .orElse(HttpFileService.forClassPath(baseResourceDir + "bar")));
@@ -146,7 +157,7 @@ class HttpFileServiceTest {
             assert304NotModified(hc, baseUri, "/foo.txt", etag, lastModified);
 
             // Confirm file service paths are cached when cache is enabled.
-            if (baseUri.contains("/cached/")) {
+            if (baseUri.contains("/cached")) {
                 assertThat(PathAndQuery.cachedPaths()).contains("/cached/foo.txt");
             }
         }
@@ -171,6 +182,11 @@ class HttpFileServiceTest {
                          hc.execute(new HttpGet(baseUri + "/classes/java/lang/Object.class"))) {
                 assert200Ok(res, null, content -> assertThat(content).isNotEmpty());
             }
+            // Read a class from a JDK module (java.base).
+            try (CloseableHttpResponse res =
+                         hc.execute(new HttpGet(baseUri + "/by-entry/classes/java/lang/Object.class"))) {
+                assert200Ok(res, null, content -> assertThat(content).isNotEmpty());
+            }
         }
     }
 
@@ -181,6 +197,11 @@ class HttpFileServiceTest {
             // Read a class from a third-party library JAR.
             try (CloseableHttpResponse res =
                          hc.execute(new HttpGet(baseUri + "/classes/io/netty/util/NetUtil.class"))) {
+                assert200Ok(res, null, content -> assertThat(content).isNotEmpty());
+            }
+            // Read a class from a third-party library JAR.
+            try (CloseableHttpResponse res =
+                         hc.execute(new HttpGet(baseUri + "/by-entry/classes/io/netty/util/NetUtil.class"))) {
                 assert200Ok(res, null, content -> assertThat(content).isNotEmpty());
             }
         }
@@ -224,7 +245,7 @@ class HttpFileServiceTest {
         Files.write(grandchildFile, "grandchild_file".getBytes(StandardCharsets.UTF_8));
         Files.write(customIndexFile, "custom_index_file".getBytes(StandardCharsets.UTF_8));
 
-        String basePath = new URI(baseUri).getPath();
+        final String basePath = new URI(baseUri).getPath();
 
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             // Ensure auto-redirect works as expected.

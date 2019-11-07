@@ -62,7 +62,7 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.DecoratingClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.ResponseTimeoutException;
-import com.linecorp.armeria.client.logging.LoggingClientBuilder;
+import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -98,7 +98,7 @@ import com.linecorp.armeria.internal.grpc.TestServiceImpl;
 import com.linecorp.armeria.internal.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
+import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
@@ -111,6 +111,7 @@ import io.grpc.ServerCall.Listener;
 import io.grpc.ServerCallHandler;
 import io.grpc.ServerInterceptor;
 import io.grpc.ServerInterceptors;
+import io.grpc.ServerServiceDefinition;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.grpc.StatusException;
@@ -140,50 +141,53 @@ public class GrpcClientTest {
             sb.maxRequestLength(MAX_MESSAGE_SIZE);
             sb.idleTimeoutMillis(0);
 
-            sb.serviceUnder("/", new GrpcServiceBuilder()
-                    .addService(
-                            ServerInterceptors.intercept(
-                                    new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()),
-                                    new ServerInterceptor() {
-                                        @Override
-                                        public <REQ, RESP> Listener<REQ> interceptCall(
-                                                ServerCall<REQ, RESP> call,
-                                                Metadata requestHeaders,
-                                                ServerCallHandler<REQ, RESP> next) {
-                                            HttpHeadersBuilder fromClient = HttpHeaders.builder();
-                                            MetadataUtil.fillHeaders(requestHeaders, fromClient);
-                                            CLIENT_HEADERS_CAPTURE.set(fromClient.build());
-                                            return next.startCall(
-                                                    new SimpleForwardingServerCall<REQ, RESP>(call) {
-                                                        @Override
-                                                        public void close(Status status, Metadata trailers) {
-                                                            trailers.merge(requestHeaders);
-                                                            super.close(status, trailers);
-                                                        }
-                                                    }, requestHeaders);
-                                        }
-                                    }))
-                    .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
-                    .setMaxOutboundMessageSizeBytes(MAX_MESSAGE_SIZE)
-                    .build()
-                    .decorate((client, ctx, req) -> {
-                        final HttpResponse res = client.serve(ctx, req);
-                        return new FilteredHttpResponse(res) {
-                            private boolean headersReceived;
-
-                            @Override
-                            protected HttpObject filter(HttpObject obj) {
-                                if (obj instanceof HttpHeaders) {
-                                    if (!headersReceived) {
-                                        headersReceived = true;
-                                    } else {
-                                        SERVER_TRAILERS_CAPTURE.set((HttpHeaders) obj);
-                                    }
+            final ServerServiceDefinition interceptService =
+                    ServerInterceptors.intercept(
+                            new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()),
+                            new ServerInterceptor() {
+                                @Override
+                                public <REQ, RESP> Listener<REQ> interceptCall(
+                                        ServerCall<REQ, RESP> call,
+                                        Metadata requestHeaders,
+                                        ServerCallHandler<REQ, RESP> next) {
+                                    final HttpHeadersBuilder fromClient = HttpHeaders.builder();
+                                    MetadataUtil.fillHeaders(requestHeaders, fromClient);
+                                    CLIENT_HEADERS_CAPTURE.set(fromClient.build());
+                                    return next.startCall(
+                                            new SimpleForwardingServerCall<REQ, RESP>(call) {
+                                                @Override
+                                                public void close(Status status, Metadata trailers) {
+                                                    trailers.merge(requestHeaders);
+                                                    super.close(status, trailers);
+                                                }
+                                            }, requestHeaders);
                                 }
-                                return obj;
-                            }
-                        };
-                    }));
+                            });
+
+            sb.serviceUnder("/",
+                            GrpcService.builder()
+                                       .addService(interceptService)
+                                       .setMaxInboundMessageSizeBytes(MAX_MESSAGE_SIZE)
+                                       .setMaxOutboundMessageSizeBytes(MAX_MESSAGE_SIZE)
+                                       .build()
+                                       .decorate((client, ctx, req) -> {
+                                           final HttpResponse res = client.serve(ctx, req);
+                                           return new FilteredHttpResponse(res) {
+                                               private boolean headersReceived;
+
+                                               @Override
+                                               protected HttpObject filter(HttpObject obj) {
+                                                   if (obj instanceof HttpHeaders) {
+                                                       if (!headersReceived) {
+                                                           headersReceived = true;
+                                                       } else {
+                                                           SERVER_TRAILERS_CAPTURE.set((HttpHeaders) obj);
+                                                       }
+                                                   }
+                                                   return obj;
+                                               }
+                                           };
+                                       }));
         }
     };
 
@@ -205,11 +209,11 @@ public class GrpcClientTest {
         final URI uri = URI.create(server.httpUri("/"));
         blockingStub = new ClientBuilder("gproto+" + uri)
                 .maxResponseLength(MAX_MESSAGE_SIZE)
-                .decorator(new LoggingClientBuilder().newDecorator())
+                .decorator(LoggingClient.builder().newDecorator())
                 .decorator(requestLogRecorder)
                 .build(TestServiceBlockingStub.class);
         asyncStub = new ClientBuilder("gproto+" + uri.getScheme(), Endpoint.of(uri.getHost(), uri.getPort()))
-                .decorator(new LoggingClientBuilder().newDecorator())
+                .decorator(LoggingClient.builder().newDecorator())
                 .decorator(requestLogRecorder)
                 .build(TestServiceStub.class);
     }
@@ -231,7 +235,7 @@ public class GrpcClientTest {
 
     @Test
     public void emptyUnary_grpcWeb() throws Exception {
-        TestServiceBlockingStub stub = new ClientBuilder("gproto-web+" + server.httpUri("/"))
+        final TestServiceBlockingStub stub = new ClientBuilder("gproto-web+" + server.httpUri("/"))
                 .build(TestServiceBlockingStub.class);
         assertThat(stub.emptyCall(EMPTY)).isEqualTo(EMPTY);
     }
@@ -277,7 +281,7 @@ public class GrpcClientTest {
 
         final TestServiceStub stub = new ClientBuilder("gproto+" + server.httpUri("/"))
                 .option(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS.newValue(true))
-                .decorator(new LoggingClientBuilder().newDecorator())
+                .decorator(LoggingClient.builder().newDecorator())
                 .build(TestServiceStub.class);
 
         final BlockingQueue<Object> resultQueue = new LinkedTransferQueue<>();
@@ -803,8 +807,8 @@ public class GrpcClientTest {
                         ClientOption.HTTP_HEADERS.newValue(
                                 HttpHeaders.of(TestServiceImpl.EXTRA_HEADER_NAME, "dog")));
 
-        AtomicReference<Metadata> headers = new AtomicReference<>();
-        AtomicReference<Metadata> trailers = new AtomicReference<>();
+        final AtomicReference<Metadata> headers = new AtomicReference<>();
+        final AtomicReference<Metadata> trailers = new AtomicReference<>();
         stub = MetadataUtils.captureMetadata(stub, headers, trailers);
 
         assertThat(stub.emptyCall(EMPTY)).isNotNull();
@@ -827,13 +831,13 @@ public class GrpcClientTest {
 
     @Test
     public void exchangeHeadersUnaryCall_grpcMetadata() throws Exception {
-        Metadata metadata = new Metadata();
+        final Metadata metadata = new Metadata();
         metadata.put(TestServiceImpl.EXTRA_HEADER_KEY, "dog");
 
         TestServiceBlockingStub stub = MetadataUtils.attachHeaders(blockingStub, metadata);
 
-        AtomicReference<Metadata> headers = new AtomicReference<>();
-        AtomicReference<Metadata> trailers = new AtomicReference<>();
+        final AtomicReference<Metadata> headers = new AtomicReference<>();
+        final AtomicReference<Metadata> trailers = new AtomicReference<>();
         stub = MetadataUtils.captureMetadata(stub, headers, trailers);
 
         assertThat(stub.emptyCall(EMPTY)).isNotNull();

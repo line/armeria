@@ -24,7 +24,6 @@ import org.junit.Test;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
@@ -83,8 +82,8 @@ public class RetryingClientAuthorityHeaderTest {
                 Endpoint.of("www.bar.com", backend2.httpPort()).withIpAddr("127.0.0.1"));
         EndpointGroupRegistry.register("backends", endpointGroup, EndpointSelectionStrategy.ROUND_ROBIN);
 
-        return new HttpClientBuilder("h2c://group:backends")
-                .decorator(RetryingHttpClient.newDecorator(RetryStrategy.onServerErrorStatus()))
-                .build();
+        return HttpClient.builder("h2c://group:backends")
+                         .decorator(RetryingHttpClient.newDecorator(RetryStrategy.onServerErrorStatus()))
+                         .build();
     }
 }

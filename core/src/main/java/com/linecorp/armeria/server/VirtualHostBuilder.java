@@ -27,6 +27,7 @@ import static com.linecorp.armeria.server.VirtualHost.normalizeHostnamePattern;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.security.cert.CertificateException;
 import java.time.Duration;
@@ -38,6 +39,7 @@ import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 
 import org.slf4j.Logger;
@@ -48,12 +50,12 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.SslContextUtil;
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpService;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceElement;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory;
 import com.linecorp.armeria.internal.crypto.BouncyCastleKeyFactoryProvider;
@@ -62,6 +64,7 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.ApplicationProtocolConfig;
 import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
@@ -70,6 +73,7 @@ import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.ReferenceCountUtil;
 
 /**
  * Builds a new {@link VirtualHost}.
@@ -93,6 +97,46 @@ public final class VirtualHostBuilder {
             ApplicationProtocolNames.HTTP_2,
             ApplicationProtocolNames.HTTP_1_1);
 
+    /**
+     * Validate {@code sslContext} is configured properly. If {@code sslContext} is configured as client
+     * context, or key store password is not given to key store when {@code sslContext} is created using key
+     * manager factory, the validation will fail and an {@link SSLException} will be raised.
+     */
+    private static SslContext validateSslContext(SslContext sslContext) throws SSLException {
+        if (!sslContext.isServer()) {
+            throw new IllegalArgumentException("sslContext: " + sslContext + " (expected: server context)");
+        }
+
+        SSLEngine serverEngine = null;
+        SSLEngine clientEngine = null;
+
+        try {
+            serverEngine = sslContext.newEngine(ByteBufAllocator.DEFAULT);
+            serverEngine.setUseClientMode(false);
+            serverEngine.setNeedClientAuth(false);
+
+            final SslContext sslContextClient =
+                    buildSslContext(SslContextBuilder::forClient, sslContextBuilder -> {});
+            clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
+            clientEngine.setUseClientMode(true);
+
+            final ByteBuffer appBuf = ByteBuffer.allocate(clientEngine.getSession().getApplicationBufferSize());
+            final ByteBuffer packetBuf = ByteBuffer.allocate(clientEngine.getSession().getPacketBufferSize());
+
+            clientEngine.wrap(appBuf, packetBuf);
+            appBuf.clear();
+            packetBuf.flip();
+            serverEngine.unwrap(packetBuf, appBuf);
+        } catch (SSLException e) {
+            throw new SSLException("failed to validate SSL/TLS configuration: " + e.getMessage(), e);
+        } finally {
+            ReferenceCountUtil.release(serverEngine);
+            ReferenceCountUtil.release(clientEngine);
+        }
+
+        return sslContext;
+    }
+
     private final ServerBuilder serverBuilder;
     private final boolean defaultVirtualHost;
     private final List<ServiceConfigBuilder> serviceConfigBuilders = new ArrayList<>();
@@ -103,8 +147,7 @@ public final class VirtualHostBuilder {
     @Nullable
     private SslContext sslContext;
     private boolean tlsSelfSigned;
-    @Nullable
-    private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
+    private final List<RouteDecoratingService> routeDecoratingServices = new ArrayList<>();
     @Nullable
     private Function<VirtualHost, Logger> accessLoggerMapper;
 
@@ -169,10 +212,10 @@ public final class VirtualHostBuilder {
     /**
      * Configures SSL or TLS of this {@link VirtualHost} with the specified {@link SslContext}.
      */
-    public VirtualHostBuilder tls(SslContext sslContext) {
+    public VirtualHostBuilder tls(SslContext sslContext) throws SSLException {
         checkState(this.sslContext == null, "sslContext is already set: %s", this.sslContext);
 
-        this.sslContext = VirtualHost.validateSslContext(requireNonNull(sslContext, "sslContext"));
+        this.sslContext = validateSslContext(requireNonNull(sslContext, "sslContext"));
         return this;
     }
 
@@ -271,47 +314,6 @@ public final class VirtualHostBuilder {
     }
 
     /**
-     * Sets the {@link SslContext} of this {@link VirtualHost}.
-     *
-     * @deprecated Use {@link #tls(SslContext)}.
-     */
-    @Deprecated
-    public VirtualHostBuilder sslContext(SslContext sslContext) {
-        return tls(sslContext);
-    }
-
-    /**
-     * Sets the {@link SslContext} of this {@link VirtualHost} from the specified {@link SessionProtocol},
-     * {@code keyCertChainFile} and cleartext {@code keyFile}.
-     *
-     * @deprecated Use {@link #tls(File, File)}.
-     */
-    @Deprecated
-    public VirtualHostBuilder sslContext(
-            SessionProtocol protocol, File keyCertChainFile, File keyFile) throws SSLException {
-        sslContext(protocol, keyCertChainFile, keyFile, null);
-        return this;
-    }
-
-    /**
-     * Sets the {@link SslContext} of this {@link VirtualHost} from the specified {@link SessionProtocol},
-     * {@code keyCertChainFile}, {@code keyFile} and {@code keyPassword}.
-     *
-     * @deprecated Use {@link #tls(File, File, String)}.
-     */
-    @Deprecated
-    public VirtualHostBuilder sslContext(
-            SessionProtocol protocol,
-            File keyCertChainFile, File keyFile, @Nullable String keyPassword) throws SSLException {
-
-        if (requireNonNull(protocol, "protocol") != SessionProtocol.HTTPS) {
-            throw new IllegalArgumentException("unsupported protocol: " + protocol);
-        }
-
-        return tls(keyCertChainFile, keyFile, keyPassword);
-    }
-
-    /**
      * Configures a {@link Service} of the {@link VirtualHost} with the {@code customizer}.
      */
     public VirtualHostBuilder withRoute(Consumer<VirtualHostServiceBindingBuilder> customizer) {
@@ -325,6 +327,14 @@ public final class VirtualHostBuilder {
      */
     public VirtualHostServiceBindingBuilder route() {
         return new VirtualHostServiceBindingBuilder(this);
+    }
+
+    /**
+     * Returns a {@link VirtualHostDecoratingServiceBindingBuilder} which is for binding
+     * a {@code decorator} fluently.
+     */
+    public VirtualHostDecoratingServiceBindingBuilder routeDecorator() {
+        return new VirtualHostDecoratingServiceBindingBuilder(this);
     }
 
     /**
@@ -343,7 +353,7 @@ public final class VirtualHostBuilder {
      */
     public VirtualHostBuilder serviceUnder(String pathPrefix,
                                            Service<HttpRequest, HttpResponse> service) {
-        service(Route.builder().prefix(pathPrefix).build(), service);
+        service(Route.builder().pathPrefix(pathPrefix).build(), service);
         return this;
     }
 
@@ -541,25 +551,84 @@ public final class VirtualHostBuilder {
 
         final List<AnnotatedHttpServiceElement> elements =
                 AnnotatedHttpServiceFactory.find(pathPrefix, service, exceptionHandlersAndConverters);
-        elements.forEach(e -> {
-            Service<HttpRequest, HttpResponse> s = e.service();
-            // Apply decorators which are specified in the service class.
-            s = e.decorator().apply(s);
-            // Apply decorators which are passed via annotatedService() methods.
-            s = decorator.apply(s);
-
-            // If there is a decorator, we should add one more decorator which handles an exception
-            // raised from decorators.
-            if (s != e.service()) {
-                s = e.service().exceptionHandlingDecorator().apply(s);
-            }
-            service(e.route(), s);
-        });
+        registerHttpServiceElement(elements, decorator);
         return this;
+    }
+
+    /**
+     * Binds the specified annotated service object under the specified path prefix.
+     *
+     * @param exceptionHandlerFunctions a list of {@link ExceptionHandlerFunction}
+     * @param requestConverterFunctions a list of {@link RequestConverterFunction}
+     * @param responseConverterFunctions a list of {@link ResponseConverterFunction}
+     */
+    public VirtualHostBuilder annotatedService(
+            String pathPrefix, Object service,
+            Function<Service<HttpRequest, HttpResponse>,
+                    ? extends Service<HttpRequest, HttpResponse>> decorator,
+            List<ExceptionHandlerFunction> exceptionHandlerFunctions,
+            List<RequestConverterFunction> requestConverterFunctions,
+            List<ResponseConverterFunction> responseConverterFunctions) {
+        requireNonNull(pathPrefix, "pathPrefix");
+        requireNonNull(service, "service");
+        requireNonNull(decorator, "decorator");
+        requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
+        requireNonNull(requestConverterFunctions, "requestConverterFunctions");
+        requireNonNull(responseConverterFunctions, "responseConverterFunctions");
+
+        final List<AnnotatedHttpServiceElement> elements =
+                AnnotatedHttpServiceFactory.find(pathPrefix, service, exceptionHandlerFunctions,
+                                                 requestConverterFunctions,
+                                                 responseConverterFunctions);
+        registerHttpServiceElement(elements, decorator);
+        return this;
+    }
+
+    /**
+     * Returns a new instance of {@link VirtualHostAnnotatedServiceBindingBuilder} to build
+     * {@link AnnotatedHttpService} fluently.
+     */
+    public VirtualHostAnnotatedServiceBindingBuilder annotatedService() {
+        return new VirtualHostAnnotatedServiceBindingBuilder(this);
+    }
+
+    /**
+     * Converts each of the {@link AnnotatedHttpServiceElement} to {@link ServiceConfigBuilder} and
+     * registers it with {@link VirtualHostBuilder}.
+     */
+    private void registerHttpServiceElement(List<AnnotatedHttpServiceElement> elements,
+                                            Function<Service<HttpRequest, HttpResponse>,
+                                                    ? extends Service<HttpRequest, HttpResponse>> decorator) {
+        elements.forEach(element -> {
+            final Service<HttpRequest, HttpResponse> decoratedService =
+                    element.buildSafeDecoratedService(decorator);
+            final ServiceConfigBuilder serviceConfigBuilder =
+                    new ServiceConfigBuilder(element.route(), decoratedService);
+            serverBuilder.serviceConfigBuilder(serviceConfigBuilder);
+        });
     }
 
     VirtualHostBuilder serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder) {
         serviceConfigBuilders.add(serviceConfigBuilder);
+        return this;
+    }
+
+    VirtualHostBuilder serviceConfigBuilders(List<ServiceConfigBuilder> serviceConfigBuilders) {
+        this.serviceConfigBuilders.addAll(serviceConfigBuilders);
+        return this;
+    }
+
+    List<ServiceConfigBuilder> serviceConfigBuilders() {
+        return serviceConfigBuilders;
+    }
+
+    VirtualHostBuilder routeDecoratingService(RouteDecoratingService routeDecoratingService) {
+        routeDecoratingServices.add(routeDecoratingService);
+        return this;
+    }
+
+    VirtualHostBuilder routeDecoratingServices(List<RouteDecoratingService> routeDecoratingServices) {
+        this.routeDecoratingServices.addAll(routeDecoratingServices);
         return this;
     }
 
@@ -572,31 +641,93 @@ public final class VirtualHostBuilder {
      */
     public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
     VirtualHostBuilder decorator(Function<T, R> decorator) {
-
-        requireNonNull(decorator, "decorator");
-
-        @SuppressWarnings("unchecked")
-        final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> castDecorator =
-                (Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>>) decorator;
-
-        if (this.decorator != null) {
-            this.decorator = this.decorator.andThen(castDecorator);
-        } else {
-            this.decorator = castDecorator;
-        }
-
-        return this;
+        return decorator(Route.builder().catchAll().build(), decorator);
     }
 
     /**
      * Decorates all {@link Service}s with the specified {@link DecoratingServiceFunction}.
      *
-     * @param decoratingServiceFunction the {@link DecoratingServiceFunction} that decorates a {@link Service}.
+     * @param decoratingServiceFunction the {@link DecoratingServiceFunction} that decorates a {@link Service}
      */
     public VirtualHostBuilder decorator(
             DecoratingServiceFunction<HttpRequest, HttpResponse> decoratingServiceFunction) {
+        return decorator(Route.builder().catchAll().build(), decoratingServiceFunction);
+    }
+
+    /**
+     * Decorates {@link Service}s whose {@link Route} matches the specified {@code pathPattern}.
+     *
+     * @param decoratingServiceFunction the {@link DecoratingServiceFunction} that decorates a {@link Service}
+     */
+    public VirtualHostBuilder decorator(
+            String pathPattern,
+            DecoratingServiceFunction<HttpRequest, HttpResponse> decoratingServiceFunction) {
+        return decorator(Route.builder().path(pathPattern).build(), decoratingServiceFunction);
+    }
+
+    /**
+     * Decorates {@link Service}s whose {@link Route} matches the specified {@code pathPattern}.
+     *
+     * @param <T> the type of the {@link Service} being decorated
+     * @param <R> the type of the {@link Service} {@code decorator} will produce
+     */
+    public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
+    VirtualHostBuilder decorator(String pathPattern, Function<T, R> decorator) {
+        return decorator(Route.builder().path(pathPattern).build(), decorator);
+    }
+
+    /**
+     * Decorates {@link Service}s whose {@link Route} matches the specified {@link Route}.
+     *
+     * @param route the route being decorated
+     * @param decorator the {@link Function} that decorates {@link Service}
+     * @param <T> the type of the {@link Service} being decorated
+     * @param <R> the type of the {@link Service} {@code decorator} will produce
+     */
+    public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
+    VirtualHostBuilder decorator(Route route, Function<T, R> decorator) {
+        requireNonNull(route, "route");
+        requireNonNull(decorator, "decorator");
+        @SuppressWarnings("unchecked")
+        final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> castDecorator =
+                (Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>>) decorator;
+        return routeDecoratingService(new RouteDecoratingService(route, castDecorator));
+    }
+
+    /**
+     * Decorates {@link Service}s whose {@link Route} matches the specified {@link Route}.
+     *
+     * @param route the route being decorated
+     * @param decoratingServiceFunction the {@link DecoratingServiceFunction} that decorates {@link Service}
+     */
+    public VirtualHostBuilder decorator(
+            Route route,
+            DecoratingServiceFunction<HttpRequest, HttpResponse> decoratingServiceFunction) {
         requireNonNull(decoratingServiceFunction, "decoratingServiceFunction");
-        return decorator(delegate -> new FunctionalDecoratingService<>(delegate, decoratingServiceFunction));
+        return decorator(route,
+                         delegate -> new FunctionalDecoratingService<>(delegate, decoratingServiceFunction));
+    }
+
+    /**
+     * Decorates {@link Service}s under the specified directory.
+     *
+     * @param <T> the type of the {@link Service} being decorated
+     * @param <R> the type of the {@link Service} {@code decorator} will produce
+     */
+    public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
+    VirtualHostBuilder decoratorUnder(String prefix, Function<T, R> decorator) {
+        return decorator(Route.builder().pathPrefix(prefix).build(), decorator);
+    }
+
+    /**
+     * Decorates {@link Service}s under the specified directory.
+     *
+     * @param decoratingServiceFunction the {@link DecoratingServiceFunction} that decorates a {@link Service}
+     */
+    public VirtualHostBuilder decoratorUnder(
+            String prefix,
+            DecoratingServiceFunction<HttpRequest, HttpResponse> decoratingServiceFunction) {
+        return decorator(Route.builder().pathPrefix(prefix).build(), decoratingServiceFunction);
     }
 
     /**
@@ -831,6 +962,14 @@ public final class VirtualHostBuilder {
         final Function<VirtualHost, Logger> accessLoggerMapper =
                 this.accessLoggerMapper != null ? this.accessLoggerMapper : serverBuilder.accessLoggerMapper();
 
+        final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
+        if (!routeDecoratingServices.isEmpty()) {
+            decorator = RouteDecoratingService.newDecorator(
+                    Routers.ofRouteDecoratingService(routeDecoratingServices));
+        } else {
+            decorator = null;
+        }
+
         final VirtualHost virtualHost =
                 new VirtualHost(defaultHostname, hostnamePattern, sslContext, serviceConfigs,
                                 rejectedRouteHandler,
@@ -849,7 +988,7 @@ public final class VirtualHostBuilder {
                           .add("serviceConfigBuilders", serviceConfigBuilders)
                           .add("sslContext", sslContext)
                           .add("tlsSelfSigned", tlsSelfSigned)
-                          .add("decorator", decorator)
+                          .add("routeDecoratingServices", routeDecoratingServices)
                           .add("accessLoggerMapper", accessLoggerMapper)
                           .add("rejectedRouteHandler", rejectedRouteHandler)
                           .add("requestTimeoutMillis", requestTimeoutMillis)

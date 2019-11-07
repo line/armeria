@@ -26,13 +26,13 @@ class ClientFactoryBuilderTest {
 
     @Test
     void addressResolverGroupFactoryAndDomainNameResolverCustomizerAreMutuallyExclusive() {
-        final ClientFactoryBuilder builder1 = new ClientFactoryBuilder();
+        final ClientFactoryBuilder builder1 = ClientFactory.builder();
         builder1.addressResolverGroupFactory(eventLoopGroup -> null);
         assertThatThrownBy(() -> builder1.domainNameResolverCustomizer(b -> {}))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("mutually exclusive");
 
-        final ClientFactoryBuilder builder2 = new ClientFactoryBuilder();
+        final ClientFactoryBuilder builder2 = ClientFactory.builder();
         builder2.domainNameResolverCustomizer(b -> {});
         assertThatThrownBy(() -> builder2.addressResolverGroupFactory(eventLoopGroup -> null))
                 .isInstanceOf(IllegalStateException.class)
@@ -41,14 +41,14 @@ class ClientFactoryBuilderTest {
 
     @Test
     void maxNumEventLoopsAndEventLoopSchedulerFactoryAreMutuallyExclusive() {
-        final ClientFactoryBuilder builder1 = new ClientFactoryBuilder();
+        final ClientFactoryBuilder builder1 = ClientFactory.builder();
         builder1.maxNumEventLoopsPerEndpoint(2);
 
         assertThrows(IllegalStateException.class,
                      () -> builder1.eventLoopSchedulerFactory(
                              eventLoopGroup -> mock(EventLoopScheduler.class)));
 
-        final ClientFactoryBuilder builder2 = new ClientFactoryBuilder();
+        final ClientFactoryBuilder builder2 = ClientFactory.builder();
         builder2.eventLoopSchedulerFactory(eventLoopGroup -> mock(EventLoopScheduler.class));
 
         final IllegalStateException cause = assertThrows(IllegalStateException.class,

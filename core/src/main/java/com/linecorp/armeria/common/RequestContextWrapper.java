@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.SocketAddress;
 import java.util.Iterator;
+import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -59,13 +60,24 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     }
 
     @Override
-    public <E extends Request> E request() {
+    public HttpRequest request() {
         return delegate().request();
     }
 
+    @Nullable
     @Override
-    public boolean updateRequest(Request req) {
-        return delegate().updateRequest(req);
+    public RpcRequest rpcRequest() {
+        return delegate().rpcRequest();
+    }
+
+    @Override
+    public void updateRequest(HttpRequest req) {
+        delegate().updateRequest(req);
+    }
+
+    @Override
+    public void updateRpcRequest(RpcRequest rpcReq) {
+        delegate().updateRpcRequest(rpcReq);
     }
 
     @Override
@@ -89,6 +101,11 @@ public abstract class RequestContextWrapper<T extends RequestContext> extends Ab
     @Override
     public SSLSession sslSession() {
         return delegate().sslSession();
+    }
+
+    @Override
+    public UUID uuid() {
+        return delegate().uuid();
     }
 
     @Override

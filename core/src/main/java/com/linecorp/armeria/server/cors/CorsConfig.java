@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.cors;
 
 import static java.util.Objects.requireNonNull;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -200,26 +199,6 @@ public final class CorsConfig {
         @Override
         public String toString() {
             return String.valueOf(value);
-        }
-    }
-
-    /**
-     * This {@link Supplier} is used for the {@code "Date"} preflight HTTP response header.
-     * It's value must be generated when the response is generated, hence will be
-     * different for every call.
-     */
-    static final class InstantValueSupplier implements Supplier<Instant> {
-
-        static final InstantValueSupplier INSTANCE = new InstantValueSupplier();
-
-        @Override
-        public Instant get() {
-            return Instant.now();
-        }
-
-        @Override
-        public String toString() {
-            return "<now>";
         }
     }
 }

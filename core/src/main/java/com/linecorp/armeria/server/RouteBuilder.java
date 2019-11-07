@@ -44,7 +44,7 @@ import com.linecorp.armeria.common.MediaType;
 /**
  * Builds a new {@link Route}.
  */
-public class RouteBuilder {
+public final class RouteBuilder {
 
     @Nullable
     private PathMapping pathMapping;
@@ -54,6 +54,8 @@ public class RouteBuilder {
     private Set<MediaType> consumes = ImmutableSet.of();
 
     private Set<MediaType> produces = ImmutableSet.of();
+
+    RouteBuilder() {}
 
     /**
      * Sets the {@link Route} to match the specified {@code pathPattern}. e.g.
@@ -71,6 +73,48 @@ public class RouteBuilder {
      */
     public RouteBuilder path(String pathPattern) {
         return pathMapping(getPathMapping(pathPattern));
+    }
+
+    /**
+     * Sets the {@link Route} to match the specified {@code prefix} and {@code pathPattern}. The mapped
+     * {@link Service} is found when a {@linkplain ServiceRequestContext#path() path} is under
+     * the specified {@code prefix} and the rest of the path matches the specified {@code pathPattern}.
+     *
+     * @see #path(String)
+     */
+    public RouteBuilder path(String prefix, String pathPattern) {
+        prefix = ensureAbsolutePath(prefix, "prefix");
+        if (!prefix.endsWith("/")) {
+            prefix += '/';
+        }
+
+        if ("/".equals(prefix)) {
+            // pathPrefix is not specified or "/".
+            return path(pathPattern);
+        }
+
+        if (pathPattern.startsWith("/")) {
+            return path(concatPaths(prefix, pathPattern));
+        }
+
+        if (pathPattern.startsWith(EXACT)) {
+            return exact(concatPaths(prefix, pathPattern.substring(EXACT.length())));
+        }
+
+        if (pathPattern.startsWith(PREFIX)) {
+            return pathPrefix(concatPaths(prefix, pathPattern.substring(PREFIX.length())));
+        }
+
+        if (pathPattern.startsWith(GLOB)) {
+            final String glob = pathPattern.substring(GLOB.length());
+            if (glob.startsWith("/")) {
+                return glob(concatPaths(prefix, glob));
+            } else {
+                return glob(concatPaths(prefix + "**/", glob), 1);
+            }
+        }
+
+        return pathMapping(new RegexPathMappingWithPrefix(prefix, getPathMapping(pathPattern)));
     }
 
     private static PathMapping globPathMapping(String glob, int numGroupsToSkip) {
@@ -104,10 +148,13 @@ public class RouteBuilder {
      *   <li>{@code "/foo/bar"} translates to  {@code "/bar"}</li>
      *   <li>{@code "/foo/bar/baz"} translates to {@code "/bar/baz"}</li>
      * </ul>
-     * This method is a shortcut to {@linkplain #prefix(String, boolean) prefix(prefix, true)}.
+     * This method is a shortcut to {@linkplain #pathPrefix(String, boolean) pathPrefix(prefix, true)}.
+     *
+     * @deprecated Use {@link #pathPrefix(String)}
      */
+    @Deprecated
     public RouteBuilder prefix(String prefix) {
-        return prefix(prefix, true);
+        return pathPrefix(prefix, true);
     }
 
     /**
@@ -120,8 +167,42 @@ public class RouteBuilder {
      *   <li>{@code "/foo/bar"} translates to  {@code "/bar"}</li>
      *   <li>{@code "/foo/bar/baz"} translates to {@code "/bar/baz"}</li>
      * </ul>
+     *
+     * @deprecated Use {@link #pathPrefix(String, boolean)}
      */
+    @Deprecated
     public RouteBuilder prefix(String prefix, boolean stripPrefix) {
+        return pathPrefix(prefix, stripPrefix);
+    }
+
+    /**
+     * Sets the {@link Route} to match when a {@linkplain ServiceRequestContext#path() path} is under the
+     * specified {@code prefix}. It also removes the specified {@code prefix} from the matched path so that
+     * {@linkplain ServiceRequestContext#mappedPath() mappedPath} does not have the specified {@code prefix}.
+     * For example, when {@code prefix} is {@code "/foo/"}:
+     * <ul>
+     *   <li>{@code "/foo/"} translates to {@code "/"}</li>
+     *   <li>{@code "/foo/bar"} translates to {@code "/bar"}</li>
+     *   <li>{@code "/foo/bar/baz"} translates to {@code "/bar/baz"}</li>
+     * </ul>
+     * This method is a shortcut to {@linkplain #pathPrefix(String, boolean) pathPrefix(prefix, true)}.
+     */
+    public RouteBuilder pathPrefix(String prefix) {
+        return pathPrefix(prefix, true);
+    }
+
+    /**
+     * Sets the {@link Route} to match when a {@linkplain ServiceRequestContext#path() path} is under the
+     * specified {@code prefix}. When {@code stripPrefix} is {@code true}, it also removes the specified
+     * {@code prefix} from the matched path so that {@linkplain ServiceRequestContext#path() mappedPath}
+     * does not have the specified {@code prefix}. For example, when {@code prefix} is {@code "/foo/"}:
+     * <ul>
+     *   <li>{@code "/foo/"} translates to {@code "/"}</li>
+     *   <li>{@code "/foo/bar"} translates to {@code "/bar"}</li>
+     *   <li>{@code "/foo/bar/baz"} translates to {@code "/bar/baz"}</li>
+     * </ul>
+     */
+    public RouteBuilder pathPrefix(String prefix, boolean stripPrefix) {
         return pathMapping(prefixPathMapping(requireNonNull(prefix, "prefix"), stripPrefix));
     }
 
@@ -170,41 +251,11 @@ public class RouteBuilder {
      * {@link Service} is found when a {@linkplain ServiceRequestContext#path() path} is under
      * the specified {@code prefix} and the rest of the path matches the specified {@code pathPattern}.
      *
-     * @see #path(String)
+     * @deprecated Use {@linkplain #path(String, String) path(prefix, pathPattern)}
      */
+    @Deprecated
     public RouteBuilder pathWithPrefix(String prefix, String pathPattern) {
-        prefix = ensureAbsolutePath(prefix, "prefix");
-        if (!prefix.endsWith("/")) {
-            prefix += '/';
-        }
-
-        if ("/".equals(prefix)) {
-            // pathPrefix is not specified or "/".
-            return path(pathPattern);
-        }
-
-        if (pathPattern.startsWith("/")) {
-            return path(concatPaths(prefix, pathPattern));
-        }
-
-        if (pathPattern.startsWith(EXACT)) {
-            return exact(concatPaths(prefix, pathPattern.substring(EXACT.length())));
-        }
-
-        if (pathPattern.startsWith(PREFIX)) {
-            return prefix(concatPaths(prefix, pathPattern.substring(PREFIX.length())));
-        }
-
-        if (pathPattern.startsWith(GLOB)) {
-            final String glob = pathPattern.substring(GLOB.length());
-            if (glob.startsWith("/")) {
-                return glob(concatPaths(prefix, glob));
-            } else {
-                return glob(concatPaths(prefix + "**/", glob), 1);
-            }
-        }
-
-        return pathMapping(new RegexPathMappingWithPrefix(prefix, getPathMapping(pathPattern)));
+        return path(prefix, pathPattern);
     }
 
     /**

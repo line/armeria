@@ -120,8 +120,9 @@ class CircuitBreakerRpcClientTest {
 
     @Test
     void testDelegate() throws Exception {
-        final CircuitBreaker circuitBreaker = new CircuitBreakerBuilder(remoteServiceName).ticker(() -> 0)
-                                                                                          .build();
+        final CircuitBreaker circuitBreaker = CircuitBreaker.builder(remoteServiceName)
+                                                            .ticker(() -> 0)
+                                                            .build();
 
         @SuppressWarnings("unchecked")
         final Client<RpcRequest, RpcResponse> delegate = mock(Client.class);
@@ -252,13 +253,13 @@ class CircuitBreakerRpcClientTest {
     }
 
     private static CircuitBreaker buildCircuitBreaker(Ticker ticker) {
-        return new CircuitBreakerBuilder(remoteServiceName)
-                .minimumRequestThreshold(minimumRequestThreshold)
-                .circuitOpenWindow(circuitOpenWindow)
-                .counterSlidingWindow(counterSlidingWindow)
-                .counterUpdateInterval(counterUpdateInterval)
-                .ticker(ticker)
-                .build();
+        return CircuitBreaker.builder(remoteServiceName)
+                             .minimumRequestThreshold(minimumRequestThreshold)
+                             .circuitOpenWindow(circuitOpenWindow)
+                             .counterSlidingWindow(counterSlidingWindow)
+                             .counterUpdateInterval(counterUpdateInterval)
+                             .ticker(ticker)
+                             .build();
     }
 
     private static void failFastInvocation(

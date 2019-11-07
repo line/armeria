@@ -14,6 +14,7 @@
  * under the License.
  */
 
+import jsonPrettify from '../json-prettify';
 import { Method } from '../specification';
 
 import Transport from './transport';
@@ -51,7 +52,11 @@ export default class GrpcUnframedTransport extends Transport {
       method: 'POST',
       body: bodyJson,
     });
-    const response = await httpResponse.text();
-    return response;
+    const contentType = httpResponse.headers.get('content-type');
+    const text = await httpResponse.text();
+    if (contentType && contentType.startsWith('application/json')) {
+      return jsonPrettify(text);
+    }
+    return text;
   }
 }

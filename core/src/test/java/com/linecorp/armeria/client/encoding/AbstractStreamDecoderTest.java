@@ -36,7 +36,7 @@ abstract class AbstractStreamDecoderTest {
     private static final byte[] PAYLOAD;
 
     static {
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        final ByteArrayOutputStream bos = new ByteArrayOutputStream();
         try (DeflaterOutputStream zip = new DeflaterOutputStream(bos, new Deflater(-1, true))) {
             zip.write(new byte[] { 1, 2, 3, 4, 5 });
         } catch (IOException e) {
@@ -52,7 +52,7 @@ abstract class AbstractStreamDecoderTest {
         final StreamDecoder decoder = newDecoder();
         final ByteBuf buf = ByteBufAllocator.DEFAULT.buffer();
         buf.writeBytes(PAYLOAD);
-        HttpData data = decoder.decode(new ByteBufHttpData(buf, false));
+        final HttpData data = decoder.decode(new ByteBufHttpData(buf, false));
         assertThat(buf.refCnt()).isZero();
         assertThat(data).isInstanceOfSatisfying(ByteBufHolder.class, d -> assertThat(d.refCnt()).isEqualTo(1));
         ((ByteBufHolder) data).release();
@@ -61,7 +61,7 @@ abstract class AbstractStreamDecoderTest {
     @Test
     public void empty_unpooled() {
         final StreamDecoder decoder = newDecoder();
-        HttpData data = decoder.decode(HttpData.EMPTY_DATA);
+        final HttpData data = decoder.decode(HttpData.EMPTY_DATA);
         assertThat(data).isNotInstanceOf(ByteBufHolder.class);
     }
 
@@ -69,7 +69,7 @@ abstract class AbstractStreamDecoderTest {
     public void empty_pooled() {
         final StreamDecoder decoder = newDecoder();
         final ByteBuf buf = ByteBufAllocator.DEFAULT.buffer();
-        HttpData data = decoder.decode(new ByteBufHttpData(buf, false));
+        final HttpData data = decoder.decode(new ByteBufHttpData(buf, false));
         assertThat(buf.refCnt()).isZero();
 
         // Even for a pooled empty input, the result is unpooled since there's no point in pooling empty

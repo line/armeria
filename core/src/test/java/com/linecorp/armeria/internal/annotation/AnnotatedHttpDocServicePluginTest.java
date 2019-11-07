@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.annotation;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.BEAN;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.INT;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpDocServicePlugin.LONG;
@@ -31,6 +32,7 @@ import static com.linecorp.armeria.server.docs.FieldLocation.QUERY;
 import static com.linecorp.armeria.server.docs.FieldRequirement.REQUIRED;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +43,7 @@ import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -58,18 +60,17 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
+import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfo;
-import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldInfo;
-import com.linecorp.armeria.server.docs.FieldInfoBuilder;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.TypeSignature;
 
-public class AnnotatedHttpDocServicePluginTest {
+class AnnotatedHttpDocServicePluginTest {
 
     private static final String FOO_NAME = FooClass.class.getName();
 
@@ -78,7 +79,7 @@ public class AnnotatedHttpDocServicePluginTest {
     private static final AnnotatedHttpDocServicePlugin plugin = new AnnotatedHttpDocServicePlugin();
 
     @Test
-    public void testToTypeSignature() throws Exception {
+    void testToTypeSignature() throws Exception {
         assertThat(toTypeSignature(Void.class)).isEqualTo(TypeSignature.ofBase("void"));
         assertThat(toTypeSignature(void.class)).isEqualTo(TypeSignature.ofBase("void"));
         assertThat(toTypeSignature(Boolean.class)).isEqualTo(TypeSignature.ofBase("boolean"));
@@ -147,66 +148,66 @@ public class AnnotatedHttpDocServicePluginTest {
     }
 
     @Test
-    public void testNewEndpointInfo() {
+    void testNewEndpointInfo() {
         final String hostnamePattern = "*";
 
         Route route = withMethodAndTypes(Route.builder().path("/path"));
         EndpointInfo endpointInfo = endpointInfo(route, hostnamePattern);
-        assertThat(endpointInfo).isEqualTo(new EndpointInfoBuilder("*", "exact:/path")
-                                                   .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8,
-                                                                       MediaType.JSON_UTF_8)
-                                                   .build());
+        assertThat(endpointInfo).isEqualTo(EndpointInfo.builder("*", "exact:/path")
+                                                       .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8,
+                                                                           MediaType.JSON_UTF_8)
+                                                       .build());
 
         route = withMethodAndTypes(Route.builder().path("prefix:/bar/baz"));
         endpointInfo = endpointInfo(route, hostnamePattern);
-        assertThat(endpointInfo).isEqualTo(new EndpointInfoBuilder("*", "prefix:/bar/baz/")
-                                                   .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8,
-                                                                       MediaType.JSON_UTF_8)
-                                                   .build());
+        assertThat(endpointInfo).isEqualTo(EndpointInfo.builder("*", "prefix:/bar/baz/")
+                                                       .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8,
+                                                                           MediaType.JSON_UTF_8)
+                                                       .build());
 
         route = withMethodAndTypes(Route.builder().path("glob:/home/*/files/**"));
         endpointInfo = endpointInfo(route, hostnamePattern);
-        assertThat(endpointInfo).isEqualTo(new EndpointInfoBuilder("*", "regex:^/home/([^/]+)/files/(.*)$")
-                                                   .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8,
-                                                                       MediaType.JSON_UTF_8)
-                                                   .build());
+        assertThat(endpointInfo).isEqualTo(EndpointInfo.builder("*", "regex:^/home/([^/]+)/files/(.*)$")
+                                                       .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8,
+                                                                           MediaType.JSON_UTF_8)
+                                                       .build());
 
         route = withMethodAndTypes(Route.builder().path("glob:/foo"));
         endpointInfo = endpointInfo(route, hostnamePattern);
-        assertThat(endpointInfo).isEqualTo(new EndpointInfoBuilder("*", "exact:/foo")
-                                                   .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8,
-                                                                       MediaType.JSON_UTF_8)
-                                                   .build());
+        assertThat(endpointInfo).isEqualTo(EndpointInfo.builder("*", "exact:/foo")
+                                                       .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8,
+                                                                           MediaType.JSON_UTF_8)
+                                                       .build());
 
         route = withMethodAndTypes(Route.builder().path("regex:^/files/(?<filePath>.*)$"));
         endpointInfo = endpointInfo(route, hostnamePattern);
-        assertThat(endpointInfo).isEqualTo(new EndpointInfoBuilder("*", "regex:^/files/(?<filePath>.*)$")
-                                                   .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8,
-                                                                       MediaType.JSON_UTF_8)
-                                                   .build());
+        assertThat(endpointInfo).isEqualTo(EndpointInfo.builder("*", "regex:^/files/(?<filePath>.*)$")
+                                                       .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8,
+                                                                           MediaType.JSON_UTF_8)
+                                                       .build());
 
         route = withMethodAndTypes(Route.builder().path("/service/{value}/test/:value2/something"));
         endpointInfo = endpointInfo(route, hostnamePattern);
         assertThat(endpointInfo).isEqualTo(
-                new EndpointInfoBuilder("*", "/service/{value}/test/{value2}/something")
-                        .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8, MediaType.JSON_UTF_8)
-                        .build());
+                EndpointInfo.builder("*", "/service/{value}/test/{value2}/something")
+                            .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8, MediaType.JSON_UTF_8)
+                            .build());
 
-        route = withMethodAndTypes(Route.builder().pathWithPrefix("/glob/", "glob:/home/*/files/**"));
+        route = withMethodAndTypes(Route.builder().path("/glob/", "glob:/home/*/files/**"));
         endpointInfo = endpointInfo(route, hostnamePattern);
         assertThat(endpointInfo).isEqualTo(
-                new EndpointInfoBuilder("*", "regex:^/glob/home/([^/]+)/files/(.*)$")
-                        .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8, MediaType.JSON_UTF_8)
-                        .build());
+                EndpointInfo.builder("*", "regex:^/glob/home/([^/]+)/files/(.*)$")
+                            .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8, MediaType.JSON_UTF_8)
+                            .build());
 
         route = withMethodAndTypes(Route.builder()
-                                        .pathWithPrefix("/prefix: regex:/", "regex:^/files/(?<filePath>.*)$"));
+                                        .path("/prefix: regex:/", "regex:^/files/(?<filePath>.*)$"));
         endpointInfo = endpointInfo(route, hostnamePattern);
         assertThat(endpointInfo).isEqualTo(
-                new EndpointInfoBuilder("*", "regex:^/files/(?<filePath>.*)$")
-                        .regexPathPrefix("prefix:/prefix: regex:/")
-                        .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8, MediaType.JSON_UTF_8)
-                        .build());
+                EndpointInfo.builder("*", "regex:^/files/(?<filePath>.*)$")
+                            .regexPathPrefix("prefix:/prefix: regex:/")
+                            .availableMimeTypes(MediaType.PLAIN_TEXT_UTF_8, MediaType.JSON_UTF_8)
+                            .build());
     }
 
     private static Route withMethodAndTypes(RouteBuilder builder) {
@@ -217,9 +218,11 @@ public class AnnotatedHttpDocServicePluginTest {
     }
 
     @Test
-    public void testGenerateSpecification() {
+    void testGenerateSpecification() {
         final Map<String, ServiceInfo> services = services((plugin, service, method) -> true,
-                                                           (plugin, service, method) -> false);
+                                                           (plugin, service, method) -> false,
+                                                           new FooClass(),
+                                                           new BarClass());
 
         assertThat(services).containsOnlyKeys(FOO_NAME, BAR_NAME);
         checkFooService(services.get(FOO_NAME));
@@ -227,7 +230,7 @@ public class AnnotatedHttpDocServicePluginTest {
     }
 
     @Test
-    public void include() {
+    void include() {
 
         // 1. Nothing specified: include all methods.
         // 2. Exclude specified: include all methods except the methods which the exclude filter returns true.
@@ -238,12 +241,12 @@ public class AnnotatedHttpDocServicePluginTest {
         // 1. Nothing specified.
         DocServiceFilter include = (plugin, service, method) -> true;
         DocServiceFilter exclude = (plugin, service, method) -> false;
-        Map<String, ServiceInfo> services = services(include, exclude);
+        Map<String, ServiceInfo> services = services(include, exclude, new FooClass(), new BarClass());
         assertThat(services).containsOnlyKeys(FOO_NAME, BAR_NAME);
 
         // 2. Exclude specified.
         exclude = DocServiceFilter.ofMethodName(FOO_NAME, "fooMethod");
-        services = services(include, exclude);
+        services = services(include, exclude, new FooClass(), new BarClass());
         assertThat(services).containsOnlyKeys(FOO_NAME, BAR_NAME);
 
         List<String> methods = methods(services);
@@ -253,7 +256,7 @@ public class AnnotatedHttpDocServicePluginTest {
         include = DocServiceFilter.ofServiceName(FOO_NAME);
         // Set the exclude to the default.
         exclude = (plugin, service, method) -> false;
-        services = services(include, exclude);
+        services = services(include, exclude, new FooClass(), new BarClass());
         assertThat(services).containsOnlyKeys(FOO_NAME);
 
         methods = methods(services);
@@ -261,7 +264,7 @@ public class AnnotatedHttpDocServicePluginTest {
 
         // 3-2. Include methodName specified.
         include = DocServiceFilter.ofMethodName(FOO_NAME, "fooMethod");
-        services = services(include, exclude);
+        services = services(include, exclude, new FooClass(), new BarClass());
         assertThat(services).containsOnlyKeys(FOO_NAME);
 
         methods = methods(services);
@@ -270,7 +273,7 @@ public class AnnotatedHttpDocServicePluginTest {
         // 4-1. Include and exclude specified.
         include = DocServiceFilter.ofServiceName(FOO_NAME);
         exclude = DocServiceFilter.ofMethodName(FOO_NAME, "fooMethod");
-        services = services(include, exclude);
+        services = services(include, exclude, new FooClass());
         assertThat(services).containsOnlyKeys(FOO_NAME);
 
         methods = methods(services);
@@ -279,8 +282,20 @@ public class AnnotatedHttpDocServicePluginTest {
         // 4-2. Include and exclude specified.
         include = DocServiceFilter.ofMethodName(FOO_NAME, "fooMethod");
         exclude = DocServiceFilter.ofServiceName(FOO_NAME);
-        services = services(include, exclude);
+        services = services(include, exclude, new FooClass(), new BarClass());
         assertThat(services.size()).isZero();
+    }
+
+    @Test
+    void testMultiPath() {
+        final Map<String, ServiceInfo> services = services(new MultiPathClass());
+        final Map<String, MethodInfo> methods =
+                services.get(MultiPathClass.class.getName()).methods().stream()
+                        .collect(toImmutableMap(MethodInfo::name, Function.identity()));
+        final Set<String> paths = methods.get("multiGet").endpoints()
+                                         .stream().map(EndpointInfo::pathMapping)
+                                         .collect(toImmutableSet());
+        assertThat(paths).containsOnly("exact:/path1", "exact:/path2");
     }
 
     private static void checkFooService(ServiceInfo fooServiceInfo) {
@@ -296,17 +311,18 @@ public class AnnotatedHttpDocServicePluginTest {
 
         assertThat(fooMethod.parameters()).hasSize(2);
         assertThat(fooMethod.parameters()).containsExactlyInAnyOrder(
-                new FieldInfoBuilder("foo", STRING).requirement(REQUIRED)
-                                                   .location(QUERY)
-                                                   .build(),
-                new FieldInfoBuilder("foo1", LONG).requirement(REQUIRED)
-                                                  .location(HEADER)
-                                                  .build());
+                FieldInfo.builder("foo", STRING).requirement(REQUIRED)
+                         .location(QUERY)
+                         .build(),
+                FieldInfo.builder("foo1", LONG).requirement(REQUIRED)
+                         .location(HEADER)
+                         .build());
 
         assertThat(fooMethod.returnTypeSignature()).isEqualTo(VOID);
 
-        assertThat(fooMethod.endpoints()).containsExactly(
-                new EndpointInfoBuilder("*", "exact:/foo").defaultMimeType(MediaType.JSON).build());
+        assertThat(fooMethod.endpoints()).containsExactly(EndpointInfo.builder("*", "exact:/foo")
+                                                                      .defaultMimeType(MediaType.JSON)
+                                                                      .build());
     }
 
     private static void checkBarService(ServiceInfo barServiceInfo) {
@@ -321,21 +337,29 @@ public class AnnotatedHttpDocServicePluginTest {
         assertThat(barMethod.exampleRequests()).isEmpty();
         assertThat(barMethod.returnTypeSignature()).isEqualTo(VOID);
 
-        assertThat(barMethod.endpoints()).containsExactly(
-                new EndpointInfoBuilder("*", "exact:/bar").defaultMimeType(MediaType.JSON).build());
+        assertThat(barMethod.endpoints()).containsExactly(EndpointInfo.builder("*", "exact:/bar")
+                                                                      .defaultMimeType(MediaType.JSON)
+                                                                      .build());
 
-        final FieldInfo bar = new FieldInfoBuilder("bar", STRING).requirement(REQUIRED)
-                                                                 .location(QUERY)
-                                                                 .build();
+        final FieldInfo bar = FieldInfo.builder("bar", STRING).requirement(REQUIRED)
+                                       .location(QUERY)
+                                       .build();
         final List<FieldInfo> fieldInfos = barMethod.parameters();
         assertFieldInfos(fieldInfos, ImmutableList.of(bar, compositeBean()));
     }
 
-    private static Map<String, ServiceInfo> services(DocServiceFilter include, DocServiceFilter exclude) {
-        final Server server = new ServerBuilder()
-                .annotatedService(new FooClass())
-                .annotatedService(new BarClass())
-                .build();
+    private static Map<String, ServiceInfo> services(Object... services) {
+        final DocServiceFilter include = (plugin, service, method) -> true;
+        final DocServiceFilter exclude = (plugin, service, method) -> false;
+        return services(include, exclude, services);
+    }
+
+    private static Map<String, ServiceInfo> services(DocServiceFilter include,
+                                                     DocServiceFilter exclude,
+                                                     Object... services) {
+        final ServerBuilder builder = Server.builder();
+        Arrays.stream(services).forEach(builder::annotatedService);
+        final Server server = builder.build();
         final ServiceSpecification specification =
                 plugin.generateSpecification(ImmutableSet.copyOf(server.serviceConfigs()),
                                              unifyFilter(include, exclude));
@@ -352,26 +376,34 @@ public class AnnotatedHttpDocServicePluginTest {
     }
 
     static FieldInfo compositeBean() {
-        return new FieldInfoBuilder(CompositeBean.class.getSimpleName(), BEAN,
-                                    createBean1(), createBean2()).build();
+        return FieldInfo.builder(CompositeBean.class.getSimpleName(), BEAN,
+                                 createBean1(), createBean2()).build();
     }
 
     private static FieldInfo createBean1() {
-        final FieldInfo uid = new FieldInfoBuilder("uid", STRING).location(HEADER).requirement(REQUIRED)
-                                                                 .build();
-        final FieldInfo seqNum = new FieldInfoBuilder("seqNum", LONG).location(QUERY).requirement(REQUIRED)
-                                                                     .build();
-        return new FieldInfoBuilder(RequestBean1.class.getSimpleName(), BEAN, uid, seqNum).build();
+        final FieldInfo uid = FieldInfo.builder("uid", STRING)
+                                       .location(HEADER)
+                                       .requirement(REQUIRED)
+                                       .build();
+        final FieldInfo seqNum = FieldInfo.builder("seqNum", LONG)
+                                          .location(QUERY)
+                                          .requirement(REQUIRED)
+                                          .build();
+        return FieldInfo.builder(RequestBean1.class.getSimpleName(), BEAN, uid, seqNum).build();
     }
 
     private static FieldInfo createBean2() {
-        final FieldInfo inside1 = new FieldInfoBuilder("inside1", LONG).location(QUERY).requirement(REQUIRED)
-                                                                       .build();
-        final FieldInfo inside2 = new FieldInfoBuilder("inside2", INT).location(QUERY).requirement(REQUIRED)
-                                                                      .build();
-        final FieldInfo insideBean = new FieldInfoBuilder(InsideBean.class.getSimpleName(), BEAN,
-                                                          inside1, inside2).build();
-        return new FieldInfoBuilder(RequestBean2.class.getSimpleName(), BEAN, insideBean).build();
+        final FieldInfo inside1 = FieldInfo.builder("inside1", LONG)
+                                           .location(QUERY)
+                                           .requirement(REQUIRED)
+                                           .build();
+        final FieldInfo inside2 = FieldInfo.builder("inside2", INT)
+                                           .location(QUERY)
+                                           .requirement(REQUIRED)
+                                           .build();
+        final FieldInfo insideBean = FieldInfo.builder(InsideBean.class.getSimpleName(), BEAN,
+                                                       inside1, inside2).build();
+        return FieldInfo.builder(RequestBean2.class.getSimpleName(), BEAN, insideBean).build();
     }
 
     private static void assertFieldInfos(List<FieldInfo> fieldInfos, List<FieldInfo> expected) {
@@ -411,6 +443,13 @@ public class AnnotatedHttpDocServicePluginTest {
     private static class BarClass {
         @Get("/bar")
         public void barMethod(@Param String bar, CompositeBean compositeBean) {}
+    }
+
+    private static class MultiPathClass {
+        @Get
+        @Path("/path1")
+        @Path("/path2")
+        public void multiGet() {}
     }
 
     static class CompositeBean {

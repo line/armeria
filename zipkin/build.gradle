@@ -1,5 +1,0 @@
-dependencies {
-    compile project(':brave')
-
-    testCompile project(':thrift')
-}

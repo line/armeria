@@ -34,8 +34,10 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.client.endpoint.EndpointSelector;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.RpcRequest;
 
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
@@ -253,16 +255,18 @@ public abstract class RetryingClient<I extends Request, O extends Response>
     }
 
     /**
-     * Creates a new derived {@link ClientRequestContext}, replacing the {@link Request} with {@code req}.
+     * Creates a new derived {@link ClientRequestContext}, replacing the requests.
      * If {@link ClientRequestContext#endpointSelector()} exists, a new {@link Endpoint} will be selected.
      */
     protected static ClientRequestContext newDerivedContext(ClientRequestContext ctx,
-                                                            Request req, boolean initialAttempt) {
+                                                            @Nullable HttpRequest req,
+                                                            @Nullable RpcRequest rpcReq,
+                                                            boolean initialAttempt) {
         final EndpointSelector endpointSelector = ctx.endpointSelector();
         if (endpointSelector != null && !initialAttempt) {
-            return ctx.newDerivedContext(req, endpointSelector.select(ctx));
+            return ctx.newDerivedContext(req, rpcReq, endpointSelector.select(ctx));
         } else {
-            return ctx.newDerivedContext(req);
+            return ctx.newDerivedContext(req, rpcReq);
         }
     }
 
@@ -270,7 +274,6 @@ public abstract class RetryingClient<I extends Request, O extends Response>
 
         private final int maxTotalAttempts;
         private final long responseTimeoutMillisForEachAttempt;
-        private final long responseTimeoutMillis;
         private final long deadlineNanos;
 
         @Nullable
@@ -281,12 +284,11 @@ public abstract class RetryingClient<I extends Request, O extends Response>
         State(int maxTotalAttempts, long responseTimeoutMillisForEachAttempt, long responseTimeoutMillis) {
             this.maxTotalAttempts = maxTotalAttempts;
             this.responseTimeoutMillisForEachAttempt = responseTimeoutMillisForEachAttempt;
-            this.responseTimeoutMillis = responseTimeoutMillis;
-            if (responseTimeoutMillis > 0) {
-                deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis);
-            } else {
-                // Response timeout is disabled.
+
+            if (responseTimeoutMillis <= 0 || responseTimeoutMillis == Long.MAX_VALUE) {
                 deadlineNanos = 0;
+            } else {
+                deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis);
             }
             totalAttemptNo = 1;
         }
@@ -318,7 +320,7 @@ public abstract class RetryingClient<I extends Request, O extends Response>
         }
 
         boolean timeoutForWholeRetryEnabled() {
-            return responseTimeoutMillis != 0;
+            return deadlineNanos != 0;
         }
 
         long actualResponseTimeoutMillis() {

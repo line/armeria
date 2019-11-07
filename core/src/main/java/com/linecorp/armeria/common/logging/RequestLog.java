@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 
 import javax.annotation.Nullable;
@@ -166,6 +167,13 @@ public interface RequestLog extends AttributeMap {
      * This method returns non-{@code null} regardless the current {@link RequestLogAvailability}.
      */
     RequestContext context();
+
+    /**
+     * Returns the {@link UUID} of the {@link Request}. This method is a shortcut to {@code context().uuid()}.
+     */
+    default UUID uuid() {
+        return context().uuid();
+    }
 
     /**
      * Returns the method of the {@link Request}. This method is a shortcut to {@code context().method()}.

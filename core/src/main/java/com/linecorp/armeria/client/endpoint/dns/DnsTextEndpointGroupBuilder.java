@@ -37,7 +37,10 @@ public final class DnsTextEndpointGroupBuilder
      * @param mapping the {@link Function} that maps the content of a {@code TXT} record into
      *                an {@link Endpoint}. The {@link Function} is expected to return {@code null}
      *                if the record contains unsupported content.
+     *
+     * @deprecated Use {@link DnsTextEndpointGroup#builder(String, Function)}.
      */
+    @Deprecated
     public DnsTextEndpointGroupBuilder(String hostname, Function<byte[], Endpoint> mapping) {
         super(hostname);
         this.mapping = requireNonNull(mapping, "mapping");

@@ -45,7 +45,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -75,11 +74,12 @@ class HttpServerStreamingTest {
 
     private static final EventLoopGroup workerGroup = EventLoopGroups.newEventLoopGroup(1);
 
-    private static final ClientFactory clientFactory = new ClientFactoryBuilder()
-            .workerGroup(workerGroup, false) // Will be shut down by the Server.
-            .idleTimeout(Duration.ofSeconds(3))
-            .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
-            .build();
+    private static final ClientFactory clientFactory =
+            ClientFactory.builder()
+                         .workerGroup(workerGroup, false) // Will be shut down by the Server.
+                         .idleTimeout(Duration.ofSeconds(3))
+                         .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                         .build();
 
     // Stream as much as twice of the heap.
     private static final long STREAMING_CONTENT_LENGTH = Runtime.getRuntime().maxMemory() * 2;
@@ -294,7 +294,7 @@ class HttpServerStreamingTest {
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
             return Stream.of(H1C, H2C, H1, H2)
                     .map(protocol -> {
-                        final HttpClientBuilder builder = new HttpClientBuilder(
+                        final HttpClientBuilder builder = HttpClient.builder(
                                 protocol.uriText() + "://127.0.0.1:" +
                                 (protocol.isTls() ? server.httpsPort() : server.httpPort()));
 

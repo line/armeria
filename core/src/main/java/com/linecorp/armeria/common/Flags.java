@@ -33,7 +33,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.CaffeineSpec;
 import com.google.common.base.Ascii;
 import com.google.common.base.CharMatcher;
@@ -46,9 +45,11 @@ import com.linecorp.armeria.client.retry.RetryingHttpClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Sampler;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.SslContextUtil;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
@@ -117,9 +118,8 @@ public final class Flags {
     private static final boolean HAS_WSLENV = System.getenv("WSLENV") != null;
     private static final boolean USE_EPOLL = getBoolean("useEpoll", isEpollAvailable(),
                                                         value -> isEpollAvailable() || !value);
-
-    private static final boolean USE_OPENSSL = getBoolean("useOpenSsl", OpenSsl.isAvailable(),
-                                                          value -> OpenSsl.isAvailable() || !value);
+    @Nullable
+    private static Boolean useOpenSsl;
 
     private static final boolean DUMP_OPENSSL_INFO = getBoolean("dumpOpenSslInfo", false);
 
@@ -266,6 +266,10 @@ public final class Flags {
     private static final Optional<String> ROUTE_CACHE_SPEC =
             caffeineSpec("routeCache", DEFAULT_ROUTE_CACHE_SPEC);
 
+    private static final String DEFAULT_ROUTE_DECORATOR_CACHE_SPEC = "maximumSize=4096";
+    private static final Optional<String> ROUTE_DECORATOR_CACHE_SPEC =
+            caffeineSpec("routeDecoratorCache", DEFAULT_ROUTE_DECORATOR_CACHE_SPEC);
+
     private static final String DEFAULT_COMPOSITE_SERVICE_CACHE_SPEC = "maximumSize=256";
     private static final Optional<String> COMPOSITE_SERVICE_CACHE_SPEC =
             caffeineSpec("compositeServiceCache", DEFAULT_COMPOSITE_SERVICE_CACHE_SPEC);
@@ -277,6 +281,10 @@ public final class Flags {
     private static final String DEFAULT_HEADER_VALUE_CACHE_SPEC = "maximumSize=4096";
     private static final Optional<String> HEADER_VALUE_CACHE_SPEC =
             caffeineSpec("headerValueCache", DEFAULT_HEADER_VALUE_CACHE_SPEC);
+
+    private static final String DEFAULT_FILE_SERVICE_CACHE_SPEC = "maximumSize=1024";
+    private static final Optional<String> FILE_SERVICE_CACHE_SPEC =
+            caffeineSpec("fileServiceCache", DEFAULT_FILE_SERVICE_CACHE_SPEC);
 
     private static final String DEFAULT_CACHED_HEADERS =
             ":authority,:scheme,:method,accept-encoding,content-type";
@@ -304,34 +312,15 @@ public final class Flags {
         } else if (USE_EPOLL) {
             logger.info("Using /dev/epoll");
         }
-
-        if (!OpenSsl.isAvailable()) {
-            final Throwable cause = Exceptions.peel(OpenSsl.unavailabilityCause());
-            logger.info("OpenSSL not available: {}", cause.toString());
-        } else if (USE_OPENSSL) {
-            logger.info("Using OpenSSL: {}, 0x{}",
-                        OpenSsl.versionString(),
-                        Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
-
-            if (dumpOpenSslInfo()) {
-                final SSLEngine engine = SslContextUtil.createSslContext(
-                        SslContextBuilder::forClient,
-                        false,
-                        unused -> {}).newEngine(ByteBufAllocator.DEFAULT);
-                logger.info("All available SSL protocols: {}",
-                            ImmutableList.copyOf(engine.getSupportedProtocols()));
-                logger.info("Default enabled SSL protocols: {}", SslContextUtil.DEFAULT_PROTOCOLS);
-                ReferenceCountUtil.release(engine);
-                logger.info("All available SSL ciphers: {}", OpenSsl.availableJavaCipherSuites());
-                logger.info("Default enabled SSL ciphers: {}", SslContextUtil.DEFAULT_CIPHERS);
-            }
-        }
     }
 
     private static boolean isEpollAvailable() {
-        // Netty epoll transport does not work with WSL (Windows Sybsystem for Linux) yet.
-        // TODO(trustin): Re-enable on WSL if https://github.com/Microsoft/WSL/issues/1982 is resolved.
-        return Epoll.isAvailable() && !HAS_WSLENV;
+        if (SystemInfo.isLinux()) {
+            // Netty epoll transport does not work with WSL (Windows Sybsystem for Linux) yet.
+            // TODO(trustin): Re-enable on WSL if https://github.com/Microsoft/WSL/issues/1982 is resolved.
+            return Epoll.isAvailable() && !HAS_WSLENV;
+        }
+        return false;
     }
 
     /**
@@ -418,7 +407,34 @@ public final class Flags {
      * {@code -Dcom.linecorp.armeria.useOpenSsl=false} JVM option to disable it.
      */
     public static boolean useOpenSsl() {
-        return USE_OPENSSL;
+        if (useOpenSsl != null) {
+            return useOpenSsl;
+        }
+        final boolean useOpenSsl = getBoolean("useOpenSsl", true);
+        if (!useOpenSsl) {
+            // OpenSSL explicitly disabled
+            return Flags.useOpenSsl = false;
+        }
+        if (!OpenSsl.isAvailable()) {
+            final Throwable cause = Exceptions.peel(OpenSsl.unavailabilityCause());
+            logger.info("OpenSSL not available: {}", cause.toString());
+            return Flags.useOpenSsl = false;
+        }
+        logger.info("Using OpenSSL: {}, 0x{}", OpenSsl.versionString(),
+                    Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
+        if (dumpOpenSslInfo()) {
+            final SSLEngine engine = SslContextUtil.createSslContext(
+                    SslContextBuilder::forClient,
+                    false,
+                    unused -> {}).newEngine(ByteBufAllocator.DEFAULT);
+            logger.info("All available SSL protocols: {}",
+                        ImmutableList.copyOf(engine.getSupportedProtocols()));
+            logger.info("Default enabled SSL protocols: {}", SslContextUtil.DEFAULT_PROTOCOLS);
+            ReferenceCountUtil.release(engine);
+            logger.info("All available SSL ciphers: {}", OpenSsl.availableJavaCipherSuites());
+            logger.info("Default enabled SSL ciphers: {}", SslContextUtil.DEFAULT_CIPHERS);
+        }
+        return Flags.useOpenSsl = true;
     }
 
     /**
@@ -712,12 +728,13 @@ public final class Flags {
 
     /**
      * Returns the value of the {@code routeCache} parameter. It would be used to create a Caffeine
-     * {@link Cache} instance using {@link Caffeine#from(String)} for routing a request. The {@link Cache}
+     * {@link Cache} instance using {@link CaffeineSpec} for routing a request. The {@link Cache}
      * would hold the mappings of {@link RoutingContext} and the designated {@link ServiceConfig}
      * for a request to improve server performance.
      *
      * <p>The default value of this flag is {@value DEFAULT_ROUTE_CACHE_SPEC}. Specify the
      * {@code -Dcom.linecorp.armeria.routeCache=<spec>} JVM option to override the default value.
+     * For example, {@code -Dcom.linecorp.armeria.routeCache=maximumSize=4096,expireAfterAccess=600s}.
      * Also, specify {@code -Dcom.linecorp.armeria.routeCache=off} JVM option to disable it.
      */
     public static Optional<String> routeCacheSpec() {
@@ -725,12 +742,28 @@ public final class Flags {
     }
 
     /**
+     * Returns the value of the {@code routeDecoratorCache} parameter. It would be used to create a Caffeine
+     * {@link Cache} instance using {@link CaffeineSpec} for mapping a route to decorator.
+     * The {@link Cache} would hold the mappings of {@link RoutingContext} and the designated
+     * dispatcher {@link Service}s for a request to improve server performance.
+     *
+     * <p>The default value of this flag is {@value DEFAULT_ROUTE_DECORATOR_CACHE_SPEC}. Specify the
+     * {@code -Dcom.linecorp.armeria.routeDecoratorCache=<spec>} JVM option to override the default value.
+     * For example, {@code -Dcom.linecorp.armeria.routeDecoratorCache=maximumSize=4096,expireAfterAccess=600s}.
+     * Also, specify {@code -Dcom.linecorp.armeria.routeDecoratorCache=off} JVM option to disable it.
+     */
+    public static Optional<String> routeDecoratorCacheSpec() {
+        return ROUTE_DECORATOR_CACHE_SPEC;
+    }
+
+    /**
      * Returns the value of the {@code parsedPathCache} parameter. It would be used to create a Caffeine
-     * {@link Cache} instance using {@link Caffeine#from(String)} mapping raw HTTP paths to parsed pair of
+     * {@link Cache} instance using {@link CaffeineSpec} for mapping raw HTTP paths to parsed pair of
      * path and query, after validation.
      *
      * <p>The default value of this flag is {@value DEFAULT_PARSED_PATH_CACHE_SPEC}. Specify the
      * {@code -Dcom.linecorp.armeria.parsedPathCache=<spec>} JVM option to override the default value.
+     * For example, {@code -Dcom.linecorp.armeria.parsedPathCache=maximumSize=4096,expireAfterAccess=600s}.
      * Also, specify {@code -Dcom.linecorp.armeria.parsedPathCache=off} JVM option to disable it.
      */
     public static Optional<String> parsedPathCacheSpec() {
@@ -739,15 +772,29 @@ public final class Flags {
 
     /**
      * Returns the value of the {@code headerValueCache} parameter. It would be used to create a Caffeine
-     * {@link Cache} instance using {@link Caffeine#from(String)} mapping raw HTTP ascii header values to
+     * {@link Cache} instance using {@link CaffeineSpec} for mapping raw HTTP ASCII header values to
      * {@link String}.
      *
      * <p>The default value of this flag is {@value DEFAULT_HEADER_VALUE_CACHE_SPEC}. Specify the
      * {@code -Dcom.linecorp.armeria.headerValueCache=<spec>} JVM option to override the default value.
+     * For example, {@code -Dcom.linecorp.armeria.headerValueCache=maximumSize=4096,expireAfterAccess=600s}.
      * Also, specify {@code -Dcom.linecorp.armeria.headerValueCache=off} JVM option to disable it.
      */
     public static Optional<String> headerValueCacheSpec() {
         return HEADER_VALUE_CACHE_SPEC;
+    }
+
+    /**
+     * Returns the value of the {@code fileServiceCache} parameter. It would be used to create a Caffeine
+     * {@link Cache} instance using {@link CaffeineSpec} for caching file entries.
+     *
+     * <p>The default value of this flag is {@value DEFAULT_FILE_SERVICE_CACHE_SPEC}. Specify the
+     * {@code -Dcom.linecorp.armeria.fileServiceCache=<spec>} JVM option to override the default value.
+     * For example, {@code -Dcom.linecorp.armeria.fileServiceCache=maximumSize=1024,expireAfterAccess=600s}.
+     * Also, specify {@code -Dcom.linecorp.armeria.fileServiceCache=off} JVM option to disable it.
+     */
+    public static Optional<String> fileServiceCacheSpec() {
+        return FILE_SERVICE_CACHE_SPEC;
     }
 
     /**
@@ -763,12 +810,13 @@ public final class Flags {
 
     /**
      * Returns the value of the {@code compositeServiceCache} parameter. It would be used to create a
-     * Caffeine {@link Cache} instance using {@link Caffeine#from(String)} for routing a request.
+     * Caffeine {@link Cache} instance using {@link CaffeineSpec} for routing a request.
      * The {@link Cache} would hold the mappings of {@link RoutingContext} and the designated
      * {@link ServiceConfig} for a request to improve server performance.
      *
      * <p>The default value of this flag is {@value DEFAULT_COMPOSITE_SERVICE_CACHE_SPEC}. Specify the
      * {@code -Dcom.linecorp.armeria.compositeServiceCache=<spec>} JVM option to override the default value.
+     * For example, {@code -Dcom.linecorp.armeria.compositeServiceCache=maximumSize=256,expireAfterAccess=600s}.
      * Also, specify {@code -Dcom.linecorp.armeria.compositeServiceCache=off} JVM option to disable it.
      */
     public static Optional<String> compositeServiceCacheSpec() {

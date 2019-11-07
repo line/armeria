@@ -117,7 +117,7 @@ public class MockWebServerExtension extends ServerExtension implements BeforeTes
         boolean interrupted = false;
         try {
             long remainingNanos = unit.toNanos(amount);
-            long end = System.nanoTime() + remainingNanos;
+            final long end = System.nanoTime() + remainingNanos;
 
             while (true) {
                 try {

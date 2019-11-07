@@ -340,10 +340,13 @@ class HttpClientIntegrationTest {
                     return HttpResponse.of(HttpStatus.OK);
                 }
             });
+
+            sb.disableServerHeader();
+            sb.disableDateHeader();
         }
     };
 
-    private static final ClientFactory clientFactory = ClientFactory.DEFAULT;
+    private static final ClientFactory clientFactory = ClientFactory.ofDefault();
 
     @BeforeEach
     void clearError() {
@@ -408,9 +411,10 @@ class HttpClientIntegrationTest {
         final String groupName = "testEndpointWithAlternateAuthority";
         EndpointGroupRegistry.register(groupName, group, EndpointSelectionStrategy.ROUND_ROBIN);
         try {
-            final HttpClient client = new HttpClientBuilder("http://group:" + groupName)
-                    .setHttpHeader(HttpHeaderNames.AUTHORITY, "255.255.255.255.xip.io")
-                    .build();
+            final HttpClient client = HttpClient.builder("http://group:" + groupName)
+                                                .setHttpHeader(HttpHeaderNames.AUTHORITY,
+                                                               "255.255.255.255.xip.io")
+                                                .build();
 
             final AggregatedHttpResponse res = client.get("/hello/world").aggregate().join();
             assertThat(res.status()).isEqualTo(HttpStatus.OK);
@@ -459,8 +463,10 @@ class HttpClientIntegrationTest {
 
     @Test
     void httpDecoding() throws Exception {
-        final HttpClient client = new HttpClientBuilder(server.uri("/"))
-                .factory(clientFactory).decorator(HttpDecodingClient.newDecorator()).build();
+        final HttpClient client = HttpClient.builder(server.uri("/"))
+                                            .factory(clientFactory)
+                                            .decorator(HttpDecodingClient.newDecorator())
+                                            .build();
 
         final AggregatedHttpResponse response =
                 client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding")).aggregate().get();
@@ -471,9 +477,11 @@ class HttpClientIntegrationTest {
 
     @Test
     void httpDecoding_deflate() throws Exception {
-        final HttpClient client = new HttpClientBuilder(server.uri("/"))
-                .factory(clientFactory)
-                .decorator(HttpDecodingClient.newDecorator(new DeflateStreamDecoderFactory())).build();
+        final HttpClient client = HttpClient.builder(server.uri("/"))
+                                            .factory(clientFactory)
+                                            .decorator(HttpDecodingClient.newDecorator(
+                                                    new DeflateStreamDecoderFactory()))
+                                            .build();
 
         final AggregatedHttpResponse response =
                 client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding")).aggregate().get();
@@ -484,9 +492,11 @@ class HttpClientIntegrationTest {
 
     @Test
     void httpDecoding_noEncodingApplied() throws Exception {
-        final HttpClient client = new HttpClientBuilder(server.uri("/"))
-                .factory(clientFactory)
-                .decorator(HttpDecodingClient.newDecorator(new DeflateStreamDecoderFactory())).build();
+        final HttpClient client = HttpClient.builder(server.uri("/"))
+                                            .factory(clientFactory)
+                                            .decorator(HttpDecodingClient.newDecorator(
+                                                    new DeflateStreamDecoderFactory()))
+                                            .build();
 
         final AggregatedHttpResponse response =
                 client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding-toosmall")).aggregate().get();
@@ -581,7 +591,7 @@ class HttpClientIntegrationTest {
 
     @Test
     void testCloseClientFactory() throws Exception {
-        final ClientFactory factory = new ClientFactoryBuilder().build();
+        final ClientFactory factory = ClientFactory.builder().build();
         final HttpClient client = factory.newClient("none+" + server.uri("/"), HttpClient.class);
         final HttpRequestWriter req = HttpRequest.streaming(RequestHeaders.of(HttpMethod.GET,
                                                                               "/stream-closed"));
@@ -624,46 +634,46 @@ class HttpClientIntegrationTest {
     @Test
     void givenClients_thenBuildClient() throws Exception {
         final Endpoint endpoint = newEndpoint();
-        final ClientFactory factory = new ClientFactoryBuilder().build();
+        final ClientFactory factory = ClientFactory.builder().build();
 
         HttpClient client = Clients.newClient(factory, SessionProtocol.HTTP, SerializationFormat.NONE,
                                               endpoint, HttpClient.class);
         checkGetRequest("/hello/world", client);
 
         client = Clients.newClient(factory, SessionProtocol.HTTP, SerializationFormat.NONE, endpoint,
-                                   HttpClient.class, ClientOptions.DEFAULT);
+                                   HttpClient.class, ClientOptions.of());
         checkGetRequest("/hello/world", client);
 
         client = Clients.newClient(SessionProtocol.HTTP, SerializationFormat.NONE, endpoint, HttpClient.class);
         checkGetRequest("/hello/world", client);
 
         client = Clients.newClient(SessionProtocol.HTTP, SerializationFormat.NONE, endpoint, HttpClient.class,
-                                   ClientOptions.DEFAULT);
+                                   ClientOptions.of());
         checkGetRequest("/hello/world", client);
     }
 
     @Test
     void givenHttpClient_thenBuildClient() throws Exception {
         final Endpoint endpoint = newEndpoint();
-        final ClientFactory factory = new ClientFactoryBuilder().build();
+        final ClientFactory factory = ClientFactory.builder().build();
 
         HttpClient client = HttpClient.of(factory, SessionProtocol.HTTP, endpoint);
         checkGetRequest("/hello/world", client);
 
-        client = HttpClient.of(factory, SessionProtocol.HTTP, endpoint, ClientOptions.DEFAULT);
+        client = HttpClient.of(factory, SessionProtocol.HTTP, endpoint, ClientOptions.of());
         checkGetRequest("/hello/world", client);
 
         client = HttpClient.of(SessionProtocol.HTTP, endpoint);
         checkGetRequest("/hello/world", client);
 
-        client = HttpClient.of(SessionProtocol.HTTP, endpoint, ClientOptions.DEFAULT);
+        client = HttpClient.of(SessionProtocol.HTTP, endpoint, ClientOptions.of());
         checkGetRequest("/hello/world", client);
     }
 
     @Test
     void givenClientBuilder_thenBuildClient() throws Exception {
         final Endpoint endpoint = newEndpoint();
-        final ClientFactory factory = new ClientFactoryBuilder().build();
+        final ClientFactory factory = ClientFactory.builder().build();
 
         HttpClient client = new ClientBuilder(SessionProtocol.HTTP, endpoint)
                 .serializationFormat(SerializationFormat.NONE)
@@ -698,13 +708,13 @@ class HttpClientIntegrationTest {
 
     @Test
     void testUpgradeRequestExecutesLogicOnlyOnce() throws Exception {
-        final ClientFactory clientFactory = new ClientFactoryBuilder()
-                .useHttp2Preface(false)
-                .build();
-        final HttpClient client = new HttpClientBuilder(server.httpUri("/"))
-                .factory(clientFactory)
-                .decorator(HttpDecodingClient.newDecorator())
-                .build();
+        final ClientFactory clientFactory = ClientFactory.builder()
+                                                         .useHttp2Preface(false)
+                                                         .build();
+        final HttpClient client = HttpClient.builder(server.httpUri("/"))
+                                            .factory(clientFactory)
+                                            .decorator(HttpDecodingClient.newDecorator())
+                                            .build();
 
         final AggregatedHttpResponse response = client.execute(
                 AggregatedHttpRequest.of(HttpMethod.GET, "/only-once/request")).aggregate().get();

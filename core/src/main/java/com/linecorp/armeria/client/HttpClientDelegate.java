@@ -76,7 +76,7 @@ final class HttpClientDelegate implements Client<HttpRequest, HttpResponse> {
         final EventLoop eventLoop = ctx.eventLoop();
         final DecodedHttpResponse res = new DecodedHttpResponse(eventLoop);
 
-        final ClientConnectionTimingsBuilder timingsBuilder = new ClientConnectionTimingsBuilder();
+        final ClientConnectionTimingsBuilder timingsBuilder = ClientConnectionTimings.builder();
 
         if (endpointWithPort.hasIpAddr()) {
             // IP address has been resolved already.

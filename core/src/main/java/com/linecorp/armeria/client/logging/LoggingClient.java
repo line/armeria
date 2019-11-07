@@ -54,23 +54,29 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
      */
     public static <I extends Request, O extends Response>
     Function<Client<I, O>, LoggingClient<I, O>> newDecorator() {
-        return new LoggingClientBuilder()
-                .requestLogLevel(LogLevel.INFO)
-                .successfulResponseLogLevel(LogLevel.INFO)
-                .failureResponseLogLevel(LogLevel.WARN)
-                .newDecorator();
+        return builder().requestLogLevel(LogLevel.INFO)
+                        .successfulResponseLogLevel(LogLevel.INFO)
+                        .failureResponseLogLevel(LogLevel.WARN)
+                        .newDecorator();
     }
 
     /**
      * Returns a new {@link Client} decorator that logs {@link Request}s and {@link Response}s.
      *
      * @param level the log level
-     * @deprecated Use {@link LoggingClientBuilder}.
+     * @deprecated Use {@link LoggingClient#builder()}.
      */
     @Deprecated
     public static <I extends Request, O extends Response>
     Function<Client<I, O>, LoggingClient<I, O>> newDecorator(LogLevel level) {
         return delegate -> new LoggingClient<>(delegate, level);
+    }
+
+    /**
+     * Returns a newly created {@link LoggingClientBuilder}.
+     */
+    public static LoggingClientBuilder builder() {
+        return new LoggingClientBuilder();
     }
 
     private final LogLevel requestLogLevel;

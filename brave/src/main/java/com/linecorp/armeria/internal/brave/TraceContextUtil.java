@@ -16,8 +16,17 @@
 
 package com.linecorp.armeria.internal.brave;
 
-import com.linecorp.armeria.common.RequestContext;
+import static java.util.Objects.requireNonNull;
 
+import java.util.Collections;
+
+import com.google.common.annotations.VisibleForTesting;
+
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
+
+import brave.Tracing;
+import brave.propagation.CurrentTraceContext.Scope;
 import brave.propagation.TraceContext;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
@@ -42,6 +51,54 @@ public final class TraceContextUtil {
 
     public static Attribute<TraceContext> getTraceContextAttribute(RequestContext ctx) {
         return ctx.attr(TRACE_CONTEXT_KEY);
+    }
+
+    /**
+     * Ensures the specified {@link Tracing} uses a {@link RequestContextCurrentTraceContext}.
+     *
+     * @throws IllegalStateException if {@code tracing} does not use {@link RequestContextCurrentTraceContext}
+     */
+    public static void ensureScopeUsesRequestContext(Tracing tracing) {
+        requireNonNull(tracing, "tracing");
+        final PingPongExtra extra = new PingPongExtra();
+        // trace contexts are not recorded until Tracer.toSpan, so this won't end up as junk data
+        final TraceContext dummyContext = TraceContext.newBuilder().traceId(1).spanId(1)
+                                                      .extra(Collections.singletonList(extra)).build();
+        final boolean scopeUsesRequestContext;
+        try (Scope scope = tracing.currentTraceContext().newScope(dummyContext)) {
+            scopeUsesRequestContext = extra.isPong();
+        }
+        if (!scopeUsesRequestContext) {
+            throw new IllegalStateException(
+                    "Tracing.currentTraceContext is not a " + RequestContextCurrentTraceContext.class
+                            .getSimpleName() + " scope. " +
+                    "Please call Tracing.Builder.currentTraceContext(" + RequestContextCurrentTraceContext.class
+                            .getSimpleName() + ".ofDefault()).");
+        }
+    }
+
+    /** Hack to allow us to peek inside a current trace context implementation. */
+    @VisibleForTesting
+    public static final class PingPongExtra {
+        /**
+         * If the input includes only this extra, set {@link #isPong() pong = true}.
+         */
+        public static boolean maybeSetPong(TraceContext context) {
+            if (context.extra().size() == 1) {
+                final Object extra = context.extra().get(0);
+                if (extra instanceof PingPongExtra) {
+                    ((PingPongExtra) extra).pong = true;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private boolean pong;
+
+        public boolean isPong() {
+            return pong;
+        }
     }
 
     private TraceContextUtil() {}

@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<!--
+Copyright 2019 Trustin Heuiseung Lee
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Loading the slides ...</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.3.200/pdf_viewer.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.3.200/pdf.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.3.200/pdf_viewer.js"></script>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+}
+
+html, body {
+  height: 100%;
+}
+
+#wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 100%;
+}
+
+#top, #bottom {
+  width: 100%;
+}
+
+#progressBar {
+  height: 0.25em;
+  width: 0;
+  background-color: darkgray;
+  transition: width 0.2s, background-color 0.5s;
+}
+
+.page {
+  display: none;
+}
+
+/* Fullscreen button */
+
+#fullscreen {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  text-align: right;
+}
+
+#fullscreen button {
+  font-size: 1em;
+  font-weight: bold;
+  color: white;
+  border: none;
+  background-color: rgba(0, 0, 0, 0.75);
+  padding: 6px 8px;
+  margin: 4px;
+  cursor: pointer;
+}
+
+html:fullscreen #fullscreen {
+  display: none;
+}
+
+/* Nudge arrow */
+
+#arrow-wrapper {
+  display: none;
+}
+
+.arrow {
+  position: absolute;
+  top: 50%;
+  right: 5vh;
+  width: 5vh;
+  height: 5vh;
+  margin: -2.5vh 0 0 -2.5vh;
+  transform: rotate(-45deg);
+  border-left: none;
+  border-top: none;
+  border-right: solid 0.2em darkgray;
+  border-bottom: solid 0.2em darkgray;
+  animation-duration: 2.5s;
+  animation-iteration-count: infinite;
+}
+
+#arrow-main {
+  z-index: 1000;
+  animation-name: arrow-main;
+}
+
+#arrow-thrust {
+  z-index: 999;
+  animation-name: arrow-thrust;
+}
+
+@keyframes arrow-main {
+  0%, 100% {
+    border-color: #ff0089;
+  }
+
+  45%, 95% {
+    border-color: darkgray;
+  }
+}
+
+@keyframes arrow-thrust {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    right: 8.5vh;
+  }
+}
+</style>
+<script>
+</script>
+</head>
+<body>
+<div id="wrapper">
+  <div id="top">
+    <div id="progressBar"></div>
+  </div>
+  <div id="pageContainer" class="pdfViewer singlePageView">
+    <img id="spinner" src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.3.200/images/loading-icon.gif">
+  </div>
+  <div id="bottom"></div>
+</div>
+<div id="arrow-wrapper">
+  <div id="arrow-thrust" class="arrow"></div>
+  <div id="arrow-main" class="arrow"></div>
+</div>
+<script>
+'use strict';
+
+function isFullscreenEnabled() {
+  var e = document;
+  var enabled = false;
+  if (e.fullscreenEnabled) {
+    enabled = e.fullscreenEnabled;
+  } else if (e.mozFullScreenEnabled) {
+    enabled = e.mozFullScreenEnabled;
+  } else if (e.webkitFullscreenEnabled) {
+    enabled = webkitFullscreenEnabled;
+  } else if (e.msFullscreenEnabled) {
+    enabled = e.msFullscreenEnabled;
+  }
+  return !!enabled;
+}
+
+function enterFullscreen() {
+  var e = document.documentElement;
+  if (e.requestFullscreen) {
+    e.requestFullscreen();
+  } else if (e.mozRequestFullScreen) {
+    e.mozRequestFullScreen();
+  } else if (e.webkitRequestFullscreen) {
+    e.webkitRequestFullscreen();
+  } else if (e.msRequestFullscreen) {
+    e.msRequestFullscreen();
+  }
+}
+
+if (isFullscreenEnabled()) {
+  document.write('<div id="fullscreen"><button onclick="enterFullscreen();">Enter fullscreen</button></div>');
+}
+
+(function() {
+
+var DEFAULT_URL = 'slides.pdf';
+
+if (!pdfjsLib.getDocument || !pdfjsViewer.PDFPageView) {
+  return;
+}
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.3.200/pdf.worker.js';
+
+var curPageNum = 1;
+var pdfDoc = null;
+var pdfTitle = '';
+var numPages = 0;
+var pages = [];
+var loadingTask = pdfjsLib.getDocument({
+  url: DEFAULT_URL,
+  cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.3.200/cmaps/',
+  cMapPacked: true
+});
+loadingTask.onProgress = function(progress) {
+  // Set progress only while the spinner is active.
+  if (document.getElementById('spinner')) {
+    setProgress(progress.loaded, progress.total);
+  }
+};
+var drawing = false;
+
+function loadAndShowPage(pageNum) {
+  if (!pdfDoc || drawing) {
+    return;
+  }
+
+  var page = pages[pageNum];
+  if (page.div) {
+    // Reuse the page which was drawn before.
+    showPage(pageNum);
+    preloadNearestPages(pageNum);
+    return;
+  }
+
+  if (drawing) {
+    return;
+  }
+
+  // Draw the current page.
+  drawing = true;
+  loadPage(pageNum).then(function() {
+    drawing = false;
+    showPage(pageNum);
+    preloadNearestPages(pageNum);
+  }).catch(function() {
+    drawing = false;
+  });
+}
+
+function loadPage(pageNum) {
+  var page = pages[pageNum];
+  if (page.promise) {
+    // The page is being loaded already.
+    return page.promise;
+  }
+
+  return page.promise = pdfDoc.getPage(pageNum).then(function(pdfPage) {
+    var wrapper = document.getElementById('wrapper');
+    var container = document.getElementById('pageContainer');
+    var cssUnits = 96 / 72;
+    var viewport = pdfPage.getViewport({ scale: 1 });
+    var scale = Math.min((wrapper.clientWidth - 2) / viewport.width,
+                         (wrapper.clientHeight - 8) / viewport.height) / cssUnits;
+    var pdfPageView = new pdfjsViewer.PDFPageView({
+      container: container,
+      id: pageNum,
+      scale: scale,
+      defaultViewport: viewport,
+      textLayerFactory: new pdfjsViewer.DefaultTextLayerFactory(),
+      annotationLayerFactory: new pdfjsViewer.DefaultAnnotationLayerFactory(),
+    });
+
+    pdfPageView.setPdfPage(pdfPage);
+    return pdfPageView.draw();
+  }).then(function() {
+    page.promise = null;
+    page.div = document.getElementById('page' + pageNum).parentNode.parentNode;
+  });
+}
+
+function preloadNearestPages(pageNum) {
+  var from = Math.max(1, pageNum - 2)
+  var to = Math.min(numPages, pageNum + 2)
+
+  // Delete the pages far from the current page.
+  for (var i = 1; i < from; i++) {
+    deletePage(i);
+  }
+  for (var i = to + 1; i < pages.length; i++) {
+    deletePage(i);
+  }
+
+  // Preload the pages around the current page.
+  for (var i = from; i <= to; i++) {
+    var p = pages[i];
+    if (p.div) {
+      // Loaded and drew already.
+      continue;
+    }
+
+    loadPage(i);
+  }
+}
+
+function showPage(pageNum) {
+  // Remove the initial spinner.
+  var spinner = document.getElementById('spinner');
+  if (spinner) {
+    spinner.remove();
+    // Show the nudge arrow.
+    document.getElementById('arrow-wrapper').style.display = 'block';
+  }
+
+  // Show the page first.
+  pages[pageNum].div.style.display = 'block';
+
+  // Hide other pages.
+  for (var i = 1; i < pages.length; i++) {
+    if (i === pageNum) {
+      continue;
+    }
+
+    var div = pages[i].div;
+    if (div) {
+      div.style.display = null;
+    }
+  }
+
+  // Update the progress.
+  setProgress(pageNum, numPages);
+
+  // Update the history.
+  if (pageNum === 1) {
+    if (window.location.hash !== '') {
+      history.pushState(null, null, ' ');
+    }
+  } else {
+    var newHash = '#p' + pageNum;
+    if (window.location.hash !== newHash) {
+      history.pushState(null, null, newHash);
+    }
+  }
+
+  if (pdfTitle !== '') {
+    document.title = pdfTitle + ' (Slide ' + pageNum + ' of ' + numPages + ')';
+  } else {
+    document.title = 'Slide ' + pageNum + ' of ' + numPages;
+  }
+}
+
+function deletePage(pageNum) {
+  var p = pages[pageNum];
+  if (p.div) {
+    p.div.remove();
+    p.div = null;
+  }
+  p.promise = null;
+}
+
+function navigate(command) {
+  if (!pdfDoc) {
+    return;
+  }
+
+  var oldPageNum = curPageNum;
+  switch (command) {
+    case 'first':
+      curPageNum = 1;
+      break;
+    case 'last':
+      curPageNum = numPages;
+      break;
+    case 'prev':
+      curPageNum = Math.max(1, curPageNum - 1);
+      break;
+    case 'next':
+      curPageNum = Math.min(numPages, curPageNum + 1);
+      break;
+  }
+
+  if (curPageNum !== oldPageNum) {
+    // Remove the initial nudge arrow.
+    var arrow = document.getElementById('arrow-wrapper');
+    if (arrow) {
+      arrow.remove();
+    }
+
+    // Turn the page.
+    loadAndShowPage(curPageNum);
+  } else if (curPageNum === numPages || curPageNum === 1) {
+    blinkProgressBar();
+  }
+}
+
+function setProgress(current, total) {
+  var progressBar = document.getElementById('progressBar');
+  progressBar.style.width = current * 100 / total + '%';
+}
+
+function blinkProgressBar() {
+  var progressBar = document.getElementById('progressBar');
+  progressBar.style.backgroundColor = '#ff0089';
+  setTimeout(function() {
+    progressBar.style.backgroundColor = 'darkgray';
+  }, 500);
+}
+
+function handleLocationChange(force) {
+  if (!pdfDoc) {
+    return;
+  }
+
+  var hash = window.location.hash;
+  var pageNum;
+  if (hash && hash.startsWith('#p')) {
+    pageNum = parseInt(hash.substring(2));
+    if (Number.isNaN(pageNum) || pageNum < 1 || pageNum > numPages) {
+      pageNum = 1;
+    }
+  } else {
+    pageNum = 1;
+  }
+
+  if (curPageNum !== pageNum || force) {
+    curPageNum = pageNum;
+    loadAndShowPage(pageNum);
+  }
+}
+
+loadingTask.promise.then(function(result) {
+  numPages = result.numPages;
+  pages.push(null);
+  for (var i = 0; i < result.numPages; i++) {
+    pages.push({
+      div: null,
+      promise: null
+    });
+  }
+
+  pdfDoc = result;
+
+  // Set title and begin to render.
+  pdfDoc.getMetadata().then(function(metadata) {
+    if (metadata.info && metadata.info.Title) {
+      pdfTitle = String(metadata.info.Title).trim();
+    }
+    handleLocationChange(true);
+  }).catch(function(metadata) {
+    handleLocationChange(true);
+  });
+});
+
+// Handle resize/fullscreen events.
+function handleResize() {
+  if (!pdfDoc) {
+    return;
+  }
+
+  for (var i = 1; i < pages.length; i++) {
+    deletePage(i);
+  }
+
+  setTimeout(function() {
+    loadAndShowPage(curPageNum);
+  }, 50);
+}
+window.addEventListener('resize', handleResize);
+window.addEventListener('fullscreenchange', handleResize);
+
+// Handle mouse events.
+var mouseMoved;
+window.addEventListener('mousedown', function(e) {
+  mouseMoved = false;
+});
+window.addEventListener('mousemove', function(e) {
+  mouseMoved = true;
+});
+window.addEventListener('mouseup', function(e) {
+  if (!pdfDoc || mouseMoved || e.button !== 0 ) {
+    return;
+  }
+
+  if (e.target &&
+      (e.target.tagName === 'A' || e.target.tagName === 'INPUT' ||
+       e.target.tagName === 'BUTTON')) {
+    return;
+  }
+
+  var wrapper = document.getElementById('wrapper');
+  if (e.clientX < wrapper.clientWidth * 4 / 10) {
+    navigate('prev');
+  } else {
+    navigate('next');
+  }
+});
+
+// Handle keyboard events.
+window.addEventListener('keydown', function(e) {
+  if (!pdfDoc || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) {
+    return;
+  }
+
+  switch (e.key) {
+    case 'Home': // Home
+      navigate('first');
+      break;
+    case 'End': // End
+      navigate('last');
+      break;
+    case 'Backspace':
+    case 'PageUp':
+    case 'ArrowLeft':
+    case 'ArrowUp':
+    case 'h':
+    case 'k':
+      navigate('prev');
+      break;
+    case ' ':
+    case 'PageDown':
+    case 'ArrowRight':
+    case 'ArrowDown':
+    case 'j':
+    case 'l':
+      navigate('next');
+      break;
+  }
+});
+
+// Handle swipe events.
+var touchStartX = -1;
+var touchStartY = -1;
+window.addEventListener('touchstart', function(e) {
+  var touch = e.touches[0];
+  touchStartX = touch.clientX;
+  touchStartY = touch.clientY;
+}, false);
+window.addEventListener('touchend', function(e) {
+  if (!pdfDoc || e.touches.length !== 0) {
+    return;
+  }
+
+  var touch = e.changedTouches[event.changedTouches.length - 1];
+  var touchDiffX = touch.clientX - touchStartX;
+  var touchDiffY = touch.clientY - touchStartY;
+  var absTouchDiffX = Math.abs(touchDiffX);
+  var absTouchDiffY = Math.abs(touchDiffY);
+
+  if (absTouchDiffX >= 32 && absTouchDiffY < absTouchDiffX / 2) {
+    navigate(touchDiffX < 0 ? 'next' : 'prev');
+  } else if (absTouchDiffY >= 32 && absTouchDiffX < absTouchDiffY / 2) {
+    navigate(touchDiffY < 0 ? 'next' : 'prev');
+  }
+}, false);
+
+// Handle history events.
+window.addEventListener('popstate', function() {
+  handleLocationChange(false);
+});
+
+})();
+</script>
+</body>
+</html>
+

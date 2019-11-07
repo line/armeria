@@ -23,8 +23,8 @@ import static org.awaitility.Awaitility.await;
 import java.net.ConnectException;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -33,27 +33,27 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
 
-public class HttpClientWithRequestLogTest {
+class HttpClientWithRequestLogTest {
 
     private static final String LOCAL_HOST = "http://127.0.0.1/";
 
     private static final AtomicReference<Throwable> requestCauseHolder = new AtomicReference<>();
     private static final AtomicReference<Throwable> responseCauseHolder = new AtomicReference<>();
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         requestCauseHolder.set(null);
         responseCauseHolder.set(null);
     }
 
     @Test
-    public void exceptionRaisedInDecorator() {
-        final HttpClient client = new HttpClientBuilder(LOCAL_HOST)
-                .decorator((delegate, ctx, req1) -> {
-                    throw new AnticipatedException();
-                })
-                .decorator(new ExceptionHoldingDecorator())
-                .build();
+    void exceptionRaisedInDecorator() {
+        final HttpClient client = HttpClient.builder(LOCAL_HOST)
+                                            .decorator((delegate, ctx, req1) -> {
+                                                throw new AnticipatedException();
+                                            })
+                                            .decorator(new ExceptionHoldingDecorator())
+                                            .build();
 
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         assertThatThrownBy(() -> client.execute(req).aggregate().get())
@@ -70,15 +70,16 @@ public class HttpClientWithRequestLogTest {
     }
 
     @Test
-    public void invalidPath() {
-        final HttpClient client = new HttpClientBuilder(LOCAL_HOST)
-                .decorator((delegate, ctx, req) -> {
-                    final HttpRequest badReq = HttpRequest.of(req, req.headers().toBuilder()
-                                                                      .path("/%").build());
-                    return delegate.execute(ctx, badReq);
-                })
-                .decorator(new ExceptionHoldingDecorator())
-                .build();
+    void invalidPath() {
+        final HttpClient client = HttpClient.builder(LOCAL_HOST)
+                                            .decorator((delegate, ctx, req) -> {
+                                                final HttpRequest badReq = HttpRequest.of(
+                                                        req, req.headers().toBuilder()
+                                                                .path("/%").build());
+                                                return delegate.execute(ctx, badReq);
+                                            })
+                                            .decorator(new ExceptionHoldingDecorator())
+                                            .build();
 
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         assertThatThrownBy(() -> client.execute(req).aggregate().get())
@@ -93,17 +94,18 @@ public class HttpClientWithRequestLogTest {
     }
 
     @Test
-    public void unresolvedUri() {
+    void unresolvedUri() {
         final AtomicReference<ClientConnectionTimings> ref = new AtomicReference<>();
 
-        final HttpClient client = new HttpClientBuilder("http://unresolved.armeria.com")
-                .decorator(new ExceptionHoldingDecorator())
-                .decorator((delegate, ctx, req) -> {
-                    ctx.log().addListener(log -> ref.set(ClientConnectionTimings.get(log)),
-                                          RequestLogAvailability.REQUEST_START);
-                    return delegate.execute(ctx, req);
-                })
-                .build();
+        final HttpClient client = HttpClient.builder("http://unresolved.armeria.com")
+                                            .decorator(new ExceptionHoldingDecorator())
+                                            .decorator((delegate, ctx, req) -> {
+                                                ctx.log().addListener(
+                                                        log -> ref.set(ClientConnectionTimings.get(log)),
+                                                        RequestLogAvailability.REQUEST_START);
+                                                return delegate.execute(ctx, req);
+                                            })
+                                            .build();
 
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         assertThatThrownBy(() -> client.execute(req).aggregate().get()).isInstanceOf(Exception.class);
@@ -123,18 +125,19 @@ public class HttpClientWithRequestLogTest {
     }
 
     @Test
-    public void connectionError() {
+    void connectionError() {
         final AtomicReference<ClientConnectionTimings> ref = new AtomicReference<>();
 
         // According to rfc7805, TCP port number 1 is not used so a connection error always happens.
-        final HttpClient client = new HttpClientBuilder("http://127.0.0.1:1")
-                .decorator(new ExceptionHoldingDecorator())
-                .decorator((delegate, ctx, req) -> {
-                    ctx.log().addListener(log -> ref.set(ClientConnectionTimings.get(log)),
-                                          RequestLogAvailability.REQUEST_START);
-                    return delegate.execute(ctx, req);
-                })
-                .build();
+        final HttpClient client = HttpClient.builder("http://127.0.0.1:1")
+                                            .decorator(new ExceptionHoldingDecorator())
+                                            .decorator((delegate, ctx, req) -> {
+                                                ctx.log().addListener(
+                                                        log -> ref.set(ClientConnectionTimings.get(log)),
+                                                        RequestLogAvailability.REQUEST_START);
+                                                return delegate.execute(ctx, req);
+                                            })
+                                            .build();
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
         assertThatThrownBy(() -> client.execute(req).aggregate().get())
                 .hasCauseInstanceOf(UnprocessedRequestException.class)

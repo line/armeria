@@ -36,7 +36,7 @@ public class HelloConfiguration {
 
             // You can also bind asynchronous RPC services such as Thrift and gRPC:
             // builder.service(THttpService.of(...));
-            // builder.service(new GrpcServiceBuilder()...build());
+            // builder.service(GrpcService.builder()...build());
         };
     }
 }

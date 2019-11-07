@@ -63,11 +63,6 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
     }
 
     @Override
-    protected void onCloseRequest(ChannelHandlerContext ctx) throws Exception {
-        HttpSession.get(ctx.channel()).deactivate();
-    }
-
-    @Override
     protected boolean needsImmediateDisconnection() {
         return clientFactory.isClosing() || responseDecoder.goAwayHandler().receivedErrorGoAway();
     }

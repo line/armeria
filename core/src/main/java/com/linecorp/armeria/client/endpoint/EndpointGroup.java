@@ -61,7 +61,7 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, SafeCloseable
      * {@code endpointGroups} can be instances of {@link Endpoint} as well, any {@link EndpointGroup}s and
      * {@link Endpoint} will all be combined into a single {@link EndpointGroup} that contains the total set.
      */
-    static EndpointGroup of(Iterable<EndpointGroup> endpointGroups) {
+    static EndpointGroup of(Iterable<? extends EndpointGroup> endpointGroups) {
         requireNonNull(endpointGroups, "endpointGroups");
 
         final List<EndpointGroup> groups = new ArrayList<>();

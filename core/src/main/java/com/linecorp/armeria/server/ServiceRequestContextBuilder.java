@@ -21,6 +21,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
@@ -60,7 +61,10 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
 
     /**
      * Returns a new {@link ServiceRequestContextBuilder} created from the specified {@link HttpRequest}.
+     *
+     * @deprecated Use {@link ServiceRequestContext#builder(HttpRequest)}.
      */
+    @Deprecated
     public static ServiceRequestContextBuilder of(HttpRequest request) {
         return new ServiceRequestContextBuilder(request);
     }
@@ -75,7 +79,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
     @Nullable
     private InetAddress clientAddress;
 
-    private ServiceRequestContextBuilder(HttpRequest request) {
+    ServiceRequestContextBuilder(HttpRequest request) {
         super(true, request);
     }
 
@@ -138,9 +142,10 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         }
 
         // Build a fake server which never starts up.
-        final ServerBuilder serverBuilder = new ServerBuilder().meterRegistry(meterRegistry())
-                                                               .workerGroup(eventLoop(), false)
-                                                               .service(path(), service);
+        final ServerBuilder serverBuilder = Server.builder()
+                                                  .meterRegistry(meterRegistry())
+                                                  .workerGroup(eventLoop(), false)
+                                                  .service(path(), service);
         serverConfigurators.forEach(configurator -> configurator.accept(serverBuilder));
 
         final Server server = serverBuilder.build();
@@ -149,13 +154,16 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         // Retrieve the ServiceConfig of the fake service.
         final ServiceConfig serviceCfg = findServiceConfig(server, path(), service);
 
-        // Build a fake object related with path mapping.
+        // Build the fake objects related with path mapping.
+        final HttpRequest req = request();
+        assert req != null;
+
         final RoutingContext routingCtx = DefaultRoutingContext.of(
                 server.config().defaultVirtualHost(),
                 localAddress().getHostString(),
                 path(),
                 query(),
-                ((HttpRequest) request()).headers(),
+                req.headers(),
                 false);
 
         final RoutingResult routingResult =
@@ -165,13 +173,13 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         // Build the context with the properties set by a user and the fake objects.
         if (isRequestStartTimeSet()) {
             return new DefaultServiceRequestContext(
-                    serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), routingCtx,
-                    routingResult, request(), sslSession(), proxiedAddresses, clientAddress,
+                    serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), uuid(), routingCtx,
+                    routingResult, req, sslSession(), proxiedAddresses, clientAddress,
                     requestStartTimeNanos(), requestStartTimeMicros());
         } else {
             return new DefaultServiceRequestContext(
-                    serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), routingCtx,
-                    routingResult, request(), sslSession(), proxiedAddresses, clientAddress);
+                    serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), uuid(), routingCtx,
+                    routingResult, req, sslSession(), proxiedAddresses, clientAddress);
         }
     }
 
@@ -214,6 +222,11 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
     @Override
     public ServiceRequestContextBuilder sessionProtocol(SessionProtocol sessionProtocol) {
         return (ServiceRequestContextBuilder) super.sessionProtocol(sessionProtocol);
+    }
+
+    @Override
+    public ServiceRequestContextBuilder uuid(UUID uuid) {
+        return (ServiceRequestContextBuilder) super.uuid(uuid);
     }
 
     @Override

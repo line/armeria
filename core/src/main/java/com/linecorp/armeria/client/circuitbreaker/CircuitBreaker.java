@@ -23,19 +23,35 @@ package com.linecorp.armeria.client.circuitbreaker;
 public interface CircuitBreaker {
 
     /**
+     * Returns a new {@link CircuitBreakerBuilder}.
+     */
+    static CircuitBreakerBuilder builder() {
+        return new CircuitBreakerBuilder();
+    }
+
+    /**
+     * Returns a new {@link CircuitBreakerBuilder} that has the specified name.
+     *
+     * @param name the name of the circuit breaker.
+     */
+    static CircuitBreakerBuilder builder(String name) {
+        return new CircuitBreakerBuilder(name);
+    }
+
+    /**
      * Creates a new {@link CircuitBreaker} that has the specified name and the default configurations.
      *
      * @param name the name of the circuit breaker
      */
     static CircuitBreaker of(String name) {
-        return new CircuitBreakerBuilder(name).build();
+        return builder(name).build();
     }
 
     /**
      * Creates a new {@link CircuitBreaker} that has a default name and the default configurations.
      */
     static CircuitBreaker ofDefaultName() {
-        return new CircuitBreakerBuilder().build();
+        return builder().build();
     }
 
     /**

@@ -31,7 +31,7 @@ public class ClientOptionsTest {
         final ClientOptions options = ClientOptions.of(ClientOption.HTTP_HEADERS.newValue(httpHeader));
         assertThat(options.get(ClientOption.HTTP_HEADERS)).contains(httpHeader);
 
-        final ClientOptions options2 = ClientOptions.DEFAULT;
+        final ClientOptions options2 = ClientOptions.of();
         assertThat(options2.get(ClientOption.HTTP_HEADERS)).contains(HttpHeaders.of());
     }
 

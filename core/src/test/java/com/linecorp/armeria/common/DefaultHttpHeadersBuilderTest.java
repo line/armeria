@@ -23,10 +23,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 
-public class DefaultHttpHeadersBuilderTest {
+class DefaultHttpHeadersBuilderTest {
 
     @Test
-    public void add() {
+    void add() {
         final HttpHeaders headers = HttpHeaders.builder()
                                                .add("a", "b")
                                                .add("c", ImmutableList.of("d", "e"))
@@ -43,7 +43,7 @@ public class DefaultHttpHeadersBuilderTest {
     }
 
     @Test
-    public void set() {
+    void set() {
         final HttpHeaders headers = HttpHeaders.builder()
                                                .add("a", "b")
                                                .add("c", ImmutableList.of("d", "e"))
@@ -64,7 +64,7 @@ public class DefaultHttpHeadersBuilderTest {
     }
 
     @Test
-    public void mutation() {
+    void mutation() {
         final HttpHeaders headers = HttpHeaders.of("a", "b");
         final HttpHeaders headers2 = headers.toBuilder().set("a", "c").build();
         assertThat(headers).isNotSameAs(headers2);
@@ -74,7 +74,7 @@ public class DefaultHttpHeadersBuilderTest {
     }
 
     @Test
-    public void mutationEndOfStreamOnly() {
+    void mutationEndOfStreamOnly() {
         final HttpHeaders headers = HttpHeaders.of("a", "b");
         final HttpHeaders headers2 = headers.toBuilder().endOfStream(true).build();
         assertThat(headers.isEndOfStream()).isFalse();
@@ -86,7 +86,7 @@ public class DefaultHttpHeadersBuilderTest {
     }
 
     @Test
-    public void mutationAfterBuild() {
+    void mutationAfterBuild() {
         final HttpHeaders headers = HttpHeaders.of("a", "b");
         final DefaultHttpHeadersBuilder builder = (DefaultHttpHeadersBuilder) headers.toBuilder();
 
@@ -136,7 +136,7 @@ public class DefaultHttpHeadersBuilderTest {
     }
 
     @Test
-    public void noMutationNoCopy() {
+    void noMutationNoCopy() {
         final HttpHeaders headers = HttpHeaders.of("a", "b");
         assertThat(headers.toBuilder().build()).isSameAs(headers);
 
@@ -163,7 +163,7 @@ public class DefaultHttpHeadersBuilderTest {
     }
 
     @Test
-    public void empty() {
+    void empty() {
         final HttpHeaders headers = HttpHeaders.of("a", "b");
         assertThat(headers.toBuilder()
                           .clear()
@@ -172,5 +172,12 @@ public class DefaultHttpHeadersBuilderTest {
                           .endOfStream(true)
                           .clear()
                           .build()).isSameAs(DefaultHttpHeaders.EMPTY_EOS);
+    }
+
+    @Test
+    void buildTwice() {
+        final HttpHeadersBuilder builder = HttpHeaders.builder().add("foo", "bar");
+        assertThat(builder.build()).isEqualTo(HttpHeaders.of("foo", "bar"));
+        assertThat(builder.build()).isEqualTo(HttpHeaders.of("foo", "bar"));
     }
 }

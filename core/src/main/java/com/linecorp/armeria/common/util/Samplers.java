@@ -31,7 +31,8 @@ final class Samplers {
 
     private static final Splitter KEY_VALUE_SPLITTER = Splitter.on('=').trimResults();
     private static final String IAE_MSG_TEMPLATE =
-            "specification: %s (expected: always, never, random=<rate> or rate-limited=<samples_per_second>";
+            "specification: %s (expected: always, never, random=<probability> or " +
+            "rate-limited=<samples_per_second>";
 
     /**
      * A sampler that will always be sampled.

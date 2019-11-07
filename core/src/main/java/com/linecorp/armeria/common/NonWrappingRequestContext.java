@@ -23,6 +23,7 @@ import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -44,13 +45,17 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     private final MeterRegistry meterRegistry;
     private final DefaultAttributeMap attrs = new DefaultAttributeMap();
     private final SessionProtocol sessionProtocol;
+    private UUID uuid;
     private final HttpMethod method;
     private final String path;
     @Nullable
     private String decodedPath;
     @Nullable
     private final String query;
-    private volatile Request request;
+    @Nullable
+    private volatile HttpRequest req;
+    @Nullable
+    private volatile RpcRequest rpcReq;
 
     // Callbacks
     @Nullable
@@ -64,46 +69,46 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
      * Creates a new instance.
      *
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
-     * @param request the request associated with this context
+     * @param uuid the {@link UUID} associated with this context
+     * @param req the {@link HttpRequest} associated with this context
+     * @param rpcReq the {@link RpcRequest} associated with this context
      */
     protected NonWrappingRequestContext(
             MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            HttpMethod method, String path, @Nullable String query, Request request) {
+            UUID uuid, HttpMethod method, String path, @Nullable String query,
+            @Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
         this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
+        this.uuid = requireNonNull(uuid, "uuid");
         this.method = requireNonNull(method, "method");
         this.path = requireNonNull(path, "path");
         this.query = query;
-        this.request = requireNonNull(request, "request");
+        this.req = req;
+        this.rpcReq = rpcReq;
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public <T extends Request> T request() {
-        return (T) request;
+    public HttpRequest request() {
+        return req;
     }
 
     @Override
-    public final boolean updateRequest(Request req) {
+    public RpcRequest rpcRequest() {
+        return rpcReq;
+    }
+
+    @Override
+    public final void updateRequest(HttpRequest req) {
         requireNonNull(req, "req");
-        final Request oldReq = request;
-        if (oldReq instanceof HttpRequest) {
-            if (!(req instanceof HttpRequest)) {
-                return false;
-            }
-
-            final HttpRequest httpReq = (HttpRequest) req;
-            validateHeaders(httpReq.headers());
-        } else {
-            assert oldReq instanceof RpcRequest;
-            if (!(req instanceof RpcRequest)) {
-                return false;
-            }
-        }
-
+        validateHeaders(req.headers());
         unsafeUpdateRequest(req);
-        return true;
+    }
+
+    @Override
+    public final void updateRpcRequest(RpcRequest rpcReq) {
+        requireNonNull(rpcReq, "rpcReq");
+        this.rpcReq = rpcReq;
     }
 
     /**
@@ -117,11 +122,11 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     }
 
     /**
-     * Replaces the {@link Request} associated with this context with the specified one without any validation.
-     * Internal use only. Use it at your own risk.
+     * Replaces the {@link HttpRequest} associated with this context with the specified one
+     * without any validation. Internal use only. Use it at your own risk.
      */
-    protected final void unsafeUpdateRequest(Request req) {
-        request = req;
+    protected final void unsafeUpdateRequest(HttpRequest req) {
+        this.req = req;
     }
 
     @Override
@@ -150,6 +155,11 @@ public abstract class NonWrappingRequestContext extends AbstractRequestContext {
     public <A extends SocketAddress> A localAddress() {
         final Channel ch = channel();
         return ch != null ? (A) ch.localAddress() : null;
+    }
+
+    @Override
+    public final UUID uuid() {
+        return uuid;
     }
 
     @Override

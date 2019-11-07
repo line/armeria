@@ -35,10 +35,8 @@ import org.junit.Test;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.ClientRequestContextBuilder;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -52,9 +50,9 @@ public class CircuitBreakerHttpClientTest {
     private static final String remoteServiceName = "testService";
 
     private static final ClientRequestContext ctx =
-            ClientRequestContextBuilder.of(HttpRequest.of(HttpMethod.GET, "/"))
-                                       .endpoint(Endpoint.of("dummyhost", 8080))
-                                       .build();
+            ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                .endpoint(Endpoint.of("dummyhost", 8080))
+                                .build();
 
     @ClassRule
     public static final ServerRule server = new ServerRule() {
@@ -118,7 +116,7 @@ public class CircuitBreakerHttpClientTest {
     @Test
     public void strategyWithoutContent() {
         final CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
-        circuitBreakerIsOpenOnServerError(new CircuitBreakerHttpClientBuilder(strategy));
+        circuitBreakerIsOpenOnServerError(CircuitBreakerHttpClient.builder(strategy));
     }
 
     @Test
@@ -126,7 +124,7 @@ public class CircuitBreakerHttpClientTest {
         final CircuitBreakerStrategyWithContent<HttpResponse> strategy =
                 (ctx, response) -> response.aggregate().handle(
                         (msg, unused1) -> msg.status().codeClass() != HttpStatusClass.SERVER_ERROR);
-        circuitBreakerIsOpenOnServerError(new CircuitBreakerHttpClientBuilder(strategy));
+        circuitBreakerIsOpenOnServerError(CircuitBreakerHttpClient.builder(strategy));
     }
 
     private static void circuitBreakerIsOpenOnServerError(CircuitBreakerHttpClientBuilder builder) {
@@ -136,25 +134,26 @@ public class CircuitBreakerHttpClientTest {
         final Duration counterSlidingWindow = Duration.ofSeconds(180);
         final Duration counterUpdateInterval = Duration.ofMillis(1);
 
-        final CircuitBreaker circuitBreaker = new CircuitBreakerBuilder(remoteServiceName)
-                .minimumRequestThreshold(minimumRequestThreshold)
-                .circuitOpenWindow(circuitOpenWindow)
-                .counterSlidingWindow(counterSlidingWindow)
-                .counterUpdateInterval(counterUpdateInterval)
-                .ticker(ticker::get)
-                .listener(new CircuitBreakerListenerAdapter() {
-                    @Override
-                    public void onEventCountUpdated(String circuitBreakerName, EventCount eventCount)
-                            throws Exception {
-                        ticker.addAndGet(Duration.ofMillis(1).toNanos());
-                    }
-                })
-                .build();
+        final CircuitBreaker circuitBreaker =
+                CircuitBreaker.builder(remoteServiceName)
+                              .minimumRequestThreshold(minimumRequestThreshold)
+                              .circuitOpenWindow(circuitOpenWindow)
+                              .counterSlidingWindow(counterSlidingWindow)
+                              .counterUpdateInterval(counterUpdateInterval)
+                              .ticker(ticker::get)
+                              .listener(new CircuitBreakerListenerAdapter() {
+                                  @Override
+                                  public void onEventCountUpdated(String circuitBreakerName,
+                                                                  EventCount eventCount) throws Exception {
+                                      ticker.addAndGet(Duration.ofMillis(1).toNanos());
+                                  }
+                              })
+                              .build();
 
         final CircuitBreakerMapping mapping = (ctx, req) -> circuitBreaker;
-        final HttpClient client = new HttpClientBuilder(server.uri("/"))
-                .decorator(builder.mapping(mapping).newDecorator())
-                .build();
+        final HttpClient client = HttpClient.builder(server.uri("/"))
+                                            .decorator(builder.mapping(mapping).newDecorator())
+                                            .build();
 
         ticker.addAndGet(Duration.ofMillis(1).toNanos());
         // CLOSED

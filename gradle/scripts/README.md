@@ -339,11 +339,11 @@ When a project has a `java` flag:
   - A special configuration property `checkstyleConfigDir` is set so you can
     access the external files such as `suppressions.xml` from `checkstyle.xml`.
   - You can choose Checkstyle version by specifying it in `dependencies.yml`:
-
     ```yaml
     com.puppycrawl.tools:
       checkstyle: { version: '8.5' }
     ```
+  - Checkstyle can be disabled completely by specifying `-PnoCheckstyle` option.
 
 - Test coverage report is enabled using `jacoco` plugin if `-Pcoverage` option
   is specified.

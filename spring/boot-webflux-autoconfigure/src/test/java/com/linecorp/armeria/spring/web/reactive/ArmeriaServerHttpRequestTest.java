@@ -34,7 +34,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
@@ -67,6 +66,7 @@ class ArmeriaServerHttpRequestTest {
 
         final ServiceRequestContext ctx = newRequestContext(httpRequest);
         final ArmeriaServerHttpRequest req = request(ctx);
+        assertThat(req.initId()).isEqualTo(ctx.uuid().toString());
         assertThat(req.getMethodValue()).isEqualTo(HttpMethod.POST.name());
         assertThat(req.<Object>getNativeRequest()).isInstanceOf(HttpRequest.class).isEqualTo(httpRequest);
 
@@ -133,8 +133,8 @@ class ArmeriaServerHttpRequestTest {
     }
 
     private static ServiceRequestContext newRequestContext(HttpRequest httpRequest) {
-        return ServiceRequestContextBuilder.of(httpRequest)
-                                           .eventLoop(EventLoopGroups.directEventLoop())
-                                           .build();
+        return ServiceRequestContext.builder(httpRequest)
+                                    .eventLoop(EventLoopGroups.directEventLoop())
+                                    .build();
     }
 }

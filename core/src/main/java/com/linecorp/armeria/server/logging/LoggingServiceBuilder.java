@@ -31,8 +31,17 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 /**
  * Builds a new {@link LoggingService}.
  */
-public class LoggingServiceBuilder extends LoggingDecoratorBuilder<LoggingServiceBuilder> {
+public final class LoggingServiceBuilder extends LoggingDecoratorBuilder<LoggingServiceBuilder> {
+
     private Sampler<? super ServiceRequestContext> sampler = Sampler.always();
+
+    /**
+     * Creates a new instance.
+     *
+     * @deprecated Use {@link LoggingService#builder()}.
+     */
+    @Deprecated
+    public LoggingServiceBuilder() {}
 
     /**
      * Sets the {@link Sampler} that determines which request needs logging.

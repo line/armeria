@@ -43,14 +43,14 @@ package com.linecorp.armeria.common.util;
 @FunctionalInterface
 public interface Sampler<T> {
     /**
-     * Returns a sampler, given a rate expressed as a floating point number between {@code 0.0} and {@code 1.0}.
+     * Returns a sampler, given a probability expressed as a floating point number
+     * between {@code 0.0} and {@code 1.0}.
      *
-     * @param rate the sampling rate between {@code 0.0} and {@code 1.0}.
+     * @param probability the probability expressed as a floating point number
+     *                    between {@code 0.0} and {@code 1.0}.
      */
-    static <T> Sampler<T> random(double rate) {
-        @SuppressWarnings("unchecked")
-        final Sampler<T> cast = CountingSampler.create(rate);
-        return cast;
+    static <T> Sampler<T> random(double probability) {
+        return CountingSampler.create(probability);
     }
 
     /**
@@ -59,9 +59,7 @@ public interface Sampler<T> {
      * @param samplesPerSecond an integer between {@code 0} and {@value Integer#MAX_VALUE}
      */
     static <T> Sampler<T> rateLimited(int samplesPerSecond) {
-        @SuppressWarnings("unchecked")
-        final Sampler<T> cast = RateLimitingSampler.create(samplesPerSecond);
-        return cast;
+        return RateLimitingSampler.create(samplesPerSecond);
     }
 
     /**
@@ -96,10 +94,11 @@ public interface Sampler<T> {
      *       <li>Returns the {@link Sampler} that never samples.</li>
      *     </ul>
      *   </li>
-     *   <li>{@code "random=<rate>"} where {@code rate} is a floating point number between 0.0 and 1.0
+     *   <li>{@code "random=<probability>"} where {@code probability} is a floating point number
+     *     between 0.0 and 1.0
      *     <ul>
-     *       <li>Returns the random {@link Sampler} that samples at the given rate.</li>
-     *       <li>e.g. {@code "random=0.05"} to sample at 5% rate</li>
+     *       <li>Returns the random {@link Sampler} that samples at the given probability.</li>
+     *       <li>e.g. {@code "random=0.05"} to sample at 5% probability</li>
      *     </ul>
      *   </li>
      *   <li>{@code "rate-limited=<samples_per_sec>"} where {@code samples_per_sec} is a non-negative integer

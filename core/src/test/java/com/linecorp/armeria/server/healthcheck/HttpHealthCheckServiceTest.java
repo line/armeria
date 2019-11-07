@@ -110,8 +110,10 @@ public class HttpHealthCheckServiceTest {
 
     @Test
     public void testGet() throws Exception {
-        final ServerBuilder builder = new ServerBuilder();
+        final ServerBuilder builder = Server.builder();
         builder.service("/l7check", new HttpHealthCheckService());
+        builder.disableServerHeader();
+        builder.disableDateHeader();
         final Server server = builder.build();
         try {
             server.start().join();
@@ -137,7 +139,9 @@ public class HttpHealthCheckServiceTest {
 
     @Test
     public void testHead() throws Exception {
-        final ServerBuilder builder = new ServerBuilder();
+        final ServerBuilder builder = Server.builder();
+        builder.disableServerHeader();
+        builder.disableDateHeader();
         builder.service("/l7check", new HttpHealthCheckService());
         final Server server = builder.build();
         try {

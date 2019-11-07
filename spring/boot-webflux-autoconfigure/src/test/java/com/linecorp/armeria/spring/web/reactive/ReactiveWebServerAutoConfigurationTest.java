@@ -48,7 +48,6 @@ import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -95,14 +94,16 @@ class ReactiveWebServerAutoConfigurationTest {
 
         @Component
         static class TestHandler {
-            public Mono<ServerResponse> route(ServerRequest request) {
+            Mono<ServerResponse> route(ServerRequest request) {
                 assertThat(ServiceRequestContext.current()).isNotNull();
+                assertThat(request.remoteAddress()).isNotEmpty();
                 return ServerResponse.ok().contentType(MediaType.TEXT_PLAIN)
                                      .body(BodyInserters.fromObject("route"));
             }
 
-            public Mono<ServerResponse> route2(ServerRequest request) {
+            Mono<ServerResponse> route2(ServerRequest request) {
                 assertThat(ServiceRequestContext.current()).isNotNull();
+                assertThat(request.remoteAddress()).isNotEmpty();
                 return Mono.from(request.bodyToMono(Map.class))
                            .map(map -> assertThat(map.get("a")).isEqualTo(1))
                            .then(ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
@@ -112,10 +113,10 @@ class ReactiveWebServerAutoConfigurationTest {
     }
 
     private static final ClientFactory clientFactory =
-            new ClientFactoryBuilder()
-                    .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
-                    .addressResolverGroupFactory(eventLoopGroup -> MockAddressResolverGroup.localhost())
-                    .build();
+            ClientFactory.builder()
+                         .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                         .addressResolverGroupFactory(eventLoopGroup -> MockAddressResolverGroup.localhost())
+                         .build();
 
     @LocalServerPort
     int port;

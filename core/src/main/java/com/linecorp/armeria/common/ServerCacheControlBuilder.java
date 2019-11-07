@@ -46,7 +46,10 @@ public final class ServerCacheControlBuilder extends CacheControlBuilder {
 
     /**
      * Creates a new builder with all directives disabled initially.
+     *
+     * @deprecated Use {@link ServerCacheControl#builder()}.
      */
+    @Deprecated
     public ServerCacheControlBuilder() {}
 
     ServerCacheControlBuilder(ServerCacheControl c) {

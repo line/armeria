@@ -31,8 +31,17 @@ import com.linecorp.armeria.common.util.Sampler;
 /**
  * Builds a new {@link LoggingClient}.
  */
-public class LoggingClientBuilder extends LoggingDecoratorBuilder<LoggingClientBuilder> {
+public final class LoggingClientBuilder extends LoggingDecoratorBuilder<LoggingClientBuilder> {
+
     private Sampler<? super ClientRequestContext> sampler = Sampler.always();
+
+    /**
+     * Creates a new instance.
+     *
+     * @deprecated Use {@link LoggingClient#builder()}.
+     */
+    @Deprecated
+    public LoggingClientBuilder() {}
 
     /**
      * Sets the {@link Sampler} that determines which request needs logging.

@@ -40,7 +40,6 @@ import org.apache.http.util.EntityUtils;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.server.Server;
@@ -139,9 +138,10 @@ public abstract class WebAppContainerTest {
 
     @Test
     public void https() throws Exception {
-        final ClientFactory clientFactory = new ClientFactoryBuilder()
-                .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
-                .build();
+        final ClientFactory clientFactory =
+                ClientFactory.builder()
+                             .sslContextCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE))
+                             .build();
         final HttpClient client = HttpClient.of(clientFactory, server().httpsUri("/"));
         final AggregatedHttpResponse response = client.get("/jsp/index.jsp").aggregate().get();
         final String actualContent = CR_OR_LF.matcher(response.contentUtf8())

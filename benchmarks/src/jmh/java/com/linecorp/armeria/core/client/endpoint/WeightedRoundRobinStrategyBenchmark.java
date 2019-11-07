@@ -56,7 +56,7 @@ public class WeightedRoundRobinStrategyBenchmark {
     }
 
     private List<Endpoint> generateEndpoints(EndpointGenerator e) {
-        List<Endpoint> result = new ArrayList<>();
+        final List<Endpoint> result = new ArrayList<>();
         for (int i = 0; i < numEndpoints; i++) {
             result.add(e.generate(i));
         }
@@ -72,7 +72,7 @@ public class WeightedRoundRobinStrategyBenchmark {
 
     @Setup
     public void setupCases() {
-        Random rand = new Random();
+        final Random rand = new Random();
 
         selectorSameWeight = getEndpointSelector(generateEndpoints(
                 id -> Endpoint.of("127.0.0.1", id + 1)

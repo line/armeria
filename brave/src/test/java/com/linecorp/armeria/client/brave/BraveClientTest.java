@@ -35,7 +35,6 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.ClientRequestContextBuilder;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -213,8 +212,9 @@ class BraveClientTest {
         final RpcRequest rpcReq = RpcRequest.of(HelloService.Iface.class, "hello", "Armeria");
         final HttpResponse res = HttpResponse.of(HttpStatus.OK);
         final RpcResponse rpcRes = RpcResponse.of("Hello, Armeria!");
-        final ClientRequestContext ctx = ClientRequestContextBuilder.of(req).build();
+        final ClientRequestContext ctx = ClientRequestContext.builder(req).build();
         final HttpRequest actualReq = ctx.request();
+        assertThat(actualReq).isNotNull();
 
         ctx.logBuilder().requestFirstBytesTransferred();
         ctx.logBuilder().requestContent(rpcReq, actualReq);

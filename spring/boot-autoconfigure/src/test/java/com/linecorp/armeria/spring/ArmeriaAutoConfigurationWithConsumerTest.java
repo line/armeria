@@ -31,7 +31,6 @@ import org.junit.runner.RunWith;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
@@ -53,7 +52,6 @@ import com.linecorp.armeria.spring.ArmeriaAutoConfigurationWithConsumerTest.Test
 public class ArmeriaAutoConfigurationWithConsumerTest {
 
     @SpringBootApplication
-    @Import(ArmeriaOkServiceConfiguration.class)
     public static class TestConfiguration {
         @Bean
         public Consumer<ServerBuilder> customizer() {

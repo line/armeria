@@ -1,6 +1,7 @@
 // Enable checkstyle if the rule file exists.
 def checkstyleConfigDir = "${rootProject.projectDir}/settings/checkstyle"
-def checkstyleEnabled = new File(checkstyleConfigDir).isDirectory() &&
+def checkstyleEnabled = !rootProject.hasProperty('noCheckstyle') &&
+                        new File(checkstyleConfigDir).isDirectory() &&
                         new File("${checkstyleConfigDir}/checkstyle.xml").isFile()
 
 configure(rootProject) {
@@ -110,11 +111,15 @@ configure(projectsWithFlags('java')) {
             }
         }
 
-        task checkstyle(group: 'Verification', description: 'Runs the checkstyle rules.') {
-            project.sourceSets.all { SourceSet sourceSet ->
-                def dependencyTask = project.tasks.findByName(sourceSet.getTaskName("checkstyle", ""))
-                if (dependencyTask instanceof Checkstyle) {
-                    dependsOn dependencyTask
+        task checkstyle(group: 'Verification', description: 'Runs the checkstyle rules.') {}
+        project.sourceSets.all { SourceSet sourceSet ->
+            def dependencyTask = project.tasks.findByName("checkstyle${sourceSet.name.capitalize()}")
+            if (dependencyTask instanceof Checkstyle) {
+                tasks.checkstyle.dependsOn dependencyTask
+
+                // Run checkstyle as soon as possible after compilation to get feedback earlier.
+                tasks.named(sourceSet.compileJavaTaskName).configure {
+                    finalizedBy dependencyTask
                 }
             }
         }

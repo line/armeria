@@ -31,7 +31,6 @@ includeWithFlags ':thrift0.9',                          'java', 'publish', 'relo
 includeWithFlags ':tomcat',                             'java', 'publish', 'relocate'
 includeWithFlags ':tomcat8.0',                          'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat8.5',                          'java', 'publish', 'relocate', 'no_aggregation'
-includeWithFlags ':zipkin',                             'java', 'publish', 'relocate'
 includeWithFlags ':zookeeper',                          'java', 'publish', 'relocate'
 includeWithFlags ':saml',                               'java', 'publish', 'relocate'
 

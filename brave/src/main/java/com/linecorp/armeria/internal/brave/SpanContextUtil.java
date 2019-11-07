@@ -31,15 +31,6 @@ public final class SpanContextUtil {
         span.start(log.requestStartTimeMicros());
     }
 
-    /**
-     * Adds logging tags to the provided {@link Span} and closes it when the log is finished.
-     * The span cannot be used further after this method has been called.
-     */
-    public static void closeSpan(Span span, RequestLog log) {
-        SpanTags.addTags(span, log);
-        span.finish(wallTimeMicros(log, log.responseEndTimeNanos()));
-    }
-
     public static long wallTimeMicros(RequestLog log, long timeNanos) {
         final long relativeTimeNanos = timeNanos - log.requestStartTimeNanos();
         return log.requestStartTimeMicros() + TimeUnit.NANOSECONDS.toMicros(relativeTimeNanos);

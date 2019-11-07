@@ -65,6 +65,7 @@ final class HttpClientFactory extends AbstractClientFactory {
     private final boolean shutdownWorkerGroupOnClose;
     private final Bootstrap baseBootstrap;
     private final Consumer<? super SslContextBuilder> sslContextCustomizer;
+    private final AddressResolverGroup<InetSocketAddress> addressResolverGroup;
     private final int http2InitialConnectionWindowSize;
     private final int http2InitialStreamWindowSize;
     private final int http2MaxFrameSize;
@@ -111,6 +112,7 @@ final class HttpClientFactory extends AbstractClientFactory {
         this.eventLoopScheduler = eventLoopScheduler;
         this.baseBootstrap = baseBootstrap;
         this.sslContextCustomizer = sslContextCustomizer;
+        this.addressResolverGroup = addressResolverGroup;
         this.http2InitialConnectionWindowSize = http2InitialConnectionWindowSize;
         this.http2InitialStreamWindowSize = http2InitialStreamWindowSize;
         this.http2MaxFrameSize = http2MaxFrameSize;
@@ -281,6 +283,7 @@ final class HttpClientFactory extends AbstractClientFactory {
             i.remove();
         }
 
+        addressResolverGroup.close();
         if (shutdownWorkerGroupOnClose) {
             workerGroup.shutdownGracefully().syncUninterruptibly();
         }

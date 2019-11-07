@@ -94,10 +94,10 @@ public class HttpClientMaxConcurrentStreamTest {
 
     @Before
     public void setUp() {
-        clientFactory = new ClientFactoryBuilder()
-                .workerGroup(EventLoopGroups.newEventLoopGroup(1), true)
-                .connectionPoolListener(connectionPoolListenerWrapper)
-                .build();
+        clientFactory = ClientFactory.builder()
+                                     .workerGroup(EventLoopGroups.newEventLoopGroup(1), true)
+                                     .connectionPoolListener(connectionPoolListenerWrapper)
+                                     .build();
     }
 
     @After

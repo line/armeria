@@ -42,7 +42,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
 
     private SessionProtocol protocol = SessionProtocol.HTTP;
     private Backoff retryBackoff = DEFAULT_HEALTH_CHECK_RETRY_BACKOFF;
-    private ClientFactory clientFactory = ClientFactory.DEFAULT;
+    private ClientFactory clientFactory = ClientFactory.ofDefault();
     private Function<? super ClientOptionsBuilder, ClientOptionsBuilder> configurator = Function.identity();
     private int port;
 

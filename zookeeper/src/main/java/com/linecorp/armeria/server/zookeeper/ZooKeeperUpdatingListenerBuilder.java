@@ -41,7 +41,7 @@ import com.linecorp.armeria.internal.zookeeper.ZooKeeperDefaults;
  *         .sessionTimeoutMillis(10000)
  *         .nodeValueCodec(NodeValueCodec.DEFAULT)
  *         .build();
- * ServerBuilder sb = new ServerBuilder();
+ * ServerBuilder sb = Server.builder();
  * sb.addListener(listener);
  * }</pre>
  *
@@ -55,7 +55,7 @@ import com.linecorp.armeria.internal.zookeeper.ZooKeeperDefaults;
  *     new ZooKeeperUpdatingListenerBuilder(curatorFramework, "/myProductionEndpoints")
  *         .nodeValueCodec(NodeValueCodec.DEFAULT)
  *         .build();
- * ServerBuilder sb = new ServerBuilder();
+ * ServerBuilder sb = Server.builder();
  * sb.addListener(listener);
  * }</pre>
  * */

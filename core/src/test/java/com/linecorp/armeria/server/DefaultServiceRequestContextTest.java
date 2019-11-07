@@ -18,7 +18,7 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -28,12 +28,12 @@ import com.linecorp.armeria.common.HttpResponse;
 
 import io.netty.util.AttributeKey;
 
-public class DefaultServiceRequestContextTest {
+class DefaultServiceRequestContextTest {
 
     @Test
-    public void requestTimedOut() {
+    void requestTimedOut() {
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/hello");
-        final ServiceRequestContext ctx = ServiceRequestContextBuilder.of(request).build();
+        final ServiceRequestContext ctx = ServiceRequestContext.builder(request).build();
         assertThat(ctx.isTimedOut()).isFalse();
 
         assert ctx instanceof DefaultServiceRequestContext;
@@ -44,9 +44,9 @@ public class DefaultServiceRequestContextTest {
     }
 
     @Test
-    public void deriveContext() {
+    void deriveContext() {
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/hello");
-        final ServiceRequestContext originalCtx = ServiceRequestContextBuilder.of(request).build();
+        final ServiceRequestContext originalCtx = ServiceRequestContext.builder(request).build();
 
         setAdditionalHeaders(originalCtx);
         setAdditionalTrailers(originalCtx);
@@ -55,7 +55,7 @@ public class DefaultServiceRequestContextTest {
         originalCtx.attr(foo).set("foo");
 
         final HttpRequest newRequest = HttpRequest.of(HttpMethod.GET, "/derived/hello");
-        final ServiceRequestContext derivedCtx = originalCtx.newDerivedContext(newRequest);
+        final ServiceRequestContext derivedCtx = originalCtx.newDerivedContext(newRequest, null);
         assertThat(derivedCtx.server()).isSameAs(originalCtx.server());
         assertThat(derivedCtx.sessionProtocol()).isSameAs(originalCtx.sessionProtocol());
         assertThat(derivedCtx.<Service<HttpRequest, HttpResponse>>service()).isSameAs(originalCtx.service());

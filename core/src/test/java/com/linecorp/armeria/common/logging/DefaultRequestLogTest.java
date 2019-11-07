@@ -20,6 +20,10 @@ import static com.linecorp.armeria.common.logging.DefaultRequestLog.REQUEST_STRI
 import static com.linecorp.armeria.common.logging.DefaultRequestLog.RESPONSE_STRING_BUILDER_CAPACITY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import org.junit.Before;
@@ -30,7 +34,6 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.ClientRequestContextBuilder;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -41,9 +44,11 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
 
 import io.netty.channel.Channel;
@@ -112,6 +117,22 @@ public class DefaultRequestLogTest {
     public void endResponseWithoutHeaders() {
         log.endResponse();
         assertThat(log.responseHeaders().status()).isEqualTo(HttpStatus.UNKNOWN);
+    }
+
+    @Test
+    public void rpcRequestIsPropagatedToContext() {
+        final RpcRequest req = RpcRequest.of(Object.class, "foo");
+        when(ctx.rpcRequest()).thenReturn(null);
+        log.requestContent(req, null);
+        verify(ctx, times(1)).updateRpcRequest(req);
+    }
+
+    @Test
+    public void rpcRequestIsNotPropagatedToContext() {
+        final RpcRequest req = RpcRequest.of(Object.class, "foo");
+        when(ctx.rpcRequest()).thenReturn(RpcRequest.of(Object.class, "bar"));
+        log.requestContent(req, null);
+        verify(ctx, never()).updateRpcRequest(any());
     }
 
     @Test
@@ -203,7 +224,7 @@ public class DefaultRequestLogTest {
                                   HttpHeaderNames.CONTENT_LENGTH, VERY_LONG_STRING.length());
         final HttpRequest req = HttpRequest.of(
                 AggregatedHttpRequest.of(reqHeaders, HttpData.ofUtf8(VERY_LONG_STRING)));
-        final ClientRequestContext ctx = ClientRequestContextBuilder.of(req).build();
+        final ClientRequestContext ctx = ClientRequestContext.builder(req).build();
 
         final RequestLogBuilder logBuilder = ctx.logBuilder();
         logBuilder.requestLength(1000000000);
@@ -230,7 +251,7 @@ public class DefaultRequestLogTest {
                                   HttpHeaderNames.CONTENT_LENGTH, VERY_LONG_STRING.length());
         final HttpRequest req = HttpRequest.of(
                 AggregatedHttpRequest.of(reqHeaders, HttpData.ofUtf8(VERY_LONG_STRING)));
-        final ClientRequestContext ctx = ClientRequestContextBuilder.of(req).build();
+        final ClientRequestContext ctx = ClientRequestContext.builder(req).build();
         final RequestLogBuilder logBuilder = ctx.logBuilder();
         logBuilder.endRequest();
 
@@ -252,5 +273,21 @@ public class DefaultRequestLogTest {
                 VERY_LONG_STRING.length() +
                 responseTrailers.toString().length() +
                 cause.toString().length());
+    }
+
+    @Test
+    public void testUUID_Assign() {
+        final RequestHeaders reqHeaders =
+                RequestHeaders.of(HttpMethod.POST, "/armeria/uuid",
+                                  HttpHeaderNames.CONTENT_LENGTH, VERY_LONG_STRING.length());
+        final HttpRequest req = HttpRequest.of(
+                AggregatedHttpRequest.of(reqHeaders, HttpData.ofUtf8(VERY_LONG_STRING)));
+        final ClientRequestContext cctx = ClientRequestContext.builder(req).build();
+        assertThat(cctx.log().uuid()).isNotNull();
+        assertThat(cctx.log().uuid()).isEqualTo(cctx.uuid());
+
+        final ServiceRequestContext sctx = ServiceRequestContext.of(req);
+        assertThat(sctx.log().uuid()).isNotNull();
+        assertThat(sctx.log().uuid()).isEqualTo(sctx.uuid());
     }
 }

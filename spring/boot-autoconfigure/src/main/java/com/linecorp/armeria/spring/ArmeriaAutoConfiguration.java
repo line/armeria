@@ -73,13 +73,15 @@ public class ArmeriaAutoConfiguration {
             Optional<List<ArmeriaServerConfigurator>> armeriaServerConfigurators,
             Optional<List<Consumer<ServerBuilder>>> armeriaServerBuilderConsumers,
             Optional<List<ThriftServiceRegistrationBean>> thriftServiceRegistrationBeans,
-            Optional<List<GrpcServiceRegistrationBean>> grpcServiceRegistrationBean,
+            Optional<List<GrpcServiceRegistrationBean>> grpcServiceRegistrationBeans,
             Optional<List<HttpServiceRegistrationBean>> httpServiceRegistrationBeans,
             Optional<List<AnnotatedServiceRegistrationBean>> annotatedServiceRegistrationBeans)
             throws InterruptedException {
 
         if (!armeriaServerConfigurators.isPresent() &&
+            !armeriaServerBuilderConsumers.isPresent() &&
             !thriftServiceRegistrationBeans.isPresent() &&
+            !grpcServiceRegistrationBeans.isPresent() &&
             !httpServiceRegistrationBeans.isPresent() &&
             !annotatedServiceRegistrationBeans.isPresent()) {
             // No services to register, no need to start up armeria server.
@@ -90,7 +92,7 @@ public class ArmeriaAutoConfiguration {
                 armeriaSettings.isEnableMetrics() ? meterIdPrefixFunctionFactory.orElse(DEFAULT)
                                                   : null;
 
-        final ServerBuilder server = new ServerBuilder();
+        final ServerBuilder server = Server.builder();
 
         final List<Port> ports = armeriaSettings.getPorts();
         if (ports.isEmpty()) {
@@ -108,7 +110,7 @@ public class ArmeriaAutoConfiguration {
                                 docsPath);
         configureGrpcServices(server,
                               docServiceBuilder,
-                              grpcServiceRegistrationBean.orElseGet(Collections::emptyList),
+                              grpcServiceRegistrationBeans.orElseGet(Collections::emptyList),
                               meterIdPrefixFuncFactory,
                               docsPath);
         configureHttpServices(server,

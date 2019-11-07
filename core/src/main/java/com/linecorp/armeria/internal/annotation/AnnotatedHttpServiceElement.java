@@ -71,6 +71,26 @@ public final class AnnotatedHttpServiceElement {
         return decorator;
     }
 
+    /**
+     * Builds a safe decorated {@link Service} by wrapping the localDecorator with exceptionHandlingDecorators.
+     *
+     * @param localDecorator a decorator to decorate the service with.
+     */
+    public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest,
+            HttpResponse>> Service<HttpRequest, HttpResponse>
+    buildSafeDecoratedService(Function<T, R> localDecorator) {
+        // Apply decorators which are specified in the service class.
+        Service<HttpRequest, HttpResponse> decoratedService = decorator.apply(service);
+        // Apply localDecorator passed in through method parameter
+        decoratedService = decoratedService.decorate(localDecorator);
+        // If there is a decorator, we should add one more decorator which handles an exception
+        // raised from decorators.
+        if (decoratedService != service) {
+            decoratedService = service.exceptionHandlingDecorator().apply(decoratedService);
+        }
+        return decoratedService;
+    }
+
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this).omitNullValues()

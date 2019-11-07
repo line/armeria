@@ -33,7 +33,7 @@ public class MetricCollectingCircuitBreakerListenerTest {
         final CircuitBreakerListener l = new MetricCollectingCircuitBreakerListener(registry, "foo");
 
         // Note: We only use the name of the circuit breaker.
-        final CircuitBreaker cb = new CircuitBreakerBuilder("bar").build();
+        final CircuitBreaker cb = CircuitBreaker.builder("bar").build();
 
         // Trigger the first event so that the metric group is registered.
         l.onEventCountUpdated(cb.name(), new EventCount(1, 2));

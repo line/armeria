@@ -49,23 +49,29 @@ public final class LoggingService<I extends Request, O extends Response> extends
      */
     public static <I extends Request, O extends Response>
     Function<Service<I, O>, LoggingService<I, O>> newDecorator() {
-        return new LoggingServiceBuilder()
-                .requestLogLevel(LogLevel.INFO)
-                .successfulResponseLogLevel(LogLevel.INFO)
-                .failureResponseLogLevel(LogLevel.WARN)
-                .newDecorator();
+        return builder().requestLogLevel(LogLevel.INFO)
+                        .successfulResponseLogLevel(LogLevel.INFO)
+                        .failureResponseLogLevel(LogLevel.WARN)
+                        .newDecorator();
     }
 
     /**
      * Returns a new {@link Service} decorator that logs {@link Request}s and {@link Response}s at the given
      * {@link LogLevel}.
      *
-     * @deprecated Use {@link LoggingServiceBuilder}.
+     * @deprecated Use {@link LoggingService#builder()}.
      */
     @Deprecated
     public static <I extends Request, O extends Response>
     Function<Service<I, O>, LoggingService<I, O>> newDecorator(LogLevel level) {
         return delegate -> new LoggingService<>(delegate, level);
+    }
+
+    /**
+     * Returns a newly created {@link LoggingServiceBuilder}.
+     */
+    public static LoggingServiceBuilder builder() {
+        return new LoggingServiceBuilder();
     }
 
     private final LogLevel requestLogLevel;

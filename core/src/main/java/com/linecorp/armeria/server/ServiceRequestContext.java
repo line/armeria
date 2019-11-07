@@ -43,6 +43,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -116,15 +117,30 @@ public interface ServiceRequestContext extends RequestContext {
      * @see ServiceRequestContextBuilder
      */
     static ServiceRequestContext of(HttpRequest request) {
-        return ServiceRequestContextBuilder.of(request).build();
+        return builder(request).build();
+    }
+
+    /**
+     * Returns a new {@link ServiceRequestContextBuilder} created from the specified {@link HttpRequest}.
+     */
+    static ServiceRequestContextBuilder builder(HttpRequest request) {
+        return new ServiceRequestContextBuilder(request);
     }
 
     /**
      * Returns the {@link HttpRequest} associated with this context.
      */
+    @Nonnull
     @Override
-    @SuppressWarnings("unchecked")
     HttpRequest request();
+
+    /**
+     * {@inheritDoc} For example, this method will return {@code null} when the request being handled is
+     * 1) not an RPC request or 2) not decoded into an RPC request yet.
+     */
+    @Nullable
+    @Override
+    RpcRequest rpcRequest();
 
     /**
      * Returns the remote address of this request.
@@ -149,10 +165,12 @@ public interface ServiceRequestContext extends RequestContext {
     }
 
     @Override
-    ServiceRequestContext newDerivedContext();
+    default ServiceRequestContext newDerivedContext() {
+        return newDerivedContext(request(), rpcRequest());
+    }
 
     @Override
-    ServiceRequestContext newDerivedContext(Request request);
+    ServiceRequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq);
 
     /**
      * Returns the {@link Server} that is handling the current {@link Request}.
