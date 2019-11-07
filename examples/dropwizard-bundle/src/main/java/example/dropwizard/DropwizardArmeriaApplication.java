@@ -4,14 +4,14 @@ import java.util.Objects;
 
 import javax.validation.Valid;
 
-import example.dropwizard.armeria.services.http.HelloService;
-import example.dropwizard.health.PingCheck;
-import example.dropwizard.resources.JerseyResource;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServerBuilder;
-
 import com.linecorp.armeria.server.dropwizard.ArmeriaBundle;
+
+import example.dropwizard.armeria.services.http.HelloService;
+import example.dropwizard.health.PingCheck;
+import example.dropwizard.resources.JerseyResource;
 import io.dropwizard.Application;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
@@ -29,7 +29,6 @@ public class DropwizardArmeriaApplication extends Application<DropwizardArmeriaC
 
     @Override
     public void initialize(final Bootstrap<DropwizardArmeriaConfiguration> bootstrap) {
-        // TODO: application initialization
         final ArmeriaBundle bundle = new ArmeriaBundle<DropwizardArmeriaConfiguration>() {
             @Override
             public void onServerBuilderReady(final ServerBuilder builder) {
@@ -40,8 +39,9 @@ public class DropwizardArmeriaApplication extends Application<DropwizardArmeriaC
 
                 builder.annotatedService(new HelloService());
 
-                // TODO: Hook up a Thrift service
-                // TODO: Hook up a gRPC service
+                // You can also bind asynchronous RPC services such as Thrift and gRPC:
+                // builder.service(THttpService.of(...));
+                // builder.service(GrpcService.builder()...build());
             }
         };
         bootstrap.addBundle(bundle);
@@ -50,8 +50,6 @@ public class DropwizardArmeriaApplication extends Application<DropwizardArmeriaC
     @Override
     public void run(@Valid final DropwizardArmeriaConfiguration configuration,
                     final Environment environment) {
-        // TODO: implement application
-
         environment.jersey().register(JerseyResource.class);
 
         environment.healthChecks().register("ping", new PingCheck());

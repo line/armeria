@@ -9,3 +9,9 @@ application {
 dependencies {
     compile project(':dropwizard')
 }
+
+task runDropwizardExample(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    main = application.mainClassName
+    args = ['server', 'server.yaml']
+}
