@@ -40,8 +40,9 @@ class RequestLogListenerInvokerTest {
         log.addListener(l -> { /* no-op */ }, RequestLogAvailability.COMPLETE);
 
         ctx.logBuilder().endRequest();
-        assertThat(counter.get()).isZero(); // There's no listener for RequestLogAvailability.REQUEST_END
-                                            // so onEnter is not called.
+        // There's no listener for RequestLogAvailability.REQUEST_END, so onEnter is not called.
+        assertThat(counter.get()).isZero();
+
         ctx.logBuilder().endResponse();
         assertThat(counter.get()).isOne();
     }
