@@ -265,7 +265,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     static final class AbortableSubscriber implements Subscriber<Object>, Subscription {
         private final PublisherBasedStreamMessage<?> parent;
         private final EventExecutor executor;
-        private boolean notifyCancellation;
+        private final boolean notifyCancellation;
         private Subscriber<Object> subscriber;
         @Nullable
         private volatile Throwable abortCause;
