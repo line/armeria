@@ -58,21 +58,17 @@ public class ArmeriaServerFactory extends SimpleServerFactory {
     public static final String TYPE = "armeria";
     private static final Logger LOGGER = LoggerFactory.getLogger(ArmeriaServerFactory.class);
 
-    @Valid
     @JsonProperty
-    private ConnectorFactory connector = ArmeriaHttpConnectorFactory.build();
+    private @Valid ConnectorFactory connector = ArmeriaHttpConnectorFactory.build();
 
-    @Valid
-    @NotNull
     @JsonProperty
-    private AccessLogWriterFactory accessLogWriter = new CommonAccessLogWriterFactory();
+    private @Valid @NotNull AccessLogWriterFactory accessLogWriter = new CommonAccessLogWriterFactory();
 
     @JsonProperty
     private boolean jerseyEnabled = true;
 
     @JsonProperty
-    @MinSize(value = 0)
-    private Size maxRequestLength = Size.bytes(Flags.defaultMaxRequestLength());
+    private @MinSize(value = 0) Size maxRequestLength = Size.bytes(Flags.defaultMaxRequestLength());
 
     @JsonIgnore
     private transient ServerBuilder serverBuilder;
@@ -168,7 +164,7 @@ public class ArmeriaServerFactory extends SimpleServerFactory {
 
         if (this.connector != null) {
             try {
-                setupAmeriaHttp(this.serverBuilder, this.connector);
+                setupArmeriaHttp(this.serverBuilder, this.connector);
             } catch (SSLException | CertificateException e) {
                 LOGGER.error("Unable to define TLS Server", e);
             }
@@ -185,7 +181,7 @@ public class ArmeriaServerFactory extends SimpleServerFactory {
                 Duration.ofMillis(getShutdownGracePeriod().toMilliseconds()));
     }
 
-    private void setupAmeriaHttp(final ServerBuilder sb, final ConnectorFactory connector)
+    private void setupArmeriaHttp(final ServerBuilder sb, final ConnectorFactory connector)
         throws SSLException, CertificateException {
         if (connector instanceof ArmeriaHttpConnectorFactory) {
             LOGGER.debug("Building Armeria HTTP Server");

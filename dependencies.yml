@@ -152,6 +152,10 @@ io.dropwizard:
     version: *DROPWIZARD_VERSION
     javadocs:
     - https://static.javadoc.io/io.dropwizard/dropwizard-jetty/1.3.16/
+  dropwizard-testing:
+    version: *DROPWIZARD_VERSION
+    javadocs:
+      - https://static.javadoc.io/io.dropwizard/dropwizard-testing/1.3.16/
   dropwizard-util:
     version: *DROPWIZARD_VERSION
     javadocs:

@@ -6,4 +6,6 @@ dependencies {
     }
     // Dropwizard Metrics
     compile 'io.dropwizard.metrics:metrics-core'
+
+    testCompile 'io.dropwizard:dropwizard-testing'
 }

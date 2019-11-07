@@ -39,8 +39,7 @@ public class CustomAccessLogWriterFactory implements AccessLogWriterFactory {
     *
     * @param format - A non-empty logging format supported by Armeria
     */
-    @Valid
-    public static CustomAccessLogWriterFactory build(@NotBlank String format) {
+    public static @Valid CustomAccessLogWriterFactory build(@NotBlank String format) {
         final CustomAccessLogWriterFactory factory = new CustomAccessLogWriterFactory();
         factory.format = format;
         return factory;

@@ -39,8 +39,7 @@ public class ArmeriaHttpsConnectorFactory extends HttpsConnectorFactory {
     /**
     * Builds an instance of {@code ArmeriaHttpsConnectorFactory} on port 8082.
     */
-    @Valid
-    public static ConnectorFactory build() {
+    public static @Valid ConnectorFactory build() {
         final ArmeriaHttpsConnectorFactory factory = new ArmeriaHttpsConnectorFactory();
         factory.setPort(8082);
         return factory;
