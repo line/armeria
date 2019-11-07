@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
@@ -366,8 +365,7 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
             this.cause = cause;
         }
 
-        void notifySubscriber(SubscriptionImpl subscription, CompletableFuture<?> completionFuture,
-                              @Nullable Consumer<Throwable> onError) {
+        void notifySubscriber(SubscriptionImpl subscription, CompletableFuture<?> completionFuture) {
             if (completionFuture.isDone()) {
                 // Notified already
                 return;
@@ -391,9 +389,6 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
                         subscriber.onError(cause);
                     }
                 } finally {
-                    if (onError != null) {
-                        onError.accept(cause);
-                    }
                     completionFuture.completeExceptionally(cause);
                 }
             }

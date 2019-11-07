@@ -58,6 +58,12 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             AtomicIntegerFieldUpdater.newUpdater(
                     DeferredStreamMessage.class, "subscribedToDelegate");
 
+    @SuppressWarnings("rawtypes")
+    private static final AtomicIntegerFieldUpdater<DeferredStreamMessage>
+            abortPendingUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(
+                    DeferredStreamMessage.class, "abortPending");
+
     @Nullable
     @SuppressWarnings("unused") // Updated only via delegateUpdater
     private volatile StreamMessage<T> delegate;
@@ -76,6 +82,9 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     // Only accessed from subscription's executor.
     private long pendingDemand;
 
+    @SuppressWarnings("unused")
+    private volatile int abortPending; // 0 - false, 1 - true
+
     // Only accessed from subscription's executor.
     private boolean cancelPending;
 
@@ -92,7 +101,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             throw new IllegalStateException("delegate set already");
         }
 
-        if (completionCause() != null) {
+        if (abortPending != 0) {
             delegate.abort(completionCause());
         }
 
@@ -268,7 +277,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
 
     @Override
     public void abort() {
-        abort0(null, ABORTED_CLOSE);
+        abort0(AbortedStreamException::get);
     }
 
     @Override
@@ -279,34 +288,40 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
 
     @Override
     public void abort(Supplier<? extends Throwable> causeSupplier) {
-        abort0(requireNonNull(causeSupplier, "causeSupplier"), null);
+        abort0(requireNonNull(causeSupplier, "causeSupplier"));
     }
 
-    private void abort0(@Nullable Supplier<? extends Throwable> causeSupplier,
-                        @Nullable CloseEvent closeEvent) {
-        final Supplier<? extends Throwable> causeOrAbortStreamExceptionSupplier =
-                causeSupplier != null ? causeSupplier : AbortedStreamException::get;
-        final Throwable cause = requireNonNull(causeOrAbortStreamExceptionSupplier.get(),
-                                               "cause returned by causeSupplier is null");
-        if (!setCompletionCause(cause)) {
+    private void abort0(Supplier<? extends Throwable> causeSupplier) {
+        if (!abortPendingUpdater.compareAndSet(this, 0, 1)) {
             return;
         }
+
+        final StreamMessage<T> delegate = this.delegate;
+        if (delegate != null) {
+            delegate.abort(causeSupplier);
+            return;
+        }
+
+        final Throwable cause = requireNonNull(causeSupplier.get(),
+                                               "cause returned by causeSupplier is null");
+        setCompletionCause(cause);
 
         final SubscriptionImpl newSubscription = new SubscriptionImpl(
                 this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, false, false);
         subscriptionUpdater.compareAndSet(this, null, newSubscription);
 
-        final StreamMessage<T> delegate = this.delegate;
-        if (delegate != null) {
-            delegate.abort(causeOrAbortStreamExceptionSupplier);
+        final CloseEvent closeEvent;
+        if (cause == AbortedStreamException.INSTANCE) {
+           closeEvent = ABORTED_CLOSE;
         } else {
-            final CloseEvent closeEvent0 = (closeEvent == null) ? new CloseEvent(cause) : closeEvent;
-            if (subscription.needsDirectInvocation()) {
-                closeEvent0.notifySubscriber(subscription, completionFuture(), null);
-            } else {
-                subscription.executor().execute(
-                        () -> closeEvent0.notifySubscriber(subscription, completionFuture(), null));
-            }
+            closeEvent = new CloseEvent(cause);
+        }
+
+        if (subscription.needsDirectInvocation()) {
+            closeEvent.notifySubscriber(subscription, completionFuture());
+        } else {
+            subscription.executor().execute(
+                    () -> closeEvent.notifySubscriber(subscription, completionFuture()));
         }
     }
 

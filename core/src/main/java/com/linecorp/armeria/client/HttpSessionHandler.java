@@ -194,7 +194,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             ctx.logBuilder().endRequest(requestCause);
         }
         final Throwable responseCause = res.completionCause();
-        if (responseCause != null) {
+        if (responseCause == null) {
             ctx.logBuilder().endResponse();
         } else {
             ctx.logBuilder().endResponse(responseCause);

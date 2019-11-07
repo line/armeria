@@ -28,6 +28,7 @@ final class AbortingSubscriber<T> implements Subscriber<T> {
 
     @SuppressWarnings("unchecked")
     static <T> AbortingSubscriber<T> get(@Nullable Throwable cause) {
+
         return cause == null || cause == AbortedStreamException.INSTANCE ? (AbortingSubscriber<T>) INSTANCE
                                                                          : new AbortingSubscriber<>(cause);
     }
@@ -53,7 +54,7 @@ final class AbortingSubscriber<T> implements Subscriber<T> {
     public void onComplete() {}
 
     /**
-     * Returns the cause of this abortion.
+     * Returns the cause which tells why the stream has been aborted.
      */
     Throwable cause() {
         return cause;

@@ -159,7 +159,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
      * This will also clean up the data published from the upstream {@link StreamMessage}.
      */
     public void abort() {
-        processor.abort(AbortedStreamException.get());
+        processor.abort(AbortedStreamException::get);
     }
 
     /**
@@ -168,7 +168,8 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
      * This will also clean up the data published from the upstream {@link StreamMessage}.
      */
     public void abort(Throwable cause) {
-        processor.abort(requireNonNull(cause, "cause"));
+        requireNonNull(cause, "cause");
+        processor.abort(() -> cause);
     }
 
     /**
@@ -177,8 +178,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
      * This will also clean up the data published from the upstream {@link StreamMessage}.
      */
     public void abort(Supplier<? extends Throwable> causeSupplier) {
-        requireNonNull(causeSupplier, "causeSupplier");
-        processor.abort(requireNonNull(causeSupplier.get(), "cause returned by causeSupplier is null"));
+        processor.abort(requireNonNull(causeSupplier, "causeSupplier"));
     }
 
     @VisibleForTesting
@@ -463,33 +463,37 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
             }
         }
 
-        void abort(Throwable cause) {
+        void abort(Supplier<? extends Throwable> causeSupplier) {
             if (processorExecutor.inEventLoop()) {
-                doAbort(cause);
+                doAbort(causeSupplier);
             } else {
-                processorExecutor.execute(() -> doAbort(cause));
+                processorExecutor.execute(() -> doAbort(causeSupplier));
             }
         }
 
-        void doAbort(Throwable cause) {
+        void doAbort(Supplier<? extends Throwable> causeSupplier) {
             if (state != State.CLOSED) {
                 state = State.CLOSED;
                 doCancelUpstreamSubscription();
                 // Do not call 'upstream.abort();', but 'upstream.cancel()' because this is not aborting
                 // the upstream StreamMessage, but aborting duplicator.
-                doCleanup(cause);
+                doCleanup(causeSupplier);
             }
         }
 
-        private void doCleanup(Throwable cause) {
+        private void doCleanup(Supplier<? extends Throwable> causeSupplier) {
             final List<CompletableFuture<Void>> completionFutures =
                     new ArrayList<>(downstreamSubscriptions.size());
-            downstreamSubscriptions.forEach(s -> {
-                s.abort(cause);
-                final CompletableFuture<Void> future = s.completionFuture();
-                completionFutures.add(future);
-            });
-            downstreamSubscriptions.clear();
+            if (!downstreamSubscriptions.isEmpty()) {
+                final Throwable cause = requireNonNull(causeSupplier.get(),
+                                                       "cause returned by causeSupplier is null");
+                downstreamSubscriptions.forEach(s -> {
+                    s.abort(cause);
+                    final CompletableFuture<Void> future = s.completionFuture();
+                    completionFutures.add(future);
+                });
+                downstreamSubscriptions.clear();
+            }
             CompletableFutures.successfulAsList(completionFutures, unused -> null)
                               .handle((unused1, unused2) -> {
                                   signals.clear();
