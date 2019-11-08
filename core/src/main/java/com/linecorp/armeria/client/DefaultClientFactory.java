@@ -35,6 +35,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 
@@ -128,6 +129,7 @@ final class DefaultClientFactory extends AbstractClientFactory {
     @Override
     public <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
         final Scheme scheme = validateScheme(uri);
+        uri = normalizeUri(uri, scheme);
         return clientFactories.get(scheme).newClient(uri, clientType, options);
     }
 
@@ -170,5 +172,16 @@ final class DefaultClientFactory extends AbstractClientFactory {
 
     void doClose() {
         clientFactoriesToClose.forEach(ClientFactory::close);
+    }
+
+    private URI normalizeUri(final URI uri, final Scheme scheme) {
+        if (scheme.serializationFormat() != SerializationFormat.NONE) {
+            return uri;
+        }
+
+        final String newScheme = uri.getScheme()
+                                    .replace(SerializationFormat.NONE.uriText(), "")
+                                    .replace("+", "");
+        return URI.create(newScheme + uri.toString().substring(uri.getScheme().length()));
     }
 }

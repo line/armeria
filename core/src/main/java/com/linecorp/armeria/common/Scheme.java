@@ -78,13 +78,12 @@ public final class Scheme implements Comparable<Scheme> {
         if (scheme == null) {
             return Optional.empty();
         }
-        final Optional<Scheme> parsedScheme = Optional.ofNullable(SCHEMES.get(Ascii.toLowerCase(scheme)));
+        final String lowercaseScheme = Ascii.toLowerCase(scheme);
+        final Optional<Scheme> parsedScheme = Optional.ofNullable(SCHEMES.get(lowercaseScheme));
         if (parsedScheme.isPresent()) {
             return parsedScheme;
         }
-        return Optional.ofNullable(SCHEMES.get(Ascii.toLowerCase(SerializationFormat.NONE.uriText() +
-                                                                 '+' +
-                                                                 scheme)));
+        return Optional.ofNullable(SCHEMES.get(SerializationFormat.NONE.uriText() + '+' + lowercaseScheme));
     }
 
     /**
