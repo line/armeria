@@ -25,8 +25,8 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -46,7 +46,7 @@ import brave.http.HttpClientResponse;
 import brave.http.HttpTracing;
 
 /**
- * Decorates a {@link Client} to trace outbound {@link HttpRequest}s using
+ * Decorates an {@link HttpClient} to trace outbound {@link HttpRequest}s using
  * <a href="https://github.com/openzipkin/brave">Brave</a>.
  */
 public final class BraveClient extends SimpleDecoratingHttpClient {
@@ -54,17 +54,17 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
     private static final Logger logger = LoggerFactory.getLogger(BraveClient.class);
 
     /**
-     * Creates a new tracing {@link Client} decorator using the specified {@link Tracing} instance.
+     * Creates a new tracing {@link HttpClient} decorator using the specified {@link Tracing} instance.
      */
-    public static Function<Client<HttpRequest, HttpResponse>, BraveClient> newDecorator(Tracing tracing) {
+    public static Function<? super HttpClient, BraveClient> newDecorator(Tracing tracing) {
         return newDecorator(tracing, null);
     }
 
     /**
-     * Creates a new tracing {@link Client} decorator using the specified {@link Tracing} instance
+     * Creates a new tracing {@link HttpClient} decorator using the specified {@link Tracing} instance
      * and the remote service name.
      */
-    public static Function<Client<HttpRequest, HttpResponse>, BraveClient> newDecorator(
+    public static Function<? super HttpClient, BraveClient> newDecorator(
             Tracing tracing, @Nullable String remoteServiceName) {
         HttpTracing httpTracing = HttpTracing.newBuilder(tracing)
                                              .clientParser(ArmeriaHttpClientParser.get())
@@ -76,9 +76,9 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
     }
 
     /**
-     * Creates a new tracing {@link Client} decorator using the specified {@link HttpTracing} instance.
+     * Creates a new tracing {@link HttpClient} decorator using the specified {@link HttpTracing} instance.
      */
-    public static Function<Client<HttpRequest, HttpResponse>, BraveClient> newDecorator(
+    public static Function<? super HttpClient, BraveClient> newDecorator(
             HttpTracing httpTracing) {
         try {
             ensureScopeUsesRequestContext(httpTracing.tracing());
@@ -96,7 +96,7 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
     /**
      * Creates a new instance.
      */
-    private BraveClient(Client<HttpRequest, HttpResponse> delegate, HttpTracing httpTracing) {
+    private BraveClient(HttpClient delegate, HttpTracing httpTracing) {
         super(delegate);
         tracer = httpTracing.tracing().tracer();
         handler = HttpClientHandler.create(httpTracing);

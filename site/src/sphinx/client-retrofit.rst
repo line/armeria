@@ -22,7 +22,7 @@ you get the following benefits:
 .. code-block:: java
 
     import com.linecorp.armeria.client.Clients;
-    import com.linecorp.armeria.client.HttpClient;
+    import com.linecorp.armeria.client.AsyncHttpClient;
 
     import retrofit2.Retrofit;
     import retrofit2.converter.jackson.JacksonConverterFactory;

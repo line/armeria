@@ -66,8 +66,8 @@ class ClientRequestContextInitFailureTest {
 
     private static void assertFailure(String authority, Consumer<Throwable> requirements) {
         final AtomicReference<ClientRequestContext> capturedCtx = new AtomicReference<>();
-        final HttpClient client = HttpClient.builder("http://" + authority)
-                                            .decorator((delegate, ctx, req) -> {
+        final AsyncHttpClient client = AsyncHttpClient.builder("http://" + authority)
+                                                      .decorator((delegate, ctx, req) -> {
                                                 capturedCtx.set(ctx);
                                                 return delegate.execute(ctx, req);
                                             }).build();

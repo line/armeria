@@ -37,10 +37,10 @@ import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.metric.MetricCollectingClient;
+import com.linecorp.armeria.client.metric.MetricCollectingRpcClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -293,7 +293,7 @@ public class PrometheusMetricsIntegrationTest {
     private static void makeRequest(String path, String serviceName, String name) throws TException {
         final Iface client = new ClientBuilder(server.uri(BINARY, path))
                 .factory(clientFactory)
-                .rpcDecorator(MetricCollectingClient.newDecorator(
+                .rpcDecorator(MetricCollectingRpcClient.newDecorator(
                         new MeterIdPrefixFunctionImpl("client", serviceName)))
                 .build(Iface.class);
         client.hello(name);
@@ -301,7 +301,7 @@ public class PrometheusMetricsIntegrationTest {
 
     private static AggregatedHttpResponse makeMetricsRequest() throws ExecutionException,
                                                                       InterruptedException {
-        final HttpClient client = HttpClient.of("http://127.0.0.1:" + server.httpPort());
+        final AsyncHttpClient client = AsyncHttpClient.of("http://127.0.0.1:" + server.httpPort());
         return client.execute(RequestHeaders.of(HttpMethod.GET, "/internal/prometheus/metrics",
                                                 HttpHeaderNames.ACCEPT, MediaType.PLAIN_TEXT_UTF_8))
                      .aggregate().get();

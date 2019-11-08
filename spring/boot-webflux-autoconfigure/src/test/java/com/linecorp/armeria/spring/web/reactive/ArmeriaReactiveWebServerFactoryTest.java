@@ -35,8 +35,8 @@ import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.util.SocketUtils;
 import org.springframework.util.unit.DataSize;
 
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -67,12 +67,12 @@ class ArmeriaReactiveWebServerFactoryTest {
         return new ArmeriaReactiveWebServerFactory(beanFactory);
     }
 
-    private HttpClient httpsClient(WebServer server) {
-        return HttpClient.of(clientFactory, "https://example.com:" + server.getPort());
+    private AsyncHttpClient httpsClient(WebServer server) {
+        return AsyncHttpClient.of(clientFactory, "https://example.com:" + server.getPort());
     }
 
-    private HttpClient httpClient(WebServer server) {
-        return HttpClient.of(clientFactory, "http://example.com:" + server.getPort());
+    private AsyncHttpClient httpClient(WebServer server) {
+        return AsyncHttpClient.of(clientFactory, "http://example.com:" + server.getPort());
     }
 
     @Test
@@ -87,7 +87,7 @@ class ArmeriaReactiveWebServerFactoryTest {
     void shouldReturnEchoResponse() {
         final ArmeriaReactiveWebServerFactory factory = factory();
         runEchoServer(factory, server -> {
-            final HttpClient client = httpClient(server);
+            final AsyncHttpClient client = httpClient(server);
             validateEchoResponse(sendPostRequest(client));
 
             final AggregatedHttpResponse res = client.get("/hello").aggregate().join();
@@ -109,7 +109,7 @@ class ArmeriaReactiveWebServerFactoryTest {
     void shouldReturnBadRequestDueToException() {
         final ArmeriaReactiveWebServerFactory factory = factory();
         runServer(factory, AlwaysFailureHandler.INSTANCE, server -> {
-            final HttpClient client = httpClient(server);
+            final AsyncHttpClient client = httpClient(server);
 
             final AggregatedHttpResponse res1 = client.post("/hello", "hello").aggregate().join();
             assertThat(res1.status()).isEqualTo(com.linecorp.armeria.common.HttpStatus.BAD_REQUEST);
@@ -166,7 +166,7 @@ class ArmeriaReactiveWebServerFactoryTest {
         });
     }
 
-    private static AggregatedHttpResponse sendPostRequest(HttpClient client) {
+    private static AggregatedHttpResponse sendPostRequest(AsyncHttpClient client) {
         final RequestHeaders requestHeaders =
                 RequestHeaders.of(HttpMethod.POST, "/hello",
                                   HttpHeaderNames.USER_AGENT, "test-agent/1.0.0",
@@ -255,7 +255,7 @@ class ArmeriaReactiveWebServerFactoryTest {
         beanFactory.registerBeanDefinition("meterRegistry2", rbd);
 
         runEchoServer(factory, server -> {
-            final HttpClient client = httpClient(server);
+            final AsyncHttpClient client = httpClient(server);
             validateEchoResponse(sendPostRequest(client));
 
             final AggregatedHttpResponse res = client.get("/hello").aggregate().join();

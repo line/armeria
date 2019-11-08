@@ -30,7 +30,7 @@ import org.apache.http.util.EntityUtils;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -161,7 +161,7 @@ public class HttpServiceTest {
 
     @Test
     public void contentLengthIsNotSetWhenTrailerExists() {
-        final HttpClient client = HttpClient.of(rule.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/"));
         AggregatedHttpResponse res = client.get("/trailersWithoutData").aggregate().join();
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
         assertThat(res.trailers().get(HttpHeaderNames.of("foo"))).isEqualTo("bar");

@@ -26,9 +26,9 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOption;
-import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
@@ -45,15 +45,15 @@ class MockWebServiceExtensionTest {
 
     @Test
     void normal() {
-        final HttpClient httpClient = HttpClient.of(server.httpUri("/"));
+        final AsyncHttpClient httpClient = AsyncHttpClient.of(server.httpUri("/"));
         final ClientFactory clientFactory =
                 ClientFactory.builder()
                              .sslContextCustomizer(
                                      ssl -> ssl.trustManager(InsecureTrustManagerFactory.INSTANCE))
                              .build();
-        final HttpClient httpsClient = HttpClient.builder(server.httpsUri("/"))
-                                                 .factory(clientFactory)
-                                                 .build();
+        final AsyncHttpClient httpsClient = AsyncHttpClient.builder(server.httpsUri("/"))
+                                                           .factory(clientFactory)
+                                                           .build();
 
         server.enqueue(AggregatedHttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, "hello"));
         server.enqueue(HttpResponse.of(AggregatedHttpResponse.of(HttpStatus.FORBIDDEN)));
@@ -110,9 +110,10 @@ class MockWebServiceExtensionTest {
                                             Duration.ofSeconds(1)));
         server.enqueue(HttpResponse.delayed(AggregatedHttpResponse.of(HttpStatus.OK), Duration.ofSeconds(1)));
 
-        final HttpClient client = HttpClient.builder(server.httpUri("/"))
-                                            .option(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(50L))
-                                            .build();
+        final AsyncHttpClient client =
+                AsyncHttpClient.builder(server.httpUri("/"))
+                               .option(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(50L))
+                               .build();
 
         assertThatThrownBy(() -> client.get("/").aggregate().join())
                 .hasCauseInstanceOf(ResponseTimeoutException.class);
@@ -128,7 +129,7 @@ class MockWebServiceExtensionTest {
         server.enqueue(AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR));
         server.enqueue(AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR));
 
-        assertThat(HttpClient.of(server.httpUri("/")).get("/whoami").aggregate().join().status())
+        assertThat(AsyncHttpClient.of(server.httpUri("/")).get("/whoami").aggregate().join().status())
                 .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
@@ -138,7 +139,7 @@ class MockWebServiceExtensionTest {
         // leavesState left two INTERNAL_SERVER_ERROR responses in the queue, but they should be gone now.
         server.enqueue(AggregatedHttpResponse.of(HttpStatus.OK));
 
-        assertThat(HttpClient.of(server.httpUri("/")).get("/").aggregate().join().status())
+        assertThat(AsyncHttpClient.of(server.httpUri("/")).get("/").aggregate().join().status())
                 .isEqualTo(HttpStatus.OK);
 
         // leavesState did not take the /whoami request, but it's gone now.

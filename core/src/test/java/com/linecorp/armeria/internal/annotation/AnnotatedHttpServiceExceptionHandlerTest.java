@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
@@ -246,7 +246,7 @@ public class AnnotatedHttpServiceExceptionHandlerTest {
 
     @Test
     public void testExceptionHandler() throws Exception {
-        final HttpClient client = HttpClient.of(rule.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/"));
 
         AggregatedHttpResponse response;
 

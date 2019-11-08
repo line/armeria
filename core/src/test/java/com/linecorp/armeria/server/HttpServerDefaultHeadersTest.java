@@ -25,7 +25,7 @@ import java.time.format.DateTimeParseException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpResponse;
@@ -81,7 +81,7 @@ class HttpServerDefaultHeadersTest {
 
     @Test
     void testServerNameAndDateHeaderIncludedByDefault() {
-        final HttpClient client = HttpClient.of(serverWithDefaults.httpUri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(serverWithDefaults.httpUri("/"));
         final AggregatedHttpResponse res = client.get("/").aggregate().join();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
@@ -95,7 +95,7 @@ class HttpServerDefaultHeadersTest {
 
     @Test
     void testServerNameHeaderShouldBeExcludedByOption() {
-        final HttpClient client = HttpClient.of(serverWithoutServerHeader.httpUri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(serverWithoutServerHeader.httpUri("/"));
         final AggregatedHttpResponse res = client.get("/").aggregate().join();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
@@ -108,7 +108,7 @@ class HttpServerDefaultHeadersTest {
 
     @Test
     void testDateHeaderShouldBeExcludedByOption() {
-        final HttpClient client = HttpClient.of(serverWithoutDateHeader.httpUri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(serverWithoutDateHeader.httpUri("/"));
         final AggregatedHttpResponse res = client.get("/").aggregate().join();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
@@ -121,7 +121,7 @@ class HttpServerDefaultHeadersTest {
 
     @Test
     void testServerNameHeaderOverride() {
-        final HttpClient client = HttpClient.of(serverWithServerNameOverridden.httpUri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(serverWithServerNameOverridden.httpUri("/"));
         final AggregatedHttpResponse res = client.get("/").aggregate().join();
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);

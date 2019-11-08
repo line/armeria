@@ -47,8 +47,8 @@ import org.springframework.web.reactive.function.server.RouterFunctions;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -125,7 +125,7 @@ class ReactiveWebServerAutoConfigurationTest {
     @ArgumentsSource(SchemesProvider.class)
     void shouldGetHelloFromRestController(String scheme) throws Exception {
         withTimeout(() -> {
-            final HttpClient client = HttpClient.of(clientFactory, scheme + "://example.com:" + port);
+            final AsyncHttpClient client = AsyncHttpClient.of(clientFactory, scheme + "://example.com:" + port);
             final AggregatedHttpResponse response = client.get("/hello").aggregate().join();
             assertThat(response.contentUtf8()).isEqualTo("hello");
         });
@@ -135,7 +135,7 @@ class ReactiveWebServerAutoConfigurationTest {
     @ArgumentsSource(SchemesProvider.class)
     void shouldGetHelloFromRouter(String scheme) throws Exception {
         withTimeout(() -> {
-            final HttpClient client = HttpClient.of(clientFactory, scheme + "://example.com:" + port);
+            final AsyncHttpClient client = AsyncHttpClient.of(clientFactory, scheme + "://example.com:" + port);
 
             final AggregatedHttpResponse res = client.get("/route").aggregate().join();
             assertThat(res.contentUtf8()).isEqualTo("route");
@@ -154,7 +154,7 @@ class ReactiveWebServerAutoConfigurationTest {
     @ArgumentsSource(SchemesProvider.class)
     void shouldGetNotFound(String scheme) {
         withTimeout(() -> {
-            final HttpClient client = HttpClient.of(clientFactory, scheme + "://example.com:" + port);
+            final AsyncHttpClient client = AsyncHttpClient.of(clientFactory, scheme + "://example.com:" + port);
             assertThat(client.get("/route2").aggregate().join().status()).isEqualTo(HttpStatus.NOT_FOUND);
 
             assertThat(client.execute(

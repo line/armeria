@@ -49,7 +49,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -139,7 +139,7 @@ public class AnnotatedHttpDocServiceTest {
                 serviceDescription, methodInfos));
         addExamples(expectedJson);
 
-        final HttpClient client = HttpClient.of(server.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(server.uri("/"));
         final AggregatedHttpResponse res = client.get("/docs/specification.json").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.CACHE_CONTROL)).isEqualTo("no-cache, must-revalidate");
@@ -299,7 +299,7 @@ public class AnnotatedHttpDocServiceTest {
 
     @Test
     public void excludeAllServices() throws IOException {
-        final HttpClient client = HttpClient.of(server.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(server.uri("/"));
         final AggregatedHttpResponse res = client.get("/excludeAll/specification.json").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         final JsonNode actualJson = mapper.readTree(res.contentUtf8());

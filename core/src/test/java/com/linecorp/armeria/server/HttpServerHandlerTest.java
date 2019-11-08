@@ -25,7 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -64,7 +64,7 @@ class HttpServerHandlerTest {
 
     @Test
     void methodNotAllowed() {
-        final HttpClient client = HttpClient.of(server.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(server.uri("/"));
         final AggregatedHttpResponse res = client.delete("/hello").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.METHOD_NOT_ALLOWED);
         await().untilAsserted(() -> assertThat(logHolder.get().path()).isEqualTo("/hello"));
@@ -73,7 +73,7 @@ class HttpServerHandlerTest {
 
     @Test
     void handleNonExistentMapping() {
-        final HttpClient client = HttpClient.of(server.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(server.uri("/"));
         final AggregatedHttpResponse res = client.get("/non_existent").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.NOT_FOUND);
         await().untilAsserted(() -> assertThat(logHolder.get().path()).isEqualTo("/non_existent"));
@@ -82,7 +82,7 @@ class HttpServerHandlerTest {
 
     @Test
     void httpStatusExceptionIsNotLoggedAsRequestCause() {
-        final HttpClient client = HttpClient.of(server.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(server.uri("/"));
         final AggregatedHttpResponse res = client.get("/httpStatusException").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.CREATED);
         await().untilAsserted(() -> assertThat(logHolder.get().path()).isEqualTo("/httpStatusException"));
@@ -91,7 +91,7 @@ class HttpServerHandlerTest {
 
     @Test
     void httpResponseExceptionIsNotLoggedAsRequestCause() {
-        final HttpClient client = HttpClient.of(server.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(server.uri("/"));
         final AggregatedHttpResponse res = client.get("/httpResponseException").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.CREATED);
         await().untilAsserted(() -> assertThat(logHolder.get().path()).isEqualTo("/httpResponseException"));

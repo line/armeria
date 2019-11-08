@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -48,11 +48,12 @@ class CircuitBreakerHttpClientIntegrationTest {
                                                             .minimumRequestThreshold(0)
                                                             .build();
 
-        final HttpClient client =
-                HttpClient.builder()
-                          .decorator(CircuitBreakerHttpClient.newDecorator(
-                                  circuitBreaker, (ctx, cause) -> CompletableFuture.completedFuture(false)))
-                          .build();
+        final AsyncHttpClient client =
+                AsyncHttpClient.builder()
+                               .decorator(CircuitBreakerHttpClient.newDecorator(
+                                       circuitBreaker,
+                                       (ctx, cause) -> CompletableFuture.completedFuture(false)))
+                               .build();
 
         for (int i = 0; i < 3; i++) {
             final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.POST, "h2c://127.0.0.1:1");

@@ -19,6 +19,7 @@ package com.linecorp.armeria.client;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -30,13 +31,13 @@ import com.linecorp.armeria.common.SessionProtocol;
 
 /**
  * Creates a new HTTP client that connects to the specified {@link URI} using the builder pattern.
- * Use the factory methods in {@link HttpClient} if you do not have many options to override.
+ * Use the factory methods in {@link AsyncHttpClient} if you do not have many options to override.
  * Please refer to {@link ClientBuilder} for how decorators and HTTP headers are configured
  */
 public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpClientBuilder> {
 
     /**
-     * An undefined {@link URI} to create {@link HttpClient} without specifying {@link URI}.
+     * An undefined {@link URI} to create {@link AsyncHttpClient} without specifying {@link URI}.
      */
     private static final URI UNDEFINED_URI = URI.create("http://undefined");
 
@@ -60,7 +61,7 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
     /**
      * Creates a new instance.
      *
-     * @deprecated Use {@link HttpClient#builder()}.
+     * @deprecated Use {@link AsyncHttpClient#builder()}.
      */
     @Deprecated
     public HttpClientBuilder() {
@@ -75,7 +76,7 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
      * @throws IllegalArgumentException if the scheme of the uri is not one of the fields
      *                                  in {@link SessionProtocol} or the uri violates RFC 2396
      *
-     * @deprecated Use {@link HttpClient#builder(String)}.
+     * @deprecated Use {@link AsyncHttpClient#builder(String)}.
      */
     @Deprecated
     public HttpClientBuilder(String uri) {
@@ -88,7 +89,7 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
      * @throws IllegalArgumentException if the scheme of the uri is not one of the fields
      *                                  in {@link SessionProtocol}
      *
-     * @deprecated Use {@link HttpClient#builder(URI)}.
+     * @deprecated Use {@link AsyncHttpClient#builder(URI)}.
      */
     @Deprecated
     public HttpClientBuilder(URI uri) {
@@ -108,7 +109,7 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
      * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields
      *                                  in {@link SessionProtocol}
      *
-     * @deprecated Use {@link HttpClient#builder(SessionProtocol, Endpoint)}.
+     * @deprecated Use {@link AsyncHttpClient#builder(SessionProtocol, Endpoint)}.
      */
     @Deprecated
     public HttpClientBuilder(SessionProtocol sessionProtocol, Endpoint endpoint) {
@@ -149,16 +150,26 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
      * Returns a newly-created HTTP client based on the properties of this builder.
      *
      * @throws IllegalArgumentException if the scheme of the {@code uri} specified in
-     *                                  {@link HttpClient#builder(String)} or {@link HttpClient#builder(URI)}
-     *                                  is not an HTTP scheme
+     *                                  {@link AsyncHttpClient#builder(String)} or
+     *                                  {@link AsyncHttpClient#builder(URI)} is not an HTTP scheme
      */
-    public HttpClient build() {
+    public AsyncHttpClient build() {
         if (uri != null) {
-            return factory.newClient(uri, HttpClient.class, buildOptions());
+            return factory.newClient(uri, AsyncHttpClient.class, buildOptions());
         } else if (path != null) {
-            return factory.newClient(scheme, endpoint, path, HttpClient.class, buildOptions());
+            return factory.newClient(scheme, endpoint, path, AsyncHttpClient.class, buildOptions());
         } else {
-            return factory.newClient(scheme, endpoint, HttpClient.class, buildOptions());
+            return factory.newClient(scheme, endpoint, AsyncHttpClient.class, buildOptions());
         }
+    }
+
+    @Override
+    public HttpClientBuilder rpcDecorator(Function<? super RpcClient, ? extends RpcClient> decorator) {
+        throw new UnsupportedOperationException("RPC decorator cannot be added to the HTTP client builder.");
+    }
+
+    @Override
+    public HttpClientBuilder rpcDecorator(DecoratingRpcClientFunction decorator) {
+        throw new UnsupportedOperationException("RPC decorator cannot be added to the HTTP client builder.");
     }
 }

@@ -24,15 +24,14 @@ import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.client.ClientDecoration.Entry;
+import com.linecorp.armeria.client.encoding.HttpDecodingClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
+import com.linecorp.armeria.client.logging.LoggingRpcClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestId;
-import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.RpcResponse;
 
 class ClientOptionsBuilderTest {
     @Test
@@ -70,26 +69,34 @@ class ClientOptionsBuilderTest {
     }
 
     @Test
-    @SuppressWarnings({ "rawtypes", "unchecked" })
     void testDecorators() {
         final ClientOptionsBuilder b = ClientOptions.builder();
-        final Function decorator = LoggingClient.newDecorator();
+        final Function<? super HttpClient, ? extends HttpClient> decorator =
+                LoggingClient.newDecorator();
 
         b.option(ClientOption.DECORATION.newValue(ClientDecoration.builder()
                                                                   .add(decorator)
                                                                   .build()));
 
-        assertThat(b.build().decoration().entries()).containsExactly(
-                new Entry<>(HttpRequest.class, HttpResponse.class, decorator));
+        assertThat(b.build().decoration().decorators()).containsExactly(decorator);
 
         // Add another decorator to ensure that the builder does not replace the previous one.
+        final Function<? super HttpClient, ? extends HttpClient> decorator2 =
+                HttpDecodingClient.newDecorator();
         b.option(ClientOption.DECORATION.newValue(ClientDecoration.builder()
-                                                                  .addRpc(decorator)
+                                                                  .add(decorator2)
+                                                                  .build()));
+        assertThat(b.build().decoration().decorators()).containsExactly(decorator, decorator2);
+
+        // Add an RPC decorator.
+        final Function<? super RpcClient, ? extends RpcClient> rpcDecorator =
+                LoggingRpcClient.newDecorator();
+        b.option(ClientOption.DECORATION.newValue(ClientDecoration.builder()
+                                                                  .addRpc(rpcDecorator)
                                                                   .build()));
 
-        assertThat(b.build().decoration().entries()).containsExactly(
-                new Entry<>(HttpRequest.class, HttpResponse.class, decorator),
-                new Entry<>(RpcRequest.class, RpcResponse.class, decorator));
+        assertThat(b.build().decoration().decorators()).containsExactly(decorator, decorator2);
+        assertThat(b.build().decoration().rpcDecorators()).containsExactly(rpcDecorator);
     }
 
     @Test
@@ -177,7 +184,7 @@ class ClientOptionsBuilderTest {
         assertThat(outer.as(LoggingClient.class).isPresent()).isFalse();
     }
 
-    private static final class FooClient implements Client<HttpRequest, HttpResponse> {
+    private static final class FooClient implements HttpClient {
         FooClient() { }
 
         @Override
@@ -187,8 +194,8 @@ class ClientOptionsBuilderTest {
         }
     }
 
-    private static final class FooDecorator extends SimpleDecoratingClient<HttpRequest, HttpResponse> {
-        FooDecorator(Client<HttpRequest, HttpResponse> delegate) {
+    private static final class FooDecorator extends SimpleDecoratingHttpClient {
+        FooDecorator(HttpClient delegate) {
             super(delegate);
         }
 

@@ -33,8 +33,6 @@ import javax.annotation.Nullable;
 
 import com.google.common.collect.MapMaker;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -234,17 +232,16 @@ final class HttpClientFactory extends AbstractClientFactory {
                             ClientOptions options) {
         validateClientType(clientType);
 
-        final Client<HttpRequest, HttpResponse> delegate = options.decoration().decorate(
-                HttpRequest.class, HttpResponse.class, clientDelegate);
+        final HttpClient delegate = options.decoration().decorate(clientDelegate);
 
-        if (clientType == Client.class) {
+        if (clientType == HttpClient.class) {
             @SuppressWarnings("unchecked")
             final T castClient = (T) delegate;
             return castClient;
         }
 
-        if (clientType == HttpClient.class) {
-            final HttpClient client = newHttpClient(uri, scheme, endpoint, options, delegate);
+        if (clientType == AsyncHttpClient.class) {
+            final AsyncHttpClient client = newHttpClient(uri, scheme, endpoint, options, delegate);
 
             @SuppressWarnings("unchecked")
             final T castClient = (T) client;
@@ -255,18 +252,18 @@ final class HttpClientFactory extends AbstractClientFactory {
     }
 
     private DefaultHttpClient newHttpClient(URI uri, Scheme scheme, Endpoint endpoint, ClientOptions options,
-                                            Client<HttpRequest, HttpResponse> delegate) {
+                                            HttpClient delegate) {
         return new DefaultHttpClient(
-                new DefaultClientBuilderParams(this, uri, HttpClient.class, options),
+                new DefaultClientBuilderParams(this, uri, AsyncHttpClient.class, options),
                 delegate, meterRegistry, scheme.sessionProtocol(), endpoint);
     }
 
     private static void validateClientType(Class<?> clientType) {
-        if (clientType != HttpClient.class && clientType != Client.class) {
+        if (clientType != AsyncHttpClient.class && clientType != HttpClient.class) {
             throw new IllegalArgumentException(
                     "clientType: " + clientType +
-                    " (expected: " + HttpClient.class.getSimpleName() + " or " +
-                    Client.class.getSimpleName() + ')');
+                    " (expected: " + AsyncHttpClient.class.getSimpleName() + " or " +
+                    HttpClient.class.getSimpleName() + ')');
         }
     }
 

@@ -44,7 +44,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -485,7 +485,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
     @Test
     public void customizedClassLevelResponse() {
-        final HttpClient client = HttpClient.of(rule.uri("/custom-classlevel"));
+        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/custom-classlevel"));
         AggregatedHttpResponse res;
 
         res = aggregated(client.get("/expect-class"));
@@ -530,15 +530,15 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
     @Test
     public void typeBasedDefaultResponseConverter() throws Exception {
-        shouldBeConvertedByDefaultResponseConverter(HttpClient.of(rule.uri("/type")));
+        shouldBeConvertedByDefaultResponseConverter(AsyncHttpClient.of(rule.uri("/type")));
     }
 
     @Test
     public void publisherBasedResponseConverter() throws Exception {
-        shouldBeConvertedByDefaultResponseConverter(HttpClient.of(rule.uri("/publish/single")));
+        shouldBeConvertedByDefaultResponseConverter(AsyncHttpClient.of(rule.uri("/publish/single")));
     }
 
-    private static void shouldBeConvertedByDefaultResponseConverter(HttpClient client) throws Exception {
+    private static void shouldBeConvertedByDefaultResponseConverter(AsyncHttpClient client) throws Exception {
         AggregatedHttpResponse res;
 
         res = aggregated(client.get("/string"));
@@ -561,7 +561,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
     @Test
     public void multipleObjectPublisherBasedResponseConverter() throws Exception {
-        final HttpClient client = HttpClient.of(rule.uri("/publish/multi"));
+        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/publish/multi"));
 
         AggregatedHttpResponse res;
 
@@ -579,7 +579,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
     @Test
     public void publisherBasedResponseConversionFailure() throws Exception {
-        final HttpClient client = HttpClient.of(rule.uri("/publish/failure"));
+        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/publish/failure"));
 
         AggregatedHttpResponse res;
 
@@ -592,7 +592,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
     @Test
     public void produceTypeAnnotationBasedDefaultResponseConverter() throws Exception {
-        final HttpClient client = HttpClient.of(rule.uri("/produce"));
+        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/produce"));
 
         AggregatedHttpResponse res;
 
@@ -631,7 +631,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
     @Test
     public void customizedHttpResponse() {
-        final HttpClient client = HttpClient.of(rule.uri("/custom-response"));
+        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/custom-response"));
 
         AggregatedHttpResponse res;
 
@@ -698,7 +698,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
 
     @Test
     public void httpResultWithPublisher() {
-        final HttpClient client = HttpClient.of(rule.uri("/publish/http-result"));
+        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/publish/http-result"));
 
         AggregatedHttpResponse res;
 
@@ -760,7 +760,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
             }
         };
 
-        StepVerifier.create(HttpClient.of(rule.uri("/json-seq")).get(path))
+        StepVerifier.create(AsyncHttpClient.of(rule.uri("/json-seq")).get(path))
                     .expectNext(ResponseHeaders.of(HttpStatus.OK,
                                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_SEQ))
                     .assertNext(o -> ensureExpectedHttpData.accept(o, "foo"))
@@ -783,7 +783,7 @@ public class AnnotatedHttpServiceResponseConverterTest {
     }
 
     private static void testEventStream(String path) {
-        StepVerifier.create(HttpClient.of(rule.uri("/event-stream")).get(path))
+        StepVerifier.create(AsyncHttpClient.of(rule.uri("/event-stream")).get(path))
                     .expectNext(ResponseHeaders.of(HttpStatus.OK,
                                                    HttpHeaderNames.CONTENT_TYPE, MediaType.EVENT_STREAM))
                     .expectNext(HttpData.ofUtf8("data:foo\n\n"))

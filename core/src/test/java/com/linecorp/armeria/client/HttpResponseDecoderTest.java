@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryStrategy;
-import com.linecorp.armeria.client.retry.RetryingHttpClient;
+import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -65,15 +65,15 @@ class HttpResponseDecoderTest {
         final RetryStrategy strategy =
                 (ctx, cause) -> CompletableFuture.completedFuture(Backoff.withoutDelay());
 
-        final HttpClientBuilder builder = HttpClient.builder(server.uri(protocol, "/"));
+        final HttpClientBuilder builder = AsyncHttpClient.builder(server.uri(protocol, "/"));
         // This increases the execution duration of 'endResponse0' of the DefaultRequestLog,
         // which means that we have more chance to reproduce the bug if two threads are racing
         // for notifying RESPONSE_END to listeners.
         builder.contentPreview(100);
         // In order to use a different thread to to subscribe to the response.
-        builder.decorator(RetryingHttpClient.builder(strategy)
-                                            .maxTotalAttempts(2)
-                                            .newDecorator());
+        builder.decorator(RetryingClient.builder(strategy)
+                                        .maxTotalAttempts(2)
+                                        .newDecorator());
         builder.decorator((delegate, ctx, req) -> {
             final AtomicReference<Thread> responseStartedThread = new AtomicReference<>();
             ctx.log().addListener(log -> {
@@ -91,7 +91,7 @@ class HttpResponseDecoderTest {
         });
 
         // Execute it as much as we can in order to confirm that there's no problem.
-        final HttpClient client = builder.build();
+        final AsyncHttpClient client = builder.build();
         final int n = 1000;
         final CountDownLatch latch = new CountDownLatch(n);
         for (int i = 0; i < n; i++) {

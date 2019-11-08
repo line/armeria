@@ -20,7 +20,7 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.client.Client;
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.client.ClientDecoration;
 import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -53,21 +53,21 @@ import io.netty.handler.codec.http.HttpHeaderValues;
  */
 public class UnaryGrpcClient {
 
-    private final HttpClient httpClient;
+    private final AsyncHttpClient httpClient;
 
     /**
-     * Constructs a {@link UnaryGrpcClient} for the given {@link HttpClient}.
+     * Constructs a {@link UnaryGrpcClient} for the given {@link AsyncHttpClient}.
      */
     // TODO(anuraaga): We would ideally use our standard client building pattern, i.e.,
     // new ClientBuilder(...).build(UnaryGrpcClient.class), but that requires mapping protocol schemes to media
     // types, which cannot be duplicated. As this and normal gproto+ clients must use the same media type, we
     // cannot currently implement this without rethinking / refactoring core and punt for now since this is an
     // advanced API.
-    public UnaryGrpcClient(HttpClient httpClient) {
+    public UnaryGrpcClient(AsyncHttpClient httpClient) {
         this.httpClient = Clients.newDerivedClient(
                 httpClient,
                 ClientOption.DECORATION.newValue(
-                        ClientDecoration.of(HttpRequest.class, HttpResponse.class, GrpcFramingDecorator::new)
+                        ClientDecoration.of(GrpcFramingDecorator::new)
                 ));
     }
 
@@ -121,7 +121,7 @@ public class UnaryGrpcClient {
 
     private static final class GrpcFramingDecorator extends SimpleDecoratingHttpClient {
 
-        private GrpcFramingDecorator(Client<HttpRequest, HttpResponse> delegate) {
+        private GrpcFramingDecorator(HttpClient delegate) {
             super(delegate);
         }
 

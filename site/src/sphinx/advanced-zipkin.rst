@@ -56,7 +56,7 @@ If the requests come to Armeria server and go to another backend, you can trace 
 .. code-block:: java
 
     import com.linecorp.armeria.client.BraveClient;
-    import com.linecorp.armeria.client.HttpClient;
+    import com.linecorp.armeria.client.AsyncHttpClient;
     import com.linecorp.armeria.client.HttpClientBuilder;
     import com.linecorp.armeria.server.brave.BraveService;
 

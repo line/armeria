@@ -27,7 +27,7 @@ import org.junit.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
@@ -88,12 +88,12 @@ public class HttpProxyIntegrationTest {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.service("/trailers", (ctx, req) -> {
-                final HttpClient client = HttpClient.of(backendServer.uri("/"));
+                final AsyncHttpClient client = AsyncHttpClient.of(backendServer.uri("/"));
                 return client.get("/trailers");
             });
 
             sb.service("/trailers-only", (ctx, req) -> {
-                final HttpClient client = HttpClient.of(backendServer.uri("/"));
+                final AsyncHttpClient client = AsyncHttpClient.of(backendServer.uri("/"));
                 return client.get("/trailers-only");
             });
 
@@ -103,7 +103,7 @@ public class HttpProxyIntegrationTest {
 
     @Test
     public void proxyWithTrailers() throws Throwable {
-        final HttpClient client = HttpClient.of(frontendServer.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(frontendServer.uri("/"));
 
         final AtomicBoolean headersReceived = new AtomicBoolean();
         final AtomicBoolean complete = new AtomicBoolean();
@@ -146,7 +146,7 @@ public class HttpProxyIntegrationTest {
 
     @Test
     public void proxyWithTrailersOnly() throws Throwable {
-        final HttpClient client = HttpClient.of(frontendServer.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(frontendServer.uri("/"));
 
         final AtomicBoolean complete = new AtomicBoolean();
         final AtomicReference<Throwable> error = new AtomicReference<>();

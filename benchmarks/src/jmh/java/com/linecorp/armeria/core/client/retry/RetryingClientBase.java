@@ -22,7 +22,7 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerPort;
@@ -31,10 +31,10 @@ import com.linecorp.armeria.server.ServerPort;
  * The base for {@link WithDuplicator} and {@link WithoutDuplicator} microbenchmarks.
  */
 @State(Scope.Benchmark)
-public abstract class RetryingHttpClientBase {
+public abstract class RetryingClientBase {
 
     private Server server;
-    private HttpClient client;
+    private AsyncHttpClient client;
 
     @Setup
     public void start() {
@@ -51,7 +51,7 @@ public abstract class RetryingHttpClientBase {
         server.stop().join();
     }
 
-    protected abstract HttpClient newClient();
+    protected abstract AsyncHttpClient newClient();
 
     protected String baseUrl() {
         final ServerPort httpPort = server.activePorts().values().stream()

@@ -25,7 +25,7 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.MoreExecutors;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -59,7 +59,7 @@ public class ServerSentEventsTest {
 
     @Test
     public void fromPublisherOrStream() {
-        final HttpClient client = HttpClient.of(rule.uri("/sse"));
+        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/sse"));
         for (final String path : ImmutableList.of("/publisher", "/stream")) {
             final AggregatedHttpResponse response = client.get(path).aggregate().join();
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
@@ -70,7 +70,7 @@ public class ServerSentEventsTest {
 
     @Test
     public void withConverter() {
-        final HttpClient client = HttpClient.of(rule.uri("/converter"));
+        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/converter"));
         for (final String path : ImmutableList.of("/publisher", "/stream")) {
             final AggregatedHttpResponse response = client.get(path).aggregate().join();
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
@@ -82,7 +82,7 @@ public class ServerSentEventsTest {
     @Test
     public void singleEvent() {
         final AggregatedHttpResponse response =
-                HttpClient.of(rule.uri("/single")).get("/sse").aggregate().join();
+                AsyncHttpClient.of(rule.uri("/single")).get("/sse").aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.headers().contentType()).isEqualTo(MediaType.EVENT_STREAM);
         assertThat(response.content().toStringUtf8()).isEqualTo("event:add\n\n");

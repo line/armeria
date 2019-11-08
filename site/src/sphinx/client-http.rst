@@ -5,7 +5,7 @@ Calling an HTTP service
 
 .. code-block:: java
 
-    import com.linecorp.armeria.client.HttpClient;
+    import com.linecorp.armeria.client.AsyncHttpClient;
     import com.linecorp.armeria.common.AggregatedHttpResponse;
     import com.linecorp.armeria.common.HttpHeaderNames;
     import com.linecorp.armeria.common.HttpMethod;

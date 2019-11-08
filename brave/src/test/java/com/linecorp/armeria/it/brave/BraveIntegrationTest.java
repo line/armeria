@@ -49,9 +49,9 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.Uninterruptibles;
 
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.brave.BraveClient;
@@ -92,7 +92,7 @@ public class BraveIntegrationTest {
     private HelloService.AsyncIface barClient;
     private HelloService.AsyncIface quxClient;
     private HelloService.Iface zipClient;
-    private HttpClient poolHttpClient;
+    private AsyncHttpClient poolHttpClient;
 
     @Rule
     public final ServerRule server = new ServerRule() {
@@ -199,7 +199,7 @@ public class BraveIntegrationTest {
         fooClientWithoutTracing = Clients.newClient(server.uri(BINARY, "/foo"), HelloService.Iface.class);
         barClient = newClient("/bar");
         quxClient = newClient("/qux");
-        poolHttpClient = HttpClient.of(server.uri("/"));
+        poolHttpClient = AsyncHttpClient.of(server.uri("/"));
         timeoutClient = new ClientBuilder(server.uri(BINARY, "/timeout"))
                 .decorator(BraveClient.newDecorator(newTracing("client/timeout")))
                 .build(HelloService.Iface.class);

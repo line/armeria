@@ -22,7 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.Rule;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -53,13 +53,13 @@ public class ThrottlingServiceTest {
 
     @Test
     public void serve() throws Exception {
-        final HttpClient client = HttpClient.of(serverRule.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(serverRule.uri("/"));
         assertThat(client.get("/http-always").aggregate().get().status()).isEqualTo(HttpStatus.OK);
     }
 
     @Test
     public void throttle() throws Exception {
-        final HttpClient client = HttpClient.of(serverRule.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(serverRule.uri("/"));
         assertThat(client.get("/http-never").aggregate().get().status())
                 .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
     }

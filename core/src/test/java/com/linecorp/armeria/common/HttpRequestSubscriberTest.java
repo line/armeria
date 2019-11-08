@@ -31,7 +31,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.common.FixedHttpRequest.EmptyFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.OneElementFixedHttpRequest;
 import com.linecorp.armeria.common.FixedHttpRequest.RegularFixedHttpRequest;
@@ -63,11 +63,11 @@ public class HttpRequestSubscriberTest {
         }
     };
 
-    static HttpClient client;
+    static AsyncHttpClient client;
 
     @BeforeAll
     static void beforeClass() {
-        client = HttpClient.of(rule.httpUri("/"));
+        client = AsyncHttpClient.of(rule.httpUri("/"));
     }
 
     @ParameterizedTest

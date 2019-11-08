@@ -29,7 +29,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.Client;
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
@@ -105,11 +105,11 @@ public class RetryingClientWithLoggingTest {
                     }
                     return Backoff.ofDefault();
                 });
-        final HttpClient client = HttpClient.builder(server.uri("/"))
-                                            .decorator(loggingDecorator())
-                                            .decorator(RetryingHttpClient.builder(retryStrategy)
-                                                                         .newDecorator())
-                                            .build();
+        final AsyncHttpClient client = AsyncHttpClient.builder(server.uri("/"))
+                                                      .decorator(loggingDecorator())
+                                                      .decorator(RetryingClient.builder(retryStrategy)
+                                                                               .newDecorator())
+                                                      .build();
         assertThat(client.get("/hello").aggregate().join().contentUtf8()).isEqualTo("hello");
 
         // wait until 6 logs(3 requests and 3 responses) are called back
@@ -121,11 +121,11 @@ public class RetryingClientWithLoggingTest {
     @Test
     public void loggingThenRetrying() throws Exception {
         successLogIndex = 1;
-        final HttpClient client = HttpClient.builder(server.uri("/"))
-                                            .decorator(RetryingHttpClient.newDecorator(
-                                                    RetryStrategy.onServerErrorStatus()))
-                                            .decorator(loggingDecorator())
-                                            .build();
+        final AsyncHttpClient client = AsyncHttpClient.builder(server.uri("/"))
+                                                      .decorator(RetryingClient.newDecorator(
+                                                              RetryStrategy.onServerErrorStatus()))
+                                                      .decorator(loggingDecorator())
+                                                      .build();
         assertThat(client.get("/hello").aggregate().join().contentUtf8()).isEqualTo("hello");
 
         // wait until 2 logs are called back
@@ -135,8 +135,7 @@ public class RetryingClientWithLoggingTest {
         assertThat(logResult.get(0).toStringRequestOnly()).isEqualTo(logResult.get(1).toStringRequestOnly());
     }
 
-    private Function<Client<HttpRequest, HttpResponse>, Client<HttpRequest, HttpResponse>>
-    loggingDecorator() {
+    private Function<? super HttpClient, ? extends HttpClient> loggingDecorator() {
         return delegate -> new SimpleDecoratingHttpClient(delegate) {
             @Override
             public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {

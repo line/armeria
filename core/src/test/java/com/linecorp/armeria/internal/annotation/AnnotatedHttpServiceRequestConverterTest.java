@@ -37,7 +37,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -625,7 +625,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
 
     @Test
     public void testRequestConverter() throws Exception {
-        final HttpClient client = HttpClient.of(rule.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/"));
         final ObjectMapper mapper = new ObjectMapper();
 
         AggregatedHttpResponse response;
@@ -651,7 +651,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
 
     @Test
     public void testDefaultRequestConverter_bean1() throws Exception {
-        final HttpClient client = HttpClient.of(rule.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/"));
         final ObjectMapper mapper = new ObjectMapper();
 
         AggregatedHttpResponse response;
@@ -719,7 +719,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
 
     @Test
     public void testDefaultRequestConverter_bean2() throws Exception {
-        final HttpClient client = HttpClient.of(rule.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/"));
         final ObjectMapper mapper = new ObjectMapper();
 
         AggregatedHttpResponse response;
@@ -760,7 +760,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
 
     @Test
     public void testDefaultRequestConverter_bean3() throws Exception {
-        final HttpClient client = HttpClient.of(rule.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/"));
         final ObjectMapper mapper = new ObjectMapper();
 
         AggregatedHttpResponse response;
@@ -799,7 +799,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
 
     @Test
     public void testDefaultRequestConverter_bean4() throws Exception {
-        final HttpClient client = HttpClient.of(rule.uri("/3"));
+        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/3"));
         final ObjectMapper mapper = new ObjectMapper();
 
         AggregatedHttpResponse response;
@@ -832,7 +832,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
 
     @Test
     public void testDefaultRequestConverter_json() throws Exception {
-        final HttpClient client = HttpClient.of(rule.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/"));
         final ObjectMapper mapper = new ObjectMapper();
 
         AggregatedHttpResponse response;
@@ -873,7 +873,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
 
     @Test
     public void testDefaultRequestConverter_binary() throws Exception {
-        final HttpClient client = HttpClient.of(rule.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/"));
 
         final AggregatedHttpResponse response;
 
@@ -887,7 +887,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
 
     @Test
     public void testDefaultRequestConverter_text() throws Exception {
-        final HttpClient client = HttpClient.of(rule.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/"));
 
         AggregatedHttpResponse response;
 
@@ -910,7 +910,7 @@ public class AnnotatedHttpServiceRequestConverterTest {
 
     @Test
     public void testRedundantlyUsedParameters() throws Exception {
-        final HttpClient client = HttpClient.of(rule.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/"));
         final ObjectMapper mapper = new ObjectMapper();
         final RequestBean4 expectedRequestBean = new RequestBean4(100);
         expectedRequestBean.foo2 = 100;

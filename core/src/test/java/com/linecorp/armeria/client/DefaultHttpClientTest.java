@@ -27,7 +27,6 @@ import org.mockito.ArgumentCaptor;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
@@ -40,9 +39,9 @@ class DefaultHttpClientTest {
         final String clientUriPath = "http://127.0.0.1/hello";
         final String requestPath = "world/test?q1=foo";
 
-        final Client<HttpRequest, HttpResponse> mockClientDelegate = mock(Client.class);
+        final HttpClient mockClientDelegate = mock(HttpClient.class);
         final ClientBuilderParams clientBuilderParams = new DefaultClientBuilderParams(
-                ClientFactory.ofDefault(), new URI(clientUriPath), HttpClient.class, ClientOptions.of());
+                ClientFactory.ofDefault(), new URI(clientUriPath), AsyncHttpClient.class, ClientOptions.of());
         final DefaultHttpClient defaultHttpClient = new DefaultHttpClient(
                 clientBuilderParams, mockClientDelegate, NoopMeterRegistry.get(),
                 SessionProtocol.of("http"), Endpoint.of("127.0.0.1"));

@@ -27,10 +27,10 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryStrategy;
-import com.linecorp.armeria.client.retry.RetryingHttpClient;
+import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit.common.EventLoopExtension;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
@@ -90,10 +90,11 @@ class HttpRequestDuplicatorTest {
 
     @Test
     void longLivedRequest() {
-        final HttpClient client = HttpClient.builder(server.uri("/"))
-                                            .decorator(RetryingHttpClient.newDecorator(
-                                                    RetryStrategy.onServerErrorStatus(Backoff.withoutDelay())))
-                                            .build();
+        final AsyncHttpClient client =
+                AsyncHttpClient.builder(server.uri("/"))
+                               .decorator(RetryingClient.newDecorator(
+                                       RetryStrategy.onServerErrorStatus(Backoff.withoutDelay())))
+                               .build();
 
         final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.POST, "/long_streaming");
         writeStreamingRequest(req, 0);
@@ -108,6 +109,6 @@ class HttpRequestDuplicatorTest {
         }
         req.write(HttpData.ofUtf8(String.valueOf(index)));
         req.onDemand(() -> eventLoop.get().schedule(() -> writeStreamingRequest(req, index + 1),
-                300, TimeUnit.MILLISECONDS));
+                                                    300, TimeUnit.MILLISECONDS));
     }
 }

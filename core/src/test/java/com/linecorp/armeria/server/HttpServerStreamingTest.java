@@ -44,8 +44,8 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -143,7 +143,7 @@ class HttpServerStreamingTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientProvider.class)
-    void testTooLargeContent(HttpClient client) throws Exception {
+    void testTooLargeContent(AsyncHttpClient client) throws Exception {
         withTimeout(() -> {
             final int maxContentLength = 65536;
             serverMaxRequestLength = maxContentLength;
@@ -163,7 +163,7 @@ class HttpServerStreamingTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientProvider.class)
-    void testTooLargeContentToNonExistentService(HttpClient client) throws Exception {
+    void testTooLargeContentToNonExistentService(AsyncHttpClient client) throws Exception {
         withTimeout(() -> {
             final int maxContentLength = 65536;
             serverMaxRequestLength = maxContentLength;
@@ -177,13 +177,13 @@ class HttpServerStreamingTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientProvider.class)
-    void testStreamingRequest(HttpClient client) throws Exception {
+    void testStreamingRequest(AsyncHttpClient client) throws Exception {
         withTimeout(() -> runStreamingRequestTest(client, "/count"), Duration.ofSeconds(60));
     }
 
     @ParameterizedTest
     @ArgumentsSource(ClientProvider.class)
-    void testStreamingRequestWithSlowService(HttpClient client) throws Exception {
+    void testStreamingRequestWithSlowService(AsyncHttpClient client) throws Exception {
         withTimeout(() -> {
             final int oldNumDeferredReads = InboundTrafficController.numDeferredReads();
             runStreamingRequestTest(client, "/slow_count");
@@ -194,7 +194,7 @@ class HttpServerStreamingTest {
         }, Duration.ofSeconds(120));
     }
 
-    private void runStreamingRequestTest(HttpClient client, String path)
+    private void runStreamingRequestTest(AsyncHttpClient client, String path)
             throws InterruptedException, ExecutionException {
         final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.POST, path);
         final CompletableFuture<AggregatedHttpResponse> f = client.execute(req).aggregate();
@@ -220,13 +220,13 @@ class HttpServerStreamingTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientProvider.class)
-    void testStreamingResponse(HttpClient client) throws Exception {
+    void testStreamingResponse(AsyncHttpClient client) throws Exception {
         withTimeout(() -> runStreamingResponseTest(client, false), Duration.ofSeconds(60));
     }
 
     @ParameterizedTest
     @ArgumentsSource(ClientProvider.class)
-    void testStreamingResponseWithSlowClient(HttpClient client) throws Exception {
+    void testStreamingResponseWithSlowClient(AsyncHttpClient client) throws Exception {
         withTimeout(() -> {
             final int oldNumDeferredReads = InboundTrafficController.numDeferredReads();
             runStreamingResponseTest(client, true);
@@ -237,7 +237,7 @@ class HttpServerStreamingTest {
         }, Duration.ofSeconds(120));
     }
 
-    private void runStreamingResponseTest(HttpClient client, boolean slowClient)
+    private void runStreamingResponseTest(AsyncHttpClient client, boolean slowClient)
             throws InterruptedException, ExecutionException {
         final HttpResponse res = client.get("/zeroes/" + STREAMING_CONTENT_LENGTH);
         final AtomicReference<HttpStatus> status = new AtomicReference<>();
@@ -294,7 +294,7 @@ class HttpServerStreamingTest {
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
             return Stream.of(H1C, H2C, H1, H2)
                     .map(protocol -> {
-                        final HttpClientBuilder builder = HttpClient.builder(
+                        final HttpClientBuilder builder = AsyncHttpClient.builder(
                                 protocol.uriText() + "://127.0.0.1:" +
                                 (protocol.isTls() ? server.httpsPort() : server.httpPort()));
 

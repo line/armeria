@@ -30,19 +30,22 @@ class ClientBuilderTest {
 
     @Test
     void nonePlusSchemeProvided() {
-        final HttpClient client = new ClientBuilder("none+https://google.com/").build(HttpClient.class);
+        final AsyncHttpClient client = new ClientBuilder("none+https://google.com/")
+                .build(AsyncHttpClient.class);
         assertThat(client.uri().toString()).isEqualTo("https://google.com/");
     }
 
     @Test
     void nonePlusSchemeUriToUrl() throws MalformedURLException {
-        final HttpClient client = new ClientBuilder("none+https://google.com/").build(HttpClient.class);
+        final AsyncHttpClient client = new ClientBuilder("none+https://google.com/")
+                .build(AsyncHttpClient.class);
         assertThat(client.uri().toURL()).isEqualTo(URI.create("https://google.com/").toURL());
     }
 
     @Test
     void noSchemeShouldDefaultToNone() {
-        final HttpClient client = new ClientBuilder("https://google.com/").build(HttpClient.class);
+        final AsyncHttpClient client = new ClientBuilder("https://google.com/")
+                .build(AsyncHttpClient.class);
         assertThat(client.uri().toString()).isEqualTo("https://google.com/");
     }
 }

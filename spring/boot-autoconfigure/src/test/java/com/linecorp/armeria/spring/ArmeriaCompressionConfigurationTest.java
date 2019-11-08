@@ -38,7 +38,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 
 import com.google.common.base.Strings;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -111,7 +111,7 @@ public class ArmeriaCompressionConfigurationTest {
     @Test
     public void compressedResponse() {
         final AggregatedHttpResponse res =
-                HttpClient.of(newUrl()).execute(request(2048)).aggregate().join();
+                AsyncHttpClient.of(newUrl()).execute(request(2048)).aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("gzip");
     }
@@ -119,7 +119,7 @@ public class ArmeriaCompressionConfigurationTest {
     @Test
     public void nonCompressedResponse() {
         final AggregatedHttpResponse res =
-                HttpClient.of(newUrl()).execute(request(1023)).aggregate().join();
+                AsyncHttpClient.of(newUrl()).execute(request(1023)).aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isNull();
     }

@@ -28,7 +28,7 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpObject;
@@ -170,7 +170,7 @@ public class ObservableResponseConverterFunctionTest {
 
     @Test
     public void maybe() {
-        final HttpClient client = HttpClient.of(rule.uri("/maybe"));
+        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/maybe"));
 
         AggregatedHttpResponse res;
 
@@ -192,7 +192,7 @@ public class ObservableResponseConverterFunctionTest {
 
     @Test
     public void single() {
-        final HttpClient client = HttpClient.of(rule.uri("/single"));
+        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/single"));
 
         AggregatedHttpResponse res;
 
@@ -210,7 +210,7 @@ public class ObservableResponseConverterFunctionTest {
 
     @Test
     public void completable() {
-        final HttpClient client = HttpClient.of(rule.uri("/completable"));
+        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/completable"));
 
         AggregatedHttpResponse res;
 
@@ -223,7 +223,7 @@ public class ObservableResponseConverterFunctionTest {
 
     @Test
     public void observable() {
-        final HttpClient client = HttpClient.of(rule.uri("/observable"));
+        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/observable"));
 
         AggregatedHttpResponse res;
 
@@ -247,7 +247,7 @@ public class ObservableResponseConverterFunctionTest {
 
     @Test
     public void streaming() {
-        final HttpClient client = HttpClient.of(rule.uri("/streaming"));
+        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/streaming"));
         final AtomicBoolean isFinished = new AtomicBoolean();
         client.get("/json").subscribe(new DefaultSubscriber<HttpObject>() {
             final ImmutableList.Builder<HttpObject> received = new Builder<>();
@@ -285,7 +285,7 @@ public class ObservableResponseConverterFunctionTest {
 
     @Test
     public void failure() {
-        final HttpClient client = HttpClient.of(rule.uri("/failure"));
+        final AsyncHttpClient client = AsyncHttpClient.of(rule.uri("/failure"));
 
         AggregatedHttpResponse res;
 

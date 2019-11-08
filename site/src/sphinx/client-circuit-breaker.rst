@@ -64,7 +64,7 @@ A :api:`CircuitBreaker` can be one of the following three states:
 ``CircuitBreakerClient``
 ------------------------
 
-Armeria provides two different :api:`Client` implementations depending on the
+Armeria provides two different client implementations depending on the
 :api:`Request` and :api:`Response` types:
 
 - :api:`CircuitBreakerHttpClient`
@@ -79,7 +79,7 @@ You can use the ``decorator()`` method in :api:`ClientBuilder` to build a :api:`
     import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerHttpClient;
     import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerStrategy;
     import com.linecorp.armeria.client.HttpClientBuilder;
-    import com.linecorp.armeria.client.HttpClient;
+    import com.linecorp.armeria.client.AsyncHttpClient;
     import com.linecorp.armeria.common.AggregatedHttpResponse;
     import com.linecorp.armeria.common.HttpRequest;
     import com.linecorp.armeria.common.HttpResponse;
@@ -92,10 +92,10 @@ You can use the ``decorator()`` method in :api:`ClientBuilder` to build a :api:`
 
     final AggregatedHttpResponse res = client.execute(...).aggregate().join(); // Send requests on and on.
 
-Now, the :api:`Client` can track the number of success or failure events depending on the :apiplural:`Response`.
-The :api:`CircuitBreaker` will enter ``OPEN``, when the number of failures divided by the total number of
-:apiplural:`Request` exceeds the failure rate. Then the :api:`Client` will immediately get
-:api:`FailFastException` by the :api:`CircuitBreaker`.
+Now, the :api:`HttpClient` can track the number of success or failure events depending on the
+:apiplural:`Response`. The :api:`CircuitBreaker` will enter ``OPEN``, when the number of failures divided
+by the total number of :apiplural:`Request` exceeds the failure rate.
+Then the :api:`HttpClient` will immediately get :api:`FailFastException` by the :api:`CircuitBreaker`.
 
 .. _circuit-breaker-strategy:
 
@@ -205,7 +205,7 @@ in many cases, you will want to use different :api:`CircuitBreaker` for differen
 might be an API which performs heavy calculation which fails often. On the other hand, there can be another API
 which is not resource hungry and this is not likely to fail.
 Having one :api:`CircuitBreaker` that tracks all the success and failure does not make sense in this scenario.
-It's even worse if the :api:`Client` connects to the services on different machines.
+It's even worse if the client connects to the services on different machines.
 When one of the remote services is down, your :api:`CircuitBreaker` will probably be ``OPEN`` state although
 you can connect to other services.
 Therefore, Armeria provides various ways that let users group the range of circuit breaker instances.

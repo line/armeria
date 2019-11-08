@@ -256,7 +256,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     }
 
     @SuppressWarnings("unchecked")
-    private T self() {
+    protected T self() {
         return (T) this;
     }
 

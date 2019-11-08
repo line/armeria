@@ -198,7 +198,7 @@ request and response properties, you need to use :api:`ClientConnectionTimings` 
 .. code-block:: java
 
     import com.linecorp.armeria.client.ClientConnectionTimings;
-    import com.linecorp.armeria.client.HttpClient;
+    import com.linecorp.armeria.client.AsyncHttpClient;
     import com.linecorp.armeria.client.HttpClientBuilder;
 
     final HttpClient client = new HttpClientBuilder("http://armeria.com")
@@ -280,7 +280,7 @@ Enabling content previews
 Armeria provides the ``requestContentPreview`` and ``responseContentPreview`` properties in :api:`RequestLog`
 to retrieve the textual representation of the first N bytes of the request and response content.
 However, the properties are disabled by default due to performance overhead and thus they always return ``null``.
-You can enable it when you configure :api:`Server`, :api:`VirtualHost` or :api:`Client`.
+You can enable it when you configure :api:`Server`, :api:`VirtualHost` or client.
 
 .. code-block:: java
 

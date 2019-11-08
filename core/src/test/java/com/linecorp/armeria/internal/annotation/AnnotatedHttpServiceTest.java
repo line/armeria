@@ -49,7 +49,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -839,7 +839,7 @@ class AnnotatedHttpServiceTest {
 
     @Test
     void testAdvancedAnnotatedHttpService() throws Exception {
-        final HttpClient client = HttpClient.of(server.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(server.uri("/"));
         final String path = "/8/same/path";
 
         RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, path);

@@ -26,7 +26,7 @@ import javax.annotation.Nullable;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -235,12 +235,13 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
     @Test
     public void metaAnnotations() {
         final AggregatedHttpResponse msg =
-                HttpClient.of(rule.uri("/"))
-                          .execute(RequestHeaders.of(HttpMethod.POST, "/hello",
-                                                     HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
-                                                     HttpHeaderNames.ACCEPT, "text/*"),
-                                   HttpData.ofUtf8("Armeria"))
-                          .aggregate().join();
+                AsyncHttpClient.of(rule.uri("/"))
+                               .execute(RequestHeaders.of(HttpMethod.POST, "/hello",
+                                                          HttpHeaderNames.CONTENT_TYPE,
+                                                          MediaType.PLAIN_TEXT_UTF_8,
+                                                          HttpHeaderNames.ACCEPT, "text/*"),
+                                        HttpData.ofUtf8("Armeria"))
+                               .aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.CREATED);
         assertThat(msg.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(msg.headers().get(HttpHeaderNames.of("x-foo"))).isEqualTo("foo");
@@ -254,12 +255,14 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
     @Test
     public void metaOfMetaAnnotation_ProducesJson() {
         final AggregatedHttpResponse msg =
-                HttpClient.of(rule.uri("/"))
-                          .execute(RequestHeaders.of(HttpMethod.POST, "/hello",
-                                                     HttpHeaderNames.CONTENT_TYPE, MediaType.PLAIN_TEXT_UTF_8,
-                                                     HttpHeaderNames.ACCEPT, "application/json; charset=utf-8"),
-                                   HttpData.ofUtf8("Armeria"))
-                          .aggregate().join();
+                AsyncHttpClient.of(rule.uri("/"))
+                               .execute(RequestHeaders.of(HttpMethod.POST, "/hello",
+                                                          HttpHeaderNames.CONTENT_TYPE,
+                                                          MediaType.PLAIN_TEXT_UTF_8,
+                                                          HttpHeaderNames.ACCEPT,
+                                                          "application/json; charset=utf-8"),
+                                        HttpData.ofUtf8("Armeria"))
+                               .aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.CREATED);
         assertThat(msg.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(msg.headers().get(HttpHeaderNames.of("x-foo"))).isEqualTo("foo");
@@ -273,7 +276,7 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
     @Test
     public void exception1() {
         final AggregatedHttpResponse msg =
-                HttpClient.of(rule.uri("/")).get("/exception1").aggregate().join();
+                AsyncHttpClient.of(rule.uri("/")).get("/exception1").aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         // @AdditionalHeader/Trailer is added using ServiceRequestContext, so they are added even if
         // the request is not succeeded.
@@ -286,7 +289,7 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
     @Test
     public void exception2() {
         final AggregatedHttpResponse msg =
-                HttpClient.of(rule.uri("/")).get("/exception2").aggregate().join();
+                AsyncHttpClient.of(rule.uri("/")).get("/exception2").aggregate().join();
         assertThat(msg.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         // @AdditionalHeader/Trailer is added using ServiceRequestContext, so they are added even if
         // the request is not succeeded.

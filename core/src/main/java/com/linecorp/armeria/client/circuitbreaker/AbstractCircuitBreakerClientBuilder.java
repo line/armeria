@@ -19,25 +19,19 @@ package com.linecorp.armeria.client.circuitbreaker;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import java.util.function.Function;
-
 import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 
 /**
  * A skeletal builder implementation that builds a new {@link CircuitBreakerClient} or its decorator function.
  *
- * @param <T> the type of the {@link Client} that this builder builds or decorates
- * @param <I> the type of outgoing {@link Request} of the {@link Client}
  * @param <O> the type of incoming {@link Response} of the {@link Client}
  */
-public abstract class CircuitBreakerClientBuilder<T extends CircuitBreakerClient<I, O>,
-        I extends Request, O extends Response> {
+public abstract class AbstractCircuitBreakerClientBuilder<O extends Response> {
 
     @Nullable
     private final CircuitBreakerStrategy strategy;
@@ -50,19 +44,20 @@ public abstract class CircuitBreakerClientBuilder<T extends CircuitBreakerClient
     /**
      * Creates a new builder with the specified {@link CircuitBreakerStrategy}.
      */
-    CircuitBreakerClientBuilder(CircuitBreakerStrategy strategy) {
+    AbstractCircuitBreakerClientBuilder(CircuitBreakerStrategy strategy) {
         this(requireNonNull(strategy, "strategy"), null);
     }
 
     /**
      * Creates a new builder with the specified {@link CircuitBreakerStrategyWithContent}.
      */
-    CircuitBreakerClientBuilder(CircuitBreakerStrategyWithContent<O> strategyWithContent) {
+    AbstractCircuitBreakerClientBuilder(CircuitBreakerStrategyWithContent<O> strategyWithContent) {
         this(null, requireNonNull(strategyWithContent, "strategyWithContent"));
     }
 
-    private CircuitBreakerClientBuilder(@Nullable CircuitBreakerStrategy strategy,
-                                        @Nullable CircuitBreakerStrategyWithContent<O> strategyWithContent) {
+    private AbstractCircuitBreakerClientBuilder(
+            @Nullable CircuitBreakerStrategy strategy,
+            @Nullable CircuitBreakerStrategyWithContent<O> strategyWithContent) {
         this.strategy = strategy;
         this.strategyWithContent = strategyWithContent;
     }
@@ -86,7 +81,7 @@ public abstract class CircuitBreakerClientBuilder<T extends CircuitBreakerClient
      * @deprecated Use {@link #mapping(CircuitBreakerMapping)}.
      */
     @Deprecated
-    public CircuitBreakerClientBuilder<T, I, O> circuitBreakerMapping(CircuitBreakerMapping mapping) {
+    public AbstractCircuitBreakerClientBuilder<O> circuitBreakerMapping(CircuitBreakerMapping mapping) {
         return mapping(mapping);
     }
 
@@ -96,7 +91,7 @@ public abstract class CircuitBreakerClientBuilder<T extends CircuitBreakerClient
      *
      * @return {@code this} to support method chaining.
      */
-    public CircuitBreakerClientBuilder<T, I, O> mapping(CircuitBreakerMapping mapping) {
+    public AbstractCircuitBreakerClientBuilder<O> mapping(CircuitBreakerMapping mapping) {
         this.mapping = requireNonNull(mapping, "mapping");
         return this;
     }
@@ -104,17 +99,6 @@ public abstract class CircuitBreakerClientBuilder<T extends CircuitBreakerClient
     CircuitBreakerMapping mapping() {
         return mapping;
     }
-
-    /**
-     * Returns a newly-created {@link CircuitBreakerClient} based on the properties of this builder.
-     */
-    public abstract T build(Client<I, O> delegate);
-
-    /**
-     * Returns a newly-created decorator that decorates a {@link Client} with a new {@link CircuitBreakerClient}
-     * based on the properties of this builder.
-     */
-    public abstract Function<Client<I, O>, T> newDecorator();
 
     @Override
     public String toString() {

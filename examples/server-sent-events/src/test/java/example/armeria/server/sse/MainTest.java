@@ -9,7 +9,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpStatus;
@@ -23,7 +23,7 @@ import reactor.test.StepVerifier;
 public class MainTest {
 
     private static Server server;
-    private static HttpClient client;
+    private static AsyncHttpClient client;
 
     @BeforeClass
     public static void beforeClass() throws Exception {
@@ -33,7 +33,7 @@ public class MainTest {
         server = Main.newServer(0, 0,
                                 Duration.ofMillis(200), 5, () -> Long.toString(sequence.getAndIncrement()));
         server.start().join();
-        client = HttpClient.of("http://127.0.0.1:" + server.activeLocalPort());
+        client = AsyncHttpClient.of("http://127.0.0.1:" + server.activeLocalPort());
     }
 
     @AfterClass

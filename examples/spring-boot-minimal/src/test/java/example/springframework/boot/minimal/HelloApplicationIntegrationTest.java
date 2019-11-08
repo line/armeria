@@ -13,7 +13,7 @@ import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.Server;
@@ -26,11 +26,11 @@ public class HelloApplicationIntegrationTest {
     @Inject
     private Server server;
 
-    private HttpClient client;
+    private AsyncHttpClient client;
 
     @Before
     public void setup() {
-        client = HttpClient.of("http://localhost:" + server.activeLocalPort());
+        client = AsyncHttpClient.of("http://localhost:" + server.activeLocalPort());
     }
 
     @Test

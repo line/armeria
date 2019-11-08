@@ -369,7 +369,7 @@ class HttpClientIntegrationTest {
 
     @Test
     void testRequestNoBody() throws Exception {
-        final HttpClient client = HttpClient.of(server.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(server.uri("/"));
 
         final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.GET, "/httptestbody",
@@ -382,7 +382,7 @@ class HttpClientIntegrationTest {
 
     @Test
     void testRequestWithBody() throws Exception {
-        final HttpClient client = HttpClient.of(server.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(server.uri("/"));
 
         final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.POST, "/httptestbody",
@@ -411,10 +411,10 @@ class HttpClientIntegrationTest {
         final String groupName = "testEndpointWithAlternateAuthority";
         EndpointGroupRegistry.register(groupName, group, EndpointSelectionStrategy.ROUND_ROBIN);
         try {
-            final HttpClient client = HttpClient.builder("http://group:" + groupName)
-                                                .setHttpHeader(HttpHeaderNames.AUTHORITY,
+            final AsyncHttpClient client = AsyncHttpClient.builder("http://group:" + groupName)
+                                                          .setHttpHeader(HttpHeaderNames.AUTHORITY,
                                                                "255.255.255.255.xip.io")
-                                                .build();
+                                                          .build();
 
             final AggregatedHttpResponse res = client.get("/hello/world").aggregate().join();
             assertThat(res.status()).isEqualTo(HttpStatus.OK);
@@ -426,7 +426,7 @@ class HttpClientIntegrationTest {
 
     @Test
     void testNot200() throws Exception {
-        final HttpClient client = HttpClient.of(server.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(server.uri("/"));
 
         final AggregatedHttpResponse response = client.get("/not200").aggregate().get();
 
@@ -454,7 +454,7 @@ class HttpClientIntegrationTest {
                                                             String headerValue) throws Exception {
         final HttpHeaders headers = HttpHeaders.of(headerName, headerValue);
         final ClientOptions options = ClientOptions.of(ClientOption.HTTP_HEADERS.newValue(headers));
-        final HttpClient client = HttpClient.of(server.uri("/"), options);
+        final AsyncHttpClient client = AsyncHttpClient.of(server.uri("/"), options);
 
         final AggregatedHttpResponse response = client.get(path).aggregate().get();
 
@@ -463,10 +463,10 @@ class HttpClientIntegrationTest {
 
     @Test
     void httpDecoding() throws Exception {
-        final HttpClient client = HttpClient.builder(server.uri("/"))
-                                            .factory(clientFactory)
-                                            .decorator(HttpDecodingClient.newDecorator())
-                                            .build();
+        final AsyncHttpClient client = AsyncHttpClient.builder(server.uri("/"))
+                                                      .factory(clientFactory)
+                                                      .decorator(HttpDecodingClient.newDecorator())
+                                                      .build();
 
         final AggregatedHttpResponse response =
                 client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding")).aggregate().get();
@@ -477,11 +477,11 @@ class HttpClientIntegrationTest {
 
     @Test
     void httpDecoding_deflate() throws Exception {
-        final HttpClient client = HttpClient.builder(server.uri("/"))
-                                            .factory(clientFactory)
-                                            .decorator(HttpDecodingClient.newDecorator(
+        final AsyncHttpClient client = AsyncHttpClient.builder(server.uri("/"))
+                                                      .factory(clientFactory)
+                                                      .decorator(HttpDecodingClient.newDecorator(
                                                     new DeflateStreamDecoderFactory()))
-                                            .build();
+                                                      .build();
 
         final AggregatedHttpResponse response =
                 client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding")).aggregate().get();
@@ -492,11 +492,11 @@ class HttpClientIntegrationTest {
 
     @Test
     void httpDecoding_noEncodingApplied() throws Exception {
-        final HttpClient client = HttpClient.builder(server.uri("/"))
-                                            .factory(clientFactory)
-                                            .decorator(HttpDecodingClient.newDecorator(
+        final AsyncHttpClient client = AsyncHttpClient.builder(server.uri("/"))
+                                                      .factory(clientFactory)
+                                                      .decorator(HttpDecodingClient.newDecorator(
                                                     new DeflateStreamDecoderFactory()))
-                                            .build();
+                                                      .build();
 
         final AggregatedHttpResponse response =
                 client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding-toosmall")).aggregate().get();
@@ -513,7 +513,7 @@ class HttpClientIntegrationTest {
 
             // Send a request. Note that we do not wait for a response anywhere because we are only interested
             // in testing what client sends.
-            Clients.newClient(clientFactory, "none+h1c://127.0.0.1:" + port, HttpClient.class).get(path);
+            Clients.newClient(clientFactory, "none+h1c://127.0.0.1:" + port, AsyncHttpClient.class).get(path);
             ss.setSoTimeout(10000);
             s = ss.accept();
 
@@ -537,7 +537,7 @@ class HttpClientIntegrationTest {
 
     @Test
     void givenHttpClientUriPathAndRequestPath_whenGet_thenRequestToConcatenatedPath() throws Exception {
-        final HttpClient client = HttpClient.of(server.uri("/hello"));
+        final AsyncHttpClient client = AsyncHttpClient.of(server.uri("/hello"));
 
         final AggregatedHttpResponse response = client.get("/world").aggregate().get();
 
@@ -546,7 +546,7 @@ class HttpClientIntegrationTest {
 
     @Test
     void givenRequestPath_whenGet_thenRequestToPath() throws Exception {
-        final HttpClient client = HttpClient.of(server.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(server.uri("/"));
 
         final AggregatedHttpResponse response = client.get("/hello/world").aggregate().get();
 
@@ -555,7 +555,7 @@ class HttpClientIntegrationTest {
 
     @Test
     void testPooledResponseDefaultSubscriber() throws Exception {
-        final HttpClient client = HttpClient.of(server.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(server.uri("/"));
 
         final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.GET, "/pooled")).aggregate().get();
@@ -567,7 +567,7 @@ class HttpClientIntegrationTest {
 
     @Test
     void testPooledResponsePooledSubscriber() throws Exception {
-        final HttpClient client = HttpClient.of(server.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(server.uri("/"));
 
         final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.GET, "/pooled-aware")).aggregate().get();
@@ -579,7 +579,7 @@ class HttpClientIntegrationTest {
 
     @Test
     void testUnpooledResponsePooledSubscriber() throws Exception {
-        final HttpClient client = HttpClient.of(server.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(server.uri("/"));
 
         final AggregatedHttpResponse response = client.execute(
                 RequestHeaders.of(HttpMethod.GET, "/pooled-unaware")).aggregate().get();
@@ -592,7 +592,7 @@ class HttpClientIntegrationTest {
     @Test
     void testCloseClientFactory() throws Exception {
         final ClientFactory factory = ClientFactory.builder().build();
-        final HttpClient client = factory.newClient("none+" + server.uri("/"), HttpClient.class);
+        final AsyncHttpClient client = factory.newClient("none+" + server.uri("/"), AsyncHttpClient.class);
         final HttpRequestWriter req = HttpRequest.streaming(RequestHeaders.of(HttpMethod.GET,
                                                                               "/stream-closed"));
         final HttpResponse res = client.execute(req);
@@ -624,7 +624,7 @@ class HttpClientIntegrationTest {
 
     @Test
     void testEscapedPathParam() throws Exception {
-        final HttpClient client = HttpClient.of(server.uri("/"));
+        final AsyncHttpClient client = AsyncHttpClient.of(server.uri("/"));
 
         final AggregatedHttpResponse response = client.get("/oneparam/foo%2Fbar").aggregate().get();
 
@@ -636,18 +636,20 @@ class HttpClientIntegrationTest {
         final Endpoint endpoint = newEndpoint();
         final ClientFactory factory = ClientFactory.builder().build();
 
-        HttpClient client = Clients.newClient(factory, SessionProtocol.HTTP, SerializationFormat.NONE,
-                                              endpoint, HttpClient.class);
+        AsyncHttpClient client = Clients.newClient(factory, SessionProtocol.HTTP, SerializationFormat.NONE,
+                                                   endpoint, AsyncHttpClient.class);
         checkGetRequest("/hello/world", client);
 
         client = Clients.newClient(factory, SessionProtocol.HTTP, SerializationFormat.NONE, endpoint,
-                                   HttpClient.class, ClientOptions.of());
+                                   AsyncHttpClient.class, ClientOptions.of());
         checkGetRequest("/hello/world", client);
 
-        client = Clients.newClient(SessionProtocol.HTTP, SerializationFormat.NONE, endpoint, HttpClient.class);
+        client = Clients.newClient(SessionProtocol.HTTP, SerializationFormat.NONE, endpoint,
+                                   AsyncHttpClient.class);
         checkGetRequest("/hello/world", client);
 
-        client = Clients.newClient(SessionProtocol.HTTP, SerializationFormat.NONE, endpoint, HttpClient.class,
+        client = Clients.newClient(SessionProtocol.HTTP, SerializationFormat.NONE, endpoint,
+                                   AsyncHttpClient.class,
                                    ClientOptions.of());
         checkGetRequest("/hello/world", client);
     }
@@ -657,16 +659,16 @@ class HttpClientIntegrationTest {
         final Endpoint endpoint = newEndpoint();
         final ClientFactory factory = ClientFactory.builder().build();
 
-        HttpClient client = HttpClient.of(factory, SessionProtocol.HTTP, endpoint);
+        AsyncHttpClient client = AsyncHttpClient.of(factory, SessionProtocol.HTTP, endpoint);
         checkGetRequest("/hello/world", client);
 
-        client = HttpClient.of(factory, SessionProtocol.HTTP, endpoint, ClientOptions.of());
+        client = AsyncHttpClient.of(factory, SessionProtocol.HTTP, endpoint, ClientOptions.of());
         checkGetRequest("/hello/world", client);
 
-        client = HttpClient.of(SessionProtocol.HTTP, endpoint);
+        client = AsyncHttpClient.of(SessionProtocol.HTTP, endpoint);
         checkGetRequest("/hello/world", client);
 
-        client = HttpClient.of(SessionProtocol.HTTP, endpoint, ClientOptions.of());
+        client = AsyncHttpClient.of(SessionProtocol.HTTP, endpoint, ClientOptions.of());
         checkGetRequest("/hello/world", client);
     }
 
@@ -675,35 +677,35 @@ class HttpClientIntegrationTest {
         final Endpoint endpoint = newEndpoint();
         final ClientFactory factory = ClientFactory.builder().build();
 
-        HttpClient client = new ClientBuilder(SessionProtocol.HTTP, endpoint)
+        AsyncHttpClient client = new ClientBuilder(SessionProtocol.HTTP, endpoint)
                 .serializationFormat(SerializationFormat.NONE)
                 .factory(factory)
-                .build(HttpClient.class);
+                .build(AsyncHttpClient.class);
         checkGetRequest("/hello/world", client);
 
         client = new ClientBuilder(SessionProtocol.HTTP, endpoint)
-                .build(HttpClient.class);
+                .build(AsyncHttpClient.class);
         checkGetRequest("/hello/world", client);
 
         client = new ClientBuilder("none+http", endpoint)
                 .path("/hello")
-                .build(HttpClient.class);
+                .build(AsyncHttpClient.class);
         checkGetRequest("/world", client);
 
         client = new ClientBuilder(Scheme.of(SerializationFormat.NONE, SessionProtocol.HTTP), endpoint)
                 .path("/hello")
-                .build(HttpClient.class);
+                .build(AsyncHttpClient.class);
         checkGetRequest("/world", client);
 
         client = new ClientBuilder(SessionProtocol.HTTP, endpoint)
                 .serializationFormat(SerializationFormat.NONE)
                 .path("/hello")
-                .build(HttpClient.class);
+                .build(AsyncHttpClient.class);
         checkGetRequest("/world", client);
 
         assertThatThrownBy(() -> new ClientBuilder("none+http", endpoint)
                 .serializationFormat(SerializationFormat.NONE)
-                .build(HttpClient.class));
+                .build(AsyncHttpClient.class));
     }
 
     @Test
@@ -711,10 +713,10 @@ class HttpClientIntegrationTest {
         final ClientFactory clientFactory = ClientFactory.builder()
                                                          .useHttp2Preface(false)
                                                          .build();
-        final HttpClient client = HttpClient.builder(server.httpUri("/"))
-                                            .factory(clientFactory)
-                                            .decorator(HttpDecodingClient.newDecorator())
-                                            .build();
+        final AsyncHttpClient client = AsyncHttpClient.builder(server.httpUri("/"))
+                                                      .factory(clientFactory)
+                                                      .decorator(HttpDecodingClient.newDecorator())
+                                                      .build();
 
         final AggregatedHttpResponse response = client.execute(
                 AggregatedHttpRequest.of(HttpMethod.GET, "/only-once/request")).aggregate().get();
@@ -762,7 +764,7 @@ class HttpClientIntegrationTest {
 
         @Test
         void http1SendsOneHostHeaderWhenUserSetsIt() {
-            final HttpClient client = HttpClient.of(
+            final AsyncHttpClient client = AsyncHttpClient.of(
                     "h1c://localhost:" + ((ServerConnector) jetty.getConnectors()[0]).getLocalPort() + '/');
 
             final AggregatedHttpResponse response = client.execute(
@@ -772,7 +774,7 @@ class HttpClientIntegrationTest {
         }
     }
 
-    private static void checkGetRequest(String path, HttpClient client) throws Exception {
+    private static void checkGetRequest(String path, AsyncHttpClient client) throws Exception {
         final AggregatedHttpResponse response = client.get(path).aggregate().get();
         assertThat(response.contentUtf8()).isEqualTo("success");
     }

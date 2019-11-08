@@ -37,7 +37,7 @@ import org.springframework.http.client.reactive.ClientHttpRequest;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
@@ -53,7 +53,7 @@ import reactor.core.publisher.Mono;
  */
 final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
 
-    private final HttpClient client;
+    private final AsyncHttpClient client;
 
     private final RequestHeadersBuilder headers;
     private final DataBufferFactoryWrapper<?> factoryWrapper;
@@ -67,7 +67,7 @@ final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
     @Nullable
     private HttpRequest request;
 
-    ArmeriaClientHttpRequest(HttpClient client, HttpMethod httpMethod, String pathAndQuery,
+    ArmeriaClientHttpRequest(AsyncHttpClient client, HttpMethod httpMethod, String pathAndQuery,
                              URI uri, DataBufferFactoryWrapper<?> factoryWrapper) {
         this.client = requireNonNull(client, "client");
         this.httpMethod = requireNonNull(httpMethod, "httpMethod");

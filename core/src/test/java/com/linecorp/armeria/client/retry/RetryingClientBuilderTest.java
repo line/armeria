@@ -24,13 +24,13 @@ import org.junit.Test;
 
 import com.linecorp.armeria.common.HttpResponse;
 
-public class RetryingHttpClientBuilderTest {
+public class RetryingClientBuilderTest {
 
     @Test
     public void cannotSetContentPreviewLengthWhenRetryStrategyIsUsed() {
         final RetryStrategy strategy = (ctx, cause) -> CompletableFuture.completedFuture(null);
-        assertThatThrownBy(() -> RetryingHttpClient.builder(strategy)
-                                                   .contentPreviewLength(1024))
+        assertThatThrownBy(() -> RetryingClient.builder(strategy)
+                                               .contentPreviewLength(1024))
                 .isExactlyInstanceOf(IllegalStateException.class);
     }
 
@@ -38,8 +38,8 @@ public class RetryingHttpClientBuilderTest {
     public void contentPreviewLengthCannotBeZero() {
         final RetryStrategyWithContent<HttpResponse> strategy =
                 (ctx, response) -> response.aggregate().handle((unused1, unused2) -> null);
-        assertThatThrownBy(() -> RetryingHttpClient.builder(strategy)
-                                                   .contentPreviewLength(0))
+        assertThatThrownBy(() -> RetryingClient.builder(strategy)
+                                               .contentPreviewLength(0))
                 .isExactlyInstanceOf(IllegalArgumentException.class);
     }
 }

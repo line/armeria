@@ -34,8 +34,8 @@ import org.junit.Test;
 import com.google.common.base.Strings;
 import com.google.common.io.BaseEncoding;
 
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.HttpData;
@@ -59,12 +59,12 @@ import io.netty.buffer.Unpooled;
 public class ContentPreviewerTest {
 
     static class MyHttpClient {
-        private final HttpClient client;
+        private final AsyncHttpClient client;
         @Nullable
         private volatile CompletableFuture<RequestLog> waitingFuture;
 
         MyHttpClient(String uri, int reqLength, int resLength) {
-            final HttpClientBuilder builder = HttpClient.builder(serverRule.uri(uri));
+            final HttpClientBuilder builder = AsyncHttpClient.builder(serverRule.uri(uri));
             final ContentPreviewerFactory reqPreviewerFactory =
                     ContentPreviewerFactory.ofText(reqLength, StandardCharsets.UTF_8);
             final ContentPreviewerFactory resPreviewerFactory =
@@ -139,10 +139,10 @@ public class ContentPreviewerTest {
         }
 
         class Client {
-            private final HttpClient client;
+            private final AsyncHttpClient client;
 
             Client(String path) {
-                client = HttpClient.of(ClientFactory.ofDefault(), serverRule.uri(path));
+                client = AsyncHttpClient.of(ClientFactory.ofDefault(), serverRule.uri(path));
             }
 
             public RequestLog get(String path) throws Exception {

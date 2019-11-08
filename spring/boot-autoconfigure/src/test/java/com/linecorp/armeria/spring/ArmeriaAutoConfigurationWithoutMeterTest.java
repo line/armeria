@@ -33,7 +33,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
-import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -67,7 +67,7 @@ public class ArmeriaAutoConfigurationWithoutMeterTest {
 
     @Test
     public void testHttpServiceRegistrationBean() throws Exception {
-        final HttpClient client = HttpClient.of(newUrl("h1c"));
+        final AsyncHttpClient client = AsyncHttpClient.of(newUrl("h1c"));
 
         final HttpResponse response = client.get("/ok");
 

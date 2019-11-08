@@ -125,7 +125,7 @@ public class HttpClientPipeliningTest {
 
     @Test
     public void withoutPipelining() throws Exception {
-        final HttpClient client = HttpClient.of(
+        final AsyncHttpClient client = AsyncHttpClient.of(
                 factoryWithoutPipelining, "h1c://127.0.0.1:" + server.httpPort());
 
         final HttpResponse res1 = client.get("/");
@@ -146,7 +146,7 @@ public class HttpClientPipeliningTest {
 
     @Test
     public void withPipelining() throws Exception {
-        final HttpClient client = HttpClient.of(
+        final AsyncHttpClient client = AsyncHttpClient.of(
                 factoryWithPipelining, "h1c://127.0.0.1:" + server.httpPort());
 
         final HttpResponse res1;

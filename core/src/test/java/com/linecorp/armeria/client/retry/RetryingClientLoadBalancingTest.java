@@ -29,8 +29,8 @@ import org.junit.jupiter.params.provider.EnumSource;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroupRegistry;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
@@ -107,16 +107,16 @@ class RetryingClientLoadBalancingTest {
                 }
 
                 // Retry only once on failure.
-                if (!HttpStatus.OK.equals(status) && RetryingClient.getTotalAttempts(ctx) <= 1) {
+                if (!HttpStatus.OK.equals(status) && AbstractRetryingClient.getTotalAttempts(ctx) <= 1) {
                     return CompletableFuture.completedFuture(Backoff.withoutDelay());
                 } else {
                     return CompletableFuture.completedFuture(null);
                 }
             };
-            final HttpClient c = HttpClient.builder("h2c://group:" + groupName)
-                                           .decorator(RetryingHttpClient.builder(retryStrategy)
-                                                                        .newDecorator())
-                                           .build();
+            final AsyncHttpClient c = AsyncHttpClient.builder("h2c://group:" + groupName)
+                                                     .decorator(RetryingClient.builder(retryStrategy)
+                                                                              .newDecorator())
+                                                     .build();
 
             for (int i = 0; i < NUM_PORTS; i++) {
                 c.get(mode.path).aggregate().join();
@@ -129,9 +129,9 @@ class RetryingClientLoadBalancingTest {
                 case FAILURE:
                     final List<Integer> expectedPortsWhenRetried =
                             ImmutableList.<Integer>builder()
-                                         .addAll(expectedPorts)
-                                         .addAll(expectedPorts)
-                                         .build();
+                                    .addAll(expectedPorts)
+                                    .addAll(expectedPorts)
+                                    .build();
                     assertThat(accessedPorts).isEqualTo(expectedPortsWhenRetried);
                     break;
             }

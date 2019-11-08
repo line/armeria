@@ -48,8 +48,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.client.AsyncHttpClient;
 import com.linecorp.armeria.client.ClientOption;
-import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -126,13 +126,13 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
     @Inject
     private SettableHealthIndicator settableHealth;
 
-    private HttpClient client;
+    private AsyncHttpClient client;
 
     @Before
     public void setUp() {
-        client = HttpClient.of(newUrl("h2c"),
-                               ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(TIMEOUT_MILLIS),
-                               ClientOption.MAX_RESPONSE_LENGTH.newValue(0L));
+        client = AsyncHttpClient.of(newUrl("h2c"),
+                                    ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(TIMEOUT_MILLIS),
+                                    ClientOption.MAX_RESPONSE_LENGTH.newValue(0L));
         settableHealth.setHealth(Health.up().build());
     }
 
