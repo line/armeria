@@ -1,11 +1,33 @@
+buildscript {
+    repositories {
+        gradlePluginPortal()
+    }
+    dependencies {
+        classpath "com.github.jengelman.gradle.plugins:shadow:${managedVersions['com.github.jengelman.gradle.plugins:shadow']}"
+    }
+}
+
 dependencies {
     compile project(':jetty')
     // Dropwizard
-    ['core','util','lifecycle','jackson','validation','jetty','jersey'].each {
+    ['core', 'util', 'lifecycle', 'jackson', 'validation', 'jetty', 'jersey'].each {
         compile "io.dropwizard:dropwizard-$it"
     }
     // Dropwizard Metrics
     compile 'io.dropwizard.metrics:metrics-core'
 
     testCompile 'io.dropwizard:dropwizard-testing'
+}
+
+// Do not relocate Guava because it's part of Dropwizard's public API.
+[tasks.shadedJar, tasks.shadedTestJar].each { task ->
+    task.relocators.clear()
+    project.ext.relocations.each { Map<String, String> props ->
+        def from = props['from']
+        def to = props['to']
+        if (from in ['com.google.common', 'com.google.thirdparty.publicsuffix']) {
+            return
+        }
+        task.relocate from, to
+    }
 }
