@@ -74,11 +74,12 @@ public class DefaultClientBuilderParams implements ClientBuilderParams {
     }
 
     protected final URI cleanUri(final URI uri) {
-        if (uri.getScheme().contains(SerializationFormat.NONE.uriText())) {
-            final String nScheme = uri.getScheme().replace(SerializationFormat.NONE.uriText(), "")
-                                      .replace("+", "");
-            return URI.create(nScheme + uri.toString().substring(uri.getScheme().length()));
+        if (!uri.getScheme().contains(SerializationFormat.NONE.uriText())) {
+            return uri;
         }
-        return uri;
+        final String nScheme = uri.getScheme()
+                                  .replace(SerializationFormat.NONE.uriText(), "")
+                                  .replace("+", "");
+        return URI.create(nScheme + uri.toString().substring(uri.getScheme().length()));
     }
 }
