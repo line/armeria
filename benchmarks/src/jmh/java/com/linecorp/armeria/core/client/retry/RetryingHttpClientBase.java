@@ -27,6 +27,9 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerPort;
 
+/**
+ * The base for {@link WithDuplicator} and {@link WithoutDuplicator} microbenchmarks.
+ */
 @State(Scope.Benchmark)
 public abstract class RetryingHttpClientBase {
 
