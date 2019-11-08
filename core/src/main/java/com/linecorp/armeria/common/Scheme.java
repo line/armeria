@@ -19,7 +19,6 @@ package com.linecorp.armeria.common;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 import javax.annotation.Nullable;
@@ -76,10 +75,16 @@ public final class Scheme implements Comparable<Scheme> {
      *         there is no such {@link Scheme} available
      */
     public static Optional<Scheme> tryParse(@Nullable String scheme) {
-        if (Objects.isNull(scheme)) {
+        if (scheme == null) {
             return Optional.empty();
         }
-        return Optional.ofNullable(SCHEMES.get(Ascii.toLowerCase(scheme)));
+        final Optional<Scheme> parsedScheme = Optional.ofNullable(SCHEMES.get(Ascii.toLowerCase(scheme)));
+        if (parsedScheme.isPresent()) {
+            return parsedScheme;
+        }
+        return Optional.ofNullable(SCHEMES.get(Ascii.toLowerCase(SerializationFormat.NONE.uriText() +
+                                                                 '+' +
+                                                                 scheme)));
     }
 
     /**
@@ -90,12 +95,11 @@ public final class Scheme implements Comparable<Scheme> {
      *                                  there is no such {@link Scheme} available
      */
     public static Scheme parse(String scheme) {
-        final Scheme res = SCHEMES.get(Ascii.toLowerCase(requireNonNull(scheme, "scheme")));
-        if (res == null) {
-            throw new IllegalArgumentException("scheme: " + scheme);
+        final Optional<Scheme> parsedScheme = tryParse(requireNonNull(scheme, "scheme"));
+        if (parsedScheme.isPresent()) {
+            return parsedScheme.get();
         }
-
-        return res;
+        throw new IllegalArgumentException("scheme: " + scheme);
     }
 
     /**

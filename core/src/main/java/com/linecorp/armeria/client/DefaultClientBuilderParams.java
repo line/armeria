@@ -77,9 +77,9 @@ public class DefaultClientBuilderParams implements ClientBuilderParams {
         if (!uri.getScheme().contains(SerializationFormat.NONE.uriText())) {
             return uri;
         }
-        final String nScheme = uri.getScheme()
+        final String newScheme = uri.getScheme()
                                   .replace(SerializationFormat.NONE.uriText(), "")
                                   .replace("+", "");
-        return URI.create(nScheme + uri.toString().substring(uri.getScheme().length()));
+        return URI.create(newScheme + uri.toString().substring(uri.getScheme().length()));
     }
 }
