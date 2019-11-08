@@ -234,8 +234,8 @@ public final class AnnotatedHttpServiceFactory {
      * from the specified {@code object}, {@link Consumer} which customizes the given
      * {@link AnnotatedServiceConfiguratorSetters}.
      */
-    public static List<AnnotatedHttpServiceElement> find(String pathPrefix, Object object,
-                                                         Consumer<AnnotatedServiceConfiguratorSetters> customizer) {
+    public static List<AnnotatedHttpServiceElement> find(
+            String pathPrefix, Object object, Consumer<AnnotatedServiceConfiguratorSetters> customizer) {
         final AnnotatedServiceConfiguratorSetters setters = new AnnotatedServiceConfiguratorSetters();
         customizer.accept(setters);
         final AnnotatedServiceConfigurator configurator = setters.toAnnotatedServiceConfigurator();
