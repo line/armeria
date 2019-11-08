@@ -20,11 +20,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.File;
+import java.util.stream.Stream;
 
 import javax.validation.Validator;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -38,13 +44,29 @@ class AccessLogWriterFactoryTest {
     private final ObjectMapper objectMapper = Jackson.newObjectMapper();
     private final Validator validator = Validators.newValidator();
 
-    @Test
-    public void typesAreDiscoverable() throws Exception {
+    @ParameterizedTest
+    @ArgumentsSource(AccessLogWriterFactoryProvider.class)
+    public void testDiscoverable(final Class<?> c) throws Exception {
         // Make sure the types we specified in META-INF gets picked up
         assertThat(new DiscoverableSubtypeResolver().getDiscoveredSubtypes())
-                .contains(CommonAccessLogWriterFactory.class)
-                .contains(CombinedAccessLogWriterFactory.class)
-                .contains(CustomAccessLogWriterFactory.class);
+                .contains(c);
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(AccessLogWriterFactoryProvider.class)
+    public void testFactoriesAreConnectorFactoriesAndServerDecorators(final Class<?> c) {
+        assertThat(AccessLogWriterFactory.class).isAssignableFrom(c);
+    }
+
+    private static class AccessLogWriterFactoryProvider implements ArgumentsProvider {
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
+            return Stream.of(
+                    CommonAccessLogWriterFactory.class,
+                    CombinedAccessLogWriterFactory.class,
+                    CustomAccessLogWriterFactory.class
+            ).map(Arguments::of);
+        }
     }
 
     @Nested
@@ -58,8 +80,7 @@ class AccessLogWriterFactoryTest {
             final File yml = new File(resourceFilePath("yaml/accessLogWriter/common.yaml"));
             final AccessLogWriterFactory factory = configFactory.build(yml);
             assertThat(factory)
-                    .isInstanceOf(Discoverable.class);
-            assertThat(factory)
+                    .isInstanceOf(Discoverable.class)
                     .isInstanceOf(CommonAccessLogWriterFactory.class);
             assertThat(factory.getWriter()).isNotNull();
         }
@@ -76,8 +97,7 @@ class AccessLogWriterFactoryTest {
             final File yml = new File(resourceFilePath("yaml/accessLogWriter/combined.yaml"));
             final AccessLogWriterFactory factory = configFactory.build(yml);
             assertThat(factory)
-                    .isInstanceOf(Discoverable.class);
-            assertThat(factory)
+                    .isInstanceOf(Discoverable.class)
                     .isInstanceOf(CombinedAccessLogWriterFactory.class);
             assertThat(factory.getWriter()).isNotNull();
         }
@@ -95,12 +115,12 @@ class AccessLogWriterFactoryTest {
             final AccessLogWriterFactory factory = configFactory.build(yml);
 
             final String format = ((CustomAccessLogWriterFactory) factory).getFormat();
-            assertThat(format).isNotBlank();
-
             final String badToken = "d";
-            assertThat(format).isEqualTo("date:%" + badToken);
+            assertThat(format)
+                    .isNotBlank()
+                    .isEqualTo("date:%" + badToken);
             final IllegalArgumentException ex = assertThrows(
-                    IllegalArgumentException.class, () -> factory.getWriter());
+                    IllegalArgumentException.class, factory::getWriter);
             assertThat(ex.getMessage())
                     .isEqualTo(String.format("Unexpected token character: '%s'", badToken));
         }
@@ -110,15 +130,34 @@ class AccessLogWriterFactoryTest {
             final File yml = new File(resourceFilePath("yaml/accessLogWriter/custom.yaml"));
             final AccessLogWriterFactory factory = configFactory.build(yml);
             assertThat(factory)
-                    .isInstanceOf(Discoverable.class);
-            assertThat(factory)
+                    .isInstanceOf(Discoverable.class)
                     .isInstanceOf(CustomAccessLogWriterFactory.class);
 
             final String format = ((CustomAccessLogWriterFactory) factory).getFormat();
-            assertThat(format).isNotBlank();
-            assertThat(format).isEqualTo("%{BASIC_ISO_DATE}t");
+            assertThat(format)
+                    .isNotBlank()
+                    .isEqualTo("%{BASIC_ISO_DATE}t");
 
             assertThat(factory.getWriter()).isNotNull();
+        }
+
+        @Test
+        public void testStaticBuilder_validFormat() {
+            final CustomAccessLogWriterFactory factory = CustomAccessLogWriterFactory.build(
+                    "%{BASIC_ISO_DATE}t");
+            final String format = factory.getFormat();
+            assertThat(format)
+                    .isNotBlank()
+                    .isEqualTo("%{BASIC_ISO_DATE}t");
+        }
+
+        @Test
+        public void testStaticBuilder_invalidFormat() {
+            final String badToken = "d";
+            final IllegalArgumentException ex = assertThrows(
+                    IllegalArgumentException.class, () -> CustomAccessLogWriterFactory.build("%" + badToken));
+            assertThat(ex.getMessage())
+                    .isEqualTo(String.format("Unexpected token character: '%s'", badToken));
         }
     }
 }

@@ -42,8 +42,8 @@ public class ManagedArmeriaServer<T extends Configuration> implements Managed {
     * and initializes the Armeria {@link ServerBuilder} to be passed back to the
     * user via a {@link BuilderCallback}.
     *
-    * @param configuration - The Dropwizard configuration
-    * @param builderCallback - A non-null implementation of {@link BuilderCallback}
+    * @param configuration The Dropwizard configuration
+    * @param builderCallback A non-null implementation of {@link BuilderCallback}
     */
     public ManagedArmeriaServer(final T configuration,
                                 final BuilderCallback builderCallback) {

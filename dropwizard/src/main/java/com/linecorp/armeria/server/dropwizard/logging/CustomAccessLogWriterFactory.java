@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server.dropwizard.logging;
 
+import java.util.Objects;
+
 import javax.validation.Valid;
 
 import org.hibernate.validator.constraints.NotBlank;
@@ -27,22 +29,23 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 @JsonTypeName("custom")
 public class CustomAccessLogWriterFactory implements AccessLogWriterFactory {
 
+    /**
+     * A custom {@link AccessLogWriter} for Armeria which requires some valid format.
+     *
+     * @param format - A non-empty logging format supported by Armeria
+     */
+    public static @Valid CustomAccessLogWriterFactory build(@NotBlank String format) {
+        final CustomAccessLogWriterFactory factory = new CustomAccessLogWriterFactory();
+        factory.format = format;
+        Objects.requireNonNull(factory.getWriter()); // force the validation of the writer format
+        return factory;
+    }
+
     @NotBlank
     @JsonProperty
     private String format;
 
     public CustomAccessLogWriterFactory() {
-    }
-
-    /**
-    * A custom {@link AccessLogWriter} for Armeria which requires some valid format.
-    *
-    * @param format - A non-empty logging format supported by Armeria
-    */
-    public static @Valid CustomAccessLogWriterFactory build(@NotBlank String format) {
-        final CustomAccessLogWriterFactory factory = new CustomAccessLogWriterFactory();
-        factory.format = format;
-        return factory;
     }
 
     public String getFormat() {
