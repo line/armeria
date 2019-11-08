@@ -24,9 +24,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
@@ -45,10 +46,10 @@ import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.logging.LoggingService;
 
-public class AnnotatedHttpServiceBuilderTest {
+class AnnotatedHttpServiceBuilderTest {
 
     @Test
-    public void successfulOf() {
+    void successfulOf() {
         Server.builder().annotatedService(new Object() {
             @Get("/")
             public void root() {}
@@ -128,18 +129,32 @@ public class AnnotatedHttpServiceBuilderTest {
         });
 
         Server.builder().annotatedService(new Object() {
-                                                 @Get("/")
-                                                 public void root(@Param("a") byte a) {}
-                                             },
-                                             new JacksonRequestConverterFunction(),
-                                             new ByteArrayRequestConverterFunction(),
-                                             new DummyExceptionHandler());
+                                              @Get("/")
+                                              public void root(@Param("a") byte a) {}
+                                          },
+                                          new JacksonRequestConverterFunction(),
+                                          new ByteArrayRequestConverterFunction(),
+                                          new DummyExceptionHandler());
 
         Server.builder().annotatedService(new Object() {
-                                                 @Get("/")
-                                                 public void root(@Param("a") byte a) {}
-                                             },
-                                             LoggingService.newDecorator());
+                                              @Get("/")
+                                              public void root(@Param("a") byte a) {}
+                                          },
+                                          setters -> {
+                                              setters.configureRequestConverters(ImmutableList.of(
+                                                      new JacksonRequestConverterFunction(),
+                                                      new ByteArrayRequestConverterFunction()
+                                              ));
+                                              setters.configureExceptionHandlers(ImmutableList.of(
+                                                      new DummyExceptionHandler()
+                                              ));
+                                          });
+
+        Server.builder().annotatedService(new Object() {
+                                              @Get("/")
+                                              public void root(@Param("a") byte a) {}
+                                          },
+                                          LoggingService.newDecorator());
 
         Server.builder().annotatedService(new Object() {
             @Get("/")
@@ -261,7 +276,7 @@ public class AnnotatedHttpServiceBuilderTest {
     }
 
     @Test
-    public void ofBuiltinRequestConverter() {
+    void ofBuiltinRequestConverter() {
         Server.builder().annotatedService(new Object() {
             @Get("/")
             public void root(@RequestObject String value) {}
@@ -281,7 +296,7 @@ public class AnnotatedHttpServiceBuilderTest {
     }
 
     @Test
-    public void failedOf() {
+    void failedOf() {
         assertThatThrownBy(() -> Server.builder().annotatedService(new Object() {
             @Get
             public void root() {}
