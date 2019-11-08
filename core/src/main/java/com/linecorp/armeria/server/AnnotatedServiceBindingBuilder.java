@@ -126,9 +126,8 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     }
 
     /**
-     * FIXME(heowc)
-     * Adds the given {@link AnnotatedServiceConfiguratorSetters} to this
-     * {@link AnnotatedServiceBindingBuilder}.
+     * Adds the given {@link Consumer} which customizes the given {@link AnnotatedServiceConfiguratorSetters}
+     * to this {@link AnnotatedServiceBindingBuilder}.
      */
     public AnnotatedServiceBindingBuilder configuratorCustomizer(
             Consumer<AnnotatedServiceConfiguratorSetters> configuratorCustomizer) {

@@ -466,8 +466,9 @@ public final class VirtualHostBuilder {
 
     /**
      * Binds the specified annotated service object under the path prefix {@code "/"}.
-     * FIXME(heowc)
-     * @param customizer the {@link AnnotatedServiceConfiguratorSetters}.
+     *
+     * @param customizer the {@link Consumer} which customizes the given
+     *                   {@link AnnotatedServiceConfiguratorSetters}
      */
     public VirtualHostBuilder annotatedService(Object service,
                                                Consumer<AnnotatedServiceConfiguratorSetters> customizer) {
@@ -493,8 +494,9 @@ public final class VirtualHostBuilder {
 
     /**
      * Binds the specified annotated service object under the path prefix {@code "/"}.
-     * FIXME(heowc)
-     * @param customizer the {@link AnnotatedServiceConfiguratorSetters}.
+     *
+     * @param customizer the {@link Consumer} which customizes the given
+     *                   {@link AnnotatedServiceConfiguratorSetters}
      */
     public VirtualHostBuilder annotatedService(
             Object service,
@@ -541,8 +543,9 @@ public final class VirtualHostBuilder {
 
     /**
      * Binds the specified annotated service object under the specified path prefix.
-     * FIXME(heowc)
-     * @param customizer the {@link AnnotatedServiceConfiguratorSetters}.
+     *
+     * @param customizer the {@link Consumer} which customizes the given
+     *                   {@link AnnotatedServiceConfiguratorSetters}
      */
     public VirtualHostBuilder annotatedService(String pathPrefix, Object service,
                                                Consumer<AnnotatedServiceConfiguratorSetters> customizer) {
@@ -620,8 +623,9 @@ public final class VirtualHostBuilder {
 
     /**
      * Binds the specified annotated service object under the specified path prefix.
-     * FIXME(heowc)
-     * @param customizer the {@link AnnotatedServiceConfiguratorSetters}.
+     *
+     * @param customizer the {@link Consumer} which customizes the given
+     *                   {@link AnnotatedServiceConfiguratorSetters}
      */
     public VirtualHostBuilder annotatedService(String pathPrefix, Object service,
                                                Function<Service<HttpRequest, HttpResponse>,

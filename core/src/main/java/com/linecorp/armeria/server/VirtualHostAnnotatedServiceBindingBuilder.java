@@ -135,9 +135,8 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     }
 
     /**
-     * FIXME(heowc)
-     * Adds the given {@link AnnotatedServiceConfiguratorSetters} to this
-     * {@link VirtualHostAnnotatedServiceBindingBuilder}.
+     * Adds the given {@link Consumer} which customizes the given {@link AnnotatedServiceConfiguratorSetters}
+     * to this {@link VirtualHostAnnotatedServiceBindingBuilder}.
      */
     public VirtualHostAnnotatedServiceBindingBuilder configuratorCustomizer(
             Consumer<AnnotatedServiceConfiguratorSetters> configuratorCustomizer) {
