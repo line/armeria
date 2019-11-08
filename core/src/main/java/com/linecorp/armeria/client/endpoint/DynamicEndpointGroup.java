@@ -125,11 +125,11 @@ public class DynamicEndpointGroup extends AbstractListenable<List<Endpoint>> imp
             final Endpoint a = oldEndpoints.get(i);
             final Endpoint b = newEndpoints.get(i);
             if (!a.equals(b) || a.weight() != b.weight()) {
-                return false;
+                return true;
             }
         }
 
-        return true;
+        return false;
     }
 
     private void completeInitialEndpointsFuture(List<Endpoint> endpoints) {
