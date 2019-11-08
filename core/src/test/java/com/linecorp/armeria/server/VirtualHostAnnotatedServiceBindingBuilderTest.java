@@ -22,23 +22,22 @@ import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
-import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 class VirtualHostAnnotatedServiceBindingBuilderTest {
 
-    private static final ExceptionHandlerFunction handlerFunction = (ctx, req, cause) -> HttpResponse.of(501);
     private static final String TEST_HOST = "foo.com";
 
     @RegisterExtension
@@ -48,7 +47,12 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
             sb.virtualHost(TEST_HOST)
               .annotatedService()
               .pathPrefix("/foo")
-              .exceptionHandler(handlerFunction)
+              .exceptionHandler((ctx, req, cause) -> HttpResponse.of(501))
+              .build(new TestService())
+              .annotatedService()
+              .pathPrefix("/custom")
+              .configuratorCustomizer(
+                      setters -> setters.configureExceptionHandlers((ctx, req, cause) -> HttpResponse.of(502)))
               .build(new TestService());
         }
     };
@@ -85,13 +89,21 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
         assertThat(serviceConfig.verboseResponses()).isTrue();
     }
 
-    @Test
-    void testServiceDecoration_shouldCatchException() throws Exception {
+    @ParameterizedTest
+    @CsvSource({
+            "/foo/bar, 501",
+            "/custom/bar, 502"
+    })
+    void testServiceDecoration_shouldCatchException(String path, Integer statusCode) throws Exception {
+        final AggregatedHttpResponse join = get(path);
+
+        assertThat(join.status().code()).isEqualTo(statusCode);
+    }
+
+    private AggregatedHttpResponse get(String path) {
         final Endpoint endpoint = Endpoint.of(TEST_HOST, server.httpPort()).withIpAddr("127.0.0.1");
         final HttpClient httpClientTest = HttpClient.of(SessionProtocol.HTTP, endpoint);
-        final AggregatedHttpResponse join = httpClientTest.get("/foo/bar").aggregate().join();
-
-        assertThat(join.status()).isEqualTo(HttpStatus.NOT_IMPLEMENTED);
+        return httpClientTest.get(path).aggregate().join();
     }
 
     private static class TestService {
