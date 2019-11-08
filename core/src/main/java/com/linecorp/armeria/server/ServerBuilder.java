@@ -71,6 +71,7 @@ import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceElement;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory;
+import com.linecorp.armeria.internal.annotation.AnnotatedServiceConfiguratorSetters;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -915,6 +916,16 @@ public final class ServerBuilder {
     }
 
     /**
+     * Binds the specified annotated service object under the path prefix {@code "/"}.
+     * FIXME(heowc)
+     * @param customizer the {@link AnnotatedServiceConfiguratorSetters}.
+     */
+    public ServerBuilder annotatedService(Object service,
+                                          Consumer<AnnotatedServiceConfiguratorSetters> customizer) {
+        return annotatedService("/", service, Function.identity(), requireNonNull(customizer, "customizer"));
+    }
+
+    /**
      * Binds the specified annotated service object under the specified path prefix.
      */
     public ServerBuilder annotatedService(String pathPrefix, Object service) {
@@ -933,6 +944,17 @@ public final class ServerBuilder {
         return annotatedService(pathPrefix, service, Function.identity(),
                                 ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
                                                                     "exceptionHandlersAndConverters")));
+    }
+
+    /**
+     * Binds the specified annotated service object under the specified path prefix.
+     * FIXME(heowc)
+     * @param customizer the {@link AnnotatedServiceConfiguratorSetters}.
+     */
+    public ServerBuilder annotatedService(String pathPrefix, Object service,
+                                          Consumer<AnnotatedServiceConfiguratorSetters> customizer) {
+        return annotatedService(pathPrefix, service, Function.identity(),
+                                requireNonNull(customizer, "customizer"));
     }
 
     /**
@@ -962,6 +984,18 @@ public final class ServerBuilder {
     public ServerBuilder annotatedService(String pathPrefix, Object service,
                                           Iterable<?> exceptionHandlersAndConverters) {
         return annotatedService(pathPrefix, service, Function.identity(), exceptionHandlersAndConverters);
+    }
+
+    /**
+     * Binds the specified annotated service object under the path prefix {@code "/"}.
+     * FIXME
+     * @param customizer the {@link AnnotatedServiceConfiguratorSetters}.
+     */
+    public ServerBuilder annotatedService(Object service,
+                                          Function<Service<HttpRequest, HttpResponse>,
+                                                  ? extends Service<HttpRequest, HttpResponse>> decorator,
+                                          Consumer<AnnotatedServiceConfiguratorSetters> customizer) {
+        return annotatedService("/", service, decorator, requireNonNull(customizer, "customizer"));
     }
 
     /**
@@ -1009,6 +1043,26 @@ public final class ServerBuilder {
         final List<AnnotatedHttpServiceElement> elements =
                 AnnotatedHttpServiceFactory.find(pathPrefix, service, exceptionHandlerFunctions,
                                                  requestConverterFunctions, responseConverterFunctions);
+        registerHttpServiceElement(elements, decorator);
+        return this;
+    }
+
+    /**
+     * Binds the specified annotated service object under the specified path prefix.
+     * FIXME(heowc)
+     * @param customizer the {@link AnnotatedServiceConfiguratorSetters}.
+     */
+    public ServerBuilder annotatedService(String pathPrefix, Object service,
+                                          Function<Service<HttpRequest, HttpResponse>,
+                                                  ? extends Service<HttpRequest, HttpResponse>> decorator,
+                                          Consumer<AnnotatedServiceConfiguratorSetters> customizer) {
+        requireNonNull(pathPrefix, "pathPrefix");
+        requireNonNull(service, "service");
+        requireNonNull(decorator, "decorator");
+        requireNonNull(customizer, "customizer");
+
+        final List<AnnotatedHttpServiceElement> elements =
+                AnnotatedHttpServiceFactory.find(pathPrefix, service, customizer);
         registerHttpServiceElement(elements, decorator);
         return this;
     }
