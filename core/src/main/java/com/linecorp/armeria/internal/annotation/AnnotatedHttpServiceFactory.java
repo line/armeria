@@ -52,6 +52,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -190,48 +191,17 @@ public final class AnnotatedHttpServiceFactory {
      */
     public static List<AnnotatedHttpServiceElement> find(String pathPrefix, Object object,
                                                          Iterable<?> exceptionHandlersAndConverters) {
-        Builder<ExceptionHandlerFunction> exceptionHandlers = null;
-        Builder<RequestConverterFunction> requestConverters = null;
-        Builder<ResponseConverterFunction> responseConverters = null;
+        final List<Method> methods = requestMappingMethods(object);
 
-        for (final Object o : exceptionHandlersAndConverters) {
-            boolean added = false;
-            if (o instanceof ExceptionHandlerFunction) {
-                if (exceptionHandlers == null) {
-                    exceptionHandlers = ImmutableList.builder();
-                }
-                exceptionHandlers.add((ExceptionHandlerFunction) o);
-                added = true;
-            }
-            if (o instanceof RequestConverterFunction) {
-                if (requestConverters == null) {
-                    requestConverters = ImmutableList.builder();
-                }
-                requestConverters.add((RequestConverterFunction) o);
-                added = true;
-            }
-            if (o instanceof ResponseConverterFunction) {
-                if (responseConverters == null) {
-                    responseConverters = ImmutableList.builder();
-                }
-                responseConverters.add((ResponseConverterFunction) o);
-                added = true;
-            }
-            if (!added) {
-                throw new IllegalArgumentException(o.getClass().getName() +
-                                                   " is neither an exception handler nor a converter.");
-            }
-        }
+        final AnnotatedServiceConfiguratorSetters setters =
+                AnnotatedServiceConfiguratorSetters
+                        .ofExceptionHandlersAndConverters(exceptionHandlersAndConverters);
+        final AnnotatedServiceConfigurator configurator = setters.toAnnotatedServiceConfigurator();
 
-        final List<ExceptionHandlerFunction> exceptionHandlerFunctions =
-                exceptionHandlers != null ? exceptionHandlers.build() : ImmutableList.of();
-        final List<RequestConverterFunction> requestConverterFunctions =
-                requestConverters != null ? requestConverters.build() : ImmutableList.of();
-        final List<ResponseConverterFunction> responseConverterFunctions =
-                responseConverters != null ? responseConverters.build() : ImmutableList.of();
-
-        return find(pathPrefix, object, exceptionHandlerFunctions, requestConverterFunctions,
-                    responseConverterFunctions);
+        return methods.stream()
+                      .flatMap((Method method) ->
+                                       create(pathPrefix, object, method, configurator).stream())
+                      .collect(toImmutableList());
     }
 
     /**
@@ -245,10 +215,41 @@ public final class AnnotatedHttpServiceFactory {
             List<RequestConverterFunction> requestConverterFunctions,
             List<ResponseConverterFunction> responseConverterFunctions) {
         final List<Method> methods = requestMappingMethods(object);
+
+        final AnnotatedServiceConfiguratorSetters setters =
+                AnnotatedServiceConfiguratorSetters
+                        .ofExceptionHandlersAndConverters(exceptionHandlerFunctions,
+                                                          requestConverterFunctions,
+                                                          responseConverterFunctions);
+        final AnnotatedServiceConfigurator configurator = setters.toAnnotatedServiceConfigurator();
+
         return methods.stream()
                       .flatMap((Method method) ->
-                                       create(pathPrefix, object, method, exceptionHandlerFunctions,
-                                              requestConverterFunctions, responseConverterFunctions).stream())
+                                       create(pathPrefix, object, method, configurator).stream())
+                      .collect(toImmutableList());
+    }
+
+    /**
+     * Returns the list of {@link AnnotatedHttpService} defined by {@link Path} and HTTP method annotations
+     * from the specified {@code object}, {@link Consumer} which customizes the given
+     * {@link AnnotatedServiceConfiguratorSetters}.
+     */
+    public static List<AnnotatedHttpServiceElement> find(String pathPrefix, Object object,
+                                                         Consumer<AnnotatedServiceConfiguratorSetters> customizer) {
+        final AnnotatedServiceConfiguratorSetters setters = new AnnotatedServiceConfiguratorSetters();
+        customizer.accept(setters);
+        final AnnotatedServiceConfigurator configurator = setters.toAnnotatedServiceConfigurator();
+
+        return find(pathPrefix, object, configurator);
+    }
+
+    private static List<AnnotatedHttpServiceElement> find(String pathPrefix, Object object,
+                                                         AnnotatedServiceConfigurator configurator) {
+        final List<Method> methods = requestMappingMethods(object);
+
+        return methods.stream()
+                      .flatMap((Method method) ->
+                                       create(pathPrefix, object, method, configurator).stream())
                       .collect(toImmutableList());
     }
 
@@ -296,9 +297,7 @@ public final class AnnotatedHttpServiceFactory {
      */
     @VisibleForTesting
     static List<AnnotatedHttpServiceElement> create(String pathPrefix, Object object, Method method,
-                                                    List<ExceptionHandlerFunction> baseExceptionHandlers,
-                                                    List<RequestConverterFunction> baseRequestConverters,
-                                                    List<ResponseConverterFunction> baseResponseConverters) {
+                                                    AnnotatedServiceConfigurator configurator) {
 
         final Set<Annotation> methodAnnotations = httpMethodAnnotations(method);
         if (methodAnnotations.isEmpty()) {
@@ -327,13 +326,13 @@ public final class AnnotatedHttpServiceFactory {
 
         final List<ExceptionHandlerFunction> eh =
                 getAnnotatedInstances(method, clazz, ExceptionHandler.class, ExceptionHandlerFunction.class)
-                        .addAll(baseExceptionHandlers).add(defaultExceptionHandler).build();
+                        .addAll(configurator.exceptionHandlers()).add(defaultExceptionHandler).build();
         final List<RequestConverterFunction> req =
                 getAnnotatedInstances(method, clazz, RequestConverter.class, RequestConverterFunction.class)
-                        .addAll(baseRequestConverters).build();
+                        .addAll(configurator.requestConverters()).build();
         final List<ResponseConverterFunction> res =
                 getAnnotatedInstances(method, clazz, ResponseConverter.class, ResponseConverterFunction.class)
-                        .addAll(baseResponseConverters).build();
+                        .addAll(configurator.responseConverters()).build();
 
         final Optional<HttpStatus> defaultResponseStatus = findFirst(method, StatusCode.class)
                 .map(code -> {
@@ -384,7 +383,7 @@ public final class AnnotatedHttpServiceFactory {
      * we handle it specially.
      */
     private static Function<Service<HttpRequest, HttpResponse>, ? extends Service<HttpRequest, HttpResponse>>
-            getInitialDecorator(Set<HttpMethod> httpMethods) {
+    getInitialDecorator(Set<HttpMethod> httpMethods) {
         if (httpMethods.contains(HttpMethod.OPTIONS)) {
             return Function.identity();
         }

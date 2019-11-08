@@ -34,8 +34,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.assertj.core.util.Lists;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -66,12 +67,12 @@ import com.linecorp.armeria.server.annotation.decorator.LoggingDecoratorFactoryF
 import com.linecorp.armeria.server.annotation.decorator.RateLimitingDecorator;
 import com.linecorp.armeria.server.annotation.decorator.RateLimitingDecoratorFactoryFunction;
 
-public class AnnotatedHttpServiceFactoryTest {
+class AnnotatedHttpServiceFactoryTest {
 
     private static final String HOME_PATH_PREFIX = "/home";
 
     @Test
-    public void ofNoOrdering() throws NoSuchMethodException {
+    void ofNoOrdering() throws NoSuchMethodException {
         final List<DecoratorAndOrder> list =
                 collectDecorators(TestClass.class,
                                   TestClass.class.getMethod("noOrdering"));
@@ -88,7 +89,7 @@ public class AnnotatedHttpServiceFactoryTest {
     }
 
     @Test
-    public void ofMethodScopeOrdering() throws NoSuchMethodException {
+    void ofMethodScopeOrdering() throws NoSuchMethodException {
         final List<DecoratorAndOrder> list =
                 collectDecorators(TestClass.class,
                                   TestClass.class.getMethod("methodScopeOrdering"));
@@ -109,7 +110,7 @@ public class AnnotatedHttpServiceFactoryTest {
     }
 
     @Test
-    public void ofGlobalScopeOrdering() throws NoSuchMethodException {
+    void ofGlobalScopeOrdering() throws NoSuchMethodException {
         final List<DecoratorAndOrder> list =
                 collectDecorators(TestClass.class,
                                   TestClass.class.getMethod("globalScopeOrdering"));
@@ -126,7 +127,7 @@ public class AnnotatedHttpServiceFactoryTest {
     }
 
     @Test
-    public void ofUserDefinedRepeatableDecorator() throws NoSuchMethodException {
+    void ofUserDefinedRepeatableDecorator() throws NoSuchMethodException {
         final List<DecoratorAndOrder> list =
                 collectDecorators(TestClass.class,
                                   TestClass.class.getMethod("userDefinedRepeatableDecorator"));
@@ -146,7 +147,7 @@ public class AnnotatedHttpServiceFactoryTest {
     }
 
     @Test
-    public void testFindAnnotatedServiceElementsWithPathPrefixAnnotation() {
+    void testFindAnnotatedServiceElementsWithPathPrefixAnnotation() {
         final Object object = new PathPrefixServiceObject();
         final List<AnnotatedHttpServiceElement> elements = find("/", object, new ArrayList<>());
 
@@ -159,7 +160,7 @@ public class AnnotatedHttpServiceFactoryTest {
     }
 
     @Test
-    public void testFindAnnotatedServiceElementsWithoutPathPrefixAnnotation() {
+    void testFindAnnotatedServiceElementsWithoutPathPrefixAnnotation() {
         final Object serviceObject = new ServiceObject();
         final List<AnnotatedHttpServiceElement> elements = find(HOME_PATH_PREFIX, serviceObject,
                                                                 new ArrayList<>());
@@ -173,20 +174,23 @@ public class AnnotatedHttpServiceFactoryTest {
     }
 
     @Test
-    public void testCreateAnnotatedServiceElementWithoutExplicitPathOnMethod() {
+    void testCreateAnnotatedServiceElementWithoutExplicitPathOnMethod() {
         final ServiceObjectWithoutPathOnAnnotatedMethod serviceObject =
                 new ServiceObjectWithoutPathOnAnnotatedMethod();
 
         getMethods(ServiceObjectWithoutPathOnAnnotatedMethod.class, HttpResponse.class).forEach(method -> {
             assertThatThrownBy(() -> {
-                create("/", serviceObject, method, Lists.emptyList(), Lists.emptyList(), Lists.emptyList());
+                final AnnotatedServiceConfiguratorSetters setters = AnnotatedServiceConfiguratorSetters
+                        .ofExceptionHandlersAndConverters(ImmutableList.of(), ImmutableList.of(),
+                                                          ImmutableList.of());
+                create("/", serviceObject, method, setters.toAnnotatedServiceConfigurator());
             }).isInstanceOf(IllegalArgumentException.class)
               .hasMessage("A path pattern should be specified by @Path or HTTP method annotations.");
         });
     }
 
     @Test
-    public void testMultiPathSuccessGetMapping() {
+    void testMultiPathSuccessGetMapping() {
         final List<AnnotatedHttpServiceElement> getServiceElements =
                 getServiceElements(new MultiPathSuccessService(), "getMapping", HttpMethod.GET);
         final Set<Route> routes = getServiceElements.stream().map(AnnotatedHttpServiceElement::route).collect(
@@ -195,7 +199,7 @@ public class AnnotatedHttpServiceFactoryTest {
     }
 
     @Test
-    public void testMultiPathSuccessGetPostMapping() {
+    void testMultiPathSuccessGetPostMapping() {
         final List<AnnotatedHttpServiceElement> getServiceElements = getServiceElements(
                 new MultiPathSuccessService(), "getPostMapping", HttpMethod.GET);
         final Set<Route> getRoutes = getServiceElements.stream().map(AnnotatedHttpServiceElement::route)
@@ -211,7 +215,7 @@ public class AnnotatedHttpServiceFactoryTest {
     }
 
     @Test
-    public void testMultiPathSuccessGetPostMappingByPath() {
+    void testMultiPathSuccessGetPostMappingByPath() {
         final List<AnnotatedHttpServiceElement> getServiceElements = getServiceElements(
                 new MultiPathSuccessService(), "getPostMappingByPath", HttpMethod.GET);
         final Set<Route> getRoutes = getServiceElements.stream().map(AnnotatedHttpServiceElement::route)
@@ -226,7 +230,7 @@ public class AnnotatedHttpServiceFactoryTest {
     }
 
     @Test
-    public void testMultiPathAnnotations() {
+    void testMultiPathAnnotations() {
         final List<AnnotatedHttpServiceElement> getServiceElements = getServiceElements(
                 new MultiPathSuccessService(), "multiPathAnnotations", HttpMethod.GET);
         final Set<Route> getRoutes = getServiceElements.stream().map(AnnotatedHttpServiceElement::route)
@@ -243,7 +247,7 @@ public class AnnotatedHttpServiceFactoryTest {
     }
 
     @Test
-    public void testDuplicatePathAnnotations() {
+    void testDuplicatePathAnnotations() {
         final List<AnnotatedHttpServiceElement> getServiceElements = getServiceElements(
                 new MultiPathSuccessService(), "duplicatePathAnnotations", HttpMethod.GET);
         assertThat(getServiceElements).hasSize(2);
@@ -262,11 +266,14 @@ public class AnnotatedHttpServiceFactoryTest {
     }
 
     @Test
-    public void testMultiPathFailingService() {
+    void testMultiPathFailingService() {
         final MultiPathFailingService serviceObject = new MultiPathFailingService();
         getMethods(MultiPathFailingService.class, HttpResponse.class).forEach(method -> {
             assertThatThrownBy(() -> {
-                create("/", serviceObject, method, Lists.emptyList(), Lists.emptyList(), Lists.emptyList());
+                final AnnotatedServiceConfiguratorSetters setters = AnnotatedServiceConfiguratorSetters
+                        .ofExceptionHandlersAndConverters(ImmutableList.of(), ImmutableList.of(),
+                                                          ImmutableList.of());
+                create("/", serviceObject, method, setters.toAnnotatedServiceConfigurator());
             }, method.getName()).isInstanceOf(IllegalArgumentException.class);
         });
     }
@@ -276,9 +283,11 @@ public class AnnotatedHttpServiceFactoryTest {
         return getMethods(service.getClass(), HttpResponse.class)
                 .filter(method -> method.getName().equals(methodName)).flatMap(
                         method -> {
+                            final AnnotatedServiceConfiguratorSetters setters =
+                                    AnnotatedServiceConfiguratorSetters.ofExceptionHandlersAndConverters(
+                                            ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
                             final List<AnnotatedHttpServiceElement> annotatedHttpServices = create(
-                                    "/", service, method, Lists.emptyList(), Lists.emptyList(),
-                                    Lists.emptyList());
+                                    "/", service, method, setters.toAnnotatedServiceConfigurator());
                             return annotatedHttpServices.stream();
                         }
                 )
