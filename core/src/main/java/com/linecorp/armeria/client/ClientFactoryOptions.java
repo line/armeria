@@ -23,8 +23,10 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
@@ -39,13 +41,21 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
+@SuppressWarnings("OptionalGetWithoutIsPresent")
 public final class ClientFactoryOptions extends AbstractOptions {
     private static final EventLoopGroup DEFAULT_WORKER_GROUP = CommonPools.workerGroup();
-    private static final EventLoopScheduler DEFAULT_EVENT_LOOP_SCHEDULER =
-            new DefaultEventLoopScheduler(DEFAULT_WORKER_GROUP, 0, 0, Collections.emptyList());
+
+    private static final Function<? super EventLoopGroup, ? extends EventLoopScheduler>
+            DEFAULT_EVENT_LOOP_SCHEDULER_FACTORY =
+            eventLoopGroup -> new DefaultEventLoopScheduler(eventLoopGroup, 0, 0, Collections.emptyList());
+
     private static final Consumer<SslContextBuilder> DEFAULT_SSL_CONTEXT_CUSTOMIZER = b -> { /* no-op */ };
-    private static final AddressResolverGroup<InetSocketAddress> DEFAULT_ADDRESS_RESOLVER_GROUP =
-            new DnsResolverGroupBuilder().build(DEFAULT_WORKER_GROUP);
+
+    private static final Function<? super EventLoopGroup,
+            ? extends AddressResolverGroup<? extends InetSocketAddress>>
+            DEFAULT_ADDRESS_RESOLVER_GROUP_FACTORY =
+            eventLoopGroup -> new DnsResolverGroupBuilder().build(eventLoopGroup);
+
     private static final ConnectionPoolListener DEFAULT_CONNECTION_POOL_LISTENER =
             ConnectionPoolListener.noop();
 
@@ -60,10 +70,10 @@ public final class ClientFactoryOptions extends AbstractOptions {
     private static final ClientFactoryOptionValue<?>[] DEFAULT_OPTIONS = {
             ClientFactoryOption.WORKER_GROUP.newValue(DEFAULT_WORKER_GROUP),
             ClientFactoryOption.SHUTDOWN_WORKER_GROUP_ON_CLOSE.newValue(false),
-            ClientFactoryOption.EVENT_LOOP_SCHEDULER.newValue(DEFAULT_EVENT_LOOP_SCHEDULER),
+            ClientFactoryOption.EVENT_LOOP_SCHEDULER_FACTORY.newValue(DEFAULT_EVENT_LOOP_SCHEDULER_FACTORY),
             ClientFactoryOption.CHANNEL_OPTIONS.newValue(new Object2ObjectArrayMap<>()),
             ClientFactoryOption.SSL_CONTEXT_CUSTOMIZER.newValue(DEFAULT_SSL_CONTEXT_CUSTOMIZER),
-            ClientFactoryOption.ADDRESS_RESOLVER_GROUP.newValue(DEFAULT_ADDRESS_RESOLVER_GROUP),
+            ClientFactoryOption.ADDRESS_RESOLVER_GROUP_FACTORY.newValue(DEFAULT_ADDRESS_RESOLVER_GROUP_FACTORY),
             ClientFactoryOption.HTTP2_INITIAL_CONNECTION_WINDOW_SIZE.newValue(
                     Flags.defaultHttp2InitialConnectionWindowSize()),
             ClientFactoryOption.HTTP2_INITIAL_STREAM_WINDOW_SIZE.newValue(
@@ -81,17 +91,66 @@ public final class ClientFactoryOptions extends AbstractOptions {
             ClientFactoryOption.METER_REGISTRY.newValue(Metrics.globalRegistry)
     };
 
-    public static final ClientFactoryOptions DEFAULT = new ClientFactoryOptions(DEFAULT_OPTIONS);
+    private static final ClientFactoryOptions DEFAULT = new ClientFactoryOptions(DEFAULT_OPTIONS);
+
+    /**
+     * TBW.
+     */
+    public static ClientFactoryOptions of() {
+        return DEFAULT;
+    }
 
     /**
      * TBW.
      */
     public static ClientFactoryOptions of(ClientFactoryOptionValue<?>... options) {
+        return of(of(), requireNonNull(options, "options"));
+    }
+
+    /**
+     * TBW.
+     */
+    public static ClientFactoryOptions of(Iterable<ClientFactoryOptionValue<?>> options) {
+        return of(of(), requireNonNull(options, "options"));
+    }
+
+    /**
+     * TBW.
+     */
+    public static ClientFactoryOptions of(ClientFactoryOptions baseOptions,
+                                          ClientFactoryOptionValue<?>... options) {
+
+        requireNonNull(baseOptions, "baseOptions");
         requireNonNull(options, "options");
         if (options.length == 0) {
-            return DEFAULT;
+            return baseOptions;
         }
-        return new ClientFactoryOptions(DEFAULT, options);
+        return new ClientFactoryOptions(baseOptions, options);
+    }
+
+    /**
+     * TBW.
+     */
+    public static ClientFactoryOptions of(ClientFactoryOptions baseOptions,
+                                          Iterable<ClientFactoryOptionValue<?>> options) {
+
+        // TODO: Reduce the cost of creating a derived ClientFactoryOptions.
+        requireNonNull(baseOptions, "baseOptions");
+        requireNonNull(options, "options");
+        if (Iterables.isEmpty(options)) {
+            return baseOptions;
+        }
+        return new ClientFactoryOptions(baseOptions, options);
+    }
+
+    /**
+     * TBW.
+     */
+    public static ClientFactoryOptions of(ClientFactoryOptions baseOptions, ClientFactoryOptions options) {
+        // TODO: Reduce the cost of creating a derived ClientFactoryOptions.
+        requireNonNull(baseOptions, "baseOptions");
+        requireNonNull(options, "options");
+        return new ClientFactoryOptions(baseOptions, options);
     }
 
     private static <T> ClientFactoryOptionValue<T> filterValue(ClientFactoryOptionValue<T> optionValue) {
@@ -117,7 +176,7 @@ public final class ClientFactoryOptions extends AbstractOptions {
     private static Map<ChannelOption<?>, Object> filterChannelOptions(
             Map<ChannelOption<?>, Object> channelOptions) {
 
-        requireNonNull(channelOptions, "channelOptions");
+        channelOptions = Collections.unmodifiableMap(requireNonNull(channelOptions, "channelOptions"));
 
         for (ChannelOption<?> channelOption : PROHIBITED_SOCKET_OPTIONS) {
             if (channelOptions.containsKey(channelOption)) {
@@ -139,133 +198,128 @@ public final class ClientFactoryOptions extends AbstractOptions {
      * TBW.
      */
     public EventLoopGroup workerGroup() {
-        return getOrElse0(ClientFactoryOption.WORKER_GROUP, CommonPools.workerGroup());
+        return get0(ClientFactoryOption.WORKER_GROUP).get();
     }
 
     /**
      * TBW.
      */
     public boolean shutdownWorkerGroupOnClose() {
-        return getOrElse0(ClientFactoryOption.SHUTDOWN_WORKER_GROUP_ON_CLOSE, false);
+        return get0(ClientFactoryOption.SHUTDOWN_WORKER_GROUP_ON_CLOSE).get();
     }
 
     /**
      * TBW.
      */
-    public EventLoopScheduler eventLoopScheduler() {
-        return getOrElse0(ClientFactoryOption.EVENT_LOOP_SCHEDULER,
-                          new DefaultEventLoopScheduler(workerGroup(), 0, 0, Collections.emptyList()));
+    public Function<? super EventLoopGroup, ? extends EventLoopScheduler> eventLoopSchedulerFactory() {
+        return get0(ClientFactoryOption.EVENT_LOOP_SCHEDULER_FACTORY).get();
     }
 
     /**
      * TBW.
      */
     public Map<ChannelOption<?>, Object> channelOptions() {
-        return getOrElse0(ClientFactoryOption.CHANNEL_OPTIONS, new Object2ObjectArrayMap<>());
+        return get0(ClientFactoryOption.CHANNEL_OPTIONS).get();
     }
 
     /**
      * TBW.
      */
     public Consumer<? super SslContextBuilder> sslContextCustomizer() {
-        return getOrElse0(ClientFactoryOption.SSL_CONTEXT_CUSTOMIZER, DEFAULT_SSL_CONTEXT_CUSTOMIZER);
+        return get0(ClientFactoryOption.SSL_CONTEXT_CUSTOMIZER).get();
     }
 
     /**
      * TBW.
      */
-    public AddressResolverGroup<InetSocketAddress> addressResolverGroup() {
-        return getOrElse0(ClientFactoryOption.ADDRESS_RESOLVER_GROUP,
-                          new DnsResolverGroupBuilder().build(workerGroup()));
+    public Function<? super EventLoopGroup,
+            ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory() {
+
+        return get0(ClientFactoryOption.ADDRESS_RESOLVER_GROUP_FACTORY).get();
     }
 
     /**
      * TBW.
      */
     public int http2InitialConnectionWindowSize() {
-        return getOrElse0(ClientFactoryOption.HTTP2_INITIAL_CONNECTION_WINDOW_SIZE,
-                          Flags.defaultHttp2InitialConnectionWindowSize());
+        return get0(ClientFactoryOption.HTTP2_INITIAL_CONNECTION_WINDOW_SIZE).get();
     }
 
     /**
      * TBW.
      */
     public int http2InitialStreamWindowSize() {
-        return getOrElse0(ClientFactoryOption.HTTP2_INITIAL_STREAM_WINDOW_SIZE,
-                          Flags.defaultHttp2InitialStreamWindowSize());
+        return get0(ClientFactoryOption.HTTP2_INITIAL_STREAM_WINDOW_SIZE).get();
     }
 
     /**
      * TBW.
      */
     public int http2MaxFrameSize() {
-        return getOrElse0(ClientFactoryOption.HTTP2_MAX_FRAME_SIZE,
-                          Flags.defaultHttp2MaxFrameSize());
+        return get0(ClientFactoryOption.HTTP2_MAX_FRAME_SIZE).get();
     }
 
     /**
      * TBW.
      */
     public long http2MaxHeaderListSize() {
-        return getOrElse0(ClientFactoryOption.HTTP2_MAX_HEADER_LIST_SIZE,
-                          Flags.defaultHttp2MaxHeaderListSize());
+        return get0(ClientFactoryOption.HTTP2_MAX_HEADER_LIST_SIZE).get();
     }
 
     /**
      * TBW.
      */
     public int http1MaxInitialLineLength() {
-        return getOrElse0(ClientFactoryOption.HTTP1_MAX_INITIAL_LINE_LENGTH,
-                          Flags.defaultHttp1MaxInitialLineLength());
+        return get0(ClientFactoryOption.HTTP1_MAX_INITIAL_LINE_LENGTH).get();
     }
 
     /**
      * TBW.
      */
     public int http1MaxHeaderSize() {
-        return getOrElse0(ClientFactoryOption.HTTP1_MAX_HEADER_SIZE, Flags.defaultHttp1MaxHeaderSize());
+        return get0(ClientFactoryOption.HTTP1_MAX_HEADER_SIZE).get();
     }
 
     /**
      * TBW.
      */
     public int http1MaxChunkSize() {
-        return getOrElse0(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE, Flags.defaultHttp1MaxChunkSize());
+        return get0(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE).get();
     }
 
     /**
      * TBW.
      */
     public long idleTimeoutMillis() {
-        return getOrElse0(ClientFactoryOption.IDLE_TIMEOUT_MILLIS, Flags.defaultClientIdleTimeoutMillis());
+        return get0(ClientFactoryOption.IDLE_TIMEOUT_MILLIS).get();
     }
 
     /**
      * TBW.
      */
     public boolean useHttp2Preface() {
-        return getOrElse0(ClientFactoryOption.USE_HTTP2_PREFACE, Flags.defaultUseHttp2Preface());
+        return get0(ClientFactoryOption.USE_HTTP2_PREFACE).get();
     }
 
     /**
      * TBW.
      */
     public boolean useHttp1Pipelining() {
-        return getOrElse0(ClientFactoryOption.USE_HTTP1_PIPELINING, Flags.defaultUseHttp1Pipelining());
+        return get0(ClientFactoryOption.USE_HTTP1_PIPELINING).get();
     }
 
     /**
      * TBW.
      */
     public ConnectionPoolListener connectionPoolListener() {
-        return getOrElse0(ClientFactoryOption.CONNECTION_POOL_LISTENER, DEFAULT_CONNECTION_POOL_LISTENER);
+        return get0(ClientFactoryOption.CONNECTION_POOL_LISTENER).get();
     }
 
     /**
      * TBW.
      */
     public MeterRegistry meterRegistry() {
-        return getOrElse0(ClientFactoryOption.METER_REGISTRY, Metrics.globalRegistry);
+        return get0(ClientFactoryOption.METER_REGISTRY).get();
     }
 
     private ClientFactoryOptions(ClientFactoryOptionValue<?>... options) {
@@ -276,5 +330,17 @@ public final class ClientFactoryOptions extends AbstractOptions {
                                  ClientFactoryOptionValue<?>... options) {
 
         super(ClientFactoryOptions::filterValue, clientFactoryOptions, options);
+    }
+
+    private ClientFactoryOptions(ClientFactoryOptions clientFactoryOptions,
+                                 Iterable<ClientFactoryOptionValue<?>> options) {
+
+        super(ClientFactoryOptions::filterValue, clientFactoryOptions, options);
+    }
+
+    private ClientFactoryOptions(ClientFactoryOptions clientFactoryOptions,
+                                 ClientFactoryOptions options) {
+
+        super(clientFactoryOptions, options);
     }
 }

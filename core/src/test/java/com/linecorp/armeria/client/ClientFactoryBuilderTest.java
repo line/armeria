@@ -22,8 +22,6 @@ import static org.mockito.Mockito.mock;
 
 import org.junit.jupiter.api.Test;
 
-import io.netty.channel.ChannelOption;
-
 class ClientFactoryBuilderTest {
 
     @Test
@@ -58,6 +56,7 @@ class ClientFactoryBuilderTest {
         assertThat(cause).hasMessageContaining("mutually exclusive");
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void shouldInheritClientFactoryOptions() {
         final ClientFactory factory1 = ClientFactory.builder()
@@ -70,13 +69,12 @@ class ClientFactoryBuilderTest {
                                                     .idleTimeoutMillis(30000)
                                                     .build();
 
-        assertThat(factory2.options().eventLoopScheduler())
-                .isEqualTo(factory1.options().eventLoopScheduler());
-        assertThat(factory2.options().addressResolverGroup())
-                .isEqualTo(factory1.options().addressResolverGroup());
-        assertThat(factory2.options().channelOptions().get(ChannelOption.CONNECT_TIMEOUT_MILLIS))
-                .isEqualTo(factory1.options().channelOptions().get(ChannelOption.CONNECT_TIMEOUT_MILLIS));
-        assertThat(factory2.options().idleTimeoutMillis())
-                .isNotEqualTo(factory1.options().idleTimeoutMillis());
+        assertThat(factory2.options().asMap()).allSatisfy((opt, optVal) -> {
+            if (opt.compareTo(ClientFactoryOption.IDLE_TIMEOUT_MILLIS) == 0) {
+                assertThat(optVal.value()).isNotEqualTo(factory1.options().asMap().get(opt).value());
+            } else {
+                assertThat(optVal.value()).isEqualTo(factory1.options().asMap().get(opt).value());
+            }
+        });
     }
 }

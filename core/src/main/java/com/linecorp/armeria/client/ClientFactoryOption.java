@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import com.linecorp.armeria.common.util.AbstractOption;
 
@@ -45,8 +46,8 @@ public final class ClientFactoryOption<T> extends AbstractOption<T> {
     public static final ClientFactoryOption<Boolean> SHUTDOWN_WORKER_GROUP_ON_CLOSE =
             valueOf("SHUTDOWN_WORKER_GROUP_ON_CLOSE");
 
-    public static final ClientFactoryOption<EventLoopScheduler> EVENT_LOOP_SCHEDULER =
-            valueOf("EVENT_LOOP_SCHEDULER");
+    public static final ClientFactoryOption<Function<? super EventLoopGroup, ? extends EventLoopScheduler>>
+            EVENT_LOOP_SCHEDULER_FACTORY = valueOf("EVENT_LOOP_SCHEDULER_FACTORY");
 
     public static final ClientFactoryOption<Map<ChannelOption<?>, Object>> CHANNEL_OPTIONS =
             valueOf("CHANNEL_OPTIONS");
@@ -54,8 +55,9 @@ public final class ClientFactoryOption<T> extends AbstractOption<T> {
     public static final ClientFactoryOption<Consumer<? super SslContextBuilder>> SSL_CONTEXT_CUSTOMIZER =
             valueOf("SSL_CONTEXT_CUSTOMIZER");
 
-    public static final ClientFactoryOption<AddressResolverGroup<InetSocketAddress>> ADDRESS_RESOLVER_GROUP =
-            valueOf("ADDRESS_RESOLVER_GROUP");
+    public static final ClientFactoryOption<Function<? super EventLoopGroup,
+            ? extends AddressResolverGroup<? extends InetSocketAddress>>>
+            ADDRESS_RESOLVER_GROUP_FACTORY = valueOf("ADDRESS_RESOLVER_GROUP_FACTORY");
 
     public static final ClientFactoryOption<Integer> HTTP2_INITIAL_CONNECTION_WINDOW_SIZE =
             valueOf("HTTP2_INITIAL_CONNECTION_WINDOW_SIZE");

@@ -90,23 +90,28 @@ final class HttpClientFactory extends AbstractClientFactory {
     private final ClientFactoryOptions options;
 
     HttpClientFactory(ClientFactoryOptions options) {
+        workerGroup = options.workerGroup();
 
-        final Bootstrap baseBootstrap = new Bootstrap();
-        baseBootstrap.channel(TransportType.socketChannelType(options.workerGroup()));
-        baseBootstrap.resolver(options.addressResolverGroup());
+        @SuppressWarnings("unchecked")
+        final AddressResolverGroup<InetSocketAddress> group =
+                (AddressResolverGroup<InetSocketAddress>) options.addressResolverGroupFactory()
+                                                                 .apply(workerGroup);
+        addressResolverGroup = group;
+
+        final Bootstrap bootstrap = new Bootstrap();
+        bootstrap.channel(TransportType.socketChannelType(workerGroup));
+        bootstrap.resolver(addressResolverGroup);
 
         options.channelOptions().forEach((option, value) -> {
             @SuppressWarnings("unchecked")
             final ChannelOption<Object> castOption = (ChannelOption<Object>) option;
-            baseBootstrap.option(castOption, value);
+            bootstrap.option(castOption, value);
         });
 
-        workerGroup = options.workerGroup();
         shutdownWorkerGroupOnClose = options.shutdownWorkerGroupOnClose();
-        eventLoopScheduler = options.eventLoopScheduler();
-        this.baseBootstrap = baseBootstrap;
+        eventLoopScheduler = options.eventLoopSchedulerFactory().apply(workerGroup);
+        baseBootstrap = bootstrap;
         sslContextCustomizer = options.sslContextCustomizer();
-        addressResolverGroup = options.addressResolverGroup();
         http2InitialConnectionWindowSize = options.http2InitialConnectionWindowSize();
         http2InitialStreamWindowSize = options.http2InitialStreamWindowSize();
         http2MaxFrameSize = options.http2MaxFrameSize();

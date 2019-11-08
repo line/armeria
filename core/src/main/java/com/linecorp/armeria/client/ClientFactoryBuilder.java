@@ -27,7 +27,6 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -71,23 +70,16 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
  */
 public final class ClientFactoryBuilder {
 
+    private final Map<ClientFactoryOption<?>, ClientFactoryOptionValue<?>> options = new LinkedHashMap<>();
+
     // Netty-related properties:
-    private EventLoopGroup workerGroup = CommonPools.workerGroup();
-    private final Map<ChannelOption<?>, Object> channelOptions = new Object2ObjectArrayMap<>();
-    @Nullable
-    private Function<? super EventLoopGroup,
-            ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory;
     @Nullable
     private List<Consumer<? super DnsResolverGroupBuilder>> dnsResolverGroupCustomizers;
 
     // Armeria-related properties:
-    @Nullable
-    private Function<? super EventLoopGroup, ? extends EventLoopScheduler> eventLoopSchedulerFactory;
     private int maxNumEventLoopsPerEndpoint;
     private int maxNumEventLoopsPerHttp1Endpoint;
     private final List<ToIntFunction<Endpoint>> maxNumEventLoopsFunctions = new ArrayList<>();
-
-    private final Map<ClientFactoryOption<?>, ClientFactoryOptionValue<?>> options = new LinkedHashMap<>();
 
     /**
      * Creates a new instance.
@@ -96,9 +88,6 @@ public final class ClientFactoryBuilder {
      */
     @Deprecated
     public ClientFactoryBuilder() {
-        options.put(ClientFactoryOption.CHANNEL_OPTIONS,
-                    ClientFactoryOption.CHANNEL_OPTIONS.newValue(channelOptions));
-
         connectTimeoutMillis(Flags.defaultConnectTimeoutMillis());
     }
 
@@ -111,8 +100,7 @@ public final class ClientFactoryBuilder {
      *                        when the {@link ClientFactory} is closed
      */
     public ClientFactoryBuilder workerGroup(EventLoopGroup workerGroup, boolean shutdownOnClose) {
-        this.workerGroup = requireNonNull(workerGroup, "workerGroup");
-        option(ClientFactoryOption.WORKER_GROUP, workerGroup);
+        option(ClientFactoryOption.WORKER_GROUP, requireNonNull(workerGroup, "workerGroup"));
         option(ClientFactoryOption.SHUTDOWN_WORKER_GROUP_ON_CLOSE, shutdownOnClose);
         return this;
     }
@@ -123,10 +111,11 @@ public final class ClientFactoryBuilder {
      */
     public ClientFactoryBuilder eventLoopSchedulerFactory(
             Function<? super EventLoopGroup, ? extends EventLoopScheduler> eventLoopSchedulerFactory) {
+        requireNonNull(eventLoopSchedulerFactory, "eventLoopSchedulerFactory");
         checkState(maxNumEventLoopsPerHttp1Endpoint == 0 && maxNumEventLoopsPerEndpoint == 0 &&
                    maxNumEventLoopsFunctions.isEmpty(),
                    "Cannot set eventLoopSchedulerFactory when maxEventLoop per endpoint is specified.");
-        this.eventLoopSchedulerFactory = requireNonNull(eventLoopSchedulerFactory, "eventLoopSchedulerFactory");
+        option(ClientFactoryOption.EVENT_LOOP_SCHEDULER_FACTORY, eventLoopSchedulerFactory);
         return this;
     }
 
@@ -155,7 +144,7 @@ public final class ClientFactoryBuilder {
     private void validateMaxNumEventLoopsPerEndpoint(int maxNumEventLoopsPerEndpoint) {
         checkArgument(maxNumEventLoopsPerEndpoint > 0,
                       "maxNumEventLoopsPerEndpoint: %s (expected: > 0)", maxNumEventLoopsPerEndpoint);
-        checkState(eventLoopSchedulerFactory == null,
+        checkState(!options.containsKey(ClientFactoryOption.EVENT_LOOP_SCHEDULER_FACTORY),
                    "maxNumEventLoopsPerEndpoint() and eventLoopSchedulerFactory() are mutually exclusive.");
     }
 
@@ -176,7 +165,7 @@ public final class ClientFactoryBuilder {
      * }</pre>
      */
     public ClientFactoryBuilder maxNumEventLoopsFunction(ToIntFunction<Endpoint> maxNumEventLoopsFunction) {
-        checkState(eventLoopSchedulerFactory == null,
+        checkState(!options.containsKey(ClientFactoryOption.EVENT_LOOP_SCHEDULER_FACTORY),
                    "maxNumEventLoopsPerEndpoint() and eventLoopSchedulerFactory() are mutually exclusive.");
         maxNumEventLoopsFunctions.add(requireNonNull(maxNumEventLoopsFunction, "maxNumEventLoopsFunction"));
         return this;
@@ -217,8 +206,15 @@ public final class ClientFactoryBuilder {
      */
     public <T> ClientFactoryBuilder channelOption(ChannelOption<T> option, T value) {
         requireNonNull(option, "option");
+        requireNonNull(value, "value");
 
-        channelOptions.put(option, requireNonNull(value, "value"));
+        @SuppressWarnings("unchecked")
+        final Map<ChannelOption<?>, Object> channelOptions =
+                (Map<ChannelOption<?>, Object>) options.computeIfAbsent(
+                        ClientFactoryOption.CHANNEL_OPTIONS,
+                        k -> ClientFactoryOption.CHANNEL_OPTIONS.newValue(
+                                new Object2ObjectArrayMap<>())).value();
+        channelOptions.put(option, value);
         return this;
     }
 
@@ -246,7 +242,7 @@ public final class ClientFactoryBuilder {
         requireNonNull(addressResolverGroupFactory, "addressResolverGroupFactory");
         checkState(dnsResolverGroupCustomizers == null,
                    "addressResolverGroupFactory() and domainNameResolverCustomizer() are mutually exclusive.");
-        this.addressResolverGroupFactory = addressResolverGroupFactory;
+        option(ClientFactoryOption.ADDRESS_RESOLVER_GROUP_FACTORY, addressResolverGroupFactory);
         return this;
     }
 
@@ -260,7 +256,7 @@ public final class ClientFactoryBuilder {
     public ClientFactoryBuilder domainNameResolverCustomizer(
             Consumer<? super DnsResolverGroupBuilder> dnsResolverGroupCustomizer) {
         requireNonNull(dnsResolverGroupCustomizer, "dnsResolverGroupCustomizer");
-        checkState(addressResolverGroupFactory == null,
+        checkState(!options.containsKey(ClientFactoryOption.ADDRESS_RESOLVER_GROUP_FACTORY),
                    "addressResolverGroupFactory() and domainNameResolverCustomizer() are mutually exclusive.");
         if (dnsResolverGroupCustomizers == null) {
             dnsResolverGroupCustomizers = new ArrayList<>();
@@ -430,18 +426,9 @@ public final class ClientFactoryBuilder {
     /**
      * TBW.
      */
-    @SuppressWarnings("unchecked")
     public <T> ClientFactoryBuilder option(ClientFactoryOptionValue<T> optionValue) {
         requireNonNull(optionValue, "optionValue");
-        final ClientFactoryOption<?> opt = optionValue.option();
-        if (opt == ClientFactoryOption.EVENT_LOOP_SCHEDULER) {
-            eventLoopSchedulerFactory(eventLoopGroup -> (EventLoopScheduler) optionValue.value());
-        } else if (opt == ClientFactoryOption.ADDRESS_RESOLVER_GROUP) {
-            addressResolverGroupFactory(
-                    eventLoopGroup -> (AddressResolverGroup<InetSocketAddress>) optionValue.value());
-        } else {
-            options.put(opt, optionValue);
-        }
+        options.put(optionValue.option(), optionValue);
         return this;
     }
 
@@ -455,36 +442,28 @@ public final class ClientFactoryBuilder {
     }
 
     private ClientFactoryOptions buildOptions() {
-        final Collection<ClientFactoryOptionValue<?>> optVals = options.values();
-        final int numOpts = optVals.size();
-        final ClientFactoryOptionValue<?>[] optValArray =
-                optVals.toArray(new ClientFactoryOptionValue[numOpts + 2]);
+        options.computeIfAbsent(ClientFactoryOption.EVENT_LOOP_SCHEDULER_FACTORY, k -> {
+           final Function<? super EventLoopGroup, ? extends EventLoopScheduler>  eventLoopSchedulerFactory =
+                   eventLoopGroup -> new DefaultEventLoopScheduler(
+                           eventLoopGroup, maxNumEventLoopsPerEndpoint, maxNumEventLoopsPerHttp1Endpoint,
+                           maxNumEventLoopsFunctions);
+           return ClientFactoryOption.EVENT_LOOP_SCHEDULER_FACTORY.newValue(eventLoopSchedulerFactory);
+        });
 
-        final EventLoopScheduler eventLoopScheduler;
-        if (eventLoopSchedulerFactory != null) {
-            eventLoopScheduler = eventLoopSchedulerFactory.apply(workerGroup);
-        } else {
-            eventLoopScheduler = new DefaultEventLoopScheduler(workerGroup, maxNumEventLoopsPerEndpoint,
-                                                               maxNumEventLoopsPerHttp1Endpoint,
-                                                               maxNumEventLoopsFunctions);
-        }
-        optValArray[numOpts] = ClientFactoryOption.EVENT_LOOP_SCHEDULER.newValue(eventLoopScheduler);
+        options.computeIfAbsent(ClientFactoryOption.ADDRESS_RESOLVER_GROUP_FACTORY, k -> {
+            final Function<? super EventLoopGroup,
+                    ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory =
+                    eventLoopGroup -> {
+                        final DnsResolverGroupBuilder builder = new DnsResolverGroupBuilder();
+                        if (dnsResolverGroupCustomizers != null) {
+                            dnsResolverGroupCustomizers.forEach(consumer -> consumer.accept(builder));
+                        }
+                        return builder.build(eventLoopGroup);
+                    };
+            return ClientFactoryOption.ADDRESS_RESOLVER_GROUP_FACTORY.newValue(addressResolverGroupFactory);
+        });
 
-        final AddressResolverGroup<InetSocketAddress> addressResolverGroup;
-        if (addressResolverGroupFactory != null) {
-            @SuppressWarnings("unchecked")
-            final AddressResolverGroup<InetSocketAddress> group =
-                    (AddressResolverGroup<InetSocketAddress>) addressResolverGroupFactory.apply(workerGroup);
-            addressResolverGroup = group;
-        } else {
-            final DnsResolverGroupBuilder builder = new DnsResolverGroupBuilder();
-            if (dnsResolverGroupCustomizers != null) {
-                dnsResolverGroupCustomizers.forEach(consumer -> consumer.accept(builder));
-            }
-            addressResolverGroup = builder.build(workerGroup);
-        }
-        optValArray[numOpts + 1] = ClientFactoryOption.ADDRESS_RESOLVER_GROUP.newValue(addressResolverGroup);
-        return ClientFactoryOptions.of(optValArray);
+        return ClientFactoryOptions.of(options.values());
     }
 
     /**
@@ -497,27 +476,17 @@ public final class ClientFactoryBuilder {
     @Override
     public String toString() {
         final ToStringHelper helper = MoreObjects.toStringHelper(this).omitNullValues();
-        helper.add("workerGroup", workerGroup);
-
-        if (eventLoopSchedulerFactory != null) {
-            helper.add("eventLoopSchedulerFactory", eventLoopSchedulerFactory);
-        } else {
-            if (maxNumEventLoopsPerHttp1Endpoint > 0) {
-                helper.add("maxNumEventLoopsPerHttp1Endpoint", maxNumEventLoopsPerHttp1Endpoint);
-            }
-            if (maxNumEventLoopsPerEndpoint > 0) {
-                helper.add("maxNumEventLoopsPerEndpoint", maxNumEventLoopsPerEndpoint);
-            }
-            if (!maxNumEventLoopsFunctions.isEmpty()) {
-                helper.add("maxNumEventLoopsFunctions", maxNumEventLoopsFunctions);
-            }
-        }
-
-        if (!(addressResolverGroupFactory instanceof DefaultAddressResolverGroupFactory)) {
-            helper.add("addressResolverGroupFactory", addressResolverGroupFactory);
-        }
-
         helper.add("options", options);
+
+        if (maxNumEventLoopsPerHttp1Endpoint > 0) {
+            helper.add("maxNumEventLoopsPerHttp1Endpoint", maxNumEventLoopsPerHttp1Endpoint);
+        }
+        if (maxNumEventLoopsPerEndpoint > 0) {
+            helper.add("maxNumEventLoopsPerEndpoint", maxNumEventLoopsPerEndpoint);
+        }
+        if (!maxNumEventLoopsFunctions.isEmpty()) {
+            helper.add("maxNumEventLoopsFunctions", maxNumEventLoopsFunctions);
+        }
 
         return helper.toString();
     }
