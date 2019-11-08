@@ -25,11 +25,12 @@ import javax.net.ssl.SSLException;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerBuilder;
 
+import io.dropwizard.jetty.ConnectorFactory;
 import io.dropwizard.validation.PortRange;
 
 public interface ArmeriaServerDecorator {
     /**
-     * Decorate a {@link ServerBuilder} with the configurations of this {@ConnectorFactory}.
+     * Decorate a {@link ServerBuilder} with the configurations of the parent {@link ConnectorFactory}.
      * By default, sets all SessionProtocols to bind to the given port.
      *
      * @param sb An instance of a {@link ServerBuilder}
