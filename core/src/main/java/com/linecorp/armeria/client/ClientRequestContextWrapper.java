@@ -25,6 +25,7 @@ import com.linecorp.armeria.client.endpoint.EndpointSelector;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContextWrapper;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RpcRequest;
 
 /**
@@ -41,9 +42,9 @@ public class ClientRequestContextWrapper
     }
 
     @Override
-    public ClientRequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
-                                                  Endpoint endpoint) {
-        return delegate().newDerivedContext(req, rpcReq, endpoint);
+    public ClientRequestContext newDerivedContext(RequestId id, @Nullable HttpRequest req,
+                                                  @Nullable RpcRequest rpcReq, Endpoint endpoint) {
+        return delegate().newDerivedContext(id, req, rpcReq, endpoint);
     }
 
     @Override

@@ -95,7 +95,7 @@ final class ArmeriaServerHttpRequest extends AbstractServerHttpRequest {
 
     @Override
     protected String initId() {
-        return ctx.uuid().toString();
+        return ctx.id().text();
     }
 
     @Nullable

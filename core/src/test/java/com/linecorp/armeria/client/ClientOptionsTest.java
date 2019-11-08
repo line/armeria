@@ -15,17 +15,43 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import org.junit.Test;
+import java.lang.reflect.Modifier;
+import java.util.Arrays;
+import java.util.Set;
+
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 
-public class ClientOptionsTest {
+class ClientOptionsTest {
 
     @Test
-    public void testSetHttpHeader() {
+    void allDefaultOptionsArePresent() throws Exception {
+        final int expectedModifiers = Modifier.PUBLIC | Modifier.STATIC | Modifier.FINAL;
+        final Set<ClientOption<Object>> options =
+                Arrays.stream(ClientOption.class.getDeclaredFields())
+                      .filter(f -> (f.getModifiers() & expectedModifiers) == expectedModifiers)
+                      .map(f -> {
+                          try {
+                              @SuppressWarnings("unchecked")
+                              final ClientOption<Object> opt = (ClientOption<Object>) f.get(null);
+                              return opt;
+                          } catch (IllegalAccessException e) {
+                              throw new Error(e);
+                          }
+                      })
+                      .collect(toImmutableSet());
+
+        assertThat(ClientOptions.of().asMap().keySet()).isEqualTo(options);
+    }
+
+    @Test
+    void testSetHttpHeader() {
         final HttpHeaders httpHeader = HttpHeaders.of(HttpHeaderNames.of("x-user-defined"), "HEADER_VALUE");
 
         final ClientOptions options = ClientOptions.of(ClientOption.HTTP_HEADERS.newValue(httpHeader));
@@ -35,24 +61,32 @@ public class ClientOptionsTest {
         assertThat(options2.get(ClientOption.HTTP_HEADERS)).contains(HttpHeaders.of());
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testSetBlackListHeader() {
-        ClientOptions.of(ClientOption.HTTP_HEADERS.newValue(
-                HttpHeaders.of(HttpHeaderNames.HOST, "localhost")));
+    @Test
+    void testSetBlackListHeader() {
+        assertThatThrownBy(() -> {
+            ClientOptions.of(ClientOption.HTTP_HEADERS.newValue(
+                    HttpHeaders.of(HttpHeaderNames.HOST, "localhost")));
+        }).isInstanceOf(IllegalArgumentException.class);
     }
 
-    @Test(expected = NullPointerException.class)
-    public void testInvalidWriteTimeoutMillis() {
-        ClientOptions.of(ClientOption.WRITE_TIMEOUT_MILLIS.newValue(null));
+    @Test
+    void testInvalidWriteTimeoutMillis() {
+        assertThatThrownBy(() -> {
+            ClientOptions.of(ClientOption.WRITE_TIMEOUT_MILLIS.newValue(null));
+        }).isInstanceOf(NullPointerException.class);
     }
 
-    @Test(expected = NullPointerException.class)
-    public void testInvalidResponseTimeoutMillis() {
-        ClientOptions.of(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(null));
+    @Test
+    void testInvalidResponseTimeoutMillis() {
+        assertThatThrownBy(() -> {
+            ClientOptions.of(ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(null));
+        }).isInstanceOf(NullPointerException.class);
     }
 
-    @Test(expected = NullPointerException.class)
-    public void testInvalidMaxResponseLength() {
-        ClientOptions.of(ClientOption.MAX_RESPONSE_LENGTH.newValue(null));
+    @Test
+    void testInvalidMaxResponseLength() {
+        assertThatThrownBy(() -> {
+            ClientOptions.of(ClientOption.MAX_RESPONSE_LENGTH.newValue(null));
+        }).isInstanceOf(NullPointerException.class);
     }
 }

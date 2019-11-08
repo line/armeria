@@ -29,12 +29,14 @@ import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.internal.ConnectionLimitingHandler;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
@@ -105,12 +107,12 @@ public final class ServerConfig {
     private final List<ClientAddressSource> clientAddressSources;
     private final Predicate<InetAddress> clientAddressTrustedProxyFilter;
     private final Predicate<InetAddress> clientAddressFilter;
+    private final boolean enableServerHeader;
+    private final boolean enableDateHeader;
+    private final Supplier<? extends RequestId> requestIdGenerator;
 
     @Nullable
     private String strVal;
-
-    private final boolean enableServerHeader;
-    private final boolean enableDateHeader;
 
     ServerConfig(
             Iterable<ServerPort> ports,
@@ -130,7 +132,8 @@ public final class ServerConfig {
             List<ClientAddressSource> clientAddressSources,
             Predicate<InetAddress> clientAddressTrustedProxyFilter,
             Predicate<InetAddress> clientAddressFilter,
-            boolean enableServerHeader, boolean enableDateHeader) {
+            boolean enableServerHeader, boolean enableDateHeader,
+            Supplier<? extends RequestId> requestIdGenerator) {
 
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
@@ -250,6 +253,7 @@ public final class ServerConfig {
 
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
+        this.requestIdGenerator = requireNonNull(requestIdGenerator, "requestIdGenerator");
     }
 
     static int validateMaxNumConnections(int maxNumConnections) {
@@ -663,6 +667,13 @@ public final class ServerConfig {
         return enableDateHeader;
     }
 
+    /**
+     * Returns the {@link Supplier} that generates a {@link RequestId} for each {@link Request}.
+     */
+    public Supplier<? extends RequestId> requestIdGenerator() {
+        return requestIdGenerator;
+    }
+
     @Override
     public String toString() {
         String strVal = this.strVal;
@@ -680,8 +691,8 @@ public final class ServerConfig {
                     meterRegistry(), serviceLoggerPrefix(),
                     accessLogWriter(), shutdownAccessLogWriterOnStop(),
                     channelOptions(), childChannelOptions(),
-                    clientAddressSources(), clientAddressTrustedProxyFilter(), clientAddressFilter()
-            );
+                    clientAddressSources(), clientAddressTrustedProxyFilter(), clientAddressFilter(),
+                    isServerHeaderEnabled(), isDateHeaderEnabled());
         }
 
         return strVal;
@@ -703,7 +714,8 @@ public final class ServerConfig {
             Map<ChannelOption<?>, ?> channelOptions, Map<ChannelOption<?>, ?> childChannelOptions,
             List<ClientAddressSource> clientAddressSources,
             Predicate<InetAddress> clientAddressTrustedProxyFilter,
-            Predicate<InetAddress> clientAddressFilter) {
+            Predicate<InetAddress> clientAddressFilter,
+            boolean serverHeaderEnabled, boolean dateHeaderEnabled) {
 
         final StringBuilder buf = new StringBuilder();
         if (type != null) {
@@ -802,6 +814,10 @@ public final class ServerConfig {
         buf.append(clientAddressTrustedProxyFilter);
         buf.append(", clientAddressFilter: ");
         buf.append(clientAddressFilter);
+        buf.append(", serverHeader: ");
+        buf.append(serverHeaderEnabled ? "enabled" : "disabled");
+        buf.append(", dateHeader: ");
+        buf.append(dateHeaderEnabled ? "enabled" : "disabled");
         buf.append(')');
 
         return buf.toString();

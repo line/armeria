@@ -46,6 +46,7 @@ import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.KeyManagerFactory;
@@ -64,6 +65,8 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
@@ -187,6 +190,9 @@ public final class ServerBuilder {
     private Predicate<InetAddress> clientAddressTrustedProxyFilter = address -> false;
     private Predicate<InetAddress> clientAddressFilter = address -> true;
     private RejectedRouteHandler rejectedRouteHandler = RejectedRouteHandler.WARN;
+    private boolean enableServerHeader = true;
+    private boolean enableDateHeader = true;
+    private Supplier<? extends RequestId> requestIdGenerator = RequestId::random;
 
     // These properties can also be set in the service level.
 
@@ -201,9 +207,6 @@ public final class ServerBuilder {
 
     private Function<VirtualHost, Logger> accessLoggerMapper = host -> LoggerFactory.getLogger(
             defaultAccessLoggerName(host.hostnamePattern()));
-
-    private boolean enableServerHeader = true;
-    private boolean enableDateHeader = true;
 
     /**
      * Returns a new {@link ServerBuilder}.
@@ -1352,6 +1355,33 @@ public final class ServerBuilder {
     }
 
     /**
+     * Sets the response header not to include default {@code "Server"} header.
+     */
+    public ServerBuilder disableServerHeader() {
+        enableServerHeader = false;
+        return this;
+    }
+
+    /**
+     * Sets the response header not to include default {@code "Date"} header.
+     */
+    public ServerBuilder disableDateHeader() {
+        enableDateHeader = false;
+        return this;
+    }
+
+    /**
+     * Sets the {@link Supplier} which generates a {@link RequestId}.
+     * By default, a {@link RequestId} is generated from a random 64-bit integer.
+     *
+     * @see RequestContext#id()
+     */
+    public ServerBuilder requestIdGenerator(Supplier<? extends RequestId> requestIdGenerator) {
+        this.requestIdGenerator = requireNonNull(requestIdGenerator, "requestIdGenerator");
+        return this;
+    }
+
+    /**
      * Sets the timeout of a request.
      *
      * @deprecated Use {@link #requestTimeout(Duration)}.
@@ -1542,30 +1572,6 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the response header not to include default {@code "Server"} header.
-     */
-    public ServerBuilder disableServerHeader() {
-        this.enableServerHeader = false;
-        return this;
-    }
-
-    boolean isServerHeaderEnabled() {
-        return enableServerHeader;
-    }
-
-    /**
-     * Sets the response header not to include default {@code "Date"} header.
-     */
-    public ServerBuilder disableDateHeader() {
-        this.enableDateHeader = false;
-        return this;
-    }
-
-    boolean isDateHeaderEnabled() {
-        return enableDateHeader;
-    }
-
-    /**
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
@@ -1650,7 +1656,7 @@ public final class ServerBuilder {
                 meterRegistry, serviceLoggerPrefix, accessLogWriter, shutdownAccessLogWriterOnStop,
                 proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter,
-                enableServerHeader, enableDateHeader), sslContexts);
+                enableServerHeader, enableDateHeader, requestIdGenerator), sslContexts);
 
         serverListeners.forEach(server::addListener);
         return server;
@@ -1743,7 +1749,7 @@ public final class ServerBuilder {
                 meterRegistry, serviceLoggerPrefix,
                 accessLogWriter, shutdownAccessLogWriterOnStop,
                 channelOptions, childChannelOptions,
-                clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter
-        );
+                clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter,
+                enableServerHeader, enableDateHeader);
     }
 }

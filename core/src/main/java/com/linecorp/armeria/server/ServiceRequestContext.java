@@ -42,6 +42,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
@@ -165,12 +166,9 @@ public interface ServiceRequestContext extends RequestContext {
     }
 
     @Override
-    default ServiceRequestContext newDerivedContext() {
-        return newDerivedContext(request(), rpcRequest());
-    }
-
-    @Override
-    ServiceRequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq);
+    ServiceRequestContext newDerivedContext(RequestId id,
+                                            @Nullable HttpRequest req,
+                                            @Nullable RpcRequest rpcReq);
 
     /**
      * Returns the {@link Server} that is handling the current {@link Request}.

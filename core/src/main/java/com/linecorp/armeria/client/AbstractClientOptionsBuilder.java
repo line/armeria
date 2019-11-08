@@ -24,6 +24,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -31,6 +32,7 @@ import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -287,6 +289,13 @@ class AbstractClientOptionsBuilder<B extends AbstractClientOptionsBuilder<B>> {
      */
     public B contentPreview(int length) {
         return contentPreview(length, ArmeriaHttpUtil.HTTP_DEFAULT_CONTENT_CHARSET);
+    }
+
+    /**
+     * Sets the {@link Supplier} that generates a {@link RequestId}.
+     */
+    public B requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
+       return option(ClientOption.REQUEST_ID_GENERATOR, requestIdGenerator);
     }
 
     /**

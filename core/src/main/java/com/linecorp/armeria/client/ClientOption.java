@@ -18,8 +18,12 @@ package com.linecorp.armeria.client;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.util.AbstractOption;
@@ -91,11 +95,23 @@ public final class ClientOption<T> extends AbstractOption<T> {
      */
     public static final ClientOption<ClientDecoration> DECORATION = valueOf("DECORATION");
 
+    /**
+     * Sets the {@link ContentPreviewerFactory} for a {@link Request}.
+     */
     public static final ClientOption<ContentPreviewerFactory> REQ_CONTENT_PREVIEWER_FACTORY = valueOf(
             "REQ_CONTENT_PREVIEWER_FACTORY");
 
+    /**
+     * Sets the {@link ContentPreviewerFactory} for a {@link Response}.
+     */
     public static final ClientOption<ContentPreviewerFactory> RES_CONTENT_PREVIEWER_FACTORY = valueOf(
             "RES_CONTENT_PREVIEWER_FACTORY");
+
+    /**
+     * The {@link Supplier} that generates a {@link RequestId}.
+     */
+    public static final ClientOption<Supplier<RequestId>> REQUEST_ID_GENERATOR = valueOf(
+            "REQUEST_ID_GENERATOR");
 
     /**
      * Returns the {@link ClientOption} of the specified name.

@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server.logging;
 
 import static com.linecorp.armeria.server.logging.AccessLogComponent.TimestampComponent.defaultDateTimeFormatter;
@@ -55,6 +54,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
@@ -135,7 +135,7 @@ class AccessLogFormatsTest {
 
         format = AccessLogFormats.parseCustom(
                 "%{com.linecorp.armeria.server.logging.AccessLogFormatsTest$Attr#KEY" +
-                ":com.linecorp.armeria.server.logging.AccessLogFormatsTest$AttributeStringfier}j");
+                ":com.linecorp.armeria.server.logging.AccessLogFormatsTest$AttributeStringifier}j");
         assertThat(format.size()).isOne();
         entry = format.get(0);
         assertThat(entry).isInstanceOf(AttributeComponent.class);
@@ -185,9 +185,11 @@ class AccessLogFormatsTest {
                                   HttpHeaderNames.USER_AGENT, "armeria/x.y.z",
                                   HttpHeaderNames.REFERER, "http://log.example.com",
                                   HttpHeaderNames.COOKIE, "a=1;b=2"));
+        final RequestId id = RequestId.random();
         final ServiceRequestContext ctx =
                 ServiceRequestContext.builder(req)
                                      .requestStartTime(requestStartTimeNanos, requestStartTimeMicros)
+                                     .id(id)
                                      .build();
         ctx.attr(Attr.ATTR_KEY).set(new Attr("line"));
 
@@ -240,7 +242,7 @@ class AccessLogFormatsTest {
 
         format = AccessLogFormats.parseCustom(
                 "%{com.linecorp.armeria.server.logging.AccessLogFormatsTest$Attr#KEY" +
-                ":com.linecorp.armeria.server.logging.AccessLogFormatsTest$AttributeStringfier}j");
+                ":com.linecorp.armeria.server.logging.AccessLogFormatsTest$AttributeStringifier}j");
         message = AccessLogger.format(format, log);
         assertThat(message).isEqualTo("(line)");
 
@@ -251,6 +253,12 @@ class AccessLogFormatsTest {
 
         format = AccessLogFormats.parseCustom("%{content-type}o");
         assertThat(AccessLogger.format(format, log)).isEqualTo(MediaType.PLAIN_TEXT_UTF_8.toString());
+
+        format = AccessLogFormats.parseCustom("%I");
+        assertThat(AccessLogger.format(format, log)).isEqualTo(id.text());
+
+        format = AccessLogFormats.parseCustom("%{short}I");
+        assertThat(AccessLogger.format(format, log)).isEqualTo(id.shortText());
     }
 
     @Test
@@ -444,7 +452,7 @@ class AccessLogFormatsTest {
         }
     }
 
-    static class AttributeStringfier implements Function<Attr, String> {
+    static class AttributeStringifier implements Function<Attr, String> {
         @Override
         public String apply(Attr attr) {
             return '(' + attr.member() + ')';
