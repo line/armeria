@@ -21,6 +21,8 @@ import java.net.URI;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.SerializationFormat;
+
 /**
  * Default {@link ClientBuilderParams} implementation.
  */
@@ -37,7 +39,7 @@ public class DefaultClientBuilderParams implements ClientBuilderParams {
     public DefaultClientBuilderParams(ClientFactory factory, URI uri, Class<?> type,
                                       ClientOptions options) {
         this.factory = requireNonNull(factory, "factory");
-        this.uri = requireNonNull(uri, "uri");
+        this.uri = cleanUri(requireNonNull(uri, "uri"));
         this.type = requireNonNull(type, "type");
         this.options = requireNonNull(options, "options");
     }
@@ -69,5 +71,14 @@ public class DefaultClientBuilderParams implements ClientBuilderParams {
                           .add("uri", uri)
                           .add("type", type)
                           .add("options", options).toString();
+    }
+
+    protected final URI cleanUri(final URI uri) {
+        if (uri.getScheme().contains(SerializationFormat.NONE.uriText())) {
+            final String nScheme = uri.getScheme().replace(SerializationFormat.NONE.uriText(), "")
+                                      .replace("+", "");
+            return URI.create(nScheme + uri.toString().substring(uri.getScheme().length()));
+        }
+        return uri;
     }
 }

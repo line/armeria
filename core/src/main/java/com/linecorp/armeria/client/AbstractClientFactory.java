@@ -19,12 +19,14 @@ package com.linecorp.armeria.client;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
 
 /**
  * A skeletal {@link ClientFactory} implementation.
@@ -96,18 +98,20 @@ public abstract class AbstractClientFactory implements ClientFactory {
     protected final Scheme validateScheme(URI uri) {
         requireNonNull(uri, "uri");
 
-        final String scheme = uri.getScheme();
-        if (scheme == null) {
-            throw new IllegalArgumentException("URI with missing scheme: " + uri);
-        }
-
-        if (uri.getAuthority() == null) {
+        if (Objects.isNull(uri.getAuthority())) {
             throw new IllegalArgumentException("URI with missing authority: " + uri);
         }
 
-        final Optional<Scheme> parsedSchemeOpt = Scheme.tryParse(scheme);
+        final String scheme = uri.getScheme();
+        if (Objects.isNull(scheme)) {
+            throw new IllegalArgumentException("URI with missing scheme: " + uri);
+        }
+        Optional<Scheme> parsedSchemeOpt = Scheme.tryParse(scheme);
         if (!parsedSchemeOpt.isPresent()) {
-            throw new IllegalArgumentException("URI with unknown scheme: " + uri);
+            parsedSchemeOpt = Scheme.tryParse(SerializationFormat.NONE.uriText() + '+' + scheme);
+            if (!parsedSchemeOpt.isPresent()) {
+                throw new IllegalArgumentException("URI with undefined scheme: " + uri);
+            }
         }
 
         final Scheme parsedScheme = parsedSchemeOpt.get();

@@ -19,6 +19,7 @@ package com.linecorp.armeria.common;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import javax.annotation.Nullable;
@@ -75,10 +76,9 @@ public final class Scheme implements Comparable<Scheme> {
      *         there is no such {@link Scheme} available
      */
     public static Optional<Scheme> tryParse(@Nullable String scheme) {
-        if (scheme == null) {
+        if (Objects.isNull(scheme)) {
             return Optional.empty();
         }
-
         return Optional.ofNullable(SCHEMES.get(Ascii.toLowerCase(scheme)));
     }
 
