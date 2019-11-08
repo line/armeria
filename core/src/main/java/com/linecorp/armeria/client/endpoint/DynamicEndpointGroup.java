@@ -97,7 +97,7 @@ public class DynamicEndpointGroup extends AbstractListenable<List<Endpoint>> imp
         final List<Endpoint> oldEndpoints = this.endpoints;
         final List<Endpoint> newEndpoints = ImmutableList.sortedCopyOf(endpoints);
 
-        if (oldEndpoints != UNINITIALIZED_ENDPOINTS && hasChanges(oldEndpoints, newEndpoints)) {
+        if (oldEndpoints != UNINITIALIZED_ENDPOINTS && !hasChanges(oldEndpoints, newEndpoints)) {
             return;
         }
 
