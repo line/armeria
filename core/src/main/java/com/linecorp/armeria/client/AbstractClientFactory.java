@@ -19,14 +19,12 @@ package com.linecorp.armeria.client;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
 import javax.annotation.Nullable;
 
 import com.linecorp.armeria.common.Scheme;
-import com.linecorp.armeria.common.SerializationFormat;
 
 /**
  * A skeletal {@link ClientFactory} implementation.
