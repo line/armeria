@@ -16,12 +16,16 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Function;
+
+import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
@@ -31,6 +35,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceElement;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory;
+import com.linecorp.armeria.internal.annotation.AnnotatedServiceConfiguratorSetters;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -64,6 +69,10 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     private final Builder<ExceptionHandlerFunction> exceptionHandlerFunctionBuilder = ImmutableList.builder();
     private final Builder<RequestConverterFunction> requestConverterFunctionBuilder = ImmutableList.builder();
     private final Builder<ResponseConverterFunction> responseConverterFunctionBuilder = ImmutableList.builder();
+    @Nullable
+    private Consumer<AnnotatedServiceConfiguratorSetters> configuratorCustomizer;
+    private boolean canSetFunctionBuilder = true;
+    private boolean canSetConfiguratorCustomizer = true;
     private String pathPrefix = "/";
 
     AnnotatedServiceBindingBuilder(ServerBuilder serverBuilder) {
@@ -84,7 +93,10 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
      */
     public AnnotatedServiceBindingBuilder exceptionHandler(ExceptionHandlerFunction exceptionHandlerFunction) {
         requireNonNull(exceptionHandlerFunction, "exceptionHandler");
+        checkState(canSetFunctionBuilder,
+                   "Cannot call exceptionHandler() if called configuratorCustomizer() already.");
         exceptionHandlerFunctionBuilder.add(exceptionHandlerFunction);
+        canSetConfiguratorCustomizer = false;
         return this;
     }
 
@@ -94,7 +106,10 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     public AnnotatedServiceBindingBuilder responseConverter(
             ResponseConverterFunction responseConverterFunction) {
         requireNonNull(responseConverterFunction, "responseConverterFunction");
+        checkState(canSetFunctionBuilder,
+                   "Cannot call responseConverter() if called configuratorCustomizer() already.");
         responseConverterFunctionBuilder.add(responseConverterFunction);
+        canSetConfiguratorCustomizer = false;
         return this;
     }
 
@@ -103,7 +118,26 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
      */
     public AnnotatedServiceBindingBuilder requestConverter(RequestConverterFunction requestConverterFunction) {
         requireNonNull(requestConverterFunction, "requestConverterFunction");
+        checkState(canSetFunctionBuilder,
+                   "Cannot call requestConverter() if called configuratorCustomizer() already.");
         requestConverterFunctionBuilder.add(requestConverterFunction);
+        canSetConfiguratorCustomizer = false;
+        return this;
+    }
+
+    /**
+     * FIXME(heowc)
+     * Adds the given {@link AnnotatedServiceConfiguratorSetters} to this
+     * {@link AnnotatedServiceBindingBuilder}.
+     */
+    public AnnotatedServiceBindingBuilder configuratorCustomizer(
+            Consumer<AnnotatedServiceConfiguratorSetters> configuratorCustomizer) {
+        requireNonNull(configuratorCustomizer, "configuratorCustomizer");
+        checkState(canSetConfiguratorCustomizer,
+                   "Cannot call configuratorCustomizer() if called exceptionHandler() or" +
+                   " responseConverter() or requestConverter() already.");
+        this.configuratorCustomizer = configuratorCustomizer;
+        canSetFunctionBuilder = true;
         return this;
     }
 
@@ -192,10 +226,8 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
      * @return {@link ServerBuilder} to continue building {@link Server}
      */
     public ServerBuilder build(Object service) {
-        final List<AnnotatedHttpServiceElement> elements =
-                AnnotatedHttpServiceFactory.find(pathPrefix, service, exceptionHandlerFunctionBuilder.build(),
-                                                 requestConverterFunctionBuilder.build(),
-                                                 responseConverterFunctionBuilder.build());
+        final List<AnnotatedHttpServiceElement> elements = find(service);
+
         elements.forEach(element -> {
             final Service<HttpRequest, HttpResponse> decoratedService =
                     element.buildSafeDecoratedService(defaultServiceConfigSetters.getDecorator());
@@ -204,5 +236,16 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
             serverBuilder.serviceConfigBuilder(serviceConfigBuilder);
         });
         return serverBuilder;
+    }
+
+    private List<AnnotatedHttpServiceElement> find(Object service) {
+        if (configuratorCustomizer != null) {
+            return AnnotatedHttpServiceFactory.find(pathPrefix, service, configuratorCustomizer);
+        } else {
+            return AnnotatedHttpServiceFactory.find(pathPrefix, service,
+                                                    exceptionHandlerFunctionBuilder.build(),
+                                                    requestConverterFunctionBuilder.build(),
+                                                    responseConverterFunctionBuilder.build());
+        }
     }
 }
