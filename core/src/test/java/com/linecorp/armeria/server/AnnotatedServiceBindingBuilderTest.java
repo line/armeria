@@ -130,7 +130,7 @@ class AnnotatedServiceBindingBuilderTest {
                                        .build(new TestService())
                                        .build())
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Cannot call customizer()");
+                .hasMessageContaining("Cannot call configuratorCustomizer()");
         assertThatThrownBy(() -> Server.builder()
                                        .annotatedService()
                                        .configuratorCustomizer(customizer)
