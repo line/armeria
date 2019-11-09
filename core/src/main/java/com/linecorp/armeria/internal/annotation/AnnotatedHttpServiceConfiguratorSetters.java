@@ -27,6 +27,9 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
+/**
+ * A setter class for binding to {@link AnnotatedHttpServiceConfigurator}.
+ */
 public final class AnnotatedHttpServiceConfiguratorSetters {
 
     private final Builder<ExceptionHandlerFunction> exceptionHandlers = ImmutableList.builder();
