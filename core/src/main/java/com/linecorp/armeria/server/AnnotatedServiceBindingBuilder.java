@@ -33,9 +33,9 @@ import com.google.common.collect.ImmutableList.Builder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceConfiguratorSetters;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceElement;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory;
-import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceConfiguratorSetters;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -126,8 +126,8 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     }
 
     /**
-     * Adds the given {@link Consumer} which customizes the given {@link AnnotatedHttpServiceConfiguratorSetters}
-     * to this {@link AnnotatedServiceBindingBuilder}.
+     * Adds the given {@link Consumer} which customizes the given
+     * {@link AnnotatedHttpServiceConfiguratorSetters} to this {@link AnnotatedServiceBindingBuilder}.
      */
     public AnnotatedServiceBindingBuilder configuratorCustomizer(
             Consumer<AnnotatedHttpServiceConfiguratorSetters> configuratorCustomizer) {
