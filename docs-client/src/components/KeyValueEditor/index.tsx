@@ -7,65 +7,47 @@ import KeyValueTable from '../KeyValueTable';
 import { CreateDefaultRow, Row, ValueListContext } from './valueListContext';
 
 interface KeyValueEditorProps {
-  defaultValue?: string;
+  defaultValue?: Row[];
   keyName?: string;
   valueName?: string;
-  onChange:any;
 }
 enum DisplayType {
   KeyValue,
   Plain,
 }
 
-export const StrToRowList = (str: string): Row[] => {
-  let rowList: Row[] = [];
-  try {
-    const obj = parseLoosely(str);
-    rowList = Object.keys(obj).map((v) => {
-      return {
-        key: v,
-        value: obj[v],
-      };
-    });
-  } catch (e) {
-    // prevent to stop running js error caused
-  }
-  return rowList;
-};
-
-export const RowListToStr = (rowList: Row[]): string => {
-  return JSON.stringify(
-    rowList.reduce(
-      (acc: { [key: string]: string }, cur: { key: string; value: string }) => {
-        if (cur.key || cur.value) {
-          acc[cur.key || ''] = cur.value || '';
-        }
-        return acc;
-      },
-      {},
-    ),
-  );
-};
-
 const KeyValueEditor: React.FunctionComponent<KeyValueEditorProps> = ({
-  rowListString,
+  defaultValue,
   keyName = 'Key',
   valueName = 'Value',
-  setRowListString,
 }) => {
   const [displayType, setDisplayType] = useState(DisplayType.KeyValue);
-  // const [rowList, setRowList] = useState<Row[]>(defaultValue ? StrToRowList(defaultValue) || [CreateDefaultRow()]);
-  const [bulkString, setBulkString] = useState(JSON.stringify(rowListString));
+  const [rowList, setRowList] = useState<Row[]>(
+    defaultValue || [CreateDefaultRow()],
+  );
+  const [bulkString, setBulkString] = useState(JSON.stringify(rowList));
 
   const DisplayTypeButton: React.FunctionComponent = () => {
     if (displayType === DisplayType.Plain) {
       return (
         <Button
           onClick={() => {
-            const newRowList = StrToRowList(bulkString);
-            newRowList.push(CreateDefaultRow());
+            let newRowList = null;
+            try {
+              const obj = parseLoosely(bulkString);
+              newRowList = Object.keys(obj).map((v) => {
+                return {
+                  key: v,
+                  value: obj[v],
+                };
+              });
 
-            setRowListString(RowListToStr(newRowList));
+              rowList.push(CreateDefaultRow());
+            } catch (e) {
+              newRowList = [CreateDefaultRow()];
+            }
+
+            setRowList(newRowList);
             setDisplayType(DisplayType.KeyValue);
           }}
         >
@@ -77,7 +59,24 @@ const KeyValueEditor: React.FunctionComponent<KeyValueEditorProps> = ({
     return (
       <Button
         onClick={() => {
-          setBulkString(jsonPrettify(rowListString));
+          setBulkString(
+            jsonPrettify(
+              JSON.stringify(
+                rowList.reduce(
+                  (
+                    acc: { [key: string]: string },
+                    cur: { key: string; value: string },
+                  ) => {
+                    if (cur.key || cur.value) {
+                      acc[cur.key || ''] = cur.value || '';
+                    }
+                    return acc;
+                  },
+                  {},
+                ),
+              ),
+            ),
+          );
           setDisplayType(DisplayType.Plain);
         }}
       >
@@ -86,11 +85,11 @@ const KeyValueEditor: React.FunctionComponent<KeyValueEditorProps> = ({
     );
   };
   return (
-    <ValueListContext.Provider value={[rowListString, setRowListString]}>
+    <ValueListContext.Provider value={[rowList, setRowList]}>
       <DisplayTypeButton />
       {displayType === DisplayType.KeyValue ? (
         <KeyValueTable
-          defaultKeyValueListString={rowListString}
+          defaultKeyValueList={rowList}
           keyName={keyName}
           valueName={valueName}
         />
