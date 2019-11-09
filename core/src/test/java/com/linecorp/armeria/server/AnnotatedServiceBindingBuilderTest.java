@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
-import com.linecorp.armeria.internal.annotation.AnnotatedServiceConfiguratorSetters;
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceConfiguratorSetters;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
@@ -119,7 +119,7 @@ class AnnotatedServiceBindingBuilderTest {
 
     @Test
     void testServiceConfigState_shouldCatchException() {
-        final Consumer<AnnotatedServiceConfiguratorSetters> customizer =
+        final Consumer<AnnotatedHttpServiceConfiguratorSetters> customizer =
                 setters -> setters.configureExceptionHandlers((ctx, req, cause) -> HttpResponse.of(502));
         final ExceptionHandlerFunction exceptionHandlerFunction = (ctx, request, cause) -> HttpResponse.of(400);
 

@@ -30,7 +30,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
  * A configurator to configure {@link ExceptionHandlerFunction}s or {@link RequestConverterFunction}s
  * or {@link ResponseConverterFunction} for an {@link AnnotatedHttpService}.
  */
-public final class AnnotatedServiceConfigurator {
+public final class AnnotatedHttpServiceConfigurator {
 
     /**
      * The exception handlers of the annotated service object.

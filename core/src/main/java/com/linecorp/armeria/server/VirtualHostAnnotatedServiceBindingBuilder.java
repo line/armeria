@@ -35,7 +35,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceElement;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory;
-import com.linecorp.armeria.internal.annotation.AnnotatedServiceConfiguratorSetters;
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceConfiguratorSetters;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -74,7 +74,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     private final Builder<RequestConverterFunction> requestConverterFunctionBuilder = ImmutableList.builder();
     private final Builder<ResponseConverterFunction> responseConverterFunctionBuilder = ImmutableList.builder();
     @Nullable
-    private Consumer<AnnotatedServiceConfiguratorSetters> configuratorCustomizer;
+    private Consumer<AnnotatedHttpServiceConfiguratorSetters> configuratorCustomizer;
     private boolean canSetFunctionBuilder = true;
     private boolean canSetConfiguratorCustomizer = true;
     private String pathPrefix = "/";
@@ -135,11 +135,11 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     }
 
     /**
-     * Adds the given {@link Consumer} which customizes the given {@link AnnotatedServiceConfiguratorSetters}
+     * Adds the given {@link Consumer} which customizes the given {@link AnnotatedHttpServiceConfiguratorSetters}
      * to this {@link VirtualHostAnnotatedServiceBindingBuilder}.
      */
     public VirtualHostAnnotatedServiceBindingBuilder configuratorCustomizer(
-            Consumer<AnnotatedServiceConfiguratorSetters> configuratorCustomizer) {
+            Consumer<AnnotatedHttpServiceConfiguratorSetters> configuratorCustomizer) {
         requireNonNull(configuratorCustomizer, "customizer");
         checkState(canSetConfiguratorCustomizer,
                    "Cannot call customizer() if called exceptionHandler()," +

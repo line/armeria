@@ -193,10 +193,10 @@ public final class AnnotatedHttpServiceFactory {
                                                          Iterable<?> exceptionHandlersAndConverters) {
         final List<Method> methods = requestMappingMethods(object);
 
-        final AnnotatedServiceConfiguratorSetters setters =
-                AnnotatedServiceConfiguratorSetters
+        final AnnotatedHttpServiceConfiguratorSetters setters =
+                AnnotatedHttpServiceConfiguratorSetters
                         .ofExceptionHandlersAndConverters(exceptionHandlersAndConverters);
-        final AnnotatedServiceConfigurator configurator = setters.toAnnotatedServiceConfigurator();
+        final AnnotatedHttpServiceConfigurator configurator = setters.toAnnotatedServiceConfigurator();
 
         return methods.stream()
                       .flatMap((Method method) ->
@@ -216,12 +216,12 @@ public final class AnnotatedHttpServiceFactory {
             List<ResponseConverterFunction> responseConverterFunctions) {
         final List<Method> methods = requestMappingMethods(object);
 
-        final AnnotatedServiceConfiguratorSetters setters =
-                AnnotatedServiceConfiguratorSetters
+        final AnnotatedHttpServiceConfiguratorSetters setters =
+                AnnotatedHttpServiceConfiguratorSetters
                         .ofExceptionHandlersAndConverters(exceptionHandlerFunctions,
                                                           requestConverterFunctions,
                                                           responseConverterFunctions);
-        final AnnotatedServiceConfigurator configurator = setters.toAnnotatedServiceConfigurator();
+        final AnnotatedHttpServiceConfigurator configurator = setters.toAnnotatedServiceConfigurator();
 
         return methods.stream()
                       .flatMap((Method method) ->
@@ -232,19 +232,19 @@ public final class AnnotatedHttpServiceFactory {
     /**
      * Returns the list of {@link AnnotatedHttpService} defined by {@link Path} and HTTP method annotations
      * from the specified {@code object}, {@link Consumer} which customizes the given
-     * {@link AnnotatedServiceConfiguratorSetters}.
+     * {@link AnnotatedHttpServiceConfiguratorSetters}.
      */
     public static List<AnnotatedHttpServiceElement> find(
-            String pathPrefix, Object object, Consumer<AnnotatedServiceConfiguratorSetters> customizer) {
-        final AnnotatedServiceConfiguratorSetters setters = new AnnotatedServiceConfiguratorSetters();
+            String pathPrefix, Object object, Consumer<AnnotatedHttpServiceConfiguratorSetters> customizer) {
+        final AnnotatedHttpServiceConfiguratorSetters setters = new AnnotatedHttpServiceConfiguratorSetters();
         customizer.accept(setters);
-        final AnnotatedServiceConfigurator configurator = setters.toAnnotatedServiceConfigurator();
+        final AnnotatedHttpServiceConfigurator configurator = setters.toAnnotatedServiceConfigurator();
 
         return find(pathPrefix, object, configurator);
     }
 
     private static List<AnnotatedHttpServiceElement> find(String pathPrefix, Object object,
-                                                         AnnotatedServiceConfigurator configurator) {
+                                                         AnnotatedHttpServiceConfigurator configurator) {
         final List<Method> methods = requestMappingMethods(object);
 
         return methods.stream()
@@ -297,7 +297,7 @@ public final class AnnotatedHttpServiceFactory {
      */
     @VisibleForTesting
     static List<AnnotatedHttpServiceElement> create(String pathPrefix, Object object, Method method,
-                                                    AnnotatedServiceConfigurator configurator) {
+                                                    AnnotatedHttpServiceConfigurator configurator) {
 
         final Set<Annotation> methodAnnotations = httpMethodAnnotations(method);
         if (methodAnnotations.isEmpty()) {

@@ -71,7 +71,7 @@ import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceElement;
 import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory;
-import com.linecorp.armeria.internal.annotation.AnnotatedServiceConfiguratorSetters;
+import com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceConfiguratorSetters;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -919,10 +919,10 @@ public final class ServerBuilder {
      * Binds the specified annotated service object under the path prefix {@code "/"}.
      *
      * @param customizer the {@link Consumer} which customizes the given
-     *                   {@link AnnotatedServiceConfiguratorSetters}
+     *                   {@link AnnotatedHttpServiceConfiguratorSetters}
      */
     public ServerBuilder annotatedService(Object service,
-                                          Consumer<AnnotatedServiceConfiguratorSetters> customizer) {
+                                          Consumer<AnnotatedHttpServiceConfiguratorSetters> customizer) {
         return annotatedService("/", service, Function.identity(), requireNonNull(customizer, "customizer"));
     }
 
@@ -951,10 +951,10 @@ public final class ServerBuilder {
      * Binds the specified annotated service object under the specified path prefix.
      *
      * @param customizer the {@link Consumer} which customizes the given
-     *                   {@link AnnotatedServiceConfiguratorSetters}
+     *                   {@link AnnotatedHttpServiceConfiguratorSetters}
      */
     public ServerBuilder annotatedService(String pathPrefix, Object service,
-                                          Consumer<AnnotatedServiceConfiguratorSetters> customizer) {
+                                          Consumer<AnnotatedHttpServiceConfiguratorSetters> customizer) {
         return annotatedService(pathPrefix, service, Function.identity(),
                                 requireNonNull(customizer, "customizer"));
     }
@@ -991,12 +991,12 @@ public final class ServerBuilder {
     /**
      * Binds the specified annotated service object under the path prefix {@code "/"}.
      * FIXME
-     * @param customizer the {@link AnnotatedServiceConfiguratorSetters}.
+     * @param customizer the {@link AnnotatedHttpServiceConfiguratorSetters}.
      */
     public ServerBuilder annotatedService(Object service,
                                           Function<Service<HttpRequest, HttpResponse>,
                                                   ? extends Service<HttpRequest, HttpResponse>> decorator,
-                                          Consumer<AnnotatedServiceConfiguratorSetters> customizer) {
+                                          Consumer<AnnotatedHttpServiceConfiguratorSetters> customizer) {
         return annotatedService("/", service, decorator, requireNonNull(customizer, "customizer"));
     }
 
@@ -1053,12 +1053,12 @@ public final class ServerBuilder {
      * Binds the specified annotated service object under the specified path prefix.
      *
      * @param customizer the {@link Consumer} which customizes the given
-     *                   {@link AnnotatedServiceConfiguratorSetters}
+     *                   {@link AnnotatedHttpServiceConfiguratorSetters}
      */
     public ServerBuilder annotatedService(String pathPrefix, Object service,
                                           Function<Service<HttpRequest, HttpResponse>,
                                                   ? extends Service<HttpRequest, HttpResponse>> decorator,
-                                          Consumer<AnnotatedServiceConfiguratorSetters> customizer) {
+                                          Consumer<AnnotatedHttpServiceConfiguratorSetters> customizer) {
         requireNonNull(pathPrefix, "pathPrefix");
         requireNonNull(service, "service");
         requireNonNull(decorator, "decorator");

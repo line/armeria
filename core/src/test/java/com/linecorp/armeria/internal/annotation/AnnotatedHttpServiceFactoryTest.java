@@ -180,7 +180,7 @@ class AnnotatedHttpServiceFactoryTest {
 
         getMethods(ServiceObjectWithoutPathOnAnnotatedMethod.class, HttpResponse.class).forEach(method -> {
             assertThatThrownBy(() -> {
-                final AnnotatedServiceConfiguratorSetters setters = AnnotatedServiceConfiguratorSetters
+                final AnnotatedHttpServiceConfiguratorSetters setters = AnnotatedHttpServiceConfiguratorSetters
                         .ofExceptionHandlersAndConverters(ImmutableList.of(), ImmutableList.of(),
                                                           ImmutableList.of());
                 create("/", serviceObject, method, setters.toAnnotatedServiceConfigurator());
@@ -270,7 +270,7 @@ class AnnotatedHttpServiceFactoryTest {
         final MultiPathFailingService serviceObject = new MultiPathFailingService();
         getMethods(MultiPathFailingService.class, HttpResponse.class).forEach(method -> {
             assertThatThrownBy(() -> {
-                final AnnotatedServiceConfiguratorSetters setters = AnnotatedServiceConfiguratorSetters
+                final AnnotatedHttpServiceConfiguratorSetters setters = AnnotatedHttpServiceConfiguratorSetters
                         .ofExceptionHandlersAndConverters(ImmutableList.of(), ImmutableList.of(),
                                                           ImmutableList.of());
                 create("/", serviceObject, method, setters.toAnnotatedServiceConfigurator());
@@ -283,8 +283,8 @@ class AnnotatedHttpServiceFactoryTest {
         return getMethods(service.getClass(), HttpResponse.class)
                 .filter(method -> method.getName().equals(methodName)).flatMap(
                         method -> {
-                            final AnnotatedServiceConfiguratorSetters setters =
-                                    AnnotatedServiceConfiguratorSetters.ofExceptionHandlersAndConverters(
+                            final AnnotatedHttpServiceConfiguratorSetters setters =
+                                    AnnotatedHttpServiceConfiguratorSetters.ofExceptionHandlersAndConverters(
                                             ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
                             final List<AnnotatedHttpServiceElement> annotatedHttpServices = create(
                                     "/", service, method, setters.toAnnotatedServiceConfigurator());

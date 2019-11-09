@@ -27,7 +27,7 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
-public final class AnnotatedServiceConfiguratorSetters {
+public final class AnnotatedHttpServiceConfiguratorSetters {
 
     private final Builder<ExceptionHandlerFunction> exceptionHandlers = ImmutableList.builder();
     private final Builder<RequestConverterFunction> requestConverters = ImmutableList.builder();
@@ -84,7 +84,7 @@ public final class AnnotatedServiceConfiguratorSetters {
     /**
      * Creates a new instance with the specified {@code exceptionHandlersAndConverters}.
      */
-    static AnnotatedServiceConfiguratorSetters ofExceptionHandlersAndConverters(
+    static AnnotatedHttpServiceConfiguratorSetters ofExceptionHandlersAndConverters(
             Iterable<?> exceptionHandlersAndConverters) {
 
         Builder<ExceptionHandlerFunction> exceptionHandlers = null;
@@ -135,12 +135,12 @@ public final class AnnotatedServiceConfiguratorSetters {
      * Creates a new instance with the specified {@link ExceptionHandlerFunction}s,
      * {@link RequestConverterFunction} and {@link ResponseConverterFunction}.
      */
-    static AnnotatedServiceConfiguratorSetters ofExceptionHandlersAndConverters(
+    static AnnotatedHttpServiceConfiguratorSetters ofExceptionHandlersAndConverters(
             List<ExceptionHandlerFunction> exceptionHandlerFunctions,
             List<RequestConverterFunction> requestConverterFunctions,
             List<ResponseConverterFunction> responseConverterFunctions) {
 
-        final AnnotatedServiceConfiguratorSetters setters = new AnnotatedServiceConfiguratorSetters();
+        final AnnotatedHttpServiceConfiguratorSetters setters = new AnnotatedHttpServiceConfiguratorSetters();
 
         setters.configureExceptionHandlers(exceptionHandlerFunctions);
         setters.configureRequestConverters(requestConverterFunctions);
@@ -149,10 +149,10 @@ public final class AnnotatedServiceConfiguratorSetters {
     }
 
     /**
-     * Converts this setter to a {@link AnnotatedServiceConfigurator} in order to fill unspecified values.
+     * Converts this setter to a {@link AnnotatedHttpServiceConfigurator} in order to fill unspecified values.
      */
-    AnnotatedServiceConfigurator toAnnotatedServiceConfigurator() {
-        final AnnotatedServiceConfigurator configurator = new AnnotatedServiceConfigurator();
+    AnnotatedHttpServiceConfigurator toAnnotatedServiceConfigurator() {
+        final AnnotatedHttpServiceConfigurator configurator = new AnnotatedHttpServiceConfigurator();
         configurator.configureExceptionHandlers(exceptionHandlers.build());
         configurator.configureRequestConverters(requestConverters.build());
         configurator.configureResponseConverters(responseConverters.build());
