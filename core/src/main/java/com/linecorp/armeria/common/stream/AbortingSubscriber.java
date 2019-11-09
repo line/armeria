@@ -23,7 +23,7 @@ import org.reactivestreams.Subscription;
 
 final class AbortingSubscriber<T> implements Subscriber<T> {
 
-    private static final AbortingSubscriber<Object> INSTANCE =
+    static final AbortingSubscriber<Object> INSTANCE =
             new AbortingSubscriber<>(AbortedStreamException.INSTANCE);
 
     @SuppressWarnings("unchecked")

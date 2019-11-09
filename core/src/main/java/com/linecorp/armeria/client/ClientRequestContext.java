@@ -31,7 +31,7 @@ import com.linecorp.armeria.client.endpoint.EndpointSelector;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpRequestWriter;
+import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
@@ -286,15 +286,15 @@ public interface ClientRequestContext extends RequestContext {
     Runnable responseTimeoutHandler();
 
     /**
-     * Sets a handler to run when the response times out. {@code responseTimeoutHandler} must close the request,
-     * e.g., by calling {@link HttpRequestWriter#close(Throwable)}. If not set, the response will be closed with
-     * {@link ResponseTimeoutException}.
+     * Sets a handler to run when the response times out. {@code responseTimeoutHandler} must abort
+     * the response, e.g., by calling {@link HttpResponseWriter#abort(Throwable)}.
+     * If not set, the response will be closed with {@link ResponseTimeoutException}.
      *
      * <p>For example,
      * <pre>{@code
-     *   HttpRequestWriter req = HttpRequest.streaming();
+     *   HttpResponseWriter res = HttpResponse.streaming();
      *   ctx.setResponseTimeoutHandler(() -> {
-     *      req.close(new IllegalStateException("Server is in a bad state."));
+     *      res.abort(new IllegalStateException("Server is in a bad state."));
      *   });
      *   ...
      * }</pre>

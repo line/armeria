@@ -229,7 +229,6 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
                                                             "cause returned by causeSupplier is null");
                 setAbortingSubscription(abortCause);
                 setCompletionCause(abortCause);
-                // cause is always not-null if cancel == false
                 if (abortCause == AbortedStreamException.INSTANCE) {
                     closeEvent = ABORTED_CLOSE;
                 } else {

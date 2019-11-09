@@ -212,13 +212,13 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
     @Override
     public void abort() {
-        abort(AbortedStreamException::get);
+        abort0(AbortedStreamException::get);
     }
 
     @Override
     public void abort(Throwable cause) {
         requireNonNull(cause, "cause");
-        abort(() -> cause);
+        abort0(() -> cause);
     }
 
     @Override
@@ -234,14 +234,16 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
             return;
         }
 
-        final AbortableSubscriber abortable = new AbortableSubscriber(this,
-                                                                      null,
+        final AbortableSubscriber abortable = new AbortableSubscriber(this, AbortingSubscriber.INSTANCE,
                                                                       ImmediateEventExecutor.INSTANCE,
                                                                       false);
-        abortable.abort(causeSupplier);
-        if (subscriberUpdater.compareAndSet(this, null, abortable)) {
-            abortable.onSubscribe(NoopSubscription.INSTANCE);
+        if (!subscriberUpdater.compareAndSet(this, null, abortable)) {
+            this.subscriber.abort(causeSupplier);
+            return;
         }
+
+        abortable.abort(causeSupplier);
+        abortable.onSubscribe(NoopSubscription.INSTANCE);
     }
 
     @Override
@@ -264,14 +266,15 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
         private final PublisherBasedStreamMessage<?> parent;
         private final EventExecutor executor;
         private final boolean notifyCancellation;
-        @Nullable
         private volatile Subscriber<Object> subscriber;
         private volatile boolean abortPending;
         @Nullable
         private volatile Subscription subscription;
+        @Nullable
+        private volatile Supplier<? extends Throwable> causeSupplier;
 
         @SuppressWarnings("unchecked")
-        AbortableSubscriber(PublisherBasedStreamMessage<?> parent, @Nullable Subscriber<?> subscriber,
+        AbortableSubscriber(PublisherBasedStreamMessage<?> parent, Subscriber<?> subscriber,
                             EventExecutor executor, boolean notifyCancellation) {
             this.parent = parent;
             this.subscriber = (Subscriber<Object>) subscriber;
@@ -293,48 +296,48 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
             assert subscription != null;
 
             // Don't cancel but just abort if abort is pending.
-            if (!abortPending) {
-                cancelOrAbort(true, CancelledSubscriptionException::get);
-            } else {
-                cancelOrAbort(false, null);
-            }
+            cancelOrAbort(!abortPending);
         }
 
         void abort(Supplier<? extends Throwable> causeSupplier) {
             abortPending = true;
+            if (this.causeSupplier == null) {
+                this.causeSupplier = causeSupplier;
+            }
             if (subscription != null) {
-                cancelOrAbort(false, causeSupplier);
+                cancelOrAbort(false);
             }
         }
 
-        private void cancelOrAbort(boolean cancel, @Nullable Supplier<? extends Throwable> causeSupplier) {
+        private void cancelOrAbort(boolean cancel) {
             if (executor.inEventLoop()) {
-                cancelOrAbort0(cancel, causeSupplier);
+                cancelOrAbort0(cancel);
             } else {
-                executor.execute(() -> cancelOrAbort0(cancel, causeSupplier));
+                executor.execute(() -> cancelOrAbort0(cancel));
             }
         }
 
-        private void cancelOrAbort0(boolean cancel, @Nullable Supplier<? extends Throwable> causeSupplier) {
+        private void cancelOrAbort0(boolean cancel) {
             final CompletableFuture<Void> completionFuture = parent.completionFuture();
             if (completionFuture.isDone()) {
-                if (!cancel) {
-                    // subscriber is not initialized yet, so set AbortingSubscriber if cancel is false
-                    subscriber = AbortingSubscriber.get(null);
-                }
                 return;
             }
 
             final Throwable cause;
-            if (causeSupplier == null) {
-                cause = parent.completionCause();
+            if (cancel) {
+                cause = CancelledSubscriptionException.get();
             } else {
-                cause = requireNonNull(causeSupplier.get(),
-                                       "cause returned by causeSupplier is null");
-                parent.setCompletionCause(cause);
+                final Throwable parentCause = parent.completionCause();
+                if (parentCause != null) {
+                    cause = parentCause;
+                } else {
+                    cause = requireNonNull(causeSupplier.get(),
+                                           "cause returned by causeSupplier is null");
+                    parent.setCompletionCause(cause);
+                }
             }
-            if (!cancel) {
-                // subscriber is not initialized yet, so set AbortingSubscriber if cancel is false
+
+            if (subscriber == AbortingSubscriber.INSTANCE && cause != AbortedStreamException.INSTANCE) {
                 subscriber = AbortingSubscriber.get(cause);
             }
 
@@ -373,7 +376,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
                 subscriber.onSubscribe(this);
             } finally {
                 if (abortPending) {
-                    cancelOrAbort0(false, null);
+                    cancelOrAbort0(false);
                 }
             }
         }
@@ -399,7 +402,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
         private void onError0(Throwable cause) {
             try {
-                completionCauseUpdater.compareAndSet(parent, null, cause);
+                parent.setCompletionCause(cause);
                 subscriber.onError(cause);
             } finally {
                 parent.completionFuture().completeExceptionally(cause);

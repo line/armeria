@@ -283,7 +283,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
     @Override
     public void abort(Throwable cause) {
         requireNonNull(cause, "cause");
-        abort(() -> cause);
+        abort0(() -> cause);
     }
 
     @Override

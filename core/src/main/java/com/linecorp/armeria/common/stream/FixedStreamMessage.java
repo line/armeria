@@ -174,7 +174,7 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
                 closeEvent = CANCELLED_CLOSE;
             }
         } else {
-            // causeSupplier is always not-null if cancel == false
+            // causeSupplier should not be null if cancel == false
             final Throwable cause = requireNonNull(causeSupplier.get(),
                                                    "cause returned by causeSupplier is null");
             if (subscription == null) {

@@ -118,7 +118,7 @@ class HttpClientResponseTimeoutHandlerTest {
 
         final HttpRequestWriter writer = HttpRequest.streaming(HttpMethod.POST, "/slow");
         final HttpResponse response = client.execute(writer);
-        await().forever().untilAsserted(() -> {
+        await().untilAsserted(() -> {
             assertThat(logHolder.get().isAvailable(RequestLogAvailability.COMPLETE)).isTrue();
         });
         assertThatThrownBy(() -> response.aggregate().join()).isInstanceOf(CompletionException.class)
@@ -135,6 +135,8 @@ class HttpClientResponseTimeoutHandlerTest {
         final HttpClient client = HttpClient.builder(server.uri(protocol, "/"))
                 .responseTimeout(Duration.ofSeconds(2))
                 .decorator((delegate, ctx, req) -> {
+                    final HttpResponseWriter res = HttpResponse.streaming();
+                    res.abort();
                     final HttpResponse response = delegate.execute(ctx, req);
                     ctx.setResponseTimeoutHandler(() -> {
                         response.abort(resCause);
@@ -146,7 +148,7 @@ class HttpClientResponseTimeoutHandlerTest {
 
         final HttpRequestWriter writer = HttpRequest.streaming(HttpMethod.POST, "/slow");
         final HttpResponse response = client.execute(writer);
-        await().forever().untilAsserted(() -> {
+        await().untilAsserted(() -> {
             assertThat(logHolder.get().isAvailable(RequestLogAvailability.COMPLETE)).isTrue();
         });
         assertThatThrownBy(() -> response.aggregate().join()).isInstanceOf(CompletionException.class)
