@@ -146,7 +146,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
                    "Cannot call customizer() if called exceptionHandler()," +
                    " responseConverter(), requestConverter() already.");
         this.configuratorCustomizer = configuratorCustomizer;
-        canSetFunctionBuilder = true;
+        canSetFunctionBuilder = false;
         return this;
     }
 

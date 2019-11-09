@@ -136,7 +136,7 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
                    "Cannot call configuratorCustomizer() if called exceptionHandler() or" +
                    " responseConverter() or requestConverter() already.");
         this.configuratorCustomizer = configuratorCustomizer;
-        canSetFunctionBuilder = true;
+        canSetFunctionBuilder = false;
         return this;
     }
 
