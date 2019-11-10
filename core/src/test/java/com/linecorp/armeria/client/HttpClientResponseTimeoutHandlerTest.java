@@ -137,6 +137,7 @@ class HttpClientResponseTimeoutHandlerTest {
                 .responseTimeout(Duration.ofSeconds(3))
                 .decorator((delegate, ctx, req) -> {
                     final HttpResponse response = delegate.execute(ctx, req);
+                    assertThat(response.isOpen()).isTrue();
                     ctx.setResponseTimeoutHandler(() -> {
                         invokeResponseTimeoutHandler.set(true);
                         response.abort(resCause);
