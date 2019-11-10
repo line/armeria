@@ -74,8 +74,7 @@ class HttpClientRequestPathTest {
     @Test
     void default_withRelativePath() {
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/simple-client");
-        final HttpClient client = HttpClient.of();
-        final HttpResponse response = client.execute(request);
+        final HttpResponse response = HttpClient.of().execute(request);
         assertThatThrownBy(() -> response.aggregate().join())
                 .hasCauseInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("no authority");
