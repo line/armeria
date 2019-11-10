@@ -69,7 +69,7 @@ class HttpClientResponseTimeoutHandlerTest {
         final IllegalStateException reqCause = new IllegalStateException("abort request");
         final AtomicBoolean invokeResponseTimeoutHandler = new AtomicBoolean(false);
         final HttpClient client = HttpClient.builder(server.uri(protocol, "/"))
-                .responseTimeout(Duration.ofSeconds(3))
+                .responseTimeout(Duration.ofSeconds(2))
                 .decorator((delegate, ctx, req) -> {
                     if (useResponseTimeoutHandler) {
                         ctx.setResponseTimeoutHandler(() -> {
@@ -106,7 +106,7 @@ class HttpClientResponseTimeoutHandlerTest {
         final AtomicReference<RequestLog> logHolder = new AtomicReference<>();
         final IllegalStateException reqCause = new IllegalStateException("abort request");
         final HttpClient client = HttpClient.builder(server.uri(protocol, "/"))
-                .responseTimeout(Duration.ofSeconds(3))
+                .responseTimeout(Duration.ofSeconds(2))
                 .decorator((delegate, ctx, req) -> {
                     ctx.setResponseTimeoutHandler(() -> {
                         ctx.request().abort(reqCause);
@@ -134,15 +134,13 @@ class HttpClientResponseTimeoutHandlerTest {
         final IllegalStateException resCause = new IllegalStateException("abort response");
         final AtomicBoolean invokeResponseTimeoutHandler = new AtomicBoolean(false);
         final HttpClient client = HttpClient.builder(server.uri(protocol, "/"))
-                .responseTimeout(Duration.ofSeconds(5))
+                .responseTimeout(Duration.ofSeconds(2))
                 .decorator((delegate, ctx, req) -> {
                     final HttpResponse response = delegate.execute(ctx, req);
-                    assertThat(response.isOpen()).isTrue();
                     ctx.setResponseTimeoutHandler(() -> {
                         invokeResponseTimeoutHandler.set(true);
                         response.abort(resCause);
                     });
-                    assertThat(response.isOpen()).isTrue();
                     logHolder.set(ctx.log());
                     return response;
                 })

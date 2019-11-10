@@ -71,10 +71,11 @@ abstract class HttpResponseDecoder {
 
     HttpResponseWrapper addResponse(
             int id, @Nullable HttpRequest req, DecodedHttpResponse res, RequestLogBuilder logBuilder,
-            long responseTimeoutMillis, @Nullable Runnable responseTimeoutHandler, long maxContentLength) {
+            long responseTimeoutMillis, Supplier<Runnable> responseTimeoutHandlerSupplier,
+            long maxContentLength) {
 
-        final HttpResponseWrapper newRes = new HttpResponseWrapper(req, res, logBuilder, responseTimeoutMillis,
-                                                                   responseTimeoutHandler, maxContentLength);
+        final HttpResponseWrapper newRes = new HttpResponseWrapper(
+                req, res, logBuilder, responseTimeoutMillis, responseTimeoutHandlerSupplier, maxContentLength);
         final HttpResponseWrapper oldRes = responses.put(id, newRes);
 
         assert oldRes == null : "addResponse(" + id + ", " + res + ", " + responseTimeoutMillis + "): " +
@@ -141,8 +142,7 @@ abstract class HttpResponseDecoder {
         private final DecodedHttpResponse delegate;
         private final RequestLogBuilder logBuilder;
         private final long responseTimeoutMillis;
-        @Nullable
-        private final Runnable responseTimeoutHandler;
+        private final Supplier<Runnable> responseTimeoutHandlerSupplier;
         private final long maxContentLength;
         @Nullable
         private ScheduledFuture<?> responseTimeoutFuture;
@@ -153,12 +153,12 @@ abstract class HttpResponseDecoder {
 
         HttpResponseWrapper(@Nullable HttpRequest request, DecodedHttpResponse delegate,
                             RequestLogBuilder logBuilder, long responseTimeoutMillis,
-                            @Nullable Runnable responseTimeoutHandler, long maxContentLength) {
+                            Supplier<Runnable> responseTimeoutHandlerSupplier, long maxContentLength) {
             this.request = request;
             this.delegate = delegate;
             this.logBuilder = logBuilder;
             this.responseTimeoutMillis = responseTimeoutMillis;
-            this.responseTimeoutHandler = responseTimeoutHandler;
+            this.responseTimeoutHandlerSupplier = responseTimeoutHandlerSupplier;
             this.maxContentLength = maxContentLength;
         }
 
@@ -196,6 +196,7 @@ abstract class HttpResponseDecoder {
 
         @Override
         public void run() {
+            final Runnable responseTimeoutHandler = responseTimeoutHandlerSupplier.get();
             if (responseTimeoutHandler != null) {
                 responseTimeoutHandler.run();
             } else {

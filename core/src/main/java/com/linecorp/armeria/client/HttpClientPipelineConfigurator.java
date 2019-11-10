@@ -30,6 +30,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.List;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLEngine;
@@ -97,6 +98,8 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
      * The maximum allowed content length of an HTTP/1 to 2 upgrade response.
      */
     private static final long UPGRADE_RESPONSE_MAX_LENGTH = 16384;
+
+    private static final Supplier<Runnable> NOOP_RESPONSE_TIMEOUT_HANDLER_SUPPLIER = () -> null;
 
     private enum HttpPreference {
         HTTP1_REQUIRED,
@@ -448,8 +451,8 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             }, ctx.channel().eventLoop());
 
             // NB: No need to set the response timeout because we have session creation timeout.
-            responseDecoder.addResponse(0, null, res, RequestLogBuilder.NOOP, 0, null,
-                                        UPGRADE_RESPONSE_MAX_LENGTH);
+            responseDecoder.addResponse(0, null, res, RequestLogBuilder.NOOP, 0,
+                                        NOOP_RESPONSE_TIMEOUT_HANDLER_SUPPLIER, UPGRADE_RESPONSE_MAX_LENGTH);
             ctx.fireChannelActive();
         }
 

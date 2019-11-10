@@ -20,6 +20,8 @@ import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 
+import java.util.function.Supplier;
+
 import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
@@ -69,11 +71,12 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     @Override
     HttpResponseWrapper addResponse(
             int id, @Nullable HttpRequest req, DecodedHttpResponse res, RequestLogBuilder logBuilder,
-            long responseTimeoutMillis, @Nullable Runnable responseTimeoutHandler, long maxContentLength) {
+            long responseTimeoutMillis, Supplier<Runnable> responseTimeoutHandlerSupplier,
+            long maxContentLength) {
 
         final HttpResponseWrapper resWrapper =
                 super.addResponse(id, req, res, logBuilder, responseTimeoutMillis,
-                                  responseTimeoutHandler, maxContentLength);
+                                  responseTimeoutHandlerSupplier, maxContentLength);
 
         resWrapper.completionFuture().handle((unused, cause) -> {
             final EventLoop eventLoop = channel().eventLoop();
