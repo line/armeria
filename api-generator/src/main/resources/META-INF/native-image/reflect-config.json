@@ -1,0 +1,10 @@
+[
+{
+  "name":"com.fasterxml.jackson.databind.ext.Java7SupportImpl",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"java.util.Map",
+  "methods":[{"name":"get","parameterTypes":["java.lang.Object"] }]
+}
+]
