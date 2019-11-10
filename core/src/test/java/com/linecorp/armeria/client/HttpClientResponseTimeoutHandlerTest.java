@@ -134,7 +134,7 @@ class HttpClientResponseTimeoutHandlerTest {
         final IllegalStateException resCause = new IllegalStateException("abort response");
         final AtomicBoolean invokeResponseTimeoutHandler = new AtomicBoolean(false);
         final HttpClient client = HttpClient.builder(server.uri(protocol, "/"))
-                .responseTimeout(Duration.ofSeconds(3))
+                .responseTimeout(Duration.ofSeconds(5))
                 .decorator((delegate, ctx, req) -> {
                     final HttpResponse response = delegate.execute(ctx, req);
                     assertThat(response.isOpen()).isTrue();
@@ -142,6 +142,7 @@ class HttpClientResponseTimeoutHandlerTest {
                         invokeResponseTimeoutHandler.set(true);
                         response.abort(resCause);
                     });
+                    assertThat(response.isOpen()).isTrue();
                     logHolder.set(ctx.log());
                     return response;
                 })
