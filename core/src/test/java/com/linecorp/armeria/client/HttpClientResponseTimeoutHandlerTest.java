@@ -132,11 +132,13 @@ class HttpClientResponseTimeoutHandlerTest {
     void testResponseTimeoutHandlerResponseAbort(SessionProtocol protocol) {
         final AtomicReference<RequestLog> logHolder = new AtomicReference<>();
         final IllegalStateException resCause = new IllegalStateException("abort response");
+        final AtomicBoolean invokeResponseTimeoutHandler = new AtomicBoolean(false);
         final HttpClient client = HttpClient.builder(server.uri(protocol, "/"))
                 .responseTimeout(Duration.ofSeconds(3))
                 .decorator((delegate, ctx, req) -> {
                     final HttpResponse response = delegate.execute(ctx, req);
                     ctx.setResponseTimeoutHandler(() -> {
+                        invokeResponseTimeoutHandler.set(true);
                         response.abort(resCause);
                     });
                     logHolder.set(ctx.log());
@@ -149,6 +151,7 @@ class HttpClientResponseTimeoutHandlerTest {
         await().untilAsserted(() -> {
             assertThat(logHolder.get().isAvailable(RequestLogAvailability.COMPLETE)).isTrue();
         });
+        assertThat(invokeResponseTimeoutHandler).isTrue();
         assertThatThrownBy(() -> response.aggregate().join()).isInstanceOf(CompletionException.class)
                                                              .hasCause(resCause);
         assertThat(logHolder.get().requestCause()).isSameAs(resCause);

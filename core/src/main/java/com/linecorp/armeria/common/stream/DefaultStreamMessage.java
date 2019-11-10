@@ -42,7 +42,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  * to control the rate of production so that the {@link Queue} does not grow up infinitely.
  *
  * <pre>{@code
- * void stream(QueueBasedPublished<Integer> pub, int start, int end) {
+ * void stream(DefaultStreamMessage<Integer> pub, int start, int end) {
  *     // Write 100 integers at most.
  *     int actualEnd = (int) Math.min(end, start + 100L);
  *     int i;
@@ -58,7 +58,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  *     pub.onDemand(() -> stream(pub, i, end));
  * }
  *
- * final QueueBasedPublisher<Integer> myPub = new QueueBasedPublisher<>();
+ * final DefaultStreamMessage<Integer> myPub = new DefaultStreamMessage<>();
  * stream(myPub, 0, Integer.MAX_VALUE);
  * }</pre>
  *
