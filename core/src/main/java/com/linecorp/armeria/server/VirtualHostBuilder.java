@@ -19,8 +19,8 @@ package com.linecorp.armeria.server;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.server.ServerConfig.validateMaxRequestLength;
-import static com.linecorp.armeria.server.ServerConfig.validateRequestTimeoutMillis;
+import static com.linecorp.armeria.server.ServiceConfig.validateMaxRequestLength;
+import static com.linecorp.armeria.server.ServiceConfig.validateRequestTimeoutMillis;
 import static com.linecorp.armeria.server.VirtualHost.ensureHostnamePatternMatchesDefaultHostname;
 import static com.linecorp.armeria.server.VirtualHost.normalizeDefaultHostname;
 import static com.linecorp.armeria.server.VirtualHost.normalizeHostnamePattern;
@@ -29,7 +29,6 @@ import static java.util.Objects.requireNonNull;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -65,11 +64,6 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.handler.ssl.ApplicationProtocolConfig;
-import io.netty.handler.ssl.ApplicationProtocolConfig.Protocol;
-import io.netty.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
-import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
-import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
@@ -87,15 +81,6 @@ import io.netty.util.ReferenceCountUtil;
  * @see Route
  */
 public final class VirtualHostBuilder {
-
-    private static final ApplicationProtocolConfig HTTPS_ALPN_CFG = new ApplicationProtocolConfig(
-            Protocol.ALPN,
-            // NO_ADVERTISE is currently the only mode supported by both OpenSsl and JDK providers.
-            SelectorFailureBehavior.NO_ADVERTISE,
-            // ACCEPT is currently the only mode supported by both OpenSsl and JDK providers.
-            SelectedListenerFailureBehavior.ACCEPT,
-            ApplicationProtocolNames.HTTP_2,
-            ApplicationProtocolNames.HTTP_1_1);
 
     /**
      * Validate {@code sslContext} is configured properly. If {@code sslContext} is configured as client
@@ -146,7 +131,8 @@ public final class VirtualHostBuilder {
     private String hostnamePattern = "*";
     @Nullable
     private SslContext sslContext;
-    private boolean tlsSelfSigned;
+    @Nullable
+    private Boolean tlsSelfSigned;
     private final List<RouteDecoratingService> routeDecoratingServices = new ArrayList<>();
     @Nullable
     private Function<VirtualHost, Logger> accessLoggerMapper;
@@ -305,11 +291,18 @@ public final class VirtualHostBuilder {
     /**
      * Configures SSL or TLS of this {@link VirtualHost} with an auto-generated self-signed certificate.
      * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
-     *
-     * @throws CertificateException if failed to generate a self-signed certificate
      */
-    public VirtualHostBuilder tlsSelfSigned() throws SSLException, CertificateException {
+    public VirtualHostBuilder tlsSelfSigned() {
         tlsSelfSigned = true;
+        return this;
+    }
+
+    /**
+     * Configures SSL or TLS of this {@link VirtualHost} with an auto-generated self-signed certificate.
+     * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
+     */
+    public VirtualHostBuilder tlsSelfSigned(boolean tlsSelfSigned) {
+        this.tlsSelfSigned = tlsSelfSigned;
         return this;
     }
 
@@ -383,19 +376,6 @@ public final class VirtualHostBuilder {
     public VirtualHostBuilder service(Route route,
                                       Service<HttpRequest, HttpResponse> service) {
         serviceConfigBuilders.add(new ServiceConfigBuilder(route, service));
-        return this;
-    }
-
-    /**
-     * Binds the specified {@link Service} at the specified {@link Route}.
-     *
-     * @deprecated Use a logging framework integration such as {@code RequestContextExportingAppender} in
-     *             {@code armeria-logback}.
-     */
-    @Deprecated
-    VirtualHostBuilder service(Route route, Service<HttpRequest, HttpResponse> service,
-                               String loggerName) {
-        serviceConfigBuilders.add(new ServiceConfigBuilder(route, service).loggerName(loggerName));
         return this;
     }
 
@@ -608,28 +588,49 @@ public final class VirtualHostBuilder {
         });
     }
 
-    VirtualHostBuilder serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder) {
+    VirtualHostBuilder addServiceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder) {
         serviceConfigBuilders.add(serviceConfigBuilder);
         return this;
     }
 
-    VirtualHostBuilder serviceConfigBuilders(List<ServiceConfigBuilder> serviceConfigBuilders) {
-        this.serviceConfigBuilders.addAll(serviceConfigBuilders);
-        return this;
-    }
-
-    List<ServiceConfigBuilder> serviceConfigBuilders() {
+    private List<ServiceConfigBuilder> getServiceConfigBuilders(
+            @Nullable VirtualHostBuilder defaultVirtualHostBuilder) {
+        final List<ServiceConfigBuilder> serviceConfigBuilders;
+        if (defaultVirtualHostBuilder != null) {
+            serviceConfigBuilders = ImmutableList.<ServiceConfigBuilder>builder()
+                                                 .addAll(this.serviceConfigBuilders)
+                                                 .addAll(defaultVirtualHostBuilder.serviceConfigBuilders)
+                                                 .build();
+        } else {
+            serviceConfigBuilders = ImmutableList.copyOf(this.serviceConfigBuilders);
+        }
         return serviceConfigBuilders;
     }
 
-    VirtualHostBuilder routeDecoratingService(RouteDecoratingService routeDecoratingService) {
+    VirtualHostBuilder addRouteDecoratingService(RouteDecoratingService routeDecoratingService) {
         routeDecoratingServices.add(routeDecoratingService);
         return this;
     }
 
-    VirtualHostBuilder routeDecoratingServices(List<RouteDecoratingService> routeDecoratingServices) {
-        this.routeDecoratingServices.addAll(routeDecoratingServices);
-        return this;
+    @Nullable
+    private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>>
+    getRouteDecoratingService(@Nullable VirtualHostBuilder defaultVirtualHostBuilder) {
+        final List<RouteDecoratingService> routeDecoratingServices;
+        if (defaultVirtualHostBuilder != null) {
+            routeDecoratingServices = ImmutableList.<RouteDecoratingService>builder()
+                    .addAll(this.routeDecoratingServices)
+                    .addAll(defaultVirtualHostBuilder.routeDecoratingServices)
+                    .build();
+        } else {
+            routeDecoratingServices = ImmutableList.copyOf(this.routeDecoratingServices);
+        }
+
+        if (!routeDecoratingServices.isEmpty()) {
+            return RouteDecoratingService.newDecorator(
+                    Routers.ofRouteDecoratingService(routeDecoratingServices));
+        } else {
+            return null;
+        }
     }
 
     /**
@@ -691,7 +692,7 @@ public final class VirtualHostBuilder {
         @SuppressWarnings("unchecked")
         final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> castDecorator =
                 (Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>>) decorator;
-        return routeDecoratingService(new RouteDecoratingService(route, castDecorator));
+        return addRouteDecoratingService(new RouteDecoratingService(route, castDecorator));
     }
 
     /**
@@ -758,7 +759,7 @@ public final class VirtualHostBuilder {
     /**
      * Sets the {@link RejectedRouteHandler} which will be invoked when an attempt to bind
      * a {@link Service} at a certain {@link Route} is rejected. If not set,
-     * {@link ServerBuilder#rejectedRouteHandler()} is used.
+     * {@link ServerBuilder#rejectedRouteHandler(RejectedRouteHandler)} ()} is used.
      */
     public VirtualHostBuilder rejectedRouteHandler(RejectedRouteHandler handler) {
         rejectedRouteHandler = requireNonNull(handler, "handler");
@@ -766,7 +767,7 @@ public final class VirtualHostBuilder {
     }
 
     /**
-     * Sets the timeout of a request. If not set, {@link ServerBuilder#requestTimeoutMillis()}
+     * Sets the timeout of a request. If not set, {@link ServerBuilder#requestTimeoutMillis(long)}
      * is used.
      *
      * @param requestTimeout the timeout. {@code 0} disables the timeout.
@@ -777,7 +778,7 @@ public final class VirtualHostBuilder {
 
     /**
      * Sets the timeout of a request in milliseconds. If not set,
-     * {@link ServerBuilder#requestTimeoutMillis()} is used.
+     * {@link ServerBuilder#requestTimeoutMillis(long)} is used.
      *
      * @param requestTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
      */
@@ -788,7 +789,7 @@ public final class VirtualHostBuilder {
 
     /**
      * Sets the maximum allowed length of the content decoded at the session layer.
-     * e.g. the content length of an HTTP request. If not set, {@link ServerBuilder#maxRequestLength()}
+     * e.g. the content length of an HTTP request. If not set, {@link ServerBuilder#maxRequestLength(long)}
      * is used.
      *
      * @param maxRequestLength the maximum allowed length. {@code 0} disables the length limit.
@@ -802,7 +803,7 @@ public final class VirtualHostBuilder {
      * Sets whether the verbose response mode is enabled. When enabled, the server responses will contain
      * the exception type and its full stack trace, which may be useful for debugging while potentially
      * insecure. When disabled, the server responses will not expose such server-side details to the client.
-     * If not set, {@link ServerBuilder#verboseResponses()} is used.
+     * If not set, {@link ServerBuilder#verboseResponses(boolean)} is used.
      */
     public VirtualHostBuilder verboseResponses(boolean verboseResponses) {
         this.verboseResponses = verboseResponses;
@@ -811,7 +812,7 @@ public final class VirtualHostBuilder {
 
     /**
      * Sets the {@link ContentPreviewerFactory} for a request of this {@link VirtualHost}. If not set,
-     * {@link ServerBuilder#requestContentPreviewerFactory()} is used.
+     * {@link ServerBuilder#requestContentPreviewerFactory(ContentPreviewerFactory)} is used.
      */
     public VirtualHostBuilder requestContentPreviewerFactory(ContentPreviewerFactory factory) {
         requestContentPreviewerFactory = requireNonNull(factory, "factory");
@@ -820,7 +821,7 @@ public final class VirtualHostBuilder {
 
     /**
      * Sets the {@link ContentPreviewerFactory} for a response of this {@link VirtualHost}. If not set,
-     * {@link ServerBuilder#responseContentPreviewerFactory()} is used.
+     * {@link ServerBuilder#responseContentPreviewerFactory(ContentPreviewerFactory)} is used.
      */
     public VirtualHostBuilder responseContentPreviewerFactory(ContentPreviewerFactory factory) {
         responseContentPreviewerFactory = requireNonNull(factory, "factory");
@@ -874,7 +875,7 @@ public final class VirtualHostBuilder {
 
     /**
      * Sets the access log writer of this {@link VirtualHost}. If not set,
-     * {@link ServerBuilder#accessLogWriter()} is used.
+     * {@link ServerBuilder#accessLogWriter(AccessLogWriter, boolean)} is used.
      *
      * @param shutdownOnStop whether to shut down the {@link AccessLogWriter} when the {@link Server} stops
      */
@@ -888,7 +889,9 @@ public final class VirtualHostBuilder {
      * Returns a newly-created {@link VirtualHost} based on the properties of this builder and the services
      * added to this builder.
      */
-    VirtualHost build() {
+    VirtualHost build(VirtualHostBuilder template) {
+        requireNonNull(template, "template");
+
         if (defaultHostname == null) {
             if ("*".equals(hostnamePattern)) {
                 defaultHostname = SystemInfo.hostname();
@@ -901,21 +904,25 @@ public final class VirtualHostBuilder {
             ensureHostnamePatternMatchesDefaultHostname(hostnamePattern, defaultHostname);
         }
 
-        final long requestTimeout = requestTimeoutMillis != null ? requestTimeoutMillis
-                                                                 : serverBuilder.requestTimeoutMillis();
-        final long maxRequest = maxRequestLength != null ? maxRequestLength
-                                                         : serverBuilder.maxRequestLength();
-        final boolean verboseResponses = this.verboseResponses != null ? this.verboseResponses
-                                                                       : serverBuilder.verboseResponses();
+        // Retrieve all settings as a local copy. Use default builder's properties if not set.
+        final long requestTimeoutMillis =
+                this.requestTimeoutMillis != null ?
+                this.requestTimeoutMillis : template.requestTimeoutMillis;
+        final long maxRequestLength =
+                this.maxRequestLength != null ?
+                this.maxRequestLength : template.maxRequestLength;
+        final boolean verboseResponses =
+                this.verboseResponses != null ?
+                this.verboseResponses : template.verboseResponses;
         final ContentPreviewerFactory requestContentPreviewerFactory =
                 this.requestContentPreviewerFactory != null ?
-                this.requestContentPreviewerFactory : serverBuilder.requestContentPreviewerFactory();
+                this.requestContentPreviewerFactory : template.requestContentPreviewerFactory;
         final ContentPreviewerFactory responseContentPreviewerFactory =
                 this.responseContentPreviewerFactory != null ?
-                this.responseContentPreviewerFactory : serverBuilder.responseContentPreviewerFactory();
+                this.responseContentPreviewerFactory : template.responseContentPreviewerFactory;
         final RejectedRouteHandler rejectedRouteHandler =
                 this.rejectedRouteHandler != null ?
-                this.rejectedRouteHandler : serverBuilder.rejectedRouteHandler();
+                this.rejectedRouteHandler : template.rejectedRouteHandler;
 
         final AccessLogWriter accessLogWriter;
         final boolean shutdownAccessLogWriterOnStop;
@@ -923,60 +930,50 @@ public final class VirtualHostBuilder {
             accessLogWriter = this.accessLogWriter;
             shutdownAccessLogWriterOnStop = this.shutdownAccessLogWriterOnStop;
         } else {
-            accessLogWriter = serverBuilder.accessLogWriter();
-            shutdownAccessLogWriterOnStop = serverBuilder.shutdownAccessLogWriterOnStop();
+            accessLogWriter = template.accessLogWriter;
+            shutdownAccessLogWriterOnStop = template.shutdownAccessLogWriterOnStop;
         }
 
-        final List<ServiceConfig> serviceConfigs = serviceConfigBuilders.stream().map(cfgBuilder -> {
-            if (cfgBuilder.requestTimeoutMillis() == null) {
-                cfgBuilder.requestTimeoutMillis(requestTimeout);
-            }
-            if (cfgBuilder.maxRequestLength() == null) {
-                cfgBuilder.maxRequestLength(maxRequest);
-            }
-            if (cfgBuilder.verboseResponses() == null) {
-                cfgBuilder.verboseResponses(verboseResponses);
-            }
-            if (cfgBuilder.requestContentPreviewerFactory() == null) {
-                cfgBuilder.requestContentPreviewerFactory(requestContentPreviewerFactory);
-            }
-            if (cfgBuilder.responseContentPreviewerFactory() == null) {
-                cfgBuilder.responseContentPreviewerFactory(responseContentPreviewerFactory);
-            }
-            if (cfgBuilder.accessLogWriter() == null) {
-                cfgBuilder.accessLogWriter(accessLogWriter, shutdownAccessLogWriterOnStop);
-            }
+        final Function<VirtualHost, Logger> accessLoggerMapper =
+                this.accessLoggerMapper != null ?
+                this.accessLoggerMapper : template.accessLoggerMapper;
 
-            return cfgBuilder.build();
+        assert requestContentPreviewerFactory != null;
+        assert responseContentPreviewerFactory != null;
+        assert rejectedRouteHandler != null;
+        assert accessLogWriter != null;
+        assert accessLoggerMapper != null;
+
+        final List<ServiceConfigBuilder> serviceConfigBuilders =
+                getServiceConfigBuilders(template);
+        final List<ServiceConfig> serviceConfigs = serviceConfigBuilders.stream().map(cfgBuilder -> {
+            return cfgBuilder.build(requestTimeoutMillis, maxRequestLength, verboseResponses,
+                                    requestContentPreviewerFactory, responseContentPreviewerFactory,
+                                    accessLogWriter, shutdownAccessLogWriterOnStop);
         }).collect(toImmutableList());
 
+        SslContext sslContext = this.sslContext != null ? this.sslContext : template.sslContext;
+        final boolean tlsSelfSigned = this.tlsSelfSigned != null ? this.tlsSelfSigned : template.tlsSelfSigned;
         if (sslContext == null && tlsSelfSigned) {
             try {
                 final SelfSignedCertificate ssc = new SelfSignedCertificate(defaultHostname);
                 tls(ssc.certificate(), ssc.privateKey());
+                sslContext = this.sslContext;
             } catch (Exception e) {
                 throw new RuntimeException("failed to create a self signed certificate", e);
             }
         }
 
-        final Function<VirtualHost, Logger> accessLoggerMapper =
-                this.accessLoggerMapper != null ? this.accessLoggerMapper : serverBuilder.accessLoggerMapper();
-
-        final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
-        if (!routeDecoratingServices.isEmpty()) {
-            decorator = RouteDecoratingService.newDecorator(
-                    Routers.ofRouteDecoratingService(routeDecoratingServices));
-        } else {
-            decorator = null;
-        }
-
         final VirtualHost virtualHost =
                 new VirtualHost(defaultHostname, hostnamePattern, sslContext, serviceConfigs,
                                 rejectedRouteHandler,
-                                accessLoggerMapper, requestTimeout, maxRequest,
+                                accessLoggerMapper, requestTimeoutMillis, maxRequestLength,
                                 verboseResponses, requestContentPreviewerFactory,
                                 responseContentPreviewerFactory, accessLogWriter,
                                 shutdownAccessLogWriterOnStop);
+
+        final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator =
+                getRouteDecoratingService(template);
         return decorator != null ? virtualHost.decorate(decorator) : virtualHost;
     }
 

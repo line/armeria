@@ -118,7 +118,7 @@ interface ServiceConfigSetters {
     ServiceConfigSetters accessLogFormat(String accessLogFormat);
 
     /**
-     * Sets the access log writer of this {@link Service}. If not set, {@link ServerConfig#accessLogWriter()}
+     * Sets the access log writer of this {@link Service}. If not set, {@link VirtualHost#accessLogWriter()}
      * is used.
      *
      * @param shutdownOnStop whether to shut down the {@link AccessLogWriter} when the {@link Server} stops

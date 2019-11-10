@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.server.ServerConfig.validateMaxRequestLength;
-import static com.linecorp.armeria.server.ServerConfig.validateRequestTimeoutMillis;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
@@ -112,6 +110,21 @@ public final class ServiceConfig {
         return value;
     }
 
+    static long validateRequestTimeoutMillis(long requestTimeoutMillis) {
+        if (requestTimeoutMillis < 0) {
+            throw new IllegalArgumentException(
+                    "requestTimeoutMillis: " + requestTimeoutMillis + " (expected: >= 0)");
+        }
+        return requestTimeoutMillis;
+    }
+
+    static long validateMaxRequestLength(long maxRequestLength) {
+        if (maxRequestLength < 0) {
+            throw new IllegalArgumentException("maxRequestLength: " + maxRequestLength + " (expected: >= 0)");
+        }
+        return maxRequestLength;
+    }
+
     ServiceConfig withVirtualHost(VirtualHost virtualHost) {
         requireNonNull(virtualHost, "virtualHost");
         return new ServiceConfig(virtualHost, route, service, loggerName, requestTimeoutMillis,
@@ -174,6 +187,8 @@ public final class ServiceConfig {
 
     /**
      * Returns the timeout of a request.
+     *
+     * @see VirtualHost#requestTimeoutMillis()
      */
     public long requestTimeoutMillis() {
         return requestTimeoutMillis;
@@ -182,6 +197,8 @@ public final class ServiceConfig {
     /**
      * Returns the maximum allowed length of the content decoded at the session layer.
      * e.g. the content length of an HTTP request.
+     *
+     * @see VirtualHost#maxRequestLength()
      */
     public long maxRequestLength() {
         return maxRequestLength;
@@ -191,6 +208,8 @@ public final class ServiceConfig {
      * Returns whether the verbose response mode is enabled. When enabled, the service response will contain
      * the exception type and its full stack trace, which may be useful for debugging while potentially
      * insecure. When disabled, the service response will not expose such server-side details to the client.
+     *
+     * @see VirtualHost#verboseResponses()
      */
     public boolean verboseResponses() {
         return verboseResponses;
@@ -199,6 +218,8 @@ public final class ServiceConfig {
     /**
      * Returns the {@link ContentPreviewerFactory} used for creating a new {@link ContentPreviewer}
      * which produces the request content preview of this {@link Service}.
+     *
+     * @see VirtualHost#requestContentPreviewerFactory()
      */
     public ContentPreviewerFactory requestContentPreviewerFactory() {
         return requestContentPreviewerFactory;
@@ -207,6 +228,8 @@ public final class ServiceConfig {
     /**
      * Returns the {@link ContentPreviewerFactory} used for creating a new {@link ContentPreviewer}
      * which produces the response content preview of this {@link Service}.
+     *
+     * @see VirtualHost#responseContentPreviewerFactory()
      */
     public ContentPreviewerFactory responseContentPreviewerFactory() {
         return responseContentPreviewerFactory;
@@ -214,6 +237,8 @@ public final class ServiceConfig {
 
     /**
      * Returns the access log writer.
+     *
+     * @see VirtualHost#accessLogWriter()
      */
     public AccessLogWriter accessLogWriter() {
         return accessLogWriter;
@@ -221,6 +246,8 @@ public final class ServiceConfig {
 
     /**
      * Tells whether the {@link AccessLogWriter} is shut down when the {@link Server} stops.
+     *
+     * @see VirtualHost#shutdownAccessLogWriterOnStop()
      */
     public boolean shutdownAccessLogWriterOnStop() {
         return shutdownAccessLogWriterOnStop;

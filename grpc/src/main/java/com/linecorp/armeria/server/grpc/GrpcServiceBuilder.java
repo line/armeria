@@ -43,8 +43,9 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.server.ServiceWithRoutes;
+import com.linecorp.armeria.server.VirtualHost;
+import com.linecorp.armeria.server.VirtualHostBuilder;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
@@ -183,10 +184,12 @@ public final class GrpcServiceBuilder {
 
     /**
      * Sets the maximum size in bytes of an individual incoming message. If not set, will use
-     * {@link ServerConfig#maxRequestLength()}. To support long-running RPC streams, it is recommended to
-     * set {@link ServerBuilder#maxRequestLength(long)} and
-     * {@link ServerBuilder#requestTimeoutMillis(long)} to very high values and set this to the expected
-     * limit of individual messages in the stream.
+     * {@link VirtualHost#maxRequestLength()}. To support long-running RPC streams, it is recommended to
+     * set {@link ServerBuilder#maxRequestLength(long)}
+     * (or {@link VirtualHostBuilder#maxRequestLength(long)})
+     * and {@link ServerBuilder#requestTimeoutMillis(long)}
+     * (or {@link VirtualHostBuilder#requestTimeoutMillis(long)})
+     * to very high values and set this to the expected limit of individual messages in the stream.
      */
     public GrpcServiceBuilder setMaxInboundMessageSizeBytes(int maxInboundMessageSizeBytes) {
         checkArgument(maxInboundMessageSizeBytes > 0,

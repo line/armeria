@@ -452,14 +452,18 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private void handleOptions(ChannelHandlerContext ctx, DecodedHttpRequest req) {
         respond(ctx,
                 newEarlyRespondingRequestContext(ctx, req, req.path(), null),
-                config.accessLogWriter(), ResponseHeaders.builder(HttpStatus.OK)
-                                                         .add(HttpHeaderNames.ALLOW, ALLOWED_METHODS_STRING),
+                // FIXME(trustin): Use a different accessLogWriter for a different host.
+                config.defaultVirtualHost().accessLogWriter(),
+                ResponseHeaders.builder(HttpStatus.OK)
+                               .add(HttpHeaderNames.ALLOW, ALLOWED_METHODS_STRING),
                 null, null);
     }
 
     private void rejectInvalidPath(ChannelHandlerContext ctx, DecodedHttpRequest req) {
         // Reject requests without a valid path.
-        respond(ctx, config.accessLogWriter(), req, HttpStatus.BAD_REQUEST, DATA_INVALID_REQUEST_PATH,
+        // FIXME(trustin): Use a different accessLogWriter for a different host.
+        respond(ctx, config.defaultVirtualHost().accessLogWriter(), req,
+                HttpStatus.BAD_REQUEST, DATA_INVALID_REQUEST_PATH,
                 new ProtocolViolationException(MSG_INVALID_REQUEST_PATH));
     }
 

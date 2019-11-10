@@ -83,7 +83,7 @@ public final class VirtualHost {
     private final ContentPreviewerFactory requestContentPreviewerFactory;
     private final ContentPreviewerFactory responseContentPreviewerFactory;
     private final AccessLogWriter accessLogWriter;
-    private boolean shutdownAccessLogWriterOnStop;
+    private final boolean shutdownAccessLogWriterOnStop;
 
     VirtualHost(String defaultHostname, String hostnamePattern,
                 @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
@@ -260,7 +260,6 @@ public final class VirtualHost {
      * @deprecated Use {@link #requestTimeoutMillis()}.
      *
      * @see ServiceConfig#requestTimeoutMillis()
-     * @see ServerConfig#requestTimeoutMillis()
      */
     @Deprecated
     public long defaultRequestTimeoutMillis() {
@@ -271,7 +270,6 @@ public final class VirtualHost {
      * Returns the timeout of a request.
      *
      * @see ServiceConfig#requestTimeoutMillis()
-     * @see ServerConfig#requestTimeoutMillis()
      */
     public long requestTimeoutMillis() {
         return requestTimeoutMillis;
@@ -284,7 +282,6 @@ public final class VirtualHost {
      * @deprecated Use {@link #maxRequestLength()}.
      *
      * @see ServiceConfig#maxRequestLength()
-     * @see ServerConfig#maxRequestLength()
      */
     @Deprecated
     public long defaultMaxRequestLength() {
@@ -296,7 +293,6 @@ public final class VirtualHost {
      * e.g. the content length of an HTTP request.
      *
      * @see ServiceConfig#maxRequestLength()
-     * @see ServerConfig#maxRequestLength()
      */
     public long maxRequestLength() {
         return maxRequestLength;
@@ -308,7 +304,6 @@ public final class VirtualHost {
      * insecure. When disabled, the server responses will not expose such server-side details to the client.
      *
      * @see ServiceConfig#verboseResponses()
-     * @see ServerConfig#verboseResponses()
      */
     public boolean verboseResponses() {
         return verboseResponses;
@@ -336,6 +331,8 @@ public final class VirtualHost {
 
     /**
      * Returns the access log writer.
+     *
+     * @see ServiceConfig#accessLogWriter()
      */
     public AccessLogWriter accessLogWriter() {
         return accessLogWriter;
@@ -343,6 +340,8 @@ public final class VirtualHost {
 
     /**
      * Tells whether the {@link AccessLogWriter} is shut down when the {@link Server} stops.
+     *
+     * @see ServiceConfig#shutdownAccessLogWriterOnStop()
      */
     public boolean shutdownAccessLogWriterOnStop() {
         return shutdownAccessLogWriterOnStop;
