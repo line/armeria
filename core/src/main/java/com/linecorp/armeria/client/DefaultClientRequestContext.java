@@ -87,7 +87,7 @@ public class DefaultClientRequestContext extends NonWrappingRequestContext imple
     private long writeTimeoutMillis;
     private long responseTimeoutMillis;
     @Nullable
-    private Runnable responseTimeoutHandler;
+    private volatile Runnable responseTimeoutHandler;
     private long maxResponseLength;
 
     @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalRequestHeadersUpdater`
