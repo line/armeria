@@ -38,13 +38,13 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
     /**
      * An undefined {@link URI} to create {@link HttpClient} without specifying {@link URI}.
      */
-    private static final URI UNDEFINED_URI = URI.create("none+http://undefined");
+    private static final URI UNDEFINED_URI = URI.create("http://undefined");
 
     /**
      * Returns {@code true} if the specified {@code uri} is an undefined {@link URI}.
      */
     static boolean isUndefinedUri(URI uri) {
-        return UNDEFINED_URI == uri;
+        return UNDEFINED_URI.equals(uri);
     }
 
     @Nullable
