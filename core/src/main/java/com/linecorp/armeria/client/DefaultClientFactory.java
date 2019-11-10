@@ -174,7 +174,7 @@ final class DefaultClientFactory extends AbstractClientFactory {
         clientFactoriesToClose.forEach(ClientFactory::close);
     }
 
-    private URI normalizeUri(final URI uri, final Scheme scheme) {
+    private URI normalizeUri(URI uri, Scheme scheme) {
         if (scheme.serializationFormat() != SerializationFormat.NONE) {
             return uri;
         }
