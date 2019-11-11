@@ -690,7 +690,7 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         @Override
         public void abort(Throwable cause) {
             requireNonNull(cause, "cause");
-            abort(() -> cause);
+            abort0(() -> cause);
         }
 
         @Override

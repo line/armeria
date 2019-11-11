@@ -74,8 +74,8 @@ abstract class HttpResponseDecoder {
             int id, @Nullable HttpRequest req, DecodedHttpResponse res, RequestLogBuilder logBuilder,
             long responseTimeoutMillis, long maxContentLength) {
 
-        final HttpResponseWrapper newRes = new HttpResponseWrapper(
-                req, res, logBuilder, responseTimeoutMillis, maxContentLength);
+        final HttpResponseWrapper newRes =
+                new HttpResponseWrapper(req, res, logBuilder, responseTimeoutMillis, maxContentLength);
         final HttpResponseWrapper oldRes = responses.put(id, newRes);
 
         assert oldRes == null : "addResponse(" + id + ", " + res + ", " + responseTimeoutMillis + "): " +
