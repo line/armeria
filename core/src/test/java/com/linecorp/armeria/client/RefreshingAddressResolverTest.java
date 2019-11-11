@@ -214,7 +214,7 @@ class RefreshingAddressResolverTest {
                 final Future<InetSocketAddress> future = resolver.resolve(
                         InetSocketAddress.createUnresolved("foo.com", 36462));
                 await().until(future::isDone);
-                assertThat(future.cause()).isExactlyInstanceOf(UnknownHostException.class);
+                assertThat(future.cause()).isInstanceOf(UnknownHostException.class);
             }
         }
     }
@@ -256,7 +256,7 @@ class RefreshingAddressResolverTest {
                 final Future<InetSocketAddress> future = resolver.resolve(
                         InetSocketAddress.createUnresolved("foo.com", 36462));
                 await().until(future::isDone);
-                assertThat(future.cause()).isExactlyInstanceOf(UnknownHostException.class);
+                assertThat(future.cause()).isInstanceOf(UnknownHostException.class);
 
                 final ConcurrentMap<String, CompletableFuture<CacheEntry>> cache = group.cache();
                 assertThat(cache.size()).isZero();
@@ -264,7 +264,7 @@ class RefreshingAddressResolverTest {
                 final Future<InetSocketAddress> future2 = resolver.resolve(
                         InetSocketAddress.createUnresolved("foo.com", 36462));
                 await().until(future2::isDone);
-                assertThat(future.cause()).isExactlyInstanceOf(UnknownHostException.class);
+                assertThat(future.cause()).isInstanceOf(UnknownHostException.class);
                 assertThat(cache.size()).isOne();
             }
         }
