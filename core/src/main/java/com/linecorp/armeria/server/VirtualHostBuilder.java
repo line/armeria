@@ -758,8 +758,8 @@ public final class VirtualHostBuilder {
 
     /**
      * Sets the {@link RejectedRouteHandler} which will be invoked when an attempt to bind
-     * a {@link Service} at a certain {@link Route} is rejected. If not set,
-     * {@link ServerBuilder#rejectedRouteHandler(RejectedRouteHandler)} ()} is used.
+     * a {@link Service} at a certain {@link Route} is rejected. If not set, the {@link RejectedRouteHandler}
+     * set via{@link ServerBuilder#rejectedRouteHandler(RejectedRouteHandler)} is used.
      */
     public VirtualHostBuilder rejectedRouteHandler(RejectedRouteHandler handler) {
         rejectedRouteHandler = requireNonNull(handler, "handler");
@@ -767,8 +767,8 @@ public final class VirtualHostBuilder {
     }
 
     /**
-     * Sets the timeout of a request. If not set, {@link ServerBuilder#requestTimeoutMillis(long)}
-     * is used.
+     * Sets the timeout of a request. If not set, the value set via
+     * {@link ServerBuilder#requestTimeoutMillis(long)} is used.
      *
      * @param requestTimeout the timeout. {@code 0} disables the timeout.
      */
@@ -777,7 +777,7 @@ public final class VirtualHostBuilder {
     }
 
     /**
-     * Sets the timeout of a request in milliseconds. If not set,
+     * Sets the timeout of a request in milliseconds. If not set, the value set via
      * {@link ServerBuilder#requestTimeoutMillis(long)} is used.
      *
      * @param requestTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
@@ -789,8 +789,8 @@ public final class VirtualHostBuilder {
 
     /**
      * Sets the maximum allowed length of the content decoded at the session layer.
-     * e.g. the content length of an HTTP request. If not set, {@link ServerBuilder#maxRequestLength(long)}
-     * is used.
+     * e.g. the content length of an HTTP request. If not set, the value set via
+     * {@link ServerBuilder#maxRequestLength(long)} is used.
      *
      * @param maxRequestLength the maximum allowed length. {@code 0} disables the length limit.
      */
@@ -803,7 +803,7 @@ public final class VirtualHostBuilder {
      * Sets whether the verbose response mode is enabled. When enabled, the server responses will contain
      * the exception type and its full stack trace, which may be useful for debugging while potentially
      * insecure. When disabled, the server responses will not expose such server-side details to the client.
-     * If not set, {@link ServerBuilder#verboseResponses(boolean)} is used.
+     * If not set, the value set via {@link ServerBuilder#verboseResponses(boolean)} is used.
      */
     public VirtualHostBuilder verboseResponses(boolean verboseResponses) {
         this.verboseResponses = verboseResponses;
@@ -812,6 +812,7 @@ public final class VirtualHostBuilder {
 
     /**
      * Sets the {@link ContentPreviewerFactory} for a request of this {@link VirtualHost}. If not set,
+     * the {@link ContentPreviewerFactory} ser via
      * {@link ServerBuilder#requestContentPreviewerFactory(ContentPreviewerFactory)} is used.
      */
     public VirtualHostBuilder requestContentPreviewerFactory(ContentPreviewerFactory factory) {
@@ -821,6 +822,7 @@ public final class VirtualHostBuilder {
 
     /**
      * Sets the {@link ContentPreviewerFactory} for a response of this {@link VirtualHost}. If not set,
+     * the {@link ContentPreviewerFactory} set via
      * {@link ServerBuilder#responseContentPreviewerFactory(ContentPreviewerFactory)} is used.
      */
     public VirtualHostBuilder responseContentPreviewerFactory(ContentPreviewerFactory factory) {
@@ -874,7 +876,7 @@ public final class VirtualHostBuilder {
     }
 
     /**
-     * Sets the access log writer of this {@link VirtualHost}. If not set,
+     * Sets the access log writer of this {@link VirtualHost}. If not set, the {@link AccessLogWriter} set via
      * {@link ServerBuilder#accessLogWriter(AccessLogWriter, boolean)} is used.
      *
      * @param shutdownOnStop whether to shut down the {@link AccessLogWriter} when the {@link Server} stops
