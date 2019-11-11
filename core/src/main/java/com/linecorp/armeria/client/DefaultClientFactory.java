@@ -188,7 +188,7 @@ final class DefaultClientFactory extends AbstractClientFactory {
             return uri;
         }
 
-        return URI.create(scheme.sessionProtocol() + "://" +
+        return URI.create(scheme.sessionProtocol() +
                           uri.toString().substring(uri.getScheme().length()));
     }
 }
