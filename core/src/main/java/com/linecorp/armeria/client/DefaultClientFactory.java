@@ -175,6 +175,10 @@ final class DefaultClientFactory extends AbstractClientFactory {
     }
 
     private URI normalizeUri(URI uri, Scheme scheme) {
+        if (uri == HttpClientBuilder.UNDEFINED_URI) {
+            // See https://github.com/line/armeria/pull/2241 discussion for more details.
+            return uri;
+        }
         if (scheme.serializationFormat() != SerializationFormat.NONE) {
             return uri;
         }
