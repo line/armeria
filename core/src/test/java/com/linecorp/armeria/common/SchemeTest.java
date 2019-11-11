@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 import java.util.Optional;
 
-import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -37,25 +36,19 @@ class SchemeTest {
     @Test
     void tryParse_add_none() {
         final Optional<Scheme> got = Scheme.tryParse("http");
-        final Condition<Scheme> condition = new Condition<>(scheme ->
-                                                                    (scheme.sessionProtocol() ==
-                                                                     SessionProtocol.HTTP) &&
-                                                                    (scheme.serializationFormat() ==
-                                                                     SerializationFormat.NONE),
-                                                            "none+http");
-        assertThat(got).hasValueSatisfying(condition);
+        assertThat(got).hasValueSatisfying(scheme -> {
+            assertThat(scheme.sessionProtocol()).isEqualTo(SessionProtocol.HTTP);
+            assertThat(scheme.serializationFormat()).isEqualTo(SerializationFormat.NONE);
+        });
     }
 
     @Test
     void tryParse_with_none() {
         final Optional<Scheme> got = Scheme.tryParse("http+none");
-        final Condition<Scheme> condition = new Condition<>(scheme ->
-                                                                    (scheme.sessionProtocol() ==
-                                                                     SessionProtocol.HTTP) &&
-                                                                    (scheme.serializationFormat() ==
-                                                                     SerializationFormat.NONE),
-                                                            "none+http");
-        assertThat(got).hasValueSatisfying(condition);
+        assertThat(got).hasValueSatisfying(scheme -> {
+            assertThat(scheme.sessionProtocol()).isEqualTo(SessionProtocol.HTTP);
+            assertThat(scheme.serializationFormat()).isEqualTo(SerializationFormat.NONE);
+        });
     }
 
     @Test

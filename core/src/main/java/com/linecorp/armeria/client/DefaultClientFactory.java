@@ -188,9 +188,7 @@ final class DefaultClientFactory extends AbstractClientFactory {
             return uri;
         }
 
-        final String newScheme = uri.getScheme()
-                                    .replace(SerializationFormat.NONE.uriText(), "")
-                                    .replace("+", "");
-        return URI.create(newScheme + uri.toString().substring(uri.getScheme().length()));
+        return URI.create(scheme.sessionProtocol() + "://" +
+                          uri.toString().substring(uri.getScheme().length()));
     }
 }
