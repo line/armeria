@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import java.util.function.Supplier;
-
 import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
@@ -71,13 +69,10 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
     @Override
     HttpResponseWrapper addResponse(
             int id, @Nullable HttpRequest req, DecodedHttpResponse res, RequestLogBuilder logBuilder,
-            long responseTimeoutMillis, Supplier<Runnable> responseTimeoutHandlerSupplier,
-            long maxContentLength) {
+            long responseTimeoutMillis, long maxContentLength) {
 
         final HttpResponseWrapper resWrapper =
-                super.addResponse(id, req, res, logBuilder, responseTimeoutMillis,
-                                  responseTimeoutHandlerSupplier,
-                                  maxContentLength);
+                super.addResponse(id, req, res, logBuilder, responseTimeoutMillis, maxContentLength);
 
         resWrapper.completionFuture().handle((unused, cause) -> {
             final EventLoop eventLoop = channel().eventLoop();

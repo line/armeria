@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamWriter;
@@ -71,11 +72,10 @@ abstract class HttpResponseDecoder {
 
     HttpResponseWrapper addResponse(
             int id, @Nullable HttpRequest req, DecodedHttpResponse res, RequestLogBuilder logBuilder,
-            long responseTimeoutMillis, Supplier<Runnable> responseTimeoutHandlerSupplier,
-            long maxContentLength) {
+            long responseTimeoutMillis, long maxContentLength) {
 
         final HttpResponseWrapper newRes = new HttpResponseWrapper(
-                req, res, logBuilder, responseTimeoutMillis, responseTimeoutHandlerSupplier, maxContentLength);
+                req, res, logBuilder, responseTimeoutMillis, maxContentLength);
         final HttpResponseWrapper oldRes = responses.put(id, newRes);
 
         assert oldRes == null : "addResponse(" + id + ", " + res + ", " + responseTimeoutMillis + "): " +
@@ -142,7 +142,6 @@ abstract class HttpResponseDecoder {
         private final DecodedHttpResponse delegate;
         private final RequestLogBuilder logBuilder;
         private final long responseTimeoutMillis;
-        private final Supplier<Runnable> responseTimeoutHandlerSupplier;
         private final long maxContentLength;
         @Nullable
         private ScheduledFuture<?> responseTimeoutFuture;
@@ -152,13 +151,11 @@ abstract class HttpResponseDecoder {
         private State state = State.WAIT_NON_INFORMATIONAL;
 
         HttpResponseWrapper(@Nullable HttpRequest request, DecodedHttpResponse delegate,
-                            RequestLogBuilder logBuilder, long responseTimeoutMillis,
-                            Supplier<Runnable> responseTimeoutHandlerSupplier, long maxContentLength) {
+                            RequestLogBuilder logBuilder, long responseTimeoutMillis, long maxContentLength) {
             this.request = request;
             this.delegate = delegate;
             this.logBuilder = logBuilder;
             this.responseTimeoutMillis = responseTimeoutMillis;
-            this.responseTimeoutHandlerSupplier = responseTimeoutHandlerSupplier;
             this.maxContentLength = maxContentLength;
         }
 
@@ -196,7 +193,14 @@ abstract class HttpResponseDecoder {
 
         @Override
         public void run() {
-            final Runnable responseTimeoutHandler = responseTimeoutHandlerSupplier.get();
+            final Runnable responseTimeoutHandler;
+            if (logBuilder != RequestLogBuilder.NOOP) {
+                responseTimeoutHandler =
+                        ((ClientRequestContext) ((RequestLog) logBuilder).context()).responseTimeoutHandler();
+            } else {
+               responseTimeoutHandler = null;
+            }
+
             if (responseTimeoutHandler != null) {
                 responseTimeoutHandler.run();
             } else {
@@ -282,7 +286,7 @@ abstract class HttpResponseDecoder {
             } else if (request.completionCause() != null) {
                 closeCause = request.completionCause();
             } else {
-               closeCause = cause;
+                closeCause = cause;
             }
             close(closeCause, this::closeAction);
         }
