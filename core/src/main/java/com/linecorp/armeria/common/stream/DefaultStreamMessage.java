@@ -29,9 +29,6 @@ import javax.annotation.Nullable;
 import org.jctools.queues.MpscChunkedArrayQueue;
 import org.reactivestreams.Subscriber;
 
-import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.util.Sampler;
-
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
@@ -213,15 +210,13 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
                                @Nullable Supplier<? extends Throwable> causeSupplier) {
         if (setState(State.OPEN, State.CLEANUP)) {
             final CloseEvent closeEvent;
-            final Sampler<Class<? extends Throwable>> sampler = Flags.verboseExceptionSampler();
             if (cancel) {
-                if (sampler.isSampled(CancelledSubscriptionException.class)) {
-                    final CancelledSubscriptionException cancelCause = new CancelledSubscriptionException();
-                    setCompletionCause(cancelCause);
-                    closeEvent = new CloseEvent(cancelCause);
-                } else {
-                    setCompletionCause(CancelledSubscriptionException.INSTANCE);
+                final CancelledSubscriptionException cancelCause = CancelledSubscriptionException.get();
+                setCompletionCause(cancelCause);
+                if (cancelCause == CancelledSubscriptionException.INSTANCE) {
                     closeEvent = CANCELLED_CLOSE;
+                } else {
+                    closeEvent = new CloseEvent(cancelCause);
                 }
             } else {
                 // causeSupplier should not be null if cancel is false

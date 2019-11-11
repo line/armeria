@@ -25,9 +25,6 @@ import javax.annotation.Nullable;
 
 import org.reactivestreams.Subscriber;
 
-import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.util.Sampler;
-
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
@@ -162,16 +159,13 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
 
     private void cancelOrAbort(boolean cancel, @Nullable Supplier<? extends Throwable> causeSupplier) {
         final CloseEvent closeEvent;
-        final Sampler<Class<? extends Throwable>> sampler = Flags.verboseExceptionSampler();
         if (cancel) {
-            final boolean sampled = sampler.isSampled(CancelledSubscriptionException.class);
-            if (sampled) {
-                final Throwable cancelCause = new CancelledSubscriptionException();
-                setCompletionCause(cancelCause);
-                closeEvent = new CloseEvent(cancelCause);
-            } else {
-                setCompletionCause(CancelledSubscriptionException.INSTANCE);
+            final Throwable cancelCause = CancelledSubscriptionException.get();
+            setCompletionCause(cancelCause);
+            if (cancelCause == CancelledSubscriptionException.INSTANCE) {
                 closeEvent = CANCELLED_CLOSE;
+            } else {
+                closeEvent = new CloseEvent(cancelCause);
             }
         } else {
             // causeSupplier should not be null if cancel == false
@@ -182,6 +176,7 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
                         this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, false, false);
                 subscriptionUpdater.compareAndSet(this, null, newSubscription);
             }
+
             setCompletionCause(cause);
             if (cause == AbortedStreamException.INSTANCE) {
                 closeEvent = ABORTED_CLOSE;
