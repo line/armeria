@@ -759,7 +759,7 @@ public final class VirtualHostBuilder {
     /**
      * Sets the {@link RejectedRouteHandler} which will be invoked when an attempt to bind
      * a {@link Service} at a certain {@link Route} is rejected. If not set, the {@link RejectedRouteHandler}
-     * set via{@link ServerBuilder#rejectedRouteHandler(RejectedRouteHandler)} is used.
+     * set via {@link ServerBuilder#rejectedRouteHandler(RejectedRouteHandler)} is used.
      */
     public VirtualHostBuilder rejectedRouteHandler(RejectedRouteHandler handler) {
         rejectedRouteHandler = requireNonNull(handler, "handler");
