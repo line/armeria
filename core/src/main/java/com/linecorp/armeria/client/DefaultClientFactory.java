@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.client.HttpClientBuilder.isUndefinedUri;
+
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
@@ -175,7 +177,7 @@ final class DefaultClientFactory extends AbstractClientFactory {
     }
 
     private URI normalizeUri(URI uri, Scheme scheme) {
-        if (HttpClientBuilder.isUndefinedUri(uri)) {
+        if (isUndefinedUri(uri)) {
             // See https://github.com/line/armeria/pull/2241 discussion for more details.
             return uri;
         }
