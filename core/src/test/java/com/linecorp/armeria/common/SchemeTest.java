@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Test for {@link Scheme}.
  */
-public class SchemeTest {
+class SchemeTest {
 
     @Test
     public void tryParse_null() {
@@ -34,26 +34,26 @@ public class SchemeTest {
     }
 
     @Test
-    public void tryParse_add_none() {
+    void tryParse_add_none() {
         final Optional<Scheme> got = Scheme.tryParse("http");
         assertThat(got.get().serializationFormat()).isEqualTo(SerializationFormat.NONE);
         assertThat(got.get().sessionProtocol()).isEqualTo(SessionProtocol.HTTP);
     }
 
     @Test
-    public void tryParse_with_none() {
+    void tryParse_with_none() {
         final Optional<Scheme> got = Scheme.tryParse("http+none");
         assertThat(got.get().serializationFormat()).isEqualTo(SerializationFormat.NONE);
         assertThat(got.get().sessionProtocol()).isEqualTo(SessionProtocol.HTTP);
     }
 
     @Test
-    public void parse_null() {
+    void parse_null() {
         assertThatCode(() -> Scheme.parse(null)).isInstanceOf(NullPointerException.class);
     }
 
     @Test
-    public void parse_exception() {
+    void parse_exception() {
         assertThatCode(() -> Scheme.parse("http+blah")).isInstanceOf(IllegalArgumentException.class)
                                                        .hasMessageContaining("scheme: http+blah");
     }

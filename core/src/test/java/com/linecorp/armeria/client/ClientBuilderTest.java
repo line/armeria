@@ -21,22 +21,25 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 import org.junit.jupiter.api.Test;
 
-public class ClientBuilderTest {
+/**
+ * Test for {@link ClientBuilder}.
+ */
+class ClientBuilderTest {
 
     @Test
-    public void nonePlusSchemeProvided() {
+    void nonePlusSchemeProvided() {
         final HttpClient client = new ClientBuilder("none+https://google.com/").build(HttpClient.class);
         assertThat(client.uri().toString()).isEqualTo("https://google.com/");
     }
 
     @Test
-    public void nonePlusSchemeUriToUrl() {
+    void nonePlusSchemeUriToUrl() {
         final HttpClient client = new ClientBuilder("none+https://google.com/").build(HttpClient.class);
         assertThatCode(() -> client.uri().toURL()).doesNotThrowAnyException();
     }
 
     @Test
-    public void noSchemeShouldDefaultToNone() {
+    void noSchemeShouldDefaultToNone() {
         final HttpClient client = new ClientBuilder("https://google.com/").build(HttpClient.class);
         assertThat(client.uri().toString()).isEqualTo("https://google.com/");
     }
