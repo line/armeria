@@ -6,7 +6,7 @@ import jsonPrettify from '../../lib/json-prettify';
 import KeyValueTable from '../KeyValueTable';
 import { CreateDefaultRow, Row, ValueListContext } from './valueListContext';
 
-interface KeyValueEditorProps {
+interface Props {
   defaultValue?: Row[];
   keyName?: string;
   valueName?: string;
@@ -16,7 +16,7 @@ enum DisplayType {
   Plain,
 }
 
-const KeyValueEditor: React.FunctionComponent<KeyValueEditorProps> = ({
+const KeyValueEditor: React.FunctionComponent<Props> = ({
   defaultValue,
   keyName = 'Key',
   valueName = 'Value',
