@@ -502,8 +502,6 @@ public abstract class AbstractStreamMessageDuplicator<T, U extends StreamMessage
         @Nullable
         @SuppressWarnings("unused")
         private volatile DownstreamSubscription<T> subscription;
-        @Nullable
-        private volatile Throwable completionCause;
 
         private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
 
