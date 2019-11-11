@@ -1,0 +1,4 @@
+dependencies {
+    // Embedded Consul
+    testImplementation 'com.pszymczyk.consul:embedded-consul'
+}
