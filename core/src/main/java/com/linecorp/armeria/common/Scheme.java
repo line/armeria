@@ -95,10 +95,7 @@ public final class Scheme implements Comparable<Scheme> {
      */
     public static Scheme parse(String scheme) {
         final Optional<Scheme> parsedScheme = tryParse(requireNonNull(scheme, "scheme"));
-        if (parsedScheme.isPresent()) {
-            return parsedScheme.get();
-        }
-        throw new IllegalArgumentException("scheme: " + scheme);
+        return parsedScheme.orElseThrow(() -> new IllegalArgumentException("scheme: " + scheme));
     }
 
     /**
