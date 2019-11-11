@@ -17,7 +17,9 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
+
+import java.net.MalformedURLException;
+import java.net.URI;
 
 import org.junit.jupiter.api.Test;
 
@@ -33,9 +35,9 @@ class ClientBuilderTest {
     }
 
     @Test
-    void nonePlusSchemeUriToUrl() {
+    void nonePlusSchemeUriToUrl() throws MalformedURLException {
         final HttpClient client = new ClientBuilder("none+https://google.com/").build(HttpClient.class);
-        assertThatCode(() -> client.uri().toURL()).doesNotThrowAnyException();
+        assertThat(client.uri().toURL()).isEqualTo(URI.create("https://google.com/").toURL());
     }
 
     @Test

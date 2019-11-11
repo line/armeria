@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 import java.util.Optional;
 
+import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -36,15 +37,25 @@ class SchemeTest {
     @Test
     void tryParse_add_none() {
         final Optional<Scheme> got = Scheme.tryParse("http");
-        assertThat(got.get().serializationFormat()).isEqualTo(SerializationFormat.NONE);
-        assertThat(got.get().sessionProtocol()).isEqualTo(SessionProtocol.HTTP);
+        final Condition<Scheme> condition = new Condition<>(scheme ->
+                                                                    (scheme.sessionProtocol() ==
+                                                                     SessionProtocol.HTTP) &&
+                                                                    (scheme.serializationFormat() ==
+                                                                     SerializationFormat.NONE),
+                                                            "none+http");
+        assertThat(got).hasValueSatisfying(condition);
     }
 
     @Test
     void tryParse_with_none() {
         final Optional<Scheme> got = Scheme.tryParse("http+none");
-        assertThat(got.get().serializationFormat()).isEqualTo(SerializationFormat.NONE);
-        assertThat(got.get().sessionProtocol()).isEqualTo(SessionProtocol.HTTP);
+        final Condition<Scheme> condition = new Condition<>(scheme ->
+                                                                    (scheme.sessionProtocol() ==
+                                                                     SessionProtocol.HTTP) &&
+                                                                    (scheme.serializationFormat() ==
+                                                                     SerializationFormat.NONE),
+                                                            "none+http");
+        assertThat(got).hasValueSatisfying(condition);
     }
 
     @Test

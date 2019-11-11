@@ -178,9 +178,12 @@ final class DefaultClientFactory extends AbstractClientFactory {
 
     private URI normalizeUri(URI uri, Scheme scheme) {
         if (isUndefinedUri(uri)) {
-            // See https://github.com/line/armeria/pull/2241 discussion for more details.
+            // We use a special singleton marker URI for clients that do not explicitly define a
+            // host or scheme at construction time.
+            // As this isn't created by users, we don't need to normalize it.
             return uri;
         }
+
         if (scheme.serializationFormat() != SerializationFormat.NONE) {
             return uri;
         }
