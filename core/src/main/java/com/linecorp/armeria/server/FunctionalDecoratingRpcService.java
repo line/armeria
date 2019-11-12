@@ -34,8 +34,7 @@ final class FunctionalDecoratingRpcService extends SimpleDecoratingRpcService {
     /**
      * Creates a new instance with the specified function.
      */
-    FunctionalDecoratingRpcService(RpcService delegate,
-                                    DecoratingRpcServiceFunction function) {
+    FunctionalDecoratingRpcService(RpcService delegate, DecoratingRpcServiceFunction function) {
         super(delegate);
         this.function = requireNonNull(function, "function");
     }

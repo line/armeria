@@ -20,7 +20,7 @@ You may want to consider the following options before putting your Armeria appli
       sb.maxNumConnections(500);
 
 - Specify an alternative ``blockingTaskExecutor`` based on expected workload if your server has
-  a :api:`Service` that uses it, such as :api:`TomcatService`, :api:`JettyService` and :api:`THttpService` with
+  a service that uses it, such as :api:`TomcatService`, :api:`JettyService` and :api:`THttpService` with
   synchronous service implementation. The default is a simple ``ThreadPoolExecutor`` with 200 threads and an
   *unbounded* queue, provided by :api:`CommonPools`.
 

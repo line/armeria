@@ -41,8 +41,8 @@ import com.linecorp.armeria.common.util.Unwrappable;
 public interface Service<I extends Request, O extends Response> extends Unwrappable {
 
     /**
-     * Invoked when this {@link HttpService} has been added to a {@link Server} with the specified
-     * configuration. Please note that this method can be invoked more than once if this {@link HttpService}
+     * Invoked when this service has been added to a {@link Server} with the specified
+     * configuration. Please note that this method can be invoked more than once if this service
      * has been added more than once.
      */
     default void serviceAdded(ServiceConfig cfg) throws Exception {}

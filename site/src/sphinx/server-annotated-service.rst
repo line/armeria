@@ -812,16 +812,15 @@ more response types which can be used in the annotated service.
 Decorating an annotated service
 -------------------------------
 
-Every :api:`Service` can be wrapped by another :api:`Service` in Armeria (Refer to :ref:`server-decorator`
-for more information). Simply, you can write your own decorator by implementing
+Every :api:`HttpService` can be wrapped by another :api:`HttpService` in Armeria (Refer to
+:ref:`server-decorator` for more information). Simply, you can write your own decorator by implementing
 :api:`DecoratingHttpServiceFunction` interface as follows.
 
 .. code-block:: java
 
     public class MyDecorator implements DecoratingHttpServiceFunction {
         @Override
-        public HttpResponse serve(Service<HttpRequest, HttpResponse> delegate,
-                                  ServiceRequestContext ctx, HttpRequest req) {
+        public HttpResponse serve(HttpService delegate, ServiceRequestContext ctx, HttpRequest req) {
             // ... Do something ...
             return delegate.serve(ctx, req);
         }

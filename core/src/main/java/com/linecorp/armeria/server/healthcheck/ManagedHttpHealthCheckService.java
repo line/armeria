@@ -31,7 +31,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
- * an {@link HttpHealthCheckService} which allows overriding its status via a PUT request.
+ * An {@link HttpHealthCheckService} which allows overriding its status via a PUT request.
  *
  * <h2>Example</h2>
  * <pre>{@code

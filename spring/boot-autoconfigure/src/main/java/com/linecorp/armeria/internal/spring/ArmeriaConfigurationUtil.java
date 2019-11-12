@@ -300,8 +300,7 @@ public final class ArmeriaConfigurationUtil {
         final List<GrpcExampleRequest> docServiceRequests = new ArrayList<>();
         final List<GrpcExampleHeaders> docServiceHeaders = new ArrayList<>();
         beans.forEach(bean -> {
-            final HttpServiceWithRoutes serviceWithRoutes =
-                    bean.getService();
+            final HttpServiceWithRoutes serviceWithRoutes = bean.getService();
             docServiceRequests.addAll(bean.getExampleRequests());
             docServiceHeaders.addAll(bean.getExampleHeaders());
             serviceWithRoutes.routes().forEach(

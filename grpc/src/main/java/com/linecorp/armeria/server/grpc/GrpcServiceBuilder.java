@@ -279,7 +279,7 @@ public final class GrpcServiceBuilder {
      * Constructs a new {@link GrpcService} that can be bound to
      * {@link ServerBuilder}. It is recommended to bind the service to a server using
      * {@linkplain ServerBuilder#service(HttpServiceWithRoutes, Function[])
-     * ServerBuilder.service(ServiceWithRoutes)} to mount all service paths
+     * ServerBuilder.service(HttpServiceWithRoutes)} to mount all service paths
      * without interfering with other services.
      */
     public HttpServiceWithRoutes build() {
