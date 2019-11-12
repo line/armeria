@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -35,6 +34,7 @@ import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
@@ -72,8 +72,9 @@ public final class VirtualHost {
     private final String hostnamePattern;
     @Nullable
     private final SslContext sslContext;
-    private final List<ServiceConfig> services;
     private final Router<ServiceConfig> router;
+    private final List<ServiceConfig> serviceConfigs;
+    private final ServiceConfig fallbackServiceConfig;
 
     private final Logger accessLogger;
 
@@ -86,7 +87,9 @@ public final class VirtualHost {
     private final boolean shutdownAccessLogWriterOnStop;
 
     VirtualHost(String defaultHostname, String hostnamePattern,
-                @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
+                @Nullable SslContext sslContext,
+                Iterable<ServiceConfig> serviceConfigs,
+                ServiceConfig fallbackServiceConfig,
                 RejectedRouteHandler rejectionHandler,
                 Function<VirtualHost, Logger> accessLoggerMapper,
                 long requestTimeoutMillis,
@@ -110,11 +113,14 @@ public final class VirtualHost {
         this.shutdownAccessLogWriterOnStop = shutdownAccessLogWriterOnStop;
 
         requireNonNull(serviceConfigs, "serviceConfigs");
-        services = Streams.stream(serviceConfigs)
-                          .map(sc -> sc.withVirtualHost(this))
-                          .collect(toImmutableList());
+        requireNonNull(fallbackServiceConfig, "fallbackServiceConfig");
+        this.serviceConfigs = Streams.stream(serviceConfigs)
+                                     .map(sc -> sc.withVirtualHost(this))
+                                     .collect(toImmutableList());
+        this.fallbackServiceConfig = fallbackServiceConfig.withVirtualHost(this);
 
-        router = Routers.ofVirtualHost(this, services, rejectionHandler);
+        router = Routers.ofVirtualHost(this, this.serviceConfigs, rejectionHandler);
+
         accessLogger = accessLoggerMapper.apply(this);
         checkState(accessLogger != null,
                    "accessLoggerMapper.apply() has returned null for virtual host: %s.", hostnamePattern);
@@ -122,7 +128,7 @@ public final class VirtualHost {
 
     VirtualHost withNewSslContext(SslContext sslContext) {
         return new VirtualHost(defaultHostname(), hostnamePattern(), sslContext,
-                               serviceConfigs(), RejectedRouteHandler.DISABLED,
+                               serviceConfigs(), fallbackServiceConfig, RejectedRouteHandler.DISABLED,
                                host -> accessLogger, requestTimeoutMillis(),
                                maxRequestLength(), verboseResponses(),
                                requestContentPreviewerFactory(), responseContentPreviewerFactory(),
@@ -244,7 +250,7 @@ public final class VirtualHost {
      * Returns the information about the {@link Service}s bound to this virtual host.
      */
     public List<ServiceConfig> serviceConfigs() {
-        return services;
+        return serviceConfigs;
     }
 
     /**
@@ -348,15 +354,46 @@ public final class VirtualHost {
     }
 
     /**
-     * Finds the {@link Service} whose {@link Router} matches the {@link RoutingContext}.
+     * Finds the {@link HttpService} whose {@link Router} matches the {@link RoutingContext}.
      *
-     * @param routingCtx a context to find the {@link Service}.
+     * @param routingCtx a context to find the {@link HttpService}.
      *
      * @return the {@link ServiceConfig} wrapped by a {@link Routed} if there's a match.
      *         {@link Routed#empty()} if there's no match.
      */
     public Routed<ServiceConfig> findServiceConfig(RoutingContext routingCtx) {
-        return router.find(requireNonNull(routingCtx, "routingCtx"));
+        return findServiceConfig(routingCtx, false);
+    }
+
+    /**
+     * Finds the {@link HttpService} whose {@link Router} matches the {@link RoutingContext}.
+     *
+     * @param routingCtx a context to find the {@link HttpService}.
+     * @param useFallbackService whether to use the fallback {@link HttpService} when there is no match.
+     *                           If {@code true}, the returned {@link Routed} will always be present.
+     *
+     * @return the {@link ServiceConfig} wrapped by a {@link Routed} if there's a match.
+     *         {@link Routed#empty()} if there's no match.
+     */
+    public Routed<ServiceConfig> findServiceConfig(RoutingContext routingCtx, boolean useFallbackService) {
+        final Routed<ServiceConfig> routed = router.find(requireNonNull(routingCtx, "routingCtx"));
+        if (routed.isPresent() || !useFallbackService) {
+            return routed;
+        }
+
+        if (routingCtx.isCorsPreflight()) {
+            // '403 Forbidden' is better for a CORS preflight request than '404 Not Found'.
+            routingCtx.deferStatusException(HttpStatusException.of(HttpStatus.FORBIDDEN));
+        } else if (routingCtx.deferredStatusException() == null) {
+            routingCtx.deferStatusException(HttpStatusException.of(HttpStatus.NOT_FOUND));
+        }
+
+        return Routed.of(fallbackServiceConfig.route(),
+                         RoutingResult.builder()
+                                      .path(routingCtx.path())
+                                      .query(routingCtx.query())
+                                      .build(),
+                         fallbackServiceConfig);
     }
 
     VirtualHost decorate(@Nullable Function<Service<HttpRequest, HttpResponse>,
@@ -365,13 +402,16 @@ public final class VirtualHost {
             return this;
         }
 
-        final List<ServiceConfig> services =
-                this.services.stream()
-                             .map(cfg -> cfg.withDecoratedService(decorator))
-                             .collect(Collectors.toList());
+        final List<ServiceConfig> serviceConfigs =
+                this.serviceConfigs.stream()
+                                   .map(cfg -> cfg.withDecoratedService(decorator))
+                                   .collect(Collectors.toList());
+
+        final ServiceConfig fallbackServiceConfig =
+                this.fallbackServiceConfig.withDecoratedService(decorator);
 
         return new VirtualHost(defaultHostname(), hostnamePattern(), sslContext(),
-                               services, RejectedRouteHandler.DISABLED,
+                               serviceConfigs, fallbackServiceConfig, RejectedRouteHandler.DISABLED,
                                host -> accessLogger, requestTimeoutMillis(),
                                maxRequestLength(), verboseResponses(),
                                requestContentPreviewerFactory(), responseContentPreviewerFactory(),
@@ -396,9 +436,7 @@ public final class VirtualHost {
         buf.append(", ssl: ");
         buf.append(sslContext() != null);
         buf.append(", services: ");
-        buf.append(services);
-        buf.append(", router: ");
-        buf.append(router);
+        buf.append(serviceConfigs);
         buf.append(", accessLogger: ");
         buf.append(accessLogger());
         buf.append(", requestTimeoutMillis: ");

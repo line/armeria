@@ -32,6 +32,13 @@ import io.micrometer.core.instrument.Tag;
 public interface Route {
 
     /**
+     * Returns the catch-all {@link Route} which matches every request.
+     */
+    static Route catchAll() {
+        return RouteBuilder.CATCH_ALL_ROUTE;
+    }
+
+    /**
      * Returns a new builder.
      */
     static RouteBuilder builder() {

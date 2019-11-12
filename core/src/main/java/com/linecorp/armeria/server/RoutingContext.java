@@ -19,7 +19,6 @@ package com.linecorp.armeria.server;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
-import java.util.Optional;
 
 import javax.annotation.Nullable;
 
@@ -82,14 +81,16 @@ public interface RoutingContext {
     List<Object> summary();
 
     /**
-     * Delays throwing a {@link Throwable} until reaching the end of the service list.
+     * Defers throwing an {@link HttpStatusException} until reaching the end of the service list.
      */
-    void delayThrowable(Throwable cause);
+    void deferStatusException(HttpStatusException cause);
 
     /**
-     * Returns a delayed {@link Throwable} set before via {@link #delayThrowable(Throwable)}.
+     * Returns a deferred {@link HttpStatusException} which was previously set via
+     * {@link #deferStatusException(HttpStatusException)}.
      */
-    Optional<Throwable> delayedThrowable();
+    @Nullable
+    HttpStatusException deferredStatusException();
 
     /**
      * Returns a wrapped {@link RoutingContext} which holds the specified {@code path}.

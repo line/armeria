@@ -37,6 +37,7 @@ public class RoutersBenchmark {
             (ctx, req) -> HttpResponse.of(HttpStatus.OK);
 
     private static final List<ServiceConfig> SERVICES;
+    private static final ServiceConfig FALLBACK_SERVICE;
     private static final VirtualHost HOST;
     private static final Router<ServiceConfig> ROUTER;
 
@@ -52,8 +53,12 @@ public class RoutersBenchmark {
                                   SERVICE, null, 0, 0, false, ContentPreviewerFactory.disabled(),
                                   ContentPreviewerFactory.disabled(), AccessLogWriter.disabled(), false)
         );
+        FALLBACK_SERVICE = new ServiceConfig(Route.catchAll(),
+                                             SERVICE, null, 0, 0, false, ContentPreviewerFactory.disabled(),
+                                             ContentPreviewerFactory.disabled(), AccessLogWriter.disabled(),
+                                             false);
         HOST = new VirtualHost(
-                "localhost", "localhost", null, SERVICES, RejectedRouteHandler.DISABLED,
+                "localhost", "localhost", null, SERVICES, FALLBACK_SERVICE, RejectedRouteHandler.DISABLED,
                 unused -> NOPLogger.NOP_LOGGER, 0, 0, false,
                 ContentPreviewerFactory.disabled(), ContentPreviewerFactory.disabled(),
                 AccessLogWriter.disabled(), false);

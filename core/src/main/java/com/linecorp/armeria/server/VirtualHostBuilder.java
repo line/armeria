@@ -642,7 +642,7 @@ public final class VirtualHostBuilder {
      */
     public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
     VirtualHostBuilder decorator(Function<T, R> decorator) {
-        return decorator(Route.builder().catchAll().build(), decorator);
+        return decorator(Route.catchAll(), decorator);
     }
 
     /**
@@ -652,7 +652,7 @@ public final class VirtualHostBuilder {
      */
     public VirtualHostBuilder decorator(
             DecoratingServiceFunction<HttpRequest, HttpResponse> decoratingServiceFunction) {
-        return decorator(Route.builder().catchAll().build(), decoratingServiceFunction);
+        return decorator(Route.catchAll(), decoratingServiceFunction);
     }
 
     /**
@@ -954,6 +954,12 @@ public final class VirtualHostBuilder {
                                     accessLogWriter, shutdownAccessLogWriterOnStop);
         }).collect(toImmutableList());
 
+        final ServiceConfig fallbackServiceConfig =
+                new ServiceConfigBuilder(Route.catchAll(), FallbackService.INSTANCE)
+                        .build(requestTimeoutMillis, maxRequestLength, verboseResponses,
+                               requestContentPreviewerFactory, responseContentPreviewerFactory,
+                               accessLogWriter, shutdownAccessLogWriterOnStop);
+
         SslContext sslContext = this.sslContext != null ? this.sslContext : template.sslContext;
         final boolean tlsSelfSigned = this.tlsSelfSigned != null ? this.tlsSelfSigned : template.tlsSelfSigned;
         if (sslContext == null && tlsSelfSigned) {
@@ -967,8 +973,8 @@ public final class VirtualHostBuilder {
         }
 
         final VirtualHost virtualHost =
-                new VirtualHost(defaultHostname, hostnamePattern, sslContext, serviceConfigs,
-                                rejectedRouteHandler,
+                new VirtualHost(defaultHostname, hostnamePattern, sslContext,
+                                serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
                                 accessLoggerMapper, requestTimeoutMillis, maxRequestLength,
                                 verboseResponses, requestContentPreviewerFactory,
                                 responseContentPreviewerFactory, accessLogWriter,

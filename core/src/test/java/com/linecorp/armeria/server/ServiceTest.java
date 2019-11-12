@@ -65,7 +65,7 @@ public class ServiceTest {
 
         // Test if FooService.serviceAdded() is invoked.
         @SuppressWarnings({ "unchecked", "rawtypes" })
-        final ServiceConfig cfg = new ServiceConfig(Route.builder().catchAll().build(),
+        final ServiceConfig cfg = new ServiceConfig(Route.catchAll(),
                                                     (Service) outer, "foo", 1, 1,
                                                     true, ContentPreviewerFactory.disabled(),
                                                     ContentPreviewerFactory.disabled(),

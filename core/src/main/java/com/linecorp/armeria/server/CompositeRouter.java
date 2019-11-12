@@ -25,9 +25,7 @@ import java.util.stream.Stream;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
-import com.linecorp.armeria.common.util.Exceptions;
 
 import io.micrometer.core.instrument.MeterRegistry;
 
@@ -56,11 +54,6 @@ final class CompositeRouter<I, O> implements Router<O> {
                 return resultMapper.apply(result);
             }
         }
-        if (routingCtx.isCorsPreflight()) {
-            // '403 Forbidden' is better for a CORS preflight request than '404 Not Found'.
-            throw HttpStatusException.of(HttpStatus.FORBIDDEN);
-        }
-        routingCtx.delayedThrowable().ifPresent(Exceptions::throwUnsafely);
 
         return Routed.empty();
     }

@@ -1181,7 +1181,7 @@ public final class ServerBuilder {
      */
     public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
     ServerBuilder decorator(Function<T, R> decorator) {
-        return decorator(Route.builder().catchAll().build(), decorator);
+        return decorator(Route.catchAll(), decorator);
     }
 
     /**
@@ -1191,7 +1191,7 @@ public final class ServerBuilder {
      */
     public ServerBuilder decorator(
             DecoratingServiceFunction<HttpRequest, HttpResponse> decoratingServiceFunction) {
-        return decorator(Route.builder().catchAll().build(), decoratingServiceFunction);
+        return decorator(Route.catchAll(), decoratingServiceFunction);
     }
 
     /**

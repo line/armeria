@@ -27,9 +27,7 @@ class RoutedTest {
      */
     @Test
     void shouldNotAcceptEmptyResult() {
-        assertThatThrownBy(() -> Routed.of(Route.builder().catchAll().build(),
-                                           RoutingResult.empty(),
-                                           new Object()))
+        assertThatThrownBy(() -> Routed.of(Route.catchAll(), RoutingResult.empty(), new Object()))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
