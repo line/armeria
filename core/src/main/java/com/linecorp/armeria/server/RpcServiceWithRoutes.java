@@ -22,5 +22,5 @@ import com.linecorp.armeria.common.RpcResponse;
 /**
  * An interface that enables getting all the {@link Route}s where an {@link RpcService} should be bound.
  */
-public interface RpcServiceWithRoutes extends ServiceWithRoutes<RpcRequest, RpcResponse> {
+public interface RpcServiceWithRoutes extends ServiceWithRoutes<RpcRequest, RpcResponse>, RpcService {
 }

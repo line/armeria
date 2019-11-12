@@ -23,5 +23,5 @@ import com.linecorp.armeria.common.RpcResponse;
  * An {@link RpcService} that handles transient requests, for example, health check requests.
  */
 @FunctionalInterface
-public interface TransientRpcService extends TransientService<RpcRequest, RpcResponse> {
+public interface TransientRpcService extends TransientService<RpcRequest, RpcResponse>, RpcService {
 }
