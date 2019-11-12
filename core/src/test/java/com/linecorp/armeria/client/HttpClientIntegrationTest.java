@@ -739,15 +739,14 @@ class HttpClientIntegrationTest {
     void requestAbortWithException(boolean isAbort) {
         final HttpClient client = HttpClient.of(server.httpUri("/"));
         final HttpRequestWriter request = HttpRequest.streaming(HttpMethod.GET, "/client-aborted");
-
         final HttpResponse response = client.execute(request);
+
         final IllegalStateException badState = new IllegalStateException("bad state");
         if (isAbort) {
             request.abort(badState);
         } else {
             request.close(badState);
         }
-        // request cause is obtained immediately
         assertThatThrownBy(() -> response.aggregate().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCause(badState);
@@ -758,10 +757,10 @@ class HttpClientIntegrationTest {
         final HttpClient client = HttpClient.of(server.httpUri("/"));
         final HttpRequest request = HttpRequest.streaming(HttpMethod.GET, "/client-aborted");
         final HttpResponse response = client.execute(request);
-        await().untilAsserted(() -> assertThat(completed).isTrue());
+
+        await().until(() -> completed);
         final IllegalStateException badState = new IllegalStateException("bad state");
         response.abort(badState);
-        // response cause is obtained immediately
         assertThatThrownBy(() -> response.aggregate().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCause(badState);
