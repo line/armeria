@@ -144,11 +144,13 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         // More than one protocol were specified. Detect the protocol.
 
         final ScheduledFuture<?> protocolDetectionTimeoutFuture;
-        if (config.requestTimeoutMillis() > 0) {
+        // FIXME(trustin): Add a dedicated timeout option to ServerConfig.
+        final long requestTimeoutMillis = config.defaultVirtualHost().requestTimeoutMillis();
+        if (requestTimeoutMillis > 0) {
             // Close the connection if the protocol detection is not finished in time.
             final Channel ch = p.channel();
             protocolDetectionTimeoutFuture = ch.eventLoop().schedule(
-                    (Runnable) ch::close, config.requestTimeoutMillis(), TimeUnit.MILLISECONDS);
+                    (Runnable) ch::close, requestTimeoutMillis, TimeUnit.MILLISECONDS);
         } else {
             protocolDetectionTimeoutFuture = null;
         }

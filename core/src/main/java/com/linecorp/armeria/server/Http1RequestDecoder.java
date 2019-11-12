@@ -174,7 +174,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                             ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg),
                             HttpUtil.isKeepAlive(nettyReq),
                             inboundTrafficController,
-                            cfg.maxRequestLength());
+                            // FIXME(trustin): Use a different maxRequestLength for a different virtual host.
+                            cfg.defaultVirtualHost().maxRequestLength());
 
                     // Close the request early when it is sure that there will be
                     // neither content nor trailers.

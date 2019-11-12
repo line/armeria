@@ -122,7 +122,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
      * Adds the {@link Consumer} that configures the given {@link ServerBuilder}. The {@link Consumer}s added
      * by this method will be invoked when this builder builds a dummy {@link Server}. This may be useful
      * when you need to update the default settings of the dummy {@link Server},
-     * such as {@link ServerConfig#maxRequestLength()}.
+     * such as {@link ServerBuilder#maxRequestLength(long)}.
      */
     public ServiceRequestContextBuilder serverConfigurator(Consumer<? super ServerBuilder> serverConfigurator) {
         serverConfigurators.add(requireNonNull(serverConfigurator, "serverConfigurator"));

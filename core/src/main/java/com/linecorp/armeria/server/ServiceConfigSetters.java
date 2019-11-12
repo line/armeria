@@ -29,15 +29,15 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 interface ServiceConfigSetters {
 
     /**
-     * Sets the timeout of an HTTP request. If not set, {@link VirtualHost#requestTimeoutMillis()}
-     * is used.
+     * Sets the timeout of an HTTP request. If not set, the value set via
+     * {@link VirtualHost#requestTimeoutMillis()} is used.
      *
      * @param requestTimeout the timeout. {@code 0} disables the timeout.
      */
     ServiceConfigSetters requestTimeout(Duration requestTimeout);
 
     /**
-     * Sets the timeout of an HTTP request in milliseconds. If not set,
+     * Sets the timeout of an HTTP request in milliseconds. If not set, the value set via
      * {@link VirtualHost#requestTimeoutMillis()} is used.
      *
      * @param requestTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
@@ -45,7 +45,7 @@ interface ServiceConfigSetters {
     ServiceConfigSetters requestTimeoutMillis(long requestTimeoutMillis);
 
     /**
-     * Sets the maximum allowed length of an HTTP request. If not set,
+     * Sets the maximum allowed length of an HTTP request. If not set, the value set via
      * {@link VirtualHost#maxRequestLength()} is used.
      *
      * @param maxRequestLength the maximum allowed length. {@code 0} disables the length limit.
@@ -56,21 +56,21 @@ interface ServiceConfigSetters {
      * Sets whether the verbose response mode is enabled. When enabled, the service response will contain
      * the exception type and its full stack trace, which may be useful for debugging while potentially
      * insecure. When disabled, the service response will not expose such server-side details to the client.
-     * If not set, {@link VirtualHost#verboseResponses()} is used.
+     * If not set, the value set via {@link VirtualHostBuilder#verboseResponses(boolean)} is used.
      */
     ServiceConfigSetters verboseResponses(boolean verboseResponses);
 
     /**
      * Sets the {@link ContentPreviewerFactory} for an HTTP request of a {@link Service}.
-     * If not set, {@link VirtualHost#requestContentPreviewerFactory()}
-     * is used.
+     * If not set, the {@link ContentPreviewerFactory} set via
+     * {@link VirtualHost#requestContentPreviewerFactory()} is used.
      */
     ServiceConfigSetters requestContentPreviewerFactory(ContentPreviewerFactory factory);
 
     /**
      * Sets the {@link ContentPreviewerFactory} for an HTTP response of a {@link Service}.
-     * If not set, {@link VirtualHost#responseContentPreviewerFactory()}
-     * is used.
+     * If not set, the {@link ContentPreviewerFactory} set via
+     * {@link VirtualHost#responseContentPreviewerFactory()} is used.
      */
     ServiceConfigSetters responseContentPreviewerFactory(ContentPreviewerFactory factory);
 
@@ -118,8 +118,8 @@ interface ServiceConfigSetters {
     ServiceConfigSetters accessLogFormat(String accessLogFormat);
 
     /**
-     * Sets the access log writer of this {@link Service}. If not set, {@link ServerConfig#accessLogWriter()}
-     * is used.
+     * Sets the access log writer of this {@link Service}. If not set, the {@link AccessLogWriter} set via
+     * {@link VirtualHost#accessLogWriter()} is used.
      *
      * @param shutdownOnStop whether to shut down the {@link AccessLogWriter} when the {@link Server} stops
      */

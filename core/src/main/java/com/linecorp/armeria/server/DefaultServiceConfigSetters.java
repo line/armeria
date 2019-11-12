@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.server.ServerConfig.validateMaxRequestLength;
-import static com.linecorp.armeria.server.ServerConfig.validateRequestTimeoutMillis;
+import static com.linecorp.armeria.server.ServiceConfig.validateMaxRequestLength;
+import static com.linecorp.armeria.server.ServiceConfig.validateRequestTimeoutMillis;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.Charset;

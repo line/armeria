@@ -207,6 +207,11 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     }
 
     @Override
+    public VirtualHostServiceBindingBuilder accessLogFormat(String accessLogFormat) {
+        return (VirtualHostServiceBindingBuilder) super.accessLogFormat(accessLogFormat);
+    }
+
+    @Override
     public VirtualHostServiceBindingBuilder accessLogWriter(AccessLogWriter accessLogWriter,
                                                             boolean shutdownOnStop) {
         return (VirtualHostServiceBindingBuilder) super.accessLogWriter(accessLogWriter, shutdownOnStop);
@@ -231,6 +236,6 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
 
     @Override
     void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder) {
-        virtualHostBuilder.serviceConfigBuilder(serviceConfigBuilder);
+        virtualHostBuilder.addServiceConfigBuilder(serviceConfigBuilder);
     }
 }
