@@ -25,7 +25,6 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -55,7 +54,7 @@ class THttpClientTest {
 
         final ServiceConfig serviceConfig = cfgHolder.get();
         assertThat(serviceConfig).isNotNull();
-        assertThat(serviceConfig.<HttpService>service()).isInstanceOf(THttpService.class);
+        assertThat(serviceConfig.service()).isInstanceOf(THttpService.class);
 
         final ThriftCallService thriftCallService = tHttpService.as(ThriftCallService.class).get();
         assertThat(thriftCallService).isNotNull();

@@ -60,7 +60,7 @@ class DefaultServiceRequestContextTest {
 
         assertThat(derivedCtx.server()).isSameAs(originalCtx.server());
         assertThat(derivedCtx.sessionProtocol()).isSameAs(originalCtx.sessionProtocol());
-        assertThat(derivedCtx.<HttpService>service()).isSameAs(originalCtx.service());
+        assertThat(derivedCtx.service()).isSameAs(originalCtx.service());
         assertThat(derivedCtx.route()).isSameAs(originalCtx.route());
         assertThat(derivedCtx.id()).isSameAs(newId);
         assertThat(derivedCtx.request()).isSameAs(newRequest);

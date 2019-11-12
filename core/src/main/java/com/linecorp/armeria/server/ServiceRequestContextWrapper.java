@@ -107,7 +107,7 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public <T extends HttpService> T service() {
+    public HttpService service() {
         return delegate().service();
     }
 

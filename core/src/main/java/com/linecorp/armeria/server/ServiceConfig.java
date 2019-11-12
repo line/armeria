@@ -166,9 +166,8 @@ public final class ServiceConfig {
     /**
      * Returns the {@link HttpService}.
      */
-    @SuppressWarnings("unchecked")
-    public <T extends HttpService> T service() {
-        return (T) service;
+    public HttpService service() {
+        return service;
     }
 
     /**

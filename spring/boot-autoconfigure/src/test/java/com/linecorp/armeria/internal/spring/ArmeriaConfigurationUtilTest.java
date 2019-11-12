@@ -37,7 +37,6 @@ import com.linecorp.armeria.internal.annotation.AnnotatedHttpService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.annotation.Get;
@@ -92,12 +91,12 @@ public class ArmeriaConfigurationUtilTest {
         assertThat(service(sb).as(SimpleDecorator.class)).isPresent();
     }
 
-    private static Service<?, ?> service(ServerBuilder sb) {
+    private static HttpService service(ServerBuilder sb) {
         final Server server = sb.build();
         return server.config().defaultVirtualHost().serviceConfigs().get(0).service();
     }
 
-    private static Service<?, ?> getServiceForHttpMethod(Server server, HttpMethod httpMethod) {
+    private static HttpService getServiceForHttpMethod(Server server, HttpMethod httpMethod) {
         return server.serviceConfigs().stream()
                      .filter(config -> config.route().methods().contains(httpMethod))
                      .findFirst().get().service();

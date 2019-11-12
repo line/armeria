@@ -304,7 +304,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     }
 
     @Override
-    public <T extends HttpService> T service() {
+    public HttpService service() {
         return cfg.service();
     }
 

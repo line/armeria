@@ -183,7 +183,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         }
     }
 
-    private static ServiceConfig findServiceConfig(Server server, String path, Service<?, ?> service) {
+    private static ServiceConfig findServiceConfig(Server server, String path, HttpService service) {
         for (ServiceConfig cfg : server.config().defaultVirtualHost().serviceConfigs()) {
             final Route route = cfg.route();
             if (route.pathType() != RoutePathType.EXACT) {
