@@ -21,6 +21,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.RouteUtil.ensureAbsolutePath;
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceConfigurator.ofExceptionHandlersAndConverters;
 import static com.linecorp.armeria.internal.annotation.AnnotatedValueResolver.toRequestObjectResolvers;
 import static com.linecorp.armeria.internal.annotation.AnnotationUtil.findAll;
 import static com.linecorp.armeria.internal.annotation.AnnotationUtil.findFirst;
@@ -193,10 +194,8 @@ public final class AnnotatedHttpServiceFactory {
                                                          Iterable<?> exceptionHandlersAndConverters) {
         final List<Method> methods = requestMappingMethods(object);
 
-        final AnnotatedHttpServiceConfiguratorSetters setters =
-                AnnotatedHttpServiceConfiguratorSetters
-                        .ofExceptionHandlersAndConverters(exceptionHandlersAndConverters);
-        final AnnotatedHttpServiceConfigurator configurator = setters.toAnnotatedServiceConfigurator();
+        final AnnotatedHttpServiceConfigurator configurator =
+                ofExceptionHandlersAndConverters(exceptionHandlersAndConverters);
 
         return methods.stream()
                       .flatMap((Method method) ->
@@ -216,12 +215,10 @@ public final class AnnotatedHttpServiceFactory {
             List<ResponseConverterFunction> responseConverterFunctions) {
         final List<Method> methods = requestMappingMethods(object);
 
-        final AnnotatedHttpServiceConfiguratorSetters setters =
-                AnnotatedHttpServiceConfiguratorSetters
-                        .ofExceptionHandlersAndConverters(exceptionHandlerFunctions,
-                                                          requestConverterFunctions,
-                                                          responseConverterFunctions);
-        final AnnotatedHttpServiceConfigurator configurator = setters.toAnnotatedServiceConfigurator();
+        final AnnotatedHttpServiceConfigurator configurator =
+                ofExceptionHandlersAndConverters(exceptionHandlerFunctions,
+                                                 requestConverterFunctions,
+                                                 responseConverterFunctions);
 
         return methods.stream()
                       .flatMap((Method method) ->
@@ -244,7 +241,7 @@ public final class AnnotatedHttpServiceFactory {
     }
 
     private static List<AnnotatedHttpServiceElement> find(String pathPrefix, Object object,
-                                                         AnnotatedHttpServiceConfigurator configurator) {
+                                                          AnnotatedHttpServiceConfigurator configurator) {
         final List<Method> methods = requestMappingMethods(object);
 
         return methods.stream()

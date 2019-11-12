@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.internal.annotation;
 
+import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceConfigurator.ofExceptionHandlersAndConverters;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.collectDecorators;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.create;
 import static com.linecorp.armeria.internal.annotation.AnnotatedHttpServiceFactory.find;
@@ -180,10 +181,10 @@ class AnnotatedHttpServiceFactoryTest {
 
         getMethods(ServiceObjectWithoutPathOnAnnotatedMethod.class, HttpResponse.class).forEach(method -> {
             assertThatThrownBy(() -> {
-                final AnnotatedHttpServiceConfiguratorSetters setters = AnnotatedHttpServiceConfiguratorSetters
-                        .ofExceptionHandlersAndConverters(ImmutableList.of(), ImmutableList.of(),
-                                                          ImmutableList.of());
-                create("/", serviceObject, method, setters.toAnnotatedServiceConfigurator());
+                final AnnotatedHttpServiceConfigurator configurator =
+                        ofExceptionHandlersAndConverters(ImmutableList.of(), ImmutableList.of(),
+                                                         ImmutableList.of());
+                create("/", serviceObject, method, configurator);
             }).isInstanceOf(IllegalArgumentException.class)
               .hasMessage("A path pattern should be specified by @Path or HTTP method annotations.");
         });
@@ -270,10 +271,10 @@ class AnnotatedHttpServiceFactoryTest {
         final MultiPathFailingService serviceObject = new MultiPathFailingService();
         getMethods(MultiPathFailingService.class, HttpResponse.class).forEach(method -> {
             assertThatThrownBy(() -> {
-                final AnnotatedHttpServiceConfiguratorSetters setters = AnnotatedHttpServiceConfiguratorSetters
-                        .ofExceptionHandlersAndConverters(ImmutableList.of(), ImmutableList.of(),
-                                                          ImmutableList.of());
-                create("/", serviceObject, method, setters.toAnnotatedServiceConfigurator());
+                final AnnotatedHttpServiceConfigurator configurator =
+                        ofExceptionHandlersAndConverters(ImmutableList.of(), ImmutableList.of(),
+                                                         ImmutableList.of());
+                create("/", serviceObject, method, configurator);
             }, method.getName()).isInstanceOf(IllegalArgumentException.class);
         });
     }
@@ -283,11 +284,11 @@ class AnnotatedHttpServiceFactoryTest {
         return getMethods(service.getClass(), HttpResponse.class)
                 .filter(method -> method.getName().equals(methodName)).flatMap(
                         method -> {
-                            final AnnotatedHttpServiceConfiguratorSetters setters =
-                                    AnnotatedHttpServiceConfiguratorSetters.ofExceptionHandlersAndConverters(
-                                            ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
+                            final AnnotatedHttpServiceConfigurator configurator =
+                                    ofExceptionHandlersAndConverters(ImmutableList.of(), ImmutableList.of(),
+                                                                     ImmutableList.of());
                             final List<AnnotatedHttpServiceElement> annotatedHttpServices = create(
-                                    "/", service, method, setters.toAnnotatedServiceConfigurator());
+                                    "/", service, method, configurator);
                             return annotatedHttpServices.stream();
                         }
                 )
