@@ -108,8 +108,8 @@ public final class ClientDecoration {
         private final Class<O> responseType;
         private final Function<Client<I, O>, Client<I, O>> decorator;
 
-        Entry(Class<I> requestType, Class<O> responseType,
-              Function<? extends Client<I, O>, ? extends Client<I, O>> decorator) {
+        <T extends Client<I, O>, R extends Client<I, O>>
+        Entry(Class<I> requestType, Class<O> responseType, Function<T, R> decorator) {
             this.requestType = requestType;
             this.responseType = responseType;
 
