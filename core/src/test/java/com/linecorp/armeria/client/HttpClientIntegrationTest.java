@@ -31,7 +31,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntFunction;
 
@@ -104,7 +103,7 @@ class HttpClientIntegrationTest {
     private static final AtomicReference<ByteBuf> releasedByteBuf = new AtomicReference<>();
 
     // Used to communicate with test when the response can't be used.
-    private static final AtomicBoolean completed = new AtomicBoolean();
+    private static volatile boolean completed;
 
     private static final class PoolUnawareDecorator extends SimpleDecoratingService<HttpRequest, HttpResponse> {
 
@@ -316,7 +315,7 @@ class HttpClientIntegrationTest {
 
                     @Override
                     public void onError(Throwable t) {
-                        completed.set(true);
+                        completed = true;
                     }
 
                     @Override
@@ -338,16 +337,17 @@ class HttpClientIntegrationTest {
 
             // To check https://github.com/line/armeria/issues/1895
             sb.serviceUnder("/", (ctx, req) -> {
-                if (!completed.compareAndSet(false, true)) {
+                if (completed) {
                     return HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
                 } else {
+                    completed = true;
                     return HttpResponse.of(HttpStatus.OK);
                 }
             });
 
             sb.service("/client-aborted", (ctx, req) -> {
                 // Don't need to return a real response since the client will timeout.
-                completed.compareAndSet(false, true);
+                completed = true;
                 return HttpResponse.streaming();
             });
 
@@ -360,7 +360,7 @@ class HttpClientIntegrationTest {
 
     @BeforeEach
     void clearError() {
-        completed.set(false);
+        completed = false;
         releasedByteBuf.set(null);
     }
 
@@ -758,7 +758,7 @@ class HttpClientIntegrationTest {
         final HttpClient client = HttpClient.of(server.httpUri("/"));
         final HttpRequest request = HttpRequest.streaming(HttpMethod.GET, "/client-aborted");
         final HttpResponse response = client.execute(request);
-        await().untilTrue(completed);
+        await().untilAsserted(() -> assertThat(completed).isTrue());
         final IllegalStateException badState = new IllegalStateException("bad state");
         response.abort(badState);
         // response cause is obtained immediately

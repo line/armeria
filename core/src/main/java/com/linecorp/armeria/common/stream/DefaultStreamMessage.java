@@ -207,15 +207,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
 
     private void cancelOrAbort(Throwable cause) {
         if (setState(State.OPEN, State.CLEANUP)) {
-            final CloseEvent closeEvent;
-            if (cause == CancelledSubscriptionException.INSTANCE) {
-                closeEvent = CANCELLED_CLOSE;
-            } else if (cause == AbortedStreamException.INSTANCE) {
-                closeEvent = ABORTED_CLOSE;
-            } else {
-                closeEvent = new CloseEvent(cause);
-            }
-            addObjectOrEvent(closeEvent);
+            addObjectOrEvent(newCloseEvent(cause));
             return;
         }
 

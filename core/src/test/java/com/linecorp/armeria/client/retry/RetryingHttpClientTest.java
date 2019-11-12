@@ -484,11 +484,10 @@ public class RetryingHttpClientTest {
             if (abortCause == null) {
                 assertThat(log.responseCause()).isExactlyInstanceOf(AbortedStreamException.class);
             } else {
-                assertThat(log.responseCause()).isExactlyInstanceOf(abortCause.getClass())
-                                               .hasMessageContaining("abort stream with a specified cause");
+                assertThat(log.responseCause()).isSameAs(abortCause);
             }
 
-            // Sleep 3 seconds more to check if there was another retry.
+            // Sleep 3 more seconds to check if there was another retry.
             TimeUnit.SECONDS.sleep(3);
             assertThat(responseAbortServiceCallCounter.get()).isOne();
             responseAbortServiceCallCounter.decrementAndGet();
@@ -549,8 +548,8 @@ public class RetryingHttpClientTest {
                 assertThat(log.requestCause()).isExactlyInstanceOf(AbortedStreamException.class);
                 assertThat(log.responseCause()).isExactlyInstanceOf(AbortedStreamException.class);
             } else {
-                assertThat(log.requestCause()).isExactlyInstanceOf(abortCause.getClass());
-                assertThat(log.responseCause()).isExactlyInstanceOf(abortCause.getClass());
+                assertThat(log.requestCause()).isSameAs(abortCause);
+                assertThat(log.responseCause()).isSameAs(abortCause);
             }
         }
     }

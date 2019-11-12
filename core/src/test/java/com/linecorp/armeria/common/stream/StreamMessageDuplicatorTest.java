@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.stream.AbortCauseArgumentProvider.ABORT_CAUSES;
 import static com.linecorp.armeria.common.stream.StreamMessageTest.newPooledBuffer;
 import static com.linecorp.armeria.common.stream.SubscriptionOption.NOTIFY_CANCELLATION;
 import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
@@ -31,8 +32,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -67,9 +66,6 @@ public class StreamMessageDuplicatorTest {
 
     @Rule
     public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
-
-    private static final List<Throwable> ABORT_CAUSES =
-            Arrays.asList(null, new IllegalStateException("abort stream with a specified cause"));
 
     @Test
     public void subscribeTwice() {

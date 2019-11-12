@@ -25,16 +25,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
-import java.util.Arrays;
-import java.util.stream.Stream;
-
 import javax.annotation.Nullable;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
@@ -209,18 +203,6 @@ class PublisherBasedStreamMessageTest {
                 assertThatThrownBy(() -> publisher.completionFuture().get())
                         .hasCauseExactlyInstanceOf(cause.getClass());
             }
-        }
-    }
-
-    private static class AbortCauseArgumentProvider implements ArgumentsProvider {
-
-        @Override
-        public Stream<? extends Arguments> provideArguments(final ExtensionContext extensionContext)
-                throws Exception {
-            return Arrays.asList(null,
-                                 new IllegalStateException("abort stream with a specified cause"))
-                         .stream()
-                         .map(Arguments::of);
         }
     }
 }

@@ -298,13 +298,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             return;
         }
 
-        final CloseEvent closeEvent;
-        if (cause == AbortedStreamException.INSTANCE) {
-            closeEvent = ABORTED_CLOSE;
-        } else {
-            closeEvent = new CloseEvent(cause);
-        }
-
+        final CloseEvent closeEvent = newCloseEvent(cause);
         if (subscription.needsDirectInvocation()) {
             closeEvent.notifySubscriber(subscription, completionFuture());
         } else {

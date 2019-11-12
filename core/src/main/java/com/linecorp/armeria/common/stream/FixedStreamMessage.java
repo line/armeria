@@ -160,15 +160,7 @@ abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> {
     }
 
     private void cancelOrAbort(Throwable cause) {
-        final CloseEvent closeEvent;
-        if (cause == CancelledSubscriptionException.INSTANCE) {
-            closeEvent = CANCELLED_CLOSE;
-        } else if (cause == AbortedStreamException.INSTANCE) {
-            closeEvent = ABORTED_CLOSE;
-        } else {
-            closeEvent = new CloseEvent(cause);
-        }
-        if (closeEventUpdater.compareAndSet(this, null, closeEvent)) {
+        if (closeEventUpdater.compareAndSet(this, null, newCloseEvent(cause))) {
             if (subscription.needsDirectInvocation()) {
                 cleanup(subscription);
             } else {
