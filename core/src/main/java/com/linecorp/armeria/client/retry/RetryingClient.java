@@ -36,6 +36,7 @@ import com.linecorp.armeria.client.endpoint.EndpointSelector;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 
@@ -262,11 +263,12 @@ public abstract class RetryingClient<I extends Request, O extends Response>
                                                             @Nullable HttpRequest req,
                                                             @Nullable RpcRequest rpcReq,
                                                             boolean initialAttempt) {
+        final RequestId id = ctx.options().requestIdGenerator().get();
         final EndpointSelector endpointSelector = ctx.endpointSelector();
         if (endpointSelector != null && !initialAttempt) {
-            return ctx.newDerivedContext(req, rpcReq, endpointSelector.select(ctx));
+            return ctx.newDerivedContext(id, req, rpcReq, endpointSelector.select(ctx));
         } else {
-            return ctx.newDerivedContext(req, rpcReq);
+            return ctx.newDerivedContext(id, req, rpcReq);
         }
     }
 

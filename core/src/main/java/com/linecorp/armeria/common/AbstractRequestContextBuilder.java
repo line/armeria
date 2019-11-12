@@ -23,7 +23,6 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.URI;
-import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 import javax.annotation.Nullable;
@@ -67,7 +66,7 @@ public abstract class AbstractRequestContextBuilder {
     private final RpcRequest rpcReq;
     private SessionProtocol sessionProtocol;
     @Nullable
-    private UUID uuid;
+    private RequestId id;
     private HttpMethod method;
     private final String authority;
     private final String path;
@@ -437,22 +436,22 @@ public abstract class AbstractRequestContextBuilder {
     }
 
     /**
-     * Sets the {@link UUID} of the request.
-     * If not set, a random {@link UUID} is generated with {@link UUID#randomUUID()}.
+     * Sets the {@link RequestId}.
+     * If not set, a random {@link RequestId} is generated with {@link RequestId#random()}.
      */
-    public AbstractRequestContextBuilder uuid(UUID uuid) {
-        this.uuid = requireNonNull(uuid, "uuid");
+    public AbstractRequestContextBuilder id(RequestId id) {
+        this.id = requireNonNull(id, "id");
         return this;
     }
 
     /**
-     * Returns the {@link UUID} of the request.
+     * Returns the {@link RequestId}.
      */
-    protected final UUID uuid() {
-        if (uuid == null) {
-            uuid = UUID.randomUUID();
+    protected final RequestId id() {
+        if (id == null) {
+            id = RequestId.random();
         }
-        return uuid;
+        return id;
     }
 
     /**

@@ -23,9 +23,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static com.linecorp.armeria.common.SessionProtocol.PROXY;
-import static com.linecorp.armeria.server.ServerConfig.validateMaxRequestLength;
 import static com.linecorp.armeria.server.ServerConfig.validateNonNegative;
-import static com.linecorp.armeria.server.ServerConfig.validateRequestTimeoutMillis;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_UPPER_BOUND;
 import static java.util.Objects.requireNonNull;
@@ -34,7 +32,6 @@ import java.io.File;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;
-import java.security.cert.CertificateException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -46,6 +43,7 @@ import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.KeyManagerFactory;
@@ -64,6 +62,8 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
@@ -157,8 +157,10 @@ public final class ServerBuilder {
 
     private final List<ServerPort> ports = new ArrayList<>();
     private final List<ServerListener> serverListeners = new ArrayList<>();
-    private final List<VirtualHostBuilder> virtualHostBuilders = new ArrayList<>();
+    @VisibleForTesting
+    final VirtualHostBuilder virtualHostTemplate = new VirtualHostBuilder(this, false);
     private final VirtualHostBuilder defaultVirtualHostBuilder = new VirtualHostBuilder(this, true);
+    private final List<VirtualHostBuilder> virtualHostBuilders = new ArrayList<>();
 
     private EventLoopGroup workerGroup = CommonPools.workerGroup();
     private boolean shutdownWorkerGroupOnStop;
@@ -182,29 +184,12 @@ public final class ServerBuilder {
     private boolean shutdownBlockingTaskExecutorOnStop;
     private MeterRegistry meterRegistry = Metrics.globalRegistry;
     private String serviceLoggerPrefix = DEFAULT_SERVICE_LOGGER_PREFIX;
-    private AccessLogWriter accessLogWriter = AccessLogWriter.disabled();
-    private boolean shutdownAccessLogWriterOnStop = true;
     private List<ClientAddressSource> clientAddressSources = ClientAddressSource.DEFAULT_SOURCES;
     private Predicate<InetAddress> clientAddressTrustedProxyFilter = address -> false;
     private Predicate<InetAddress> clientAddressFilter = address -> true;
-    private RejectedRouteHandler rejectedRouteHandler = RejectedRouteHandler.WARN;
-
-    // These properties can also be set in the service level.
-
-    private long requestTimeoutMillis = Flags.defaultRequestTimeoutMillis();
-    private long maxRequestLength = Flags.defaultMaxRequestLength();
-    private boolean verboseResponses = Flags.verboseResponses();
-    private ContentPreviewerFactory requestContentPreviewerFactory = ContentPreviewerFactory.disabled();
-    private ContentPreviewerFactory responseContentPreviewerFactory = ContentPreviewerFactory.disabled();
-
-    private final List<RouteDecoratingService> routeDecoratingServices = new ArrayList<>();
-    private final List<ServiceConfigBuilder> serviceConfigBuilders = new ArrayList<>();
-
-    private Function<VirtualHost, Logger> accessLoggerMapper = host -> LoggerFactory.getLogger(
-            defaultAccessLoggerName(host.hostnamePattern()));
-
     private boolean enableServerHeader = true;
     private boolean enableDateHeader = true;
+    private Supplier<? extends RequestId> requestIdGenerator = RequestId::random;
 
     /**
      * Returns a new {@link ServerBuilder}.
@@ -212,7 +197,36 @@ public final class ServerBuilder {
      * @deprecated Use {@link Server#builder()}.
      */
     @Deprecated
-    public ServerBuilder() {}
+    public ServerBuilder() {
+        // Set the default host-level properties.
+        virtualHostTemplate.accessLogWriter(AccessLogWriter.disabled(), true);
+        virtualHostTemplate.rejectedRouteHandler(RejectedRouteHandler.WARN);
+        virtualHostTemplate.requestTimeoutMillis(Flags.defaultRequestTimeoutMillis());
+        virtualHostTemplate.maxRequestLength(Flags.defaultMaxRequestLength());
+        virtualHostTemplate.verboseResponses(Flags.verboseResponses());
+        virtualHostTemplate.requestContentPreviewerFactory(ContentPreviewerFactory.disabled());
+        virtualHostTemplate.responseContentPreviewerFactory(ContentPreviewerFactory.disabled());
+        virtualHostTemplate.accessLogger(
+                    host -> LoggerFactory.getLogger(defaultAccessLoggerName(host.hostnamePattern())));
+        virtualHostTemplate.tlsSelfSigned(false);
+    }
+
+    private static String defaultAccessLoggerName(String hostnamePattern) {
+        requireNonNull(hostnamePattern, "hostnamePattern");
+        final String[] elements = hostnamePattern.split("\\.");
+        final StringBuilder name = new StringBuilder(
+                DEFAULT_ACCESS_LOGGER_PREFIX.length() + hostnamePattern.length() + 1);
+        name.append(DEFAULT_ACCESS_LOGGER_PREFIX);
+        for (int i = elements.length - 1; i >= 0; i--) {
+            final String element = elements[i];
+            if (element.isEmpty() || "*".equals(element)) {
+                continue;
+            }
+            name.append('.');
+            name.append(element);
+        }
+        return name.toString();
+    }
 
     /**
      * Adds an HTTP port that listens on all available network interfaces.
@@ -669,17 +683,8 @@ public final class ServerBuilder {
      * @param shutdownOnStop whether to shut down the {@link AccessLogWriter} when the {@link Server} stops
      */
     public ServerBuilder accessLogWriter(AccessLogWriter accessLogWriter, boolean shutdownOnStop) {
-        this.accessLogWriter = requireNonNull(accessLogWriter, "accessLogWriter");
-        shutdownAccessLogWriterOnStop = shutdownOnStop;
+        virtualHostTemplate.accessLogWriter(accessLogWriter, shutdownOnStop);
         return this;
-    }
-
-    AccessLogWriter accessLogWriter() {
-        return accessLogWriter;
-    }
-
-    boolean shutdownAccessLogWriterOnStop() {
-        return shutdownAccessLogWriterOnStop;
     }
 
     /**
@@ -698,72 +703,78 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the {@link SslContext} of the default {@link VirtualHost}.
+     * Sets the {@link SslContext} of the {@link Server}.
      */
     public ServerBuilder tls(SslContext sslContext) throws SSLException {
-        defaultVirtualHostBuilder.tls(sslContext);
+        virtualHostTemplate.tls(sslContext);
         return this;
     }
 
     /**
-     * Configures SSL or TLS of the default {@link VirtualHost} from the specified {@code keyCertChainFile}
+     * Configures SSL or TLS of the {@link Server} from the specified {@code keyCertChainFile}
      * and cleartext {@code keyFile}.
      */
     public ServerBuilder tls(File keyCertChainFile, File keyFile) throws SSLException {
-        defaultVirtualHostBuilder.tls(keyCertChainFile, keyFile);
+        virtualHostTemplate.tls(keyCertChainFile, keyFile);
         return this;
     }
 
     /**
-     * Configures SSL or TLS of the default {@link VirtualHost} from the specified {@code keyCertChainFile},
+     * Configures SSL or TLS of the {@link Server} from the specified {@code keyCertChainFile},
      * cleartext {@code keyFile} and {@code tlsCustomizer}.
      */
     public ServerBuilder tls(File keyCertChainFile, File keyFile,
                              Consumer<SslContextBuilder> tlsCustomizer) throws SSLException {
-        defaultVirtualHostBuilder.tls(keyCertChainFile, keyFile, tlsCustomizer);
+        virtualHostTemplate.tls(keyCertChainFile, keyFile, tlsCustomizer);
         return this;
     }
 
     /**
-     * Configures SSL or TLS of the default {@link VirtualHost} from the specified {@code keyCertChainFile},
+     * Configures SSL or TLS of the {@link Server} from the specified {@code keyCertChainFile},
      * {@code keyFile} and {@code keyPassword}.
      */
     public ServerBuilder tls(
             File keyCertChainFile, File keyFile, @Nullable String keyPassword) throws SSLException {
-        defaultVirtualHostBuilder.tls(keyCertChainFile, keyFile, keyPassword);
+        virtualHostTemplate.tls(keyCertChainFile, keyFile, keyPassword);
         return this;
     }
 
     /**
-     * Configures SSL or TLS of the default {@link VirtualHost} from the specified {@code keyCertChainFile},
+     * Configures SSL or TLS of the {@link Server} from the specified {@code keyCertChainFile},
      * {@code keyFile}, {@code keyPassword} and {@code tlsCustomizer}.
      */
     public ServerBuilder tls(
             File keyCertChainFile, File keyFile, @Nullable String keyPassword,
             Consumer<SslContextBuilder> tlsCustomizer) throws SSLException {
-        defaultVirtualHostBuilder.tls(keyCertChainFile, keyFile, keyPassword, tlsCustomizer);
+        virtualHostTemplate.tls(keyCertChainFile, keyFile, keyPassword, tlsCustomizer);
         return this;
     }
 
     /**
-     * Configures SSL or TLS of the default {@link VirtualHost} from the specified {@code keyManagerFactory}
+     * Configures SSL or TLS of the {@link Server} from the specified {@code keyManagerFactory}
      * and {@code tlsCustomizer}.
      */
     public ServerBuilder tls(KeyManagerFactory keyManagerFactory,
                              Consumer<SslContextBuilder> tlsCustomizer) throws SSLException {
-        defaultVirtualHostBuilder.tls(keyManagerFactory, tlsCustomizer);
+        virtualHostTemplate.tls(keyManagerFactory, tlsCustomizer);
         return this;
     }
 
     /**
-     * Configures SSL or TLS of the default {@link VirtualHost} with an auto-generated self-signed
-     * certificate. <strong>Note:</strong> You should never use this in production but only for a testing
-     * purpose.
-     *
-     * @throws CertificateException if failed to generate a self-signed certificate
+     * Configures SSL or TLS of the {@link Server} with an auto-generated self-signed certificate.
+     * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
      */
-    public ServerBuilder tlsSelfSigned() throws SSLException, CertificateException {
-        defaultVirtualHostBuilder.tlsSelfSigned();
+    public ServerBuilder tlsSelfSigned() {
+        virtualHostTemplate.tlsSelfSigned();
+        return this;
+    }
+
+    /**
+     * Configures SSL or TLS of the {@link Server} with an auto-generated self-signed certificate.
+     * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
+     */
+    public ServerBuilder tlsSelfSigned(boolean tlsSelfSigned) {
+        virtualHostTemplate.tlsSelfSigned(tlsSelfSigned);
         return this;
     }
 
@@ -831,8 +842,7 @@ public final class ServerBuilder {
      * {@link VirtualHost}.
      */
     public ServerBuilder service(Route route, Service<HttpRequest, HttpResponse> service) {
-        serviceConfigBuilders.add(new ServiceConfigBuilder(route, service));
-        return this;
+        return serviceConfigBuilder(new ServiceConfigBuilder(route, service));
     }
 
     /**
@@ -1094,12 +1104,12 @@ public final class ServerBuilder {
     }
 
     ServerBuilder serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder) {
-        serviceConfigBuilders.add(serviceConfigBuilder);
+        virtualHostTemplate.addServiceConfigBuilder(serviceConfigBuilder);
         return this;
     }
 
     ServerBuilder routingDecorator(RouteDecoratingService routeDecoratingService) {
-        routeDecoratingServices.add(routeDecoratingService);
+        virtualHostTemplate.addRouteDecoratingService(routeDecoratingService);
         return this;
     }
 
@@ -1385,12 +1395,8 @@ public final class ServerBuilder {
      * will have an access logger set by the {@code mapper} when {@link ServerBuilder#build()} is called.
      */
     public ServerBuilder accessLogger(Function<VirtualHost, Logger> mapper) {
-        accessLoggerMapper = requireNonNull(mapper, "mapper");
+        virtualHostTemplate.accessLogger(mapper);
         return this;
-    }
-
-    Function<VirtualHost, Logger> accessLoggerMapper() {
-        return accessLoggerMapper;
     }
 
     /**
@@ -1399,13 +1405,35 @@ public final class ServerBuilder {
      * routes are logged at WARN level.
      */
     public ServerBuilder rejectedRouteHandler(RejectedRouteHandler handler) {
-        rejectedRouteHandler = requireNonNull(handler, "handler");
-        defaultVirtualHostBuilder.rejectedRouteHandler(handler);
+        virtualHostTemplate.rejectedRouteHandler(handler);
         return this;
     }
 
-    RejectedRouteHandler rejectedRouteHandler() {
-        return rejectedRouteHandler;
+    /**
+     * Sets the response header not to include default {@code "Server"} header.
+     */
+    public ServerBuilder disableServerHeader() {
+        enableServerHeader = false;
+        return this;
+    }
+
+    /**
+     * Sets the response header not to include default {@code "Date"} header.
+     */
+    public ServerBuilder disableDateHeader() {
+        enableDateHeader = false;
+        return this;
+    }
+
+    /**
+     * Sets the {@link Supplier} which generates a {@link RequestId}.
+     * By default, a {@link RequestId} is generated from a random 64-bit integer.
+     *
+     * @see RequestContext#id()
+     */
+    public ServerBuilder requestIdGenerator(Supplier<? extends RequestId> requestIdGenerator) {
+        this.requestIdGenerator = requireNonNull(requestIdGenerator, "requestIdGenerator");
+        return this;
     }
 
     /**
@@ -1431,16 +1459,6 @@ public final class ServerBuilder {
     }
 
     /**
-     * Returns the timeout of a request in milliseconds.
-     *
-     * @deprecated Use {@link #requestTimeoutMillis()}.
-     */
-    @Deprecated
-    long defaultRequestTimeoutMillis() {
-        return requestTimeoutMillis;
-    }
-
-    /**
      * Sets the timeout of a request.
      *
      * @param requestTimeout the timeout. {@code 0} disables the timeout.
@@ -1455,16 +1473,8 @@ public final class ServerBuilder {
      * @param requestTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
      */
     public ServerBuilder requestTimeoutMillis(long requestTimeoutMillis) {
-        this.requestTimeoutMillis = validateRequestTimeoutMillis(requestTimeoutMillis);
-        defaultVirtualHostBuilder.requestTimeoutMillis(requestTimeoutMillis);
+        virtualHostTemplate.requestTimeoutMillis(requestTimeoutMillis);
         return this;
-    }
-
-    /**
-     * Returns the timeout of a request in milliseconds.
-     */
-    long requestTimeoutMillis() {
-        return requestTimeoutMillis;
     }
 
     /**
@@ -1481,34 +1491,14 @@ public final class ServerBuilder {
     }
 
     /**
-     * Returns the maximum allowed length of the content decoded at the session layer.
-     * e.g. the content length of an HTTP request.
-     *
-     * @deprecated Use {@link #maxRequestLength()}.
-     */
-    @Deprecated
-    long defaultMaxRequestLength() {
-        return maxRequestLength;
-    }
-
-    /**
      * Sets the maximum allowed length of the content decoded at the session layer.
      * e.g. the content length of an HTTP request.
      *
      * @param maxRequestLength the maximum allowed length. {@code 0} disables the length limit.
      */
     public ServerBuilder maxRequestLength(long maxRequestLength) {
-        this.maxRequestLength = validateMaxRequestLength(maxRequestLength);
-        defaultVirtualHostBuilder.maxRequestLength(maxRequestLength);
+        virtualHostTemplate.maxRequestLength(maxRequestLength);
         return this;
-    }
-
-    /**
-     * Returns the maximum allowed length of the content decoded at the session layer.
-     * e.g. the content length of an HTTP request.
-     */
-    long maxRequestLength() {
-        return maxRequestLength;
     }
 
     /**
@@ -1518,39 +1508,24 @@ public final class ServerBuilder {
      * The default value of this property is retrieved from {@link Flags#verboseResponses()}.
      */
     public ServerBuilder verboseResponses(boolean verboseResponses) {
-        this.verboseResponses = verboseResponses;
-        defaultVirtualHostBuilder.verboseResponses(verboseResponses);
+        virtualHostTemplate.verboseResponses(verboseResponses);
         return this;
-    }
-
-    boolean verboseResponses() {
-        return verboseResponses;
     }
 
     /**
      * Sets the {@link ContentPreviewerFactory} for a request of this {@link Server}.
      */
     public ServerBuilder requestContentPreviewerFactory(ContentPreviewerFactory factory) {
-        requestContentPreviewerFactory = requireNonNull(factory, "factory");
-        defaultVirtualHostBuilder.requestContentPreviewerFactory(factory);
+        virtualHostTemplate.requestContentPreviewerFactory(factory);
         return this;
-    }
-
-    ContentPreviewerFactory requestContentPreviewerFactory() {
-        return requestContentPreviewerFactory;
     }
 
     /**
      * Sets the {@link ContentPreviewerFactory} for a response of this {@link Server}.
      */
     public ServerBuilder responseContentPreviewerFactory(ContentPreviewerFactory factory) {
-        responseContentPreviewerFactory = requireNonNull(factory, "factory");
-        defaultVirtualHostBuilder.responseContentPreviewerFactory(factory);
+        virtualHostTemplate.responseContentPreviewerFactory(factory);
         return this;
-    }
-
-    ContentPreviewerFactory responseContentPreviewerFactory() {
-        return responseContentPreviewerFactory;
     }
 
     /**
@@ -1599,52 +1574,16 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the response header not to include default {@code "Server"} header.
-     */
-    public ServerBuilder disableServerHeader() {
-        this.enableServerHeader = false;
-        return this;
-    }
-
-    boolean isServerHeaderEnabled() {
-        return enableServerHeader;
-    }
-
-    /**
-     * Sets the response header not to include default {@code "Date"} header.
-     */
-    public ServerBuilder disableDateHeader() {
-        this.enableDateHeader = false;
-        return this;
-    }
-
-    boolean isDateHeaderEnabled() {
-        return enableDateHeader;
-    }
-
-    /**
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
-        final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator;
-        if (!routeDecoratingServices.isEmpty()) {
-            decorator = RouteDecoratingService.newDecorator(
-                    Routers.ofRouteDecoratingService(routeDecoratingServices));
-        } else {
-            decorator = null;
-        }
+        final VirtualHost defaultVirtualHost =
+                defaultVirtualHostBuilder.build(virtualHostTemplate);
+        final List<VirtualHost> virtualHosts =
+                virtualHostBuilders.stream()
+                                   .map(vhb -> vhb.build(virtualHostTemplate))
+                                   .collect(toImmutableList());
 
-        defaultVirtualHostBuilder.serviceConfigBuilders(serviceConfigBuilders);
-        final List<VirtualHost> virtualHosts = virtualHostBuilders
-                .stream()
-                .map(vhb -> vhb.routeDecoratingServices(routeDecoratingServices))
-                .map(vhb -> vhb.serviceConfigBuilders(serviceConfigBuilders.stream()
-                                                                           .map(ServiceConfigBuilder::copyOf)
-                                                                           .collect(toImmutableList())))
-                .map(VirtualHostBuilder::build)
-                .collect(toImmutableList());
-
-        final VirtualHost defaultVirtualHost = defaultVirtualHostBuilder.build().decorate(decorator);
         // Pre-populate the domain name mapping for later matching.
         final DomainNameMapping<SslContext> sslContexts;
         final SslContext defaultSslContext = findDefaultSslContext(defaultVirtualHost, virtualHosts);
@@ -1698,16 +1637,15 @@ public final class ServerBuilder {
         final Server server = new Server(new ServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext), virtualHosts,
                 workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
-                idleTimeoutMillis, requestTimeoutMillis, maxRequestLength, verboseResponses,
-                http2InitialConnectionWindowSize, http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
-                http2MaxFrameSize, http2MaxHeaderListSize,
+                idleTimeoutMillis, http2InitialConnectionWindowSize, http2InitialStreamWindowSize,
+                http2MaxStreamsPerConnection, http2MaxFrameSize, http2MaxHeaderListSize,
                 http1MaxInitialLineLength, http1MaxHeaderSize, http1MaxChunkSize,
                 gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
-                meterRegistry, serviceLoggerPrefix, accessLogWriter, shutdownAccessLogWriterOnStop,
+                meterRegistry, serviceLoggerPrefix,
                 proxyProtocolMaxTlvSize, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter,
-                enableServerHeader, enableDateHeader), sslContexts);
+                enableServerHeader, enableDateHeader, requestIdGenerator), sslContexts);
 
         serverListeners.forEach(server::addListener);
         return server;
@@ -1770,37 +1708,18 @@ public final class ServerBuilder {
         return null;
     }
 
-    private static String defaultAccessLoggerName(String hostnamePattern) {
-        requireNonNull(hostnamePattern, "hostnamePattern");
-        final String[] elements = hostnamePattern.split("\\.");
-        final StringBuilder name = new StringBuilder(
-                DEFAULT_ACCESS_LOGGER_PREFIX.length() + hostnamePattern.length() + 1);
-        name.append(DEFAULT_ACCESS_LOGGER_PREFIX);
-        for (int i = elements.length - 1; i >= 0; i--) {
-            final String element = elements[i];
-            if (element.isEmpty() || "*".equals(element)) {
-                continue;
-            }
-            name.append('.');
-            name.append(element);
-        }
-        return name.toString();
-    }
-
     @Override
     public String toString() {
         return ServerConfig.toString(
                 getClass(), ports, null, ImmutableList.of(), workerGroup, shutdownWorkerGroupOnStop,
-                maxNumConnections, idleTimeoutMillis, requestTimeoutMillis, maxRequestLength,
-                verboseResponses, http2InitialConnectionWindowSize, http2InitialStreamWindowSize,
-                http2MaxStreamsPerConnection, http2MaxFrameSize, http2MaxHeaderListSize,
-                http1MaxInitialLineLength, http1MaxHeaderSize, http1MaxChunkSize,
+                maxNumConnections, idleTimeoutMillis, http2InitialConnectionWindowSize,
+                http2InitialStreamWindowSize, http2MaxStreamsPerConnection, http2MaxFrameSize,
+                http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize, http1MaxChunkSize,
                 proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
                 meterRegistry, serviceLoggerPrefix,
-                accessLogWriter, shutdownAccessLogWriterOnStop,
                 channelOptions, childChannelOptions,
-                clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter
-        );
+                clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter,
+                enableServerHeader, enableDateHeader);
     }
 }

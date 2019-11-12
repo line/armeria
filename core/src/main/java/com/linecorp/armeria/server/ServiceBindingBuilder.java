@@ -207,6 +207,11 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     }
 
     @Override
+    public ServiceBindingBuilder accessLogFormat(String accessLogFormat) {
+        return (ServiceBindingBuilder) super.accessLogFormat(accessLogFormat);
+    }
+
+    @Override
     public ServiceBindingBuilder accessLogWriter(AccessLogWriter accessLogWriter, boolean shutdownOnStop) {
         return (ServiceBindingBuilder) super.accessLogWriter(accessLogWriter, shutdownOnStop);
     }

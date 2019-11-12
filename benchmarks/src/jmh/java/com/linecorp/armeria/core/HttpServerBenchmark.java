@@ -36,11 +36,14 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.shared.AsyncCounters;
 
+/**
+ * Microbenchmarks of a {@link Server}.
+ */
 @State(Scope.Benchmark)
 public class HttpServerBenchmark {
 
     // JMH bug prevents it from using enums that override toString() (it should use name() instead...).
-    public enum Protocol {
+    private enum Protocol {
         H2C(SessionProtocol.H2C),
         H1C(SessionProtocol.H1C);
 

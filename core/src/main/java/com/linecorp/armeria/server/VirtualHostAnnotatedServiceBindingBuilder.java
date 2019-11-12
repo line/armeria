@@ -242,7 +242,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
                     element.buildSafeDecoratedService(defaultServiceConfigSetters.getDecorator());
             final ServiceConfigBuilder serviceConfigBuilder =
                     defaultServiceConfigSetters.toServiceConfigBuilder(element.route(), decoratedService);
-            virtualHostBuilder.serviceConfigBuilder(serviceConfigBuilder);
+            virtualHostBuilder.addServiceConfigBuilder(serviceConfigBuilder);
         });
         return virtualHostBuilder;
     }

@@ -19,7 +19,6 @@ package com.linecorp.armeria.common;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
-import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -169,10 +168,9 @@ public interface RequestContext extends AttributeMap {
     SSLSession sslSession();
 
     /**
-     * Returns the {@link UUID} that represents the unique identifier of the current {@link Request}
-     * and {@link Response} pair.
+     * Returns the {@link RequestId} of the current {@link Request} and {@link Response} pair.
      */
-    UUID uuid();
+    RequestId id();
 
     /**
      * Returns the HTTP method of the current {@link Request}.
@@ -647,16 +645,8 @@ public interface RequestContext extends AttributeMap {
 
     /**
      * Creates a new {@link RequestContext} whose properties and {@link Attribute}s are copied from this
-     * {@link RequestContext}, except having its own {@link RequestLog}.
-     */
-    default RequestContext newDerivedContext() {
-        return newDerivedContext(request(), rpcRequest());
-    }
-
-    /**
-     * Creates a new {@link RequestContext} whose properties and {@link Attribute}s are copied from this
      * {@link RequestContext}, except having a different pair of {@link HttpRequest} and {@link RpcRequest}
      * and its own {@link RequestLog}.
      */
-    RequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq);
+    RequestContext newDerivedContext(RequestId id, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq);
 }

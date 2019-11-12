@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
@@ -185,8 +186,11 @@ public abstract class AbstractCompositeService<I extends Request, O extends Resp
         }
 
         @Override
-        public ServiceRequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
-            return new CompositeServiceRequestContext(super.newDerivedContext(req, rpcReq), route, mappedPath);
+        public ServiceRequestContext newDerivedContext(RequestId id,
+                                                       @Nullable HttpRequest req,
+                                                       @Nullable RpcRequest rpcReq) {
+            return new CompositeServiceRequestContext(super.newDerivedContext(id, req, rpcReq),
+                                                      route, mappedPath);
         }
 
         @Override

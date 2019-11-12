@@ -38,6 +38,7 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
 class VirtualHostAnnotatedServiceBindingBuilderTest {
 
+    private static final VirtualHostBuilder template = Server.builder().virtualHostTemplate;
     private static final String TEST_HOST = "foo.com";
 
     @RegisterExtension
@@ -76,7 +77,7 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
                 .contentPreviewerFactory(factory)
                 .verboseResponses(verboseResponse)
                 .build(new TestService())
-                .build();
+                .build(template);
 
         assertThat(virtualHost.serviceConfigs()).hasSize(1);
         final ServiceConfig serviceConfig = virtualHost.serviceConfigs().get(0);

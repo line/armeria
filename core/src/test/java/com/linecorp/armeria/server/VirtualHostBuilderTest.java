@@ -31,6 +31,8 @@ import com.linecorp.armeria.common.HttpResponse;
 
 class VirtualHostBuilderTest {
 
+    private static final VirtualHostBuilder template = Server.builder().virtualHostTemplate;
+
     @Test
     void defaultVirtualHost() {
         final ServerBuilder sb = Server.builder();
@@ -150,7 +152,7 @@ class VirtualHostBuilderTest {
         final VirtualHost h = new VirtualHostBuilder(Server.builder(), false)
                 .defaultHostname("foo.com")
                 .hostnamePattern("foo.com")
-                .build();
+                .build(template);
         assertThat(h.hostnamePattern()).isEqualTo("foo.com");
         assertThat(h.defaultHostname()).isEqualTo("foo.com");
     }
@@ -160,7 +162,7 @@ class VirtualHostBuilderTest {
         final VirtualHost h = new VirtualHostBuilder(Server.builder(), false)
                 .defaultHostname("bar.foo.com")
                 .hostnamePattern("*.foo.com")
-                .build();
+                .build(template);
         assertThat(h.hostnamePattern()).isEqualTo("*.foo.com");
         assertThat(h.defaultHostname()).isEqualTo("bar.foo.com");
     }
@@ -171,14 +173,14 @@ class VirtualHostBuilderTest {
                 .defaultHostname("bar.foo.com")
                 .hostnamePattern("*.foo.com")
                 .accessLogger(host -> LoggerFactory.getLogger("customize.test"))
-                .build();
+                .build(template);
         assertThat(h1.accessLogger().getName()).isEqualTo("customize.test");
 
         final VirtualHost h2 = new VirtualHostBuilder(Server.builder(), false)
                 .defaultHostname("bar.foo.com")
                 .hostnamePattern("*.foo.com")
                 .accessLogger(LoggerFactory.getLogger("com.foo.test"))
-                .build();
+                .build(template);
         assertThat(h2.accessLogger().getName()).isEqualTo("com.foo.test");
     }
 
@@ -216,7 +218,7 @@ class VirtualHostBuilderTest {
             new VirtualHostBuilder(Server.builder(), false)
                     .defaultHostname("bar.com")
                     .hostnamePattern("foo.com")
-                    .build();
+                    .build(template);
         });
     }
 
@@ -226,7 +228,7 @@ class VirtualHostBuilderTest {
             new VirtualHostBuilder(Server.builder(), false)
                     .defaultHostname("bar.com")
                     .hostnamePattern("*.foo.com")
-                    .build();
+                    .build(template);
         });
     }
 
@@ -234,10 +236,10 @@ class VirtualHostBuilderTest {
     void precedenceOfDuplicateRoute() {
         final Route routeA = Route.builder().path("/").build();
         final Route routeB = Route.builder().path("/").build();
-        final VirtualHost virtualHost = new VirtualHostBuilder(new ServerBuilder(), true)
+        final VirtualHost virtualHost = new VirtualHostBuilder(Server.builder(), true)
                 .service(routeA, (ctx, req) -> HttpResponse.of(OK))
                 .service(routeB, (ctx, req) -> HttpResponse.of(OK))
-                .build();
+                .build(template);
         assertThat(virtualHost.serviceConfigs().size()).isEqualTo(2);
         final RoutingContext routingContext = mock(RoutingContext.class);
         when(routingContext.path()).thenReturn("/");
