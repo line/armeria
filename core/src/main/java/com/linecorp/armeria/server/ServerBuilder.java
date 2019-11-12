@@ -990,7 +990,7 @@ public final class ServerBuilder {
 
     /**
      * Binds the specified annotated service object under the path prefix {@code "/"}.
-     * FIXME
+     *
      * @param customizer the {@link AnnotatedHttpServiceConfiguratorSetters}.
      */
     public ServerBuilder annotatedService(Object service,

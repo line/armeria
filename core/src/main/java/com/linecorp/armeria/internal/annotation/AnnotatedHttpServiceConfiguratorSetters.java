@@ -136,7 +136,7 @@ public final class AnnotatedHttpServiceConfiguratorSetters {
 
     /**
      * Creates a new instance with the specified {@link ExceptionHandlerFunction}s,
-     * {@link RequestConverterFunction} and {@link ResponseConverterFunction}.
+     * {@link RequestConverterFunction}s and {@link ResponseConverterFunction}s.
      */
     static AnnotatedHttpServiceConfiguratorSetters ofExceptionHandlersAndConverters(
             List<ExceptionHandlerFunction> exceptionHandlerFunctions,

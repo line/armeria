@@ -27,28 +27,28 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
 /**
- * A configurator to configure {@link ExceptionHandlerFunction}s or {@link RequestConverterFunction}s
- * or {@link ResponseConverterFunction} for an {@link AnnotatedHttpService}.
+ * A configurator to configure {@link ExceptionHandlerFunction}s, {@link RequestConverterFunction}s
+ * or {@link ResponseConverterFunction}s for an {@link AnnotatedHttpService}.
  */
-public final class AnnotatedHttpServiceConfigurator {
+final class AnnotatedHttpServiceConfigurator {
 
     /**
-     * The exception handlers of the annotated service object.
+     * The exception handlers of the annotated service.
      */
     private List<ExceptionHandlerFunction> exceptionHandlers = ImmutableList.of();
 
     /**
-     * The request converters of the annotated service object.
+     * The request converters of the annotated service.
      */
     private List<RequestConverterFunction> requestConverters = ImmutableList.of();
 
     /**
-     * The response converters of the annotated service object.
+     * The response converters of the annotated service.
      */
     private List<ResponseConverterFunction> responseConverters = ImmutableList.of();
 
     /**
-     * Configures the specified {@link ExceptionHandlerFunction}s with the annotated service object.
+     * Configures the specified {@link ExceptionHandlerFunction}s with the annotated service.
      */
     void configureExceptionHandlers(List<ExceptionHandlerFunction> exceptionHandlers) {
         requireNonNull(exceptionHandlers, "exceptionHandlers");
