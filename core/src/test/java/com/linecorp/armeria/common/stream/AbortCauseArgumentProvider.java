@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.stream;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -27,7 +28,8 @@ import org.junit.jupiter.params.provider.ArgumentsProvider;
 class AbortCauseArgumentProvider implements ArgumentsProvider {
 
     static final List<Throwable> ABORT_CAUSES =
-            Arrays.asList(null, new IllegalStateException("abort stream with a specified cause"));
+            Collections.unmodifiableList(
+                    Arrays.asList(null, new IllegalStateException("abort stream with a specified cause")));
 
     @Override
     public Stream<? extends Arguments> provideArguments(ExtensionContext extensionContext)
