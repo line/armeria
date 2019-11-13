@@ -72,11 +72,11 @@ abstract class HttpResponseDecoder {
     }
 
     HttpResponseWrapper addResponse(
-            int id, @Nullable HttpRequest req, DecodedHttpResponse res, RequestLogBuilder logBuilder,
+            int id, @Nullable HttpRequest req, DecodedHttpResponse res, @Nullable ClientRequestContext ctx,
             long responseTimeoutMillis, long maxContentLength) {
 
         final HttpResponseWrapper newRes =
-                new HttpResponseWrapper(req, res, logBuilder, responseTimeoutMillis, maxContentLength);
+                new HttpResponseWrapper(req, res, ctx, responseTimeoutMillis, maxContentLength);
         final HttpResponseWrapper oldRes = responses.put(id, newRes);
 
         assert oldRes == null : "addResponse(" + id + ", " + res + ", " + responseTimeoutMillis + "): " +
@@ -141,6 +141,8 @@ abstract class HttpResponseDecoder {
         @Nullable
         private final HttpRequest request;
         private final DecodedHttpResponse delegate;
+        @Nullable
+        private final ClientRequestContext ctx;
         private final RequestLogBuilder logBuilder;
         private final long responseTimeoutMillis;
         private final long maxContentLength;
@@ -152,10 +154,12 @@ abstract class HttpResponseDecoder {
         private State state = State.WAIT_NON_INFORMATIONAL;
 
         HttpResponseWrapper(@Nullable HttpRequest request, DecodedHttpResponse delegate,
-                            RequestLogBuilder logBuilder, long responseTimeoutMillis, long maxContentLength) {
+                            @Nullable ClientRequestContext ctx,
+                            long responseTimeoutMillis, long maxContentLength) {
             this.request = request;
             this.delegate = delegate;
-            this.logBuilder = logBuilder;
+            this.ctx = ctx;
+            logBuilder = ctx != null ? ctx.logBuilder() : RequestLogBuilder.NOOP;
             this.responseTimeoutMillis = responseTimeoutMillis;
             this.maxContentLength = maxContentLength;
         }
