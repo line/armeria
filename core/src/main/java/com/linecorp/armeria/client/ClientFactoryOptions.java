@@ -35,12 +35,16 @@ import com.linecorp.armeria.common.util.AbstractOptions;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
+/**
+ * A set of {@link ClientFactoryOption}s and their respective values.
+ */
 @SuppressWarnings("OptionalGetWithoutIsPresent")
 public final class ClientFactoryOptions extends AbstractOptions {
     private static final EventLoopGroup DEFAULT_WORKER_GROUP = CommonPools.workerGroup();
@@ -94,28 +98,30 @@ public final class ClientFactoryOptions extends AbstractOptions {
     private static final ClientFactoryOptions DEFAULT = new ClientFactoryOptions(DEFAULT_OPTIONS);
 
     /**
-     * TBW.
+     * The default {@link ClientFactoryOptions}.
      */
     public static ClientFactoryOptions of() {
         return DEFAULT;
     }
 
     /**
-     * TBW.
+     * Returns the {@link ClientFactoryOptions} with the specified {@link ClientFactoryOptionValue}s.
      */
     public static ClientFactoryOptions of(ClientFactoryOptionValue<?>... options) {
         return of(of(), requireNonNull(options, "options"));
     }
 
     /**
-     * TBW.
+     * Returns the {@link ClientFactoryOptions} with the specified {@link ClientFactoryOptionValue}s.
      */
     public static ClientFactoryOptions of(Iterable<ClientFactoryOptionValue<?>> options) {
         return of(of(), requireNonNull(options, "options"));
     }
 
     /**
-     * TBW.
+     * Merges the specified {@link ClientFactoryOptions} and {@link ClientFactoryOptionValue}s.
+     *
+     * @return the merged {@link ClientFactoryOptions}
      */
     public static ClientFactoryOptions of(ClientFactoryOptions baseOptions,
                                           ClientFactoryOptionValue<?>... options) {
@@ -129,7 +135,9 @@ public final class ClientFactoryOptions extends AbstractOptions {
     }
 
     /**
-     * TBW.
+     * Merges the specified {@link ClientFactoryOptions} and {@link ClientFactoryOptionValue}s.
+     *
+     * @return the merged {@link ClientFactoryOptions}
      */
     public static ClientFactoryOptions of(ClientFactoryOptions baseOptions,
                                           Iterable<ClientFactoryOptionValue<?>> options) {
@@ -144,7 +152,9 @@ public final class ClientFactoryOptions extends AbstractOptions {
     }
 
     /**
-     * TBW.
+     * Merges the specified two {@link ClientFactoryOptions}s.
+     *
+     * @return the merged {@link ClientFactoryOptions}
      */
     public static ClientFactoryOptions of(ClientFactoryOptions baseOptions, ClientFactoryOptions options) {
         // TODO: Reduce the cost of creating a derived ClientFactoryOptions.
@@ -188,49 +198,53 @@ public final class ClientFactoryOptions extends AbstractOptions {
     }
 
     /**
-     * TBW.
+     * Converts this {@link ClientFactoryOptions} to a {@link Map}.
      */
     public Map<ClientFactoryOption<Object>, ClientFactoryOptionValue<Object>> asMap() {
         return asMap0();
     }
 
     /**
-     * TBW.
+     * Returns the worker {@link EventLoopGroup}.
      */
     public EventLoopGroup workerGroup() {
         return get0(ClientFactoryOption.WORKER_GROUP).get();
     }
 
     /**
-     * TBW.
+     * Returns the flag whether to shut down the worker {@link EventLoopGroup}
+     * when the {@link ClientFactory} is closed.
      */
     public boolean shutdownWorkerGroupOnClose() {
         return get0(ClientFactoryOption.SHUTDOWN_WORKER_GROUP_ON_CLOSE).get();
     }
 
     /**
-     * TBW.
+     * Returns the factory that creates an {@link EventLoopScheduler} which is responsible for assigning an
+     * {@link EventLoop} to handle a connection to the specified {@link Endpoint}.
      */
     public Function<? super EventLoopGroup, ? extends EventLoopScheduler> eventLoopSchedulerFactory() {
         return get0(ClientFactoryOption.EVENT_LOOP_SCHEDULER_FACTORY).get();
     }
 
     /**
-     * TBW.
+     * Returns the options of sockets created by the {@link ClientFactory}.
      */
     public Map<ChannelOption<?>, Object> channelOptions() {
         return get0(ClientFactoryOption.CHANNEL_OPTIONS).get();
     }
 
     /**
-     * TBW.
+     * Returns the {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be
+     * applied to the SSL session.
      */
     public Consumer<? super SslContextBuilder> sslContextCustomizer() {
         return get0(ClientFactoryOption.SSL_CONTEXT_CUSTOMIZER).get();
     }
 
     /**
-     * TBW.
+     * Returns the factory that creates a {@link AddressResolverGroup} which resolves remote addresses into
+     * {@link InetSocketAddress}es.
      */
     public Function<? super EventLoopGroup,
             ? extends AddressResolverGroup<? extends InetSocketAddress>> addressResolverGroupFactory() {
@@ -239,84 +253,90 @@ public final class ClientFactoryOptions extends AbstractOptions {
     }
 
     /**
-     * TBW.
+     * Returns the <a href="https://tools.ietf.org/html/rfc7540#section-6.9.2">initial connection flow-control
+     * window size</a>.
      */
     public int http2InitialConnectionWindowSize() {
         return get0(ClientFactoryOption.HTTP2_INITIAL_CONNECTION_WINDOW_SIZE).get();
     }
 
     /**
-     * TBW.
+     * Returns the <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_INITIAL_WINDOW_SIZE</a>
+     * for HTTP/2 stream-level flow control.
      */
     public int http2InitialStreamWindowSize() {
         return get0(ClientFactoryOption.HTTP2_INITIAL_STREAM_WINDOW_SIZE).get();
     }
 
     /**
-     * TBW.
+     * Returns the <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_FRAME_SIZE</a>
+     * that indicates the size of the largest frame payload that this client is willing to receive.
      */
     public int http2MaxFrameSize() {
         return get0(ClientFactoryOption.HTTP2_MAX_FRAME_SIZE).get();
     }
 
     /**
-     * TBW.
+     * Returns the <a href="https://tools.ietf.org/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>
+     * that indicates the maximum size of header list that the client is prepared to accept, in octets.
      */
     public long http2MaxHeaderListSize() {
         return get0(ClientFactoryOption.HTTP2_MAX_HEADER_LIST_SIZE).get();
     }
 
     /**
-     * TBW.
+     * Returns the maximum length of an HTTP/1 response initial line.
      */
     public int http1MaxInitialLineLength() {
         return get0(ClientFactoryOption.HTTP1_MAX_INITIAL_LINE_LENGTH).get();
     }
 
     /**
-     * TBW.
+     * Returns the maximum length of all headers in an HTTP/1 response.
      */
     public int http1MaxHeaderSize() {
         return get0(ClientFactoryOption.HTTP1_MAX_HEADER_SIZE).get();
     }
 
     /**
-     * TBW.
+     * Returns the maximum length of each chunk in an HTTP/1 response content.
      */
     public int http1MaxChunkSize() {
         return get0(ClientFactoryOption.HTTP1_MAX_CHUNK_SIZE).get();
     }
 
     /**
-     * TBW.
+     * Returns the idle timeout of a socket connection in milliseconds.
      */
     public long idleTimeoutMillis() {
         return get0(ClientFactoryOption.IDLE_TIMEOUT_MILLIS).get();
     }
 
     /**
-     * TBW.
+     * Returns whether to send an HTTP/2 preface string instead of an HTTP/1 upgrade request to negotiate
+     * the protocol version of a cleartext HTTP connection.
      */
     public boolean useHttp2Preface() {
         return get0(ClientFactoryOption.USE_HTTP2_PREFACE).get();
     }
 
     /**
-     * TBW.
+     * Returns whether to use <a href="https://en.wikipedia.org/wiki/HTTP_pipelining">HTTP pipelining</a> for
+     * HTTP/1 connections.
      */
     public boolean useHttp1Pipelining() {
         return get0(ClientFactoryOption.USE_HTTP1_PIPELINING).get();
     }
 
     /**
-     * TBW.
+     * Returns the listener which is notified on a connection pool event.
      */
     public ConnectionPoolListener connectionPoolListener() {
         return get0(ClientFactoryOption.CONNECTION_POOL_LISTENER).get();
     }
 
     /**
-     * TBW.
+     * Returns the {@link MeterRegistry} which collects various stats.
      */
     public MeterRegistry meterRegistry() {
         return get0(ClientFactoryOption.METER_REGISTRY).get();

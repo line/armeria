@@ -18,6 +18,11 @@ package com.linecorp.armeria.client;
 
 import com.linecorp.armeria.common.util.AbstractOptionValue;
 
+/**
+ * A value of a {@link ClientFactoryOption}.
+ *
+ * @param <T> the type of the option value
+ */
 public class ClientFactoryOptionValue<T> extends AbstractOptionValue<ClientFactoryOption<T>, T> {
     ClientFactoryOptionValue(ClientFactoryOption<T> option, T value) {
         super(option, value);

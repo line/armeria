@@ -129,7 +129,7 @@ public interface ClientFactory extends AutoCloseable {
     MeterRegistry meterRegistry();
 
     /**
-     * TBW.
+     * Returns the {@link ClientFactoryOptions} that has been used to create this {@link ClientFactory}.
      */
     ClientFactoryOptions options();
 

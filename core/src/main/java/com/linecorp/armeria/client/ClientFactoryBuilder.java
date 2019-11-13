@@ -415,7 +415,7 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * TBW.
+     * Adds the specified {@link ClientFactoryOption} and its {@code value}.
      */
     public <T> ClientFactoryBuilder option(ClientFactoryOption<T> option, T value) {
         requireNonNull(option, "option");
@@ -424,7 +424,7 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * TBW.
+     * Adds the specified {@link ClientFactoryOptionValue}.
      */
     public <T> ClientFactoryBuilder option(ClientFactoryOptionValue<T> optionValue) {
         requireNonNull(optionValue, "optionValue");
@@ -433,7 +433,7 @@ public final class ClientFactoryBuilder {
     }
 
     /**
-     * TBW.
+     * Adds the specified {@link ClientFactoryOptions}.
      */
     public ClientFactoryBuilder options(ClientFactoryOptions options) {
         requireNonNull(options, "options");
