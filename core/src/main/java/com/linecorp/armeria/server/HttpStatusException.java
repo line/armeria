@@ -78,21 +78,26 @@ public final class HttpStatusException extends RuntimeException {
     public static HttpStatusException of(HttpStatus status, Throwable cause) {
         requireNonNull(status, "status");
         requireNonNull(cause, "cause");
-        return new HttpStatusException(status, cause);
+        return of0(status, cause);
+    }
+
+    private static HttpStatusException of0(HttpStatus status, @Nullable Throwable cause) {
+        final boolean sampled = Flags.verboseExceptionSampler().isSampled(HttpStatusException.class);
+        if (sampled || cause != null) {
+            return new HttpStatusException(status, sampled, cause);
+        }
+
+        final int statusCode = status.code();
+        if (statusCode >= 0 && statusCode < 1000) {
+            return EXCEPTIONS[statusCode];
+        } else {
+            return new HttpStatusException(HttpStatus.valueOf(statusCode), false, null);
+        }
     }
 
     private static final long serialVersionUID = 3341744805097308847L;
 
     private final HttpStatus httpStatus;
-
-    /**
-     * Creates a new instance.
-     */
-    private HttpStatusException(HttpStatus httpStatus, @Nullable Throwable cause) {
-        this(httpStatus,
-             Flags.verboseExceptionSampler().isSampled(HttpStatusException.class),
-             cause);
-    }
 
     /**
      * Creates a new instance.
