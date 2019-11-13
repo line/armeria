@@ -59,9 +59,6 @@ public final class LoggingService extends SimpleDecoratingHttpService {
         return new LoggingServiceBuilder();
     }
 
-    private final LogLevel requestLogLevel;
-    private final LogLevel successfulResponseLogLevel;
-    private final LogLevel failedResponseLogLevel;
     private final Function<? super RequestLog, LogLevel> requestLogLevelMapper;
     private final Function<? super RequestLog, LogLevel> responseLogLevelMapper;
     private final Function<? super RequestHeaders, ?> requestHeadersSanitizer;
@@ -80,9 +77,6 @@ public final class LoggingService extends SimpleDecoratingHttpService {
      */
     LoggingService(
             HttpService delegate,
-            LogLevel requestLogLevel,
-            LogLevel successfulResponseLogLevel,
-            LogLevel failedResponseLogLevel,
             Function<? super RequestLog, LogLevel> requestLogLevelMapper,
             Function<? super RequestLog, LogLevel> responseLogLevelMapper,
             Function<? super RequestHeaders, ?> requestHeadersSanitizer,
@@ -94,10 +88,6 @@ public final class LoggingService extends SimpleDecoratingHttpService {
             Function<? super Throwable, ?> responseCauseSanitizer,
             Sampler<? super ServiceRequestContext> sampler) {
         super(requireNonNull(delegate, "delegate"));
-        this.requestLogLevel = requireNonNull(requestLogLevel, "requestLogLevel");
-        this.successfulResponseLogLevel =
-                requireNonNull(successfulResponseLogLevel, "successfulResponseLogLevel");
-        this.failedResponseLogLevel = requireNonNull(failedResponseLogLevel, "failedResponseLogLevel");
         this.requestLogLevelMapper = requireNonNull(requestLogLevelMapper, "requestLogLevelMapper");
         this.responseLogLevelMapper = requireNonNull(responseLogLevelMapper, "responseLogLevelMapper");
         this.requestHeadersSanitizer = requireNonNull(requestHeadersSanitizer, "requestHeadersSanitizer");

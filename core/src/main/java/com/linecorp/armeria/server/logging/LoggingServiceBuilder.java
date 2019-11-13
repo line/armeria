@@ -57,9 +57,6 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder<Logging
      */
     public LoggingService build(HttpService delegate) {
         return new LoggingService(delegate,
-                                  requestLogLevel(),
-                                  successfulResponseLogLevel(),
-                                  failedResponseLogLevel(),
                                   requestLogLevelMapper(),
                                   responseLogLevelMapper(),
                                   requestHeadersSanitizer(),
