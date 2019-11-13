@@ -143,8 +143,8 @@ public class GracefulShutdownIntegrationTest {
         final CountDownLatch latch = new CountDownLatch(1);
         CompletableFuture.runAsync(() -> {
             try {
-                latch.countDown();
                 client.sleep(500L);
+                latch.countDown();
                 completed.set(true);
             } catch (Throwable t) {
                 fail("Shouldn't happen: " + t);
