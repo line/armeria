@@ -40,7 +40,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.AdditionalHeader;
 import com.linecorp.armeria.server.annotation.ConsumesJson;
@@ -353,7 +352,7 @@ public class HttpServerCorsTest {
 
         // Ensure double decoration is prohibited.
         assertThatThrownBy(() -> {
-            final Function<Service<HttpRequest, HttpResponse>, CorsService> decorator =
+            final Function<? super HttpService, CorsService> decorator =
                     CorsServiceBuilder.forAnyOrigin().newDecorator();
             final HttpService service = (ctx, req) -> HttpResponse.of("OK");
             service.decorate(decorator).decorate(decorator);

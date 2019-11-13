@@ -52,7 +52,7 @@ import io.netty.util.DomainNameMappingBuilder;
  *   <li>the hostname pattern, as defined in
  *       <a href="https://tools.ietf.org/html/rfc2818#section-3.1">the section 3.1 of RFC2818</a></li>
  *   <li>{@link SslContext} if TLS is enabled</li>
- *   <li>the list of available {@link Service}s and their {@link Route}s</li>
+ *   <li>the list of available {@link HttpService}s and their {@link Route}s</li>
  * </ul>
  *
  * @see VirtualHostBuilder
@@ -247,7 +247,7 @@ public final class VirtualHost {
     }
 
     /**
-     * Returns the information about the {@link Service}s bound to this virtual host.
+     * Returns the information about the {@link HttpService}s bound to this virtual host.
      */
     public List<ServiceConfig> serviceConfigs() {
         return serviceConfigs;
@@ -396,8 +396,7 @@ public final class VirtualHost {
                          fallbackServiceConfig);
     }
 
-    VirtualHost decorate(@Nullable Function<Service<HttpRequest, HttpResponse>,
-            Service<HttpRequest, HttpResponse>> decorator) {
+    VirtualHost decorate(@Nullable Function<? super HttpService, ? extends HttpService> decorator) {
         if (decorator == null) {
             return this;
         }

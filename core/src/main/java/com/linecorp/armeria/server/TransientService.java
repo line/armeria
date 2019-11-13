@@ -21,6 +21,10 @@ import com.linecorp.armeria.common.Response;
 
 /**
  * A {@link Service} that handles transient requests, for example, health check requests.
+ *
+ * @param <I> the {@link Request} type
+ * @param <O> the {@link Response} type
  */
+@FunctionalInterface
 public interface TransientService<I extends Request, O extends Response> extends Service<I, O> {
 }

@@ -49,7 +49,6 @@ import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
@@ -302,7 +301,7 @@ public final class HttpFileService extends AbstractHttpService {
      *
      * @param nextService the {@link HttpService} to try secondly
      */
-    public HttpService orElse(Service<HttpRequest, HttpResponse> nextService) {
+    public HttpService orElse(HttpService nextService) {
         requireNonNull(nextService, "nextService");
         return new OrElseHttpService(this, nextService);
     }
@@ -310,9 +309,9 @@ public final class HttpFileService extends AbstractHttpService {
     private static final class OrElseHttpService extends AbstractHttpService {
 
         private final HttpFileService first;
-        private final Service<HttpRequest, HttpResponse> second;
+        private final HttpService second;
 
-        OrElseHttpService(HttpFileService first, Service<HttpRequest, HttpResponse> second) {
+        OrElseHttpService(HttpFileService first, HttpService second) {
             this.first = first;
             this.second = second;
         }

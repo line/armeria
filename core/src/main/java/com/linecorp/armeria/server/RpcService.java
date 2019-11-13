@@ -16,17 +16,42 @@
 
 package com.linecorp.armeria.server;
 
+import java.util.function.Function;
+
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 
 /**
  * An RPC {@link Service}.
- *
- * <p>This interface is a shortcut to {@code Service<RpcRequest, RpcResponse>}.
  */
 @FunctionalInterface
 public interface RpcService extends Service<RpcRequest, RpcResponse> {
 
     @Override
     RpcResponse serve(ServiceRequestContext ctx, RpcRequest req) throws Exception;
+
+    /**
+     * Creates a new {@link Service} that decorates this {@link RpcService} with the specified
+     * {@code decorator}.
+     */
+    default <R extends Service<R_I, R_O>, R_I extends Request, R_O extends Response>
+    R decorate(Function<? super RpcService, R> decorator) {
+        final R newService = decorator.apply(this);
+
+        if (newService == null) {
+            throw new NullPointerException("decorator.apply() returned null: " + decorator);
+        }
+
+        return newService;
+    }
+
+    /**
+     * Creates a new {@link RpcService} that decorates this {@link RpcService} with the specified
+     * {@link DecoratingRpcServiceFunction}.
+     */
+    default RpcService decorate(DecoratingRpcServiceFunction function) {
+        return new FunctionalDecoratingRpcService(this, function);
+    }
 }

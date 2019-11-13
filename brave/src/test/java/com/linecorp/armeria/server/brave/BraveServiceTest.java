@@ -45,7 +45,7 @@ import com.linecorp.armeria.common.brave.SpanCollectingReporter;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import brave.Tracing;
@@ -177,8 +177,7 @@ class BraveServiceTest {
         logBuilder.endRequest();
 
         try (SafeCloseable ignored = ctx.push()) {
-            @SuppressWarnings("unchecked")
-            final Service<HttpRequest, HttpResponse> delegate = mock(Service.class);
+            final HttpService delegate = mock(HttpService.class);
             final BraveService service = BraveService.newDecorator(httpTracing).apply(delegate);
             when(delegate.serve(ctx, req)).thenReturn(res);
 

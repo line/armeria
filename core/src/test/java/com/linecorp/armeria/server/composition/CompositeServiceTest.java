@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.internal.metric.MicrometerUtil;
 import com.linecorp.armeria.server.AbstractHttpService;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -142,7 +143,7 @@ class CompositeServiceTest {
     }
 
     private static final class TestCompositeService
-            extends AbstractCompositeService<HttpRequest, HttpResponse> {
+            extends AbstractCompositeService<HttpService, HttpRequest, HttpResponse> implements HttpService {
 
         TestCompositeService() {
             super(CompositeServiceEntry.ofPrefix("/foo/", serviceA),

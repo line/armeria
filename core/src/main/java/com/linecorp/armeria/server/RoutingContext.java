@@ -94,7 +94,7 @@ public interface RoutingContext {
 
     /**
      * Returns a wrapped {@link RoutingContext} which holds the specified {@code path}.
-     * It is usually used to find a {@link Service} with a prefix-stripped path.
+     * It is usually used to find an {@link HttpService} with a prefix-stripped path.
      */
     default RoutingContext overridePath(String path) {
         requireNonNull(path, "path");

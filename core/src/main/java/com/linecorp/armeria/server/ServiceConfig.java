@@ -27,14 +27,12 @@ import javax.annotation.Nullable;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
- * A {@link Service} configuration.
+ * An {@link HttpService} configuration.
  *
  * @see ServerConfig#serviceConfigs()
  * @see VirtualHost#serviceConfigs()
@@ -51,7 +49,7 @@ public final class ServiceConfig {
     private final Route route;
     @Nullable
     private final String loggerName;
-    private final Service<HttpRequest, HttpResponse> service;
+    private final HttpService service;
 
     private final long requestTimeoutMillis;
     private final long maxRequestLength;
@@ -66,7 +64,7 @@ public final class ServiceConfig {
      * Creates a new instance.
      */
     ServiceConfig(Route route,
-                  Service<HttpRequest, HttpResponse> service,
+                  HttpService service,
                   @Nullable String loggerName, long requestTimeoutMillis,
                   long maxRequestLength, boolean verboseResponses,
                   ContentPreviewerFactory requestContentPreviewerFactory,
@@ -81,7 +79,7 @@ public final class ServiceConfig {
      * Creates a new instance.
      */
     private ServiceConfig(@Nullable VirtualHost virtualHost, Route route,
-                          Service<HttpRequest, HttpResponse> service,
+                          HttpService service,
                           @Nullable String loggerName, long requestTimeoutMillis,
                           long maxRequestLength, boolean verboseResponses,
                           ContentPreviewerFactory requestContentPreviewerFactory,
@@ -133,8 +131,7 @@ public final class ServiceConfig {
                                  shutdownAccessLogWriterOnStop);
     }
 
-    ServiceConfig withDecoratedService(
-            Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator) {
+    ServiceConfig withDecoratedService(Function<? super HttpService, ? extends HttpService> decorator) {
         requireNonNull(decorator, "decorator");
         return new ServiceConfig(virtualHost, route, service.decorate(decorator), loggerName,
                                  requestTimeoutMillis, maxRequestLength, verboseResponses,
@@ -167,15 +164,14 @@ public final class ServiceConfig {
     }
 
     /**
-     * Returns the {@link Service}.
+     * Returns the {@link HttpService}.
      */
-    @SuppressWarnings("unchecked")
-    public <T extends Service<HttpRequest, HttpResponse>> T service() {
-        return (T) service;
+    public HttpService service() {
+        return service;
     }
 
     /**
-     * Returns the logger name for the {@link Service}.
+     * Returns the logger name for the {@link HttpService}.
      *
      * @deprecated Use a logging framework integration such as {@code RequestContextExportingAppender} in
      *             {@code armeria-logback}.
@@ -217,7 +213,7 @@ public final class ServiceConfig {
 
     /**
      * Returns the {@link ContentPreviewerFactory} used for creating a new {@link ContentPreviewer}
-     * which produces the request content preview of this {@link Service}.
+     * which produces the request content preview of this {@link HttpService}.
      *
      * @see VirtualHost#requestContentPreviewerFactory()
      */
@@ -227,7 +223,7 @@ public final class ServiceConfig {
 
     /**
      * Returns the {@link ContentPreviewerFactory} used for creating a new {@link ContentPreviewer}
-     * which produces the response content preview of this {@link Service}.
+     * which produces the response content preview of this {@link HttpService}.
      *
      * @see VirtualHost#responseContentPreviewerFactory()
      */

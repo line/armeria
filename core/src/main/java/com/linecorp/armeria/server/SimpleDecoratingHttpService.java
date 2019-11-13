@@ -22,14 +22,15 @@ import com.linecorp.armeria.common.HttpResponse;
 /**
  * An {@link HttpService} that decorates another {@link HttpService}.
  *
- * @see Service#decorate(DecoratingServiceFunction)
+ * @see HttpService#decorate(DecoratingHttpServiceFunction)
  */
 public abstract class SimpleDecoratingHttpService extends SimpleDecoratingService<HttpRequest, HttpResponse>
         implements HttpService {
+
     /**
-     * Creates a new instance that decorates the specified {@link Service}.
+     * Creates a new instance that decorates the specified {@link HttpService}.
      */
-    protected SimpleDecoratingHttpService(Service<HttpRequest, HttpResponse> delegate) {
+    protected SimpleDecoratingHttpService(HttpService delegate) {
         super(delegate);
     }
 }

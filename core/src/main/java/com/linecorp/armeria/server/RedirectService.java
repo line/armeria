@@ -187,7 +187,7 @@ public class RedirectService extends AbstractHttpService {
      * Creates a new instance that redirects to the location constructed with the specified
      * {@code locationPattern}, preserving the query string in the request URI.
      *
-     * @param redirectStatus the {@link HttpStatus} that the {@link Service} will return.
+     * @param redirectStatus the {@link HttpStatus} that the {@link HttpService} will return.
      * @param locationPattern the location pattern that is used to generate a redirect location.
      *
      * @throws IllegalArgumentException if the specified {@code locationPattern} is unsupported or invalid
@@ -200,7 +200,7 @@ public class RedirectService extends AbstractHttpService {
      * Creates a new instance that redirects to the location constructed with the specified
      * {@code locationPattern}.
      *
-     * @param redirectStatus the {@link HttpStatus} that the {@link Service} will return.
+     * @param redirectStatus the {@link HttpStatus} that the {@link HttpService} will return.
      * @param locationPattern the location pattern that is used to generate a redirect location.
      * @param preserveQueryString whether to preserve the query string in the generated redirect location.
      *
@@ -219,7 +219,7 @@ public class RedirectService extends AbstractHttpService {
      * Creates a new instance that redirects to the location returned by {@code locationFunction},
      * preserving the query string in the request URI.
      *
-     * @param redirectStatus the {@link HttpStatus} that the {@link Service} will return.
+     * @param redirectStatus the {@link HttpStatus} that the {@link HttpService} will return.
      * @param locationFunction a {@link Function} that takes a {@link ServiceRequestContext}
      *                         and returns a new location.
      */
@@ -231,7 +231,7 @@ public class RedirectService extends AbstractHttpService {
     /**
      * Creates a new instance that redirects to the location returned by {@code locationFunction}.
      *
-     * @param redirectStatus the {@link HttpStatus} that the {@link Service} will return.
+     * @param redirectStatus the {@link HttpStatus} that the {@link HttpService} will return.
      * @param locationFunction a {@link Function} that takes a {@link ServiceRequestContext}
      *                         and returns a new location.
      * @param preserveQueryString whether to preserve the query string in the generated redirect location.

@@ -24,18 +24,16 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
- * A builder class for binding a {@link Service} fluently. This class can be instantiated through
- * {@link ServerBuilder#route()}. You can also configure a {@link Service} using
+ * A builder class for binding an {@link HttpService} fluently. This class can be instantiated through
+ * {@link ServerBuilder#route()}. You can also configure an {@link HttpService} using
  * {@link ServerBuilder#withRoute(Consumer)}.
  *
- * <p>Call {@link #build(Service)} to build the {@link Service} and return to the {@link ServerBuilder}.
+ * <p>Call {@link #build(HttpService)} to build the {@link HttpService} and return to the {@link ServerBuilder}.
  *
  * <pre>{@code
  * ServerBuilder sb = Server.builder();
@@ -217,18 +215,17 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     }
 
     @Override
-    public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
-    ServiceBindingBuilder decorator(Function<T, R> decorator) {
+    public ServiceBindingBuilder decorator(Function<? super HttpService, ? extends HttpService> decorator) {
         return (ServiceBindingBuilder) super.decorator(decorator);
     }
 
     /**
-     * Sets the {@link Service} and returns the {@link ServerBuilder} that this
+     * Sets the {@link HttpService} and returns the {@link ServerBuilder} that this
      * {@link ServiceBindingBuilder} was created from.
      *
-     * @throws IllegalStateException if the path that the {@link Service} will be bound to is not specified
+     * @throws IllegalStateException if the path that the {@link HttpService} will be bound to is not specified
      */
-    public ServerBuilder build(Service<HttpRequest, HttpResponse> service) {
+    public ServerBuilder build(HttpService service) {
         build0(service);
         return serverBuilder;
     }
