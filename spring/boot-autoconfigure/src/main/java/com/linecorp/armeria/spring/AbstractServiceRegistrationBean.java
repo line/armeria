@@ -27,9 +27,7 @@ import javax.validation.constraints.NotNull;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.docs.DocService;
 
 /**
@@ -58,8 +56,7 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
      * The decorators of the annotated service object.
      */
     @NotNull
-    private List<Function<Service<HttpRequest, HttpResponse>,
-            ? extends Service<HttpRequest, HttpResponse>>> decorators = new ArrayList<>();
+    private List<Function<? super HttpService, ? extends HttpService>> decorators = new ArrayList<>();
 
     /**
      * Example requests to populate debug forms in {@link DocService}.
@@ -111,8 +108,7 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
      * Returns the decorators of the annotated service object.
      */
     @NotNull
-    public final List<Function<Service<HttpRequest, HttpResponse>,
-            ? extends Service<HttpRequest, HttpResponse>>> getDecorators() {
+    public final List<Function<? super HttpService, ? extends HttpService>> getDecorators() {
         return decorators;
     }
 
@@ -123,8 +119,7 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
      */
     @Deprecated
     public final U setDecorator(
-            Function<Service<HttpRequest, HttpResponse>,
-                    ? extends Service<HttpRequest, HttpResponse>> decorator) {
+            Function<? super HttpService, ? extends HttpService> decorator) {
         return setDecorators(requireNonNull(decorator, "decorator"));
     }
 
@@ -134,8 +129,7 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
      */
     @SafeVarargs
     public final U setDecorators(
-            Function<Service<HttpRequest, HttpResponse>,
-                    ? extends Service<HttpRequest, HttpResponse>>... decorators) {
+            Function<? super HttpService, ? extends HttpService>... decorators) {
         return setDecorators(ImmutableList.copyOf(requireNonNull(decorators, "decorators")));
     }
 
@@ -144,8 +138,7 @@ public class AbstractServiceRegistrationBean<T, U, V, W> {
      * order.
      */
     public final U setDecorators(
-            List<Function<Service<HttpRequest, HttpResponse>,
-                    ? extends Service<HttpRequest, HttpResponse>>> decorators) {
+            List<Function<? super HttpService, ? extends HttpService>> decorators) {
         this.decorators = requireNonNull(decorators, "decorators");
         return self();
     }

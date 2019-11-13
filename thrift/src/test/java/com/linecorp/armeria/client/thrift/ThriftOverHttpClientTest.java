@@ -57,7 +57,6 @@ import com.linecorp.armeria.client.logging.ConnectionPoolLoggingListener;
 import com.linecorp.armeria.client.logging.LoggingRpcClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RpcRequest;
@@ -70,8 +69,8 @@ import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.thrift.THttpService;
@@ -194,8 +193,7 @@ class ThriftOverHttpClientTest {
 
             for (Handlers h : Handlers.values()) {
                 for (SerializationFormat defaultSerializationFormat : ThriftSerializationFormats.values()) {
-                    Service<HttpRequest, HttpResponse> service =
-                            THttpService.of(h.handler(), defaultSerializationFormat);
+                    HttpService service = THttpService.of(h.handler(), defaultSerializationFormat);
                     if (ENABLE_LOGGING_DECORATORS) {
                         service = service.decorate(LoggingService.newDecorator());
                     }

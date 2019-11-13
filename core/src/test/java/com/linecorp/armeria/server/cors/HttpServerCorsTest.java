@@ -40,7 +40,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.AdditionalHeader;
 import com.linecorp.armeria.server.annotation.ConsumesJson;
@@ -256,6 +255,15 @@ public class HttpServerCorsTest {
                                  .newDecorator());
 
             sb.annotatedService("/cors10", new MyAnnotatedService2());
+
+            // CORS decorator as a route decorator & not bound for OPTIONS.
+            sb.route().get("/cors11/get")
+              .build((ctx, req) -> HttpResponse.of(HttpStatus.OK));
+            sb.routeDecorator().pathPrefix("/cors11")
+              .build(CorsServiceBuilder.forOrigin("http://example.com")
+                                       .shortCircuit()
+                                       .allowRequestMethods(HttpMethod.GET)
+                                       .newDecorator());
         }
     };
 
@@ -344,7 +352,7 @@ public class HttpServerCorsTest {
 
         // Ensure double decoration is prohibited.
         assertThatThrownBy(() -> {
-            final Function<Service<HttpRequest, HttpResponse>, CorsService> decorator =
+            final Function<? super HttpService, CorsService> decorator =
                     CorsServiceBuilder.forAnyOrigin().newDecorator();
             final HttpService service = (ctx, req) -> HttpResponse.of("OK");
             service.decorate(decorator).decorate(decorator);
@@ -551,5 +559,30 @@ public class HttpServerCorsTest {
         res = preflightRequest(client, "/cors10/not_configured", "http://example.com", "GET");
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS)).isNull();
+    }
+
+    /**
+     * If CORS was configured as a route decorator and there's no binding for OPTIONS method,
+     * the server's fallback service decorated with the CORS decorator will be matched and thus
+     * must respond with a CORS response.
+     */
+    @Test
+    public void testCorsWithPartialBindingAndRouteDecorator() {
+        final HttpClient client = client();
+        AggregatedHttpResponse res;
+
+        res = preflightRequest(client, "/cors11/get", "http://example.com", "GET");
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS)).isEqualTo("GET");
+
+        // GET must be allowed.
+        res = request(client, HttpMethod.GET, "/cors11/get", "http://example.com", "GET");
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN))
+                .isEqualTo("http://example.com");
+
+        // Other methods must be disallowed.
+        res = request(client, HttpMethod.GET, "/cors11/get", "http://notallowed.com", "GET");
+        assertThat(res.status()).isSameAs(HttpStatus.FORBIDDEN);
     }
 }

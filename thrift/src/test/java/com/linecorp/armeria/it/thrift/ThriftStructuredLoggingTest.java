@@ -18,86 +18,53 @@ package com.linecorp.armeria.it.thrift;
 
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedTransferQueue;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.thrift.protocol.TMessageType;
-import org.junit.Rule;
-import org.junit.Test;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.server.logging.structured.StructuredLoggingService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.server.thrift.ThriftStructuredLog;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.hello_args;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.hello_result;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit.server.ServerExtension;
 
-public class ThriftStructuredLoggingTest {
+class ThriftStructuredLoggingTest {
 
-    private static final BlockingQueue<ThriftStructuredLog> writtenLogs = new LinkedTransferQueue<>();
+    private static final AtomicReference<ThriftStructuredLog> logHolder = new AtomicReference<>();
 
-    private static class MockedStructuredLoggingService<I extends Request, O extends Response>
-            extends StructuredLoggingService<I, O, ThriftStructuredLog> {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
 
-        int closed;
-
-        MockedStructuredLoggingService(Service<I, O> delegate) {
-            super(delegate, ThriftStructuredLog::new);
-        }
-
-        @Override
-        protected void writeLog(RequestLog log, ThriftStructuredLog structuredLog) {
-            writtenLogs.add(structuredLog);
-        }
-
-        @Override
-        protected void close() {
-            super.close();
-            closed++;
-        }
-    }
-
-    private MockedStructuredLoggingService<HttpRequest, HttpResponse> loggingService;
-
-    @Rule
-    public final ServerRule server = new ServerRule() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            loggingService = new MockedStructuredLoggingService<>(
-                    THttpService.of((HelloService.Iface) name -> "Hello " + name));
-            sb.service("/hello", loggingService);
+            final THttpService tHttpService = THttpService.of((HelloService.Iface) name -> "Hello " + name);
+            sb.service("/hello", tHttpService).accessLogWriter(log -> {
+                logHolder.set(new ThriftStructuredLog(log));
+            }, true);
         }
     };
 
-    private HelloService.Iface newClient() throws Exception {
+    private static HelloService.Iface newClient() throws Exception {
         final String uri = server.uri(BINARY, "/hello");
         return Clients.newClient(uri, HelloService.Iface.class);
     }
 
-    @Rule
-    public final MockitoRule mockitoRule = MockitoJUnit.rule();
-
-    @Test(timeout = 10000)
+    @Test
     public void testStructuredLogging() throws Exception {
         final HelloService.Iface client = newClient();
         client.hello("kawamuray");
 
-        final ThriftStructuredLog log = writtenLogs.take();
-        //assertThat(writtenLogs.size()).isEqualTo(1);
+        await().until(() -> logHolder.get() != null);
+        final ThriftStructuredLog log = logHolder.get();
 
         assertThat(log.timestampMillis()).isGreaterThan(0);
         assertThat(log.responseTimeNanos()).isGreaterThanOrEqualTo(0);
@@ -106,20 +73,16 @@ public class ThriftStructuredLoggingTest {
         assertThat(log.thriftMethodName()).isEqualTo("hello");
 
         final ThriftCall call = log.thriftCall();
+        assertThat(call).isNotNull();
         assertThat(call.header().name).isEqualTo("hello");
         assertThat(call.header().type).isEqualTo(TMessageType.CALL);
         assertThat(call.args()).isEqualTo(new hello_args().setName("kawamuray"));
 
         final ThriftReply reply = log.thriftReply();
+        assertThat(reply).isNotNull();
         assertThat(reply.header().name).isEqualTo("hello");
         assertThat(reply.header().type).isEqualTo(TMessageType.REPLY);
         assertThat(reply.header().seqid).isEqualTo(call.header().seqid);
         assertThat(reply.result()).isEqualTo(new hello_result().setSuccess("Hello kawamuray"));
-    }
-
-    @Test(timeout = 10000)
-    public void testWriterClosed() throws Exception {
-        server.stop().join();
-        assertThat(loggingService.closed).isOne();
     }
 }

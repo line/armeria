@@ -27,7 +27,6 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.util.Sampler;
-import com.linecorp.armeria.server.logging.LoggingService;
 
 /**
  * Decorates an {@link HttpClient} to log {@link Request}s and {@link Response}s.
@@ -69,7 +68,7 @@ public final class LoggingClient extends AbstractLoggingClient<HttpRequest, Http
     /**
      * Creates a new instance that logs {@link Request}s and {@link Response}s at {@link LogLevel#INFO}.
      *
-     * @deprecated Use {@link LoggingService#newDecorator()}.
+     * @deprecated Use {@link LoggingClient#newDecorator()}.
      */
     @Deprecated
     public LoggingClient(HttpClient delegate) {

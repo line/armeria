@@ -401,7 +401,7 @@ class HttpServerTest {
 
             sb.serviceUnder("/not-cached-paths", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
 
-            sb.serviceUnder("/cached-paths", new Service<HttpRequest, HttpResponse>() {
+            sb.serviceUnder("/cached-paths", new HttpService() {
                 @Override
                 public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                     return HttpResponse.of(HttpStatus.OK);
@@ -415,7 +415,7 @@ class HttpServerTest {
 
             sb.service("/cached-exact-path", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
 
-            final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator =
+            final Function<? super HttpService, ? extends HttpService> decorator =
                     s -> new SimpleDecoratingHttpService(s) {
                         @Override
                         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {

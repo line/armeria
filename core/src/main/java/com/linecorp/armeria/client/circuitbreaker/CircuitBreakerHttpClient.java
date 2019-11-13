@@ -63,7 +63,7 @@ public final class CircuitBreakerHttpClient extends CircuitBreakerClient<HttpReq
      * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
      * unrelated services.
      *
-     * @param factory a function that takes a {@link HttpMethod} and creates a new {@link CircuitBreaker}
+     * @param factory a function that takes an {@link HttpMethod} and creates a new {@link CircuitBreaker}
      */
     public static Function<? super HttpClient, CircuitBreakerHttpClient>
     newPerMethodDecorator(Function<String, CircuitBreaker> factory,

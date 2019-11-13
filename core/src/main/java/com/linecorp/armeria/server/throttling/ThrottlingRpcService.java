@@ -25,19 +25,21 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.server.HttpStatusException;
+import com.linecorp.armeria.server.RpcService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * Decorates an RPC {@link Service} to throttle incoming requests.
  */
-public class ThrottlingRpcService extends ThrottlingService<RpcRequest, RpcResponse> {
+public class ThrottlingRpcService extends AbstractThrottlingService<RpcRequest, RpcResponse>
+        implements RpcService {
     /**
      * Creates a new decorator using the specified {@link ThrottlingStrategy} instance.
      *
      * @param strategy The {@link ThrottlingStrategy} instance to be used
      */
-    public static Function<Service<RpcRequest, RpcResponse>, ThrottlingRpcService>
+    public static Function<? super RpcService, ThrottlingRpcService>
     newDecorator(ThrottlingStrategy<RpcRequest> strategy) {
         requireNonNull(strategy, "strategy");
         return delegate -> new ThrottlingRpcService(delegate, strategy);
@@ -46,8 +48,7 @@ public class ThrottlingRpcService extends ThrottlingService<RpcRequest, RpcRespo
     /**
      * Creates a new instance that decorates the specified {@link Service}.
      */
-    protected ThrottlingRpcService(Service<RpcRequest, RpcResponse> delegate,
-                                   ThrottlingStrategy<RpcRequest> strategy) {
+    protected ThrottlingRpcService(RpcService delegate, ThrottlingStrategy<RpcRequest> strategy) {
         super(delegate, strategy, RpcResponse::from);
     }
 

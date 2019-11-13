@@ -6,7 +6,7 @@
 Decorating a service
 ====================
 
-A 'decorating service' (or a 'decorator') is a :api:`Service` that wraps another :api:`Service`
+A 'decorating service' (or a 'decorator') is a service that wraps another service
 to intercept an incoming request or an outgoing response. As its name says, it is an implementation of
 `the decorator pattern`_. Service decoration takes a crucial role in Armeria. A lot of core features
 such as logging, metrics and distributed tracing are implemented as decorators and you will also find it
@@ -14,15 +14,16 @@ useful when `separating concerns`_.
 
 There are basically three ways to write a decorating service:
 
-- Implementing :api:`DecoratingServiceFunction`
-- Extending :api:`SimpleDecoratingService`
+- Implementing :api:`DecoratingHttpServiceFunction` and :api:`DecoratingRpcServiceFunction`
+- Extending :api:`SimpleDecoratingHttpService` and :api:`SimpleDecoratingRpcService`
 - Extending :api:`DecoratingService`
 
-Implementing ``DecoratingServiceFunction``
-------------------------------------------
+Implementing ``DecoratingHttpServiceFunction`` and ``DecoratingRpcServiceFunction``
+-----------------------------------------------------------------------------------
 
-:api:`DecoratingServiceFunction` is a functional interface that greatly simplifies the implementation of
-a decorating service. It enables you to write a decorating service with a single lambda expression:
+:api:`DecoratingHttpServiceFunction` and :api:`DecoratingRpcServiceFunction` are functional interfaces that
+greatly simplify the implementation of a decorating service. They enables you to write a decorating service
+with a single lambda expression:
 
 .. code-block:: java
 
@@ -42,22 +43,23 @@ a decorating service. It enables you to write a decorating service with a single
         return delegate.serve(ctx, req);
     });
 
-Extending ``SimpleDecoratingService``
--------------------------------------
+Extending ``SimpleDecoratingHttpService`` and ``SimpleDecoratingRpcService``
+----------------------------------------------------------------------------
 
 If your decorator is expected to be reusable, it is recommended to define a new top-level class that extends
-:api:`SimpleDecoratingService` :
+:api:`SimpleDecoratingHttpService` or :api:`SimpleDecoratingRpcService` depending on whether you are
+decorating an :api:`HttpService` or an :api:`RpcService`:
 
 .. code-block:: java
 
     import com.linecorp.armeria.common.HttpRequest;
     import com.linecorp.armeria.common.HttpResponse;
-    import com.linecorp.armeria.server.Service;
+    import com.linecorp.armeria.server.HttpService;
     import com.linecorp.armeria.server.ServiceRequestContext;
-    import com.linecorp.armeria.server.SimpleDecoratingService;
+    import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 
-    public class AuthService extends SimpleDecoratingService<HttpRequest, HttpResponse> {
-        public AuthService(Service<HttpRequest, HttpResponse> delegate) {
+    public class AuthService extends SimpleDecoratingHttpService {
+        public AuthService(HttpService delegate) {
             super(delegate);
         }
 
@@ -69,7 +71,7 @@ If your decorator is expected to be reusable, it is recommended to define a new 
 
             }
 
-            Service<HttpRequest, HttpResponse> delegate = delegate();
+            HttpService delegate = delegate();
             return delegate.serve(ctx, req);
         }
     }
@@ -88,10 +90,9 @@ response. You can do that as well, of course, using :api:`DecoratingService`:
 
 .. code-block:: java
 
-    import com.linecorp.armeria.common.RpcRequest;
-    import com.linecorp.armeria.common.RpcResponse;
+    import com.linecorp.armeria.server.RpcService;
 
-    // Transforms a Service<RpcRequest, RpcResponse> into Service<HttpRequest, HttpResponse>.
+    // Transforms an RpcService into an HttpService.
     public class MyRpcService extends DecoratingService<RpcRequest, RpcResponse,
                                                         HttpRequest, HttpResponse> {
 
@@ -115,8 +116,8 @@ response. You can do that as well, of course, using :api:`DecoratingService`:
 Unwrapping decoration
 ---------------------
 
-Once a :api:`Service` is decorated, the type of the service is not that of the original :api:`Service`
-anymore. Therefore, you cannot simply down-cast it to access the method exposed by the original :api:`Service`.
+Once a service is decorated, the type of the service is not that of the original service
+anymore. Therefore, you cannot simply down-cast it to access the method exposed by the original service.
 Instead, you need to 'unwrap' the decorator using the ``Service.as()`` method:
 
 .. code-block:: java
@@ -129,7 +130,7 @@ Instead, you need to 'unwrap' the decorator using the ``Service.as()`` method:
     assert decoratedService.as(MyDecoratedService.class).get() == decoratedService;
     assert !decoratedService.as(SomeOtherService.class).isPresent();
 
-``as()`` is especially useful when you are looking for the :api:`Service` instances that implements
+``as()`` is especially useful when you are looking for the service instances that implements
 a certain type from a server:
 
 .. code-block:: java
@@ -149,20 +150,20 @@ a certain type from a server:
 .. _server-decorator-service-with-routes:
 
 Decorating ``ServiceWithRoutes``
---------------------------------------
+--------------------------------
 
-:api:`ServiceWithRoutes` is a special variant of :api:`Service` which allows a user to register multiple
+:api:`ServiceWithRoutes` is a special variant of service which allows a user to register multiple
 routes for a single service. It has a method called ``routes()`` which returns a ``Set`` of
 :apiplural:`Route` so that you do not have to specify path when registering your service:
 
 .. code-block:: java
 
     import com.linecorp.armeria.server.Route;
-    import com.linecorp.armeria.server.ServiceWithRoutes;
+    import com.linecorp.armeria.server.HttpServiceWithRoutes;
     import java.util.HashSet;
     import java.util.Set;
 
-    public class MyServiceWithRoutes implements ServiceWithRoutes<HttpRequest, HttpResponse> {
+    public class MyServiceWithRoutes implements HttpServiceWithRoutes {
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) { ... }
 
@@ -183,7 +184,7 @@ routes for a single service. It has a method called ``routes()`` which returns a
 
 However, decorating a :api:`ServiceWithRoutes` can lead to a compilation error when you attempt to
 register it without specifying a path explicitly, because a decorated service is not a
-:api:`ServiceWithRoutes` anymore but just a :api:`Service`:
+:api:`ServiceWithRoutes` anymore but just a service:
 
 .. code-block:: java
 
@@ -192,13 +193,11 @@ register it without specifying a path explicitly, because a decorated service is
     ServerBuilder sb = Server.builder();
 
     // Works.
-    ServiceWithRoutes<HttpRequest, HttpResponse> service =
-            new MyServiceWithRoutes();
+    HttpServiceWithRoutes service = new MyServiceWithRoutes();
     sb.service(service);
 
-    // Does not work - not a ServiceWithRoutes anymore due to decoration.
-    Service<HttpRequest, HttpResponse> decoratedService =
-            service.decorate(LoggingService.newDecorator());
+    // Does not work - not a HttpServiceWithRoutes anymore due to decoration.
+    HttpService decoratedService = service.decorate(LoggingService.newDecorator());
     sb.service(decoratedService); // Compilation error
 
     // Works if a path is specified explicitly.

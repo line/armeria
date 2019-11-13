@@ -40,9 +40,9 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
-import com.linecorp.armeria.server.DecoratingServiceFunction;
+import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.annotation.AdditionalHeader;
@@ -161,19 +161,19 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
         }
     }
 
-    static class MyDecorator1 implements DecoratingServiceFunction<HttpRequest, HttpResponse> {
+    static class MyDecorator1 implements DecoratingHttpServiceFunction {
         @Override
-        public HttpResponse serve(Service<HttpRequest, HttpResponse> delegate,
-                                  ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        public HttpResponse serve(
+                HttpService delegate, ServiceRequestContext ctx, HttpRequest req) throws Exception {
             appendAttribute(ctx, " (decorated-1)");
             return delegate.serve(ctx, req);
         }
     }
 
-    static class MyDecorator2 implements DecoratingServiceFunction<HttpRequest, HttpResponse> {
+    static class MyDecorator2 implements DecoratingHttpServiceFunction {
         @Override
-        public HttpResponse serve(Service<HttpRequest, HttpResponse> delegate,
-                                  ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        public HttpResponse serve(
+                HttpService delegate, ServiceRequestContext ctx, HttpRequest req) throws Exception {
             appendAttribute(ctx, " (decorated-2)");
             return delegate.serve(ctx, req);
         }
@@ -185,8 +185,7 @@ public class AnnotatedHttpServiceAnnotationAliasTest {
 
     static class MyDecorator3Factory implements DecoratorFactoryFunction<MyDecorator3> {
         @Override
-        public Function<Service<HttpRequest, HttpResponse>,
-                ? extends Service<HttpRequest, HttpResponse>> newDecorator(MyDecorator3 parameter) {
+        public Function<? super HttpService, ? extends HttpService> newDecorator(MyDecorator3 parameter) {
             return delegate -> new SimpleDecoratingHttpService(delegate) {
                 @Override
                 public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {

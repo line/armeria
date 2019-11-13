@@ -65,8 +65,8 @@ import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.thrift.ThriftCompletableFuture;
 import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.server.AbstractHttpService;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.brave.BraveService;
 import com.linecorp.armeria.server.thrift.THttpService;
@@ -219,7 +219,7 @@ public class BraveIntegrationTest {
         assertThat(spanReporter.spans).isEmpty();
     }
 
-    private static BraveService decorate(String name, Service<HttpRequest, HttpResponse> service) {
+    private static BraveService decorate(String name, HttpService service) {
         return BraveService.newDecorator(newTracing(name)).apply(service);
     }
 

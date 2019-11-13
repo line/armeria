@@ -28,12 +28,12 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 
 /**
- * Decorates a {@link Service} to provide HTTP authorization functionality.
+ * Decorates an {@link HttpService} to provide HTTP authorization functionality.
  *
  * @see HttpAuthServiceBuilder
  */
@@ -42,24 +42,24 @@ public final class HttpAuthService extends SimpleDecoratingHttpService {
     static final Logger logger = LoggerFactory.getLogger(HttpAuthService.class);
 
     /**
-     * Creates a new HTTP authorization {@link Service} decorator using the specified
+     * Creates a new HTTP authorization {@link HttpService} decorator using the specified
      * {@link Authorizer}s.
      *
      * @param authorizers a list of {@link Authorizer}s.
      */
-    public static Function<Service<HttpRequest, HttpResponse>, HttpAuthService> newDecorator(
+    public static Function<? super HttpService, HttpAuthService> newDecorator(
             Iterable<? extends Authorizer<HttpRequest>> authorizers) {
         return new HttpAuthServiceBuilder().add(authorizers).newDecorator();
     }
 
     /**
-     * Creates a new HTTP authorization {@link Service} decorator using the specified
+     * Creates a new HTTP authorization {@link HttpService} decorator using the specified
      * {@link Authorizer}s.
      *
      * @param authorizers the array of {@link Authorizer}s.
      */
     @SafeVarargs
-    public static Function<Service<HttpRequest, HttpResponse>, HttpAuthService>
+    public static Function<? super HttpService, HttpAuthService>
     newDecorator(Authorizer<HttpRequest>... authorizers) {
         return newDecorator(ImmutableList.copyOf(requireNonNull(authorizers, "authorizers")));
     }
@@ -68,7 +68,7 @@ public final class HttpAuthService extends SimpleDecoratingHttpService {
     private final AuthSuccessHandler<HttpRequest, HttpResponse> successHandler;
     private final AuthFailureHandler<HttpRequest, HttpResponse> failureHandler;
 
-    HttpAuthService(Service<HttpRequest, HttpResponse> delegate, Authorizer<HttpRequest> authorizer,
+    HttpAuthService(HttpService delegate, Authorizer<HttpRequest> authorizer,
                     AuthSuccessHandler<HttpRequest, HttpResponse> successHandler,
                     AuthFailureHandler<HttpRequest, HttpResponse> failureHandler) {
         super(delegate);

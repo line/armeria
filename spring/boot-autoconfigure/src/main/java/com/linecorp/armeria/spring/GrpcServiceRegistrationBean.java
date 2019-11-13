@@ -20,9 +20,7 @@ import javax.validation.constraints.NotNull;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.server.ServiceWithRoutes;
+import com.linecorp.armeria.server.HttpServiceWithRoutes;
 
 /**
  * A bean with information for registering a gRPC service.
@@ -46,9 +44,8 @@ import com.linecorp.armeria.server.ServiceWithRoutes;
  * > }
  * }</pre>
  */
-public class GrpcServiceRegistrationBean
-        extends AbstractServiceRegistrationBean<ServiceWithRoutes<HttpRequest, HttpResponse>,
-        GrpcServiceRegistrationBean, GrpcExampleRequest, GrpcExampleHeaders> {
+public class GrpcServiceRegistrationBean extends AbstractServiceRegistrationBean<
+        HttpServiceWithRoutes, GrpcServiceRegistrationBean, GrpcExampleRequest, GrpcExampleHeaders> {
 
     /**
      * Adds an example request for {@link #getService()}.

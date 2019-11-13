@@ -71,7 +71,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
 
     private final List<Consumer<? super ServerBuilder>> serverConfigurators = new ArrayList<>(4);
 
-    private Service<HttpRequest, HttpResponse> service = fakeService;
+    private HttpService service = fakeService;
     @Nullable
     private RoutingResult routingResult;
     @Nullable
@@ -87,7 +87,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
      * Sets the {@link Service} that handles the request. If not set, a dummy {@link Service}, which always
      * returns a {@code "405 Method Not Allowed"} response, is used.
      */
-    public ServiceRequestContextBuilder service(Service<HttpRequest, HttpResponse> service) {
+    public ServiceRequestContextBuilder service(HttpService service) {
         this.service = requireNonNull(service, "service");
         return this;
     }
@@ -183,7 +183,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         }
     }
 
-    private static ServiceConfig findServiceConfig(Server server, String path, Service<?, ?> service) {
+    private static ServiceConfig findServiceConfig(Server server, String path, HttpService service) {
         for (ServiceConfig cfg : server.config().defaultVirtualHost().serviceConfigs()) {
             final Route route = cfg.route();
             if (route.pathType() != RoutePathType.EXACT) {

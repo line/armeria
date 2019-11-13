@@ -16,16 +16,42 @@
 
 package com.linecorp.armeria.server;
 
+import java.util.function.Function;
+
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.Response;
 
 /**
  * An HTTP/2 {@link Service}.
- *
- * <p>This interface is merely a shortcut to {@code Service<HttpRequest, HttpResponse>} at the moment.
  */
 @FunctionalInterface
 public interface HttpService extends Service<HttpRequest, HttpResponse> {
+
     @Override
     HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception;
+
+    /**
+     * Creates a new {@link Service} that decorates this {@link HttpService} with the specified
+     * {@code decorator}.
+     */
+    default <R extends Service<R_I, R_O>, R_I extends Request, R_O extends Response>
+    R decorate(Function<? super HttpService, R> decorator) {
+        final R newService = decorator.apply(this);
+
+        if (newService == null) {
+            throw new NullPointerException("decorator.apply() returned null: " + decorator);
+        }
+
+        return newService;
+    }
+
+    /**
+     * Creates a new {@link HttpService} that decorates this {@link HttpService} with the specified
+     * {@link DecoratingHttpServiceFunction}.
+     */
+    default HttpService decorate(DecoratingHttpServiceFunction function) {
+        return new FunctionalDecoratingHttpService(this, function);
+    }
 }

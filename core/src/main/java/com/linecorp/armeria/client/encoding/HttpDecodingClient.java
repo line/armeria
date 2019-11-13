@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.HttpResponse;
 
 /**
  * A {@link DecoratingClient} that requests and decodes HTTP encoding (e.g., gzip) that has been applied to the
- * content of a {@link HttpResponse}.
+ * content of an {@link HttpResponse}.
  */
 public final class HttpDecodingClient extends SimpleDecoratingHttpClient {
 

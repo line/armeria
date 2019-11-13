@@ -114,8 +114,7 @@ class HttpServerStreamingTest {
                 }
             });
 
-            final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>>
-                    decorator =
+            final Function<? super HttpService, ? extends HttpService> decorator =
                     s -> new SimpleDecoratingHttpService(s) {
                         @Override
                         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {

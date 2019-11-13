@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
@@ -331,28 +330,20 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         // Find the service that matches the path.
         final Routed<ServiceConfig> routed;
         try {
-            routed = host.findServiceConfig(routingCtx);
-        } catch (HttpStatusException cause) {
-            // There's no chance that an HttpResponseException is raised so we just handle HttpStatusException.
-            // Just pass the null as the cause because we don't want to log HttpStatusException as the cause.
-            respond(ctx, host.accessLogWriter(), req, pathAndQuery, cause.httpStatus(), null, null);
-            return;
+            routed = host.findServiceConfig(routingCtx, true);
         } catch (Throwable cause) {
             logger.warn("{} Unexpected exception: {}", ctx.channel(), req, cause);
             respond(ctx, host.accessLogWriter(), req, pathAndQuery,
                     HttpStatus.INTERNAL_SERVER_ERROR, null, cause);
             return;
         }
-        if (!routed.isPresent()) {
-            // No services matched the path.
-            handleNonExistentMapping(ctx, host.accessLogWriter(), req, host, pathAndQuery, routingCtx);
-            return;
-        }
+
+        assert routed.isPresent();
 
         // Decode the request and create a new invocation context from it to perform an invocation.
         final RoutingResult routingResult = routed.routingResult();
         final ServiceConfig serviceCfg = routed.value();
-        final Service<HttpRequest, HttpResponse> service = serviceCfg.service();
+        final HttpService service = serviceCfg.service();
         final Channel channel = ctx.channel();
         final InetAddress remoteAddress = ((InetSocketAddress) channel.remoteAddress()).getAddress();
 
@@ -467,31 +458,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 new ProtocolViolationException(MSG_INVALID_REQUEST_PATH));
     }
 
-    private void handleNonExistentMapping(ChannelHandlerContext ctx, AccessLogWriter accessLogWriter,
-                                          DecodedHttpRequest req,
-                                          VirtualHost host, PathAndQuery pathAndQuery,
-                                          RoutingContext routingCtx) {
-
-        final String path = routingCtx.path();
-        if (path.charAt(path.length() - 1) != '/') {
-            // Handle the case where /path doesn't exist but /path/ exists.
-            final String pathWithSlash = path + '/';
-            if (host.findServiceConfig(routingCtx.overridePath(pathWithSlash)).isPresent()) {
-                final String location;
-                final String originalPath = req.path();
-                if (path.length() == originalPath.length()) {
-                    location = pathWithSlash;
-                } else {
-                    location = pathWithSlash + originalPath.substring(path.length());
-                }
-                redirect(ctx, accessLogWriter, req, pathAndQuery, location);
-                return;
-            }
-        }
-
-        respond(ctx, accessLogWriter, req, HttpStatus.NOT_FOUND, null, null);
-    }
-
     private static String hostname(RequestHeaders headers) {
         final String authority = headers.authority();
         assert authority != null;
@@ -501,15 +467,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         return authority.substring(0, hostnameColonIdx);
-    }
-
-    private void redirect(ChannelHandlerContext ctx, AccessLogWriter accessLogWriter, DecodedHttpRequest req,
-                          PathAndQuery pathAndQuery, String location) {
-        respond(ctx,
-                newEarlyRespondingRequestContext(ctx, req, pathAndQuery.path(), pathAndQuery.query()),
-                accessLogWriter, ResponseHeaders.builder(HttpStatus.TEMPORARY_REDIRECT)
-                                                .add(HttpHeaderNames.LOCATION, location),
-                null, null);
     }
 
     // TODO(minwoox) Refactor response() methods so that they are easily read

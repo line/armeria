@@ -46,7 +46,7 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.TransientService;
+import com.linecorp.armeria.server.TransientHttpService;
 
 import io.netty.util.AsciiString;
 import io.netty.util.concurrent.FutureListener;
@@ -95,7 +95,7 @@ import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
  *
  * @see HealthCheckServiceBuilder
  */
-public final class HealthCheckService implements HttpService, TransientService<HttpRequest, HttpResponse> {
+public final class HealthCheckService implements TransientHttpService {
 
     private static final Logger logger = LoggerFactory.getLogger(HealthCheckService.class);
     private static final AsciiString ARMERIA_LPHC = HttpHeaderNames.of("armeria-lphc");

@@ -17,9 +17,7 @@ package com.linecorp.armeria.server.annotation.decorator;
 
 import java.util.function.Function;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
 import com.linecorp.armeria.server.logging.LoggingService;
 
@@ -32,8 +30,7 @@ public final class LoggingDecoratorFactoryFunction implements DecoratorFactoryFu
      * Creates a new decorator with the specified {@code parameter}.
      */
     @Override
-    public Function<Service<HttpRequest, HttpResponse>,
-            ? extends Service<HttpRequest, HttpResponse>> newDecorator(LoggingDecorator parameter) {
+    public Function<? super HttpService, ? extends HttpService> newDecorator(LoggingDecorator parameter) {
         return LoggingService.builder()
                              .requestLogLevel(parameter.requestLogLevel())
                              .successfulResponseLogLevel(parameter.successfulResponseLogLevel())

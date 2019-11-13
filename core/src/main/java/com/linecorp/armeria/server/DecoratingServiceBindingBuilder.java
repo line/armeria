@@ -21,15 +21,13 @@ import static java.util.Objects.requireNonNull;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 
 /**
  * A builder class for binding a {@code decorator} with {@link Route} fluently.
  * This class can be instantiated through {@link ServerBuilder#routeDecorator()}.
  *
- * <p>Call {@link #build(Function)} or {@link #build(DecoratingServiceFunction)}
+ * <p>Call {@link #build(Function)} or {@link #build(DecoratingHttpServiceFunction)}
  * to build the {@code decorator} and return to the {@link ServerBuilder}.
  *
  * <pre>{@code
@@ -154,31 +152,25 @@ public final class DecoratingServiceBindingBuilder extends AbstractBindingBuilde
      * Sets the {@code decorator} and returns {@link ServerBuilder} that this
      * {@link DecoratingServiceBindingBuilder} was created from.
      *
-     * @param decorator the {@link Function} that decorates {@link Service}
-     * @param <T> the type of the {@link Service} being decorated
-     * @param <R> the type of the {@link Service} {@code decorator} will produce
+     * @param decorator the {@link Function} that decorates {@link HttpService}
      */
-    public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
-    ServerBuilder build(Function<T, R> decorator) {
+    public ServerBuilder build(Function<? super HttpService, ? extends HttpService> decorator) {
         requireNonNull(decorator, "decorator");
-        @SuppressWarnings("unchecked")
-        final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> castDecorator =
-                (Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>>) decorator;
-
         buildRouteList().forEach(
-                route -> serverBuilder.routingDecorator(new RouteDecoratingService(route, castDecorator)));
+                route -> serverBuilder.routingDecorator(new RouteDecoratingService(route, decorator)));
         return serverBuilder;
     }
 
     /**
-     * Sets the {@link DecoratingServiceFunction} and returns {@link ServerBuilder} that this
+     * Sets the {@link DecoratingHttpServiceFunction} and returns {@link ServerBuilder} that this
      * {@link DecoratingServiceBindingBuilder} was created from.
      *
-     * @param decoratingServiceFunction the {@link DecoratingServiceFunction} that decorates {@link Service}
+     * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
+     *                                      {@link HttpService}
      */
     public ServerBuilder build(
-            DecoratingServiceFunction<HttpRequest, HttpResponse> decoratingServiceFunction) {
-        requireNonNull(decoratingServiceFunction, "decoratingServiceFunction");
-        return build(delegate -> new FunctionalDecoratingService<>(delegate, decoratingServiceFunction));
+            DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
+        requireNonNull(decoratingHttpServiceFunction, "decoratingHttpServiceFunction");
+        return build(delegate -> new FunctionalDecoratingHttpService(delegate, decoratingHttpServiceFunction));
     }
 }
