@@ -40,9 +40,10 @@ final class FallbackService implements HttpService {
             throw cause;
         }
 
+        // Handle 404 Not Found.
         final String pathWithoutQuery = routingCtx.path();
         if (pathWithoutQuery.charAt(pathWithoutQuery.length() - 1) == '/') {
-            // The request path already ends with '/'. Send 404.
+            // No need to send a redirect response because the request path already ends with '/'.
             throw cause;
         }
 
@@ -52,7 +53,7 @@ final class FallbackService implements HttpService {
         if (!ctx.virtualHost()
                 .findServiceConfig(routingCtx.overridePath(pathWithSlashAndWithoutQuery))
                 .isPresent()) {
-            // '/path/' (or '/path/?query') does not exist. Send 404.
+            // No need to send a redirect response because '/path/' (or '/path/?query') does not exist.
             throw cause;
         }
 
@@ -77,6 +78,7 @@ final class FallbackService implements HttpService {
             // '403 Forbidden' is better for a CORS preflight request than other statuses.
             return HttpStatusException.of(HttpStatus.FORBIDDEN);
         }
+
         final HttpStatusException cause = routingCtx.deferredStatusException();
         if (cause == null) {
             return HttpStatusException.of(HttpStatus.NOT_FOUND);
