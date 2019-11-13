@@ -49,6 +49,7 @@ public final class HttpStatusException extends RuntimeException {
      * Returns a new {@link HttpStatusException} instance with the specified HTTP status code and {@code cause}.
      */
     public static HttpStatusException of(int statusCode, Throwable cause) {
+        requireNonNull(cause, "cause");
         return of(HttpStatus.valueOf(statusCode), cause);
     }
 
