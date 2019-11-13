@@ -35,35 +35,53 @@ final class FallbackService implements HttpService {
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final RoutingContext routingCtx = ctx.routingContext();
-        final HttpStatusException cause = requireNonNull(routingCtx.deferredStatusException());
+        final HttpStatusException cause = getStatusException(routingCtx);
         if (cause.httpStatus() != HttpStatus.NOT_FOUND) {
             throw cause;
         }
 
-        final String path = req.path();
-        if (path.charAt(path.length() - 1) == '/') {
+        final String pathWithoutQuery = routingCtx.path();
+        if (pathWithoutQuery.charAt(pathWithoutQuery.length() - 1) == '/') {
             // The request path already ends with '/'. Send 404.
             throw cause;
         }
 
-        // Handle the case where /path doesn't exist but /path/ exists.
-        final String pathWithSlash = path + '/';
-        if (!ctx.virtualHost().findServiceConfig(routingCtx.overridePath(pathWithSlash)).isPresent()) {
-            // '/path/' does not exist. Send 404.
+        // Handle the case where '/path' (or '/path?query') doesn't exist
+        // but '/path/' (or '/path/?query') exists.
+        final String pathWithSlashAndWithoutQuery = pathWithoutQuery + '/';
+        if (!ctx.virtualHost()
+                .findServiceConfig(routingCtx.overridePath(pathWithSlashAndWithoutQuery))
+                .isPresent()) {
+            // '/path/' (or '/path/?query') does not exist. Send 404.
             throw cause;
         }
 
-        // '/path/' exists. Send a redirect response.
+        // '/path/' (or '/path/?query') exists. Send a redirect response.
         final String location;
-        final String originalPath = req.path();
-        if (path.length() == originalPath.length()) {
-            location = pathWithSlash;
+        final String pathWithQuery = req.path();
+        if (pathWithoutQuery.length() == pathWithQuery.length()) {
+            // '/path/'
+            location = pathWithSlashAndWithoutQuery;
         } else {
-            location = pathWithSlash + originalPath.substring(path.length());
+            // '/path/?query'
+            location = pathWithSlashAndWithoutQuery + pathWithQuery.substring(pathWithoutQuery.length());
         }
 
         return HttpResponse.of(ResponseHeaders.builder(HttpStatus.TEMPORARY_REDIRECT)
                                               .add(HttpHeaderNames.LOCATION, location)
                                               .build());
+    }
+
+    private static HttpStatusException getStatusException(RoutingContext routingCtx) {
+        if (routingCtx.isCorsPreflight()) {
+            // '403 Forbidden' is better for a CORS preflight request than other statuses.
+            return HttpStatusException.of(HttpStatus.FORBIDDEN);
+        }
+        final HttpStatusException cause = routingCtx.deferredStatusException();
+        if (cause == null) {
+            return HttpStatusException.of(HttpStatus.NOT_FOUND);
+        }
+
+        return cause;
     }
 }

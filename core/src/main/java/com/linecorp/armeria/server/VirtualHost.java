@@ -32,8 +32,6 @@ import org.slf4j.Logger;
 import com.google.common.base.Ascii;
 import com.google.common.collect.Streams;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
@@ -381,13 +379,8 @@ public final class VirtualHost {
             return routed;
         }
 
-        if (routingCtx.isCorsPreflight()) {
-            // '403 Forbidden' is better for a CORS preflight request than '404 Not Found'.
-            routingCtx.deferStatusException(HttpStatusException.of(HttpStatus.FORBIDDEN));
-        } else if (routingCtx.deferredStatusException() == null) {
-            routingCtx.deferStatusException(HttpStatusException.of(HttpStatus.NOT_FOUND));
-        }
-
+        // Note that we did not implement this fallback mechanism inside a Router implementation like
+        // CompositeRouter because we wanted to avoid caching non-existent mappings.
         return Routed.of(fallbackServiceConfig.route(),
                          RoutingResult.builder()
                                       .path(routingCtx.path())
