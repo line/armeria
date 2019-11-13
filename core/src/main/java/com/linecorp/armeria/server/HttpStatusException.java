@@ -57,18 +57,7 @@ public final class HttpStatusException extends RuntimeException {
      * Returns a new {@link HttpStatusException} instance with the specified {@link HttpStatus}.
      */
     public static HttpStatusException of(HttpStatus status) {
-        requireNonNull(status, "status");
-        final boolean sampled = Flags.verboseExceptionSampler().isSampled(HttpStatusException.class);
-        if (!sampled) {
-            final int statusCode = status.code();
-            if (statusCode >= 0 && statusCode < 1000) {
-                return EXCEPTIONS[statusCode];
-            } else {
-                return new HttpStatusException(HttpStatus.valueOf(statusCode), false, null);
-            }
-        }
-
-        return new HttpStatusException(status, true, null);
+        return of0(requireNonNull(status, "status"), null);
     }
 
     /**
@@ -76,9 +65,7 @@ public final class HttpStatusException extends RuntimeException {
      * {@code cause}.
      */
     public static HttpStatusException of(HttpStatus status, Throwable cause) {
-        requireNonNull(status, "status");
-        requireNonNull(cause, "cause");
-        return of0(status, cause);
+        return of0(requireNonNull(status, "status"), requireNonNull(cause, "cause"));
     }
 
     private static HttpStatusException of0(HttpStatus status, @Nullable Throwable cause) {
