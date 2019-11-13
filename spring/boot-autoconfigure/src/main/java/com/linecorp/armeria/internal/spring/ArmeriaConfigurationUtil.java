@@ -59,14 +59,12 @@ import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
-import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.server.ServiceWithRoutes;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.encoding.HttpEncodingService;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
@@ -243,9 +241,8 @@ public final class ArmeriaConfigurationUtil {
         final List<TBase<?, ?>> docServiceRequests = new ArrayList<>();
         final Map<String, Collection<? extends ExampleHeaders>> docServiceHeaders = new HashMap<>();
         beans.forEach(bean -> {
-            Service<HttpRequest, HttpResponse> service = bean.getService();
-            for (Function<Service<HttpRequest, HttpResponse>, ? extends Service<HttpRequest, HttpResponse>>
-                    decorator : bean.getDecorators()) {
+            HttpService service = bean.getService();
+            for (Function<? super HttpService, ? extends HttpService> decorator : bean.getDecorators()) {
                 service = service.decorate(decorator);
             }
             service = setupMetricCollectingService(service, bean, meterIdPrefixFunctionFactory);
@@ -279,9 +276,8 @@ public final class ArmeriaConfigurationUtil {
         requireNonNull(beans, "beans");
 
         beans.forEach(bean -> {
-            Service<HttpRequest, HttpResponse> service = bean.getService();
-            for (Function<Service<HttpRequest, HttpResponse>, ? extends Service<HttpRequest, HttpResponse>>
-                    decorator : bean.getDecorators()) {
+            HttpService service = bean.getService();
+            for (Function<? super HttpService, ? extends HttpService> decorator : bean.getDecorators()) {
                 service = service.decorate(decorator);
             }
             service = setupMetricCollectingService(service, bean, meterIdPrefixFunctionFactory);
@@ -304,15 +300,13 @@ public final class ArmeriaConfigurationUtil {
         final List<GrpcExampleRequest> docServiceRequests = new ArrayList<>();
         final List<GrpcExampleHeaders> docServiceHeaders = new ArrayList<>();
         beans.forEach(bean -> {
-            final ServiceWithRoutes<HttpRequest, HttpResponse> serviceWithRoutes =
-                    bean.getService();
+            final HttpServiceWithRoutes serviceWithRoutes = bean.getService();
             docServiceRequests.addAll(bean.getExampleRequests());
             docServiceHeaders.addAll(bean.getExampleHeaders());
             serviceWithRoutes.routes().forEach(
                     route -> {
-                        Service<HttpRequest, HttpResponse> service = bean.getService();
-                        for (Function<Service<HttpRequest, HttpResponse>,
-                                ? extends Service<HttpRequest, HttpResponse>> decorator
+                        HttpService service = bean.getService();
+                        for (Function<? super HttpService, ? extends HttpService> decorator
                                 : bean.getDecorators()) {
                             service = service.decorate(decorator);
                         }
@@ -352,10 +346,8 @@ public final class ArmeriaConfigurationUtil {
         final Map<String, Collection<? extends AnnotatedExampleRequest>> docServiceRequests = new HashMap<>();
         final Map<String, Collection<? extends ExampleHeaders>> docServiceHeaders = new HashMap<>();
         beans.forEach(bean -> {
-            Function<Service<HttpRequest, HttpResponse>,
-                    ? extends Service<HttpRequest, HttpResponse>> decorator = Function.identity();
-            for (Function<Service<HttpRequest, HttpResponse>, ? extends Service<HttpRequest, HttpResponse>>
-                    d : bean.getDecorators()) {
+            Function<? super HttpService, ? extends HttpService> decorator = Function.identity();
+            for (Function<? super HttpService, ? extends HttpService> d : bean.getDecorators()) {
                 decorator = decorator.andThen(d);
             }
             if (meterIdPrefixFunctionFactory != null) {
@@ -396,9 +388,8 @@ public final class ArmeriaConfigurationUtil {
         }
     }
 
-    private static Service<HttpRequest, HttpResponse> setupMetricCollectingService(
-            Service<HttpRequest, HttpResponse> service,
-            AbstractServiceRegistrationBean<?, ?, ?, ?> bean,
+    private static HttpService setupMetricCollectingService(
+            HttpService service, AbstractServiceRegistrationBean<?, ?, ?, ?> bean,
             @Nullable MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory) {
         requireNonNull(service, "service");
         requireNonNull(bean, "bean");
@@ -409,8 +400,7 @@ public final class ArmeriaConfigurationUtil {
         return service.decorate(metricCollectingServiceDecorator(bean, meterIdPrefixFunctionFactory));
     }
 
-    private static Function<Service<HttpRequest, HttpResponse>,
-            MetricCollectingService<HttpRequest, HttpResponse>> metricCollectingServiceDecorator(
+    private static Function<? super HttpService, MetricCollectingService> metricCollectingServiceDecorator(
             AbstractServiceRegistrationBean<?, ?, ?, ?> bean,
             MeterIdPrefixFunctionFactory meterIdPrefixFunctionFactory) {
         requireNonNull(bean, "bean");
@@ -546,10 +536,9 @@ public final class ArmeriaConfigurationUtil {
     /**
      * Configures a decorator for encoding the content of the HTTP responses sent from the server.
      */
-    public static Function<Service<HttpRequest, HttpResponse>,
-            HttpEncodingService> contentEncodingDecorator(@Nullable String[] mimeTypes,
-                                                          @Nullable String[] excludedUserAgents,
-                                                          long minBytesToForceChunkedAndEncoding) {
+    public static Function<? super HttpService, HttpEncodingService> contentEncodingDecorator(
+            @Nullable String[] mimeTypes, @Nullable String[] excludedUserAgents,
+            long minBytesToForceChunkedAndEncoding) {
         final Predicate<MediaType> encodableContentTypePredicate;
         if (mimeTypes == null || mimeTypes.length == 0) {
             encodableContentTypePredicate = contentType -> true;

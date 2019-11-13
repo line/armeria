@@ -20,8 +20,6 @@ import java.nio.charset.Charset;
 import java.time.Duration;
 import java.util.function.Function;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
@@ -61,14 +59,14 @@ interface ServiceConfigSetters {
     ServiceConfigSetters verboseResponses(boolean verboseResponses);
 
     /**
-     * Sets the {@link ContentPreviewerFactory} for an HTTP request of a {@link Service}.
+     * Sets the {@link ContentPreviewerFactory} for an HTTP request of an {@link HttpService}.
      * If not set, the {@link ContentPreviewerFactory} set via
      * {@link VirtualHost#requestContentPreviewerFactory()} is used.
      */
     ServiceConfigSetters requestContentPreviewerFactory(ContentPreviewerFactory factory);
 
     /**
-     * Sets the {@link ContentPreviewerFactory} for an HTTP response of a {@link Service}.
+     * Sets the {@link ContentPreviewerFactory} for an HTTP response of an {@link HttpService}.
      * If not set, the {@link ContentPreviewerFactory} set via
      * {@link VirtualHost#responseContentPreviewerFactory()} is used.
      */
@@ -76,7 +74,7 @@ interface ServiceConfigSetters {
 
     /**
      * Sets the {@link ContentPreviewerFactory} for creating a {@link ContentPreviewer} which produces the
-     * preview with the maximum {@code length} limit for an HTTP request/response of the {@link Service}.
+     * preview with the maximum {@code length} limit for an HTTP request/response of the {@link HttpService}.
      * The previewer is enabled only if the content type of an HTTP request/response meets
      * any of the following conditions:
      * <ul>
@@ -91,7 +89,7 @@ interface ServiceConfigSetters {
 
     /**
      * Sets the {@link ContentPreviewerFactory} for creating a {@link ContentPreviewer} which produces the
-     * preview with the maximum {@code length} limit for an HTTP request/response of a {@link Service}.
+     * preview with the maximum {@code length} limit for an HTTP request/response of an {@link HttpService}.
      * The previewer is enabled only if the content type of an HTTP request/response meets any of
      * the following conditions:
      * <ul>
@@ -107,18 +105,18 @@ interface ServiceConfigSetters {
     ServiceConfigSetters contentPreview(int length, Charset defaultCharset);
 
     /**
-     * Sets the {@link ContentPreviewerFactory} for an HTTP request/response of a {@link Service}.
+     * Sets the {@link ContentPreviewerFactory} for an HTTP request/response of an {@link HttpService}.
      */
     ServiceConfigSetters contentPreviewerFactory(ContentPreviewerFactory factory);
 
     /**
-     * Sets the format of this {@link Service}'s access log. The specified {@code accessLogFormat} would be
+     * Sets the format of this {@link HttpService}'s access log. The specified {@code accessLogFormat} would be
      * parsed by {@link AccessLogWriter#custom(String)}.
      */
     ServiceConfigSetters accessLogFormat(String accessLogFormat);
 
     /**
-     * Sets the access log writer of this {@link Service}. If not set, the {@link AccessLogWriter} set via
+     * Sets the access log writer of this {@link HttpService}. If not set, the {@link AccessLogWriter} set via
      * {@link VirtualHost#accessLogWriter()} is used.
      *
      * @param shutdownOnStop whether to shut down the {@link AccessLogWriter} when the {@link Server} stops
@@ -127,12 +125,9 @@ interface ServiceConfigSetters {
                                          boolean shutdownOnStop);
 
     /**
-     * Decorates a {@link Service} with the specified {@code decorator}.
+     * Decorates an {@link HttpService} with the specified {@code decorator}.
      *
-     * @param decorator the {@link Function} that decorates the {@link Service}
-     * @param <T> the type of the {@link Service} being decorated
-     * @param <R> the type of the {@link Service} {@code decorator} will produce
+     * @param decorator the {@link Function} that decorates the {@link HttpService}
      */
-    <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
-    ServiceConfigSetters decorator(Function<T, R> decorator);
+    ServiceConfigSetters decorator(Function<? super HttpService, ? extends HttpService> decorator);
 }

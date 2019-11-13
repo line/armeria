@@ -18,49 +18,46 @@ package com.linecorp.armeria.server.composition;
 
 import java.util.List;
 
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Routed;
 import com.linecorp.armeria.server.RoutingContext;
-import com.linecorp.armeria.server.Service;
 
 /**
  * A general purpose {@link AbstractCompositeService} implementation. Useful when you do not want to define
- * a new dedicated {@link Service} type.
- *
- * @param <I> the {@link Request} type
- * @param <O> the {@link Response} type
+ * a new dedicated {@link HttpService} type.
  */
-public class SimpleCompositeService<I extends Request, O extends Response>
-        extends AbstractCompositeService<I, O> {
+public final class SimpleCompositeService
+        extends AbstractCompositeService<HttpService, HttpRequest, HttpResponse> implements HttpService {
 
     /**
      * Creates a new instance that is composed of the specified entries.
      */
     @SafeVarargs
-    public SimpleCompositeService(CompositeServiceEntry<I, O>... services) {
+    public SimpleCompositeService(CompositeServiceEntry<HttpService>... services) {
         super(services);
     }
 
     /**
      * Creates a new instance that is composed of the specified entries.
      */
-    public SimpleCompositeService(Iterable<CompositeServiceEntry<I, O>> services) {
+    public SimpleCompositeService(Iterable<CompositeServiceEntry<HttpService>> services) {
         super(services);
     }
 
     @Override
-    public List<CompositeServiceEntry<I, O>> services() {
+    public List<CompositeServiceEntry<HttpService>> services() {
         return super.services();
     }
 
     @Override
-    public <T extends Service<I, O>> T serviceAt(int index) {
+    public HttpService serviceAt(int index) {
         return super.serviceAt(index);
     }
 
     @Override
-    public Routed<Service<I, O>> findService(RoutingContext routingCtx) {
+    public Routed<HttpService> findService(RoutingContext routingCtx) {
         return super.findService(routingCtx);
     }
 }

@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.stream.StreamMessageWrapper;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
- * Allows subscribing to a {@link HttpResponse} multiple times by duplicating the stream.
+ * Allows subscribing to an {@link HttpResponse} multiple times by duplicating the stream.
  *
  * <pre>{@code
  * > final HttpResponse originalRes = ...
@@ -55,7 +55,7 @@ public class HttpResponseDuplicator
         extends AbstractStreamMessageDuplicator<HttpObject, HttpResponse> {
 
     /**
-     * Creates a new instance wrapping a {@link HttpResponse} and publishing to multiple subscribers.
+     * Creates a new instance wrapping an {@link HttpResponse} and publishing to multiple subscribers.
      * The length of response is limited by default with the client-side parameter which is
      * {@link Flags#defaultMaxResponseLength()}. If you are at server-side, you need to use
      * {@link #HttpResponseDuplicator(HttpResponse, long)} and the {@code long} value should be greater than
@@ -67,7 +67,7 @@ public class HttpResponseDuplicator
     }
 
     /**
-     * Creates a new instance wrapping a {@link HttpResponse} and publishing to multiple subscribers.
+     * Creates a new instance wrapping an {@link HttpResponse} and publishing to multiple subscribers.
      * @param res the response that will publish data to subscribers
      * @param maxSignalLength the maximum length of signals. {@code 0} disables the length limit
      */
@@ -76,7 +76,7 @@ public class HttpResponseDuplicator
     }
 
     /**
-     * Creates a new instance wrapping a {@link HttpResponse} and publishing to multiple subscribers.
+     * Creates a new instance wrapping an {@link HttpResponse} and publishing to multiple subscribers.
      * @param res the response that will publish data to subscribers
      * @param maxSignalLength the maximum length of signals. {@code 0} disables the length limit
      * @param executor the executor to use for upstream signals.

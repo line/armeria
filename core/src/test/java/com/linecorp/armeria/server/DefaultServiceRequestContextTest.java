@@ -24,7 +24,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestId;
 
 import io.netty.util.AttributeKey;
@@ -61,7 +60,7 @@ class DefaultServiceRequestContextTest {
 
         assertThat(derivedCtx.server()).isSameAs(originalCtx.server());
         assertThat(derivedCtx.sessionProtocol()).isSameAs(originalCtx.sessionProtocol());
-        assertThat(derivedCtx.<Service<HttpRequest, HttpResponse>>service()).isSameAs(originalCtx.service());
+        assertThat(derivedCtx.service()).isSameAs(originalCtx.service());
         assertThat(derivedCtx.route()).isSameAs(originalCtx.route());
         assertThat(derivedCtx.id()).isSameAs(newId);
         assertThat(derivedCtx.request()).isSameAs(newRequest);

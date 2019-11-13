@@ -18,36 +18,34 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.RpcResponse;
 
 /**
- * A decorating {@link Service} which implements its {@link #serve(ServiceRequestContext, Request)} method
- * using a given function.
+ * A decorating {@link RpcService} which implements its {@link #serve(ServiceRequestContext, RpcRequest)}
+ * method using a given function.
  *
- * @see Service#decorate(DecoratingServiceFunction)
+ * @see RpcService#decorate(DecoratingRpcServiceFunction)
  */
-final class FunctionalDecoratingService<I extends Request, O extends Response>
-        extends SimpleDecoratingService<I, O> {
+final class FunctionalDecoratingRpcService extends SimpleDecoratingRpcService {
 
-    private final DecoratingServiceFunction<I, O> function;
+    private final DecoratingRpcServiceFunction function;
 
     /**
      * Creates a new instance with the specified function.
      */
-    FunctionalDecoratingService(Service<I, O> delegate,
-                                DecoratingServiceFunction<I, O> function) {
+    FunctionalDecoratingRpcService(RpcService delegate, DecoratingRpcServiceFunction function) {
         super(delegate);
         this.function = requireNonNull(function, "function");
     }
 
     @Override
-    public O serve(ServiceRequestContext ctx, I req) throws Exception {
+    public RpcResponse serve(ServiceRequestContext ctx, RpcRequest req) throws Exception {
         return function.serve(delegate(), ctx, req);
     }
 
     @Override
     public String toString() {
-        return FunctionalDecoratingService.class.getSimpleName() + '(' + delegate() + ", " + function + ')';
+        return FunctionalDecoratingRpcService.class.getSimpleName() + '(' + delegate() + ", " + function + ')';
     }
 }

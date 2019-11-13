@@ -20,31 +20,24 @@ import static java.util.Objects.requireNonNull;
 
 import javax.annotation.Nullable;
 
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerListenerAdapter;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.SimpleDecoratingService;
-import com.linecorp.armeria.server.logging.AccessLogWriter;
+import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 
 /**
  * A decorating service which provides support of structured and optionally externalized request/response
  * content logging.
  *
- * @param <I> the {@link Request} type
- * @param <O> the {@link Response} type
  * @param <L> the type of the structured log representation
- *
- * @deprecated Use {@link AccessLogWriter}.
  */
-@Deprecated
-public abstract class StructuredLoggingService<I extends Request, O extends Response, L>
-        extends SimpleDecoratingService<I, O> {
+public abstract class StructuredLoggingService<L> extends SimpleDecoratingHttpService {
 
     private final StructuredLogBuilder<L> logBuilder;
     @Nullable
@@ -53,11 +46,11 @@ public abstract class StructuredLoggingService<I extends Request, O extends Resp
     /**
      * Creates a new {@link StructuredLoggingService}.
      *
-     * @param delegate the {@link Service} being decorated
+     * @param delegate the {@link HttpService} being decorated
      * @param logBuilder an instance of {@link StructuredLogBuilder} which is used to construct an entry of
      *        structured log
      */
-    protected StructuredLoggingService(Service<I, O> delegate, StructuredLogBuilder<L> logBuilder) {
+    protected StructuredLoggingService(HttpService delegate, StructuredLogBuilder<L> logBuilder) {
         super(delegate);
         this.logBuilder = requireNonNull(logBuilder, "logBuilder");
     }
@@ -84,7 +77,7 @@ public abstract class StructuredLoggingService<I extends Request, O extends Resp
     }
 
     @Override
-    public O serve(ServiceRequestContext ctx, I req) throws Exception {
+    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         ctx.log().addListener(log -> {
             final L structuredLog = logBuilder.build(log);
             if (structuredLog != null) {

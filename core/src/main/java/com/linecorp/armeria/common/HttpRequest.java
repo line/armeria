@@ -262,7 +262,7 @@ public interface HttpRequest extends Request, StreamMessage<HttpObject> {
      * {@link RequestContext#updateRequest(HttpRequest)} if you are intercepting an {@link HttpRequest}
      * in a decorator. For example:
      * <pre>{@code
-     * > public class MyService extends SimpleDecoratingService<HttpRequest, HttpResponse> {
+     * > public class MyService extends SimpleDecoratingHttpService {
      * >     @Override
      * >     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
      * >         // Create a new request with an additional header.

@@ -41,11 +41,10 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.internal.thrift.ThriftFunction;
 import com.linecorp.armeria.server.RpcService;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
- * A {@link Service} that handles a Thrift {@link RpcRequest}.
+ * An {@link RpcService} that handles a Thrift {@link RpcRequest}.
  *
  * @see THttpService
  */

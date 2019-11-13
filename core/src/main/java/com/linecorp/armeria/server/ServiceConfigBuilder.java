@@ -22,15 +22,13 @@ import javax.annotation.Nullable;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 final class ServiceConfigBuilder {
 
     private final Route route;
-    private final Service<HttpRequest, HttpResponse> service;
+    private final HttpService service;
     @Nullable
     private String loggerName;
 
@@ -48,7 +46,7 @@ final class ServiceConfigBuilder {
     private AccessLogWriter accessLogWriter;
     private boolean shutdownAccessLogWriterOnStop;
 
-    ServiceConfigBuilder(Route route, Service<HttpRequest, HttpResponse> service) {
+    ServiceConfigBuilder(Route route, HttpService service) {
         this.route = requireNonNull(route, "route");
         this.service = requireNonNull(service, "service");
     }

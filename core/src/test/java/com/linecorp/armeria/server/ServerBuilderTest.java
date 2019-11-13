@@ -212,8 +212,8 @@ class ServerBuilderTest {
     }
 
     /**
-     * Makes sure that {@link ServerBuilder#decorator(DecoratingServiceFunction)} works at every service and
-     * virtual hosts and {@link VirtualHostBuilder#decorator(DecoratingServiceFunction)} works only at
+     * Makes sure that {@link ServerBuilder#decorator(DecoratingHttpServiceFunction)} works at every service and
+     * virtual hosts and {@link VirtualHostBuilder#decorator(DecoratingHttpServiceFunction)} works only at
      * its own services.
      */
     @Test
@@ -263,17 +263,25 @@ class ServerBuilderTest {
                                     .requestTimeoutMillis(100)     // for default virtual host
                                     .service("/default_virtual_host",
                                              (ctx, req) -> HttpResponse.delayed(
-                                                     HttpResponse.of(HttpStatus.OK), Duration.ofMillis(200))
-                                    )
-                                    .route().get("/service_config")
-                                    .requestTimeoutMillis(200)     // for service
-                                    .build((ctx, req) -> HttpResponse
-                                            .delayed(HttpResponse.of(HttpStatus.OK), Duration.ofMillis(250)))
-                                    .virtualHost("foo.com")
-                                    .service("/custom_virtual_host", (ctx, req) -> HttpResponse.delayed(
-                                            HttpResponse.of(HttpStatus.OK), Duration.ofMillis(150)))
-                                    .requestTimeoutMillis(300)    // for custom virtual host
-                                    .and().build();
+                                                     HttpResponse.of(HttpStatus.OK),
+                                                     Duration.ofMillis(200),
+                                                     ctx.eventLoop()))
+                                    .withRoute(
+                                            r -> r.get("/service_config")
+                                                  .requestTimeoutMillis(200)     // for service
+                                                  .build((ctx, req) -> HttpResponse.delayed(
+                                                          HttpResponse.of(HttpStatus.OK),
+                                                          Duration.ofMillis(250),
+                                                          ctx.eventLoop())))
+                                    .withVirtualHost(
+                                            h -> h.hostnamePattern("foo.com")
+                                                  .service("/custom_virtual_host",
+                                                           (ctx, req) -> HttpResponse.delayed(
+                                                                   HttpResponse.of(HttpStatus.OK),
+                                                                   Duration.ofMillis(150),
+                                                                   ctx.eventLoop()))
+                                                  .requestTimeoutMillis(300))    // for custom virtual host
+                                    .build();
         server.start().join();
 
         try {

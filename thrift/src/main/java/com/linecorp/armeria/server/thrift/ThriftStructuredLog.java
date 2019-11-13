@@ -28,7 +28,6 @@ import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftReply;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.server.logging.structured.StructuredLog;
-import com.linecorp.armeria.server.logging.structured.StructuredLogBuilder;
 
 /**
  * A representation and constructor of a service log which holds Apache Thrift based RPC invocation oriented
@@ -63,7 +62,6 @@ public class ThriftStructuredLog extends StructuredLog {
 
     /**
      * Constructs {@link ThriftStructuredLog} from {@link RequestContext} and {@link RequestLog}.
-     * Can be used as {@link StructuredLogBuilder}.
      */
     public ThriftStructuredLog(RequestLog reqLog) {
         super(reqLog);

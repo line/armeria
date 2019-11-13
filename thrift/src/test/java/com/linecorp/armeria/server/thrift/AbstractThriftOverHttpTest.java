@@ -39,6 +39,7 @@ import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RpcRequest;
@@ -48,10 +49,10 @@ import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -136,8 +137,7 @@ public abstract class AbstractThriftOverHttpTest {
 
             sb.decorator(LoggingService.newDecorator());
 
-            final Function<Service<HttpRequest, HttpResponse>,
-                    Service<HttpRequest, HttpResponse>> logCollectingDecorator =
+            final Function<? super HttpService, ? extends HttpService> logCollectingDecorator =
                     s -> new SimpleDecoratingHttpService(s) {
                         @Override
                         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
@@ -354,7 +354,7 @@ public abstract class AbstractThriftOverHttpTest {
             client.hello("Trustin");
         }
 
-        final RequestLog log = requestLogs.take();
+        final RequestLog log = takeLog();
 
         assertThat(log.requestHeaders()).isInstanceOf(HttpHeaders.class);
         assertThat(log.requestContent()).isInstanceOf(RpcRequest.class);
@@ -396,7 +396,7 @@ public abstract class AbstractThriftOverHttpTest {
             assertThatThrownBy(() -> client.hello("Trustin")).isInstanceOf(TApplicationException.class);
         }
 
-        final RequestLog log = requestLogs.take();
+        final RequestLog log = takeLog();
 
         assertThat(log.requestHeaders()).isInstanceOf(HttpHeaders.class);
         assertThat(log.requestContent()).isInstanceOf(RpcRequest.class);
@@ -446,5 +446,17 @@ public abstract class AbstractThriftOverHttpTest {
         }
 
         throw new Error();
+    }
+
+    private static RequestLog takeLog() throws InterruptedException {
+        for (;;) {
+            final RequestLog log = requestLogs.take();
+            if (log.method() == HttpMethod.HEAD) {
+                // Skip the upgrade request.
+                continue;
+            }
+
+            return log;
+        }
     }
 }

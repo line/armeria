@@ -49,6 +49,7 @@ import com.linecorp.armeria.common.DefaultRpcResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -66,9 +67,11 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.thrift.TByteBufTransport;
 import com.linecorp.armeria.internal.thrift.ThriftFieldAccess;
 import com.linecorp.armeria.internal.thrift.ThriftFunction;
-import com.linecorp.armeria.server.AbstractHttpService;
+import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.HttpResponseException;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpStatusException;
+import com.linecorp.armeria.server.RpcService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.unsafe.ByteBufHttpData;
@@ -77,11 +80,12 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 
 /**
- * A {@link Service} that handles a Thrift call.
+ * An {@link HttpService} that handles a Thrift call.
  *
  * @see ThriftProtocolFactories
  */
-public final class THttpService extends AbstractHttpService {
+public final class THttpService extends DecoratingService<RpcRequest, RpcResponse, HttpRequest, HttpResponse>
+        implements HttpService {
 
     private static final Logger logger = LoggerFactory.getLogger(THttpService.class);
 
@@ -279,7 +283,7 @@ public final class THttpService extends AbstractHttpService {
      * <p>Currently, the only way to specify a serialization format is by using the HTTP session
      * protocol and setting the Content-Type header to the appropriate {@link SerializationFormat#mediaType()}.
      */
-    public static Function<Service<RpcRequest, RpcResponse>, THttpService> newDecorator() {
+    public static Function<? super RpcService, THttpService> newDecorator() {
         return newDecorator(ThriftSerializationFormats.BINARY);
     }
 
@@ -292,7 +296,7 @@ public final class THttpService extends AbstractHttpService {
      * @param defaultSerializationFormat the default serialization format to use when not specified by the
      *                                   client
      */
-    public static Function<Service<RpcRequest, RpcResponse>, THttpService> newDecorator(
+    public static Function<? super RpcService, THttpService> newDecorator(
             SerializationFormat defaultSerializationFormat) {
 
         final SerializationFormat[] allowedSerializationFormatArray = newAllowedSerializationFormats(
@@ -313,7 +317,7 @@ public final class THttpService extends AbstractHttpService {
      * @param otherAllowedSerializationFormats other serialization formats that should be supported by this
      *                                         service in addition to the default
      */
-    public static Function<Service<RpcRequest, RpcResponse>, THttpService> newDecorator(
+    public static Function<? super RpcService, THttpService> newDecorator(
             SerializationFormat defaultSerializationFormat,
             SerializationFormat... otherAllowedSerializationFormats) {
 
@@ -332,7 +336,7 @@ public final class THttpService extends AbstractHttpService {
      * @param otherAllowedSerializationFormats other serialization formats that should be supported by this
      *                                         service in addition to the default
      */
-    public static Function<Service<RpcRequest, RpcResponse>, THttpService> newDecorator(
+    public static Function<? super RpcService, THttpService> newDecorator(
             SerializationFormat defaultSerializationFormat,
             Iterable<SerializationFormat> otherAllowedSerializationFormats) {
 
@@ -355,17 +359,12 @@ public final class THttpService extends AbstractHttpService {
         return set.toArray(EMPTY_FORMATS);
     }
 
-    private final Service<RpcRequest, RpcResponse> delegate;
     private final SerializationFormat[] allowedSerializationFormatArray;
     private final Set<SerializationFormat> allowedSerializationFormats;
     private final ThriftCallService thriftService;
 
-    private THttpService(Service<RpcRequest, RpcResponse> delegate,
-                         SerializationFormat[] allowedSerializationFormatArray) {
-
-        requireNonNull(delegate, "delegate");
-
-        this.delegate = delegate;
+    private THttpService(RpcService delegate, SerializationFormat[] allowedSerializationFormatArray) {
+        super(delegate);
         thriftService = findThriftService(delegate);
 
         this.allowedSerializationFormatArray = allowedSerializationFormatArray;
@@ -403,7 +402,10 @@ public final class THttpService extends AbstractHttpService {
     }
 
     @Override
-    protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
+    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        if (req.method() != HttpMethod.POST) {
+            return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
+        }
 
         final SerializationFormat serializationFormat = determineSerializationFormat(req);
         if (serializationFormat == null) {
@@ -612,7 +614,7 @@ public final class THttpService extends AbstractHttpService {
         final RpcResponse reply;
 
         try (SafeCloseable ignored = ctx.push()) {
-            reply = delegate.serve(ctx, call);
+            reply = delegate().serve(ctx, call);
         } catch (Throwable cause) {
             handleException(ctx, new DefaultRpcResponse(cause), res, serializationFormat, seqId, func, cause);
             return;

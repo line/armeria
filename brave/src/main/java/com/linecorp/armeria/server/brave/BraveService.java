@@ -26,7 +26,7 @@ import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.internal.brave.SpanContextUtil;
 import com.linecorp.armeria.internal.brave.SpanTags;
 import com.linecorp.armeria.internal.brave.TraceContextUtil;
-import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 
@@ -40,14 +40,14 @@ import brave.http.HttpServerResponse;
 import brave.http.HttpTracing;
 
 /**
- * Decorates a {@link Service} to trace inbound {@link HttpRequest}s using
+ * Decorates an {@link HttpService} to trace inbound {@link HttpRequest}s using
  * <a href="https://github.com/openzipkin/brave">Brave</a>.
  */
 public final class BraveService extends SimpleDecoratingHttpService {
     /**
-     * Creates a new tracing {@link Service} decorator using the specified {@link Tracing} instance.
+     * Creates a new tracing {@link HttpService} decorator using the specified {@link Tracing} instance.
      */
-    public static Function<Service<HttpRequest, HttpResponse>, BraveService>
+    public static Function<? super HttpService, BraveService>
     newDecorator(Tracing tracing) {
         return newDecorator(HttpTracing.newBuilder(tracing)
                                        .serverParser(ArmeriaHttpServerParser.get())
@@ -55,9 +55,9 @@ public final class BraveService extends SimpleDecoratingHttpService {
     }
 
     /**
-     * Creates a new tracing {@link Service} decorator using the specified {@link HttpTracing} instance.
+     * Creates a new tracing {@link HttpService} decorator using the specified {@link HttpTracing} instance.
      */
-    public static Function<Service<HttpRequest, HttpResponse>, BraveService>
+    public static Function<? super HttpService, BraveService>
     newDecorator(HttpTracing httpTracing) {
         ensureScopeUsesRequestContext(httpTracing.tracing());
         return service -> new BraveService(service, httpTracing);
@@ -69,7 +69,7 @@ public final class BraveService extends SimpleDecoratingHttpService {
     /**
      * Creates a new instance.
      */
-    private BraveService(Service<HttpRequest, HttpResponse> delegate, HttpTracing httpTracing) {
+    private BraveService(HttpService delegate, HttpTracing httpTracing) {
         super(delegate);
         tracer = httpTracing.tracing().tracer();
         handler = HttpServerHandler.create(httpTracing);

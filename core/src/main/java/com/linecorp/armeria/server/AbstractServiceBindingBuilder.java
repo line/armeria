@@ -23,13 +23,11 @@ import java.time.Duration;
 import java.util.List;
 import java.util.function.Function;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
- * A builder class for binding a {@link Service} fluently.
+ * A builder class for binding an {@link HttpService} fluently.
  *
  * @see ServiceBindingBuilder
  * @see VirtualHostServiceBindingBuilder
@@ -105,20 +103,19 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     }
 
     @Override
-    public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
-    AbstractServiceBindingBuilder decorator(Function<T, R> decorator) {
+    public AbstractServiceBindingBuilder decorator(
+            Function<? super HttpService, ? extends HttpService> decorator) {
         defaultServiceConfigSetters.decorator(decorator);
         return this;
     }
 
     abstract void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder);
 
-    final void build0(Service<HttpRequest, HttpResponse> service) {
+    final void build0(HttpService service) {
         final List<Route> routes = buildRouteList();
 
         for (Route route : routes) {
-            final Service<HttpRequest, HttpResponse> decoratedService =
-                    defaultServiceConfigSetters.decorate(service);
+            final HttpService decoratedService = defaultServiceConfigSetters.decorator().apply(service);
             final ServiceConfigBuilder serviceConfigBuilder =
                     defaultServiceConfigSetters.toServiceConfigBuilder(route, decoratedService);
             serviceConfigBuilder(serviceConfigBuilder);

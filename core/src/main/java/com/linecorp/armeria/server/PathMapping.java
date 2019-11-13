@@ -31,7 +31,7 @@ interface PathMapping {
     /**
      * Matches the specified {@code path} and extracts the path parameters from it.
      *
-     * @param routingCtx a context to find the {@link Service}.
+     * @param routingCtx a context to find the {@link HttpService}.
      *
      * @return a non-empty {@link RoutingResultBuilder} if the specified {@code path} matches this mapping.
      *         {@code null} otherwise.
