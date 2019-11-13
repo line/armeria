@@ -63,6 +63,7 @@ import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.EventLoopThreadFactory;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.metric.MicrometerUtil;
+import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
@@ -146,6 +147,8 @@ public class ServerTest {
             sb.decorator(decorator);
 
             sb.idleTimeoutMillis(idleTimeoutMillis);
+            // Enable access logs to make sure AccessLogWriter does not fail on an invalid path.
+            sb.accessLogWriter(AccessLogWriter.common(), false);
         }
     };
 
