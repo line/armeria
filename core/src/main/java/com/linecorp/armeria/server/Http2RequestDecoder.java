@@ -134,7 +134,10 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             req = new DecodedHttpRequest(ctx.channel().eventLoop(), ++nextId, streamId,
                                          ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, headers, endOfStream,
                                                                                  scheme, cfg),
-                                         true, inboundTrafficController, cfg.maxRequestLength());
+                                         true, inboundTrafficController,
+                                         // FIXME(trustin): Use a different maxRequestLength
+                                         //                 for a different host.
+                                         cfg.defaultVirtualHost().maxRequestLength());
 
             // Close the request early when it is sure that there will be
             // neither content nor trailers.

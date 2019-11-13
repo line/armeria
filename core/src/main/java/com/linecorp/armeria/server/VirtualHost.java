@@ -33,8 +33,6 @@ import org.slf4j.Logger;
 import com.google.common.base.Ascii;
 import com.google.common.collect.Streams;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
@@ -52,7 +50,7 @@ import io.netty.util.DomainNameMappingBuilder;
  *   <li>the hostname pattern, as defined in
  *       <a href="https://tools.ietf.org/html/rfc2818#section-3.1">the section 3.1 of RFC2818</a></li>
  *   <li>{@link SslContext} if TLS is enabled</li>
- *   <li>the list of available {@link Service}s and their {@link Route}s</li>
+ *   <li>the list of available {@link HttpService}s and their {@link Route}s</li>
  * </ul>
  *
  * @see VirtualHostBuilder
@@ -83,7 +81,7 @@ public final class VirtualHost {
     private final ContentPreviewerFactory requestContentPreviewerFactory;
     private final ContentPreviewerFactory responseContentPreviewerFactory;
     private final AccessLogWriter accessLogWriter;
-    private boolean shutdownAccessLogWriterOnStop;
+    private final boolean shutdownAccessLogWriterOnStop;
 
     VirtualHost(String defaultHostname, String hostnamePattern,
                 @Nullable SslContext sslContext, Iterable<ServiceConfig> serviceConfigs,
@@ -241,7 +239,7 @@ public final class VirtualHost {
     }
 
     /**
-     * Returns the information about the {@link Service}s bound to this virtual host.
+     * Returns the information about the {@link HttpService}s bound to this virtual host.
      */
     public List<ServiceConfig> serviceConfigs() {
         return services;
@@ -260,7 +258,6 @@ public final class VirtualHost {
      * @deprecated Use {@link #requestTimeoutMillis()}.
      *
      * @see ServiceConfig#requestTimeoutMillis()
-     * @see ServerConfig#requestTimeoutMillis()
      */
     @Deprecated
     public long defaultRequestTimeoutMillis() {
@@ -271,7 +268,6 @@ public final class VirtualHost {
      * Returns the timeout of a request.
      *
      * @see ServiceConfig#requestTimeoutMillis()
-     * @see ServerConfig#requestTimeoutMillis()
      */
     public long requestTimeoutMillis() {
         return requestTimeoutMillis;
@@ -284,7 +280,6 @@ public final class VirtualHost {
      * @deprecated Use {@link #maxRequestLength()}.
      *
      * @see ServiceConfig#maxRequestLength()
-     * @see ServerConfig#maxRequestLength()
      */
     @Deprecated
     public long defaultMaxRequestLength() {
@@ -296,7 +291,6 @@ public final class VirtualHost {
      * e.g. the content length of an HTTP request.
      *
      * @see ServiceConfig#maxRequestLength()
-     * @see ServerConfig#maxRequestLength()
      */
     public long maxRequestLength() {
         return maxRequestLength;
@@ -308,7 +302,6 @@ public final class VirtualHost {
      * insecure. When disabled, the server responses will not expose such server-side details to the client.
      *
      * @see ServiceConfig#verboseResponses()
-     * @see ServerConfig#verboseResponses()
      */
     public boolean verboseResponses() {
         return verboseResponses;
@@ -336,6 +329,8 @@ public final class VirtualHost {
 
     /**
      * Returns the access log writer.
+     *
+     * @see ServiceConfig#accessLogWriter()
      */
     public AccessLogWriter accessLogWriter() {
         return accessLogWriter;
@@ -343,15 +338,17 @@ public final class VirtualHost {
 
     /**
      * Tells whether the {@link AccessLogWriter} is shut down when the {@link Server} stops.
+     *
+     * @see ServiceConfig#shutdownAccessLogWriterOnStop()
      */
     public boolean shutdownAccessLogWriterOnStop() {
         return shutdownAccessLogWriterOnStop;
     }
 
     /**
-     * Finds the {@link Service} whose {@link Router} matches the {@link RoutingContext}.
+     * Finds the {@link HttpService} whose {@link Router} matches the {@link RoutingContext}.
      *
-     * @param routingCtx a context to find the {@link Service}.
+     * @param routingCtx a context to find the {@link HttpService}.
      *
      * @return the {@link ServiceConfig} wrapped by a {@link Routed} if there's a match.
      *         {@link Routed#empty()} if there's no match.
@@ -360,8 +357,7 @@ public final class VirtualHost {
         return router.find(requireNonNull(routingCtx, "routingCtx"));
     }
 
-    VirtualHost decorate(@Nullable Function<Service<HttpRequest, HttpResponse>,
-            Service<HttpRequest, HttpResponse>> decorator) {
+    VirtualHost decorate(@Nullable Function<? super HttpService, ? extends HttpService> decorator) {
         if (decorator == null) {
             return this;
         }

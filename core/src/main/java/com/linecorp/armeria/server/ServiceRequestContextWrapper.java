@@ -30,9 +30,9 @@ import org.slf4j.Logger;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContextWrapper;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
@@ -75,8 +75,10 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public ServiceRequestContext newDerivedContext(@Nullable HttpRequest req, @Nullable RpcRequest rpcReq) {
-        return delegate().newDerivedContext(req, rpcReq);
+    public ServiceRequestContext newDerivedContext(RequestId id,
+                                                   @Nullable HttpRequest req,
+                                                   @Nullable RpcRequest rpcReq) {
+        return delegate().newDerivedContext(id, req, rpcReq);
     }
 
     @Override
@@ -105,7 +107,7 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public <T extends Service<HttpRequest, HttpResponse>> T service() {
+    public HttpService service() {
         return delegate().service();
     }
 

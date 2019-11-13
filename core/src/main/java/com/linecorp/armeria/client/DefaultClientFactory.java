@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.client.HttpClientBuilder.isUndefinedUri;
+
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +37,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 
@@ -128,6 +131,7 @@ final class DefaultClientFactory extends AbstractClientFactory {
     @Override
     public <T> T newClient(URI uri, Class<T> clientType, ClientOptions options) {
         final Scheme scheme = validateScheme(uri);
+        uri = normalizeUri(uri, scheme);
         return clientFactories.get(scheme).newClient(uri, clientType, options);
     }
 
@@ -175,5 +179,21 @@ final class DefaultClientFactory extends AbstractClientFactory {
     @Override
     public ClientFactoryOptions options() {
         return httpClientFactory.options();
+    }
+
+    private URI normalizeUri(URI uri, Scheme scheme) {
+        if (isUndefinedUri(uri)) {
+            // We use a special singleton marker URI for clients that do not explicitly define a
+            // host or scheme at construction time.
+            // As this isn't created by users, we don't need to normalize it.
+            return uri;
+        }
+
+        if (scheme.serializationFormat() != SerializationFormat.NONE) {
+            return uri;
+        }
+
+        return URI.create(scheme.sessionProtocol().uriText() +
+                          uri.toString().substring(uri.getScheme().length()));
     }
 }

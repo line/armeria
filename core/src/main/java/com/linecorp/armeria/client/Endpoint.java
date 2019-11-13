@@ -672,7 +672,11 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
     @Override
     public int hashCode() {
-        return (authority().hashCode() * 31 + Objects.hashCode(ipAddr)) * 31 + port;
+        if (isGroup()) {
+            return groupName.hashCode();
+        } else {
+            return (host.hashCode() * 31 + Objects.hashCode(ipAddr)) * 31 + port;
+        }
     }
 
     @Override

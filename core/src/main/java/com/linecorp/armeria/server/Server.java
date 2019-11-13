@@ -556,15 +556,7 @@ public final class Server implements AutoCloseable {
                 }
             }
 
-            if (!config.shutdownAccessLogWriterOnStop()) {
-                future.complete(null);
-                return;
-            }
-
             final Builder<AccessLogWriter> builder = ImmutableSet.builder();
-            if (config.shutdownAccessLogWriterOnStop()) {
-                builder.add(config.accessLogWriter());
-            }
             config.virtualHosts()
                   .stream()
                   .filter(VirtualHost::shutdownAccessLogWriterOnStop)

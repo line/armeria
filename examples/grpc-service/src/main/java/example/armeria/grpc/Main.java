@@ -5,11 +5,9 @@ import java.net.InetSocketAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServiceWithRoutes;
 import com.linecorp.armeria.server.docs.DocServiceBuilder;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.grpc.GrpcService;
@@ -40,7 +38,7 @@ public final class Main {
 
     static Server newServer(int httpPort, int httpsPort) throws Exception {
         final HelloRequest exampleRequest = HelloRequest.newBuilder().setName("Armeria").build();
-        final ServiceWithRoutes<HttpRequest, HttpResponse> grpcService =
+        final HttpServiceWithRoutes grpcService =
                 GrpcService.builder()
                            .addService(new HelloServiceImpl())
                            // See https://github.com/grpc/grpc-java/blob/master/documentation/server-reflection-tutorial.md

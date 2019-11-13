@@ -31,8 +31,6 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.internal.metric.CaffeineMetricSupport;
 import com.linecorp.armeria.server.composition.CompositeServiceEntry;
@@ -78,19 +76,18 @@ final class RouteCache {
      * Returns a {@link Router} which is wrapped with a {@link Cache} layer in order to improve the
      * performance of the {@link CompositeServiceEntry} search.
      */
-    static <I extends Request, O extends Response>
-    Router<CompositeServiceEntry<I, O>> wrapCompositeServiceRouter(
-            Router<CompositeServiceEntry<I, O>> delegate) {
+    static <T extends Service<?, ?>> Router<CompositeServiceEntry<T>> wrapCompositeServiceRouter(
+            Router<CompositeServiceEntry<T>> delegate) {
 
-        final Cache<RoutingContext, CompositeServiceEntry<I, O>> cache =
-                Flags.compositeServiceCacheSpec().map(RouteCache::<CompositeServiceEntry<I, O>>buildCache)
+        final Cache<RoutingContext, CompositeServiceEntry<T>> cache =
+                Flags.compositeServiceCacheSpec().map(RouteCache::<CompositeServiceEntry<T>>buildCache)
                      .orElse(null);
         if (cache == null) {
             return delegate;
         }
 
-        final Cache<RoutingContext, List<CompositeServiceEntry<I, O>>> listCache =
-                Flags.compositeServiceCacheSpec().map(RouteCache::<List<CompositeServiceEntry<I, O>>>buildCache)
+        final Cache<RoutingContext, List<CompositeServiceEntry<T>>> listCache =
+                Flags.compositeServiceCacheSpec().map(RouteCache::<List<CompositeServiceEntry<T>>>buildCache)
                      .orElse(null);
 
         return new CachingRouter<>(delegate, CompositeServiceEntry::route, cache, listCache);

@@ -77,7 +77,7 @@ public final class RouteBuilder {
 
     /**
      * Sets the {@link Route} to match the specified {@code prefix} and {@code pathPattern}. The mapped
-     * {@link Service} is found when a {@linkplain ServiceRequestContext#path() path} is under
+     * {@link HttpService} is found when a {@linkplain ServiceRequestContext#path() path} is under
      * the specified {@code prefix} and the rest of the path matches the specified {@code pathPattern}.
      *
      * @see #path(String)
@@ -248,7 +248,7 @@ public final class RouteBuilder {
 
     /**
      * Sets the {@link Route} to match the specified {@code prefix} and {@code pathPattern}. The mapped
-     * {@link Service} is found when a {@linkplain ServiceRequestContext#path() path} is under
+     * {@link HttpService} is found when a {@linkplain ServiceRequestContext#path() path} is under
      * the specified {@code prefix} and the rest of the path matches the specified {@code pathPattern}.
      *
      * @deprecated Use {@linkplain #path(String, String) path(prefix, pathPattern)}
@@ -260,7 +260,7 @@ public final class RouteBuilder {
 
     /**
      * Sets the {@link Route} to support the specified {@link HttpMethod}s. If not set,
-     * the mapped {@link Service} accepts any {@link HttpMethod}s.
+     * the mapped {@link HttpService} accepts any {@link HttpMethod}s.
      */
     public RouteBuilder methods(HttpMethod... methods) {
         methods(ImmutableSet.copyOf(requireNonNull(methods, "methods")));
@@ -269,7 +269,7 @@ public final class RouteBuilder {
 
     /**
      * Sets the {@link Route} to support the specified {@link HttpMethod}s. If not set,
-     * the mapped {@link Service} accepts any {@link HttpMethod}s.
+     * the mapped {@link HttpService} accepts any {@link HttpMethod}s.
      */
     public RouteBuilder methods(Iterable<HttpMethod> methods) {
         this.methods = Sets.immutableEnumSet(requireNonNull(methods, "methods"));
@@ -278,7 +278,7 @@ public final class RouteBuilder {
 
     /**
      * Sets the {@link Route} to consume the specified {@link MediaType}s. If not set,
-     * the mapped {@link Service} accepts {@link HttpRequest}s that have any
+     * the mapped {@link HttpService} accepts {@link HttpRequest}s that have any
      * {@link HttpHeaderNames#CONTENT_TYPE}. In order to get this work, {@link #methods(Iterable)} must be set.
      */
     public RouteBuilder consumes(MediaType... consumeTypes) {
@@ -288,7 +288,7 @@ public final class RouteBuilder {
 
     /**
      * Sets the {@link Route} to consume the specified {@link MediaType}s. If not set,
-     * the mapped {@link Service} accepts {@link HttpRequest}s that have any
+     * the mapped {@link HttpService} accepts {@link HttpRequest}s that have any
      * {@link HttpHeaderNames#CONTENT_TYPE}. In order to get this work, {@link #methods(Iterable)} must be set.
      */
     public RouteBuilder consumes(Iterable<MediaType> consumeTypes) {
@@ -299,7 +299,7 @@ public final class RouteBuilder {
 
     /**
      * Sets the {@link Route} to produce the specified {@link MediaType}s. If not set,
-     * the mapped {@link Service} accepts {@link HttpRequest}s that have any
+     * the mapped {@link HttpService} accepts {@link HttpRequest}s that have any
      * {@link HttpHeaderNames#ACCEPT}. In order to get this work, {@link #methods(Iterable)} must be set.
      */
     public RouteBuilder produces(MediaType... produceTypes) {
@@ -309,7 +309,7 @@ public final class RouteBuilder {
 
     /**
      * Sets the {@link Route} to produce the specified {@link MediaType}s. If not set,
-     * the mapped {@link Service} accepts {@link HttpRequest}s that have any
+     * the mapped {@link HttpService} accepts {@link HttpRequest}s that have any
      * {@link HttpHeaderNames#ACCEPT}. In order to get this work, {@link #methods(Iterable)} must be set.
      */
     public RouteBuilder produces(Iterable<MediaType> produceTypes) {

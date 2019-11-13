@@ -276,18 +276,18 @@ public class DefaultRequestLogTest {
     }
 
     @Test
-    public void testUUID_Assign() {
+    public void testId_Assign() {
         final RequestHeaders reqHeaders =
-                RequestHeaders.of(HttpMethod.POST, "/armeria/uuid",
+                RequestHeaders.of(HttpMethod.POST, "/armeria/id",
                                   HttpHeaderNames.CONTENT_LENGTH, VERY_LONG_STRING.length());
         final HttpRequest req = HttpRequest.of(
                 AggregatedHttpRequest.of(reqHeaders, HttpData.ofUtf8(VERY_LONG_STRING)));
         final ClientRequestContext cctx = ClientRequestContext.builder(req).build();
-        assertThat(cctx.log().uuid()).isNotNull();
-        assertThat(cctx.log().uuid()).isEqualTo(cctx.uuid());
+        assertThat(cctx.log().id()).isNotNull();
+        assertThat(cctx.log().id()).isEqualTo(cctx.id());
 
         final ServiceRequestContext sctx = ServiceRequestContext.of(req);
-        assertThat(sctx.log().uuid()).isNotNull();
-        assertThat(sctx.log().uuid()).isEqualTo(sctx.uuid());
+        assertThat(sctx.log().id()).isNotNull();
+        assertThat(sctx.log().id()).isEqualTo(sctx.id());
     }
 }

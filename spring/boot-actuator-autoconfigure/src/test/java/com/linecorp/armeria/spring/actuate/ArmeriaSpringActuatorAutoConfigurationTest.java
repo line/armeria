@@ -48,7 +48,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -60,6 +60,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfigurationTest.TestConfiguration;
 
 import io.prometheus.client.exporter.common.TextFormat;
@@ -67,7 +68,7 @@ import reactor.test.StepVerifier;
 
 /**
  * This uses {@link com.linecorp.armeria.spring.ArmeriaAutoConfiguration} for integration tests.
- * application-autoConfTest.yml will be loaded with minimal settings to make it work.
+ * {@code application-autoConfTest.yml} will be loaded with minimal settings to make it work.
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
@@ -107,10 +108,17 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
         public SettableHealthIndicator settableHealth() {
             return new SettableHealthIndicator();
         }
+
+        @Bean
+        public ArmeriaServerConfigurator serverConfigurator() {
+            return sb -> sb.requestTimeoutMillis(TIMEOUT_MILLIS);
+        }
     }
 
+    private static final long TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(30);
+
     @Rule
-    public TestRule globalTimeout = new DisableOnDebug(new Timeout(30, TimeUnit.SECONDS));
+    public TestRule globalTimeout = new DisableOnDebug(new Timeout(TIMEOUT_MILLIS, TimeUnit.MILLISECONDS));
 
     @Inject
     private Server server;
@@ -122,7 +130,9 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
 
     @Before
     public void setUp() {
-        client = HttpClient.of(newUrl("h2c"));
+        client = HttpClient.of(newUrl("h2c"),
+                               ClientOption.RESPONSE_TIMEOUT_MILLIS.newValue(TIMEOUT_MILLIS),
+                               ClientOption.MAX_RESPONSE_LENGTH.newValue(0L));
         settableHealth.setHealth(Health.up().build());
     }
 
@@ -184,11 +194,7 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
     }
 
     @Test
-    public void testHeapdump() throws Exception {
-        final HttpClient client = Clients.newDerivedClient(this.client,
-                                                           options -> options.toBuilder()
-                                                                             .maxResponseLength(0)
-                                                                             .build());
+    public void testHeapDump() throws Exception {
         final HttpResponse res = client.get("/internal/actuator/heapdump");
         final AtomicLong remainingBytes = new AtomicLong();
         StepVerifier.create(res)
@@ -199,7 +205,7 @@ public class ArmeriaSpringActuatorAutoConfigurationTest {
                         assertThat(headers.contentType()).isEqualTo(MediaType.OCTET_STREAM);
                         assertThat(headers.get(HttpHeaderNames.CONTENT_DISPOSITION))
                                 .startsWith("attachment;filename=heapdump");
-                        final Long contentLength = headers.getLong(HttpHeaderNames.CONTENT_LENGTH);
+                        final long contentLength = headers.getLong(HttpHeaderNames.CONTENT_LENGTH, -1);
                         assertThat(contentLength).isPositive();
                         remainingBytes.set(contentLength);
                     })

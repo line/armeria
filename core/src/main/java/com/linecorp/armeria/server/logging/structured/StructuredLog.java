@@ -49,7 +49,6 @@ public abstract class StructuredLog {
 
     /**
      * Constructs {@link StructuredLog} from {@link RequestContext} and {@link RequestLog}.
-     * Can be used as {@link StructuredLogBuilder}.
      */
     protected StructuredLog(RequestLog reqLog) {
         timestampMillis = reqLog.requestStartTimeMillis();

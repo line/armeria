@@ -42,8 +42,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.server.RoutingTrie.Builder;
 import com.linecorp.armeria.server.composition.CompositeServiceEntry;
 
@@ -79,11 +77,11 @@ public final class Routers {
     /**
      * Returns the default implementation of the {@link Router} to find a {@link CompositeServiceEntry}.
      */
-    public static <I extends Request, O extends Response> Router<Service<I, O>> ofCompositeService(
-            List<CompositeServiceEntry<I, O>> entries) {
+    public static <T extends Service<?, ?>> Router<T> ofCompositeService(
+            List<CompositeServiceEntry<T>> entries) {
         requireNonNull(entries, "entries");
 
-        final Router<CompositeServiceEntry<I, O>> delegate = wrapCompositeServiceRouter(defaultRouter(
+        final Router<CompositeServiceEntry<T>> delegate = wrapCompositeServiceRouter(defaultRouter(
                 entries, CompositeServiceEntry::route,
                 (mapping, existingMapping) -> {
                     final String a = mapping.toString();

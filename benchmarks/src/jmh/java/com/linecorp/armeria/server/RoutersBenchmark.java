@@ -24,7 +24,6 @@ import org.slf4j.helpers.NOPLogger;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -33,7 +32,7 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 public class RoutersBenchmark {
 
-    private static final Service<HttpRequest, HttpResponse> SERVICE =
+    private static final HttpService SERVICE =
             (ctx, req) -> HttpResponse.of(HttpStatus.OK);
 
     private static final List<ServiceConfig> SERVICES;

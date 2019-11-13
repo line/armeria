@@ -37,7 +37,7 @@ class ClientRequestContextTest {
                                                          .hasMessageContaining("unavailable");
 
         final ClientRequestContext ctx = ClientRequestContext.of(req);
-        assertThat(ctx.uuid()).isNotNull();
+        assertThat(ctx.id()).isNotNull();
         try (SafeCloseable unused = ctx.push()) {
             assertThat(ClientRequestContext.current()).isSameAs(ctx);
         }

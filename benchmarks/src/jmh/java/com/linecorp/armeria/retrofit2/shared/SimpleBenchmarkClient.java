@@ -20,6 +20,9 @@ import java.util.concurrent.CompletableFuture;
 
 import retrofit2.http.GET;
 
+/**
+ * Represents a basic client which is used for the retrofit2 benchmarks.
+ */
 public interface SimpleBenchmarkClient {
     @GET("/empty")
     CompletableFuture<String> empty();

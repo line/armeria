@@ -3,4 +3,4 @@
 Structured logging with Kafka
 =============================
 
-TBW - See :api:`KafkaStructuredLoggingService`.
+TBW - See :api:`KafkaAccessLogWriter`.

@@ -22,14 +22,14 @@ import com.linecorp.armeria.common.RpcResponse;
 /**
  * An {@link RpcService} that decorates another {@link RpcService}.
  *
- * @see Service#decorate(DecoratingServiceFunction)
+ * @see RpcService#decorate(DecoratingRpcServiceFunction)
  */
 public abstract class SimpleDecoratingRpcService extends SimpleDecoratingService<RpcRequest, RpcResponse>
         implements RpcService {
     /**
      * Creates a new instance that decorates the specified {@link Service}.
      */
-    protected SimpleDecoratingRpcService(Service<RpcRequest, RpcResponse> delegate) {
+    protected SimpleDecoratingRpcService(RpcService delegate) {
         super(delegate);
     }
 }
