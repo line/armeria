@@ -29,14 +29,10 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.logging.DefaultRequestLog;
-import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -72,11 +68,11 @@ abstract class HttpResponseDecoder {
     }
 
     HttpResponseWrapper addResponse(
-            int id, @Nullable HttpRequest req, DecodedHttpResponse res, @Nullable ClientRequestContext ctx,
+            int id, DecodedHttpResponse res, @Nullable ClientRequestContext ctx,
             long responseTimeoutMillis, long maxContentLength) {
 
         final HttpResponseWrapper newRes =
-                new HttpResponseWrapper(req, res, ctx, responseTimeoutMillis, maxContentLength);
+                new HttpResponseWrapper(res, ctx, responseTimeoutMillis, maxContentLength);
         final HttpResponseWrapper oldRes = responses.put(id, newRes);
 
         assert oldRes == null : "addResponse(" + id + ", " + res + ", " + responseTimeoutMillis + "): " +
@@ -138,12 +134,9 @@ abstract class HttpResponseDecoder {
             DONE
         }
 
-        @Nullable
-        private final HttpRequest request;
         private final DecodedHttpResponse delegate;
         @Nullable
         private final ClientRequestContext ctx;
-        private final RequestLogBuilder logBuilder;
         private final long responseTimeoutMillis;
         private final long maxContentLength;
         @Nullable
@@ -153,13 +146,10 @@ abstract class HttpResponseDecoder {
 
         private State state = State.WAIT_NON_INFORMATIONAL;
 
-        HttpResponseWrapper(@Nullable HttpRequest request, DecodedHttpResponse delegate,
-                            @Nullable ClientRequestContext ctx,
+        HttpResponseWrapper(DecodedHttpResponse delegate, @Nullable ClientRequestContext ctx,
                             long responseTimeoutMillis, long maxContentLength) {
-            this.request = request;
             this.delegate = delegate;
             this.ctx = ctx;
-            logBuilder = ctx != null ? ctx.logBuilder() : RequestLogBuilder.NOOP;
             this.responseTimeoutMillis = responseTimeoutMillis;
             this.maxContentLength = maxContentLength;
         }
@@ -191,30 +181,24 @@ abstract class HttpResponseDecoder {
 
         void logResponseFirstBytesTransferred() {
             if (!loggedResponseFirstBytesTransferred) {
-                logBuilder.responseFirstBytesTransferred();
+                if (ctx != null) {
+                    ctx.logBuilder().responseFirstBytesTransferred();
+                }
                 loggedResponseFirstBytesTransferred = true;
             }
         }
 
         @Override
         public void run() {
-            final Runnable responseTimeoutHandler;
-            if (logBuilder instanceof DefaultRequestLog) {
-                responseTimeoutHandler =
-                        ((ClientRequestContext) ((RequestLog) logBuilder).context()).responseTimeoutHandler();
-            } else {
-                responseTimeoutHandler = null;
-            }
-
+            final Runnable responseTimeoutHandler = ctx != null ? ctx.responseTimeoutHandler() : null;
             if (responseTimeoutHandler != null) {
                 responseTimeoutHandler.run();
             } else {
                 final ResponseTimeoutException cause = ResponseTimeoutException.get();
                 delegate.close(cause);
-                logBuilder.endResponse(cause);
-
-                if (request != null) {
-                    request.abort(cause);
+                if (ctx != null) {
+                    ctx.logBuilder().endResponse(cause);
+                    ctx.request().abort(cause);
                 }
             }
         }
@@ -236,7 +220,9 @@ abstract class HttpResponseDecoder {
             switch (state) {
                 case WAIT_NON_INFORMATIONAL:
                     // NB: It's safe to call logBuilder.startResponse() multiple times.
-                    logBuilder.startResponse();
+                    if (ctx != null) {
+                        ctx.logBuilder().startResponse();
+                    }
 
                     assert o instanceof HttpHeaders && !(o instanceof RequestHeaders) : o;
 
@@ -245,16 +231,22 @@ abstract class HttpResponseDecoder {
                         final HttpStatus status = headers.status();
                         if (status.codeClass() != HttpStatusClass.INFORMATIONAL) {
                             state = State.WAIT_DATA_OR_TRAILERS;
-                            logBuilder.responseHeaders(headers);
+                            if (ctx != null) {
+                                ctx.logBuilder().responseHeaders(headers);
+                            }
                         }
                     }
                     break;
                 case WAIT_DATA_OR_TRAILERS:
                     if (o instanceof HttpHeaders) {
                         state = State.DONE;
-                        logBuilder.responseTrailers((HttpHeaders) o);
+                        if (ctx != null) {
+                            ctx.logBuilder().responseTrailers((HttpHeaders) o);
+                        }
                     } else {
-                        logBuilder.increaseResponseLength((HttpData) o);
+                        if (ctx != null) {
+                            ctx.logBuilder().increaseResponseLength((HttpData) o);
+                        }
                     }
                     break;
                 case DONE:
@@ -294,11 +286,11 @@ abstract class HttpResponseDecoder {
 
             cancelTimeoutOrLog(cause, actionOnTimeoutCancelled);
 
-            if (request != null) {
+            if (ctx != null) {
                 if (cause == null) {
-                    request.abort();
+                    ctx.request().abort();
                 } else {
-                    request.abort(cause);
+                    ctx.request().abort(cause);
                 }
             }
         }
@@ -306,18 +298,26 @@ abstract class HttpResponseDecoder {
         private void closeAction(@Nullable Throwable cause) {
             if (cause != null) {
                 delegate.close(cause);
-                logBuilder.endResponse(cause);
+                if (ctx != null) {
+                    ctx.logBuilder().endResponse(cause);
+                }
             } else {
                 delegate.close();
-                logBuilder.endResponse();
+                if (ctx != null) {
+                    ctx.logBuilder().endResponse();
+                }
             }
         }
 
         private void cancelAction(@Nullable Throwable cause) {
             if (cause != null && !(cause instanceof CancelledSubscriptionException)) {
-                logBuilder.endResponse(cause);
+                if (ctx != null) {
+                    ctx.logBuilder().endResponse(cause);
+                }
             } else {
-                logBuilder.endResponse();
+                if (ctx != null) {
+                    ctx.logBuilder().endResponse();
+                }
             }
         }
 
@@ -344,8 +344,8 @@ abstract class HttpResponseDecoder {
             }
 
             final StringBuilder logMsg = new StringBuilder("Unexpected exception while closing a request");
-            if (request != null) {
-                final String authority = request.authority();
+            if (ctx != null) {
+                final String authority = ctx.request().authority();
                 if (authority != null) {
                     logMsg.append(" to ").append(authority);
                 }
