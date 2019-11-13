@@ -22,6 +22,11 @@ import static org.mockito.Mockito.mock;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.common.util.OsType;
+import com.linecorp.armeria.common.util.SystemInfo;
+
+import io.netty.resolver.DefaultAddressResolverGroup;
+
 class ClientFactoryBuilderTest {
 
     @Test
@@ -54,5 +59,15 @@ class ClientFactoryBuilderTest {
         final IllegalStateException cause = assertThrows(IllegalStateException.class,
                                                          () -> builder2.maxNumEventLoopsPerEndpoint(2));
         assertThat(cause).hasMessageContaining("mutually exclusive");
+    }
+
+    @Test
+    void useDefaultDnsResolverForWindow() {
+        final DefaultClientFactory clientFactory = (DefaultClientFactory) ClientFactory.ofDefault();
+        if (SystemInfo.osType() == OsType.WINDOWS) {
+            assertThat(clientFactory.addressResolverGroup()).isSameAs(DefaultAddressResolverGroup.INSTANCE);
+        } else {
+            assertThat(clientFactory.addressResolverGroup()).isInstanceOf(RefreshingAddressResolverGroup.class);
+        }
     }
 }

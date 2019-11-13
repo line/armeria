@@ -53,6 +53,7 @@ import io.netty.channel.epoll.EpollChannelOption;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
+import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
@@ -454,6 +455,10 @@ public final class ClientFactoryBuilder {
                                                                maxNumEventLoopsFunctions);
         }
 
+        if (Flags.useDefaultDnsResolver() &&
+            addressResolverGroupFactory == null && dnsResolverGroupCustomizers == null) {
+            addressResolverGroupFactory(unused -> DefaultAddressResolverGroup.INSTANCE);
+        }
         final AddressResolverGroup<InetSocketAddress> addressResolverGroup;
         if (addressResolverGroupFactory != null) {
             @SuppressWarnings("unchecked")

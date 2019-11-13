@@ -44,6 +44,7 @@ import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingHttpClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.OsType;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.SslContextUtil;
@@ -60,6 +61,7 @@ import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.ssl.OpenSsl;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.util.ReferenceCountUtil;
 
 /**
@@ -296,6 +298,9 @@ public final class Flags {
     private static final ExceptionVerbosity ANNOTATED_SERVICE_EXCEPTION_VERBOSITY =
             exceptionLoggingMode("annotatedServiceExceptionVerbosity",
                                  DEFAULT_ANNOTATED_SERVICE_EXCEPTION_VERBOSITY);
+
+    private static final boolean USE_DEFAULT_DNS_RESOLVER =
+            getBoolean("useDefaultDnsResolver", SystemInfo.osType() == OsType.WINDOWS);
 
     static {
         if (!isEpollAvailable()) {
@@ -843,6 +848,19 @@ public final class Flags {
      */
     public static ExceptionVerbosity annotatedServiceExceptionVerbosity() {
         return ANNOTATED_SERVICE_EXCEPTION_VERBOSITY;
+    }
+
+    /**
+     * Enables {@link DefaultAddressResolverGroup} that resolves using JDK's built-in domain name
+     * lookup mechanism.
+     * Note that this resolver performs a blocking name lookup from the caller thread.
+     *
+     * <p>This flag is enabled for Windows OS and disabled for others by default.
+     * Specify the {@code -Dcom.linecorp.armeria.useDefaultDnsResolver=<true|false>} JVM option
+     * to override the default value.
+     */
+    public static boolean useDefaultDnsResolver() {
+        return USE_DEFAULT_DNS_RESOLVER;
     }
 
     private static Optional<String> caffeineSpec(String name, String defaultValue) {
