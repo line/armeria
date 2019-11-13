@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
@@ -34,7 +35,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedTransferQueue;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -60,8 +63,8 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.CompletionActions;
-import com.linecorp.armeria.common.util.EventLoopThreadFactory;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.internal.metric.MicrometerUtil;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.internal.AnticipatedException;
@@ -373,7 +376,14 @@ public class ServerTest {
     public void customStartStopExecutor() {
         final Queue<Thread> threads = new LinkedTransferQueue<>();
         final String prefix = getClass().getName() + "#customStartStopExecutor";
-        final ExecutorService executor = Executors.newSingleThreadExecutor(new EventLoopThreadFactory(prefix));
+
+        final AtomicBoolean serverStarted = new AtomicBoolean();
+        final ThreadFactory factory = ThreadFactories.builder(prefix).taskFunction(task -> () -> {
+            await().until(() -> !serverStarted.get());
+            task.run();
+        }).build();
+
+        final ExecutorService executor = Executors.newSingleThreadExecutor(factory);
         final Server server = Server.builder()
                                     .startStopExecutor(executor)
                                     .service("/", (ctx, req) -> HttpResponse.of(200))
@@ -381,7 +391,10 @@ public class ServerTest {
                                     .build();
 
         threads.add(server.start().thenApply(unused -> Thread.currentThread()).join());
-        threads.add(server.stop().thenApply(unused -> Thread.currentThread()).join());
+        serverStarted.set(true);
+        final CompletableFuture<Void> stopFuture = server.stop();
+        serverStarted.set(false);
+        threads.add(stopFuture.thenApply(unused -> Thread.currentThread()).join());
 
         threads.forEach(t -> assertThat(t.getName()).startsWith(prefix));
     }
@@ -391,9 +404,9 @@ public class ServerTest {
         final ExecutorService executor = Executors.newSingleThreadExecutor();
 
         final Server server = Server.builder()
-                .blockingTaskExecutor(executor, true)
-                .service("/", (ctx, req) -> HttpResponse.of(200))
-                .build();
+                                    .blockingTaskExecutor(executor, true)
+                                    .service("/", (ctx, req) -> HttpResponse.of(200))
+                                    .build();
 
         server.start().join();
 
@@ -416,9 +429,9 @@ public class ServerTest {
         final ExecutorService executor = Executors.newSingleThreadExecutor();
 
         final Server server = Server.builder()
-                .blockingTaskExecutor(executor, false)
-                .service("/", (ctx, req) -> HttpResponse.of(200))
-                .build();
+                                    .blockingTaskExecutor(executor, false)
+                                    .service("/", (ctx, req) -> HttpResponse.of(200))
+                                    .build();
 
         server.start().join();
 
