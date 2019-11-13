@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server;
 
 import java.util.List;
-import java.util.Optional;
 
 import javax.annotation.Nullable;
 
@@ -75,13 +74,13 @@ class RoutingContextWrapper implements RoutingContext {
     }
 
     @Override
-    public void delayThrowable(Throwable cause) {
-        delegate.delayThrowable(cause);
+    public void deferStatusException(HttpStatusException cause) {
+        delegate.deferStatusException(cause);
     }
 
     @Override
-    public Optional<Throwable> delayedThrowable() {
-        return delegate.delayedThrowable();
+    public HttpStatusException deferredStatusException() {
+        return delegate.deferredStatusException();
     }
 
     @Override

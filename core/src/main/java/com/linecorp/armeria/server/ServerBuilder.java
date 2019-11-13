@@ -1167,7 +1167,7 @@ public final class ServerBuilder {
      * @param decorator the {@link Function} that decorates {@link HttpService}s
      */
     public ServerBuilder decorator(Function<? super HttpService, ? extends HttpService> decorator) {
-        return decorator(Route.builder().catchAll().build(), decorator);
+        return decorator(Route.ofCatchAll(), decorator);
     }
 
     /**
@@ -1178,7 +1178,7 @@ public final class ServerBuilder {
      */
     public ServerBuilder decorator(
             DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
-        return decorator(Route.builder().catchAll().build(), decoratingHttpServiceFunction);
+        return decorator(Route.ofCatchAll(), decoratingHttpServiceFunction);
     }
 
     /**

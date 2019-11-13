@@ -39,6 +39,7 @@ import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RpcRequest;
@@ -353,7 +354,7 @@ public abstract class AbstractThriftOverHttpTest {
             client.hello("Trustin");
         }
 
-        final RequestLog log = requestLogs.take();
+        final RequestLog log = takeLog();
 
         assertThat(log.requestHeaders()).isInstanceOf(HttpHeaders.class);
         assertThat(log.requestContent()).isInstanceOf(RpcRequest.class);
@@ -395,7 +396,7 @@ public abstract class AbstractThriftOverHttpTest {
             assertThatThrownBy(() -> client.hello("Trustin")).isInstanceOf(TApplicationException.class);
         }
 
-        final RequestLog log = requestLogs.take();
+        final RequestLog log = takeLog();
 
         assertThat(log.requestHeaders()).isInstanceOf(HttpHeaders.class);
         assertThat(log.requestContent()).isInstanceOf(RpcRequest.class);
@@ -445,5 +446,17 @@ public abstract class AbstractThriftOverHttpTest {
         }
 
         throw new Error();
+    }
+
+    private static RequestLog takeLog() throws InterruptedException {
+        for (;;) {
+            final RequestLog log = requestLogs.take();
+            if (log.method() == HttpMethod.HEAD) {
+                // Skip the upgrade request.
+                continue;
+            }
+
+            return log;
+        }
     }
 }
