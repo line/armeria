@@ -396,7 +396,7 @@ public class ServerTest {
         final CompletableFuture<Thread> stopFuture = server.stop().thenApply(
                 unused -> Thread.currentThread());
         serverStarted.set(false);
-        stopFuture.join();
+        threads.add(stopFuture.join());
 
         threads.forEach(t -> assertThat(t.getName()).startsWith(prefix));
     }
