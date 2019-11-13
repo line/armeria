@@ -48,10 +48,10 @@ import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftReply;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -136,8 +136,7 @@ public abstract class AbstractThriftOverHttpTest {
 
             sb.decorator(LoggingService.newDecorator());
 
-            final Function<Service<HttpRequest, HttpResponse>,
-                    Service<HttpRequest, HttpResponse>> logCollectingDecorator =
+            final Function<? super HttpService, ? extends HttpService> logCollectingDecorator =
                     s -> new SimpleDecoratingHttpService(s) {
                         @Override
                         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {

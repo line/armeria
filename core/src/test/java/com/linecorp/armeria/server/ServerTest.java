@@ -91,10 +91,10 @@ public class ServerTest {
             sb.channelOption(ChannelOption.SO_BACKLOG, 1024);
             sb.meterRegistry(PrometheusMeterRegistries.newRegistry());
 
-            final Service<HttpRequest, HttpResponse> immediateResponseOnIoThread =
+            final HttpService immediateResponseOnIoThread =
                     new EchoService().decorate(LoggingService.newDecorator());
 
-            final Service<HttpRequest, HttpResponse> delayedResponseOnIoThread = new EchoService() {
+            final HttpService delayedResponseOnIoThread = new EchoService() {
                 @Override
                 protected HttpResponse echo(AggregatedHttpRequest aReq) {
                     try {
@@ -106,7 +106,7 @@ public class ServerTest {
                 }
             }.decorate(LoggingService.newDecorator());
 
-            final Service<HttpRequest, HttpResponse> lazyResponseNotOnIoThread = new EchoService() {
+            final HttpService lazyResponseNotOnIoThread = new EchoService() {
                 @Override
                 protected HttpResponse echo(AggregatedHttpRequest aReq) {
                     final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
@@ -119,7 +119,7 @@ public class ServerTest {
                 }
             }.decorate(LoggingService.newDecorator());
 
-            final Service<HttpRequest, HttpResponse> buggy = new AbstractHttpService() {
+            final HttpService buggy = new AbstractHttpService() {
                 @Override
                 protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
                     throw Exceptions.clearTrace(new AnticipatedException("bug!"));
@@ -133,7 +133,7 @@ public class ServerTest {
               .service("/buggy", buggy);
 
             // Disable request timeout for '/timeout-not' only.
-            final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator =
+            final Function<HttpService, HttpService> decorator =
                     s -> new SimpleDecoratingHttpService(s) {
                         @Override
                         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {

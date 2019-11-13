@@ -78,7 +78,8 @@ import com.linecorp.armeria.server.file.HttpFileService;
  * @see DocServiceBuilder#include(DocServiceFilter)
  * @see DocServiceBuilder#exclude(DocServiceFilter)
  */
-public class DocService extends AbstractCompositeService<HttpRequest, HttpResponse> {
+public class DocService extends AbstractCompositeService<HttpService, HttpRequest, HttpResponse>
+        implements HttpService {
 
     private static final int SPECIFICATION_INDEX = 0;
     private static final int VERSIONS_INDEX = 1;

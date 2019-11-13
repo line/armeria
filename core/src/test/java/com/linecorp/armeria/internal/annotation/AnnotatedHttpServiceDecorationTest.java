@@ -30,10 +30,10 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
-import com.linecorp.armeria.server.DecoratingServiceFunction;
+import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TestConverters.UnformattedStringConverterFunction;
 import com.linecorp.armeria.server.annotation.Decorator;
@@ -128,37 +128,31 @@ public class AnnotatedHttpServiceDecorationTest {
         }
     }
 
-    public static final class AlwaysTooManyRequestsDecorator
-            implements DecoratingServiceFunction<HttpRequest, HttpResponse> {
+    public static final class AlwaysTooManyRequestsDecorator implements DecoratingHttpServiceFunction {
 
         @Override
-        public HttpResponse serve(Service<HttpRequest, HttpResponse> delegate,
-                                  ServiceRequestContext ctx,
-                                  HttpRequest req) throws Exception {
+        public HttpResponse serve(
+                HttpService delegate, ServiceRequestContext ctx, HttpRequest req) throws Exception {
             validateContextAndRequest(ctx, req);
             throw HttpStatusException.of(HttpStatus.TOO_MANY_REQUESTS);
         }
     }
 
-    static final class AlwaysLockedDecorator
-            implements DecoratingServiceFunction<HttpRequest, HttpResponse> {
+    static final class AlwaysLockedDecorator implements DecoratingHttpServiceFunction {
 
         @Override
-        public HttpResponse serve(Service<HttpRequest, HttpResponse> delegate,
-                                  ServiceRequestContext ctx,
-                                  HttpRequest req) throws Exception {
+        public HttpResponse serve(
+                HttpService delegate, ServiceRequestContext ctx, HttpRequest req) throws Exception {
             validateContextAndRequest(ctx, req);
             return HttpResponse.of(HttpStatus.LOCKED);
         }
     }
 
-    private static final class FallThroughDecorator
-            implements DecoratingServiceFunction<HttpRequest, HttpResponse> {
+    private static final class FallThroughDecorator implements DecoratingHttpServiceFunction {
 
         @Override
-        public HttpResponse serve(Service<HttpRequest, HttpResponse> delegate,
-                                  ServiceRequestContext ctx,
-                                  HttpRequest req) throws Exception {
+        public HttpResponse serve(
+                HttpService delegate, ServiceRequestContext ctx, HttpRequest req) throws Exception {
             validateContextAndRequest(ctx, req);
             return delegate.serve(ctx, req);
         }

@@ -108,7 +108,7 @@ final class HttpResponseSubscriber implements Subscriber<HttpObject>, RequestTim
         startTimeNanos = System.nanoTime();
     }
 
-    private Service<?, ?> service() {
+    private HttpService service() {
         return reqCtx.service();
     }
 

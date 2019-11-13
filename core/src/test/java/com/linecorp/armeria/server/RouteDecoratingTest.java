@@ -42,7 +42,6 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -61,7 +60,7 @@ class RouteDecoratingTest {
         queue = new ArrayDeque<>();
     }
 
-    static DecoratingServiceFunction<HttpRequest, HttpResponse> newDecorator(int id) {
+    static DecoratingHttpServiceFunction newDecorator(int id) {
         return (delegate, ctx, req) -> {
             queue.add(id);
             return delegate.serve(ctx, req);

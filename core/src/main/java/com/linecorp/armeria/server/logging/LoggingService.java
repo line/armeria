@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2019 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -23,48 +23,32 @@ import static java.util.Objects.requireNonNull;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.Sampler;
-import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.SimpleDecoratingService;
+import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 
 /**
- * Decorates a {@link Service} to log {@link Request}s and {@link Response}s.
- *
- * @param <I> the {@link Request} type
- * @param <O> the {@link Response} type
+ * Decorates an {@link HttpService} to log {@link HttpRequest}s and {@link HttpResponse}s.
  */
-public final class LoggingService<I extends Request, O extends Response> extends SimpleDecoratingService<I, O> {
+public final class LoggingService extends SimpleDecoratingHttpService {
     /**
-     * Returns a new {@link Service} decorator that logs {@link Request}s and {@link Response}s at
+     * Returns a new {@link HttpService} decorator that logs {@link HttpRequest}s and {@link HttpResponse}s at
      * {@link LogLevel#INFO} for success, {@link LogLevel#WARN} for failure.
      *
      * @see LoggingServiceBuilder for more information on the default settings.
      */
-    public static <I extends Request, O extends Response>
-    Function<Service<I, O>, LoggingService<I, O>> newDecorator() {
+    public static Function<? super HttpService, LoggingService> newDecorator() {
         return builder().requestLogLevel(LogLevel.INFO)
                         .successfulResponseLogLevel(LogLevel.INFO)
                         .failureResponseLogLevel(LogLevel.WARN)
                         .newDecorator();
-    }
-
-    /**
-     * Returns a new {@link Service} decorator that logs {@link Request}s and {@link Response}s at the given
-     * {@link LogLevel}.
-     *
-     * @deprecated Use {@link LoggingService#builder()}.
-     */
-    @Deprecated
-    public static <I extends Request, O extends Response>
-    Function<Service<I, O>, LoggingService<I, O>> newDecorator(LogLevel level) {
-        return delegate -> new LoggingService<>(delegate, level);
     }
 
     /**
@@ -88,42 +72,11 @@ public final class LoggingService<I extends Request, O extends Response> extends
     private final Sampler<? super ServiceRequestContext> sampler;
 
     /**
-     * Creates a new instance.
-     *
-     * @deprecated Use {@link LoggingService#newDecorator()}.
-     */
-    @Deprecated
-    public LoggingService(Service<I, O> delegate) {
-        this(delegate, LogLevel.INFO);
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @deprecated Use {@link LoggingServiceBuilder}.
-     */
-    @Deprecated
-    public LoggingService(Service<I, O> delegate, LogLevel level) {
-        this(delegate,
-             level,
-             level,
-             level,
-             Function.identity(),
-             Function.identity(),
-             Function.identity(),
-             Function.identity(),
-             Function.identity(),
-             Function.identity(),
-             Function.identity(),
-             Sampler.always());
-    }
-
-    /**
-     * Creates a new instance that logs {@link Request}s and {@link Response}s at the specified
+     * Creates a new instance that logs {@link HttpRequest}s and {@link HttpResponse}s at the specified
      * {@link LogLevel}s with the specified sanitizers.
      */
     LoggingService(
-            Service<I, O> delegate,
+            HttpService delegate,
             LogLevel requestLogLevel,
             LogLevel successfulResponseLogLevel,
             LogLevel failedResponseLogLevel,
@@ -152,7 +105,7 @@ public final class LoggingService<I extends Request, O extends Response> extends
     }
 
     @Override
-    public O serve(ServiceRequestContext ctx, I req) throws Exception {
+    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         if (sampler.isSampled(ctx)) {
             ctx.log().addListener(log -> logRequest(((ServiceRequestContext) log.context()).logger(),
                                                     log, requestLogLevel, requestHeadersSanitizer,

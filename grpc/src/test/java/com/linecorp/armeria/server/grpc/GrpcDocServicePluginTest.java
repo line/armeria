@@ -32,8 +32,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Descriptors.ServiceDescriptor;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.grpc.testing.Messages.CompressionType;
 import com.linecorp.armeria.grpc.testing.Messages.ReconnectInfo;
@@ -48,10 +46,10 @@ import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceImplBase;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
+import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServiceWithRoutes;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.EnumInfo;
@@ -176,7 +174,7 @@ class GrpcDocServicePluginTest {
         final ServerBuilder serverBuilder = Server.builder();
 
         // The case where a GrpcService is added to ServerBuilder without a prefix.
-        final ServiceWithRoutes<HttpRequest, HttpResponse> prefixlessService =
+        final HttpServiceWithRoutes prefixlessService =
                 GrpcService.builder()
                            .addService(mock(TestServiceImplBase.class))
                            .build();

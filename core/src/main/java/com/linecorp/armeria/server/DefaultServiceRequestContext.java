@@ -40,7 +40,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.Request;
@@ -305,7 +304,7 @@ public class DefaultServiceRequestContext extends NonWrappingRequestContext impl
     }
 
     @Override
-    public <T extends Service<HttpRequest, HttpResponse>> T service() {
+    public HttpService service() {
         return cfg.service();
     }
 

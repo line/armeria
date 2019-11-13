@@ -333,22 +333,20 @@ public final class ServerConfig {
     }
 
     /**
-     * Finds the {@link List} of {@link VirtualHost}s that contains the specified {@link Service}. If there's
-     * no match, an empty {@link List} is returned. Note that this is potentially an expensive operation and
-     * thus should not be used in a performance-sensitive path.
+     * Finds the {@link List} of {@link VirtualHost}s that contains the specified {@link HttpService}.
+     * If there's no match, an empty {@link List} is returned. Note that this is potentially an expensive
+     * operation and thus should not be used in a performance-sensitive path.
      */
-    public List<VirtualHost> findVirtualHosts(Service<?, ?> service) {
+    public List<VirtualHost> findVirtualHosts(HttpService service) {
         requireNonNull(service, "service");
 
-        @SuppressWarnings("rawtypes")
-        final Class<? extends Service> serviceType = service.getClass();
+        final Class<? extends HttpService> serviceType = service.getClass();
         final List<VirtualHost> res = new ArrayList<>();
         for (VirtualHost h : virtualHosts) {
             for (ServiceConfig c : h.serviceConfigs()) {
                 // Consider the case where the specified service is decorated before being added.
-                final Service<?, ?> s = c.service();
-                @SuppressWarnings("rawtypes")
-                final Optional<? extends Service> sOpt = s.as(serviceType);
+                final HttpService s = c.service();
+                final Optional<? extends HttpService> sOpt = s.as(serviceType);
                 if (!sOpt.isPresent()) {
                     continue;
                 }
@@ -364,7 +362,7 @@ public final class ServerConfig {
     }
 
     /**
-     * Returns the information of all available {@link Service}s in the {@link Server}.
+     * Returns the information of all available {@link HttpService}s in the {@link Server}.
      */
     public List<ServiceConfig> serviceConfigs() {
         return services;

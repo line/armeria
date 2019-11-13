@@ -18,9 +18,7 @@ package com.linecorp.armeria.server.annotation;
 import java.lang.annotation.Annotation;
 import java.util.function.Function;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.HttpService;
 
 /**
  * A decorator factory which is used for a user-defined decorator annotation.
@@ -31,6 +29,5 @@ public interface DecoratorFactoryFunction<T extends Annotation> {
     /**
      * Creates a new decorator with the specified {@code parameter}.
      */
-    Function<Service<HttpRequest, HttpResponse>,
-            ? extends Service<HttpRequest, HttpResponse>> newDecorator(T parameter);
+    Function<? super HttpService, ? extends HttpService> newDecorator(T parameter);
 }

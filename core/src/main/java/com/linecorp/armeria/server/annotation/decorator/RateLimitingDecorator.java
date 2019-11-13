@@ -24,11 +24,11 @@ import java.lang.annotation.Target;
 import com.linecorp.armeria.internal.DefaultValues;
 import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.DecoratorFactory;
-import com.linecorp.armeria.server.throttling.ThrottlingHttpService;
+import com.linecorp.armeria.server.throttling.ThrottlingService;
 import com.linecorp.armeria.server.throttling.ThrottlingStrategy;
 
 /**
- * A {@link ThrottlingHttpService} decorator for annotated HTTP services.
+ * A {@link ThrottlingService} decorator for annotated HTTP services.
  */
 @DecoratorFactory(RateLimitingDecoratorFactoryFunction.class)
 @Repeatable(RateLimitingDecorators.class)

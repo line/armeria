@@ -57,7 +57,7 @@ abstract class AbstractBindingBuilder {
     private final Set<RouteBuilder> pathBuilders = new LinkedHashSet<>();
 
     /**
-     * Sets the path pattern that a {@link Service} will be bound to.
+     * Sets the path pattern that an {@link HttpService} will be bound to.
      * Please refer to the <a href="https://line.github.io/armeria/server-basics.html#path-patterns">Path patterns</a>
      * in order to learn how to specify a path pattern.
      *
@@ -69,7 +69,7 @@ abstract class AbstractBindingBuilder {
     }
 
     /**
-     * Sets the specified prefix which is a directory that a {@link Service} will be bound under.
+     * Sets the specified prefix which is a directory that an {@link HttpService} will be bound under.
      * {@code pathUnder("/my/path")} is identical to {@code path("prefix:/my/path")}.
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
@@ -81,7 +81,7 @@ abstract class AbstractBindingBuilder {
     }
 
     /**
-     * Sets the specified prefix which is a directory that a {@link Service} will be bound under.
+     * Sets the specified prefix which is a directory that an {@link HttpService} will be bound under.
      * {@code pathPrefix("/my/path")} is identical to {@code path("prefix:/my/path")}.
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
@@ -92,8 +92,8 @@ abstract class AbstractBindingBuilder {
     }
 
     /**
-     * Sets the path pattern that a {@link Service} will be bound to, only supporting {@link HttpMethod#GET}
-     * requests.
+     * Sets the path pattern that an {@link HttpService} will be bound to, only supporting
+     * {@link HttpMethod#GET} requests.
      * Please refer to the <a href="https://line.github.io/armeria/server-basics.html#path-patterns">Path patterns</a>
      * in order to learn how to specify a path pattern.
      *
@@ -105,8 +105,8 @@ abstract class AbstractBindingBuilder {
     }
 
     /**
-     * Sets the path pattern that a {@link Service} will be bound to, only supporting {@link HttpMethod#POST}
-     * requests.
+     * Sets the path pattern that an {@link HttpService} will be bound to, only supporting
+     * {@link HttpMethod#POST} requests.
      * Please refer to the <a href="https://line.github.io/armeria/server-basics.html#path-patterns">Path patterns</a>
      * in order to learn how to specify a path pattern.
      *
@@ -118,8 +118,8 @@ abstract class AbstractBindingBuilder {
     }
 
     /**
-     * Sets the path pattern that a {@link Service} will be bound to, only supporting {@link HttpMethod#PUT}
-     * requests.
+     * Sets the path pattern that an {@link HttpService} will be bound to, only supporting
+     * {@link HttpMethod#PUT} requests.
      * Please refer to the <a href="https://line.github.io/armeria/server-basics.html#path-patterns">Path patterns</a>
      * in order to learn how to specify a path pattern.
      *
@@ -131,8 +131,8 @@ abstract class AbstractBindingBuilder {
     }
 
     /**
-     * Sets the path pattern that a {@link Service} will be bound to, only supporting {@link HttpMethod#PATCH}
-     * requests.
+     * Sets the path pattern that an {@link HttpService} will be bound to, only supporting
+     * {@link HttpMethod#PATCH} requests.
      * Please refer to the <a href="https://line.github.io/armeria/server-basics.html#path-patterns">Path patterns</a>
      * in order to learn how to specify a path pattern.
      *
@@ -144,8 +144,8 @@ abstract class AbstractBindingBuilder {
     }
 
     /**
-     * Sets the path pattern that a {@link Service} will be bound to, only supporting {@link HttpMethod#DELETE}
-     * requests.
+     * Sets the path pattern that an {@link HttpService} will be bound to, only supporting
+     * {@link HttpMethod#DELETE} requests.
      * Please refer to the <a href="https://line.github.io/armeria/server-basics.html#path-patterns">Path patterns</a>
      * in order to learn how to specify a path pattern.
      *
@@ -157,8 +157,8 @@ abstract class AbstractBindingBuilder {
     }
 
     /**
-     * Sets the path pattern that a {@link Service} will be bound to, only supporting {@link HttpMethod#OPTIONS}
-     * requests.
+     * Sets the path pattern that an {@link HttpService} will be bound to, only supporting
+     * {@link HttpMethod#OPTIONS} requests.
      * Please refer to the <a href="https://line.github.io/armeria/server-basics.html#path-patterns">Path patterns</a>
      * in order to learn how to specify a path pattern.
      *
@@ -170,8 +170,8 @@ abstract class AbstractBindingBuilder {
     }
 
     /**
-     * Sets the path pattern that a {@link Service} will be bound to, only supporting {@link HttpMethod#HEAD}
-     * requests.
+     * Sets the path pattern that an {@link HttpService} will be bound to, only supporting
+     * {@link HttpMethod#HEAD} requests.
      * Please refer to the <a href="https://line.github.io/armeria/server-basics.html#path-patterns">Path patterns</a>
      * in order to learn how to specify a path pattern.
      *
@@ -183,8 +183,8 @@ abstract class AbstractBindingBuilder {
     }
 
     /**
-     * Sets the path pattern that a {@link Service} will be bound to, only supporting {@link HttpMethod#TRACE}
-     * requests.
+     * Sets the path pattern that an {@link HttpService} will be bound to, only supporting
+     * {@link HttpMethod#TRACE} requests.
      * Please refer to the <a href="https://line.github.io/armeria/server-basics.html#path-patterns">Path patterns</a>
      * in order to learn how to specify a path pattern.
      *
@@ -196,8 +196,8 @@ abstract class AbstractBindingBuilder {
     }
 
     /**
-     * Sets the path pattern that a {@link Service} will be bound to, only supporting {@link HttpMethod#CONNECT}
-     * requests.
+     * Sets the path pattern that an {@link HttpService} will be bound to, only supporting
+     * {@link HttpMethod#CONNECT} requests.
      * Please refer to the <a href="https://line.github.io/armeria/server-basics.html#path-patterns">Path patterns</a>
      * in order to learn how to specify a path pattern.
      *
@@ -225,7 +225,7 @@ abstract class AbstractBindingBuilder {
     }
 
     /**
-     * Sets the {@link HttpMethod}s that a {@link Service} will support. If not set,
+     * Sets the {@link HttpMethod}s that an {@link HttpService} will support. If not set,
      * {@link HttpMethod#knownMethods()}s are set.
      *
      * @see #path(String)
@@ -236,7 +236,7 @@ abstract class AbstractBindingBuilder {
     }
 
     /**
-     * Sets the {@link HttpMethod}s that a {@link Service} will support. If not set,
+     * Sets the {@link HttpMethod}s that an {@link HttpService} will support. If not set,
      * {@link HttpMethod#knownMethods()}s are set.
      *
      * @see #path(String)
@@ -250,7 +250,7 @@ abstract class AbstractBindingBuilder {
     }
 
     /**
-     * Sets {@link MediaType}s that a {@link Service} will consume. If not set, the {@link Service}
+     * Sets {@link MediaType}s that an {@link HttpService} will consume. If not set, the {@link HttpService}
      * will accept all media types.
      */
     public AbstractBindingBuilder consumes(MediaType... consumeTypes) {
@@ -259,7 +259,7 @@ abstract class AbstractBindingBuilder {
     }
 
     /**
-     * Sets {@link MediaType}s that a {@link Service} will consume. If not set, the {@link Service}
+     * Sets {@link MediaType}s that an {@link HttpService} will consume. If not set, the {@link HttpService}
      * will accept all media types.
      */
     public AbstractBindingBuilder consumes(Iterable<MediaType> consumeTypes) {
@@ -269,7 +269,7 @@ abstract class AbstractBindingBuilder {
     }
 
     /**
-     * Sets {@link MediaType}s that a {@link Service} will produce to be used in
+     * Sets {@link MediaType}s that an {@link HttpService} will produce to be used in
      * content negotiation. See <a href="https://tools.ietf.org/html/rfc7231#section-5.3.2">Accept header</a>
      * for more information.
      */
@@ -279,7 +279,7 @@ abstract class AbstractBindingBuilder {
     }
 
     /**
-     * Sets {@link MediaType}s that a {@link Service} will produce to be used in
+     * Sets {@link MediaType}s that an {@link HttpService} will produce to be used in
      * content negotiation. See <a href="https://tools.ietf.org/html/rfc7231#section-5.3.2">Accept header</a>
      * for more information.
      */

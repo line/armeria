@@ -42,7 +42,7 @@ abstract class AbstractPathMapping implements PathMapping {
      * Invoked by {@link #apply(RoutingContext)} to perform the actual path matching and path parameter
      * extraction.
      *
-     * @param routingCtx a context to find the {@link Service}
+     * @param routingCtx a context to find the {@link HttpService}
      *
      * @return a non-empty {@link RoutingResultBuilder} if the specified {@code path} matches this mapping.
      *         {@code null} otherwise.

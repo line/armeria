@@ -47,8 +47,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.util.SystemInfo;
@@ -307,7 +305,7 @@ public final class VirtualHostBuilder {
     }
 
     /**
-     * Configures a {@link Service} of the {@link VirtualHost} with the {@code customizer}.
+     * Configures an {@link HttpService} of the {@link VirtualHost} with the {@code customizer}.
      */
     public VirtualHostBuilder withRoute(Consumer<VirtualHostServiceBindingBuilder> customizer) {
         final VirtualHostServiceBindingBuilder builder = new VirtualHostServiceBindingBuilder(this);
@@ -316,7 +314,7 @@ public final class VirtualHostBuilder {
     }
 
     /**
-     * Returns a {@link ServiceBindingBuilder} which is for binding a {@link Service} fluently.
+     * Returns a {@link ServiceBindingBuilder} which is for binding an {@link HttpService} fluently.
      */
     public VirtualHostServiceBindingBuilder route() {
         return new VirtualHostServiceBindingBuilder(this);
@@ -331,27 +329,25 @@ public final class VirtualHostBuilder {
     }
 
     /**
-     * Binds the specified {@link Service} at the specified path pattern.
+     * Binds the specified {@link HttpService} at the specified path pattern.
      *
-     * @deprecated Use {@link #service(String, Service)} instead.
+     * @deprecated Use {@link #service(String, HttpService)} instead.
      */
     @Deprecated
-    public VirtualHostBuilder serviceAt(String pathPattern,
-                                        Service<HttpRequest, HttpResponse> service) {
+    public VirtualHostBuilder serviceAt(String pathPattern, HttpService service) {
         return service(pathPattern, service);
     }
 
     /**
-     * Binds the specified {@link Service} under the specified directory.
+     * Binds the specified {@link HttpService} under the specified directory.
      */
-    public VirtualHostBuilder serviceUnder(String pathPrefix,
-                                           Service<HttpRequest, HttpResponse> service) {
+    public VirtualHostBuilder serviceUnder(String pathPrefix, HttpService service) {
         service(Route.builder().pathPrefix(pathPrefix).build(), service);
         return this;
     }
 
     /**
-     * Binds the specified {@link Service} at the specified path pattern. e.g.
+     * Binds the specified {@link HttpService} at the specified path pattern. e.g.
      * <ul>
      *   <li>{@code /login} (no path parameters)</li>
      *   <li>{@code /users/{userId}} (curly-brace style)</li>
@@ -364,61 +360,56 @@ public final class VirtualHostBuilder {
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public VirtualHostBuilder service(String pathPattern,
-                                      Service<HttpRequest, HttpResponse> service) {
+    public VirtualHostBuilder service(String pathPattern, HttpService service) {
         service(Route.builder().path(pathPattern).build(), service);
         return this;
     }
 
     /**
-     * Binds the specified {@link Service} at the specified {@link Route}.
+     * Binds the specified {@link HttpService} at the specified {@link Route}.
      */
-    public VirtualHostBuilder service(Route route,
-                                      Service<HttpRequest, HttpResponse> service) {
+    public VirtualHostBuilder service(Route route, HttpService service) {
         serviceConfigBuilders.add(new ServiceConfigBuilder(route, service));
         return this;
     }
 
     /**
-     * Decorates and binds the specified {@link ServiceWithRoutes} at multiple {@link Route}s
+     * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s
      * of the default {@link VirtualHost}.
      *
-     * @param serviceWithRoutes the {@link ServiceWithRoutes}.
+     * @param serviceWithRoutes the {@link HttpServiceWithRoutes}.
      * @param decorators the decorator functions, which will be applied in the order specified.
      */
     public VirtualHostBuilder service(
-            ServiceWithRoutes<HttpRequest, HttpResponse> serviceWithRoutes,
-            Iterable<Function<? super Service<HttpRequest, HttpResponse>,
-                    ? extends Service<HttpRequest, HttpResponse>>> decorators) {
+            HttpServiceWithRoutes serviceWithRoutes,
+            Iterable<Function<? super HttpService, ? extends HttpService>> decorators) {
         requireNonNull(serviceWithRoutes, "serviceWithRoutes");
         requireNonNull(serviceWithRoutes.routes(), "serviceWithRoutes.routes()");
         requireNonNull(decorators, "decorators");
 
-        Service<HttpRequest, HttpResponse> decorated = serviceWithRoutes;
-        for (Function<? super Service<HttpRequest, HttpResponse>,
-                ? extends Service<HttpRequest, HttpResponse>> d : decorators) {
+        HttpService decorated = serviceWithRoutes;
+        for (Function<? super HttpService, ? extends HttpService> d : decorators) {
             checkNotNull(d, "decorators contains null: %s", decorators);
             decorated = d.apply(decorated);
             checkNotNull(decorated, "A decorator returned null: %s", d);
         }
 
-        final Service<HttpRequest, HttpResponse> finalDecorated = decorated;
+        final HttpService finalDecorated = decorated;
         serviceWithRoutes.routes().forEach(route -> service(route, finalDecorated));
         return this;
     }
 
     /**
-     * Decorates and binds the specified {@link ServiceWithRoutes} at multiple {@link Route}s
+     * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s
      * of the default {@link VirtualHost}.
      *
-     * @param serviceWithRoutes the {@link ServiceWithRoutes}.
+     * @param serviceWithRoutes the {@link HttpServiceWithRoutes}.
      * @param decorators the decorator functions, which will be applied in the order specified.
      */
     @SafeVarargs
     public final VirtualHostBuilder service(
-            ServiceWithRoutes<HttpRequest, HttpResponse> serviceWithRoutes,
-            Function<? super Service<HttpRequest, HttpResponse>,
-                    ? extends Service<HttpRequest, HttpResponse>>... decorators) {
+            HttpServiceWithRoutes serviceWithRoutes,
+            Function<? super HttpService, ? extends HttpService>... decorators) {
         return service(serviceWithRoutes, ImmutableList.copyOf(requireNonNull(decorators, "decorators")));
     }
 
@@ -451,9 +442,7 @@ public final class VirtualHostBuilder {
      *                                       {@link ResponseConverterFunction}
      */
     public VirtualHostBuilder annotatedService(
-            Object service,
-            Function<Service<HttpRequest, HttpResponse>,
-                    ? extends Service<HttpRequest, HttpResponse>> decorator,
+            Object service, Function<? super HttpService, ? extends HttpService> decorator,
             Object... exceptionHandlersAndConverters) {
         return annotatedService("/", service, decorator,
                                 ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
@@ -489,9 +478,7 @@ public final class VirtualHostBuilder {
      *                                       {@link ResponseConverterFunction}
      */
     public VirtualHostBuilder annotatedService(
-            String pathPrefix, Object service,
-            Function<Service<HttpRequest, HttpResponse>,
-                    ? extends Service<HttpRequest, HttpResponse>> decorator,
+            String pathPrefix, Object service, Function<? super HttpService, ? extends HttpService> decorator,
             Object... exceptionHandlersAndConverters) {
         return annotatedService(pathPrefix, service, decorator,
                                 ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
@@ -520,9 +507,7 @@ public final class VirtualHostBuilder {
      *                                       {@link ResponseConverterFunction}
      */
     public VirtualHostBuilder annotatedService(
-            String pathPrefix, Object service,
-            Function<Service<HttpRequest, HttpResponse>,
-                    ? extends Service<HttpRequest, HttpResponse>> decorator,
+            String pathPrefix, Object service, Function<? super HttpService, ? extends HttpService> decorator,
             Iterable<?> exceptionHandlersAndConverters) {
         requireNonNull(pathPrefix, "pathPrefix");
         requireNonNull(service, "service");
@@ -543,9 +528,7 @@ public final class VirtualHostBuilder {
      * @param responseConverterFunctions a list of {@link ResponseConverterFunction}
      */
     public VirtualHostBuilder annotatedService(
-            String pathPrefix, Object service,
-            Function<Service<HttpRequest, HttpResponse>,
-                    ? extends Service<HttpRequest, HttpResponse>> decorator,
+            String pathPrefix, Object service, Function<? super HttpService, ? extends HttpService> decorator,
             List<ExceptionHandlerFunction> exceptionHandlerFunctions,
             List<RequestConverterFunction> requestConverterFunctions,
             List<ResponseConverterFunction> responseConverterFunctions) {
@@ -577,10 +560,9 @@ public final class VirtualHostBuilder {
      * registers it with {@link VirtualHostBuilder}.
      */
     private void registerHttpServiceElement(List<AnnotatedHttpServiceElement> elements,
-                                            Function<Service<HttpRequest, HttpResponse>,
-                                                    ? extends Service<HttpRequest, HttpResponse>> decorator) {
+                                            Function<? super HttpService, ? extends HttpService> decorator) {
         elements.forEach(element -> {
-            final Service<HttpRequest, HttpResponse> decoratedService =
+            final HttpService decoratedService =
                     element.buildSafeDecoratedService(decorator);
             final ServiceConfigBuilder serviceConfigBuilder =
                     new ServiceConfigBuilder(element.route(), decoratedService);
@@ -613,8 +595,8 @@ public final class VirtualHostBuilder {
     }
 
     @Nullable
-    private Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>>
-    getRouteDecoratingService(@Nullable VirtualHostBuilder defaultVirtualHostBuilder) {
+    private Function<? super HttpService, ? extends HttpService> getRouteDecoratingService(
+            @Nullable VirtualHostBuilder defaultVirtualHostBuilder) {
         final List<RouteDecoratingService> routeDecoratingServices;
         if (defaultVirtualHostBuilder != null) {
             routeDecoratingServices = ImmutableList.<RouteDecoratingService>builder()
@@ -634,101 +616,88 @@ public final class VirtualHostBuilder {
     }
 
     /**
-     * Decorates all {@link Service}s with the specified {@code decorator}.
+     * Decorates all {@link HttpService}s with the specified {@code decorator}.
      *
-     * @param decorator the {@link Function} that decorates a {@link Service}
-     * @param <T> the type of the {@link Service} being decorated
-     * @param <R> the type of the {@link Service} {@code decorator} will produce
+     * @param decorator the {@link Function} that decorates {@link HttpService}s
      */
-    public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
-    VirtualHostBuilder decorator(Function<T, R> decorator) {
+    public VirtualHostBuilder decorator(Function<? super HttpService, ? extends HttpService> decorator) {
         return decorator(Route.builder().catchAll().build(), decorator);
     }
 
     /**
-     * Decorates all {@link Service}s with the specified {@link DecoratingServiceFunction}.
+     * Decorates all {@link HttpService}s with the specified {@link DecoratingHttpServiceFunction}.
      *
-     * @param decoratingServiceFunction the {@link DecoratingServiceFunction} that decorates a {@link Service}
+     * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
+     *                                      {@link HttpService}s
      */
     public VirtualHostBuilder decorator(
-            DecoratingServiceFunction<HttpRequest, HttpResponse> decoratingServiceFunction) {
-        return decorator(Route.builder().catchAll().build(), decoratingServiceFunction);
+            DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
+        return decorator(Route.builder().catchAll().build(), decoratingHttpServiceFunction);
     }
 
     /**
-     * Decorates {@link Service}s whose {@link Route} matches the specified {@code pathPattern}.
+     * Decorates {@link HttpService}s whose {@link Route} matches the specified {@code pathPattern}.
      *
-     * @param decoratingServiceFunction the {@link DecoratingServiceFunction} that decorates a {@link Service}
+     * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
+     *                                      {@link HttpService}s
      */
     public VirtualHostBuilder decorator(
-            String pathPattern,
-            DecoratingServiceFunction<HttpRequest, HttpResponse> decoratingServiceFunction) {
-        return decorator(Route.builder().path(pathPattern).build(), decoratingServiceFunction);
+            String pathPattern, DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
+        return decorator(Route.builder().path(pathPattern).build(), decoratingHttpServiceFunction);
     }
 
     /**
-     * Decorates {@link Service}s whose {@link Route} matches the specified {@code pathPattern}.
-     *
-     * @param <T> the type of the {@link Service} being decorated
-     * @param <R> the type of the {@link Service} {@code decorator} will produce
+     * Decorates {@link HttpService}s whose {@link Route} matches the specified {@code pathPattern}.
      */
-    public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
-    VirtualHostBuilder decorator(String pathPattern, Function<T, R> decorator) {
+    public VirtualHostBuilder decorator(
+            String pathPattern, Function<? super HttpService, ? extends HttpService> decorator) {
         return decorator(Route.builder().path(pathPattern).build(), decorator);
     }
 
     /**
-     * Decorates {@link Service}s whose {@link Route} matches the specified {@link Route}.
+     * Decorates {@link HttpService}s whose {@link Route} matches the specified {@link Route}.
      *
      * @param route the route being decorated
-     * @param decorator the {@link Function} that decorates {@link Service}
-     * @param <T> the type of the {@link Service} being decorated
-     * @param <R> the type of the {@link Service} {@code decorator} will produce
-     */
-    public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
-    VirtualHostBuilder decorator(Route route, Function<T, R> decorator) {
-        requireNonNull(route, "route");
-        requireNonNull(decorator, "decorator");
-        @SuppressWarnings("unchecked")
-        final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> castDecorator =
-                (Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>>) decorator;
-        return addRouteDecoratingService(new RouteDecoratingService(route, castDecorator));
-    }
-
-    /**
-     * Decorates {@link Service}s whose {@link Route} matches the specified {@link Route}.
-     *
-     * @param route the route being decorated
-     * @param decoratingServiceFunction the {@link DecoratingServiceFunction} that decorates {@link Service}
+     * @param decorator the {@link Function} that decorates {@link HttpService}
      */
     public VirtualHostBuilder decorator(
-            Route route,
-            DecoratingServiceFunction<HttpRequest, HttpResponse> decoratingServiceFunction) {
-        requireNonNull(decoratingServiceFunction, "decoratingServiceFunction");
-        return decorator(route,
-                         delegate -> new FunctionalDecoratingService<>(delegate, decoratingServiceFunction));
+            Route route, Function<? super HttpService, ? extends HttpService> decorator) {
+        requireNonNull(route, "route");
+        requireNonNull(decorator, "decorator");
+        return addRouteDecoratingService(new RouteDecoratingService(route, decorator));
     }
 
     /**
-     * Decorates {@link Service}s under the specified directory.
+     * Decorates {@link HttpService}s whose {@link Route} matches the specified {@link Route}.
      *
-     * @param <T> the type of the {@link Service} being decorated
-     * @param <R> the type of the {@link Service} {@code decorator} will produce
+     * @param route the route being decorated
+     * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
+     *                                      {@link HttpService}s
      */
-    public <T extends Service<HttpRequest, HttpResponse>, R extends Service<HttpRequest, HttpResponse>>
-    VirtualHostBuilder decoratorUnder(String prefix, Function<T, R> decorator) {
+    public VirtualHostBuilder decorator(
+            Route route, DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
+        requireNonNull(decoratingHttpServiceFunction, "decoratingHttpServiceFunction");
+        return decorator(route, delegate -> new FunctionalDecoratingHttpService(
+                delegate, decoratingHttpServiceFunction));
+    }
+
+    /**
+     * Decorates {@link HttpService}s under the specified directory.
+     */
+    public VirtualHostBuilder decoratorUnder(
+            String prefix, Function<? super HttpService, ? extends HttpService> decorator) {
         return decorator(Route.builder().pathPrefix(prefix).build(), decorator);
     }
 
     /**
-     * Decorates {@link Service}s under the specified directory.
+     * Decorates {@link HttpService}s under the specified directory.
      *
-     * @param decoratingServiceFunction the {@link DecoratingServiceFunction} that decorates a {@link Service}
+     * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
+     *                                      {@link HttpService}s
      */
     public VirtualHostBuilder decoratorUnder(
-            String prefix,
-            DecoratingServiceFunction<HttpRequest, HttpResponse> decoratingServiceFunction) {
-        return decorator(Route.builder().pathPrefix(prefix).build(), decoratingServiceFunction);
+            String prefix, DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
+        return decorator(Route.builder().pathPrefix(prefix).build(), decoratingHttpServiceFunction);
     }
 
     /**
@@ -758,8 +727,9 @@ public final class VirtualHostBuilder {
 
     /**
      * Sets the {@link RejectedRouteHandler} which will be invoked when an attempt to bind
-     * a {@link Service} at a certain {@link Route} is rejected. If not set, the {@link RejectedRouteHandler}
-     * set via {@link ServerBuilder#rejectedRouteHandler(RejectedRouteHandler)} is used.
+     * an {@link HttpService} at a certain {@link Route} is rejected. If not set,
+     * the {@link RejectedRouteHandler} set via
+     * {@link ServerBuilder#rejectedRouteHandler(RejectedRouteHandler)} is used.
      */
     public VirtualHostBuilder rejectedRouteHandler(RejectedRouteHandler handler) {
         rejectedRouteHandler = requireNonNull(handler, "handler");
@@ -974,7 +944,7 @@ public final class VirtualHostBuilder {
                                 responseContentPreviewerFactory, accessLogWriter,
                                 shutdownAccessLogWriterOnStop);
 
-        final Function<Service<HttpRequest, HttpResponse>, Service<HttpRequest, HttpResponse>> decorator =
+        final Function<? super HttpService, ? extends HttpService> decorator =
                 getRouteDecoratingService(template);
         return decorator != null ? virtualHost.decorate(decorator) : virtualHost;
     }
