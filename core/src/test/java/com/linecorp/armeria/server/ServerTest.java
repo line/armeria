@@ -379,7 +379,7 @@ public class ServerTest {
 
         final AtomicBoolean serverStarted = new AtomicBoolean();
         final ThreadFactory factory = ThreadFactories.builder(prefix).taskFunction(task -> () -> {
-            await().until(() -> !serverStarted.get());
+            await().untilFalse(serverStarted);
             task.run();
         }).build();
 
@@ -392,9 +392,11 @@ public class ServerTest {
 
         threads.add(server.start().thenApply(unused -> Thread.currentThread()).join());
         serverStarted.set(true);
-        final CompletableFuture<Void> stopFuture = server.stop();
+
+        final CompletableFuture<Thread> stopFuture = server.stop().thenApply(
+                unused -> Thread.currentThread());
         serverStarted.set(false);
-        threads.add(stopFuture.thenApply(unused -> Thread.currentThread()).join());
+        stopFuture.join();
 
         threads.forEach(t -> assertThat(t.getName()).startsWith(prefix));
     }
