@@ -132,7 +132,7 @@ class RouterTest {
         testDuplicateRoutes(Route.builder().path("exact:/a").build(),
                             Route.builder().path("/a").build());
         testDuplicateRoutes(Route.builder().path("prefix:/").build(),
-                            Route.catchAll());
+                            Route.ofCatchAll());
     }
 
     /**

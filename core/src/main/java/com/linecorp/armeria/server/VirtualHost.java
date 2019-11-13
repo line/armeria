@@ -32,7 +32,6 @@ import org.slf4j.Logger;
 import com.google.common.base.Ascii;
 import com.google.common.collect.Streams;
 
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;

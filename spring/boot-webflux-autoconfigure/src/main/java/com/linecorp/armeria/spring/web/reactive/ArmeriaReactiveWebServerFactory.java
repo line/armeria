@@ -205,7 +205,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                                                   @Nullable String serverHeader) {
         final ArmeriaHttpHandlerAdapter handler =
                 new ArmeriaHttpHandlerAdapter(httpHandler, factoryWrapper);
-        return sb.service(Route.catchAll(), (ctx, req) -> {
+        return sb.service(Route.ofCatchAll(), (ctx, req) -> {
             final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
             final HttpResponse response = HttpResponse.from(future);
             final Disposable disposable = handler.handle(ctx, req, future, serverHeader).subscribe();

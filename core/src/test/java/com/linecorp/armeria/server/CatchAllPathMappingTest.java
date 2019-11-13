@@ -23,11 +23,11 @@ import org.junit.jupiter.api.Test;
 class CatchAllPathMappingTest {
     @Test
     void testLoggerName() throws Exception {
-        assertThat(Route.catchAll().loggerName()).isEqualTo("__ROOT__");
+        assertThat(Route.ofCatchAll().loggerName()).isEqualTo("__ROOT__");
     }
 
     @Test
     void testMetricName() throws Exception {
-        assertThat(Route.catchAll().meterTag()).isEqualTo("catch-all");
+        assertThat(Route.ofCatchAll().meterTag()).isEqualTo("catch-all");
     }
 }

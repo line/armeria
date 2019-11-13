@@ -52,7 +52,7 @@ public class RoutersBenchmark {
                                   SERVICE, null, 0, 0, false, ContentPreviewerFactory.disabled(),
                                   ContentPreviewerFactory.disabled(), AccessLogWriter.disabled(), false)
         );
-        FALLBACK_SERVICE = new ServiceConfig(Route.catchAll(),
+        FALLBACK_SERVICE = new ServiceConfig(Route.ofCatchAll(),
                                              SERVICE, null, 0, 0, false, ContentPreviewerFactory.disabled(),
                                              ContentPreviewerFactory.disabled(), AccessLogWriter.disabled(),
                                              false);

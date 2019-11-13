@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.server;
 
-import static java.util.Objects.requireNonNull;
-
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;

@@ -621,7 +621,7 @@ public final class VirtualHostBuilder {
      * @param decorator the {@link Function} that decorates {@link HttpService}s
      */
     public VirtualHostBuilder decorator(Function<? super HttpService, ? extends HttpService> decorator) {
-        return decorator(Route.catchAll(), decorator);
+        return decorator(Route.ofCatchAll(), decorator);
     }
 
     /**
@@ -632,7 +632,7 @@ public final class VirtualHostBuilder {
      */
     public VirtualHostBuilder decorator(
             DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
-        return decorator(Route.catchAll(), decoratingHttpServiceFunction);
+        return decorator(Route.ofCatchAll(), decoratingHttpServiceFunction);
     }
 
     /**
@@ -925,7 +925,7 @@ public final class VirtualHostBuilder {
         }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
-                new ServiceConfigBuilder(Route.catchAll(), FallbackService.INSTANCE)
+                new ServiceConfigBuilder(Route.ofCatchAll(), FallbackService.INSTANCE)
                         .build(requestTimeoutMillis, maxRequestLength, verboseResponses,
                                requestContentPreviewerFactory, responseContentPreviewerFactory,
                                accessLogWriter, shutdownAccessLogWriterOnStop);

@@ -34,7 +34,7 @@ public interface Route {
     /**
      * Returns the catch-all {@link Route} which matches every request.
      */
-    static Route catchAll() {
+    static Route ofCatchAll() {
         return RouteBuilder.CATCH_ALL_ROUTE;
     }
 
