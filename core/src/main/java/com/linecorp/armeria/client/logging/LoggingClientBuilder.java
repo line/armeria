@@ -70,6 +70,8 @@ public final class LoggingClientBuilder extends LoggingDecoratorBuilder<LoggingC
                                    requestLogLevel(),
                                    successfulResponseLogLevel(),
                                    failedResponseLogLevel(),
+                                   requestLogLevelMapper(),
+                                   responseLogLevelMapper(),
                                    requestHeadersSanitizer(),
                                    requestContentSanitizer(),
                                    requestTrailersSanitizer(),

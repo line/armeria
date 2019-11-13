@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAvailability;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.server.Service;
@@ -77,6 +78,8 @@ public final class LoggingService<I extends Request, O extends Response> extends
     private final LogLevel requestLogLevel;
     private final LogLevel successfulResponseLogLevel;
     private final LogLevel failedResponseLogLevel;
+    private final Function<? super RequestLog, LogLevel> requestLogLevelMapper;
+    private final Function<? super RequestLog, LogLevel> responseLogLevelMapper;
     private final Function<? super RequestHeaders, ?> requestHeadersSanitizer;
     private final Function<Object, ?> requestContentSanitizer;
     private final Function<? super HttpHeaders, ?> requestTrailersSanitizer;
@@ -108,6 +111,8 @@ public final class LoggingService<I extends Request, O extends Response> extends
              level,
              level,
              level,
+             log -> level,
+             log -> level,
              Function.identity(),
              Function.identity(),
              Function.identity(),
@@ -127,6 +132,8 @@ public final class LoggingService<I extends Request, O extends Response> extends
             LogLevel requestLogLevel,
             LogLevel successfulResponseLogLevel,
             LogLevel failedResponseLogLevel,
+            Function<? super RequestLog, LogLevel> requestLogLevelMapper,
+            Function<? super RequestLog, LogLevel> responseLogLevelMapper,
             Function<? super RequestHeaders, ?> requestHeadersSanitizer,
             Function<Object, ?> requestContentSanitizer,
             Function<? super HttpHeaders, ?> requestTrailersSanitizer,
@@ -140,6 +147,8 @@ public final class LoggingService<I extends Request, O extends Response> extends
         this.successfulResponseLogLevel =
                 requireNonNull(successfulResponseLogLevel, "successfulResponseLogLevel");
         this.failedResponseLogLevel = requireNonNull(failedResponseLogLevel, "failedResponseLogLevel");
+        this.requestLogLevelMapper = requireNonNull(requestLogLevelMapper, "requestLogLevelMapper");
+        this.responseLogLevelMapper = requireNonNull(responseLogLevelMapper, "responseLogLevelMapper");
         this.requestHeadersSanitizer = requireNonNull(requestHeadersSanitizer, "requestHeadersSanitizer");
         this.requestContentSanitizer = requireNonNull(requestContentSanitizer, "requestContentSanitizer");
         this.requestTrailersSanitizer = requireNonNull(requestTrailersSanitizer, "requestTrailersSanitizer");
@@ -155,16 +164,17 @@ public final class LoggingService<I extends Request, O extends Response> extends
     public O serve(ServiceRequestContext ctx, I req) throws Exception {
         if (sampler.isSampled(ctx)) {
             ctx.log().addListener(log -> logRequest(((ServiceRequestContext) log.context()).logger(),
-                                                    log, requestLogLevel, requestHeadersSanitizer,
+                                                    log,
+                                                    requestLogLevelMapper,
+                                                    requestHeadersSanitizer,
                                                     requestContentSanitizer, requestTrailersSanitizer),
                                   RequestLogAvailability.REQUEST_END);
             ctx.log().addListener(log -> logResponse(((ServiceRequestContext) log.context()).logger(), log,
-                                                     requestLogLevel,
+                                                     requestLogLevelMapper,
+                                                     responseLogLevelMapper,
                                                      requestHeadersSanitizer,
                                                      requestContentSanitizer,
                                                      requestTrailersSanitizer,
-                                                     successfulResponseLogLevel,
-                                                     failedResponseLogLevel,
                                                      responseHeadersSanitizer,
                                                      responseContentSanitizer,
                                                      responseTrailersSanitizer,

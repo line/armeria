@@ -36,6 +36,10 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     private LogLevel requestLogLevel = LogLevel.TRACE;
     private LogLevel successfulResponseLogLevel = LogLevel.TRACE;
     private LogLevel failedResponseLogLevel = LogLevel.WARN;
+    private Function<? super RequestLog, LogLevel> requestLogLevelMapper =
+            log -> requestLogLevel();
+    private Function<? super RequestLog, LogLevel> responseLogLevelMapper =
+            log -> log.responseCause() == null ? successfulResponseLogLevel() : failedResponseLogLevel();
     private Function<? super HttpHeaders, ?> requestHeadersSanitizer = DEFAULT_HEADERS_SANITIZER;
     private Function<Object, ?> requestContentSanitizer = DEFAULT_CONTENT_SANITIZER;
     private Function<? super HttpHeaders, ?> requestTrailersSanitizer = DEFAULT_HEADERS_SANITIZER;
@@ -91,6 +95,36 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      */
     protected LogLevel failedResponseLogLevel() {
         return failedResponseLogLevel;
+    }
+
+    /**
+     * Sets the {@link Function} to use when mapping the log level of request logs.
+     */
+    public T requestLogLevelMapper(Function<? super RequestLog, LogLevel> requestLogLevelMapper) {
+        this.requestLogLevelMapper = requireNonNull(requestLogLevelMapper, "requestLogLevelMapper");
+        return self();
+    }
+
+    /**
+     * Returns the {@link LogLevel} to use when logging request logs.
+     */
+    protected Function<? super RequestLog, LogLevel> requestLogLevelMapper() {
+        return requestLogLevelMapper;
+    }
+
+    /**
+     * Sets the {@link Function} to use when mapping the log level of response logs.
+     */
+    public T responseLogLevelMapper(Function<? super RequestLog, LogLevel> responseLogLevelMapper) {
+        this.responseLogLevelMapper = requireNonNull(responseLogLevelMapper, "responseLogLevelMapper");
+        return self();
+    }
+
+    /**
+     * Returns the {@link LogLevel} to use when logging response logs.
+     */
+    protected Function<? super RequestLog, LogLevel> responseLogLevelMapper() {
+        return responseLogLevelMapper;
     }
 
     /**
@@ -263,6 +297,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
     @Override
     public String toString() {
         return toString(this, requestLogLevel, successfulResponseLogLevel, failedResponseLogLevel,
+                        requestLogLevelMapper, responseLogLevelMapper,
                         requestHeadersSanitizer, requestContentSanitizer, requestTrailersSanitizer,
                         responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer);
     }
@@ -272,6 +307,8 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
             LogLevel requestLogLevel,
             LogLevel successfulResponseLogLevel,
             LogLevel failureResponseLogLevel,
+            Function<? super RequestLog, LogLevel> requestLogLevelMapper,
+            Function<? super RequestLog, LogLevel> responseLogLevelMapper,
             Function<? super HttpHeaders, ?> requestHeadersSanitizer,
             Function<?, ?> requestContentSanitizer,
             Function<? super HttpHeaders, ?> requestTrailersSanitizer,
@@ -281,7 +318,10 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
         final ToStringHelper helper = MoreObjects.toStringHelper(self)
                                                  .add("requestLogLevel", requestLogLevel)
                                                  .add("successfulResponseLogLevel", successfulResponseLogLevel)
-                                                 .add("failedResponseLogLevel", failureResponseLogLevel);
+                                                 .add("failedResponseLogLevel", failureResponseLogLevel)
+                                                 .add("requestLogLevelMapper", requestLogLevelMapper)
+                                                 .add("responseLogLevelMapper", responseLogLevelMapper);
+
         if (requestHeadersSanitizer != DEFAULT_HEADERS_SANITIZER) {
             helper.add("requestHeadersSanitizer", requestHeadersSanitizer);
         }

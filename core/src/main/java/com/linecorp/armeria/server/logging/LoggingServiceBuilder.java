@@ -70,6 +70,8 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder<Logging
                                     requestLogLevel(),
                                     successfulResponseLogLevel(),
                                     failedResponseLogLevel(),
+                                    requestLogLevelMapper(),
+                                    responseLogLevelMapper(),
                                     requestHeadersSanitizer(),
                                     requestContentSanitizer(),
                                     requestTrailersSanitizer(),
