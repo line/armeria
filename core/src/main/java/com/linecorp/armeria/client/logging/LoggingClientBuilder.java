@@ -67,9 +67,6 @@ public final class LoggingClientBuilder extends LoggingDecoratorBuilder<LoggingC
      */
     public <I extends Request, O extends Response> LoggingClient<I, O> build(Client<I, O> delegate) {
         return new LoggingClient<>(delegate,
-                                   requestLogLevel(),
-                                   successfulResponseLogLevel(),
-                                   failedResponseLogLevel(),
                                    requestLogLevelMapper(),
                                    responseLogLevelMapper(),
                                    requestHeadersSanitizer(),

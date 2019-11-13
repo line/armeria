@@ -79,9 +79,6 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
         return new LoggingClientBuilder();
     }
 
-    private final LogLevel requestLogLevel;
-    private final LogLevel successfulResponseLogLevel;
-    private final LogLevel failedResponseLogLevel;
     private final Function<? super RequestLog, LogLevel> requestLogLevelMapper;
     private final Function<? super RequestLog, LogLevel> responseLogLevelMapper;
     private final Function<? super HttpHeaders, ?> requestHeadersSanitizer;
@@ -113,9 +110,6 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
     @Deprecated
     public LoggingClient(Client<I, O> delegate, LogLevel level) {
         this(delegate,
-             level,
-             level,
-             level,
              log -> level,
              log -> level,
              Function.identity(),
@@ -133,9 +127,6 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
      * {@link LogLevel}s with the specified sanitizers.
      */
     LoggingClient(Client<I, O> delegate,
-                  LogLevel requestLogLevel,
-                  LogLevel successfulResponseLogLevel,
-                  LogLevel failedResponseLogLevel,
                   Function<? super RequestLog, LogLevel> requestLogLevelMapper,
                   Function<? super RequestLog, LogLevel> responseLogLevelMapper,
                   Function<? super HttpHeaders, ?> requestHeadersSanitizer,
@@ -147,12 +138,9 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
                   Function<? super Throwable, ?> responseCauseSanitizer,
                   Sampler<? super ClientRequestContext> sampler) {
         super(requireNonNull(delegate, "delegate"));
-        this.requestLogLevel = requireNonNull(requestLogLevel, "requestLogLevel");
-        this.successfulResponseLogLevel = requireNonNull(successfulResponseLogLevel,
-                                                         "successfulResponseLogLevel");
-        this.failedResponseLogLevel = requireNonNull(failedResponseLogLevel, "failedResponseLogLevel");
         this.requestLogLevelMapper = requireNonNull(requestLogLevelMapper, "requestLogLevelMapper");
         this.responseLogLevelMapper = requireNonNull(responseLogLevelMapper, "responseLogLevelMapper");
+
         this.requestHeadersSanitizer = requireNonNull(requestHeadersSanitizer, "requestHeadersSanitizer");
         this.requestContentSanitizer = requireNonNull(requestContentSanitizer, "requestContentSanitizer");
         this.requestTrailersSanitizer = requireNonNull(requestTrailersSanitizer, "requestTrailersSanitizer");
