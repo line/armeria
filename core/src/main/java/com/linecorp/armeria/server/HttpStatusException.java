@@ -17,6 +17,8 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import javax.annotation.Nullable;
+
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpStatus;
 
@@ -32,7 +34,7 @@ public final class HttpStatusException extends RuntimeException {
 
     static {
         for (int i = 0; i < EXCEPTIONS.length; i++) {
-            EXCEPTIONS[i] = new HttpStatusException(HttpStatus.valueOf(i), false);
+            EXCEPTIONS[i] = new HttpStatusException(HttpStatus.valueOf(i), false, null);
         }
     }
 
@@ -40,24 +42,44 @@ public final class HttpStatusException extends RuntimeException {
      * Returns a new {@link HttpStatusException} instance with the specified HTTP status code.
      */
     public static HttpStatusException of(int statusCode) {
-        if (statusCode < 0 || statusCode >= 1000) {
-            final HttpStatus status = HttpStatus.valueOf(statusCode);
-            if (Flags.verboseExceptionSampler().isSampled(HttpStatusException.class)) {
-                return new HttpStatusException(status);
-            } else {
-                return new HttpStatusException(status, false);
-            }
-        } else {
-            return EXCEPTIONS[statusCode];
-        }
+        return of(HttpStatus.valueOf(statusCode));
+    }
+
+    /**
+     * Returns a new {@link HttpStatusException} instance with the specified HTTP status code and {@code cause}.
+     */
+    public static HttpStatusException of(int statusCode, Throwable cause) {
+        requireNonNull(cause, "cause");
+        return of(HttpStatus.valueOf(statusCode), cause);
     }
 
     /**
      * Returns a new {@link HttpStatusException} instance with the specified {@link HttpStatus}.
      */
-    public static HttpStatusException of(HttpStatus httpStatus) {
-        requireNonNull(httpStatus, "httpStatus");
-        return of(httpStatus.code());
+    public static HttpStatusException of(HttpStatus status) {
+        return of0(requireNonNull(status, "status"), null);
+    }
+
+    /**
+     * Returns a new {@link HttpStatusException} instance with the specified {@link HttpStatus} and
+     * {@code cause}.
+     */
+    public static HttpStatusException of(HttpStatus status, Throwable cause) {
+        return of0(requireNonNull(status, "status"), requireNonNull(cause, "cause"));
+    }
+
+    private static HttpStatusException of0(HttpStatus status, @Nullable Throwable cause) {
+        final boolean sampled = Flags.verboseExceptionSampler().isSampled(HttpStatusException.class);
+        if (sampled || cause != null) {
+            return new HttpStatusException(status, sampled, cause);
+        }
+
+        final int statusCode = status.code();
+        if (statusCode >= 0 && statusCode < 1000) {
+            return EXCEPTIONS[statusCode];
+        } else {
+            return new HttpStatusException(HttpStatus.valueOf(statusCode), false, null);
+        }
     }
 
     private static final long serialVersionUID = 3341744805097308847L;
@@ -65,18 +87,10 @@ public final class HttpStatusException extends RuntimeException {
     private final HttpStatus httpStatus;
 
     /**
-     * Creates a new instance with the specified {@link HttpStatus}.
+     * Creates a new instance.
      */
-    private HttpStatusException(HttpStatus httpStatus) {
-        super(requireNonNull(httpStatus, "httpStatus").toString());
-        this.httpStatus = httpStatus;
-    }
-
-    /**
-     * Creates a new singleton instance with the specified {@link HttpStatus}.
-     */
-    private HttpStatusException(HttpStatus httpStatus, @SuppressWarnings("unused") boolean dummy) {
-        super(requireNonNull(httpStatus, "httpStatus").toString(), null, false, false);
+    private HttpStatusException(HttpStatus httpStatus, boolean withStackTrace, @Nullable Throwable cause) {
+        super(requireNonNull(httpStatus, "httpStatus").toString(), cause, withStackTrace, withStackTrace);
         this.httpStatus = httpStatus;
     }
 
