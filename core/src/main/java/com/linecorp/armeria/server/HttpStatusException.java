@@ -56,6 +56,7 @@ public final class HttpStatusException extends RuntimeException {
      * Returns a new {@link HttpStatusException} instance with the specified {@link HttpStatus}.
      */
     public static HttpStatusException of(HttpStatus status) {
+        requireNonNull(status, "status");
         final boolean sampled = Flags.verboseExceptionSampler().isSampled(HttpStatusException.class);
         if (!sampled) {
             final int statusCode = status.code();
