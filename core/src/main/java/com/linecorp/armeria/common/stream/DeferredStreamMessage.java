@@ -98,6 +98,7 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             throw new IllegalStateException("delegate set already");
         }
 
+        final Throwable abortCause = this.abortCause;
         if (abortCause != null) {
             delegate.abort(abortCause);
         }

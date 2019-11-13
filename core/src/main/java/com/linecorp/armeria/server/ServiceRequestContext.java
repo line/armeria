@@ -286,7 +286,7 @@ public interface ServiceRequestContext extends RequestContext {
     /**
      * Returns {@link Request} timeout handler which is executed when
      * receiving the current {@link Request} and sending the corresponding {@link Response}
-     * is not completely within the allowed {@link #requestTimeoutMillis()}.
+     * is not completely received within the allowed {@link #requestTimeoutMillis()}.
      */
     @Nullable
     Runnable requestTimeoutHandler();

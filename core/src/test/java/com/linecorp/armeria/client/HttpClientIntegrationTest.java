@@ -629,7 +629,7 @@ class HttpClientIntegrationTest {
         req.write(HttpData.ofUtf8("not finishing this stream, sorry."));
         await().untilAsserted(() -> assertThat(obj).hasValue(ResponseHeaders.of(HttpStatus.OK)));
         factory.close();
-        await().untilAsserted(() -> assertThat(completed));
+        await().until(() -> completed);
     }
 
     @Test
