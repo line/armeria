@@ -388,6 +388,10 @@ public final class VirtualHost {
                          fallbackServiceConfig);
     }
 
+    ServiceConfig fallbackServiceConfig() {
+        return fallbackServiceConfig;
+    }
+
     VirtualHost decorate(@Nullable Function<? super HttpService, ? extends HttpService> decorator) {
         if (decorator == null) {
             return this;
