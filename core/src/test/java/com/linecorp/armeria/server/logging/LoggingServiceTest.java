@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doAnswer;
@@ -198,46 +199,52 @@ public class LoggingServiceTest {
                             ", trailers: " + RESPONSE_TRAILERS);
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void duplicateSetRequestLogLevelAndMapper() throws Exception {
-        LoggingService.builder()
-                      .requestLogLevel(LogLevel.INFO)
-                      .requestLogLevelMapper(log -> LogLevel.INFO);
+        assertThatThrownBy(() -> LoggingService.builder()
+                                               .requestLogLevel(LogLevel.INFO)
+                                               .requestLogLevelMapper(log -> LogLevel.INFO))
+                .isInstanceOf(IllegalStateException.class);
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void reversedDuplicateSetRequestLogLevelAndMapper() throws Exception {
-        LoggingService.builder()
-                      .requestLogLevelMapper(log -> LogLevel.INFO)
-                      .requestLogLevel(LogLevel.INFO);
+        assertThatThrownBy(() -> LoggingService.builder()
+                                               .requestLogLevelMapper(log -> LogLevel.INFO)
+                                               .requestLogLevel(LogLevel.INFO))
+                .isInstanceOf(IllegalStateException.class);
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void duplicateSetSuccessfulResponseLogLevelAndMapper() throws Exception {
-        LoggingService.builder()
-                      .successfulResponseLogLevel(LogLevel.INFO)
-                      .responseLogLevelMapper(log -> LogLevel.INFO);
+        assertThatThrownBy(() -> LoggingService.builder()
+                                               .successfulResponseLogLevel(LogLevel.INFO)
+                                               .responseLogLevelMapper(log -> LogLevel.INFO))
+                .isInstanceOf(IllegalStateException.class);
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void reversedDuplicateSetSuccessfulResponseLogLevelAndMapper() throws Exception {
-        LoggingService.builder()
-                      .responseLogLevelMapper(log -> LogLevel.INFO)
-                      .successfulResponseLogLevel(LogLevel.INFO);
+        assertThatThrownBy(() -> LoggingService.builder()
+                                               .responseLogLevelMapper(log -> LogLevel.INFO)
+                                               .successfulResponseLogLevel(LogLevel.INFO))
+                .isInstanceOf(IllegalStateException.class);
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void duplicateSetFailureResponseLogLevelAndMapper() throws Exception {
-        LoggingService.builder()
-                      .failureResponseLogLevel(LogLevel.INFO)
-                      .responseLogLevelMapper(log -> LogLevel.INFO);
+        assertThatThrownBy(() -> LoggingService.builder()
+                                               .failureResponseLogLevel(LogLevel.INFO)
+                                               .responseLogLevelMapper(log -> LogLevel.INFO))
+                .isInstanceOf(IllegalStateException.class);
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void reversedDuplicateSetFailureResponseLogLevelAndMapper() throws Exception {
-        LoggingService.builder()
-                      .responseLogLevelMapper(log -> LogLevel.INFO)
-                      .failureResponseLogLevel(LogLevel.INFO);
+        assertThatThrownBy(() -> LoggingService.builder()
+                                               .responseLogLevelMapper(log -> LogLevel.INFO)
+                                               .failureResponseLogLevel(LogLevel.INFO))
+                .isInstanceOf(IllegalStateException.class);
     }
 
     @Test
