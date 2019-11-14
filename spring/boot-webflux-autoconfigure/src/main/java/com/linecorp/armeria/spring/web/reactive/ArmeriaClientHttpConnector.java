@@ -32,7 +32,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.AsyncHttpClient;
-import com.linecorp.armeria.client.HttpClientBuilder;
+import com.linecorp.armeria.client.AsyncHttpClientBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
 
 import reactor.core.publisher.Mono;
@@ -106,7 +106,7 @@ public final class ArmeriaClientHttpConnector implements ClientHttpConnector {
         checkArgument(!Strings.isNullOrEmpty(path), "path is undefined: " + uri);
 
         final URI baseUri = URI.create(Strings.isNullOrEmpty(scheme) ? authority : scheme + "://" + authority);
-        final HttpClientBuilder builder = AsyncHttpClient.builder(baseUri);
+        final AsyncHttpClientBuilder builder = AsyncHttpClient.builder(baseUri);
         configurators.forEach(c -> c.configure(builder));
 
         final String pathAndQuery = Strings.isNullOrEmpty(query) ? path : path + '?' + query;

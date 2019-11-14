@@ -44,9 +44,10 @@ abstract class AbstractLoggingClientBuilder<T extends LoggingDecoratorBuilder<T>
     /**
      * Sets the {@link Sampler} that determines which request needs logging.
      */
+    @SuppressWarnings("unchecked")
     public T sampler(Sampler<? super ClientRequestContext> sampler) {
         this.sampler = requireNonNull(sampler, "sampler");
-        return self();
+        return (T) this;
     }
 
     Sampler<? super ClientRequestContext> sampler() {

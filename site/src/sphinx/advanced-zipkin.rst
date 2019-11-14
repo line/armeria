@@ -55,13 +55,12 @@ If the requests come to Armeria server and go to another backend, you can trace 
 
 .. code-block:: java
 
-    import com.linecorp.armeria.client.BraveClient;
     import com.linecorp.armeria.client.AsyncHttpClient;
-    import com.linecorp.armeria.client.HttpClientBuilder;
+    import com.linecorp.armeria.client.brave.BraveClient;
     import com.linecorp.armeria.server.brave.BraveService;
 
     Tracing tracing = ...
-    HttpClient client = new HttpClientBuilder("https://myBackend.com")
+    AsyncHttpClient client = AsyncHttpClient.builder("https://myBackend.com")
             .decorator(BraveClient.newDecorator(httpTracing.clientOf("myBackend")))
             .build();
 

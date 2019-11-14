@@ -139,7 +139,7 @@ in your configuration as follows:
          */
         @Bean
         public ArmeriaClientConfigurator armeriaClientConfigurator(ClientFactory clientFactory) {
-            // Customize the client using the given HttpClientBuilder. For example:
+            // Customize the client using the given AsyncHttpClientBuilder. For example:
             return builder -> {
                 // Use a circuit breaker for each remote host.
                 final CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();

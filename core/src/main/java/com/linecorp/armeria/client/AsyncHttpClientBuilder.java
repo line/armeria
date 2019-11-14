@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.SessionProtocol;
  * Use the factory methods in {@link AsyncHttpClient} if you do not have many options to override.
  * Please refer to {@link ClientBuilder} for how decorators and HTTP headers are configured
  */
-public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpClientBuilder> {
+public final class AsyncHttpClientBuilder extends AbstractClientOptionsBuilder<AsyncHttpClientBuilder> {
 
     /**
      * An undefined {@link URI} to create {@link AsyncHttpClient} without specifying {@link URI}.
@@ -60,11 +60,8 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
 
     /**
      * Creates a new instance.
-     *
-     * @deprecated Use {@link AsyncHttpClient#builder()}.
      */
-    @Deprecated
-    public HttpClientBuilder() {
+    AsyncHttpClientBuilder() {
         uri = UNDEFINED_URI;
         scheme = null;
         endpoint = null;
@@ -74,25 +71,9 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
      * Creates a new instance.
      *
      * @throws IllegalArgumentException if the scheme of the uri is not one of the fields
-     *                                  in {@link SessionProtocol} or the uri violates RFC 2396
-     *
-     * @deprecated Use {@link AsyncHttpClient#builder(String)}.
-     */
-    @Deprecated
-    public HttpClientBuilder(String uri) {
-        this(URI.create(requireNonNull(uri, "uri")));
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @throws IllegalArgumentException if the scheme of the uri is not one of the fields
      *                                  in {@link SessionProtocol}
-     *
-     * @deprecated Use {@link AsyncHttpClient#builder(URI)}.
      */
-    @Deprecated
-    public HttpClientBuilder(URI uri) {
+    AsyncHttpClientBuilder(URI uri) {
         if (isUndefinedUri(uri)) {
             this.uri = uri;
         } else {
@@ -108,11 +89,8 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
      *
      * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields
      *                                  in {@link SessionProtocol}
-     *
-     * @deprecated Use {@link AsyncHttpClient#builder(SessionProtocol, Endpoint)}.
      */
-    @Deprecated
-    public HttpClientBuilder(SessionProtocol sessionProtocol, Endpoint endpoint) {
+    AsyncHttpClientBuilder(SessionProtocol sessionProtocol, Endpoint endpoint) {
         validateScheme(requireNonNull(sessionProtocol, "sessionProtocol").uriText());
 
         uri = null;
@@ -133,7 +111,7 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
     /**
      * Sets the {@link ClientFactory} of the client. The default is {@link ClientFactory#ofDefault()}.
      */
-    public HttpClientBuilder factory(ClientFactory factory) {
+    public AsyncHttpClientBuilder factory(ClientFactory factory) {
         this.factory = requireNonNull(factory, "factory");
         return this;
     }
@@ -141,7 +119,7 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
     /**
      * Sets the {@code path} of the client.
      */
-    public HttpClientBuilder path(String path) {
+    public AsyncHttpClientBuilder path(String path) {
         this.path = requireNonNull(path, "path");
         return this;
     }
@@ -164,12 +142,12 @@ public final class HttpClientBuilder extends AbstractClientOptionsBuilder<HttpCl
     }
 
     @Override
-    public HttpClientBuilder rpcDecorator(Function<? super RpcClient, ? extends RpcClient> decorator) {
+    public AsyncHttpClientBuilder rpcDecorator(Function<? super RpcClient, ? extends RpcClient> decorator) {
         throw new UnsupportedOperationException("RPC decorator cannot be added to the HTTP client builder.");
     }
 
     @Override
-    public HttpClientBuilder rpcDecorator(DecoratingRpcClientFunction decorator) {
+    public AsyncHttpClientBuilder rpcDecorator(DecoratingRpcClientFunction decorator) {
         throw new UnsupportedOperationException("RPC decorator cannot be added to the HTTP client builder.");
     }
 }

@@ -45,8 +45,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.AsyncHttpClient;
+import com.linecorp.armeria.client.AsyncHttpClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -293,7 +293,7 @@ class HttpServerStreamingTest {
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
             return Stream.of(H1C, H2C, H1, H2)
                     .map(protocol -> {
-                        final HttpClientBuilder builder = AsyncHttpClient.builder(
+                        final AsyncHttpClientBuilder builder = AsyncHttpClient.builder(
                                 protocol.uriText() + "://127.0.0.1:" +
                                 (protocol.isTls() ? server.httpsPort() : server.httpPort()));
 

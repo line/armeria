@@ -204,41 +204,41 @@ public interface AsyncHttpClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Returns a new {@link HttpClientBuilder} created without a base {@link URI}.
+     * Returns a new {@link AsyncHttpClientBuilder} created without a base {@link URI}.
      */
-    static HttpClientBuilder builder() {
-        return new HttpClientBuilder();
+    static AsyncHttpClientBuilder builder() {
+        return new AsyncHttpClientBuilder();
     }
 
     /**
-     * Returns a new {@link HttpClientBuilder} created with the specified base {@code uri}.
+     * Returns a new {@link AsyncHttpClientBuilder} created with the specified base {@code uri}.
      *
      * @throws IllegalArgumentException if the scheme of the uri is not one of the fields
      *                                  in {@link SessionProtocol} or the uri violates RFC 2396
      */
-    static HttpClientBuilder builder(String uri) {
+    static AsyncHttpClientBuilder builder(String uri) {
         return builder(URI.create(requireNonNull(uri, "uri")));
     }
 
     /**
-     * Returns a new {@link HttpClientBuilder} created with the specified base {@link URI}.
+     * Returns a new {@link AsyncHttpClientBuilder} created with the specified base {@link URI}.
      *
      * @throws IllegalArgumentException if the scheme of the uri is not one of the fields
      *                                  in {@link SessionProtocol}
      */
-    static HttpClientBuilder builder(URI uri) {
-        return new HttpClientBuilder(uri);
+    static AsyncHttpClientBuilder builder(URI uri) {
+        return new AsyncHttpClientBuilder(uri);
     }
 
     /**
-     * Returns a new {@link HttpClientBuilder} created with the specified {@link SessionProtocol}
+     * Returns a new {@link AsyncHttpClientBuilder} created with the specified {@link SessionProtocol}
      * and base {@link Endpoint}.
      *
      * @throws IllegalArgumentException if the {@code sessionProtocol} is not one of the fields
      *                                  in {@link SessionProtocol}
      */
-    static HttpClientBuilder builder(SessionProtocol sessionProtocol, Endpoint endpoint) {
-        return new HttpClientBuilder(sessionProtocol, endpoint);
+    static AsyncHttpClientBuilder builder(SessionProtocol sessionProtocol, Endpoint endpoint) {
+        return new AsyncHttpClientBuilder(sessionProtocol, endpoint);
     }
 
     /**

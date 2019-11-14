@@ -75,27 +75,26 @@ You can use the ``decorator()`` method in :api:`ClientBuilder` to build a :api:`
 
 .. code-block:: java
 
+    import com.linecorp.armeria.client.AsyncHttpClient;
     import com.linecorp.armeria.client.circuitbreaker.CircuitBreaker;
     import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerHttpClient;
     import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerStrategy;
-    import com.linecorp.armeria.client.HttpClientBuilder;
-    import com.linecorp.armeria.client.AsyncHttpClient;
     import com.linecorp.armeria.common.AggregatedHttpResponse;
     import com.linecorp.armeria.common.HttpRequest;
     import com.linecorp.armeria.common.HttpResponse;
 
-    final CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
-    final HttpClient client = new HttpClientBuilder(...)
+    CircuitBreakerStrategy strategy = CircuitBreakerStrategy.onServerErrorStatus();
+    AsyncHttpClient client = AsyncHttpClient.builder(...)
             .decorator(CircuitBreakerHttpClient.builder(strategy)
                                                .newDecorator())
             .build();
 
-    final AggregatedHttpResponse res = client.execute(...).aggregate().join(); // Send requests on and on.
+    AggregatedHttpResponse res = client.execute(...).aggregate().join(); // Send requests on and on.
 
-Now, the :api:`HttpClient` can track the number of success or failure events depending on the
+Now, the :api:`AsyncHttpClient` can track the number of success or failure events depending on the
 :apiplural:`Response`. The :api:`CircuitBreaker` will enter ``OPEN``, when the number of failures divided
 by the total number of :apiplural:`Request` exceeds the failure rate.
-Then the :api:`HttpClient` will immediately get :api:`FailFastException` by the :api:`CircuitBreaker`.
+Then the :api:`AsyncHttpClient` will immediately get :api:`FailFastException` by the :api:`CircuitBreaker`.
 
 .. _circuit-breaker-strategy:
 
@@ -154,7 +153,7 @@ a failure.
 
 If you need to determine whether the request was successful by looking into the response content,
 you should implement :api:`CircuitBreakerStrategyWithContent` and specify it when you create an
-:api:`HttpClient` using :api:`CircuitBreakerHttpClientBuilder`:
+:api:`AsyncHttpClient` using :api:`CircuitBreakerHttpClientBuilder`:
 
 .. code-block:: java
 
@@ -190,12 +189,12 @@ you should implement :api:`CircuitBreakerStrategyWithContent` and specify it whe
                 }
             };
 
-    final HttpClient client = new HttpClientBuilder(...)
+    AsyncHttpClient client = AsyncHttpClient.builder(...)
             .decorator(CircuitBreakerHttpClient.builder(myStrategy) // Specify the strategy
                                                .newDecorator())
             .build();
 
-    final AggregatedHttpResponse res = client.execute(...).aggregate().join();
+    AggregatedHttpResponse res = client.execute(...).aggregate().join();
 
 Grouping ``CircuitBreaker``\s
 -----------------------------

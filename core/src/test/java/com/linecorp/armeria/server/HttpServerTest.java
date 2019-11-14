@@ -65,8 +65,8 @@ import com.google.common.base.Strings;
 import com.google.common.io.ByteStreams;
 
 import com.linecorp.armeria.client.AsyncHttpClient;
+import com.linecorp.armeria.client.AsyncHttpClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.DefaultHttpData;
@@ -981,7 +981,7 @@ class HttpServerTest {
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
             return Stream.of(H1C, H1, H2C, H2)
                          .map(protocol -> {
-                             final HttpClientBuilder builder = AsyncHttpClient.builder(
+                             final AsyncHttpClientBuilder builder = AsyncHttpClient.builder(
                                      protocol.uriText() + "://127.0.0.1:" +
                                      (protocol.isTls() ? server.httpsPort() : server.httpPort()));
 

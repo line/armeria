@@ -18,23 +18,22 @@ So, let's find out what we can do with :api:`RetryingClient`.
 ``RetryingClient``
 ------------------
 
-You can just use the ``decorator()`` method in :api:`ClientBuilder` or :api:`HttpClientBuilder` to build a
+You can just use the ``decorator()`` method in :api:`ClientBuilder` or :api:`AsyncHttpClientBuilder` to build a
 :api:`RetryingClient`. For example:
 
 .. code-block:: java
 
     import com.linecorp.armeria.client.AsyncHttpClient;
-    import com.linecorp.armeria.client.HttpClientBuilder;
     import com.linecorp.armeria.client.retry.RetryingClient;
     import com.linecorp.armeria.client.retry.RetryStrategy;
     import com.linecorp.armeria.common.AggregatedHttpResponse;
 
     RetryStrategy strategy = RetryStrategy.onServerErrorStatus();
-    HttpClient client = new HttpClientBuilder("http://example.com/hello")
+    AsyncHttpClient client = AsyncHttpClient.builder("http://example.com/hello")
             .decorator(RetryingClient.newDecorator(strategy))
             .build();
 
-    final AggregatedHttpResponse res = client.execute(...).aggregate().join();
+    AggregatedHttpResponse res = client.execute(...).aggregate().join();
 
 That's it. The client will keep attempting until it succeeds or the number of attempts exceeds the maximum
 number of total attempts. You can configure the ``maxTotalAttempts`` when making the decorator using
@@ -58,7 +57,7 @@ You can customize the ``strategy`` by implementing :api:`RetryStrategy`.
     import com.linecorp.armeria.common.HttpStatus;
 
     new RetryStrategy() {
-        final Backoff backoff = Backoff.ofDefault();
+        Backoff backoff = Backoff.ofDefault();
 
         @Override
         public CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx,
@@ -108,8 +107,8 @@ You can return a different :api:`Backoff` according to the response status.
     import com.linecorp.armeria.common.HttpStatusClass;
 
     new RetryStrategy() {
-        final Backoff backoffOnServerErrorOrTimeout = Backoff.ofDefault();
-        final Backoff backoffOnConflict = Backoff.fixed(100);
+        Backoff backoffOnServerErrorOrTimeout = Backoff.ofDefault();
+        Backoff backoffOnConflict = Backoff.fixed(100);
 
         @Override
         public CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx,
@@ -136,17 +135,17 @@ You can return a different :api:`Backoff` according to the response status.
     };
 
 If you need to determine whether you need to retry by looking into the response content, you should implement
-:api:`RetryStrategyWithContent` and specify it when you create an :api:`HttpClient`
+:api:`RetryStrategyWithContent` and specify it when you create an :api:`AsyncHttpClient`
 using :api:`RetryingClientBuilder`:
 
 .. code-block:: java
 
     import com.linecorp.armeria.client.retry.RetryStrategyWithContent;
 
-    final RetryStrategyWithContent<HttpResponse> strategy =
+    RetryStrategyWithContent<HttpResponse> strategy =
         new RetryStrategyWithContent<HttpResponse>() {
 
-            final Backoff backoff = Backoff.ofDefault();
+            Backoff backoff = Backoff.ofDefault();
 
             @Override
             public CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx,
@@ -167,13 +166,13 @@ using :api:`RetryingClientBuilder`:
             }
         };
 
-    // Create an HttpClient with a custom strategy.
-    final HttpClient client = new HttpClientBuilder(...)
+    // Create an AsyncHttpClient with a custom strategy.
+    AsyncHttpClient client = AsyncHttpClient.builder(...)
             .decorator(RetryingClient.builder(strategy)
                                      .newDecorator())
             .build();
 
-    final AggregatedHttpResponse res = client.execute(...).aggregate().join();
+    AggregatedHttpResponse res = client.execute(...).aggregate().join();
 
 .. tip::
 
@@ -326,7 +325,7 @@ requests and responses, decorate :api:`LoggingClient` with :api:`RetryingClient`
 .. code-block:: java
 
     RetryStrategy strategy = RetryStrategy.onServerErrorStatus();
-    HttpClient client = new HttpClientBuilder(...)
+    AsyncHttpClient client = AsyncHttpClient.builder(...)
             .decorator(LoggingClient.newDecorator())
             .decorator(RetryingClient.newDecorator(strategy))
             .build();
@@ -357,7 +356,7 @@ do the reverse:
 
     RetryStrategy strategy = RetryStrategy.onServerErrorStatus();
     // Note the order of decoration.
-    HttpClient client = new HttpClientBuilder(...)
+    AsyncHttpClient client = AsyncHttpClient.builder(...)
             .decorator(RetryingClient.newDecorator(strategy))
             .decorator(LoggingClient.newDecorator())
             .build();
@@ -387,14 +386,14 @@ You might want to use :ref:`client-circuit-breaker` with :api:`RetryingClient` u
     CircuitBreakerStrategy cbStrategy = CircuitBreakerStrategy.onServerErrorStatus();
     RetryStrategy myRetryStrategy = new RetryStrategy() { ... };
 
-    HttpClient client = new HttpClientBuilder(...)
+    AsyncHttpClient client = AsyncHttpClient.builder(...)
             .decorator(CircuitBreakerHttpClient.builder(cbStrategy)
                                                .newDecorator())
             .decorator(RetryingClient.builder(myRetryStrategy)
                                      .newDecorator())
             .build();
 
-    final AggregatedHttpResponse res = client.execute(...).aggregate().join();
+    AggregatedHttpResponse res = client.execute(...).aggregate().join();
 
 This decorates :api:`CircuitBreakerHttpClient` with :api:`RetryingClient` so that the :api:`CircuitBreaker`
 judges every request and retried request as successful or failed. If the failure rate exceeds a certain
@@ -407,7 +406,7 @@ a retry unnecessarily when the circuit is open, e.g.
     import com.linecorp.armeria.client.circuitbreaker.FailFastException;
 
     new RetryStrategy() {
-        final Backoff backoff = Backoff.ofDefault();
+        Backoff backoff = Backoff.ofDefault();
 
         @Override
         public CompletionStage<Backoff> shouldRetry(ClientRequestContext ctx,

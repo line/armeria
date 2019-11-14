@@ -35,8 +35,8 @@ import com.google.common.base.Strings;
 import com.google.common.io.BaseEncoding;
 
 import com.linecorp.armeria.client.AsyncHttpClient;
+import com.linecorp.armeria.client.AsyncHttpClientBuilder;
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.HttpClientBuilder;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -64,7 +64,7 @@ public class ContentPreviewerTest {
         private volatile CompletableFuture<RequestLog> waitingFuture;
 
         MyHttpClient(String uri, int reqLength, int resLength) {
-            final HttpClientBuilder builder = AsyncHttpClient.builder(serverRule.uri(uri));
+            final AsyncHttpClientBuilder builder = AsyncHttpClient.builder(serverRule.uri(uri));
             final ContentPreviewerFactory reqPreviewerFactory =
                     ContentPreviewerFactory.ofText(reqLength, StandardCharsets.UTF_8);
             final ContentPreviewerFactory resPreviewerFactory =

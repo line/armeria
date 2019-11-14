@@ -131,7 +131,7 @@ public final class ArmeriaRetrofitBuilder {
      * This method can be useful if you already have an Armeria client and want to reuse its configuration,
      * such as using the same decorators.
      * <pre>{@code
-     * HttpClient myClient = ...;
+     * AsyncHttpClient myClient = ...;
      * // Use the same settings and decorators with `myClient` when sending requests.
      * builder.clientOptions(myClient.options());
      * }</pre>

@@ -232,7 +232,7 @@ public interface ClientFactory extends AutoCloseable {
      * Unwraps the specified {@code client} object into the object of the specified {@code type}. For example,
      * <pre>{@code
      * ClientFactory clientFactory = ...;
-     * HttpClient client = new HttpClientBuilder()
+     * AsyncHttpClient client = AsyncHttpClient.builder(...)
      *     .factory(clientFactory)
      *     .decorator(LoggingClient.newDecorator())
      *     .build();

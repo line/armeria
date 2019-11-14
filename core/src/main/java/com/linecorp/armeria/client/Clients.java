@@ -349,7 +349,7 @@ public final class Clients {
      * but with different {@link ClientOption}s. For example:
      *
      * <pre>{@code
-     * HttpClient derivedHttpClient = Clients.newDerivedClient(httpClient, options -> {
+     * AsyncHttpClient derivedHttpClient = Clients.newDerivedClient(httpClient, options -> {
      *     ClientOptionsBuilder builder = new ClientOptionsBuilder(options);
      *     builder.decorator(...);  // Add a decorator.
      *     builder.addHttpHeader(...); // Add an HTTP header.
@@ -401,7 +401,7 @@ public final class Clients {
      * Unwraps the specified client into the object of the specified {@code type}.
      * Use this method instead of an explicit downcast. For example:
      * <pre>{@code
-     * HttpClient client = new HttpClientBuilder()
+     * AsyncHttpClient client = AsyncHttpClient.builder(...)
      *     .decorator(LoggingClient.newDecorator())
      *     .build();
      *

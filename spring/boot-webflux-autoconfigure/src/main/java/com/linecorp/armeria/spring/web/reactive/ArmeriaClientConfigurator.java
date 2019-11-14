@@ -20,17 +20,17 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.core.annotation.Order;
 
-import com.linecorp.armeria.client.HttpClientBuilder;
+import com.linecorp.armeria.client.AsyncHttpClientBuilder;
 
 /**
- * A configurator to configure an {@link HttpClientBuilder} for an {@link ArmeriaClientHttpConnector}.
+ * A configurator to configure an {@link AsyncHttpClientBuilder} for an {@link ArmeriaClientHttpConnector}.
  */
 @FunctionalInterface
 public interface ArmeriaClientConfigurator extends Ordered {
     /**
-     * Configures the client using the specified {@link HttpClientBuilder}.
+     * Configures the client using the specified {@link AsyncHttpClientBuilder}.
      */
-    void configure(HttpClientBuilder builder);
+    void configure(AsyncHttpClientBuilder builder);
 
     /**
      * Returns the evaluation order of this configurator. A user can specify the order with an {@link Order}

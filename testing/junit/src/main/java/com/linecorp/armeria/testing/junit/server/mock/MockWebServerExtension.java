@@ -59,7 +59,7 @@ import com.linecorp.armeria.testing.junit.server.ServerExtension;
  * >
  * >   @Test
  * >   void checkSomething() {
- * >       HttpClient client = HttpClient.of(server.httpUri("/"));
+ * >       AsyncHttpClient client = AsyncHttpClient.of(server.httpUri("/"));
  * >
  * >       server.enqueue(AggregatedHttpResponse.of(HttpStatus.OK));
  * >       server.enqueue(AggregatedHttpResponse.of(HttpStatus.FORBIDDEN));

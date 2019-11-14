@@ -568,7 +568,7 @@ public class HttpServerCorsTest {
      */
     @Test
     public void testCorsWithPartialBindingAndRouteDecorator() {
-        final HttpClient client = client();
+        final AsyncHttpClient client = client();
         AggregatedHttpResponse res;
 
         res = preflightRequest(client, "/cors11/get", "http://example.com", "GET");

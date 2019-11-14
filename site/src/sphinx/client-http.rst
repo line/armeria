@@ -11,7 +11,7 @@ Calling an HTTP service
     import com.linecorp.armeria.common.HttpMethod;
     import com.linecorp.armeria.common.RequestHeaders;
 
-    HttpClient httpClient = HttpClient.of("http://example.com/");
+    AsyncHttpClient httpClient = AsyncHttpClient.of("http://example.com/");
 
     // Send a simple GET request.
     AggregatedHttpResponse res1 = httpClient.get("/foo/bar.txt").aggregate().join();

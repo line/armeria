@@ -199,9 +199,8 @@ request and response properties, you need to use :api:`ClientConnectionTimings` 
 
     import com.linecorp.armeria.client.ClientConnectionTimings;
     import com.linecorp.armeria.client.AsyncHttpClient;
-    import com.linecorp.armeria.client.HttpClientBuilder;
 
-    final HttpClient client = new HttpClientBuilder("http://armeria.com")
+    AsyncHttpClient client = AsyncHttpClient.builder("http://armeria.com")
             .decorator((delegate, ctx, req) -> {
                 ctx.log().addListener(
                         log -> {
@@ -299,9 +298,9 @@ You can enable it when you configure :api:`Server`, :api:`VirtualHost` or client
 
 .. code-block:: java
 
-    import com.linecorp.armeria.client.HttpClientBuilder;
+    import com.linecorp.armeria.client.AsyncHttpClientBuilder;
 
-    HttpClientBuilder cb = new HttpClientBuilder();
+    AsyncHttpClientBuilder cb = AsyncHttpClient.builder();
     ...
     cb.contentPreview(100);
 
