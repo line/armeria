@@ -64,7 +64,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      * Returns the nullable {@link Logger} to use when logging.
      */
     @Nullable
-    public Logger logger() {
+    protected Logger logger() {
         return logger;
     }
 
@@ -303,6 +303,7 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
             Function<Object, ?> responseContentSanitizer,
             Function<? super HttpHeaders, ?> responseTrailersSanitizer) {
         final ToStringHelper helper = MoreObjects.toStringHelper(self)
+                                                 .omitNullValues()
                                                  .add("logger", logger)
                                                  .add("requestLogLevel", requestLogLevel)
                                                  .add("successfulResponseLogLevel", successfulResponseLogLevel)

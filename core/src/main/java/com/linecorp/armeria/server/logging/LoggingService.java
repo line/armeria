@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.logging;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.linecorp.armeria.internal.logging.LoggingDecorators.logRequest;
 import static com.linecorp.armeria.internal.logging.LoggingDecorators.logResponse;
 import static java.util.Objects.requireNonNull;
@@ -128,6 +129,7 @@ public final class LoggingService<I extends Request, O extends Response> extends
     /**
      * Creates a new instance that logs {@link Request}s and {@link Response}s at the specified
      * {@link LogLevel}s with the specified sanitizers.
+     * If the logger is null, it means that the logger from {@link ServiceRequestContext#logger()} is used.
      */
     LoggingService(
             Service<I, O> delegate,
@@ -163,12 +165,14 @@ public final class LoggingService<I extends Request, O extends Response> extends
     @Override
     public O serve(ServiceRequestContext ctx, I req) throws Exception {
         if (sampler.isSampled(ctx)) {
-            ctx.log().addListener(log -> logRequest(getActiveLogger((ServiceRequestContext) log.context()),
+            final Logger logger = firstNonNull(this.logger, ctx.logger());
+
+            ctx.log().addListener(log -> logRequest(logger,
                                                     log, requestLogLevel, requestHeadersSanitizer,
                                                     requestContentSanitizer, requestTrailersSanitizer),
                                   RequestLogAvailability.REQUEST_END);
             ctx.log().addListener(
-                    log -> logResponse(getActiveLogger((ServiceRequestContext) log.context()), log,
+                    log -> logResponse(logger, log,
                                        requestLogLevel,
                                        requestHeadersSanitizer,
                                        requestContentSanitizer,
@@ -182,9 +186,5 @@ public final class LoggingService<I extends Request, O extends Response> extends
                     RequestLogAvailability.COMPLETE);
         }
         return delegate().serve(ctx, req);
-    }
-
-    private Logger getActiveLogger(ServiceRequestContext context) {
-        return logger != null ? logger : context.logger();
     }
 }

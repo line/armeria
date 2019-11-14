@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.logging;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.linecorp.armeria.internal.logging.LoggingDecorators.logRequest;
 import static com.linecorp.armeria.internal.logging.LoggingDecorators.logResponse;
 import static java.util.Objects.requireNonNull;
@@ -46,7 +47,7 @@ import com.linecorp.armeria.server.logging.LoggingService;
  */
 public final class LoggingClient<I extends Request, O extends Response> extends SimpleDecoratingClient<I, O> {
 
-    private static final Logger logger = LoggerFactory.getLogger(LoggingClient.class);
+    private static final Logger defaultLogger = LoggerFactory.getLogger(LoggingClient.class);
 
     /**
      * Returns a new {@link Client} decorator that logs {@link Request}s and {@link Response}s at
@@ -81,7 +82,7 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
         return new LoggingClientBuilder();
     }
 
-    private final Logger activeLogger;
+    private final Logger logger;
     private final LogLevel requestLogLevel;
     private final LogLevel successfulResponseLogLevel;
     private final LogLevel failedResponseLogLevel;
@@ -131,6 +132,7 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
     /**
      * Creates a new instance that logs {@link Request}s and {@link Response}s at the specified
      * {@link LogLevel}s with the specified sanitizers.
+     * If the logger is null, it means that the default logger is used.
      */
     LoggingClient(Client<I, O> delegate,
                   @Nullable Logger logger,
@@ -146,7 +148,7 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
                   Function<? super Throwable, ?> responseCauseSanitizer,
                   Sampler<? super ClientRequestContext> sampler) {
         super(requireNonNull(delegate, "delegate"));
-        activeLogger = logger != null ? logger : LoggingClient.logger;
+        this.logger = firstNonNull(logger, defaultLogger);
         this.requestLogLevel = requireNonNull(requestLogLevel, "requestLogLevel");
         this.successfulResponseLogLevel = requireNonNull(successfulResponseLogLevel,
                                                          "successfulResponseLogLevel");
@@ -165,11 +167,11 @@ public final class LoggingClient<I extends Request, O extends Response> extends 
     @Override
     public O execute(ClientRequestContext ctx, I req) throws Exception {
         if (sampler.isSampled(ctx)) {
-            ctx.log().addListener(log -> logRequest(activeLogger, log, requestLogLevel,
+            ctx.log().addListener(log -> logRequest(logger, log, requestLogLevel,
                                                     requestHeadersSanitizer,
                                                     requestContentSanitizer, requestTrailersSanitizer),
                                   RequestLogAvailability.REQUEST_END);
-            ctx.log().addListener(log -> logResponse(activeLogger, log, requestLogLevel,
+            ctx.log().addListener(log -> logResponse(logger, log, requestLogLevel,
                                                      requestHeadersSanitizer,
                                                      requestContentSanitizer,
                                                      requestHeadersSanitizer,
