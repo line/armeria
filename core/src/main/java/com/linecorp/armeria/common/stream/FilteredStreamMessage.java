@@ -244,6 +244,11 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
         delegate.abort();
     }
 
+    @Override
+    public void abort(Throwable cause) {
+        delegate.abort(requireNonNull(cause, "cause"));
+    }
+
     private final class FilteringSubscriber implements Subscriber<T> {
 
         private final Subscriber<? super U> delegate;

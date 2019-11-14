@@ -374,8 +374,25 @@ public final class VirtualHost {
      */
     public Routed<ServiceConfig> findServiceConfig(RoutingContext routingCtx, boolean useFallbackService) {
         final Routed<ServiceConfig> routed = router.find(requireNonNull(routingCtx, "routingCtx"));
-        if (routed.isPresent() || !useFallbackService) {
-            return routed;
+        switch (routed.routingResultType()) {
+            case MATCHED:
+                return routed;
+            case NOT_MATCHED:
+                if (!useFallbackService) {
+                    return routed;
+                }
+                break;
+            case CORS_PREFLIGHT:
+                assert routingCtx.isCorsPreflight();
+                if (routed.value().handlesCorsPreflight()) {
+                    // CorsService will handle the preflight request
+                    // even if the service does not handle an OPTIONS method.
+                    return routed;
+                }
+                break;
+            default:
+                // Never reaches here.
+                throw new Error();
         }
 
         // Note that we did not implement this fallback mechanism inside a Router implementation like
@@ -386,6 +403,10 @@ public final class VirtualHost {
                                       .query(routingCtx.query())
                                       .build(),
                          fallbackServiceConfig);
+    }
+
+    ServiceConfig fallbackServiceConfig() {
+        return fallbackServiceConfig;
     }
 
     VirtualHost decorate(@Nullable Function<? super HttpService, ? extends HttpService> decorator) {

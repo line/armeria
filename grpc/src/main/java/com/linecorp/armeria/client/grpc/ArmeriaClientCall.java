@@ -226,7 +226,11 @@ class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             status = status.withCause(cause);
         }
         close(status, new Metadata());
-        req.abort();
+        if (cause == null) {
+            req.abort();
+        } else {
+            req.abort(cause);
+        }
     }
 
     @Override

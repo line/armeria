@@ -162,10 +162,21 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                             CompletableFuture<HttpResponse> future) {
         final int totalAttempts = getTotalAttempts(ctx);
         final boolean initialAttempt = totalAttempts <= 1;
-        if (originalReq.completionFuture().isCompletedExceptionally() || returnedRes.isComplete()) {
-            // The request or response has been aborted by the client before it receives a response,
-            // so stop retrying.
-            handleException(ctx, rootReqDuplicator, future, AbortedStreamException.get(), initialAttempt);
+        // The request or response has been aborted by the client before it receives a response,
+        // so stop retrying.
+        if (originalReq.completionFuture().isCompletedExceptionally()) {
+            originalReq.completionFuture().handle((unused, cause) -> {
+                handleException(ctx, rootReqDuplicator, future, cause, initialAttempt);
+                return null;
+            });
+            return;
+        }
+        if (returnedRes.isComplete()) {
+            returnedRes.completionFuture().handle((result, cause) -> {
+                final Throwable abortCause = firstNonNull(cause, AbortedStreamException.get());
+                handleException(ctx, rootReqDuplicator, future, abortCause, initialAttempt);
+                return null;
+            });
             return;
         }
 
@@ -202,9 +213,11 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             } else {
                 final Throwable responseCause =
                         log.isAvailable(RequestLogAvailability.RESPONSE_END) ? log.responseCause() : null;
+                final Runnable originalResClosingTask =
+                        responseCause == null ? response::abort : () -> response.abort(responseCause);
                 retryStrategy().shouldRetry(derivedCtx, responseCause)
                                .handle(handleBackoff(ctx, derivedCtx, rootReqDuplicator, originalReq,
-                                                     returnedRes, future, response, response::abort));
+                                                     returnedRes, future, response, originalResClosingTask));
             }
         }, RequestLogAvailability.RESPONSE_HEADERS);
     }
@@ -217,7 +230,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         }
         ctx.logBuilder().endResponse(cause);
         future.completeExceptionally(cause);
-        rootReqDuplicator.abort();
+        rootReqDuplicator.abort(cause);
     }
 
     private static int maxSignalLength(long maxResponseLength) {
@@ -238,13 +251,13 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                                                HttpResponse returnedRes,
                                                                CompletableFuture<HttpResponse> future,
                                                                HttpResponse originalRes,
-                                                               Runnable closingOriginalResTask) {
+                                                               Runnable originalResClosingTask) {
         return (backoff, unused) -> {
             if (backoff != null) {
                 final long millisAfter = useRetryAfter ? getRetryAfterMillis(derivedCtx) : -1;
                 final long nextDelay = getNextDelay(ctx, backoff, millisAfter);
                 if (nextDelay >= 0) {
-                    closingOriginalResTask.run();
+                    originalResClosingTask.run();
                     scheduleNextRetry(
                             ctx, cause -> handleException(ctx, rootReqDuplicator, future, cause, false),
                             () -> doExecute0(ctx, rootReqDuplicator, originalReq, returnedRes, future),

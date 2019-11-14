@@ -34,7 +34,7 @@ import io.netty.util.concurrent.EventExecutor;
 /**
  * A variant of <a href="http://www.reactive-streams.org/">Reactive Streams</a> {@link Publisher}, which allows
  * only one {@link Subscriber}. Unlike a usual {@link Publisher}, a {@link StreamMessage} can stream itself
- * only once.  It has the following additional operations on top of what the Reactive Streams API provides:
+ * only once. It has the following additional operations on top of what the Reactive Streams API provides:
  * <ul>
  *   <li>{@link #isOpen()}</li>
  *   <li>{@link #isEmpty()}</li>
@@ -385,4 +385,12 @@ public interface StreamMessage<T> extends Publisher<T> {
      * on a closed or aborted stream has no effect.
      */
     void abort();
+
+    /**
+     * Closes this stream with the specified {@link Throwable} and prevents further subscription.
+     * A {@link Subscriber} that attempts to subscribe to an aborted stream will be notified with
+     * the specified {@link Throwable} via {@link Subscriber#onError(Throwable)}. Calling this method
+     * on a closed or aborted stream has no effect.
+     */
+    void abort(Throwable cause);
 }

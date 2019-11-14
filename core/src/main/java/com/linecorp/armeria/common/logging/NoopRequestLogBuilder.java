@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.channel.Channel;
 
+@Deprecated
 final class NoopRequestLogBuilder implements RequestLogBuilder {
 
     @Override

@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.common.stream.AbortCauseArgumentProvider.ABORT_CAUSES;
 import static com.linecorp.armeria.common.stream.StreamMessageTest.newPooledBuffer;
 import static com.linecorp.armeria.common.stream.SubscriptionOption.NOTIFY_CANCELLATION;
 import static com.linecorp.armeria.common.stream.SubscriptionOption.WITH_POOLED_OBJECTS;
@@ -198,47 +199,79 @@ public class StreamMessageDuplicatorTest {
 
     @Test
     public void abortPublisherWithSubscribers() {
-        final DefaultStreamMessage<String> publisher = new DefaultStreamMessage<>();
-        final StreamMessageDuplicator duplicator = new StreamMessageDuplicator(publisher);
+        for (Throwable abortCause : ABORT_CAUSES) {
+            final DefaultStreamMessage<String> publisher = new DefaultStreamMessage<>();
+            final StreamMessageDuplicator duplicator = new StreamMessageDuplicator(publisher);
 
-        final CompletableFuture<String> future = subscribe(duplicator.duplicateStream());
-        publisher.abort();
+            final CompletableFuture<String> future = subscribe(duplicator.duplicateStream());
+            if (abortCause == null) {
+                publisher.abort();
+            } else {
+                publisher.abort(abortCause);
+            }
 
-        assertThatThrownBy(future::join).hasCauseInstanceOf(AbortedStreamException.class);
-        duplicator.abort();
+            if (abortCause == null) {
+                assertThatThrownBy(future::join).hasCauseInstanceOf(AbortedStreamException.class);
+            } else {
+                assertThatThrownBy(future::join).hasCauseInstanceOf(abortCause.getClass());
+            }
+            duplicator.abort();
+        }
     }
 
     @Test
     public void abortPublisherWithoutSubscriber() {
-        final DefaultStreamMessage<String> publisher = new DefaultStreamMessage<>();
-        final StreamMessageDuplicator duplicator = new StreamMessageDuplicator(publisher);
-        publisher.abort();
+        for (Throwable abortCause : ABORT_CAUSES) {
+            final DefaultStreamMessage<String> publisher = new DefaultStreamMessage<>();
+            final StreamMessageDuplicator duplicator = new StreamMessageDuplicator(publisher);
+            if (abortCause == null) {
+                publisher.abort();
+            } else {
+                publisher.abort(abortCause);
+            }
 
-        // Completed exceptionally once a subscriber subscribes.
-        final CompletableFuture<String> future = subscribe(duplicator.duplicateStream());
-        assertThatThrownBy(future::join).hasCauseInstanceOf(AbortedStreamException.class);
-        duplicator.abort();
+            // Completed exceptionally once a subscriber subscribes.
+            final CompletableFuture<String> future = subscribe(duplicator.duplicateStream());
+            if (abortCause == null) {
+                assertThatThrownBy(future::join).hasCauseInstanceOf(AbortedStreamException.class);
+            } else {
+                assertThatThrownBy(future::join).hasCauseInstanceOf(abortCause.getClass());
+            }
+            duplicator.abort();
+        }
     }
 
     @Test
     public void abortChildStream() {
-        final DefaultStreamMessage<String> publisher = new DefaultStreamMessage<>();
-        final StreamMessageDuplicator duplicator = new StreamMessageDuplicator(publisher);
+        for (Throwable abortCause : ABORT_CAUSES) {
+            final DefaultStreamMessage<String> publisher = new DefaultStreamMessage<>();
+            final StreamMessageDuplicator duplicator = new StreamMessageDuplicator(publisher);
 
-        final StreamMessage<String> sm1 = duplicator.duplicateStream();
-        final CompletableFuture<String> future1 = subscribe(sm1);
+            final StreamMessage<String> sm1 = duplicator.duplicateStream();
+            final CompletableFuture<String> future1 = subscribe(sm1);
 
-        final StreamMessage<String> sm2 = duplicator.duplicateStream();
-        final CompletableFuture<String> future2 = subscribe(sm2);
+            final StreamMessage<String> sm2 = duplicator.duplicateStream();
+            final CompletableFuture<String> future2 = subscribe(sm2);
 
-        sm1.abort();
-        assertThatThrownBy(future1::join).hasCauseInstanceOf(AbortedStreamException.class);
+            if (abortCause == null) {
+                sm1.abort();
+                assertThatThrownBy(future1::join).hasCauseInstanceOf(AbortedStreamException.class);
+            } else {
+                sm1.abort(abortCause);
+                assertThatThrownBy(future1::join).hasCauseInstanceOf(abortCause.getClass());
+            }
 
-        // Aborting from another subscriber does not affect other subscribers.
-        assertThat(sm2.isOpen()).isTrue();
-        sm2.abort();
-        assertThatThrownBy(future2::join).hasCauseInstanceOf(AbortedStreamException.class);
-        duplicator.abort();
+            // Aborting from another subscriber does not affect other subscribers.
+            assertThat(sm2.isOpen()).isTrue();
+            if (abortCause == null) {
+                sm2.abort();
+                assertThatThrownBy(future2::join).hasCauseInstanceOf(AbortedStreamException.class);
+            } else {
+                sm2.abort(abortCause);
+                assertThatThrownBy(future2::join).hasCauseInstanceOf(abortCause.getClass());
+            }
+            duplicator.abort();
+        }
     }
 
     @Test

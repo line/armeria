@@ -16,24 +16,26 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import java.net.URI;
+import java.util.concurrent.CompletionException;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 
 class DefaultHttpClientTest {
 
-    @SuppressWarnings("unchecked")
     @Test
     void testConcatenateRequestPath() throws Exception {
         final String clientUriPath = "http://127.0.0.1/hello";
@@ -53,5 +55,14 @@ class DefaultHttpClientTest {
 
         final String concatPath = argCaptor.getValue().path();
         assertThat(concatPath).isEqualTo("/hello/world/test?q1=foo");
+    }
+
+    @Test
+    void requestAbortPropagatesException() {
+        final HttpRequestWriter req = HttpRequest.streaming(HttpMethod.GET, "/");
+        req.abort(new IllegalStateException("closed"));
+        assertThatThrownBy(() -> req.aggregate().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(IllegalStateException.class);
     }
 }

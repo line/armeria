@@ -65,7 +65,8 @@ import io.netty.buffer.CompositeByteBuf;
 
 /**
  * A framer of messages for transport with the gRPC wire protocol. See
- * <a href="https://grpc.io/docs/guides/wire.html">gRPC Wire Protocol</a> for more detail on the protocol.
+ * <a href="https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md">gRPC Wire Format</a>
+ * for more detail on the protocol.
  *
  * <p>The logic has mostly been copied from {@code io.grpc.internal.MessageFramer}, while removing the buffer
  * abstraction in favor of using {@link ByteBuf} directly. The code has been vastly simplified due to the lack

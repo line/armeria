@@ -63,6 +63,7 @@ final class HttpClientDelegate implements HttpClient {
             // - `ClientRequestContext.endpoint()` returns `null` only when the context initialization failed.
             // - `ClientUtil.initContextAndExecuteWithFallback()` will use the fallback response rather than
             //   what we return here.
+            req.abort(CONTEXT_INITIALIZATION_FAILED);
             return HttpResponse.ofFailure(CONTEXT_INITIALIZATION_FAILED);
         }
 
@@ -202,7 +203,7 @@ final class HttpClientDelegate implements HttpClient {
 
     private static void handleEarlyRequestException(ClientRequestContext ctx,
                                                     HttpRequest req, Throwable cause) {
-        req.abort();
+        req.abort(cause);
         final RequestLogBuilder logBuilder = ctx.logBuilder();
         logBuilder.endRequest(cause);
         logBuilder.endResponse(cause);

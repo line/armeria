@@ -42,7 +42,10 @@ public interface RequestLogBuilder {
 
     /**
      * A dummy {@link RequestLogBuilder} that discards everything it collected.
+     *
+     * @deprecated This field will be removed without a replacement. Use {@link DefaultRequestLog} or a mock.
      */
+    @Deprecated
     RequestLogBuilder NOOP = new NoopRequestLogBuilder();
 
     /**
