@@ -58,11 +58,11 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      * Sets the {@link LogLevel} to use when logging requests. If unset, will use {@link LogLevel#TRACE}.
      */
     public T requestLogLevel(LogLevel requestLogLevel) {
-        if (this.isSetRequestLogLevelMapper) {
+        if (isSetRequestLogLevelMapper) {
             throw new IllegalStateException("requestLogLevelMapper has been set already.");
         }
         this.requestLogLevel = requireNonNull(requestLogLevel, "requestLogLevel");
-        this.isSetRequestLogLevel = true;
+        isSetRequestLogLevel = true;
         return self();
     }
 
@@ -78,12 +78,12 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      * If unset, will use {@link LogLevel#TRACE}.
      */
     public T successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
-        if (this.isSetResponseLogLevelMapper) {
+        if (isSetResponseLogLevelMapper) {
             throw new IllegalStateException("responseLogLevelMapper has been set already.");
         }
         this.successfulResponseLogLevel =
                 requireNonNull(successfulResponseLogLevel, "successfulResponseLogLevel");
-        this.isSetSuccessfulResponseLogLevel = true;
+        isSetSuccessfulResponseLogLevel = true;
         return self();
     }
 
@@ -99,11 +99,11 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      * If unset, will use {@link LogLevel#WARN}. The request will be logged too if it was not otherwise.
      */
     public T failureResponseLogLevel(LogLevel failedResponseLogLevel) {
-        if (this.isSetResponseLogLevelMapper) {
+        if (isSetResponseLogLevelMapper) {
             throw new IllegalStateException("responseLogLevelMapper has been set already.");
         }
         this.failedResponseLogLevel = requireNonNull(failedResponseLogLevel, "failedResponseLogLevel");
-        this.isSetFailedResponseLogLevel = true;
+        isSetFailedResponseLogLevel = true;
         return self();
     }
 
@@ -118,11 +118,11 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      * Sets the {@link Function} to use when mapping the log level of request logs.
      */
     public T requestLogLevelMapper(Function<? super RequestLog, LogLevel> requestLogLevelMapper) {
-        if (this.isSetRequestLogLevel) {
+        if (isSetRequestLogLevel) {
             throw new IllegalStateException("requestLogLevel has been set already.");
         }
         this.requestLogLevelMapper = requireNonNull(requestLogLevelMapper, "requestLogLevelMapper");
-        this.isSetRequestLogLevelMapper = true;
+        isSetRequestLogLevelMapper = true;
         return self();
     }
 
@@ -137,14 +137,14 @@ public abstract class LoggingDecoratorBuilder<T extends LoggingDecoratorBuilder<
      * Sets the {@link Function} to use when mapping the log level of response logs.
      */
     public T responseLogLevelMapper(Function<? super RequestLog, LogLevel> responseLogLevelMapper) {
-        if (this.isSetSuccessfulResponseLogLevel) {
+        if (isSetSuccessfulResponseLogLevel) {
             throw new IllegalStateException("successfulResponseLogLevel has been set already.");
         }
-        if (this.isSetFailedResponseLogLevel) {
+        if (isSetFailedResponseLogLevel) {
             throw new IllegalStateException("failedResponseLogLevel has been set already.");
         }
         this.responseLogLevelMapper = requireNonNull(responseLogLevelMapper, "responseLogLevelMapper");
-        this.isSetResponseLogLevelMapper = true;
+        isSetResponseLogLevelMapper = true;
         return self();
     }
 
